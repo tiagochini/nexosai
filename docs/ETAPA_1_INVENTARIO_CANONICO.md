@@ -626,7 +626,9 @@ gates, execução, verificação e encerramento.
 
 Os números anteriores não mediam a mesma coisa.
 
-O censo detalhado, incluindo as 79 roles, os seis departamentos observacionais,
+O censo detalhado original incluiu 79 roles. A implementação audiovisual posterior
+adicionou sete especialidades operacionais, elevando o total atual para 86 roles,
+mantidos os seis departamentos observacionais,
 os 37 slots funcionais comparativos e o benchmark estrutural que estava em
 stand-by, está em `docs/ETAPA_1_ANEXO_INVENTARIO_AGENTES.md`. O anexo é parte
 integrante deste inventário, mas não aprova a arquitetura futura.
@@ -637,8 +639,8 @@ atividade, prontidão e a auditoria da cadeia audiovisual/editor interno, está 
 
 | Medida | Quantidade encontrada | O que significa |
 |---|---:|---|
-| `AgentRole` no AI gateway | 79 | Identidades aceitas pelo roteador de IA |
-| Entradas no provider map | 79 | Roles com provider/modelo configurado |
+| `AgentRole` no AI gateway | 86 | Identidades aceitas pelo roteador de IA |
+| Entradas no provider map | 86 | Roles com provider/modelo configurado |
 | Arquivos `*.agent.ts` | 72 | Implementações nomeadas como arquivos de agente |
 | Seções/famílias no contrato antigo | 17 | Cobertura documental, não quantidade real |
 
@@ -699,7 +701,7 @@ skills, SOPs e gates; uma role isolada pode não preencher capacidade alguma.
 ### `INVENTARIO_AGENTES_NEXOS.md`
 
 - é anterior ao congelamento canônico;
-- informa 64 agentes, número que não corresponde às 79 roles atuais;
+- informa 64 agentes, número que não corresponde às 86 roles atuais;
 - é profundo em doutrinas e frameworks;
 - não diferencia consistentemente prompt, pipeline, executor, evidência e
   recovery;
@@ -725,7 +727,7 @@ skills, SOPs e gates; uma role isolada pode não preencher capacidade alguma.
 ### `NEXOS_MASTER_ARCHITECTURE.md`
 
 - está conceitualmente subordinado à Etapa 0;
-- sua contagem “70+ roles” é imprecisa diante das 79 roles atuais;
+- sua contagem “70+ roles” é imprecisa diante das 86 roles atuais;
 - declara execução integral em amplitude maior do que a comprovação reunida;
 - permanece válido como visão técnica, com necessidade de atualização factual.
 
@@ -821,7 +823,7 @@ remoção ampla nem reescrita sem análise de impacto.
 2. Não há cadeia única comprovada do intake à continuidade.
 3. Inteligência de mercado não tem evidência externa uniforme.
 4. Agentes registrados não equivalem a agentes integrados.
-5. Contratos documentais cobrem apenas parte das 79 roles.
+5. Contratos documentais cobrem apenas parte das 86 roles.
 6. Funil completo não está comprovado ponta a ponta.
 7. Produção e publicação de páginas e vídeos são desiguais.
 8. CRM, leads e grupos estão fragmentados.
@@ -845,7 +847,7 @@ A Etapa 1 poderá ser congelada quando o responsável do produto confirmar que:
 - [ ] as 22 capacidades GLP foram inventariadas;
 - [ ] código, interface e documentação foram considerados;
 - [ ] role, arquivo, prompt e agente operacional foram diferenciados;
-- [ ] as 79 roles e os oito arquivos auxiliares foram censados sem duplicação;
+- [ ] as 86 roles e os oito arquivos auxiliares foram censados sem duplicação;
 - [ ] o benchmark dos 37 slots e seis departamentos foi comparado sem copiar sua
       arquitetura;
 - [ ] base de conhecimento, SOP, skill, autonomia, dashboard e orquestrador

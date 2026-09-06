@@ -6,10 +6,13 @@ import {
   Sparkles, Info, Brain, Zap, Star, Target, ChevronRight, RefreshCw, Camera,
 } from "lucide-react";
 import { VisualAnalysisCard, DirectorChatPanel } from "./DirectorPanel";
+import { StudioWorkspace } from "./StudioWorkspace";
+import type { ProductionPhase } from "./domain/projects";
+import { videoEditorClient } from "./lib/video-editor-client";
+
+import { EditorCockpit } from "./components/EditorCockpit";
 
 const queryClient = new QueryClient();
-
-const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") + "/../../api";
 
 function formatTime(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -118,11 +121,7 @@ function UploadZone({ onFilesUploaded }: { onFilesUploaded: (files: UploadedFile
     for (let i = 0; i < fileArr.length; i++) {
       const file = fileArr[i]!;
       try {
-        const fd = new FormData();
-        fd.append("video", file);
-        const res = await fetch(`${API_BASE}/video-editor/upload`, { method: "POST", body: fd });
-        if (!res.ok) throw new Error("Upload falhou");
-        const data = await res.json() as UploadedFile;
+        const data = await videoEditorClient.upload(file);
         results.push({ ...data, localUrl: URL.createObjectURL(file) });
         setUploadProgress(prev => prev.map((p, idx) => idx === i ? { ...p, done: true } : p));
       } catch {
@@ -417,6 +416,9 @@ function VideoEditor() {
   const [processing, setProcessing] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [isEditingSequence, setIsEditingSequence] = useState(false);
+
   const handleFilesUploaded = useCallback((newFiles: UploadedFile[]) => {
     setFiles(prev => {
       const merged = [...prev];
@@ -479,7 +481,7 @@ function VideoEditor() {
     setFiles(prev => prev.filter(f => f.fileId !== fileId));
     setClips(prev => prev.filter(c => c.fileId !== fileId));
     setSmartTranscriptStatus(prev => { const next = { ...prev }; delete next[fileId]; return next; });
-    try { await fetch(`${API_BASE}/video-editor/files/${fileId}`, { method: "DELETE" }); } catch {}
+    try { await videoEditorClient.deleteFile(fileId); } catch {}
   }, []);
 
   // ── Smart Edit functions ──────────────────────────────────────────────────
@@ -487,8 +489,7 @@ function VideoEditor() {
   const transcribeSingleFile = useCallback(async (fileId: string) => {
     setSmartTranscriptStatus(prev => ({ ...prev, [fileId]: "loading" }));
     try {
-      const res = await fetch(`${API_BASE}/video-editor/transcribe/${fileId}`, { method: "POST" });
-      if (!res.ok) throw new Error("Falha na transcrição");
+      await videoEditorClient.transcribeTake(fileId);
       setSmartTranscriptStatus(prev => ({ ...prev, [fileId]: "done" }));
     } catch {
       setSmartTranscriptStatus(prev => ({ ...prev, [fileId]: "error" }));
@@ -517,16 +518,7 @@ function VideoEditor() {
     setSmartError(null);
     setSmartMapping(null);
     try {
-      const res = await fetch(`${API_BASE}/video-editor/smart-edit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileIds: files.map(f => f.fileId), script: smartScript, videoType, intent: smartIntent.trim() || undefined }),
-      });
-      if (!res.ok) {
-        const err = await res.json() as { error: string };
-        throw new Error(err.error);
-      }
-      const data = await res.json() as SmartMappingResult;
+      const data = await videoEditorClient.smartEdit<SmartMappingResult>({ fileIds: files.map(f => f.fileId), script: smartScript, videoType, intent: smartIntent.trim() || undefined });
       setSmartMapping(data);
     } catch (err) {
       setSmartError(err instanceof Error ? err.message : "Erro desconhecido");
@@ -590,14 +582,7 @@ function VideoEditor() {
         reader.onload = e => r(e.target?.result as string);
         reader.readAsDataURL(audioBlob!);
       });
-      const token = localStorage.getItem("nexos_access_token");
-      const res = await fetch(`${API_BASE}/agents/transcribe`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ audioBase64, mimeType: "audio/webm" }),
-      });
-      if (!res.ok) throw new Error("Transcrição falhou");
-      const data = await res.json() as { text: string };
+      const data = await videoEditorClient.transcribeAudio({ audioBase64, mimeType: "audio/webm" });
       const text = data.text?.trim();
       if (!text) throw new Error("Sem texto retornado");
       const words = text.split(" ");
@@ -625,20 +610,11 @@ function VideoEditor() {
     setJobStatus(null);
     setJobId(null);
     try {
-      const res = await fetch(`${API_BASE}/video-editor/process`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clips: clips.map(c => ({ fileId: c.fileId, startTime: c.startTime, endTime: c.endTime, label: c.label })),
-          subtitles: subtitles.filter(s => s.text.trim()),
-          outputFormat,
-        }),
+      const { jobId: id } = await videoEditorClient.process({
+        clips: clips.map(c => ({ fileId: c.fileId, startTime: c.startTime, endTime: c.endTime, label: c.label })),
+        subtitles: subtitles.filter(s => s.text.trim()),
+        outputFormat,
       });
-      if (!res.ok) {
-        const err = await res.json() as { error: string };
-        throw new Error(err.error);
-      }
-      const { jobId: id } = await res.json() as { jobId: string };
       setJobId(id);
       setJobStatus({ status: "processing", progress: 0 });
     } catch (err) {
@@ -652,8 +628,7 @@ function VideoEditor() {
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`${API_BASE}/video-editor/jobs/${jobId}`);
-        const data = await res.json() as typeof jobStatus;
+        const data = await videoEditorClient.getJob<typeof jobStatus>(jobId);
         setJobStatus(data);
         if (data && (data.status === "done" || data.status === "failed")) {
           clearInterval(pollRef.current!);
@@ -668,6 +643,21 @@ function VideoEditor() {
 
   const allTranscribed = files.length > 0 && files.every(f => smartTranscriptStatus[f.fileId] === "done");
   const anyTranscribing = files.some(f => smartTranscriptStatus[f.fileId] === "loading");
+  const openProductionPhase = useCallback((phase: ProductionPhase) => {
+    if (phase === "timeline" || phase === "edit") {
+      if (selectedProjectId) setIsEditingSequence(true);
+      return;
+    }
+    const phaseStep: Partial<Record<ProductionPhase, Step>> = {
+      script: "smart", assets: "upload", export: "export",
+    };
+    const nextStep = phaseStep[phase];
+    if (nextStep) setStep(nextStep);
+  }, [selectedProjectId]);
+
+  if (isEditingSequence && selectedProjectId) {
+    return <EditorCockpit projectId={selectedProjectId} onBack={() => setIsEditingSequence(false)} />;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -706,6 +696,7 @@ function VideoEditor() {
       </header>
 
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+        <StudioWorkspace onPhaseChange={openProductionPhase} onProjectSelect={setSelectedProjectId} />
         {/* Navigation */}
         <nav className="flex items-center gap-1 bg-card border border-card-border rounded-xl p-1">
           {STEPS.map((s) => {
@@ -1273,12 +1264,19 @@ function VideoEditor() {
                       <CheckCircle2 className="w-5 h-5 text-chart-2" />
                       <span className="text-sm font-semibold text-foreground">Vídeo pronto!</span>
                     </div>
-                    <a href={`${API_BASE}/video-editor/files/${jobStatus.resultFileId}?download=1`}
-                      download={jobStatus.resultFileName}
+                    <button type="button"
+                      onClick={() => void videoEditorClient.downloadFile(jobStatus.resultFileId!).then((blob) => {
+                        const url = URL.createObjectURL(blob);
+                        const anchor = document.createElement("a");
+                        anchor.href = url;
+                        anchor.download = jobStatus.resultFileName ?? "nexos-video.mp4";
+                        anchor.click();
+                        URL.revokeObjectURL(url);
+                      })}
                       className="flex items-center justify-center gap-2 w-full py-3 px-6 bg-chart-2/15 border border-chart-2/30 text-chart-2 rounded-xl font-semibold text-sm hover:bg-chart-2/25 transition-colors">
                       <Download className="w-5 h-5" />
                       Baixar {jobStatus.resultFileName}
-                    </a>
+                    </button>
                     <button onClick={() => { setJobId(null); setJobStatus(null); setProcessing(false); }}
                       className="w-full py-2.5 px-4 bg-muted text-muted-foreground rounded-xl text-sm hover:bg-accent hover:text-foreground transition-colors">
                       Processar novamente

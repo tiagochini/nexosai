@@ -34,19 +34,19 @@ benchmark estrutural**. Não fornece nomes a copiar, não é prova de implementa
 e não aprova arquitetura.
 
 A explicação individual de missão, mecanismo, especialização, entrada, saída,
-consumidor, conexão, atividade e prontidão das 79 roles está em
+consumidor, conexão, atividade e prontidão das 79 roles do snapshot original está em
 `docs/ETAPA_1_REVISAO_79_AGENTES.md`.
 
 ## 2. Contagens confirmadas
 
 | Medida | Valor | Evidência |
 |---|---:|---|
-| `AgentRole` | 79 | `ai-gateway.service.ts` |
-| provider map | 79 | `AGENT_PROVIDER_MAP` no mesmo path |
+| `AgentRole` | 86 | `ai-gateway.service.ts` |
+| provider map | 86 | `AGENT_PROVIDER_MAP` no mesmo path |
 | arquivos `*.agent.ts` | 72 | diretório `modules/agents/` |
 | arquivos sem role homônima | 8 | lista na seção 4 |
 
-## 3. Censo único de roles (79)
+## 3. Censo-base de roles (79)
 
 **Legenda:** classe é a classificação predominante; integração estática é
 conservadora. Todas as roles abaixo são LLM/identidades de gateway ou camadas de
@@ -164,7 +164,7 @@ orquestração; nenhuma é denominada aqui “executor externo”.
 `artifacts/api-server/src/modules/agents/`. Não são automaticamente agentes
 independentes: podem ser helper, alias, implementação compartilhada ou lacuna
 contratual. Em particular, `item_copy` aparece no contrato histórico, mas não é
-uma das 79 `AgentRole` atuais.
+uma das 79 `AgentRole` do snapshot original.
 
 ## 5. Matriz de classes
 
@@ -271,6 +271,19 @@ do Master Plan. Este subgate apenas informa o gate da Etapa 1; não o substitui.
 
 ## 8. Contagem automática
 
-Contagem automática do censo: **79 linhas de role** (D1 10 + D2 15 + D3 20 +
-D4 13 + D5 12 + D6 9), sem duplicatas; slots: **37**. O anexo inventaria identidades e
+Contagem automática do censo-base: **79 linhas de role** (D1 10 + D2 15 + D3 20 +
+D4 13 + D5 12 + D6 9), sem duplicatas. O suplemento audiovisual adiciona **7 roles**,
+totalizando **86**; slots comparativos: **37**. O anexo inventaria identidades e
 evidências, preserva o que existe e mantém a Etapa 1 aguardando revisão e gate.
+
+## 9. Suplemento operacional audiovisual
+
+| Role | Função operacional | Mecanismo e consumidor |
+|---|---|---|
+| `art_direction` | Define linguagem visual, cenários, composição e props. | Planejamento estruturado consumido pela cadeia audiovisual e pelo editor. |
+| `wardrobe_appearance` | Define figurino, aparência e continuidade de apresentação. | Consome direção de arte; orienta takes filmados, clone e geração sintética. |
+| `performance_voice` | Dirige interpretação, voz, ritmo e presença. | Consome roteiro e direção; orienta gravação, clone consentido e montagem. |
+| `sound_design` | Planeja voz, música, ambiência e transições sonoras. | Entrega especificação ao editor; execução determinística permanece separada. |
+| `editor` | Constrói plano de montagem e decisões de timeline. | Consome as decisões anteriores; timeline e render são persistidos. |
+| `color_continuity` | Define tratamento de cor e verifica continuidade visual. | Orienta normalização e revisão; não substitui o executor de render. |
+| `av_qc` | Avalia evidências técnicas e narrativas do render. | Produz relatório e issues persistentes; ausência de evidência falha para revisão humana. |

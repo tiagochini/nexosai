@@ -1,4 +1,4 @@
-# Etapa 1 — Revisão explicativa das 79 roles
+# Etapa 1 — Revisão explicativa das 79 roles (snapshot-base)
 
 ## A) Escopo e escalas
 
@@ -309,6 +309,16 @@ Perguntas de decisão para a Etapa 2:
 5. Vídeo deve priorizar uma ponte storyboard→clips→timeline persistente, ou primeiro
    o escopo de áudio, cor, continuidade e QC?
 
-Validações executadas: censo de 79 roles sem duplicatas, soma dos cinco estados
+Validações executadas no snapshot-base: censo de 79 roles sem duplicatas, soma dos cinco estados
 igual a 79 e `git diff --check` sem erros. Essas validações não foram usadas para
 inferir atividade operacional.
+
+## Atualização posterior — núcleo audiovisual
+
+O snapshot-base permanece preservado para rastreabilidade. A implementação do
+estúdio audiovisual adicionou sete roles operacionais: `art_direction`,
+`wardrobe_appearance`, `performance_voice`, `sound_design`, `editor`,
+`color_continuity` e `av_qc`. O total atual é **86 roles únicas**, todas com entrada
+no provider map e no enum persistente. A cadeia persiste manifesto, assets, timeline,
+renders, QC, revisões e correções; geração de mídia e FFmpeg continuam como
+executores determinísticos separados dos agentes de decisão.

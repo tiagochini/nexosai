@@ -26,6 +26,7 @@ import { startPaidMediaScheduler, stopPaidMediaScheduler } from "./modules/paid-
 import { initSequenceScheduler, closeSequenceScheduler } from "./modules/launch-sequence/sequence-scheduler.worker.js";
 import { startFunnelScheduler } from "./modules/academy/academy-funnel.service.js";
 import { cleanupDisconnectedIntegrationDuplicates } from "./modules/integrations/integration-cleanup.service.js";
+import { recoverStudioRenders } from "./modules/video-editor/audiovisual-studio.service.js";
 import { db, campaignAgentsTable, campaignsTable, socialPresencePostsTable, socialPresenceConfigTable, socialPostsTable } from "@workspace/db";
 import { eq, and, lt, sql as sqlRaw, like, inArray } from "drizzle-orm";
 
@@ -288,6 +289,7 @@ Promise.all([
   // Stale recovery is deliberately complete before explicit resume. Queue state
   // remains untouched, and resume itself excludes campaigns with a fresh agent.
   await resumeGeneratingCampaigns(bootRecoveryCutoff);
+  await recoverStudioRenders(logger);
 
   // Do not begin consuming jobs until stale recovery has finished. Starting
   // workers above would let a second instance race its own boot checks.

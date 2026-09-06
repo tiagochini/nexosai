@@ -74,3 +74,6 @@
 - [Focused Validation Strategy](focused-validation-strategy.md) — prefer risk-focused tests, isolated fixtures and branch-only retests before one decisive E2E pass.
 - [Backend Hardening Invariants](backend-hardening-invariants.md) — tenant scope, atomic credits, fail-closed queue reconciliation and stale-only boot recovery are mandatory.
 - [Autonomous E2E Fixture Safety](autonomous-e2e-fixture-safety.md) — fixtures must not accidentally activate schedulers, recovery loops, AI calls or provider mutations.
+- [Audiovisual Studio Contract](audiovisual-studio-contract.md) — persistent video production is tenant-scoped, consent-gated, resumable and evidence-honest; specialists never replace media executors.
+- [Universal Campaign Action Context](universal-campaign-action-context.md) — every runAgent execution receives a bounded, role-specific, tenant-scoped snapshot of the client’s approved plan and objective.
+- [Audiovisual Council and Trailers](audiovisual-council-trailers.md) — specialist debate is compiled by the director into the sole executable prompt plan; trailers are independent exact-duration deliverables.

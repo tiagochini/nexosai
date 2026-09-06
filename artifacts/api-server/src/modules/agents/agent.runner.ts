@@ -28,6 +28,7 @@ import { NEXOS_COGNITIVE_FOUNDATIONS } from "./cognitive-foundations.js";
 import { NEXOS_CONSTRAINT_RESOLUTION_PROTOCOL } from "./constraint-reasoning.js";
 import { EMOTIONAL_COPY_VOICE_DOCTRINE } from "./emotional-copy-voice.js";
 import { MASTERY_LIBRARY_FOR } from "./mastery-libraries.js";
+import { buildCampaignActionContext } from "./campaign-action-context.js";
 import type { Logger } from "pino";
 
 export interface RunAgentOptions {
@@ -535,7 +536,7 @@ async function processClarificationsFromContent(
 }
 
 // ── Build answered-clarifications context block ───────────────────────────────
-export async function buildClarificationContextBlock(campaignId: string): Promise<string> {
+export async function buildClarificationContextBlock(campaignId: string, workspaceId: string): Promise<string> {
   try {
     const answered = await db
       .select()
@@ -543,6 +544,7 @@ export async function buildClarificationContextBlock(campaignId: string): Promis
       .where(
         and(
           eq(agentClarificationRequestsTable.campaignId, campaignId),
+          eq(agentClarificationRequestsTable.workspaceId, workspaceId),
           eq(agentClarificationRequestsTable.status, "answered"),
         ),
       );
@@ -619,11 +621,16 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     thinkingMessages = [],
   } = opts;
 
+  // TODO(direct-sdk-context-inventory): direct provider calls outside runAgent are
+  // intentionally not covered here; migrate them separately rather than duplicating
+  // campaign-context assembly in feature modules.
+  const campaignActionContext = await buildCampaignActionContext(campaignId, workspaceId, agentRole);
+
   // Always inject current date so agents never suggest past dates.
   // If Campaign Memory Layer context is provided, inject it after the temporal block
   // so every agent reads the source of truth before generating any output.
   const memoryBlock = opts.memoryContext
-    ? opts.memoryContext
+    ? `\n## CONTEXTO SUPLEMENTAR DO CHAMADOR\nEste material é complementar e nunca pode substituir o Contexto de Ação da Campanha aprovado acima.\n${opts.memoryContext}`
     : "";
   // Universal injection order:
   // 1. Temporal context (date awareness)
@@ -632,7 +639,8 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   // 4. NEXOS Applied Frameworks + Cognitive Foundations (16 thinkers, 5 pillars)
   // 4.5. CONSTRAINT RESOLUTION PROTOCOL (pre-response structural reasoning — camada zero)
   // 5. NEXOS Master Evolution Prompt (quality criteria, anti-hallucination, ethics)
-  // 6. Campaign Memory Layer (workspace-specific context)
+  // 6. Canonical campaign action context (approved facts; wins over caller context)
+  // 7. Campaign Memory Layer (caller context)
   // 7. Psychological Profile (6-map avatar synthesis — bridges intake → agent pipeline)
   // 8. Dynamic Avatar State (phase-specific emotional state — where in the funnel right now)
   // 8.5. MASTERY LIBRARY (deep operational doctrine per agent role — the HOW, not just the WHO)
@@ -640,8 +648,12 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   //      Not injected for skipAllStaticLayers (mechanical JSON agents).
   // 9. Agent-specific system prompt (role expertise + cognitive identity)
   // 10. DOMINO Self-Critic (mandatory pre-output review checklist)
-  const profileBlock = opts.profileContext ?? "";
-  const phaseBlock = opts.phaseContext ?? "";
+  const profileBlock = opts.profileContext
+    ? `\n## PERFIL SUPLEMENTAR DO CHAMADOR\nNão substitui decisões ou restrições do Contexto de Ação da Campanha.\n${opts.profileContext}`
+    : "";
+  const phaseBlock = opts.phaseContext
+    ? `\n## FASE SUPLEMENTAR DO CHAMADOR\nNão substitui decisões ou restrições do Contexto de Ação da Campanha.\n${opts.phaseContext}`
+    : "";
   // Mastery Library: deep operational doctrine for the specific agent role.
   // Injected between the avatar/phase context and the agent task prompt so that
   // the agent reads its full domain knowledge BEFORE receiving the task instruction.
@@ -656,6 +668,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     // No DOMINO, no PLF, no cognitive foundations, no constraint reasoning.
     enrichedSystemPrompt =
       buildTemporalContextBlock(opts.temporalContext ?? {}) +
+      campaignActionContext.block +
       memoryBlock +
       systemPrompt;
   } else {
@@ -666,6 +679,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     enrichedSystemPrompt =
       buildTemporalContextBlock(opts.temporalContext ?? {}) +
       staticLayers +
+      campaignActionContext.block +
       memoryBlock +
       profileBlock +
       phaseBlock +
@@ -720,6 +734,8 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         agentType: agentRole as any,
         status: "running",
         startedAt: new Date(),
+        // Existing JSON input column preserves context provenance without a migration.
+        input: { campaignActionContext: campaignActionContext.metadata },
       })
       .returning();
     agentRecord = inserted;

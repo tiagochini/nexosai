@@ -43,6 +43,7 @@ export * from "./sales-conversations";
 export * from "./integration-chat";
 export * from "./campaign-groups";
 export * from "./video-projects";
+export * from "./audiovisual-studio";
 export * from "./agent-clarifications";
 export * from "./fingerprints";
 export * from "./market-intel";

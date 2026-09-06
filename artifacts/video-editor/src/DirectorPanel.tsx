@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Camera, Sparkles, Loader2, Send, MessageSquare, AlertTriangle, CheckCircle2 } from "lucide-react";
-
-const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") + "/../../api";
+import { videoEditorClient } from "./lib/video-editor-client";
 
 interface VisualFrame {
   timestamp: number;
@@ -38,12 +37,7 @@ export function VisualAnalysisCard({ fileId, fileName }: { fileId: string; fileN
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/video-editor/visual-analysis/${fileId}`, { method: "POST" });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null) as { error?: string } | null;
-        throw new Error(body?.error ?? "Falha na análise visual.");
-      }
-      const data = await res.json() as VisualAnalysisResult;
+      const data = await videoEditorClient.visualAnalysis<VisualAnalysisResult>(fileId);
       setResult(data);
       setExpanded(true);
     } catch (err) {
@@ -134,12 +128,7 @@ export function DirectorChatPanel({ script, fileIds }: { script: string; fileIds
     setInput("");
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/video-editor/director-chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history: messages, script, fileIds }),
-      });
-      const data = await res.json() as { reply?: string; error?: string };
+      const data = await videoEditorClient.directorChat<{ reply?: string; error?: string }>({ message: text, history: messages, script, fileIds });
       setMessages(prev => [...prev, { role: "assistant", content: data.reply ?? data.error ?? "Sem resposta." }]);
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "Falha ao consultar o diretor. Tente novamente." }]);

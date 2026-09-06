@@ -114,6 +114,20 @@ export async function uploadBufferToGCS(
   return key;
 }
 
+/** Upload a local file without reading the complete file into application memory. */
+export async function uploadFileToGCS(
+  localPath: string,
+  key: string,
+  contentType = "application/octet-stream",
+): Promise<string> {
+  await gcs.bucket(bucketId()).upload(localPath, {
+    destination: key,
+    contentType,
+    resumable: true,
+  });
+  return key;
+}
+
 /** GCS object key convention for presence-post storyboard frames (internal preview). */
 export function presenceStoryboardObjectKey(workspaceId: string, postId: string, frameIndex: number): string {
   return `presence-storyboard/${workspaceId}/${postId}/frame-${frameIndex}.png`;

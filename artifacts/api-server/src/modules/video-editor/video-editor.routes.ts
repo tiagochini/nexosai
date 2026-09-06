@@ -5,12 +5,254 @@ import { v4 as uuidv4 } from "uuid";
 import fs from "fs";
 import path from "path";
 import OpenAIClient from "openai";
+import { z } from "zod/v4";
 import { logger } from "../../lib/logger.js";
 import { env } from "../../lib/env.js";
 import { getAnthropic, getOpenAI, callVisionChat, hasOpenAIIntegration } from "../ai-gateway/ai-gateway.service.js";
 import { ATLAS_CINEMATOGRAPHY_LIBRARY } from "../agents/scene-director.agent.js";
+import { requireAuth } from "../auth/auth.middleware.js";
+import {
+  advanceProduction, createCorrection, createStudioProject, createStudioRender, createStudioTrailerRender, getStudioDetail, getStudioRender, listStudioProjects,
+  getStudioAsset, registerAsset, resolveCorrection, runAutonomousPreproduction, runPlanningEnsemble,
+  submitQc, upsertTimeline,
+} from "./audiovisual-studio.service.js";
+import { createGCSObjectStream, getGCSObjectMeta, uploadFileToGCS } from "../../lib/gcs-recordings.js";
 
 const router = Router();
+
+const projectIdSchema = z.string().uuid();
+const objectStorageUriSchema = z.string().regex(/^(s3|gs|r2|azure|blob):\/\//, "uri must be an object-storage URI");
+const createStudioProjectSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  campaignId: z.string().uuid().optional(),
+  format: z.enum(["vsl", "cpl", "live_promo", "stories", "reels", "youtube", "webinar_promo", "testimonial", "product_demo"]).optional(),
+  sourceMode: z.enum(["filmed", "digital_twin", "synthetic", "hybrid"]).optional(),
+  targetDurationsSeconds: z.array(z.number().int().positive().max(4 * 60 * 60)).min(1).max(20).optional(),
+  aspectRatio: z.enum(["16:9", "9:16", "1:1"]).optional(),
+  trailerPolicy: z.object({ enabled: z.boolean(), durationsSeconds: z.array(z.union([z.literal(15), z.literal(30)])).optional(), durations: z.array(z.union([z.literal(15), z.literal(30)])).optional() }).optional(),
+});
+const jsonRecordSchema = z.record(z.string(), z.unknown());
+const timelineSchema = z.object({
+  expectedRevisionNumber: z.number().int().nonnegative().optional(),
+  tracks: z.array(z.object({
+    id: z.string().uuid().optional(),
+    trackType: z.enum(["video", "audio", "voiceover", "music", "graphics", "subtitles"]),
+    name: z.string().trim().min(1).max(200),
+    position: z.number().int().nonnegative(),
+    settings: jsonRecordSchema.optional(),
+  })).max(100),
+  items: z.array(z.object({
+    id: z.string().uuid().optional(), trackId: z.string().uuid(), assetId: z.string().uuid().optional(),
+    position: z.number().int().nonnegative(), startMs: z.number().int().nonnegative(), durationMs: z.number().int().positive(),
+    trimStartMs: z.number().int().nonnegative().optional(), trimEndMs: z.number().int().nonnegative().optional(), settings: jsonRecordSchema.optional(),
+  })).max(1000),
+});
+const assetSchema = z.object({
+  assetType: z.enum(["video", "audio", "image", "subtitle", "graphic", "font", "document"]),
+  name: z.string().trim().min(1).max(300), uri: objectStorageUriSchema, mimeType: z.string().max(200).optional(),
+  byteSize: z.number().int().nonnegative().optional(), durationMs: z.number().int().nonnegative().optional(), specification: jsonRecordSchema.optional(),
+});
+const qcSchema = z.object({ renderJobId: z.string().uuid() });
+const correctionSchema = z.object({ revisionId: z.string().uuid(), qcIssueId: z.string().uuid().optional(), instruction: z.string().trim().min(1).max(10000), specification: jsonRecordSchema.optional() });
+const resolutionSchema = z.object({ resolution: z.string().trim().min(1).max(10000) });
+const uploadAssetSchema = z.object({ fileId: z.string().uuid(), name: z.string().trim().min(1).max(300).optional() });
+
+function validProjectId(value: string, res: import("express").Response): value is string {
+  if (projectIdSchema.safeParse(value).success) return true;
+  res.status(400).json({ error: "Invalid project id", code: "VALIDATION_ERROR" });
+  return false;
+}
+function validationError(res: import("express").Response, error: z.ZodError): void {
+  res.status(400).json({ error: error.message, code: "VALIDATION_ERROR" });
+}
+
+// Persistent studio routes are deliberately individually authenticated. The
+// transient editor routes below remain available under their original contract.
+router.get("/projects", requireAuth, async (req, res): Promise<void> => {
+  res.json({ projects: await listStudioProjects(req.auth.workspaceId) });
+});
+router.post("/projects", requireAuth, async (req, res): Promise<void> => {
+  const parsed = createStudioProjectSchema.safeParse(req.body);
+  if (!parsed.success) return validationError(res, parsed.error);
+  const { trailerPolicy, ...input } = parsed.data;
+  res.status(201).json(await createStudioProject(req.auth.workspaceId, { ...input, trailerPolicy: trailerPolicy ? { enabled: trailerPolicy.enabled, durationsSeconds: trailerPolicy.durationsSeconds ?? trailerPolicy.durations ?? [] } : undefined }));
+});
+router.get("/projects/:projectId", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  if (!validProjectId(projectId, res)) return;
+  res.json(await getStudioDetail(req.auth.workspaceId, projectId));
+});
+router.get("/projects/:projectId/manifest", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  if (!validProjectId(projectId, res)) return;
+  const detail = await getStudioDetail(req.auth.workspaceId, projectId);
+  res.json({ manifest: detail.manifest });
+});
+router.post("/projects/:projectId/planning-ensemble", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  if (!validProjectId(projectId, res)) return;
+  res.json({ manifest: await runPlanningEnsemble(req.auth.workspaceId, projectId, req.log ?? logger) });
+});
+router.post("/projects/:projectId/autonomous-preproduction", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  if (!validProjectId(projectId, res)) return;
+  res.json(await runAutonomousPreproduction(req.auth.workspaceId, projectId, req.log ?? logger));
+});
+router.post("/projects/:projectId/advance-production", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  if (!validProjectId(projectId, res)) return;
+  res.json(await advanceProduction(req.auth.workspaceId, projectId, req.log ?? logger));
+});
+router.post("/projects/:projectId/render", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  if (!validProjectId(projectId, res)) return;
+  res.status(202).json({ render: await createStudioRender(req.auth.workspaceId, projectId, req.log ?? logger) });
+});
+router.post("/projects/:projectId/trailers/:duration/render", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  const duration = Number(req.params.duration);
+  if (!validProjectId(projectId, res) || (duration !== 15 && duration !== 30)) { if (!res.headersSent) res.status(400).json({ error: "Invalid trailer duration", code: "VALIDATION_ERROR" }); return; }
+  res.status(202).json({ render: await createStudioTrailerRender(req.auth.workspaceId, projectId, duration, req.log ?? logger) });
+});
+router.get("/projects/:projectId/render/:renderJobId", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  const renderJobId = req.params.renderJobId as string;
+  if (!validProjectId(projectId, res) || !projectIdSchema.safeParse(renderJobId).success) {
+    if (!res.headersSent) res.status(400).json({ error: "Invalid render job id", code: "VALIDATION_ERROR" });
+    return;
+  }
+  res.json({ render: await getStudioRender(req.auth.workspaceId, projectId, renderJobId) });
+});
+router.put("/projects/:projectId/timeline", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  if (!validProjectId(projectId, res)) return;
+  const parsed = timelineSchema.safeParse(req.body);
+  if (!parsed.success) return validationError(res, parsed.error);
+  res.json(await upsertTimeline(req.auth.workspaceId, projectId, parsed.data));
+});
+router.post("/projects/:projectId/assets", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  if (!validProjectId(projectId, res)) return;
+  const parsed = assetSchema.safeParse(req.body);
+  if (!parsed.success) return validationError(res, parsed.error);
+  res.status(201).json({ asset: await registerAsset(req.auth.workspaceId, projectId, parsed.data) });
+});
+router.post("/projects/:projectId/assets/from-upload", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  if (!validProjectId(projectId, res)) return;
+  const parsed = uploadAssetSchema.safeParse(req.body);
+  if (!parsed.success) return validationError(res, parsed.error);
+  // The legacy upload registry remains private to this module. Lookup always
+  // binds the opaque ID to the authenticated tenant before its local path is read.
+  const uploaded = uploadedFiles.get(parsed.data.fileId);
+  if (!uploaded || uploaded.workspaceId !== req.auth.workspaceId) {
+    res.status(404).json({ error: "Arquivo não encontrado.", code: "NOT_FOUND" });
+    return;
+  }
+  if (!fs.existsSync(uploaded.filePath)) {
+    res.status(409).json({ error: "Arquivo temporário não está mais disponível.", code: "UPLOAD_EXPIRED" });
+    return;
+  }
+  const mimeType = uploaded.mimeType;
+  const assetType = mimeType.startsWith("audio/") ? "audio" : "video";
+  const extension = path.extname(uploaded.originalName).replace(/[^a-zA-Z0-9.]/g, "") || (assetType === "video" ? ".mp4" : ".audio");
+  const key = `audiovisual-studio/${req.auth.workspaceId}/${projectId}/assets/${uuidv4()}${extension}`;
+  try {
+    const uri = await uploadFileToGCS(uploaded.filePath, key, mimeType);
+    const asset = await registerAsset(req.auth.workspaceId, projectId, {
+      assetType, name: parsed.data.name ?? uploaded.originalName, uri, mimeType,
+      byteSize: uploaded.size, durationMs: Math.round(uploaded.duration * 1000),
+      specification: { importedFromLegacyUploadId: parsed.data.fileId },
+    });
+    res.status(201).json({ asset });
+  } catch (error) {
+    logger.error({ error, projectId, fileId: parsed.data.fileId }, "Failed to persist uploaded editor asset");
+    res.status(500).json({ error: "Falha ao persistir o asset enviado.", code: "ASSET_PERSIST_FAILED" });
+  }
+});
+
+async function streamStudioObject(req: import("express").Request, res: import("express").Response, objectKey: string, declaredMime?: string | null): Promise<void> {
+  const { size, contentType } = await getGCSObjectMeta(objectKey);
+  const mimeType = declaredMime ?? contentType;
+  const range = req.headers.range;
+  res.setHeader("Accept-Ranges", "bytes");
+  res.setHeader("Content-Type", mimeType);
+  if (!range) {
+    res.status(200).setHeader("Content-Length", size);
+    createGCSObjectStream(objectKey).on("error", () => res.destroy()).pipe(res);
+    return;
+  }
+  const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+  if (!match) { res.status(416).setHeader("Content-Range", `bytes */${size}`).end(); return; }
+  const start = match[1] ? Number(match[1]) : Math.max(0, size - Number(match[2]));
+  const end = match[2] ? Math.min(Number(match[2]), size - 1) : size - 1;
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start > end || start >= size) { res.status(416).setHeader("Content-Range", `bytes */${size}`).end(); return; }
+  res.status(206).set({ "Content-Range": `bytes ${start}-${end}/${size}`, "Content-Length": String(end - start + 1) });
+  createGCSObjectStream(objectKey, { start, end }).on("error", () => res.destroy()).pipe(res);
+}
+router.get("/projects/:projectId/assets/:assetId/media", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  const assetId = req.params.assetId as string;
+  if (!validProjectId(projectId, res) || !projectIdSchema.safeParse(assetId).success) { if (!res.headersSent) res.status(400).json({ error: "Invalid asset id", code: "VALIDATION_ERROR" }); return; }
+  const asset = await getStudioAsset(req.auth.workspaceId, projectId, assetId);
+  if (!asset.uri.startsWith("audiovisual-studio/")) { res.status(409).json({ error: "Asset is not GCS-backed", code: "ASSET_MEDIA_UNAVAILABLE" }); return; }
+  await streamStudioObject(req, res, asset.uri, asset.mimeType);
+});
+router.get("/projects/:projectId/render/:renderJobId/media", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  const renderJobId = req.params.renderJobId as string;
+  if (!validProjectId(projectId, res) || !projectIdSchema.safeParse(renderJobId).success) { if (!res.headersSent) res.status(400).json({ error: "Invalid render job id", code: "VALIDATION_ERROR" }); return; }
+  const render = await getStudioRender(req.auth.workspaceId, projectId, renderJobId);
+  if (render.status !== "succeeded" || !render.outputUri?.startsWith("audiovisual-studio/")) { res.status(409).json({ error: "Render media is unavailable", code: "RENDER_MEDIA_UNAVAILABLE" }); return; }
+  await streamStudioObject(req, res, render.outputUri, render.outputMimeType);
+});
+router.get("/projects/:projectId/trailers/:duration/:renderJobId", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string; const renderJobId = req.params.renderJobId as string;
+  if (!validProjectId(projectId, res) || !projectIdSchema.safeParse(renderJobId).success) { if (!res.headersSent) res.status(400).json({ error: "Invalid render job id", code: "VALIDATION_ERROR" }); return; }
+  const render = await getStudioRender(req.auth.workspaceId, projectId, renderJobId);
+  if ((render.specification as Record<string, unknown>).deliverableType !== "trailer" || (render.specification as Record<string, unknown>).durationSeconds !== Number(req.params.duration)) { res.status(404).json({ error: "Trailer render not found", code: "NOT_FOUND" }); return; }
+  res.json({ render });
+});
+router.get("/projects/:projectId/trailers/:duration/:renderJobId/media", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string; const renderJobId = req.params.renderJobId as string;
+  if (!validProjectId(projectId, res) || !projectIdSchema.safeParse(renderJobId).success) { if (!res.headersSent) res.status(400).json({ error: "Invalid render job id", code: "VALIDATION_ERROR" }); return; }
+  const render = await getStudioRender(req.auth.workspaceId, projectId, renderJobId);
+  if ((render.specification as Record<string, unknown>).deliverableType !== "trailer" || render.status !== "succeeded" || !render.outputUri?.startsWith("audiovisual-studio/")) { res.status(409).json({ error: "Trailer media is unavailable", code: "RENDER_MEDIA_UNAVAILABLE" }); return; }
+  await streamStudioObject(req, res, render.outputUri, render.outputMimeType);
+});
+router.get("/capabilities", requireAuth, (_req, res): void => {
+  res.json({ digitalTwin: { backend: "HeyGen", nativeCloneEngineAvailable: false }, clone: { syntheticPrompt: true, avatar: true, digitalTwin: true, cloneCreation: false, consentAuthority: "HeyGen", limits: ["Native clone creation requires a configured native adapter"], backingEngine: "HeyGen", managedBy: "NexOS" } });
+});
+router.post("/projects/:projectId/qc", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  if (!validProjectId(projectId, res)) return;
+  const parsed = qcSchema.safeParse(req.body);
+  if (!parsed.success) return validationError(res, parsed.error);
+  res.status(201).json({ report: await submitQc(req.auth.workspaceId, projectId, parsed.data.renderJobId, req.log ?? logger) });
+});
+router.post("/projects/:projectId/corrections", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  if (!validProjectId(projectId, res)) return;
+  const parsed = correctionSchema.safeParse(req.body);
+  if (!parsed.success) return validationError(res, parsed.error);
+  res.status(201).json({ correction: await createCorrection(req.auth.workspaceId, projectId, parsed.data) });
+});
+router.post("/projects/:projectId/corrections/:correctionId/resolve", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  const correctionId = req.params.correctionId as string;
+  if (!validProjectId(projectId, res) || !projectIdSchema.safeParse(correctionId).success) {
+    if (!res.headersSent) res.status(400).json({ error: "Invalid correction id", code: "VALIDATION_ERROR" });
+    return;
+  }
+  const parsed = resolutionSchema.safeParse(req.body);
+  if (!parsed.success) return validationError(res, parsed.error);
+  res.json({ correction: await resolveCorrection(req.auth.workspaceId, projectId, correctionId, parsed.data.resolution) });
+});
+
+// Every legacy/transient editor endpoint below is tenant-authenticated too.
+// Keeping this as a router-level barrier prevents newly added transient routes
+// from accidentally becoming public.
+router.use(requireAuth);
 
 const UPLOAD_DIR = "/tmp/nexos-video-editor/uploads";
 const OUTPUT_DIR = "/tmp/nexos-video-editor/outputs";
@@ -24,6 +266,7 @@ for (const dir of [UPLOAD_DIR, OUTPUT_DIR]) {
 }
 
 interface JobStatus {
+  workspaceId: string;
   status: "processing" | "done" | "failed";
   progress: number;
   resultFileId?: string;
@@ -43,11 +286,9 @@ interface VisualAnalysisResult {
 }
 
 const jobs = new Map<string, JobStatus>();
-const uploadedFiles = new Map<string, { filePath: string; originalName: string; duration: number; size: number }>();
+const uploadedFiles = new Map<string, { workspaceId: string; filePath: string; originalName: string; mimeType: string; duration: number; size: number }>();
 const transcriptCache = new Map<string, TranscriptResult>();
 const visualAnalysisCache = new Map<string, VisualAnalysisResult>();
-// Video-editor is a standalone tool (no workspace auth) — used only to tag AI cost logs.
-const VIDEO_EDITOR_LOG_WORKSPACE_ID = "video-editor-standalone";
 
 // Cleanup jobs and transcripts older than 2 hours
 setInterval(() => {
@@ -105,12 +346,11 @@ function extractAudioMp3(inputPath: string, outputPath: string): Promise<void> {
   });
 }
 
-async function transcribeFile(fileId: string): Promise<TranscriptResult> {
+async function transcribeFile(fileId: string, workspaceId: string): Promise<TranscriptResult> {
+  const fileInfo = uploadedFiles.get(fileId);
+  if (!fileInfo || fileInfo.workspaceId !== workspaceId) throw new Error(`Arquivo não encontrado: ${fileId}`);
   const cached = transcriptCache.get(fileId);
   if (cached) return cached;
-
-  const fileInfo = uploadedFiles.get(fileId);
-  if (!fileInfo) throw new Error(`Arquivo não encontrado: ${fileId}`);
 
   const audioPath = path.join(UPLOAD_DIR, `audio_${fileId}.mp3`);
   await extractAudioMp3(fileInfo.filePath, audioPath);
@@ -192,7 +432,7 @@ function frameToDataUrl(framePath: string): string {
 router.post("/visual-analysis/:fileId", async (req, res): Promise<void> => {
   const { fileId } = req.params;
   const fileInfo = uploadedFiles.get(fileId);
-  if (!fileInfo) {
+  if (!fileInfo || fileInfo.workspaceId !== req.auth.workspaceId) {
     res.status(404).json({ error: "Arquivo não encontrado." });
     return;
   }
@@ -232,7 +472,7 @@ Retorne SOMENTE JSON válido, sem markdown:
       systemPrompt,
       [{ role: "user", content: userMessage }],
       dataUrls,
-      VIDEO_EDITOR_LOG_WORKSPACE_ID,
+      req.auth.workspaceId,
       logger,
     );
 
@@ -292,12 +532,16 @@ router.post("/director-chat", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Mensagem é obrigatória." });
     return;
   }
+  if ((fileIds ?? []).some((id) => uploadedFiles.get(id)?.workspaceId !== req.auth.workspaceId)) {
+    res.status(404).json({ error: "Arquivo não encontrado." });
+    return;
+  }
 
   const takesContext = (fileIds ?? [])
     .map(id => {
       const info = uploadedFiles.get(id);
+      if (!info || info.workspaceId !== req.auth.workspaceId) return null;
       const analysis = visualAnalysisCache.get(id);
-      if (!info) return null;
       return `- ${info.originalName} (${info.duration}s)${analysis ? ` — análise visual: score ${analysis.overallScore}/100, "${analysis.summary}"` : " — ainda sem análise visual"}`;
     })
     .filter(Boolean)
@@ -406,8 +650,10 @@ router.post("/upload", upload.single("video"), async (req, res): Promise<void> =
     }
     const fileId = uuidv4();
     uploadedFiles.set(fileId, {
+      workspaceId: req.auth.workspaceId,
       filePath: req.file.path,
       originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
       duration: info.duration,
       size: req.file.size,
     });
@@ -430,13 +676,13 @@ router.post("/upload", upload.single("video"), async (req, res): Promise<void> =
 router.post("/transcribe/:fileId", async (req, res): Promise<void> => {
   const { fileId } = req.params;
   const fileInfo = uploadedFiles.get(fileId);
-  if (!fileInfo) {
+  if (!fileInfo || fileInfo.workspaceId !== req.auth.workspaceId) {
     res.status(404).json({ error: "Arquivo não encontrado." });
     return;
   }
 
   try {
-    const result = await transcribeFile(fileId);
+    const result = await transcribeFile(fileId, req.auth.workspaceId);
     res.json({ fileId, originalName: fileInfo.originalName, ...result });
   } catch (err) {
     logger.error({ err, fileId }, "Transcription failed");
@@ -469,9 +715,9 @@ router.post("/smart-edit", async (req, res): Promise<void> => {
 
   for (const fileId of fileIds) {
     const fileInfo = uploadedFiles.get(fileId);
-    if (!fileInfo) continue;
+    if (!fileInfo || fileInfo.workspaceId !== req.auth.workspaceId) continue;
     try {
-      const result = await transcribeFile(fileId);
+      const result = await transcribeFile(fileId, req.auth.workspaceId);
       transcripts.push({
         fileId,
         fileName: fileInfo.originalName,
@@ -574,7 +820,10 @@ Retorne SOMENTE JSON válido, sem markdown nem explicação adicional:
     // Validate and clamp timestamps
     for (const clip of result.clips) {
       const info = uploadedFiles.get(clip.fileId);
-      const maxDuration = info?.duration ?? 99999;
+      if (!info || info.workspaceId !== req.auth.workspaceId) {
+        throw new Error("A IA retornou referência a um arquivo indisponível.");
+      }
+      const maxDuration = info.duration;
       clip.startTime = Math.max(0, Number(clip.startTime) || 0);
       clip.endTime = Math.min(maxDuration, Number(clip.endTime) || 0);
       if (clip.endTime <= clip.startTime) clip.endTime = clip.startTime + 1;
@@ -605,7 +854,8 @@ router.post("/process", async (req, res): Promise<void> => {
   }
 
   for (const clip of clips) {
-    if (!uploadedFiles.has(clip.fileId)) {
+    const file = uploadedFiles.get(clip.fileId);
+    if (!file || file.workspaceId !== req.auth.workspaceId) {
       res.status(400).json({ error: `Arquivo não encontrado: ${clip.fileId}` });
       return;
     }
@@ -616,13 +866,14 @@ router.post("/process", async (req, res): Promise<void> => {
   }
 
   const jobId = uuidv4();
-  jobs.set(jobId, { status: "processing", progress: 0, createdAt: new Date() });
+  jobs.set(jobId, { workspaceId: req.auth.workspaceId, status: "processing", progress: 0, createdAt: new Date() });
   res.status(202).json({ jobId });
 
-  setImmediate(() => void processJob(jobId, clips, subtitles as SubtitleSpec[], outputFormat));
+  setImmediate(() => void processJob(req.auth.workspaceId, jobId, clips, subtitles as SubtitleSpec[], outputFormat));
 });
 
 async function processJob(
+  workspaceId: string,
   jobId: string,
   clips: ClipSpec[],
   subtitles: SubtitleSpec[],
@@ -630,11 +881,13 @@ async function processJob(
 ): Promise<void> {
   const tmpClips: string[] = [];
   const job = jobs.get(jobId)!;
+  if (!job || job.workspaceId !== workspaceId) return;
 
   try {
     for (let i = 0; i < clips.length; i++) {
       const clip = clips[i]!;
       const fileInfo = uploadedFiles.get(clip.fileId)!;
+      if (!fileInfo || fileInfo.workspaceId !== workspaceId) throw new Error(`Arquivo não encontrado: ${clip.fileId}`);
       const clipPath = path.join(UPLOAD_DIR, `clip_${jobId}_${i}.mp4`);
       tmpClips.push(clipPath);
 
@@ -712,8 +965,10 @@ async function processJob(
     }
 
     uploadedFiles.set(resultFileId, {
+      workspaceId,
       filePath: outputPath,
       originalName: `nexos_video_final${outputExt}`,
+      mimeType: "video/mp4",
       duration: 0,
       size: fs.statSync(outputPath).size,
     });
@@ -741,7 +996,7 @@ async function processJob(
 
 router.get("/jobs/:jobId", (req, res): void => {
   const job = jobs.get(req.params.jobId);
-  if (!job) {
+  if (!job || job.workspaceId !== req.auth.workspaceId) {
     res.status(404).json({ error: "Job não encontrado." });
     return;
   }
@@ -758,7 +1013,7 @@ router.get("/jobs/:jobId", (req, res): void => {
 
 router.get("/files/:fileId", (req, res): void => {
   const file = uploadedFiles.get(req.params.fileId);
-  if (!file) {
+  if (!file || file.workspaceId !== req.auth.workspaceId) {
     res.status(404).json({ error: "Arquivo não encontrado." });
     return;
   }
@@ -790,10 +1045,11 @@ router.get("/files/:fileId", (req, res): void => {
 
 router.delete("/files/:fileId", (req, res): void => {
   const file = uploadedFiles.get(req.params.fileId);
-  if (file) {
+  if (file?.workspaceId === req.auth.workspaceId) {
     try { fs.unlinkSync(file.filePath); } catch {}
     uploadedFiles.delete(req.params.fileId);
     transcriptCache.delete(req.params.fileId);
+    visualAnalysisCache.delete(req.params.fileId);
   }
   res.json({ ok: true });
 });

@@ -33,7 +33,38 @@ const log = logger.child({ module: "video-production" });
 interface WorkspacePersona {
   voiceCloneId?: string;
   heygenAvatarId?: string;
+  digitalTwinId?: string;
   avatarType?: "talking_photo" | "stock";
+}
+
+/** HeyGen is the consent authority. Never accept a browser-provided timestamp. */
+async function verifyDigitalTwinConsent(workspaceId: string, project: VideoProject, scenes: VideoScene[], pendingAction: "preview" | "final"): Promise<boolean> {
+  const persona = await getWorkspacePersona(workspaceId);
+  if (!scenes.some((scene) => scene.hasAvatar) || getAvailableAvatarProvider() !== "heygen" || persona.avatarType === "stock") return true;
+  if (!persona.digitalTwinId || !env.HEYGEN_API_KEY) {
+    await db.update(videoProjectsTable).set({ status: "awaiting_clone", pendingAction, updatedAt: new Date() })
+      .where(and(eq(videoProjectsTable.id, project.id), eq(videoProjectsTable.workspaceId, workspaceId)));
+    return false;
+  }
+  try {
+    const response = await fetch(`https://api.heygen.com/v3/avatars/${encodeURIComponent(persona.digitalTwinId)}`, { headers: { "X-Api-Key": env.HEYGEN_API_KEY } });
+    if (!response.ok) throw new Error(`HeyGen consent lookup returned ${response.status}`);
+    const body = await response.json() as { data?: { consent_status?: string } };
+    if (body.data?.consent_status !== "approved") {
+      await db.update(videoProjectsTable).set({ status: "awaiting_clone", pendingAction, updatedAt: new Date() })
+        .where(and(eq(videoProjectsTable.id, project.id), eq(videoProjectsTable.workspaceId, workspaceId)));
+      return false;
+    }
+    const config = project.config as VideoConfig;
+    await db.update(videoProjectsTable).set({ config: { ...config, consentConfirmedAt: new Date().toISOString() }, updatedAt: new Date() })
+      .where(and(eq(videoProjectsTable.id, project.id), eq(videoProjectsTable.workspaceId, workspaceId)));
+    return true;
+  } catch (error) {
+    log.warn({ workspaceId, projectId: project.id, error }, "Digital twin consent could not be verified");
+    await db.update(videoProjectsTable).set({ status: "awaiting_clone", pendingAction, updatedAt: new Date() })
+      .where(and(eq(videoProjectsTable.id, project.id), eq(videoProjectsTable.workspaceId, workspaceId)));
+    return false;
+  }
 }
 
 async function getWorkspacePersona(workspaceId: string): Promise<WorkspacePersona> {
@@ -102,7 +133,7 @@ export async function createVideoProject(
     }
   }
 
-  const config: VideoConfig = {
+  const config = {
     hasUserFace: input.config.hasUserFace ?? false,
     voiceStyle: input.config.voiceStyle ?? "narrator",
     aspectRatio: input.config.aspectRatio ?? "16:9",
@@ -110,8 +141,12 @@ export async function createVideoProject(
     styleKeywords: input.config.styleKeywords,
     rhythm: input.config.rhythm ?? "medium",
     tone: input.config.tone ?? "inspirational",
+    sourceMode: input.config.sourceMode ?? "hybrid",
+    targetDurationsSeconds: input.config.targetDurationsSeconds ?? [10, 15, 30, 60],
+    trailerPolicy: (input.config as VideoConfig & { trailerPolicy?: { enabled: boolean; durationsSeconds: Array<15 | 30> } }).trailerPolicy ?? { enabled: false, durationsSeconds: [] },
+    cloneSourceAssetIds: input.config.cloneSourceAssetIds,
     totalCreditsUsed: 0,
-  };
+  } as VideoConfig & { trailerPolicy?: { enabled: boolean; durationsSeconds: Array<15 | 30> } };
 
   const [project] = await db
     .insert(videoProjectsTable)
@@ -181,7 +216,7 @@ export async function generateScript(
           revenueTarget: campaignsTable.revenueTarget,
         })
         .from(campaignsTable)
-        .where(eq(campaignsTable.id, project.campaignId))
+        .where(and(eq(campaignsTable.id, project.campaignId), eq(campaignsTable.workspaceId, workspaceId)))
         .limit(1);
 
       if (campaign) {
@@ -492,7 +527,7 @@ export async function generateStoryboard(
           track: campaignsTable.track,
         })
         .from(campaignsTable)
-        .where(eq(campaignsTable.id, project.campaignId))
+        .where(and(eq(campaignsTable.id, project.campaignId), eq(campaignsTable.workspaceId, workspaceId)))
         .limit(1);
 
       if (campaign) {
@@ -625,17 +660,18 @@ export async function generatePreviewClips(
       const [paused] = await db
         .update(videoProjectsTable)
         .set({ status: "awaiting_clone", pendingAction: "preview", updatedAt: new Date() })
-        .where(eq(videoProjectsTable.id, projectId))
+        .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)))
         .returning();
       reqLog.info({ projectId, workspaceId }, "Video project paused awaiting avatar/voice clone");
       return paused!;
     }
   }
+  if (!await verifyDigitalTwinConsent(workspaceId, project, scenes, "preview")) return getProject(workspaceId, projectId);
 
   await db
     .update(videoProjectsTable)
     .set({ status: "preview_generating", updatedAt: new Date() })
-    .where(eq(videoProjectsTable.id, projectId));
+    .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)));
 
   const persona = await getWorkspacePersona(workspaceId);
   const creditCostPerScene = config.hasUserFace ? 80 : 50;
@@ -661,7 +697,9 @@ export async function generatePreviewClips(
             durationSeconds: scene.durationSeconds,
             aspectRatio: config.aspectRatio ?? "16:9",
             resolution: "720p",
-            negativePrompt: "text, subtitles, watermark, blurry, pixelated, distorted faces, bad quality",
+            // Council-compiled prompts are executable contracts; do not append
+            // provider defaults that would silently change the approved plan.
+            negativePrompt: (scene as VideoScene & { negativePrompt?: string }).negativePrompt,
           });
         } else {
           return {
@@ -679,6 +717,9 @@ export async function generatePreviewClips(
           };
         }
 
+        if (result.status === "failed" || result.status === "avatar_still_processing" || result.status === "avatar_consent_required") {
+          return { ...scene, clipStatus: "failed" as const, notes: result.error ?? result.setupInstructions ?? `Generation ${result.status}` };
+        }
         return {
           ...scene,
           clipStatus: result.status === "ready" ? "ready" as const : "generating" as const,
@@ -693,7 +734,14 @@ export async function generatePreviewClips(
   );
 
   const allFailed = updatedScenes.every((s) => s.clipStatus === "failed");
-  const newStatus = allFailed ? ("storyboard_approved" as const) : ("preview_ready" as const);
+  // A provider can accept a job without having produced a playable clip.  Do
+  // not expose that as a reviewable preview; pollClipJobs will promote it.
+  const allReady = updatedScenes.every((s) => s.clipStatus === "ready");
+  const newStatus = allFailed
+    ? ("storyboard_approved" as const)
+    : allReady
+      ? ("preview_ready" as const)
+      : ("preview_generating" as const);
 
   const [updated] = await db
     .update(videoProjectsTable)
@@ -704,7 +752,7 @@ export async function generatePreviewClips(
       errorMessage: allFailed ? "Todos os clipes falharam — verifique as configurações do provedor de vídeo" : null,
       updatedAt: new Date(),
     })
-    .where(eq(videoProjectsTable.id, projectId))
+    .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)))
     .returning();
 
   return updated!;
@@ -720,6 +768,9 @@ export async function approvePreview(
   const project = await getProject(workspaceId, projectId);
   if (project.status !== "preview_ready") {
     throw new AppError(409, "Só é possível aprovar preview com status preview_ready", "INVALID_STATUS");
+  }
+  if (!(project.storyboard as VideoScene[]).every((scene) => scene.clipStatus === "ready")) {
+    throw new AppError(409, "Todos os clipes de preview devem estar prontos antes da aprovação", "PREVIEW_NOT_READY");
   }
 
   let scenes = project.storyboard as VideoScene[];
@@ -737,7 +788,7 @@ export async function approvePreview(
       storyboard: scenes,
       updatedAt: new Date(),
     })
-    .where(eq(videoProjectsTable.id, projectId))
+    .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)))
     .returning();
 
   return updated!;
@@ -764,17 +815,18 @@ export async function generateFinalClips(
       const [paused] = await db
         .update(videoProjectsTable)
         .set({ status: "awaiting_clone", pendingAction: "final", updatedAt: new Date() })
-        .where(eq(videoProjectsTable.id, projectId))
+        .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)))
         .returning();
       reqLog.info({ projectId, workspaceId }, "Video project paused awaiting avatar/voice clone");
       return paused!;
     }
   }
+  if (!await verifyDigitalTwinConsent(workspaceId, project, scenes, "final")) return getProject(workspaceId, projectId);
 
   await db
     .update(videoProjectsTable)
     .set({ status: "final_generating", updatedAt: new Date() })
-    .where(eq(videoProjectsTable.id, projectId));
+    .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)));
 
   const persona = await getWorkspacePersona(workspaceId);
   const creditCostPerScene = config.hasUserFace ? 80 : 150;
@@ -799,8 +851,11 @@ export async function generateFinalClips(
             durationSeconds: scene.durationSeconds,
             aspectRatio: config.aspectRatio ?? "16:9",
             resolution: "1080p",
-            negativePrompt: "text, subtitles, watermark, blurry, low quality, grain",
+            negativePrompt: (scene as VideoScene & { negativePrompt?: string }).negativePrompt,
           });
+        }
+        if (result.status === "failed" || result.status === "provider_not_configured" || result.status === "avatar_still_processing" || result.status === "avatar_consent_required") {
+          return { ...scene, clipStatus: "failed" as const, notes: result.error ?? result.setupInstructions ?? `Generation ${result.status}` };
         }
         return {
           ...scene,
@@ -814,7 +869,9 @@ export async function generateFinalClips(
     }),
   );
 
-  const allReady = updatedScenes.every((s) => s.clipStatus === "ready" || s.clipStatus === "generating");
+  // "generating" means the provider has only accepted the job, not that it is
+  // complete.  This used to mark projects completed before HD clips existed.
+  const allReady = updatedScenes.every((s) => s.clipStatus === "ready");
 
   const [updated] = await db
     .update(videoProjectsTable)
@@ -825,7 +882,7 @@ export async function generateFinalClips(
       completedAt: allReady ? new Date() : null,
       updatedAt: new Date(),
     })
-    .where(eq(videoProjectsTable.id, projectId))
+    .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)))
     .returning();
 
   return updated!;
@@ -876,7 +933,7 @@ export async function pollClipJobs(workspaceId: string, projectId: string): Prom
       completedAt: newStatus === "completed" ? new Date() : project.completedAt,
       updatedAt: new Date(),
     })
-    .where(eq(videoProjectsTable.id, projectId))
+    .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)))
     .returning();
 
   return updated!;

@@ -135,6 +135,13 @@ const AGENT_TASK_MAP: Partial<Record<AgentRole, LLMTaskType>> = {
   video:                    "long_context",
   creator_growth:           "long_context",
   scene_director:           "long_context",
+  art_direction:            "structured_json",
+  wardrobe_appearance:      "structured_json",
+  performance_voice:        "structured_json",
+  sound_design:             "structured_json",
+  editor:                   "structured_json",
+  color_continuity:         "validation",
+  av_qc:                    "validation",
 };
 
 export function getTaskType(role: AgentRole): LLMTaskType {

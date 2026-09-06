@@ -7,6 +7,7 @@ import {
   timestamp,
   pgEnum,
   integer,
+  unique,
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 import { workspacesTable } from "./workspaces";
@@ -62,6 +63,8 @@ export const SceneSchema = z.object({
   mood: z.string(),
   hasAvatar: z.boolean().default(false),
   videoPrompt: z.string(),
+  negativePrompt: z.string().optional(),
+  sourceType: z.enum(["filmed", "digital_twin", "synthetic", "hybrid"]).optional(),
   clipUrl: z.string().optional(),
   clipUrlHd: z.string().optional(),
   clipStatus: z.enum(["pending", "generating", "ready", "failed"]).default("pending"),
@@ -85,6 +88,14 @@ export const VideoConfigSchema = z.object({
   voiceId: z.string().optional(),
   avatarId: z.string().optional(),
   providerUsed: z.string().optional(),
+  sourceMode: z.enum(["filmed", "digital_twin", "synthetic", "hybrid"]).default("hybrid"),
+  targetDurationsSeconds: z.array(z.number().int().positive().max(4 * 60 * 60)).default([10, 15, 30, 60]),
+  trailerPolicy: z.object({
+    enabled: z.boolean().default(false),
+    durationsSeconds: z.array(z.union([z.literal(15), z.literal(30)])).default([]),
+  }).default({ enabled: false, durationsSeconds: [] }),
+  cloneSourceAssetIds: z.array(z.string()).optional(),
+  consentConfirmedAt: z.string().optional(),
   totalCreditsUsed: z.number().default(0),
 });
 
@@ -111,7 +122,11 @@ export const videoProjectsTable = pgTable("video_projects", {
   completedAt: timestamp("completed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  // Allows dependent studio records to enforce that a project belongs to
+  // their workspace with a composite foreign key.
+  unique("video_projects_workspace_id_id_unique").on(table.workspaceId, table.id),
+]);
 
 export type VideoProject = typeof videoProjectsTable.$inferSelect;
 export type InsertVideoProject = typeof videoProjectsTable.$inferInsert;

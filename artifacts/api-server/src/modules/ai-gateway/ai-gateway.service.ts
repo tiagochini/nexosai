@@ -81,6 +81,13 @@ export type AgentRole =
   | "product_validator"
   // ── Vídeo Production ─────────────────────────────────────────────────────
   | "scene_director"
+  | "art_direction"
+  | "wardrobe_appearance"
+  | "performance_voice"
+  | "sound_design"
+  | "editor"
+  | "color_continuity"
+  | "av_qc"
   // ── Suporte / Integrações ────────────────────────────────────────────────
   | "integrations_specialist"
   // ── Presença Social Always-On ────────────────────────────────────────────
@@ -204,6 +211,13 @@ const AGENT_PROVIDER_MAP: Record<
   semente_launch:     { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
   // ── Vídeo Production ─────────────────────────────────────────────────────
   scene_director:     { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
+  art_direction:      { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  wardrobe_appearance:{ provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  performance_voice:  { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  sound_design:       { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
+  editor:             { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
+  color_continuity:   { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
+  av_qc:              { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
   product_validator:  { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
   // ── Suporte / Integrações ──────────────────────────────────────────────────
   integrations_specialist: { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
