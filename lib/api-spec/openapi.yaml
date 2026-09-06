@@ -15,6 +15,7 @@ tags:
   - name: launch-sequences
   - name: sequence-items
   - name: credits
+  - name: autonomy
 
 paths:
   /healthz:
@@ -218,6 +219,92 @@ paths:
                     type: string
                   status:
                     type: string
+        "428":
+          description: Required product autonomy contract acceptances are missing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractAcceptanceRequiredError"
+
+  # ─── Product autonomy contract ─────────────────────────────────────────────
+  /autonomy/status:
+    get:
+      operationId: getAutonomyStatus
+      tags: [autonomy]
+      summary: Current product autonomy contract and acceptance status
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaignId
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Current contract status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutonomyStatus"
+  /autonomy/acceptances:
+    post:
+      operationId: acceptAutonomyContract
+      tags: [autonomy]
+      summary: Record idempotent contract acceptances
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AutonomyAcceptanceInput"
+      responses:
+        "201":
+          description: Acceptances recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutonomyAcceptanceResponse"
+  /autonomy/acceptances/{acceptanceId}/revoke:
+    post:
+      operationId: revokeAutonomyAcceptance
+      tags: [autonomy]
+      summary: Revoke a contract acceptance
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/acceptanceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AutonomyRevocationInput"
+      responses:
+        "200":
+          description: Acceptance revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutonomyAcceptanceResponse"
+  /autonomy/evidence:
+    get:
+      operationId: listAutonomyEvidence
+      tags: [autonomy]
+      summary: Contract acceptance evidence and history
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaignId
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Acceptance evidence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutonomyEvidenceResponse"
 
   # ─── Intake ────────────────────────────────────────────────────────────────
   /intake/{campaignId}:
@@ -557,6 +644,12 @@ components:
       required: true
       schema:
         type: string
+    acceptanceId:
+      name: acceptanceId
+      in: path
+      required: true
+      schema:
+        type: string
 
   schemas:
     HealthStatus:
@@ -692,7 +785,25 @@ components:
           type: string
         type:
           type: string
-          enum: [launch, evergreen, relaunch]
+          enum:
+            - launch
+            - evergreen
+            - relaunch
+            - perpetual_launch
+            - flash_sale
+            - live_sale
+            - continuous_sales
+            - subscription_growth
+            - authority
+            - audience_growth
+            - branding
+            - creator_monetization
+            - upsell
+            - remarketing
+            - affiliate
+            - scale
+            - regional_dominance
+            - semente_launch
         track:
           type: string
           enum: [six_digits, eight_digits, ten_digits]
@@ -707,6 +818,102 @@ components:
           type: string
           enum: [strategy, content, launch, monitor]
       required: [phase]
+
+    ContractMetadata:
+      type: object
+      properties:
+        key: { type: string }
+        version: { type: string }
+        hash: { type: string }
+        snapshot:
+          type: object
+          additionalProperties: {}
+      required: [key, version, hash, snapshot]
+    AutonomyAcceptance:
+      type: object
+      properties:
+        id: { type: string }
+        workspaceId: { type: string }
+        userId: { type: string }
+        campaignId: { type: ["string", "null"] }
+        contractKey: { type: string }
+        contractVersion: { type: string }
+        contractHash: { type: string }
+        acceptanceType: { type: string, enum: [autonomy, regulated_activity, asset_rights] }
+        evidenceSnapshot:
+          type: object
+          additionalProperties: {}
+        acceptedAt: { type: string }
+        ipAddress: { type: ["string", "null"] }
+        userAgent: { type: ["string", "null"] }
+        revokedAt: { type: ["string", "null"] }
+        revokedByUserId: { type: ["string", "null"] }
+        revocationReason: { type: ["string", "null"] }
+      required: [id, workspaceId, userId, contractKey, contractVersion, contractHash, acceptanceType, evidenceSnapshot, acceptedAt]
+    AutonomyStatus:
+      type: object
+      properties:
+        contract: { $ref: "#/components/schemas/ContractMetadata" }
+        campaignId: { type: ["string", "null"] }
+        requiredAcceptanceTypes:
+          type: array
+          items: { type: string, enum: [autonomy, regulated_activity, asset_rights] }
+        acceptedAcceptanceTypes:
+          type: array
+          items: { type: string, enum: [autonomy, regulated_activity, asset_rights] }
+        missingAcceptanceTypes:
+          type: array
+          items: { type: string, enum: [autonomy, regulated_activity, asset_rights] }
+        regulatedActivityRequired: { type: boolean }
+      required: [contract, requiredAcceptanceTypes, acceptedAcceptanceTypes, missingAcceptanceTypes, regulatedActivityRequired]
+    AutonomyAcceptanceInput:
+      type: object
+      properties:
+        campaignId: { type: string }
+        acceptanceTypes:
+          type: array
+          minItems: 1
+          items: { type: string, enum: [autonomy, regulated_activity, asset_rights] }
+        idempotencyKey: { type: string, minLength: 8, maxLength: 200 }
+      required: [acceptanceTypes, idempotencyKey]
+    AutonomyRevocationInput:
+      type: object
+      properties:
+        reason: { type: string, maxLength: 1000 }
+    AutonomyAcceptanceResponse:
+      type: object
+      properties:
+        acceptances:
+          type: array
+          items: { $ref: "#/components/schemas/AutonomyAcceptance" }
+        acceptance: { $ref: "#/components/schemas/AutonomyAcceptance" }
+        status: { $ref: "#/components/schemas/AutonomyStatus" }
+        contract: { $ref: "#/components/schemas/ContractMetadata" }
+      additionalProperties: true
+    AutonomyEvidenceResponse:
+      type: object
+      properties:
+        acceptances:
+          type: array
+          items: { $ref: "#/components/schemas/AutonomyAcceptance" }
+      required: [acceptances]
+    ContractAcceptanceRequiredError:
+      type: object
+      properties:
+        error: { type: string }
+        code: { type: string, enum: [CONTRACT_ACCEPTANCE_REQUIRED] }
+        data:
+          type: object
+          properties:
+            contract: { $ref: "#/components/schemas/ContractMetadata" }
+            requiredAcceptanceTypes:
+              type: array
+              items: { type: string, enum: [autonomy, regulated_activity, asset_rights] }
+            missingAcceptanceTypes:
+              type: array
+              items: { type: string, enum: [autonomy, regulated_activity, asset_rights] }
+          required: [contract, requiredAcceptanceTypes, missingAcceptanceTypes]
+      required: [error, code, data]
 
     # ─── Intake ─────────────────────────────────────────────────────────────
     IntakeSaveInput:

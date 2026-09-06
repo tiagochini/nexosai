@@ -69,3 +69,4 @@
 - [Workspace Settings JSON Path](workspace-settings-json-path.md) — Persona fields are at settings->'persona'->>field, NOT settings->>field; top-level path always returns NULL.
 - [HeyGen Consent Gate](heygen-consent-gate.md) — digital_twin group consent_status:"pending" blocks all video gen; look status:"completed" does NOT imply consent granted; pre-flight only checks look, not group.
 - [NexOS Autonomous Agency Doctrine](nexos-autonomous-agency-doctrine.md) — NexOS must replace a full marketing agency: agents plan, act, verify and optimize across isolated product workspaces.
+- [Product Autonomy Contract](product-autonomy-contract.md) — intraplatform optimization is autonomous; interplatform budget moves require approval; launch requires versioned acceptances.

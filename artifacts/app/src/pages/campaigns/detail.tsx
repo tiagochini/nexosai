@@ -5,6 +5,8 @@ import {
   useExecuteCampaign,
   CampaignExecuteInputPhase,
   getGetCampaignQueryKey,
+  getGetAutonomyStatusQueryKey,
+  useGetAutonomyStatus,
 } from "@workspace/api-client-react";
 import { useCampaignSocket, type CampaignEvent } from "@/lib/socket";
 import { customFetch, ApiError } from "@workspace/api-client-react/custom-fetch";
@@ -51,6 +53,7 @@ import { LaunchAuditScanner } from "@/components/LaunchAuditScanner";
 import { CampaignCreativeGallery } from "@/components/CampaignCreativeGallery";
 import { ComplianceReviewModal } from "@/components/ComplianceReviewModal";
 import { MarketValidationReview } from "@/components/MarketValidationReview";
+import { AutonomyAcceptanceModal } from "@/components/AutonomyAcceptanceModal";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface AgentRun {
@@ -1289,6 +1292,17 @@ export default function CampaignDetail() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const searchString = useSearch();
+  const { data: autonomyStatus } = useGetAutonomyStatus({ campaignId });
+  const [pendingExecutionPhase, setPendingExecutionPhase] = useState<CampaignExecuteInputPhase | null>(null);
+
+  const handleExecuteClick = (phase: CampaignExecuteInputPhase) => {
+    if (phase === "launch" && autonomyStatus?.missingAcceptanceTypes && autonomyStatus.missingAcceptanceTypes.length > 0) {
+      setPendingExecutionPhase(phase);
+    } else {
+      executeMutation.mutate({ campaignId, data: { phase } });
+    }
+  };
+
   const [activeTab, setActiveTab] = useState<"comando" | "agentes" | "estrategia" | "conteudo" | "metricas" | "grupos" | "galeria">("comando");
   const { isArquiteto, isFundador, setMode } = useMode();
   const { user, workspace } = useAuth();
@@ -1655,7 +1669,7 @@ export default function CampaignDetail() {
         });
         queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
       },
-      onError: (err: unknown) => {
+      onError: async (err: unknown) => {
         // ApiError from customFetch exposes parsed JSON body in .data directly
         // (.response is the raw Fetch Response object, not { data: ... })
         type ErrBody = { error?: string; code?: string; data?: { shortage?: number; balance?: number; required?: number; missing?: { category: string; providers: string[]; reason?: string }[] } };
@@ -1663,7 +1677,10 @@ export default function CampaignDetail() {
         const errData = apiErr?.data;
         const code = errData?.code;
         const msg = errData?.error;
-        if (code === "INSUFFICIENT_CREDITS" && errData?.data) {
+        if (code === "CONTRACT_ACCEPTANCE_REQUIRED") {
+          await queryClient.invalidateQueries({ queryKey: getGetAutonomyStatusQueryKey({ campaignId }) });
+          setPendingExecutionPhase("launch");
+        } else if (code === "INSUFFICIENT_CREDITS" && errData?.data) {
           const { shortage = 0, balance = 0, required = 0 } = errData.data;
           toast.error(`Créditos insuficientes — faltam ${shortage} cr (saldo: ${balance}, necessário: ${required})`, {
             description: "Compre créditos para continuar executando agentes.",
@@ -2191,7 +2208,7 @@ export default function CampaignDetail() {
                   </Link>
                 ) : nextAction.phase ? (
                   <Button
-                    onClick={() => executeMutation.mutate({ campaignId, data: { phase: nextAction.phase! } })}
+                    onClick={() => handleExecuteClick(nextAction.phase!)}
                     disabled={executeMutation.isPending}
                     className="flex-1 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-12 text-sm"
                   >
@@ -2255,7 +2272,7 @@ export default function CampaignDetail() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => executeMutation.mutate({ campaignId, data: { phase: "strategy" as CampaignExecuteInputPhase } })}
+                    onClick={() => handleExecuteClick("strategy")}
                     disabled={executeMutation.isPending}
                     className="rounded-none font-mono uppercase tracking-widest font-black gap-2 text-xs border-rose-400/40 text-rose-300 hover:bg-rose-400/10"
                   >
@@ -2474,7 +2491,7 @@ export default function CampaignDetail() {
                 </p>
                 {nextAction?.phase ? (
                   <Button
-                    onClick={() => executeMutation.mutate({ campaignId, data: { phase: nextAction.phase! } })}
+                    onClick={() => handleExecuteClick(nextAction.phase!)}
                     disabled={executeMutation.isPending}
                     className="w-full rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-12 text-sm"
                   >
@@ -2557,7 +2574,7 @@ export default function CampaignDetail() {
           onClose={() => setShowAuditScanner(false)}
           onConfirmLaunch={() => {
             setShowAuditScanner(false);
-            executeMutation.mutate({ campaignId, data: { phase: "launch" as CampaignExecuteInputPhase } });
+            handleExecuteClick("launch");
           }}
           launching={executeMutation.isPending}
         />
@@ -3002,6 +3019,18 @@ export default function CampaignDetail() {
         </div>
       )}
 
+      {pendingExecutionPhase && autonomyStatus && (
+        <AutonomyAcceptanceModal
+          campaignId={campaignId}
+          autonomyStatus={autonomyStatus}
+          onSuccess={() => {
+            executeMutation.mutate({ campaignId, data: { phase: pendingExecutionPhase } });
+            setPendingExecutionPhase(null);
+          }}
+          onCancel={() => setPendingExecutionPhase(null)}
+        />
+      )}
+
       {/* Inline ConnectModal — opens on top of missing integrations modal */}
       {connectingEntry && (
         <ConnectModal
@@ -3257,7 +3286,7 @@ export default function CampaignDetail() {
                 ) : nextAction.phase ? (
                   <Button
                     className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-12 px-6 w-full md:w-auto"
-                    onClick={() => executeMutation.mutate({ campaignId, data: { phase: nextAction.phase! } })}
+                    onClick={() => handleExecuteClick(nextAction.phase!)}
                     disabled={executeMutation.isPending}
                   >
                     {executeMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" />Processando...</> : <><Play className="h-4 w-4 fill-current" />{nextAction.label}</>}
@@ -3499,7 +3528,7 @@ export default function CampaignDetail() {
                   variant="outline"
                   className="font-mono uppercase tracking-widest rounded-none gap-2 border-border/50 hover:border-primary/50 h-9 px-4 text-xs"
                   disabled={executeMutation.isPending || rerunStrategyLoading}
-                  onClick={() => executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } })}
+                  onClick={() => handleExecuteClick("content")}
                 >
                   {executeMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
                   Pular e Gerar Conteúdo
@@ -3680,7 +3709,7 @@ export default function CampaignDetail() {
             {["strategy_ready", "approved"].includes(campaign.status) && (
               <Button
                 className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-xs"
-                onClick={() => executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } })}
+                onClick={() => handleExecuteClick("content")}
                 disabled={executeMutation.isPending}
               >
                 <Zap className="h-3 w-3" />Gerar Conteúdo
@@ -3694,7 +3723,7 @@ export default function CampaignDetail() {
               <Layers className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
               <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-4">Nenhuma peça de conteúdo gerada ainda.</p>
               {campaign.status === "strategy_ready" && (
-                <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary" onClick={() => executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } })} disabled={executeMutation.isPending}>
+                <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary" onClick={() => handleExecuteClick("content")} disabled={executeMutation.isPending}>
                   <Play className="h-4 w-4 fill-current" />Gerar Conteúdo Agora
                 </Button>
               )}

@@ -21,15 +21,22 @@ import type {
   AddSequenceContacts201,
   AnalyticsResponse,
   AuthResponse,
+  AutonomyAcceptanceInput,
+  AutonomyAcceptanceResponse,
+  AutonomyEvidenceResponse,
+  AutonomyRevocationInput,
+  AutonomyStatus,
   CalendarResponse,
   CampaignExecuteInput,
   CampaignInput,
   ContactsAddInput,
+  ContractAcceptanceRequiredError,
   CreateCampaign201,
   CreditsBalance,
   ExecuteCampaign202,
   GenerateItemCopy200,
   GenerateSequencePlan200,
+  GetAutonomyStatusParams,
   GetCampaign200,
   GetSequence200,
   HealthStatus,
@@ -38,6 +45,7 @@ import type {
   IntakeScore,
   ItemCopyInput,
   LaunchSequence,
+  ListAutonomyEvidenceParams,
   ListCampaigns200,
   ListSequenceContacts200,
   ListSequences200,
@@ -807,7 +815,7 @@ export const executeCampaign = async (
 };
 
 export const getExecuteCampaignMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ContractAcceptanceRequiredError>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -848,13 +856,14 @@ export type ExecuteCampaignMutationResult = NonNullable<
   Awaited<ReturnType<typeof executeCampaign>>
 >;
 export type ExecuteCampaignMutationBody = BodyType<CampaignExecuteInput>;
-export type ExecuteCampaignMutationError = ErrorType<unknown>;
+export type ExecuteCampaignMutationError =
+  ErrorType<ContractAcceptanceRequiredError>;
 
 /**
  * @summary Execute campaign phase
  */
 export const useExecuteCampaign = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ContractAcceptanceRequiredError>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -872,6 +881,387 @@ export const useExecuteCampaign = <
 > => {
   return useMutation(getExecuteCampaignMutationOptions(options));
 };
+
+/**
+ * @summary Current product autonomy contract and acceptance status
+ */
+export const getGetAutonomyStatusUrl = (params?: GetAutonomyStatusParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/autonomy/status?${stringifiedParams}`
+    : `/api/autonomy/status`;
+};
+
+export const getAutonomyStatus = async (
+  params?: GetAutonomyStatusParams,
+  options?: RequestInit,
+): Promise<AutonomyStatus> => {
+  return customFetch<AutonomyStatus>(getGetAutonomyStatusUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAutonomyStatusQueryKey = (
+  params?: GetAutonomyStatusParams,
+) => {
+  return [`/api/autonomy/status`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetAutonomyStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAutonomyStatus>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetAutonomyStatusParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAutonomyStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAutonomyStatusQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAutonomyStatus>>
+  > = ({ signal }) => getAutonomyStatus(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAutonomyStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAutonomyStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAutonomyStatus>>
+>;
+export type GetAutonomyStatusQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Current product autonomy contract and acceptance status
+ */
+
+export function useGetAutonomyStatus<
+  TData = Awaited<ReturnType<typeof getAutonomyStatus>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetAutonomyStatusParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAutonomyStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAutonomyStatusQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Record idempotent contract acceptances
+ */
+export const getAcceptAutonomyContractUrl = () => {
+  return `/api/autonomy/acceptances`;
+};
+
+export const acceptAutonomyContract = async (
+  autonomyAcceptanceInput: AutonomyAcceptanceInput,
+  options?: RequestInit,
+): Promise<AutonomyAcceptanceResponse> => {
+  return customFetch<AutonomyAcceptanceResponse>(
+    getAcceptAutonomyContractUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(autonomyAcceptanceInput),
+    },
+  );
+};
+
+export const getAcceptAutonomyContractMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acceptAutonomyContract>>,
+    TError,
+    { data: BodyType<AutonomyAcceptanceInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof acceptAutonomyContract>>,
+  TError,
+  { data: BodyType<AutonomyAcceptanceInput> },
+  TContext
+> => {
+  const mutationKey = ["acceptAutonomyContract"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof acceptAutonomyContract>>,
+    { data: BodyType<AutonomyAcceptanceInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return acceptAutonomyContract(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AcceptAutonomyContractMutationResult = NonNullable<
+  Awaited<ReturnType<typeof acceptAutonomyContract>>
+>;
+export type AcceptAutonomyContractMutationBody =
+  BodyType<AutonomyAcceptanceInput>;
+export type AcceptAutonomyContractMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Record idempotent contract acceptances
+ */
+export const useAcceptAutonomyContract = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acceptAutonomyContract>>,
+    TError,
+    { data: BodyType<AutonomyAcceptanceInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof acceptAutonomyContract>>,
+  TError,
+  { data: BodyType<AutonomyAcceptanceInput> },
+  TContext
+> => {
+  return useMutation(getAcceptAutonomyContractMutationOptions(options));
+};
+
+/**
+ * @summary Revoke a contract acceptance
+ */
+export const getRevokeAutonomyAcceptanceUrl = (acceptanceId: string) => {
+  return `/api/autonomy/acceptances/${acceptanceId}/revoke`;
+};
+
+export const revokeAutonomyAcceptance = async (
+  acceptanceId: string,
+  autonomyRevocationInput: AutonomyRevocationInput,
+  options?: RequestInit,
+): Promise<AutonomyAcceptanceResponse> => {
+  return customFetch<AutonomyAcceptanceResponse>(
+    getRevokeAutonomyAcceptanceUrl(acceptanceId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(autonomyRevocationInput),
+    },
+  );
+};
+
+export const getRevokeAutonomyAcceptanceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeAutonomyAcceptance>>,
+    TError,
+    { acceptanceId: string; data: BodyType<AutonomyRevocationInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revokeAutonomyAcceptance>>,
+  TError,
+  { acceptanceId: string; data: BodyType<AutonomyRevocationInput> },
+  TContext
+> => {
+  const mutationKey = ["revokeAutonomyAcceptance"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revokeAutonomyAcceptance>>,
+    { acceptanceId: string; data: BodyType<AutonomyRevocationInput> }
+  > = (props) => {
+    const { acceptanceId, data } = props ?? {};
+
+    return revokeAutonomyAcceptance(acceptanceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevokeAutonomyAcceptanceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revokeAutonomyAcceptance>>
+>;
+export type RevokeAutonomyAcceptanceMutationBody =
+  BodyType<AutonomyRevocationInput>;
+export type RevokeAutonomyAcceptanceMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Revoke a contract acceptance
+ */
+export const useRevokeAutonomyAcceptance = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeAutonomyAcceptance>>,
+    TError,
+    { acceptanceId: string; data: BodyType<AutonomyRevocationInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof revokeAutonomyAcceptance>>,
+  TError,
+  { acceptanceId: string; data: BodyType<AutonomyRevocationInput> },
+  TContext
+> => {
+  return useMutation(getRevokeAutonomyAcceptanceMutationOptions(options));
+};
+
+/**
+ * @summary Contract acceptance evidence and history
+ */
+export const getListAutonomyEvidenceUrl = (
+  params?: ListAutonomyEvidenceParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/autonomy/evidence?${stringifiedParams}`
+    : `/api/autonomy/evidence`;
+};
+
+export const listAutonomyEvidence = async (
+  params?: ListAutonomyEvidenceParams,
+  options?: RequestInit,
+): Promise<AutonomyEvidenceResponse> => {
+  return customFetch<AutonomyEvidenceResponse>(
+    getListAutonomyEvidenceUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListAutonomyEvidenceQueryKey = (
+  params?: ListAutonomyEvidenceParams,
+) => {
+  return [`/api/autonomy/evidence`, ...(params ? [params] : [])] as const;
+};
+
+export const getListAutonomyEvidenceQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAutonomyEvidence>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListAutonomyEvidenceParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listAutonomyEvidence>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListAutonomyEvidenceQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listAutonomyEvidence>>
+  > = ({ signal }) =>
+    listAutonomyEvidence(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAutonomyEvidence>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListAutonomyEvidenceQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAutonomyEvidence>>
+>;
+export type ListAutonomyEvidenceQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Contract acceptance evidence and history
+ */
+
+export function useListAutonomyEvidence<
+  TData = Awaited<ReturnType<typeof listAutonomyEvidence>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListAutonomyEvidenceParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listAutonomyEvidence>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListAutonomyEvidenceQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Get intake data

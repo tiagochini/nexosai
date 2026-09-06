@@ -757,7 +757,7 @@ router.post("/:campaignId/execute/launch", async (req, res): Promise<void> => {
     }
 
     const creditAdvisory = await checkCreditsForPhase(req.auth.workspaceId, campaignId, "launch");
-    const result = await triggerExecutionPhase(campaignId, req.auth.workspaceId, req.log);
+    const result = await triggerExecutionPhase(campaignId, req.auth.workspaceId, req.log, req.auth.userId);
     res.status(202).json({
       message: result.queued
         ? "Lançamento enfileirado — campanha será ativada em instantes"

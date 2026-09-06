@@ -19,16 +19,18 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import nexosLogo from "/nexos-logo.png";
 import { useLocation } from "wouter";
+import { AutonomyTab } from "@/components/AutonomyTab";
 
-type Tab = "perfil" | "workspace" | "seguranca" | "integracoes" | "identidade" | "compliance";
+type Tab = "perfil" | "workspace" | "seguranca" | "integracoes" | "identidade" | "compliance" | "autonomia";
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "perfil",       label: "Perfil",          icon: User        },
-  { id: "workspace",    label: "Workspace",        icon: Building2   },
-  { id: "compliance",   label: "Identificação",    icon: ShieldCheck },
-  { id: "seguranca",    label: "Segurança",        icon: Zap         },
-  { id: "integracoes",  label: "Integrações",      icon: Link2       },
-  { id: "identidade",   label: "Identidade",       icon: Fingerprint },
+  { id: "workspace",    label: "Workspace",       icon: Building2   },
+  { id: "autonomia",    label: "Autonomia IA",    icon: ShieldCheck },
+  { id: "compliance",   label: "Identificação",   icon: ShieldCheck },
+  { id: "seguranca",    label: "Segurança",       icon: Zap         },
+  { id: "integracoes",  label: "Integrações",     icon: Link2       },
+  { id: "identidade",   label: "Identidade",      icon: Fingerprint },
 ];
 
 function SectionCard({ children, title, icon: Icon }: { children: React.ReactNode; title: string; icon: React.ElementType }) {
@@ -2289,6 +2291,7 @@ export default function Settings() {
 
       {tab === "perfil"      && <ProfileTab />}
       {tab === "workspace"   && <WorkspaceTab />}
+      {tab === "autonomia"   && <AutonomyTab />}
       {tab === "compliance"  && <ComplianceTab />}
       {tab === "seguranca"   && <SecurityTab />}
       {tab === "integracoes" && <IntegracaoTab />}

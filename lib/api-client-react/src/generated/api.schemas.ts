@@ -140,6 +140,161 @@ export interface CampaignExecuteInput {
   phase: CampaignExecuteInputPhase;
 }
 
+export type ContractMetadataSnapshot = { [key: string]: unknown };
+
+export interface ContractMetadata {
+  key: string;
+  version: string;
+  hash: string;
+  snapshot: ContractMetadataSnapshot;
+}
+
+export type AutonomyAcceptanceAcceptanceType =
+  (typeof AutonomyAcceptanceAcceptanceType)[keyof typeof AutonomyAcceptanceAcceptanceType];
+
+export const AutonomyAcceptanceAcceptanceType = {
+  autonomy: "autonomy",
+  regulated_activity: "regulated_activity",
+  asset_rights: "asset_rights",
+} as const;
+
+export type AutonomyAcceptanceEvidenceSnapshot = { [key: string]: unknown };
+
+export interface AutonomyAcceptance {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  /** @nullable */
+  campaignId?: string | null;
+  contractKey: string;
+  contractVersion: string;
+  contractHash: string;
+  acceptanceType: AutonomyAcceptanceAcceptanceType;
+  evidenceSnapshot: AutonomyAcceptanceEvidenceSnapshot;
+  acceptedAt: string;
+  /** @nullable */
+  ipAddress?: string | null;
+  /** @nullable */
+  userAgent?: string | null;
+  /** @nullable */
+  revokedAt?: string | null;
+  /** @nullable */
+  revokedByUserId?: string | null;
+  /** @nullable */
+  revocationReason?: string | null;
+}
+
+export type AutonomyStatusRequiredAcceptanceTypesItem =
+  (typeof AutonomyStatusRequiredAcceptanceTypesItem)[keyof typeof AutonomyStatusRequiredAcceptanceTypesItem];
+
+export const AutonomyStatusRequiredAcceptanceTypesItem = {
+  autonomy: "autonomy",
+  regulated_activity: "regulated_activity",
+  asset_rights: "asset_rights",
+} as const;
+
+export type AutonomyStatusAcceptedAcceptanceTypesItem =
+  (typeof AutonomyStatusAcceptedAcceptanceTypesItem)[keyof typeof AutonomyStatusAcceptedAcceptanceTypesItem];
+
+export const AutonomyStatusAcceptedAcceptanceTypesItem = {
+  autonomy: "autonomy",
+  regulated_activity: "regulated_activity",
+  asset_rights: "asset_rights",
+} as const;
+
+export type AutonomyStatusMissingAcceptanceTypesItem =
+  (typeof AutonomyStatusMissingAcceptanceTypesItem)[keyof typeof AutonomyStatusMissingAcceptanceTypesItem];
+
+export const AutonomyStatusMissingAcceptanceTypesItem = {
+  autonomy: "autonomy",
+  regulated_activity: "regulated_activity",
+  asset_rights: "asset_rights",
+} as const;
+
+export interface AutonomyStatus {
+  contract: ContractMetadata;
+  /** @nullable */
+  campaignId?: string | null;
+  requiredAcceptanceTypes: AutonomyStatusRequiredAcceptanceTypesItem[];
+  acceptedAcceptanceTypes: AutonomyStatusAcceptedAcceptanceTypesItem[];
+  missingAcceptanceTypes: AutonomyStatusMissingAcceptanceTypesItem[];
+  regulatedActivityRequired: boolean;
+}
+
+export type AutonomyAcceptanceInputAcceptanceTypesItem =
+  (typeof AutonomyAcceptanceInputAcceptanceTypesItem)[keyof typeof AutonomyAcceptanceInputAcceptanceTypesItem];
+
+export const AutonomyAcceptanceInputAcceptanceTypesItem = {
+  autonomy: "autonomy",
+  regulated_activity: "regulated_activity",
+  asset_rights: "asset_rights",
+} as const;
+
+export interface AutonomyAcceptanceInput {
+  campaignId?: string;
+  /** @minItems 1 */
+  acceptanceTypes: AutonomyAcceptanceInputAcceptanceTypesItem[];
+  /**
+   * @minLength 8
+   * @maxLength 200
+   */
+  idempotencyKey: string;
+}
+
+export interface AutonomyRevocationInput {
+  /** @maxLength 1000 */
+  reason?: string;
+}
+
+export interface AutonomyAcceptanceResponse {
+  acceptances?: AutonomyAcceptance[];
+  acceptance?: AutonomyAcceptance;
+  status?: AutonomyStatus;
+  contract?: ContractMetadata;
+  [key: string]: unknown;
+}
+
+export interface AutonomyEvidenceResponse {
+  acceptances: AutonomyAcceptance[];
+}
+
+export type ContractAcceptanceRequiredErrorCode =
+  (typeof ContractAcceptanceRequiredErrorCode)[keyof typeof ContractAcceptanceRequiredErrorCode];
+
+export const ContractAcceptanceRequiredErrorCode = {
+  CONTRACT_ACCEPTANCE_REQUIRED: "CONTRACT_ACCEPTANCE_REQUIRED",
+} as const;
+
+export type ContractAcceptanceRequiredErrorDataRequiredAcceptanceTypesItem =
+  (typeof ContractAcceptanceRequiredErrorDataRequiredAcceptanceTypesItem)[keyof typeof ContractAcceptanceRequiredErrorDataRequiredAcceptanceTypesItem];
+
+export const ContractAcceptanceRequiredErrorDataRequiredAcceptanceTypesItem = {
+  autonomy: "autonomy",
+  regulated_activity: "regulated_activity",
+  asset_rights: "asset_rights",
+} as const;
+
+export type ContractAcceptanceRequiredErrorDataMissingAcceptanceTypesItem =
+  (typeof ContractAcceptanceRequiredErrorDataMissingAcceptanceTypesItem)[keyof typeof ContractAcceptanceRequiredErrorDataMissingAcceptanceTypesItem];
+
+export const ContractAcceptanceRequiredErrorDataMissingAcceptanceTypesItem = {
+  autonomy: "autonomy",
+  regulated_activity: "regulated_activity",
+  asset_rights: "asset_rights",
+} as const;
+
+export type ContractAcceptanceRequiredErrorData = {
+  contract: ContractMetadata;
+  requiredAcceptanceTypes: ContractAcceptanceRequiredErrorDataRequiredAcceptanceTypesItem[];
+  missingAcceptanceTypes: ContractAcceptanceRequiredErrorDataMissingAcceptanceTypesItem[];
+};
+
+export interface ContractAcceptanceRequiredError {
+  error: string;
+  code: ContractAcceptanceRequiredErrorCode;
+  data: ContractAcceptanceRequiredErrorData;
+}
+
 export type IntakeSaveInputIntakeData = { [key: string]: unknown };
 
 export interface IntakeSaveInput {
@@ -380,6 +535,14 @@ export type GetCampaign200 = {
 export type ExecuteCampaign202 = {
   message?: string;
   status?: string;
+};
+
+export type GetAutonomyStatusParams = {
+  campaignId?: string;
+};
+
+export type ListAutonomyEvidenceParams = {
+  campaignId?: string;
 };
 
 export type ListSequences200 = {

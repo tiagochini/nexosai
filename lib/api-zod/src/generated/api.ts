@@ -126,7 +126,26 @@ export const ListCampaignsResponse = zod.object({
  */
 export const CreateCampaignBody = zod.object({
   title: zod.string(),
-  type: zod.enum(["launch", "evergreen", "relaunch"]),
+  type: zod.enum([
+    "launch",
+    "evergreen",
+    "relaunch",
+    "perpetual_launch",
+    "flash_sale",
+    "live_sale",
+    "continuous_sales",
+    "subscription_growth",
+    "authority",
+    "audience_growth",
+    "branding",
+    "creator_monetization",
+    "upsell",
+    "remarketing",
+    "affiliate",
+    "scale",
+    "regional_dominance",
+    "semente_launch",
+  ]),
   track: zod.enum(["six_digits", "eight_digits", "ten_digits"]),
   revenueTarget: zod.string().optional(),
 });
@@ -170,6 +189,177 @@ export const ExecuteCampaignParams = zod.object({
 
 export const ExecuteCampaignBody = zod.object({
   phase: zod.enum(["strategy", "content", "launch", "monitor"]),
+});
+
+/**
+ * @summary Current product autonomy contract and acceptance status
+ */
+export const GetAutonomyStatusQueryParams = zod.object({
+  campaignId: zod.coerce.string().optional(),
+});
+
+export const GetAutonomyStatusResponse = zod.object({
+  contract: zod.object({
+    key: zod.string(),
+    version: zod.string(),
+    hash: zod.string(),
+    snapshot: zod.record(zod.string(), zod.unknown()),
+  }),
+  campaignId: zod.string().nullish(),
+  requiredAcceptanceTypes: zod.array(
+    zod.enum(["autonomy", "regulated_activity", "asset_rights"]),
+  ),
+  acceptedAcceptanceTypes: zod.array(
+    zod.enum(["autonomy", "regulated_activity", "asset_rights"]),
+  ),
+  missingAcceptanceTypes: zod.array(
+    zod.enum(["autonomy", "regulated_activity", "asset_rights"]),
+  ),
+  regulatedActivityRequired: zod.boolean(),
+});
+
+/**
+ * @summary Record idempotent contract acceptances
+ */
+
+export const acceptAutonomyContractBodyIdempotencyKeyMin = 8;
+export const acceptAutonomyContractBodyIdempotencyKeyMax = 200;
+
+export const AcceptAutonomyContractBody = zod.object({
+  campaignId: zod.string().optional(),
+  acceptanceTypes: zod
+    .array(zod.enum(["autonomy", "regulated_activity", "asset_rights"]))
+    .min(1),
+  idempotencyKey: zod
+    .string()
+    .min(acceptAutonomyContractBodyIdempotencyKeyMin)
+    .max(acceptAutonomyContractBodyIdempotencyKeyMax),
+});
+
+/**
+ * @summary Revoke a contract acceptance
+ */
+export const RevokeAutonomyAcceptanceParams = zod.object({
+  acceptanceId: zod.coerce.string(),
+});
+
+export const revokeAutonomyAcceptanceBodyReasonMax = 1000;
+
+export const RevokeAutonomyAcceptanceBody = zod.object({
+  reason: zod.string().max(revokeAutonomyAcceptanceBodyReasonMax).optional(),
+});
+
+export const RevokeAutonomyAcceptanceResponse = zod.object({
+  acceptances: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        workspaceId: zod.string(),
+        userId: zod.string(),
+        campaignId: zod.string().nullish(),
+        contractKey: zod.string(),
+        contractVersion: zod.string(),
+        contractHash: zod.string(),
+        acceptanceType: zod.enum([
+          "autonomy",
+          "regulated_activity",
+          "asset_rights",
+        ]),
+        evidenceSnapshot: zod.record(zod.string(), zod.unknown()),
+        acceptedAt: zod.string(),
+        ipAddress: zod.string().nullish(),
+        userAgent: zod.string().nullish(),
+        revokedAt: zod.string().nullish(),
+        revokedByUserId: zod.string().nullish(),
+        revocationReason: zod.string().nullish(),
+      }),
+    )
+    .optional(),
+  acceptance: zod
+    .object({
+      id: zod.string(),
+      workspaceId: zod.string(),
+      userId: zod.string(),
+      campaignId: zod.string().nullish(),
+      contractKey: zod.string(),
+      contractVersion: zod.string(),
+      contractHash: zod.string(),
+      acceptanceType: zod.enum([
+        "autonomy",
+        "regulated_activity",
+        "asset_rights",
+      ]),
+      evidenceSnapshot: zod.record(zod.string(), zod.unknown()),
+      acceptedAt: zod.string(),
+      ipAddress: zod.string().nullish(),
+      userAgent: zod.string().nullish(),
+      revokedAt: zod.string().nullish(),
+      revokedByUserId: zod.string().nullish(),
+      revocationReason: zod.string().nullish(),
+    })
+    .optional(),
+  status: zod
+    .object({
+      contract: zod.object({
+        key: zod.string(),
+        version: zod.string(),
+        hash: zod.string(),
+        snapshot: zod.record(zod.string(), zod.unknown()),
+      }),
+      campaignId: zod.string().nullish(),
+      requiredAcceptanceTypes: zod.array(
+        zod.enum(["autonomy", "regulated_activity", "asset_rights"]),
+      ),
+      acceptedAcceptanceTypes: zod.array(
+        zod.enum(["autonomy", "regulated_activity", "asset_rights"]),
+      ),
+      missingAcceptanceTypes: zod.array(
+        zod.enum(["autonomy", "regulated_activity", "asset_rights"]),
+      ),
+      regulatedActivityRequired: zod.boolean(),
+    })
+    .optional(),
+  contract: zod
+    .object({
+      key: zod.string(),
+      version: zod.string(),
+      hash: zod.string(),
+      snapshot: zod.record(zod.string(), zod.unknown()),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Contract acceptance evidence and history
+ */
+export const ListAutonomyEvidenceQueryParams = zod.object({
+  campaignId: zod.coerce.string().optional(),
+});
+
+export const ListAutonomyEvidenceResponse = zod.object({
+  acceptances: zod.array(
+    zod.object({
+      id: zod.string(),
+      workspaceId: zod.string(),
+      userId: zod.string(),
+      campaignId: zod.string().nullish(),
+      contractKey: zod.string(),
+      contractVersion: zod.string(),
+      contractHash: zod.string(),
+      acceptanceType: zod.enum([
+        "autonomy",
+        "regulated_activity",
+        "asset_rights",
+      ]),
+      evidenceSnapshot: zod.record(zod.string(), zod.unknown()),
+      acceptedAt: zod.string(),
+      ipAddress: zod.string().nullish(),
+      userAgent: zod.string().nullish(),
+      revokedAt: zod.string().nullish(),
+      revokedByUserId: zod.string().nullish(),
+      revocationReason: zod.string().nullish(),
+    }),
+  ),
 });
 
 /**

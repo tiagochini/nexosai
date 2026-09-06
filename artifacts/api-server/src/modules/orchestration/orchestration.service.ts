@@ -17,6 +17,7 @@ import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
 import type { Logger } from "pino";
+import { enforceLaunchAutonomyGate } from "../autonomy/autonomy.service.js";
 
 // ── Execution status ──────────────────────────────────────────────────────────
 
@@ -472,6 +473,7 @@ export async function triggerExecutionPhase(
   campaignId: string,
   workspaceId: string,
   log: Logger,
+  actor = "user",
 ): Promise<{ queued: boolean; jobId?: string }> {
   const [campaign] = await db
     .select({ status: campaignsTable.status })
@@ -487,6 +489,8 @@ export async function triggerExecutionPhase(
       `Cannot launch from status "${campaign.status}". Campaign must be approved first.`,
     );
   }
+  // Gate only the transition that starts execution. Existing executions remain untouched.
+  await enforceLaunchAutonomyGate(workspaceId, campaignId, actor);
 
   await db.insert(auditLogsTable).values({
     workspaceId,
