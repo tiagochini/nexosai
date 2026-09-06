@@ -9,4 +9,6 @@ NexOS's principal product is the full autonomous execution of the complete launc
 
 **How to apply:** Evaluate every feature and agent by how directly or indirectly it enables complete launch execution. Treat each product or service as an isolated workspace with its own CEO/orchestrator, context and agent teams. After final campaign approval, execution continues autonomously within the approved Masterplan and budget envelope; material changes to identity, Masterplan or external commitments require user initiative or explicit authorization. Optimize costs through context reuse, deterministic operations and model routing, never by making agents context-blind.
 
+Roadmap work must follow the official flowchart order. At the close of every stage, compare its findings and deliverables against the frozen canonical positioning declaration before advancing. Preserve prior work unless a demonstrated contradiction or gap requires an explicit change.
+
 Commercial direction: initial market is Brazil but architecture is global from day one. Current intended onboarding fee is R$3,990, followed by credit or tier packages. Target gross margin is 85–99%, subject to separating variable third-party spend and validating unit economics before public launch.
