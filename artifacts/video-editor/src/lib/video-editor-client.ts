@@ -16,6 +16,12 @@ async function download(path: string): Promise<Blob> {
   if (!response.ok) throw new Error(`Download failed (${response.status})`);
   return response.blob();
 }
+async function downloadWithMeta(path: string): Promise<{ blob: Blob; checksum?: string; size?: number }> {
+  const response = await fetch(`${apiBase}${path}`, { headers: authHeaders() });
+  if (!response.ok) throw new Error(`Download failed (${response.status})`);
+  const size = Number(response.headers.get("content-length"));
+  return { blob: await response.blob(), checksum: response.headers.get("x-content-sha256") ?? undefined, size: Number.isFinite(size) ? size : undefined };
+}
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${apiBase}${path}`, {
@@ -49,9 +55,19 @@ export const videoEditorClient = {
   submitQc: <T = unknown>(projectId: string, renderJobId: string) => request<T>(`/video-editor/projects/${projectId}/qc`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ renderJobId }),
   }),
-  getCapabilities: <T = { digitalTwin?: { backend: string; nativeCloneEngineAvailable: boolean } }>() => request<T>("/video-editor/capabilities"),
+  getCapabilities: <T = { native?: { available: boolean; workers: Array<{ name: string; capabilities: Array<{ modelId?: string; modelRevision?: string; licenseApproved?: boolean; resolutions?: string[] }> }> }; digitalTwin?: { backend: string; nativeCloneEngineAvailable: boolean } }>() => request<T>("/video-editor/capabilities"),
   renderTrailer: <T = { render: { id: string; status: string } }>(id: string, duration: 15 | 30) => request<T>(`/video-editor/projects/${id}/trailers/${duration}/render`, { method: "POST" }),
   getRenderMedia: (projectId: string, renderJobId: string) => download(`/video-editor/projects/${projectId}/render/${renderJobId}/media`),
+  downloadRenderHandoff: (projectId: string, renderJobId: string) => downloadWithMeta(`/video-editor/projects/${projectId}/render/${renderJobId}/download`),
+  downloadEditablePackage: (projectId: string, includeOutputs = false) => downloadWithMeta(`/video-editor/projects/${projectId}/export-package?includeOutputs=${includeOutputs}`),
+  confirmEditablePackage: <T = { checksum: string; confirmed: boolean }>(projectId: string, checksum: string, confirmation: string) =>
+    request<T>(`/video-editor/projects/${projectId}/export-package/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ checksum, confirmation }) }),
+  importEditablePackage: (file: File) => {
+    const form = new FormData(); form.append("package", file);
+    return request<ProjectDetail>("/video-editor/projects/import-package", { method: "POST", body: form });
+  },
+  purgeMedia: <T = { status: string }>(projectId: string, body: { renderJobId: string; expectedChecksum: string; confirmation: string }, retry = false) =>
+    request<T>(`/video-editor/projects/${projectId}/purge-media${retry ? "/retry" : ""}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
   getTrailerMedia: (projectId: string, duration: 15 | 30, renderJobId: string) => download(`/video-editor/projects/${projectId}/trailers/${duration}/${renderJobId}/media`),
   getManifest: <T = unknown>(id: string) => request<T>(`/video-editor/projects/${id}/manifest`),
   upload: (file: File) => {

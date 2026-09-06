@@ -19,6 +19,7 @@ import {
   getAvailableAvatarProvider,
   pollVideoJob,
 } from "./video-generation.service.js";
+import { getNativeJob, submitNativeJob } from "./native-media-engine.service.js";
 import { completeWithAgent } from "../ai-gateway/ai-gateway.service.js";
 import { parseAgentJSON } from "../agents/agent.runner.js";
 import { NotFoundError, AppError } from "../../lib/errors.js";
@@ -134,6 +135,7 @@ export async function createVideoProject(
   }
 
   const config = {
+    executionEngine: input.config.executionEngine ?? "native",
     hasUserFace: input.config.hasUserFace ?? false,
     voiceStyle: input.config.voiceStyle ?? "narrator",
     aspectRatio: input.config.aspectRatio ?? "16:9",
@@ -654,7 +656,7 @@ export async function generatePreviewClips(
   const avatarProvider = getAvailableAvatarProvider();
   const config = project.config as VideoConfig;
 
-  if (needsAvatarClone(scenes)) {
+  if (config.executionEngine !== "native" && needsAvatarClone(scenes)) {
     const persona = await getWorkspacePersona(workspaceId);
     if (!persona.voiceCloneId || !persona.heygenAvatarId) {
       const [paused] = await db
@@ -666,7 +668,9 @@ export async function generatePreviewClips(
       return paused!;
     }
   }
-  if (!await verifyDigitalTwinConsent(workspaceId, project, scenes, "preview")) return getProject(workspaceId, projectId);
+  // Native consent is enforced by the native control plane; never call a
+  // commercial consent authority on a native execution path.
+  if (config.executionEngine !== "native" && !await verifyDigitalTwinConsent(workspaceId, project, scenes, "preview")) return getProject(workspaceId, projectId);
 
   await db
     .update(videoProjectsTable)
@@ -683,7 +687,14 @@ export async function generatePreviewClips(
     scenes.map(async (scene) => {
       try {
         let result;
-        if (scene.hasAvatar && avatarProvider === "heygen") {
+        if (config.executionEngine === "native") {
+          const job = await submitNativeJob(workspaceId, projectId, {
+            operation: scene.hasAvatar ? "avatar_animation" : "text_to_video",
+            request: { prompt: scene.videoPrompt, negativePrompt: scene.negativePrompt, durationSeconds: scene.durationSeconds, resolution: "720p", aspectRatio: config.aspectRatio },
+            consentSubject: scene.hasAvatar ? (config.avatarId ?? persona.heygenAvatarId) : undefined,
+          });
+          result = { status: "submitted" as const, jobId: job.id, provider: "native" };
+        } else if (scene.hasAvatar && avatarProvider === "heygen") {
           result = await generateAvatarVideo({
             voiceoverText: scene.voiceoverText,
             avatarId: config.avatarId ?? persona.heygenAvatarId,
@@ -809,7 +820,7 @@ export async function generateFinalClips(
   const scenes = (project.storyboard as VideoScene[]) ?? [];
   const config = project.config as VideoConfig;
 
-  if (needsAvatarClone(scenes)) {
+  if (config.executionEngine !== "native" && needsAvatarClone(scenes)) {
     const personaCheck = await getWorkspacePersona(workspaceId);
     if (!personaCheck.voiceCloneId || !personaCheck.heygenAvatarId) {
       const [paused] = await db
@@ -821,7 +832,7 @@ export async function generateFinalClips(
       return paused!;
     }
   }
-  if (!await verifyDigitalTwinConsent(workspaceId, project, scenes, "final")) return getProject(workspaceId, projectId);
+  if (config.executionEngine !== "native" && !await verifyDigitalTwinConsent(workspaceId, project, scenes, "final")) return getProject(workspaceId, projectId);
 
   await db
     .update(videoProjectsTable)
@@ -838,7 +849,14 @@ export async function generateFinalClips(
     scenes.map(async (scene) => {
       try {
         let result;
-        if (scene.hasAvatar && getAvailableAvatarProvider() === "heygen") {
+        if (config.executionEngine === "native") {
+          const job = await submitNativeJob(workspaceId, projectId, {
+            operation: scene.hasAvatar ? "avatar_animation" : "text_to_video",
+            request: { prompt: scene.videoPrompt, negativePrompt: scene.negativePrompt, durationSeconds: scene.durationSeconds, resolution: "1080p", aspectRatio: config.aspectRatio },
+            consentSubject: scene.hasAvatar ? (config.avatarId ?? persona.heygenAvatarId) : undefined,
+          });
+          result = { status: "submitted" as const, jobId: job.id, provider: "native" };
+        } else if (scene.hasAvatar && getAvailableAvatarProvider() === "heygen") {
           result = await generateAvatarVideo({
             voiceoverText: scene.voiceoverText,
             avatarId: config.avatarId ?? persona.heygenAvatarId,
@@ -900,6 +918,17 @@ export async function pollClipJobs(workspaceId: string, projectId: string): Prom
       const [, provider, jobId] = scene.notes.split(":");
       if (!provider || !jobId) return scene;
 
+      if (provider === "native") {
+        const native = await getNativeJob(workspaceId, projectId, jobId);
+        if (native.status === "succeeded") {
+          const output = (native.outputObjects as Array<{ key: string }>)[0];
+          if (!output) return { ...scene, clipStatus: "failed" as const, notes: "Native job completed without verified output" };
+          const isHd = scene.clipUrlHd !== undefined;
+          return { ...scene, clipStatus: "ready" as const, [isHd ? "clipUrlHd" : "clipUrl"]: output.key, notes: undefined };
+        }
+        if (native.status === "failed" || native.status === "cancelled") return { ...scene, clipStatus: "failed" as const, notes: native.errorMessage ?? native.status };
+        return scene;
+      }
       const result = await pollVideoJob(jobId, provider);
       if (result.status === "ready") {
         const isHd = scene.clipUrlHd !== undefined;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { 
   AlertCircle, CheckCircle2, Circle, Clapperboard, Loader2, Plus, 
   Settings2, Activity, PlaySquare, CalendarClock, ChevronDown, MonitorPlay, 
@@ -60,7 +60,7 @@ export function StudioWorkspace({ onPhaseChange, onProjectSelect }: { onPhaseCha
   const [selected, setSelected] = useState<string | null>(null);
   const [projectDetail, setProjectDetail] = useState<ProjectDetail | null>(null);
 
-  const [capabilities, setCapabilities] = useState<{ digitalTwin?: { backend: string; nativeCloneEngineAvailable: boolean } } | null>(null);
+  const [capabilities, setCapabilities] = useState<{ native?: { available: boolean; workers: Array<{ name: string; capabilities: Array<{ modelId?: string; modelRevision?: string; licenseApproved?: boolean; resolutions?: string[] }> }> }; digitalTwin?: { backend: string; nativeCloneEngineAvailable: boolean } } | null>(null);
 
   useEffect(() => {
     onProjectSelect?.(selected);
@@ -109,6 +109,11 @@ export function StudioWorkspace({ onPhaseChange, onProjectSelect }: { onPhaseCha
   const [targetDurations, setTargetDurations] = useState<number[]>([]);
   const [trailerEnabled, setTrailerEnabled] = useState(false);
   const [trailerDurations, setTrailerDurations] = useState<(15 | 30)[]>([]);
+  const [retentionPolicy, setRetentionPolicy] = useState<"archive" | "ephemeral">("archive");
+  const [downloadEvidence, setDownloadEvidence] = useState<{ renderJobId: string; checksum?: string; size?: number } | null>(null);
+  const [purging, setPurging] = useState(false);
+  const [importingPackage, setImportingPackage] = useState(false);
+  const packageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchProjects().then(projs => {
@@ -151,6 +156,7 @@ export function StudioWorkspace({ onPhaseChange, onProjectSelect }: { onPhaseCha
         aspectRatio,
         targetDurationsSeconds: targetDurations.length > 0 ? targetDurations : undefined,
         trailerPolicy: trailerEnabled ? { enabled: true, durations: trailerDurations } : undefined,
+        retentionPolicy,
       });
       setProjects((current) => [project, ...current]);
       setSelected(project.id);
@@ -161,6 +167,7 @@ export function StudioWorkspace({ onPhaseChange, onProjectSelect }: { onPhaseCha
       setTargetDurations([]);
       setTrailerEnabled(false);
       setTrailerDurations([]);
+      setRetentionPolicy("archive");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível criar o projeto.");
     } finally {
@@ -239,9 +246,10 @@ export function StudioWorkspace({ onPhaseChange, onProjectSelect }: { onPhaseCha
 
   const downloadMedia = async (renderJobId: string, duration?: 15 | 30) => {
     try {
-      const blob = duration 
+      const handoff = !duration ? await videoEditorClient.downloadRenderHandoff(selected!, renderJobId) : undefined;
+      const blob = handoff?.blob ?? (duration
         ? await videoEditorClient.getTrailerMedia(selected!, duration, renderJobId)
-        : await videoEditorClient.getRenderMedia(selected!, renderJobId);
+        : await videoEditorClient.getRenderMedia(selected!, renderJobId));
         
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -249,8 +257,64 @@ export function StudioWorkspace({ onPhaseChange, onProjectSelect }: { onPhaseCha
       a.download = duration ? `trailer-${duration}s-${Date.now()}.mp4` : `master-${Date.now()}.mp4`;
       a.click();
       window.URL.revokeObjectURL(url);
+      if (handoff) setDownloadEvidence({ renderJobId, checksum: handoff.checksum, size: handoff.size });
     } catch (e) {
       alert("Erro ao baixar mídia.");
+    }
+  };
+  const confirmPurge = async () => {
+    if (!selected || !downloadEvidence?.checksum) return;
+    const confirmation = window.prompt("A exclusão é irreversível: fontes, proxies, renders, trailers e temporários serão apagados. Sem nova carga, não será possível editar novamente. Digite APAGAR MÍDIA para confirmar:");
+    if (confirmation !== "APAGAR MÍDIA") return;
+    setPurging(true);
+    try {
+      await videoEditorClient.purgeMedia(selected, { renderJobId: downloadEvidence.renderJobId, expectedChecksum: downloadEvidence.checksum, confirmation });
+      setDownloadEvidence(null);
+      await fetchProjectDetail(selected);
+      await fetchProjects();
+    } catch (error) { setError(error instanceof Error ? error.message : "Não foi possível apagar a mídia."); }
+    finally { setPurging(false); }
+  };
+  const downloadEditablePackage = async () => {
+    if (!selected || !masterRender || masterRender.status !== "succeeded") return;
+    try {
+      setError(null);
+      setOperationStatus("Preparando pacote editável com fontes e timeline...");
+      const handoff = await videoEditorClient.downloadEditablePackage(selected);
+      if (!handoff.checksum) throw new Error("O servidor não informou o checksum do pacote.");
+      const url = window.URL.createObjectURL(handoff.blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `projeto-editavel-${Date.now()}.nexosvideo`; a.click();
+      window.URL.revokeObjectURL(url);
+      const confirmation = window.prompt("Confirme somente após salvar o arquivo .nexosvideo. Digite SALVEI O PACOTE EDITÁVEL:");
+      if (confirmation !== "SALVEI O PACOTE EDITÁVEL") {
+        setOperationStatus("Pacote baixado, mas ainda não confirmado.");
+        return;
+      }
+      await videoEditorClient.confirmEditablePackage(selected, handoff.checksum, confirmation);
+      setDownloadEvidence({ renderJobId: masterRender.id, checksum: handoff.checksum, size: handoff.size });
+      setOperationStatus("Pacote editável confirmado. A exclusão da mídia pode ser habilitada.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Não foi possível baixar o pacote editável.");
+      setOperationStatus(null);
+    }
+  };
+  const importEditablePackage = async (file?: File) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".nexosvideo")) { setError("Selecione um arquivo .nexosvideo."); return; }
+    setImportingPackage(true); setError(null); setOperationStatus("Validando e importando pacote editável...");
+    try {
+      const detail = await videoEditorClient.importEditablePackage(file);
+      await fetchProjects();
+      setSelected(detail.project.id);
+      setProjectDetail(detail);
+      setOperationStatus("Projeto editável importado com sucesso.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Não foi possível importar o pacote.");
+      setOperationStatus(null);
+    } finally {
+      setImportingPackage(false);
+      if (packageInputRef.current) packageInputRef.current.value = "";
     }
   };
 
@@ -287,6 +351,10 @@ export function StudioWorkspace({ onPhaseChange, onProjectSelect }: { onPhaseCha
         </div>
 
         <div className="flex items-center gap-3">
+          <input ref={packageInputRef} type="file" accept=".nexosvideo,application/zip" className="hidden" onChange={(event) => void importEditablePackage(event.target.files?.[0])} />
+          <button type="button" onClick={() => packageInputRef.current?.click()} disabled={importingPackage} className="inline-flex h-10 items-center gap-2 rounded-lg border border-input bg-background px-3 text-sm font-medium text-foreground hover:border-primary/50 disabled:opacity-50">
+            {importingPackage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Importar projeto
+          </button>
           {!showCreate && projects.length > 0 && (
             <div className="relative group">
               <select
@@ -409,8 +477,9 @@ export function StudioWorkspace({ onPhaseChange, onProjectSelect }: { onPhaseCha
                       <button
                         key={mode.value}
                         onClick={() => setSourceMode(mode.value)}
+                        disabled={(mode.value === "synthetic" || mode.value === "digital_twin") && capabilities?.native?.available === false}
                         className={cn(
-                          "flex items-center gap-2 p-3 rounded-lg border text-left transition-all",
+                          "flex items-center gap-2 p-3 rounded-lg border text-left transition-all disabled:cursor-not-allowed disabled:opacity-40",
                           sourceMode === mode.value
                             ? "bg-primary/10 border-primary text-primary"
                             : "bg-muted/30 border-input text-muted-foreground hover:bg-muted"
@@ -424,14 +493,17 @@ export function StudioWorkspace({ onPhaseChange, onProjectSelect }: { onPhaseCha
                   {sourceMode === "digital_twin" && (
                     <div className="mt-3 p-3 bg-muted/20 border border-primary/20 rounded-lg text-xs animate-in fade-in slide-in-from-top-2">
                       <p className="font-semibold mb-1 text-primary">Capacidade do Motor de Geração</p>
-                      <p className="text-muted-foreground">O ambiente atual utiliza um clone digital gerenciado pela NexOS com processamento em {capabilities?.digitalTwin?.backend || "HeyGen"}.</p>
+                      <p className="text-muted-foreground">Execução: {capabilities?.digitalTwin?.backend || "verificando worker privado"}.</p>
                       {capabilities?.digitalTwin?.nativeCloneEngineAvailable === false ? (
-                        <p className="text-destructive font-medium mt-2 flex items-center gap-1"><AlertOctagon className="w-3 h-3"/> O motor nativo de clonagem está indisponível. Processamento terceirizado em uso.</p>
+                        <p className="text-destructive font-medium mt-2 flex items-center gap-1"><AlertOctagon className="w-3 h-3"/> Nenhum worker GPU privado saudável para clonagem. A geração nativa está desabilitada.</p>
                       ) : capabilities?.digitalTwin?.nativeCloneEngineAvailable === true ? (
                         <p className="text-emerald-500 font-medium mt-2 flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> Motor nativo de clonagem disponível e ativo.</p>
                       ) : (
                         <p className="text-muted-foreground mt-2">Verificando status do motor nativo...</p>
                       )}
+                      {capabilities?.native?.workers.map((worker) => (
+                        <p key={worker.name} className="text-[10px] mt-2 text-muted-foreground">Worker {worker.name}: {worker.capabilities.map((c) => `${c.modelId ?? "local"}${c.modelRevision ? `@${c.modelRevision}` : ""} · ${c.licenseApproved ? "licença aprovada" : "sem licença"}${c.resolutions?.length ? ` · ${c.resolutions.join(", ")}` : ""}`).join(" | ")}</p>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -491,6 +563,14 @@ export function StudioWorkspace({ onPhaseChange, onProjectSelect }: { onPhaseCha
                     </div>
                   )}
                 </div>
+                <div className="space-y-2 pt-4 border-t border-border/50">
+                  <label className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">Retenção de mídia</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => setRetentionPolicy("archive")} className={cn("rounded-lg border p-3 text-left text-xs", retentionPolicy === "archive" ? "border-primary bg-primary/10 text-primary" : "border-input text-muted-foreground")}>Arquivo permanente</button>
+                    <button type="button" onClick={() => setRetentionPolicy("ephemeral")} className={cn("rounded-lg border p-3 text-left text-xs", retentionPolicy === "ephemeral" ? "border-amber-500 bg-amber-500/10 text-foreground" : "border-input text-muted-foreground")}>Efêmera — apagar após download</button>
+                  </div>
+                  {retentionPolicy === "ephemeral" && <p className="text-[11px] text-amber-600 dark:text-amber-400">A mídia fica temporariamente armazenada durante a edição. Após baixar e verificar o arquivo, você deverá confirmar a exclusão irreversível. A timeline/auditoria pode permanecer, mas não poderá ser reeditada sem novo upload. O armazenamento de mídia recorrente fica zero ou próximo de zero após sucesso; pequenos metadados/auditoria e o processamento temporário permanecem.</p>}
+                </div>
 
               </div>
             </div>
@@ -514,6 +594,7 @@ export function StudioWorkspace({ onPhaseChange, onProjectSelect }: { onPhaseCha
                 <span className="w-2 h-2 rounded-full bg-chart-2 shadow-[0_0_8px_rgba(var(--chart-2),0.6)]" />
                 {project.status.toUpperCase()}
               </span>
+              {project.retentionPolicy === "ephemeral" && <span className="rounded bg-amber-500/10 px-2 py-1 text-amber-600 dark:text-amber-400">{project.mediaPurgedAt ? "MÍDIA APAGADA" : "MÍDIA EFÊMERA"}</span>}
               <span className="text-muted-foreground border-l border-border/50 pl-4 flex items-center gap-1.5">
                 <CalendarClock className="w-3.5 h-3.5" />
                 Criado {new Date(project.createdAt).toLocaleDateString()}
@@ -580,6 +661,14 @@ export function StudioWorkspace({ onPhaseChange, onProjectSelect }: { onPhaseCha
                     </button>
                   </div>
                   {operationStatus && <p className="mt-3 text-xs text-muted-foreground bg-muted/20 p-2 rounded border border-border/50">{operationStatus}</p>}
+                  {project.retentionPolicy === "ephemeral" && !project.mediaPurgedAt && (
+                    <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs">
+                      <p className="font-semibold text-foreground">Download e exclusão da mídia efêmera</p>
+                      <p className="mt-1 text-muted-foreground">Antes da exclusão, baixe e confirme o pacote editável (.nexosvideo), que contém fontes e timeline. MP4 continua sendo um download separado.</p>
+                      {!downloadEvidence && <button type="button" disabled={masterRender?.status !== "succeeded"} onClick={() => void downloadEditablePackage()} className="mt-2 inline-flex rounded bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"><Download className="mr-1 h-3.5 w-3.5" />Baixar projeto editável</button>}
+                      {downloadEvidence && <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center"><span className="font-mono text-[10px] break-all">Pacote confirmado · SHA-256: {downloadEvidence.checksum} {downloadEvidence.size ? `· ${downloadEvidence.size} bytes` : ""}</span><button type="button" disabled={purging} onClick={() => void confirmPurge()} className="rounded bg-destructive px-3 py-2 text-xs font-semibold text-destructive-foreground disabled:opacity-50">{purging ? "Apagando..." : "Apagar mídia após pacote salvo"}</button></div>}
+                    </div>
+                  )}
 
                   {/* Render Status Section */}
                   {(masterRender || trailers.length > 0) && (

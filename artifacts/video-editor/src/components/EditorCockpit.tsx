@@ -117,6 +117,12 @@ export function EditorCockpit({
       </div>
     );
   }
+  const renderSpec = projectData?.manifest?.specification?.timelineRender as { resolution?: string; fps?: number } | undefined;
+  const latestEvidence = (projectData?.renders?.[0] as any)?.specification?.render as { resolution?: string; fps?: number } | undefined;
+  // Prefer the completed render provenance, then the persisted request. These
+  // are the same values the server compiles and verifies with ffprobe.
+  const outputResolution = latestEvidence?.resolution ?? renderSpec?.resolution ?? "1080x1920";
+  const outputFps = latestEvidence?.fps ?? renderSpec?.fps ?? 30;
 
   return (
     <EditorContext.Provider value={{ state, dispatch }}>
@@ -131,6 +137,8 @@ export function EditorCockpit({
               <h1 className="text-sm font-semibold tracking-tight">{projectData?.project?.name || "Projeto Sem Título"}</h1>
               <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono uppercase">
                 <span>{projectData?.project?.id.split("-")[0]}</span>
+                <span>•</span>
+                <span>OUTPUT {outputResolution} / {outputFps} FPS</span>
                 <span>•</span>
                 {saveStatus === "saving" && <span className="text-primary animate-pulse">Salvando...</span>}
                 {saveStatus === "saved" && <span className="text-emerald-500">Salvo</span>}

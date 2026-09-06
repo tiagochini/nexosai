@@ -14,11 +14,17 @@ import { requireAuth } from "../auth/auth.middleware.js";
 import {
   advanceProduction, createCorrection, createStudioProject, createStudioRender, createStudioTrailerRender, getStudioDetail, getStudioRender, listStudioProjects,
   getStudioAsset, registerAsset, resolveCorrection, runAutonomousPreproduction, runPlanningEnsemble,
-  submitQc, upsertTimeline,
+  submitQc, upsertTimeline, createRenderDownloadHandoff, purgeEphemeralMedia, createEditablePackageExport, confirmEditablePackage, importEditablePackage,
 } from "./audiovisual-studio.service.js";
 import { createGCSObjectStream, getGCSObjectMeta, uploadFileToGCS } from "../../lib/gcs-recordings.js";
+import { nativeCapabilities } from "../video-production/native-media-engine.service.js";
+import { persistedTimelineSchema } from "./timeline-render.compiler.js";
 
 const router = Router();
+const packageUpload = multer({
+  storage: multer.diskStorage({ destination: "/tmp/nexos-video-editor/uploads", filename: (_req, file, cb) => cb(null, `${uuidv4()}${path.extname(file.originalname)}`) }),
+  limits: { fileSize: 2 * 1024 * 1024 * 1024, files: 1 },
+});
 
 const projectIdSchema = z.string().uuid();
 const objectStorageUriSchema = z.string().regex(/^(s3|gs|r2|azure|blob):\/\//, "uri must be an object-storage URI");
@@ -30,23 +36,12 @@ const createStudioProjectSchema = z.object({
   targetDurationsSeconds: z.array(z.number().int().positive().max(4 * 60 * 60)).min(1).max(20).optional(),
   aspectRatio: z.enum(["16:9", "9:16", "1:1"]).optional(),
   trailerPolicy: z.object({ enabled: z.boolean(), durationsSeconds: z.array(z.union([z.literal(15), z.literal(30)])).optional(), durations: z.array(z.union([z.literal(15), z.literal(30)])).optional() }).optional(),
+  retentionPolicy: z.enum(["archive", "ephemeral"]).optional(),
 });
 const jsonRecordSchema = z.record(z.string(), z.unknown());
-const timelineSchema = z.object({
-  expectedRevisionNumber: z.number().int().nonnegative().optional(),
-  tracks: z.array(z.object({
-    id: z.string().uuid().optional(),
-    trackType: z.enum(["video", "audio", "voiceover", "music", "graphics", "subtitles"]),
-    name: z.string().trim().min(1).max(200),
-    position: z.number().int().nonnegative(),
-    settings: jsonRecordSchema.optional(),
-  })).max(100),
-  items: z.array(z.object({
-    id: z.string().uuid().optional(), trackId: z.string().uuid(), assetId: z.string().uuid().optional(),
-    position: z.number().int().nonnegative(), startMs: z.number().int().nonnegative(), durationMs: z.number().int().positive(),
-    trimStartMs: z.number().int().nonnegative().optional(), trimEndMs: z.number().int().nonnegative().optional(), settings: jsonRecordSchema.optional(),
-  })).max(1000),
-});
+// .strict() settings schemas are deliberate: accepting an effect which the
+// renderer does not implement is worse than returning a visible validation error.
+const timelineSchema = persistedTimelineSchema;
 const assetSchema = z.object({
   assetType: z.enum(["video", "audio", "image", "subtitle", "graphic", "font", "document"]),
   name: z.string().trim().min(1).max(300), uri: objectStorageUriSchema, mimeType: z.string().max(200).optional(),
@@ -56,6 +51,15 @@ const qcSchema = z.object({ renderJobId: z.string().uuid() });
 const correctionSchema = z.object({ revisionId: z.string().uuid(), qcIssueId: z.string().uuid().optional(), instruction: z.string().trim().min(1).max(10000), specification: jsonRecordSchema.optional() });
 const resolutionSchema = z.object({ resolution: z.string().trim().min(1).max(10000) });
 const uploadAssetSchema = z.object({ fileId: z.string().uuid(), name: z.string().trim().min(1).max(300).optional() });
+const purgeMediaSchema = z.object({
+  renderJobId: z.string().uuid(),
+  expectedChecksum: z.string().trim().regex(/^[a-fA-F0-9]{64}$/, "checksum SHA-256 inválido"),
+  confirmation: z.string().trim(),
+});
+const packageConfirmationSchema = z.object({
+  checksum: z.string().trim().regex(/^[a-fA-F0-9]{64}$/, "checksum SHA-256 inválido").transform((value) => value.toLowerCase()),
+  confirmation: z.string().trim(),
+});
 
 function validProjectId(value: string, res: import("express").Response): value is string {
   if (projectIdSchema.safeParse(value).success) return true;
@@ -206,6 +210,63 @@ router.get("/projects/:projectId/render/:renderJobId/media", requireAuth, async 
   if (render.status !== "succeeded" || !render.outputUri?.startsWith("audiovisual-studio/")) { res.status(409).json({ error: "Render media is unavailable", code: "RENDER_MEDIA_UNAVAILABLE" }); return; }
   await streamStudioObject(req, res, render.outputUri, render.outputMimeType);
 });
+// This is a server-streamed handoff, not a redirect. Its audit event proves
+// delivery began, never that the user's browser completed a local save.
+router.get("/projects/:projectId/render/:renderJobId/download", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string; const renderJobId = req.params.renderJobId as string;
+  if (!validProjectId(projectId, res) || !projectIdSchema.safeParse(renderJobId).success) { if (!res.headersSent) res.status(400).json({ error: "Invalid render job id", code: "VALIDATION_ERROR" }); return; }
+  const { render, meta } = await createRenderDownloadHandoff(req.auth.workspaceId, projectId, renderJobId);
+  const filename = `nexos-${projectId.slice(0, 8)}-${renderJobId.slice(0, 8)}.mp4`;
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  if (meta.sha256) res.setHeader("X-Content-SHA256", meta.sha256);
+  await streamStudioObject(req, res, render.outputUri!, render.outputMimeType);
+});
+router.get("/projects/:projectId/export-package", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  if (!validProjectId(projectId, res)) return;
+  const includeOutputs = req.query.includeOutputs === "true";
+  const exported = await createEditablePackageExport(req.auth.workspaceId, projectId, includeOutputs);
+  res.setHeader("Content-Type", "application/vnd.nexosvideo+zip");
+  res.setHeader("Content-Length", String(exported.size));
+  res.setHeader("Content-Disposition", `attachment; filename="${exported.filename.replace(/"/g, "")}"`);
+  res.setHeader("X-Content-SHA256", exported.checksum);
+  const cleanup = () => void exported.cleanup();
+  res.once("finish", cleanup); res.once("close", cleanup);
+  fs.createReadStream(exported.path).on("error", () => res.destroy()).pipe(res);
+});
+router.post("/projects/:projectId/export-package/confirm", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  if (!validProjectId(projectId, res)) return;
+  const parsed = packageConfirmationSchema.safeParse(req.body);
+  if (!parsed.success) return validationError(res, parsed.error);
+  res.json(await confirmEditablePackage(req.auth.workspaceId, projectId, parsed.data.checksum, parsed.data.confirmation));
+});
+router.post("/projects/import-package", requireAuth, packageUpload.single("package"), async (req, res): Promise<void> => {
+  if (!req.file) { res.status(400).json({ error: "Envie um arquivo .nexosvideo.", code: "VALIDATION_ERROR" }); return; }
+  if (!req.file.originalname.toLowerCase().endsWith(".nexosvideo")) {
+    await fs.promises.unlink(req.file.path).catch(() => undefined);
+    res.status(400).json({ error: "O arquivo deve ter extensão .nexosvideo.", code: "VALIDATION_ERROR" }); return;
+  }
+  try {
+    res.status(201).json(await importEditablePackage(req.auth.workspaceId, req.file.path));
+  } finally {
+    await fs.promises.unlink(req.file.path).catch(() => undefined);
+  }
+});
+router.post("/projects/:projectId/purge-media", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  if (!validProjectId(projectId, res)) return;
+  const parsed = purgeMediaSchema.safeParse(req.body);
+  if (!parsed.success) return validationError(res, parsed.error);
+  res.json(await purgeEphemeralMedia(req.auth.workspaceId, projectId, parsed.data));
+});
+router.post("/projects/:projectId/purge-media/retry", requireAuth, async (req, res): Promise<void> => {
+  const projectId = req.params.projectId as string;
+  if (!validProjectId(projectId, res)) return;
+  const parsed = purgeMediaSchema.safeParse(req.body);
+  if (!parsed.success) return validationError(res, parsed.error);
+  res.json(await purgeEphemeralMedia(req.auth.workspaceId, projectId, parsed.data, true));
+});
 router.get("/projects/:projectId/trailers/:duration/:renderJobId", requireAuth, async (req, res): Promise<void> => {
   const projectId = req.params.projectId as string; const renderJobId = req.params.renderJobId as string;
   if (!validProjectId(projectId, res) || !projectIdSchema.safeParse(renderJobId).success) { if (!res.headersSent) res.status(400).json({ error: "Invalid render job id", code: "VALIDATION_ERROR" }); return; }
@@ -220,8 +281,13 @@ router.get("/projects/:projectId/trailers/:duration/:renderJobId/media", require
   if ((render.specification as Record<string, unknown>).deliverableType !== "trailer" || render.status !== "succeeded" || !render.outputUri?.startsWith("audiovisual-studio/")) { res.status(409).json({ error: "Trailer media is unavailable", code: "RENDER_MEDIA_UNAVAILABLE" }); return; }
   await streamStudioObject(req, res, render.outputUri, render.outputMimeType);
 });
-router.get("/capabilities", requireAuth, (_req, res): void => {
-  res.json({ digitalTwin: { backend: "HeyGen", nativeCloneEngineAvailable: false }, clone: { syntheticPrompt: true, avatar: true, digitalTwin: true, cloneCreation: false, consentAuthority: "HeyGen", limits: ["Native clone creation requires a configured native adapter"], backingEngine: "HeyGen", managedBy: "NexOS" } });
+router.get("/capabilities", requireAuth, async (req, res): Promise<void> => {
+  const native = await nativeCapabilities(req.auth.workspaceId);
+  res.json({
+    native,
+    digitalTwin: { backend: native.available ? "NexOS native worker" : "unavailable", nativeCloneEngineAvailable: native.workers.some((worker) => (worker.capabilities as Array<{ operation?: string }>).some((capability) => capability.operation === "avatar_animation")) },
+    clone: { syntheticPrompt: native.workers.some((worker) => (worker.capabilities as Array<{ operation?: string }>).some((capability) => capability.operation === "text_to_video")), avatar: native.workers.some((worker) => (worker.capabilities as Array<{ operation?: string }>).some((capability) => capability.operation === "avatar_animation")), cloneCreation: native.workers.some((worker) => (worker.capabilities as Array<{ operation?: string }>).some((capability) => capability.operation === "voice_clone")), backingEngine: "native", managedBy: "NexOS", limits: native.available ? [] : ["No healthy private GPU worker is registered"] },
+  });
 });
 router.post("/projects/:projectId/qc", requireAuth, async (req, res): Promise<void> => {
   const projectId = req.params.projectId as string;

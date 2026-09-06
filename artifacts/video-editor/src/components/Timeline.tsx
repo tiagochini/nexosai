@@ -12,6 +12,14 @@ export function Timeline({ assets }: { assets: Asset[] }) {
   // Dragging clips
   const [draggingItem, setDraggingItem] = useState<{ id: string, startX: number, originalStartMs: number, trackId: string } | null>(null);
 
+  const toggleTrackSetting = (track: Track, setting: "mute" | "solo" | "visible") => {
+    const settings = track.settings ?? {};
+    dispatch({
+      type: "UPDATE_TRACK_SETTINGS",
+      payload: { id: track.id, settings: { ...settings, [setting]: setting === "visible" ? settings.visible === false : !settings[setting] } },
+    });
+  };
+
   const handlePointerDownPlayhead = (e: React.PointerEvent) => {
     setIsDraggingPlayhead(true);
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -234,9 +242,17 @@ export function Timeline({ assets }: { assets: Asset[] }) {
         {/* Track Headers */}
         <div className="w-[150px] shrink-0 sticky left-0 z-20 bg-background border-r border-border/50 shadow-[10px_0_20px_rgba(0,0,0,0.2)]">
           <div className="h-8 border-b border-border/20 bg-muted/10"></div>
-          {tracks.sort((a,b)=>a.position-b.position).map(t => (
+          {[...tracks].sort((a,b)=>a.position-b.position).map(t => (
             <div key={t.id} className="h-20 border-b border-border/20 flex items-center px-3 bg-muted/5 group">
-              <span className="text-[10px] font-semibold text-foreground/80 truncate uppercase tracking-wider">{t.name}</span>
+               <div className="min-w-0 flex-1">
+                 <span className="block text-[10px] font-semibold text-foreground/80 truncate uppercase tracking-wider">{t.name}</span>
+                 <span className="text-[8px] text-muted-foreground uppercase">{t.trackType}</span>
+               </div>
+               <div className="flex gap-1">
+                 <button title="Toggle visibility" onClick={() => toggleTrackSetting(t, "visible")} className={`w-5 h-5 rounded text-[9px] ${t.settings?.visible === false ? "bg-muted text-muted-foreground" : "bg-primary/15 text-primary"}`}>◉</button>
+                 <button title="Mute track" onClick={() => toggleTrackSetting(t, "mute")} className={`w-5 h-5 rounded text-[9px] ${t.settings?.mute ? "bg-destructive/20 text-destructive" : "bg-muted/50"}`}>M</button>
+                 <button title="Solo track" onClick={() => toggleTrackSetting(t, "solo")} className={`w-5 h-5 rounded text-[9px] ${t.settings?.solo ? "bg-amber-400/20 text-amber-300" : "bg-muted/50"}`}>S</button>
+               </div>
             </div>
           ))}
         </div>
@@ -257,7 +273,7 @@ export function Timeline({ assets }: { assets: Asset[] }) {
 
           {/* Tracks */}
           <div className="relative">
-            {tracks.sort((a,b)=>a.position-b.position).map((t, i) => (
+            {[...tracks].sort((a,b)=>a.position-b.position).map((t, i) => (
               <div 
                 key={t.id} 
                 className="h-20 border-b border-border/20 relative"

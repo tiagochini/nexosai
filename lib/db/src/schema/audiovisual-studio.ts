@@ -57,6 +57,14 @@ export const renderJobStatusEnum = pgEnum("render_job_status", [
   "cancelled",
 ]);
 
+/** Durable state for an explicitly requested ephemeral-media destruction. */
+export const videoMediaPurgeStatusEnum = pgEnum("video_media_purge_status", [
+  "requested",
+  "in_progress",
+  "purge_failed",
+  "purged",
+]);
+
 export const qcReportStatusEnum = pgEnum("qc_report_status", [
   "pending",
   "passed",
@@ -196,6 +204,35 @@ export const renderJobsTable = pgTable("render_jobs", {
   index("render_jobs_manifest_idx").on(table.manifestId),
 ]);
 
+/**
+ * This is an audit/control-plane record only. It intentionally holds object
+ * identifiers, checksums and deletion accounting—not media bytes or URLs.
+ * A failed attempt is retained so an operator/user can safely retry it.
+ */
+export const videoMediaPurgesTable = pgTable("video_media_purges", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspacesTable.id, { onDelete: "cascade" }),
+  videoProjectId: uuid("video_project_id").notNull(),
+  renderJobId: uuid("render_job_id").notNull().references(() => renderJobsTable.id, { onDelete: "restrict" }),
+  status: videoMediaPurgeStatusEnum("status").notNull().default("requested"),
+  /** SHA-256 supplied by the user after the server-issued download handoff. */
+  acknowledgedChecksum: text("acknowledged_checksum").notNull(),
+  confirmationText: text("confirmation_text").notNull(),
+  requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  purgedAt: timestamp("purged_at", { withTimezone: true }),
+  objectCount: integer("object_count").notNull().default(0),
+  deletedObjectCount: integer("deleted_object_count").notNull().default(0),
+  byteCount: integer("byte_count").notNull().default(0),
+  deletedByteCount: integer("deleted_byte_count").notNull().default(0),
+  errors: jsonb("errors").notNull().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => [
+  projectWorkspaceForeignKey(table, "video_media_purges_project_workspace_fkey"),
+  index("video_media_purges_project_status_idx").on(table.workspaceId, table.videoProjectId, table.status, table.createdAt),
+]);
+
 export const qcReportsTable = pgTable("qc_reports", {
   id: uuid("id").primaryKey().defaultRandom(),
   workspaceId: uuid("workspace_id").notNull().references(() => workspacesTable.id, { onDelete: "cascade" }),
@@ -274,6 +311,7 @@ export const insertProductionAssetSchema = createInsertSchema(productionAssetsTa
 export const insertTimelineTrackSchema = createInsertSchema(timelineTracksTable).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTimelineItemSchema = createInsertSchema(timelineItemsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertRenderJobSchema = createInsertSchema(renderJobsTable).omit({ id: true, createdAt: true, updatedAt: true, queuedAt: true, startedAt: true, completedAt: true });
+export const insertVideoMediaPurgeSchema = createInsertSchema(videoMediaPurgesTable).omit({ id: true, createdAt: true, updatedAt: true, requestedAt: true, startedAt: true, purgedAt: true });
 export const insertQcReportSchema = createInsertSchema(qcReportsTable).omit({ id: true, createdAt: true, updatedAt: true, completedAt: true });
 export const insertQcIssueSchema = createInsertSchema(qcIssuesTable).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertProductionRevisionSchema = createInsertSchema(productionRevisionsTable).omit({ id: true, createdAt: true, updatedAt: true });
@@ -289,6 +327,8 @@ export type InsertTimelineItem = z.infer<typeof insertTimelineItemSchema>;
 export type TimelineItem = typeof timelineItemsTable.$inferSelect;
 export type InsertRenderJob = z.infer<typeof insertRenderJobSchema>;
 export type RenderJob = typeof renderJobsTable.$inferSelect;
+export type InsertVideoMediaPurge = z.infer<typeof insertVideoMediaPurgeSchema>;
+export type VideoMediaPurge = typeof videoMediaPurgesTable.$inferSelect;
 export type InsertQcReport = z.infer<typeof insertQcReportSchema>;
 export type QcReport = typeof qcReportsTable.$inferSelect;
 export type InsertQcIssue = z.infer<typeof insertQcIssueSchema>;

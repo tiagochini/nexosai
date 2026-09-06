@@ -1,0 +1,11 @@
+{
+  "workerName": "private-gpu-01",
+  "models": [
+    {"operation":"text_to_video","modelId":"local-model-id","modelRevision":"local-revision","path":"/models/local-model-id","licenseApproved":true,"resolutions":["720p"],"maxFps":24,"maxDurationSeconds":10,"vramMb":24576}
+  ],
+  "deterministicCapabilities": [
+    {"operation":"timeline_render","licenseApproved":true,"resolutions":["1080p"],"maxFps":60,"maxDurationSeconds":14400,"vramMb":1},
+    {"operation":"qc_extract","licenseApproved":true,"maxDurationSeconds":14400,"vramMb":1}
+  ],
+  "plugins": {"text_to_video": "/opt/nexos/plugins/text-to-video.sh"}
+}

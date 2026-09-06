@@ -48,6 +48,16 @@ export const videoFormatEnum = pgEnum("video_format", [
   "product_demo",
 ]);
 
+/**
+ * Archive is the historical/default behavior. Ephemeral projects retain their
+ * media only until an explicitly acknowledged download is purged; the project
+ * record and its audit trail can remain as a non-replayable tombstone.
+ */
+export const videoProjectRetentionPolicyEnum = pgEnum("video_project_retention_policy", [
+  "archive",
+  "ephemeral",
+]);
+
 // ─── Scene shape (stored in JSONB) ──────────────────────────────────────────
 export const SceneSchema = z.object({
   id: z.string(),
@@ -76,6 +86,7 @@ export type VideoScene = z.infer<typeof SceneSchema>;
 
 // ─── Config shape ────────────────────────────────────────────────────────────
 export const VideoConfigSchema = z.object({
+  executionEngine: z.enum(["native", "provider_managed"]).default("native"),
   hasUserFace: z.boolean().default(false),
   voiceStyle: z.enum(["narrator", "avatar", "voice_clone", "subtitles_only"]).default("narrator"),
   aspectRatio: z.enum(["16:9", "9:16", "1:1"]).default("16:9"),
@@ -113,6 +124,9 @@ export const videoProjectsTable = pgTable("video_projects", {
   title: text("title").notNull(),
   format: videoFormatEnum("format").notNull().default("vsl"),
   status: videoProjectStatusEnum("status").notNull().default("intake"),
+  retentionPolicy: videoProjectRetentionPolicyEnum("retention_policy").notNull().default("archive"),
+  /** Set only after every project-owned media object has been confirmed gone. */
+  mediaPurgedAt: timestamp("media_purged_at", { withTimezone: true }),
   config: jsonb("config").$type<VideoConfig>().notNull().default({} as VideoConfig),
   script: text("script"),
   storyboard: jsonb("storyboard").$type<VideoScene[]>().notNull().default([]),

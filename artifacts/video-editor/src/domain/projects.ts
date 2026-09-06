@@ -28,6 +28,8 @@ export interface StudioProject {
   status: ProjectStatus;
   activePhase: ProductionPhase;
   phases: ProjectPhase[];
+  retentionPolicy?: "archive" | "ephemeral";
+  mediaPurgedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,6 +45,7 @@ export interface CreateStudioProjectInput {
     enabled: boolean;
     durations: (15 | 30)[];
   };
+  retentionPolicy?: "archive" | "ephemeral";
 }
 
 export interface StudioProjectCollection {

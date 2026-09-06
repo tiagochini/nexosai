@@ -26,6 +26,11 @@
     "test:operational-status": "tsx src/scripts/test-operational-status.ts",
     "test:content-checkpoint-resume": "NODE_ENV=test tsx src/scripts/test-content-checkpoint-resume.ts",
     "test:orchestration-dead-letter": "tsx src/scripts/test-orchestration-dead-letter.ts"
+    ,"test:timeline-render-compiler": "tsx src/scripts/test-timeline-render-compiler.ts"
+    ,"test:native-media-control-plane": "NODE_ENV=test tsx src/scripts/test-native-media-control-plane.ts"
+    ,"test:native-media-worker-self-test": "python3 ../../services/native-media-worker/test_worker_self_test.py"
+    ,"test:native-media-e2e": "pnpm run test:native-media-control-plane && NODE_ENV=test tsx src/scripts/test-native-media-http.ts && pnpm run test:timeline-render-compiler && pnpm run test:native-media-worker-self-test"
+    ,"test:ephemeral-video-e2e": "NODE_ENV=test tsx src/scripts/test-ephemeral-video-e2e.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

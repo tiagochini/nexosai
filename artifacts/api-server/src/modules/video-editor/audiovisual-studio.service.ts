@@ -1,12 +1,18 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
+import { createHash } from "node:crypto";
+import { ZipArchive } from "archiver";
 import ffmpeg from "fluent-ffmpeg";
 import fs from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { createWriteStream } from "node:fs";
+import { mkdtemp, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import dns from "node:dns/promises";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
+import { once } from "node:events";
+import { spawn } from "node:child_process";
+import { z } from "zod/v4";
 import {
   correctionLoopsTable,
   campaignsTable,
@@ -20,6 +26,9 @@ import {
   timelineItemsTable,
   timelineTracksTable,
   videoProjectsTable,
+  videoMediaPurgesTable,
+  nativeMediaJobsTable,
+  auditLogsTable,
   type VideoProject,
 } from "@workspace/db";
 import { AppError, NotFoundError } from "../../lib/errors.js";
@@ -40,7 +49,8 @@ import {
 import {
   approvePreview, generateFinalClips, generatePreviewClips, pollClipJobs,
 } from "../video-production/video-production.service.js";
-import { createGCSObjectStream, uploadFileToGCS } from "../../lib/gcs-recordings.js";
+import { createGCSObjectStream, deleteGCSObject, getGCSObjectMeta, listGCSObjects, uploadFileToGCS } from "../../lib/gcs-recordings.js";
+import { compileTimelineFilter, persistedTimelineSchema, resolveRenderDimensions, type RenderAsset, type RenderItem, type RenderTrack } from "./timeline-render.compiler.js";
 
 const PHASES = ["script", "storyboard", "assets", "timeline", "edit", "sound", "color", "qc", "corrections", "export"] as const;
 type Phase = typeof PHASES[number];
@@ -76,13 +86,16 @@ function toStudioProject(project: VideoProject, specification?: JsonRecord) {
     ?? PHASES.find((phase) => phases.find((item) => item.phase === phase)?.status === "not_started")
     ?? "export") as Phase;
   const projectStatus = project.status === "completed" ? "complete" : project.status === "failed" ? "review" : project.status === "intake" ? "draft" : "active";
-  return { id: project.id, name: project.title, status: projectStatus, activePhase, phases, createdAt: project.createdAt.toISOString(), updatedAt: project.updatedAt.toISOString() };
+  return { id: project.id, name: project.title, status: projectStatus, activePhase, phases, retentionPolicy: project.retentionPolicy, mediaPurgedAt: project.mediaPurgedAt?.toISOString(), createdAt: project.createdAt.toISOString(), updatedAt: project.updatedAt.toISOString() };
 }
 
 async function scopedProject(workspaceId: string, projectId: string) {
   const [project] = await db.select().from(videoProjectsTable).where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId))).limit(1);
   if (!project) throw new NotFoundError("Projeto de vídeo");
   return project;
+}
+function assertMediaAvailable(project: VideoProject): void {
+  if (project.mediaPurgedAt) throw new AppError(409, "A mídia foi apagada irreversivelmente; envie novos arquivos para voltar a editar.", "PROJECT_MEDIA_PURGED");
 }
 
 async function scopedManifest(workspaceId: string, projectId: string) {
@@ -171,7 +184,7 @@ async function materializeProduction(workspaceId: string, project: VideoProject,
     for (const [position, asset] of materialized.entries()) {
       const durationMs = asset.durationMs ?? 0;
       const item = existing.find((candidate) => candidate.assetId === asset.id);
-      const values = { workspaceId, videoProjectId: project.id, trackId: track!.id, assetId: asset.id, position, startMs: cursor, durationMs, trimStartMs: 0, trimEndMs: 0, settings: { generated: true } };
+       const values = { workspaceId, videoProjectId: project.id, trackId: track!.id, assetId: asset.id, position, startMs: cursor, durationMs, trimStartMs: 0, trimEndMs: 0, settings: {} };
       if (item) await tx.update(timelineItemsTable).set(values).where(and(eq(timelineItemsTable.id, item.id), eq(timelineItemsTable.workspaceId, workspaceId)));
       else await tx.insert(timelineItemsTable).values(values);
       cursor += durationMs;
@@ -195,6 +208,7 @@ export interface CreateStudioProjectInput {
   targetDurationsSeconds?: number[];
   aspectRatio?: "16:9" | "9:16" | "1:1";
   trailerPolicy?: { enabled: boolean; durationsSeconds: Array<15 | 30> };
+  retentionPolicy?: "archive" | "ephemeral";
 }
 
 export async function createStudioProject(workspaceId: string, input: CreateStudioProjectInput) {
@@ -210,7 +224,9 @@ export async function createStudioProject(workspaceId: string, input: CreateStud
       title: input.name,
       format: input.format ?? "reels",
       status: "intake",
+      retentionPolicy: input.retentionPolicy ?? "archive",
       config: {
+        executionEngine: "native",
         hasUserFace: input.sourceMode === "filmed" || input.sourceMode === "digital_twin" || input.sourceMode === "hybrid",
         voiceStyle: input.sourceMode === "digital_twin" || input.sourceMode === "hybrid" ? "voice_clone" : "narrator",
         aspectRatio: input.aspectRatio ?? "9:16",
@@ -389,7 +405,13 @@ export async function runAutonomousPreproduction(
   return getStudioDetail(workspaceId, projectId);
 }
 
-export async function upsertTimeline(workspaceId: string, projectId: string, input: { expectedRevisionNumber?: number; tracks: Array<{ id?: string; trackType: "video" | "audio" | "voiceover" | "music" | "graphics" | "subtitles"; name: string; position: number; settings?: JsonRecord }>; items: Array<{ id?: string; trackId: string; assetId?: string; position: number; startMs: number; durationMs: number; trimStartMs?: number; trimEndMs?: number; settings?: JsonRecord }> }) {
+export async function upsertTimeline(workspaceId: string, projectId: string, input: { expectedRevisionNumber?: number; project?: { resolution?: "1920x1080" | "1080x1920" | "3840x2160" | "2160x3840"; fps?: 24 | 25 | 30 | 50 | 60 }; tracks: Array<{ id?: string; trackType: "video" | "audio" | "voiceover" | "music" | "graphics" | "subtitles"; name: string; position: number; settings?: JsonRecord }>; items: Array<{ id?: string; trackId: string; assetId?: string; position: number; startMs: number; durationMs: number; trimStartMs?: number; trimEndMs?: number; settings?: JsonRecord }> }) {
+  // This service is also called by jobs/tests, bypassing Express. Keep the
+  // allow-list at the trust boundary rather than relying on route validation.
+  const checked = persistedTimelineSchema.safeParse(input);
+  if (!checked.success) throw new AppError(400, checked.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; "), "UNSUPPORTED_TIMELINE_PROPERTY");
+  input = checked.data as typeof input;
+  assertMediaAvailable(await scopedProject(workspaceId, projectId));
   const manifest = await scopedManifest(workspaceId, projectId);
   await db.transaction(async (tx) => {
     const [latest] = await tx.select({ revisionNumber: productionRevisionsTable.revisionNumber }).from(productionRevisionsTable)
@@ -435,6 +457,12 @@ export async function upsertTimeline(workspaceId: string, projectId: string, inp
       workspaceId, videoProjectId: projectId, manifestId: manifest.id, revisionNumber: (latest?.revisionNumber ?? 0) + 1,
       note: "Timeline updated", specification: { timelineWrite: true },
     });
+    if (checked.data.project) {
+      await tx.update(productionManifestsTable).set({
+        specification: { ...(manifest.specification as JsonRecord), timelineRender: checked.data.project },
+        updatedAt: new Date(),
+      }).where(and(eq(productionManifestsTable.id, manifest.id), eq(productionManifestsTable.workspaceId, workspaceId)));
+    }
   });
   await invalidateRenderedOutput(workspaceId, projectId, manifest);
   return getStudioDetail(workspaceId, projectId);
@@ -450,6 +478,7 @@ export async function getStudioAsset(workspaceId: string, projectId: string, ass
 }
 
 export async function registerAsset(workspaceId: string, projectId: string, input: { assetType: "video" | "audio" | "image" | "subtitle" | "graphic" | "font" | "document"; name: string; uri: string; mimeType?: string; byteSize?: number; durationMs?: number; specification?: JsonRecord }) {
+  assertMediaAvailable(await scopedProject(workspaceId, projectId));
   const manifest = await scopedManifest(workspaceId, projectId);
   const [asset] = await db.insert(productionAssetsTable).values({ workspaceId, videoProjectId: projectId, manifestId: manifest.id, status: "ready", ...input, specification: input.specification ?? {} }).returning();
   return asset!;
@@ -489,14 +518,40 @@ async function downloadAsset(uri: string, target: string) {
   await downloadClip(uri, target);
 }
 
-function probe(pathname: string): Promise<{ hasAudio: boolean; durationMs: number }> {
+function probe(pathname: string): Promise<{ hasAudio: boolean; durationMs: number; width?: number; height?: number; fps?: number; audioStreams: number }> {
   return new Promise((resolve, reject) => ffmpeg.ffprobe(pathname, (error, metadata) => error ? reject(error) : resolve({
     hasAudio: metadata.streams.some((stream) => stream.codec_type === "audio"),
     durationMs: Math.round((metadata.format.duration ?? 0) * 1000),
+    width: metadata.streams.find((stream) => stream.codec_type === "video")?.width,
+    height: metadata.streams.find((stream) => stream.codec_type === "video")?.height,
+    fps: (() => { const rate = metadata.streams.find((stream) => stream.codec_type === "video")?.r_frame_rate; const [a, b] = (rate ?? "0/1").split("/").map(Number); return b ? a / b : 0; })(),
+    audioStreams: metadata.streams.filter((stream) => stream.codec_type === "audio").length,
   })));
 }
 function runFfmpeg(command: ffmpeg.FfmpegCommand, output: string): Promise<void> {
-  return new Promise((resolve, reject) => command.on("error", reject).on("end", () => resolve()).save(output));
+  return new Promise((resolve, reject) => {
+    let argv = "";
+    command.on("start", (line: string) => { argv = line; })
+      .on("error", (error: Error, _stdout: string, stderr: string) => {
+        const detail = [argv && `ffmpeg: ${argv}`, stderr?.trim()].filter(Boolean).join("\n");
+        reject(new Error(`${error.message}${detail ? `\n${detail}` : ""}`));
+      })
+      .on("end", () => resolve())
+      .save(output);
+  });
+}
+async function sha256File(filename: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const hash = createHash("sha256");
+    const stream = fs.createReadStream(filename);
+    stream.on("error", reject).on("data", (chunk) => hash.update(chunk)).on("end", () => resolve(hash.digest("hex")));
+  });
+}
+
+async function sha256Object(objectKey: string): Promise<string> {
+  const hash = createHash("sha256");
+  for await (const chunk of createGCSObjectStream(objectKey)) hash.update(chunk);
+  return hash.digest("hex");
 }
 function renderDimensions(aspectRatio: string | undefined) {
   if (aspectRatio === "9:16") return { width: 1080, height: 1920 };
@@ -506,6 +561,7 @@ function renderDimensions(aspectRatio: string | undefined) {
 
 export async function createStudioRender(workspaceId: string, projectId: string, log: Logger) {
   const project = await scopedProject(workspaceId, projectId);
+  assertMediaAvailable(project);
   const manifest = await scopedManifest(workspaceId, projectId);
   const storyboard = project.storyboard as Array<{ clipStatus?: string; clipUrlHd?: string; clipUrl?: string }>;
   if (storyboard.length && storyboard.some((scene) => scene.clipStatus !== "ready" || !(scene.clipUrlHd ?? scene.clipUrl))) {
@@ -582,7 +638,7 @@ export async function recoverStudioRenders(log: Logger) {
 
 async function invalidateRenderedOutput(workspaceId: string, projectId: string, manifest: { id: string; specification: unknown }) {
   await db.update(renderJobsTable).set({ status: "cancelled", completedAt: new Date(), errorMessage: "Invalidated by timeline/correction revision" })
-    .where(and(eq(renderJobsTable.workspaceId, workspaceId), eq(renderJobsTable.videoProjectId, projectId), eq(renderJobsTable.status, "succeeded")));
+    .where(and(eq(renderJobsTable.workspaceId, workspaceId), eq(renderJobsTable.videoProjectId, projectId), inArray(renderJobsTable.status, ["queued", "running", "succeeded"])));
   await db.update(qcReportsTable).set({ status: "needs_review", completedAt: new Date() })
     .where(and(eq(qcReportsTable.workspaceId, workspaceId), eq(qcReportsTable.videoProjectId, projectId)));
   await updatePhases(workspaceId, manifest.id, manifest.specification as JsonRecord, { edit: "in_progress", qc: "not_started", corrections: "not_started", export: "not_started" });
@@ -600,6 +656,13 @@ async function executeStudioRender(workspaceId: string, projectId: string, jobId
     ]);
     if (!job) throw new NotFoundError("Render job");
     await db.update(renderJobsTable).set({ status: "running", startedAt: new Date() }).where(and(eq(renderJobsTable.id, jobId), eq(renderJobsTable.workspaceId, workspaceId)));
+    // Persistent timelines are rendered as one deterministic filter graph.
+    // The storyboard fallback below is retained only for legacy projects which
+    // predate timeline materialisation.
+    if (tracks.length || items.length) {
+      await executeCompiledTimeline({ workspaceId, projectId, jobId, project, manifest, job, tracks, items, assets });
+      return;
+    }
     // Only the first video track is executable today. Audio, graphics and
     // additional video compositing are deliberately not implied by a render.
     const primaryTrack = tracks.filter((track) => track.trackType === "video").sort((a, b) => a.position - b.position)[0];
@@ -678,7 +741,7 @@ async function executeStudioRender(workspaceId: string, projectId: string, jobId
         throw new AppError(409, `Trailer output duration ${renderedDurationMs}ms does not match requested ${expectedDurationMs}ms`, "TRAILER_DURATION_MISMATCH");
       }
     }
-    const outputUri = await uploadFileToGCS(finalPath, `audiovisual-studio/${workspaceId}/${projectId}/renders/${jobId}.mp4`, "video/mp4");
+    const outputUri = await uploadFileToGCS(finalPath, `audiovisual-studio/${workspaceId}/${projectId}/renders/${jobId}.mp4`, "video/mp4", { sha256: await sha256File(finalPath) });
     await db.update(renderJobsTable).set({ status: "succeeded", outputUri, outputMimeType: "video/mp4", completedAt: new Date() }).where(and(eq(renderJobsTable.id, jobId), eq(renderJobsTable.workspaceId, workspaceId), eq(renderJobsTable.videoProjectId, projectId)));
     // Rendering proves only the assembled picture.  It does not start QC or
     // claim an unperformed sound/color pass.
@@ -691,11 +754,410 @@ async function executeStudioRender(workspaceId: string, projectId: string, jobId
   }
 }
 
+async function executeCompiledTimeline(context: {
+  workspaceId: string; projectId: string; jobId: string; project: VideoProject;
+  manifest: { id: string; specification: unknown }; job: { specification: unknown };
+  tracks: Array<any>; items: Array<any>; assets: Array<any>;
+}) {
+  const { workspaceId, projectId, jobId, project, manifest, job, tracks, items, assets } = context;
+  const spec = job.specification as JsonRecord;
+  const projectConfig = project.config as { aspectRatio?: string; fps?: number; resolution?: string };
+  const config = { ...projectConfig, ...((manifest.specification as JsonRecord).timelineRender as { fps?: number; resolution?: string } ?? {}) };
+  const requestedDurationMs = spec.deliverableType === "trailer" ? Number(spec.expectedDurationMs) : Math.max(1, ...items.map((item) => item.startMs + item.durationMs));
+  if (!Number.isSafeInteger(requestedDurationMs) || requestedDurationMs <= 0) throw new AppError(409, "Timeline has no renderable duration", "TIMELINE_DURATION_REQUIRED");
+  let dimensions: { width: number; height: number; resolution: string; is4k: boolean };
+  try { dimensions = resolveRenderDimensions(config.resolution, projectConfig.aspectRatio); }
+  catch (error) { throw new AppError(400, error instanceof Error ? error.message : String(error), "UNSUPPORTED_RENDER_RESOLUTION"); }
+  if (dimensions.is4k) {
+    // This CPU renderer deliberately never silently claims 4K. A dedicated
+    // capability-gated worker can opt in later.
+    throw new AppError(409, "4K rendering requires an approved hardware-capable worker", "RENDER_4K_UNAVAILABLE");
+  }
+  const { width, height } = dimensions;
+  const fps = [24, 25, 30, 50, 60].includes(config.fps ?? 30) ? config.fps ?? 30 : 30;
+  const referenced = new Set(items.flatMap((item) => item.assetId ? [item.assetId] : []));
+  const media = assets.filter((asset) => referenced.has(asset.id));
+  for (const item of items) {
+    if (item.assetId && !media.some((asset) => asset.id === item.assetId)) throw new AppError(409, "Timeline item references a missing, unready, or cross-workspace asset", "TIMELINE_ASSET_UNAVAILABLE");
+  }
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "nexos-timeline-filter-"));
+  try {
+    const renderAssets: RenderAsset[] = [];
+    for (const [index, asset] of media.entries()) {
+      const ext = asset.assetType === "image" || asset.assetType === "graphic" ? ".png" : ".media";
+      const localPath = path.join(tempDir, `asset-${index}${ext}`);
+      await downloadAsset(asset.uri, localPath);
+      renderAssets.push({ id: asset.id, assetType: asset.assetType, durationMs: asset.durationMs, localPath });
+    }
+    const graph = compileTimelineFilter({
+      tracks: tracks as RenderTrack[], items: items as RenderItem[], assets: renderAssets,
+      width, height, fps, durationMs: requestedDurationMs, baseInput: 0,
+    });
+    const output = path.join(tempDir, "final.mp4");
+    const command = ffmpeg().input(`color=c=black:s=${width}x${height}:r=${fps}:d=${requestedDurationMs / 1000}`).inputOptions(["-f", "lavfi"]);
+    for (const asset of renderAssets) {
+      command.input(asset.localPath);
+      if (asset.assetType === "image" || asset.assetType === "graphic") command.inputOptions(["-loop", "1", "-framerate", String(fps)]);
+    }
+    // Map filter outputs explicitly below. Passing output labels to
+    // fluent-ffmpeg's complexFilter() also adds implicit -map arguments,
+    // which mapped [vout] twice on video-only timelines.
+    command.complexFilter(graph.filter)
+      // CI and small private workers frequently expose a very high host CPU
+      // count behind a tight thread/process quota. Letting x264 auto-size its
+      // pool then fails while opening the output encoder (often surfaced only
+      // as "Error opening output file ... Invalid argument"). One encoder
+      // thread is deterministic and does not alter the validated timeline.
+      .outputOptions(["-map", "[vout]", ...(graph.audioOutput ? ["-map", "[aout]"] : []), "-t", (requestedDurationMs / 1000).toFixed(3), "-r", String(fps), "-c:v", "libx264", "-threads", "1", "-pix_fmt", "yuv420p", ...(graph.audioOutput ? ["-c:a", "aac", "-ar", "48000"] : []), "-movflags", "+faststart"]);
+    await runFfmpeg(command, output);
+    const [current] = await db.select({ status: renderJobsTable.status }).from(renderJobsTable)
+      .where(and(eq(renderJobsTable.id, jobId), eq(renderJobsTable.workspaceId, workspaceId), eq(renderJobsTable.videoProjectId, projectId))).limit(1);
+    // A revision may arrive while ffmpeg is working. Never publish stale media.
+    if (current?.status === "cancelled") return;
+    const evidence = await probe(output);
+    const durationMatches = Math.abs(evidence.durationMs - requestedDurationMs) <= 150;
+    const videoMatches = evidence.width === width && evidence.height === height && Math.abs((evidence.fps ?? 0) - fps) < 0.1;
+    const audioExpected = graph.audioOutput !== undefined;
+    if (!durationMatches || !videoMatches || (audioExpected && !evidence.hasAudio)) {
+      throw new AppError(409, `Render evidence differs from specification: ${JSON.stringify({ expected: { durationMs: requestedDurationMs, width, height, fps, audioExpected }, actual: evidence })}`, "RENDER_EVIDENCE_MISMATCH");
+    }
+    const outputUri = await uploadFileToGCS(output, `audiovisual-studio/${workspaceId}/${projectId}/renders/${jobId}.mp4`, "video/mp4", { sha256: await sha256File(output) });
+    await db.update(renderJobsTable).set({
+      status: "succeeded", outputUri, outputMimeType: "video/mp4", completedAt: new Date(),
+      specification: { ...spec, expectedDurationMs: requestedDurationMs, render: { width, height, fps, resolution: dimensions.resolution }, evidence: { ...evidence, technicalPass: true } },
+    }).where(and(eq(renderJobsTable.id, jobId), eq(renderJobsTable.workspaceId, workspaceId), eq(renderJobsTable.videoProjectId, projectId)));
+    // Technical QC is reproducible ffprobe evidence only. It must not be
+    // confused with the separate semantic/manual visual review endpoint.
+    await db.insert(qcReportsTable).values({
+      workspaceId, videoProjectId: projectId, renderJobId: jobId, status: "passed",
+      summary: "Technical QC passed: duration, dimensions, frame rate and required audio stream match the render specification.",
+      specification: { kind: "technical_ffprobe", evidence: { ...evidence, expectedDurationMs: requestedDurationMs, width, height, fps, audioExpected } },
+      completedAt: new Date(),
+    });
+    if (spec.deliverableType !== "trailer") await updatePhases(workspaceId, manifest.id, manifest.specification as JsonRecord, { edit: "ready", sound: "ready", color: "ready", qc: "ready", export: "ready" });
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+}
+
 export async function getStudioRender(workspaceId: string, projectId: string, jobId: string) {
   await scopedProject(workspaceId, projectId);
   const [job] = await db.select().from(renderJobsTable).where(and(eq(renderJobsTable.id, jobId), eq(renderJobsTable.workspaceId, workspaceId), eq(renderJobsTable.videoProjectId, projectId))).limit(1);
   if (!job) throw new NotFoundError("Render job");
   return job;
+}
+
+/** Records that the server handed a completed render to the authenticated client.
+ * It deliberately does not assert that a browser or operating system saved it. */
+export async function createRenderDownloadHandoff(workspaceId: string, projectId: string, renderJobId: string) {
+  const render = await getStudioRender(workspaceId, projectId, renderJobId);
+  if (render.status !== "succeeded" || !render.outputUri || !ownedStudioKey(workspaceId, projectId, render.outputUri)) {
+    throw new AppError(409, "Render concluído não está disponível para download", "RENDER_MEDIA_UNAVAILABLE");
+  }
+  const meta = await getGCSObjectMeta(render.outputUri);
+  await db.insert(auditLogsTable).values({
+    workspaceId, action: "video_render_download_handoff_started", actor: "authenticated_user",
+    data: { videoProjectId: projectId, renderJobId, checksum: meta.sha256, byteSize: meta.size },
+  });
+  return { render, meta };
+}
+
+function ownedStudioKey(workspaceId: string, projectId: string, key: string): boolean {
+  return key.startsWith(`audiovisual-studio/${workspaceId}/${projectId}/`);
+}
+function ownedNativeKey(workspaceId: string, projectId: string, key: string): boolean {
+  return key.startsWith(`native-media/${workspaceId}/${projectId}/`);
+}
+
+/** Package data deliberately uses local identifiers: neither database IDs nor
+ * workspace authority, signed links, consent material, or provider credentials
+ * may leave the tenant boundary. */
+function packageSafe(value: unknown): unknown {
+  const blocked = /(?:token|secret|credential|signed|workspace|tenant|consent|avatarphoto|voicesample|voiceid|avatarid|provider|url|uri)/i;
+  if (Array.isArray(value)) return value.map(packageSafe);
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value as JsonRecord)
+    .filter(([key]) => !blocked.test(key))
+    .map(([key, child]) => [key, packageSafe(child)]));
+  return value;
+}
+function packageName(value: string): string {
+  return value.normalize("NFKD").replace(/[^\w.-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 100) || "media";
+}
+function sha256Json(value: unknown) {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+export interface EditablePackageExport {
+  path: string;
+  filename: string;
+  checksum: string;
+  size: number;
+  cleanup: () => Promise<void>;
+}
+
+/** Stage rather than trailer a zip: checksums are known before headers are sent,
+ * and the staged file is a short-lived project-owned handoff artifact. */
+export async function createEditablePackageExport(workspaceId: string, projectId: string, includeOutputs = false): Promise<EditablePackageExport> {
+  const project = await scopedProject(workspaceId, projectId);
+  assertMediaAvailable(project);
+  const manifest = await scopedManifest(workspaceId, projectId);
+  const [assets, tracks, items, renders] = await Promise.all([
+    db.select().from(productionAssetsTable).where(and(eq(productionAssetsTable.workspaceId, workspaceId), eq(productionAssetsTable.videoProjectId, projectId))),
+    db.select().from(timelineTracksTable).where(and(eq(timelineTracksTable.workspaceId, workspaceId), eq(timelineTracksTable.videoProjectId, projectId))).orderBy(timelineTracksTable.position),
+    db.select().from(timelineItemsTable).where(and(eq(timelineItemsTable.workspaceId, workspaceId), eq(timelineItemsTable.videoProjectId, projectId))).orderBy(timelineItemsTable.position),
+    includeOutputs ? db.select().from(renderJobsTable).where(and(eq(renderJobsTable.workspaceId, workspaceId), eq(renderJobsTable.videoProjectId, projectId), eq(renderJobsTable.status, "succeeded"))) : Promise.resolve([]),
+  ]);
+  const assetIds = new Map(assets.map((asset, index) => [asset.id, `asset-${String(index + 1).padStart(4, "0")}`]));
+  const trackIds = new Map(tracks.map((track, index) => [track.id, `track-${String(index + 1).padStart(3, "0")}`]));
+  const referencedAssetIds = new Set(items.flatMap((item) => item.assetId ? [item.assetId] : []));
+  for (const asset of assets) {
+    if (referencedAssetIds.has(asset.id) && ["video", "audio", "image", "graphic", "font"].includes(asset.assetType) && !ownedStudioKey(workspaceId, projectId, asset.uri)) {
+      throw new AppError(409, `A fonte necessária "${asset.name}" não está disponível para um pacote editável.`, "PACKAGE_SOURCE_MEDIA_UNAVAILABLE");
+    }
+  }
+  const media: Array<{ archivePath: string; key: string; mimeType: string | null; packageId: string }> = [];
+  for (const asset of assets) {
+    if (!ownedStudioKey(workspaceId, projectId, asset.uri)) continue;
+    const id = assetIds.get(asset.id)!;
+    media.push({ archivePath: `media/${id}-${packageName(asset.name)}${path.extname(asset.uri) || ""}`, key: asset.uri, mimeType: asset.mimeType, packageId: id });
+  }
+  for (const [index, render] of renders.entries()) {
+    if (render.outputUri && ownedStudioKey(workspaceId, projectId, render.outputUri)) media.push({ archivePath: `outputs/render-${String(index + 1).padStart(3, "0")}${path.extname(render.outputUri) || ".mp4"}`, key: render.outputUri, mimeType: render.outputMimeType, packageId: `output-${index + 1}` });
+  }
+  const checksums: Record<string, { sha256: string; size: number; mimeType: string | null }> = {};
+  for (const source of media) {
+    const meta = await getGCSObjectMeta(source.key);
+    const sha256 = meta.sha256 ?? await sha256Object(source.key);
+    checksums[source.archivePath] = { sha256, size: meta.size, mimeType: source.mimeType };
+  }
+  const mediaById = new Map(media.map((entry) => [entry.packageId, entry.archivePath]));
+  const packageProject = {
+    format: "nexosvideo", formatVersion: 1, schemaVersion: 1,
+    project: { title: packageName(project.title), format: project.format, status: project.status, retentionPolicy: project.retentionPolicy, config: packageSafe(project.config), script: project.script, storyboard: packageSafe(project.storyboard) },
+    manifest: { name: packageName(manifest.name), status: manifest.status, specification: packageSafe(manifest.specification) },
+    assets: assets.map((asset) => ({ id: assetIds.get(asset.id), assetType: asset.assetType, status: asset.status, name: packageName(asset.name), mediaPath: mediaById.get(assetIds.get(asset.id)!), mimeType: asset.mimeType, byteSize: asset.byteSize, durationMs: asset.durationMs, specification: packageSafe(asset.specification) })),
+    tracks: tracks.map((track) => ({ id: trackIds.get(track.id), trackType: track.trackType, name: packageName(track.name), position: track.position, settings: packageSafe(track.settings) })),
+    items: items.map((item, index) => ({ id: `item-${String(index + 1).padStart(4, "0")}`, trackId: trackIds.get(item.trackId), assetId: item.assetId ? assetIds.get(item.assetId) : undefined, position: item.position, startMs: item.startMs, durationMs: item.durationMs, trimStartMs: item.trimStartMs, trimEndMs: item.trimEndMs, settings: packageSafe(item.settings) })),
+  };
+  checksums["project.json"] = { sha256: sha256Json(packageProject), size: Buffer.byteLength(JSON.stringify(packageProject)), mimeType: "application/json" };
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "nexosvideo-export-"));
+  const output = path.join(tempDir, `${packageName(project.title)}.nexosvideo`);
+  const archive = new ZipArchive({ zlib: { level: 6 } });
+  const destination = createWriteStream(output);
+  archive.pipe(destination);
+  archive.append(JSON.stringify(packageProject), { name: "project.json" });
+  archive.append(JSON.stringify({ format: "nexosvideo-checksums", version: 1, files: checksums }), { name: "checksums.json" });
+  for (const source of media) archive.append(createGCSObjectStream(source.key), { name: source.archivePath });
+  const closed = once(destination, "close");
+  await archive.finalize();
+  await closed;
+  const info = await stat(output);
+  const checksum = await sha256File(output);
+  await db.insert(auditLogsTable).values({ workspaceId, action: "video_editable_package_handoff_started", actor: "authenticated_user", data: { videoProjectId: projectId, checksum, byteSize: info.size, expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString() } });
+  return { path: output, filename: `${packageName(project.title)}.nexosvideo`, checksum, size: info.size, cleanup: () => rm(tempDir, { recursive: true, force: true }) };
+}
+
+export async function confirmEditablePackage(workspaceId: string, projectId: string, checksum: string, confirmation: string) {
+  await scopedProject(workspaceId, projectId);
+  if (confirmation !== "SALVEI O PACOTE EDITÁVEL") throw new AppError(400, 'Digite exatamente "SALVEI O PACOTE EDITÁVEL" para confirmar.', "PACKAGE_CONFIRMATION_REQUIRED");
+  // Filter data in application code because audit JSON differs between drivers.
+  const handoffs = await db.select().from(auditLogsTable).where(and(eq(auditLogsTable.workspaceId, workspaceId), eq(auditLogsTable.action, "video_editable_package_handoff_started"))).orderBy(desc(auditLogsTable.createdAt));
+  if (!handoffs.some((row) => (row.data as JsonRecord).videoProjectId === projectId && (row.data as JsonRecord).checksum === checksum)) throw new AppError(409, "O checksum não corresponde a um pacote editável entregue para este projeto.", "PACKAGE_CHECKSUM_MISMATCH");
+  await db.insert(auditLogsTable).values({ workspaceId, action: "video_editable_package_saved_confirmed", actor: "authenticated_user", data: { videoProjectId: projectId, checksum, confirmation } });
+  return { checksum, confirmed: true };
+}
+
+const packageChecksumSchema = z.object({
+  format: z.literal("nexosvideo-checksums"), version: z.literal(1),
+  files: z.record(z.string().regex(/^(?:project\.json|media\/[A-Za-z0-9._/-]+|outputs\/[A-Za-z0-9._/-]+)$/), z.object({
+    sha256: z.string().regex(/^[a-f0-9]{64}$/i), size: z.number().int().nonnegative(), mimeType: z.string().nullable(),
+  }).strict()),
+}).strict();
+const importedPackageSchema = z.object({
+  format: z.literal("nexosvideo"), formatVersion: z.literal(1), schemaVersion: z.literal(1),
+  project: z.object({
+    title: z.string().min(1).max(200), format: z.enum(["vsl", "cpl", "live_promo", "stories", "reels", "youtube", "webinar_promo", "testimonial", "product_demo"]),
+    status: z.enum(["intake", "script_generating", "script_ready", "script_approved", "storyboard_generating", "storyboard_ready", "storyboard_approved", "preview_generating", "preview_ready", "preview_approved", "awaiting_clone", "final_generating", "completed", "failed"]),
+    retentionPolicy: z.enum(["archive", "ephemeral"]), config: z.record(z.string(), z.unknown()), script: z.string().nullable(), storyboard: z.array(z.unknown()),
+  }).strict(),
+  manifest: z.object({ name: z.string().min(1).max(200), status: z.enum(["draft", "active", "locked", "archived"]), specification: z.record(z.string(), z.unknown()) }).strict(),
+  assets: z.array(z.object({ id: z.string().regex(/^asset-\d+$/), assetType: z.enum(["video", "audio", "image", "subtitle", "graphic", "font", "document"]), status: z.enum(["uploading", "ready", "processing", "failed", "archived"]), name: z.string().min(1).max(300), mediaPath: z.string().regex(/^media\/[A-Za-z0-9._/-]+$/).optional(), mimeType: z.string().nullable().optional(), byteSize: z.number().int().nonnegative().nullable().optional(), durationMs: z.number().int().nonnegative().nullable().optional(), specification: z.record(z.string(), z.unknown()) }).strict()).max(10000),
+  tracks: z.array(z.object({ id: z.string().regex(/^track-\d+$/), trackType: z.enum(["video", "audio", "voiceover", "music", "graphics", "subtitles"]), name: z.string().min(1).max(300), position: z.number().int(), settings: z.record(z.string(), z.unknown()) }).strict()).max(10000),
+  items: z.array(z.object({ id: z.string().regex(/^item-\d+$/), trackId: z.string().regex(/^track-\d+$/), assetId: z.string().regex(/^asset-\d+$/).optional(), position: z.number().int(), startMs: z.number().int().nonnegative(), durationMs: z.number().int().nonnegative(), trimStartMs: z.number().int().nonnegative(), trimEndMs: z.number().int().nonnegative(), settings: z.record(z.string(), z.unknown()) }).strict()).max(100000),
+}).strict();
+
+function runZipInspector(archive: string, extracted: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("python3", [path.resolve(process.cwd(), "src/scripts/nexosvideo_zip.py"), archive, extracted], { shell: false, stdio: ["ignore", "pipe", "pipe"] });
+    let output = ""; let errors = "";
+    child.stdout.on("data", (chunk) => { output += String(chunk); });
+    child.stderr.on("data", (chunk) => { errors += String(chunk); });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      try {
+        const result = JSON.parse(output) as { ok?: boolean; error?: string };
+        if (code === 0 && result.ok) resolve();
+        else reject(new AppError(400, result.error ?? errors ?? "Pacote inválido.", "INVALID_EDITABLE_PACKAGE"));
+      } catch { reject(new AppError(400, "Validador de pacote não retornou resultado válido.", "INVALID_EDITABLE_PACKAGE")); }
+    });
+  });
+}
+
+export async function importEditablePackage(workspaceId: string, archive: string) {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "nexosvideo-import-"));
+  const extracted = path.join(tempDir, "contents");
+  const uploaded: string[] = [];
+  try {
+    await runZipInspector(archive, extracted);
+    const projectRaw = JSON.parse(await fs.promises.readFile(path.join(extracted, "project.json"), "utf8"));
+    const checksumRaw = JSON.parse(await fs.promises.readFile(path.join(extracted, "checksums.json"), "utf8"));
+    const parsedProject = importedPackageSchema.safeParse(projectRaw);
+    const parsedChecksums = packageChecksumSchema.safeParse(checksumRaw);
+    if (!parsedProject.success || !parsedChecksums.success) throw new AppError(400, "project.json ou checksums.json não segue o schema suportado.", "INVALID_EDITABLE_PACKAGE");
+    const packageData = parsedProject.data; const checksums = parsedChecksums.data.files;
+    if (!checksums["project.json"] || checksums["project.json"]!.sha256.toLowerCase() !== sha256Json(projectRaw).toLowerCase()) throw new AppError(400, "Checksum de project.json inválido.", "PACKAGE_CHECKSUM_INVALID");
+    for (const mediaPath of Object.keys(checksums).filter((entry) => entry !== "project.json")) {
+      const declared = checksums[mediaPath];
+      if (!declared) throw new AppError(400, `Checksum ausente para ${mediaPath}.`, "PACKAGE_CHECKSUM_INVALID");
+      const mediaFile = path.join(extracted, ...mediaPath.split("/"));
+      const info = await stat(mediaFile).catch(() => undefined);
+      if (!info || !info.isFile() || info.size !== declared.size || (await sha256File(mediaFile)).toLowerCase() !== declared.sha256.toLowerCase()) throw new AppError(400, `Checksum inválido para ${mediaPath}.`, "PACKAGE_CHECKSUM_INVALID");
+    }
+    // Do not trust package provenance/config authority. The sanitizer also
+    // drops consent and provider fields even if a hand-crafted package adds it.
+    const importedConfig = packageSafe(packageData.project.config) as JsonRecord;
+    const importedProjectId = crypto.randomUUID();
+    const assetObjectPaths = new Map<string, string>();
+    for (const asset of packageData.assets) {
+      if (!asset.mediaPath) continue;
+      const source = path.join(extracted, ...asset.mediaPath.split("/"));
+      const extension = path.extname(asset.mediaPath).replace(/[^A-Za-z0-9.]/g, "");
+      const key = `audiovisual-studio/${workspaceId}/${importedProjectId}/assets/${crypto.randomUUID()}${extension}`;
+      const checksum = checksums[asset.mediaPath]!;
+      await uploadFileToGCS(source, key, checksum.mimeType ?? asset.mimeType ?? "application/octet-stream", { sha256: checksum.sha256 });
+      uploaded.push(key); assetObjectPaths.set(asset.id, key);
+    }
+    const detail = await db.transaction(async (tx) => {
+      const [project] = await tx.insert(videoProjectsTable).values({
+        id: importedProjectId, workspaceId, title: packageName(packageData.project.title), format: packageData.project.format, status: packageData.project.status,
+        retentionPolicy: packageData.project.retentionPolicy, config: importedConfig as VideoProject["config"], script: packageData.project.script, storyboard: packageData.project.storyboard as VideoProject["storyboard"],
+      }).returning();
+      const [manifest] = await tx.insert(productionManifestsTable).values({ workspaceId, videoProjectId: project!.id, name: packageName(packageData.manifest.name), status: packageData.manifest.status, specification: packageSafe(packageData.manifest.specification) as JsonRecord }).returning();
+      const assetIds = new Map<string, string>();
+      for (const asset of packageData.assets) {
+        const [created] = await tx.insert(productionAssetsTable).values({ workspaceId, videoProjectId: project!.id, manifestId: manifest!.id, assetType: asset.assetType, status: asset.status, name: packageName(asset.name), uri: assetObjectPaths.get(asset.id) ?? "package://inline", mimeType: asset.mimeType, byteSize: asset.byteSize, durationMs: asset.durationMs, specification: packageSafe(asset.specification) as JsonRecord }).returning();
+        assetIds.set(asset.id, created!.id);
+      }
+      const trackIds = new Map<string, string>();
+      for (const track of packageData.tracks) {
+        const [created] = await tx.insert(timelineTracksTable).values({ workspaceId, videoProjectId: project!.id, manifestId: manifest!.id, trackType: track.trackType, name: packageName(track.name), position: track.position, settings: packageSafe(track.settings) as JsonRecord }).returning();
+        trackIds.set(track.id, created!.id);
+      }
+      for (const item of packageData.items) {
+        const trackId = trackIds.get(item.trackId); if (!trackId) throw new AppError(400, "Item referencia faixa inexistente.", "INVALID_EDITABLE_PACKAGE");
+        if (item.assetId && !assetIds.has(item.assetId)) throw new AppError(400, "Item referencia asset inexistente.", "INVALID_EDITABLE_PACKAGE");
+        await tx.insert(timelineItemsTable).values({ workspaceId, videoProjectId: project!.id, trackId, assetId: item.assetId ? assetIds.get(item.assetId) : null, position: item.position, startMs: item.startMs, durationMs: item.durationMs, trimStartMs: item.trimStartMs, trimEndMs: item.trimEndMs, settings: packageSafe(item.settings) as JsonRecord });
+      }
+      await tx.insert(productionRevisionsTable).values({ workspaceId, videoProjectId: project!.id, manifestId: manifest!.id, revisionNumber: 1, note: "Imported editable package", specification: { packageFormatVersion: 1 } });
+      return project!;
+    });
+    await db.insert(auditLogsTable).values({ workspaceId, action: "video_editable_package_imported", actor: "authenticated_user", data: { videoProjectId: detail.id, assetCount: packageData.assets.length } });
+    return getStudioDetail(workspaceId, detail.id);
+  } catch (error) {
+    await Promise.all(uploaded.map((key) => deleteGCSObject(key).catch(() => undefined)));
+    throw error;
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+}
+function nativeObjectKeys(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== "object") return [];
+    const key = (entry as { key?: unknown }).key;
+    return typeof key === "string" ? [key] : [];
+  });
+}
+
+export interface PurgeEphemeralMediaInput {
+  renderJobId: string;
+  expectedChecksum: string;
+  confirmation: string;
+}
+
+/** Delete precisely this project's known media, leaving timeline/audit tombstones. */
+export async function purgeEphemeralMedia(workspaceId: string, projectId: string, input: PurgeEphemeralMediaInput, retry = false) {
+  const project = await scopedProject(workspaceId, projectId);
+  if (project.retentionPolicy !== "ephemeral") throw new AppError(409, "Este projeto usa retenção em arquivo, não mídia efêmera.", "EPHEMERAL_RETENTION_REQUIRED");
+  if (project.mediaPurgedAt) throw new AppError(409, "A mídia deste projeto já foi apagada irreversivelmente.", "MEDIA_ALREADY_PURGED");
+  if (input.confirmation !== "APAGAR MÍDIA") throw new AppError(400, 'Digite exatamente "APAGAR MÍDIA" para confirmar.', "PURGE_CONFIRMATION_REQUIRED");
+  const confirmations = await db.select().from(auditLogsTable).where(and(
+    eq(auditLogsTable.workspaceId, workspaceId), eq(auditLogsTable.action, "video_editable_package_saved_confirmed"),
+  )).orderBy(desc(auditLogsTable.createdAt));
+  const checksum = input.expectedChecksum.toLowerCase();
+  if (!confirmations.some((row) => (row.data as JsonRecord).videoProjectId === projectId && (row.data as JsonRecord).checksum === checksum)) {
+    throw new AppError(409, "Exporte e confirme que salvou o pacote editável com este checksum antes de apagar a mídia.", "EDITABLE_PACKAGE_CONFIRMATION_REQUIRED");
+  }
+  const render = await getStudioRender(workspaceId, projectId, input.renderJobId);
+  if (render.status !== "succeeded") throw new AppError(409, "O render informado não está concluído.", "RENDER_MEDIA_UNAVAILABLE");
+
+  const [activeRender] = await db.select({ id: renderJobsTable.id }).from(renderJobsTable).where(and(
+    eq(renderJobsTable.workspaceId, workspaceId), eq(renderJobsTable.videoProjectId, projectId), inArray(renderJobsTable.status, ["queued", "running"]),
+  )).limit(1);
+  const [activeNative] = await db.select({ id: nativeMediaJobsTable.id }).from(nativeMediaJobsTable).where(and(
+    eq(nativeMediaJobsTable.workspaceId, workspaceId), eq(nativeMediaJobsTable.videoProjectId, projectId), inArray(nativeMediaJobsTable.status, ["queued", "leased", "running"]),
+  )).limit(1);
+  if (activeRender || activeNative) throw new AppError(409, "Aguarde o término de todos os jobs de geração, renderização e mídia nativa.", "MEDIA_JOBS_ACTIVE");
+
+  const prior = await db.select().from(videoMediaPurgesTable).where(and(
+    eq(videoMediaPurgesTable.workspaceId, workspaceId), eq(videoMediaPurgesTable.videoProjectId, projectId),
+  )).orderBy(desc(videoMediaPurgesTable.createdAt)).limit(1);
+  if (prior[0] && prior[0].status !== "purge_failed" && !retry) throw new AppError(409, "Uma solicitação de purge já está em andamento.", "PURGE_ALREADY_REQUESTED");
+  if (retry && prior[0]?.status !== "purge_failed") throw new AppError(409, "Não há purge com falha para repetir.", "PURGE_RETRY_UNAVAILABLE");
+
+  const [purge] = await db.insert(videoMediaPurgesTable).values({
+    workspaceId, videoProjectId: projectId, renderJobId: input.renderJobId, status: "in_progress",
+    acknowledgedChecksum: checksum, confirmationText: input.confirmation, startedAt: new Date(),
+  }).returning();
+  const assets = await db.select().from(productionAssetsTable).where(and(eq(productionAssetsTable.workspaceId, workspaceId), eq(productionAssetsTable.videoProjectId, projectId)));
+  const renders = await db.select().from(renderJobsTable).where(and(eq(renderJobsTable.workspaceId, workspaceId), eq(renderJobsTable.videoProjectId, projectId)));
+  const native = await db.select().from(nativeMediaJobsTable).where(and(eq(nativeMediaJobsTable.workspaceId, workspaceId), eq(nativeMediaJobsTable.videoProjectId, projectId)));
+  // Prefix listing is intentionally exact (workspace AND project), never a tenant-wide deletion.
+  const listed = await Promise.all([
+    listGCSObjects(`audiovisual-studio/${workspaceId}/${projectId}/`),
+    listGCSObjects(`native-media/${workspaceId}/${projectId}/`),
+  ]);
+  const keys = new Set<string>([...listed.flat(), ...assets.map((asset) => asset.uri).filter((key) => ownedStudioKey(workspaceId, projectId, key)),
+    ...renders.map((render) => render.outputUri).filter((key): key is string => Boolean(key && ownedStudioKey(workspaceId, projectId, key))),
+    ...native.flatMap((job) => [...nativeObjectKeys(job.inputObjects), ...nativeObjectKeys(job.outputObjects)]).filter((key) => ownedNativeKey(workspaceId, projectId, key))]);
+  let deleted = 0; let bytes = 0; let deletedBytes = 0; const errors: string[] = [];
+  for (const key of keys) {
+    try {
+      const meta = await getGCSObjectMeta(key).catch((error: any) => error?.code === 404 || error?.code === "ENOENT" ? undefined : Promise.reject(error));
+      if (meta) bytes += meta.size;
+      await deleteGCSObject(key);
+      deleted++; if (meta) deletedBytes += meta.size;
+    } catch (error) { errors.push(`${key}: ${error instanceof Error ? error.message : String(error)}`); }
+  }
+  if (errors.length) {
+    await db.update(videoMediaPurgesTable).set({ status: "purge_failed", objectCount: keys.size, deletedObjectCount: deleted, byteCount: bytes, deletedByteCount: deletedBytes, errors })
+      .where(and(eq(videoMediaPurgesTable.id, purge!.id), eq(videoMediaPurgesTable.workspaceId, workspaceId)));
+    throw new AppError(502, "A exclusão de parte da mídia falhou; a mídia restante não foi declarada apagada. Tente novamente.", "PURGE_PARTIAL_FAILURE");
+  }
+  await db.transaction(async (tx) => {
+    await tx.update(productionAssetsTable).set({ status: "archived", uri: "purged://media", byteSize: null, updatedAt: new Date() })
+      .where(and(eq(productionAssetsTable.workspaceId, workspaceId), eq(productionAssetsTable.videoProjectId, projectId)));
+    await tx.update(renderJobsTable).set({ outputUri: null, outputMimeType: null, updatedAt: new Date() })
+      .where(and(eq(renderJobsTable.workspaceId, workspaceId), eq(renderJobsTable.videoProjectId, projectId)));
+    for (const job of native) await tx.update(nativeMediaJobsTable).set({ inputObjects: [], outputObjects: [], updatedAt: new Date() })
+      .where(and(eq(nativeMediaJobsTable.id, job.id), eq(nativeMediaJobsTable.workspaceId, workspaceId), eq(nativeMediaJobsTable.videoProjectId, projectId)));
+    await tx.update(videoProjectsTable).set({ mediaPurgedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)));
+    await tx.update(videoMediaPurgesTable).set({ status: "purged", purgedAt: new Date(), objectCount: keys.size, deletedObjectCount: deleted, byteCount: bytes, deletedByteCount: deletedBytes, errors: [] })
+      .where(and(eq(videoMediaPurgesTable.id, purge!.id), eq(videoMediaPurgesTable.workspaceId, workspaceId)));
+    await tx.insert(auditLogsTable).values({ workspaceId, action: "video_ephemeral_media_purged", actor: "authenticated_user", data: { videoProjectId: projectId, renderJobId: input.renderJobId, objectCount: keys.size, deletedObjectCount: deleted, byteCount: bytes, checksum } });
+  });
+  return { status: "purged" as const, objectCount: keys.size, deletedObjectCount: deleted, byteCount: bytes };
 }
 
 export async function submitQc(workspaceId: string, projectId: string, renderJobId: string, log: Logger) {

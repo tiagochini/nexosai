@@ -86,7 +86,11 @@ const isMetaWebhook = (req: { url?: string }): boolean => {
   return pathname === "/api/social/webhooks/meta" ||
     pathname === "/api/social-moderation/webhooks/meta";
 };
-app.use(express.json({ limit: "10mb", type: (req) => !isMetaWebhook(req) }));
+app.use(express.json({
+  limit: "10mb",
+  type: (req) => !isMetaWebhook(req),
+  verify: (req, _res, buf) => { (req as typeof req & { rawBody?: Buffer }).rawBody = Buffer.from(buf); },
+}));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // ─── Request logging ──────────────────────────────────────────────────────────

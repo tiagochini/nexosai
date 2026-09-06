@@ -3,6 +3,8 @@
  * Uses Replit sidecar authentication (no API key needed).
  */
 import { Storage } from "@google-cloud/storage";
+import fsModule from "node:fs";
+import pathModule from "node:path";
 
 const REPLIT_SIDECAR = "http://127.0.0.1:1106";
 
@@ -119,10 +121,21 @@ export async function uploadFileToGCS(
   localPath: string,
   key: string,
   contentType = "application/octet-stream",
+  metadata?: Record<string, string>,
 ): Promise<string> {
+  if (testStorageEnabled()) {
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+    const target = path.join(process.env["NATIVE_MEDIA_TEST_STORAGE_DIR"]!, key);
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.copyFile(localPath, target);
+    await fs.writeFile(`${target}.metadata.json`, JSON.stringify({ contentType, size: (await fs.stat(target)).size, sha256: metadata?.sha256 }));
+    return key;
+  }
   await gcs.bucket(bucketId()).upload(localPath, {
     destination: key,
     contentType,
+    metadata: metadata ? { metadata } : undefined,
     resumable: true,
   });
   return key;
@@ -143,16 +156,72 @@ export function createGCSObjectStream(
   objectKey: string,
   opts?: { start?: number; end?: number },
 ) {
+  if (testStorageEnabled()) {
+    const local = pathModule.join(process.env["NATIVE_MEDIA_TEST_STORAGE_DIR"]!, objectKey);
+    return fsModule.createReadStream(local, opts ?? {});
+  }
   return gcs.bucket(bucketId()).file(objectKey).createReadStream(opts ?? {});
 }
 
 /** Get content type + size for a GCS object. */
-export async function getGCSObjectMeta(objectKey: string): Promise<{ contentType: string; size: number }> {
+export async function getGCSObjectMeta(objectKey: string): Promise<{ contentType: string; size: number; sha256?: string }> {
+  if (testStorageEnabled()) {
+    const fs = await import("node:fs/promises"); const path = await import("node:path");
+    return JSON.parse(await fs.readFile(`${path.join(process.env["NATIVE_MEDIA_TEST_STORAGE_DIR"]!, objectKey)}.metadata.json`, "utf8"));
+  }
   const [meta] = await gcs.bucket(bucketId()).file(objectKey).getMetadata();
   return {
     contentType: (meta.contentType as string) ?? "application/octet-stream",
     size: parseInt(meta.size as string, 10),
+    sha256: (meta.metadata as Record<string, string> | undefined)?.["sha256"],
   };
+}
+
+function testStorageEnabled(): boolean {
+  return process.env["NODE_ENV"] === "test" && Boolean(process.env["NATIVE_MEDIA_TEST_STORAGE_DIR"]);
+}
+
+/** Delete is idempotent: a missing object is a confirmed deletion. */
+export async function deleteGCSObject(objectKey: string): Promise<void> {
+  if (testStorageEnabled()) {
+    if (process.env["EPHEMERAL_PURGE_FAIL_KEY"] === objectKey) throw new Error("test injected object deletion failure");
+    const fs = await import("node:fs/promises");
+    const local = pathModule.join(process.env["NATIVE_MEDIA_TEST_STORAGE_DIR"]!, objectKey);
+    await fs.rm(local, { force: true });
+    await fs.rm(`${local}.metadata.json`, { force: true });
+    return;
+  }
+  try {
+    await gcs.bucket(bucketId()).file(objectKey).delete({ ignoreNotFound: true });
+  } catch (error: any) {
+    if (error?.code !== 404) throw error;
+  }
+}
+
+/** Lists only keys below a caller-supplied, already tenant-scoped prefix. */
+export async function listGCSObjects(prefix: string): Promise<string[]> {
+  if (testStorageEnabled()) {
+    const fs = await import("node:fs/promises");
+    const root = process.env["NATIVE_MEDIA_TEST_STORAGE_DIR"]!;
+    const base = pathModule.join(root, prefix);
+    const keys: string[] = [];
+    const walk = async (dir: string): Promise<void> => {
+      let entries: import("node:fs").Dirent[];
+      try { entries = await fs.readdir(dir, { withFileTypes: true }); } catch (error: any) {
+        if (error?.code === "ENOENT") return;
+        throw error;
+      }
+      await Promise.all(entries.map(async (entry) => {
+        const full = pathModule.join(dir, entry.name);
+        if (entry.isDirectory()) return walk(full);
+        if (!entry.name.endsWith(".metadata.json")) keys.push(pathModule.relative(root, full));
+      }));
+    };
+    await walk(base);
+    return keys;
+  }
+  const [files] = await gcs.bucket(bucketId()).getFiles({ prefix });
+  return files.map((file) => file.name);
 }
 
 /**

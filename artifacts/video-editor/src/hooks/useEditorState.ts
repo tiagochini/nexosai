@@ -18,7 +18,9 @@ export type EditorAction =
   | { type: "UNDO" }
   | { type: "REDO" }
   | { type: "ADD_ITEM"; payload: TimelineItem }
-  | { type: "ADD_TRACK"; payload: Track };
+  | { type: "ADD_TRACK"; payload: Track }
+  | { type: "UPDATE_ITEM_SETTINGS"; payload: { id: string; settings: Record<string, unknown> } }
+  | { type: "UPDATE_TRACK_SETTINGS"; payload: { id: string; settings: Record<string, unknown> } };
 
 export interface EditorState {
   tracks: Track[];
@@ -130,6 +132,18 @@ function reducer(state: EditorState, action: EditorAction): EditorState {
     }
     case "ADD_TRACK": {
       return pushHistory({ ...state, tracks: [...state.tracks, action.payload] });
+    }
+    case "UPDATE_ITEM_SETTINGS": {
+      const items = state.items.map((item) => item.id === action.payload.id
+        ? { ...item, settings: action.payload.settings }
+        : item);
+      return pushHistory({ ...state, items });
+    }
+    case "UPDATE_TRACK_SETTINGS": {
+      const tracks = state.tracks.map((track) => track.id === action.payload.id
+        ? { ...track, settings: action.payload.settings }
+        : track);
+      return pushHistory({ ...state, tracks });
     }
     case "UNDO": {
       if (state.historyIndex > 0) {

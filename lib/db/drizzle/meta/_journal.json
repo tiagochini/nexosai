@@ -8,6 +8,13 @@
       "when": 1774396800000,
       "tag": "0000_audiovisual_studio",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1774483200000,
+      "tag": "0003_ephemeral_video_media",
+      "breakpoints": true
     }
   ]
 }
