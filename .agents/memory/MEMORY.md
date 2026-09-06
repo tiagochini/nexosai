@@ -80,3 +80,4 @@
 - [NexOS Native Media Engine](nexos-native-media-engine.md) — Replit is the control plane; private GPU workers run local approved weights with lease-bound I/O, consent, provenance and no commercial fallback.
 - [Portable Ephemeral Video Projects](portable-ephemeral-video-projects.md) — purge requires confirmed editable .nexosvideo handoff; MP4 alone is insufficient, and imported projects receive fresh scoped identities.
 - [Workspace Device Folders](workspace-device-folders.md) — each device authorizes once; NexOS reuses an IndexedDB directory handle scoped by authoritative workspace ID, with safe browser fallback.
+- [Publish FK Ordering](publish-fk-ordering.md) — Replit may emit new foreign keys before their new parent unique constraint; stage composite tenant FKs across two publishes.

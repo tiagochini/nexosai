@@ -8,7 +8,7 @@ import {
   workspaceFolderKey,
   workspaceFolderName,
   type AuthorizedDirectoryHandle,
-} from "../../../video-editor/src/lib/workspace-folder.js";
+} from "./workspace-folder.js";
 
 const workspaceA = { id: "workspace-123456789", name: "Cliente: São Paulo/BR" };
 const workspaceB = { id: "workspace-987654321", name: "Cliente: São Paulo/BR" };

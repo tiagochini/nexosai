@@ -31,7 +31,7 @@
     ,"test:native-media-worker-self-test": "python3 ../../services/native-media-worker/test_worker_self_test.py"
     ,"test:native-media-e2e": "pnpm run test:native-media-control-plane && NODE_ENV=test tsx src/scripts/test-native-media-http.ts && pnpm run test:timeline-render-compiler && pnpm run test:native-media-worker-self-test"
     ,"test:ephemeral-video-e2e": "NODE_ENV=test tsx src/scripts/test-ephemeral-video-e2e.ts",
-    "test:workspace-folder": "tsx src/scripts/test-workspace-folder.ts"
+    "test:workspace-folder": "tsx ../video-editor/src/lib/workspace-folder.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",
