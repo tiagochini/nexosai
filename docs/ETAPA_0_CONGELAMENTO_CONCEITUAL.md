@@ -2,7 +2,8 @@
 
 **Documento canônico de produto**  
 **Versão:** 0.1  
-**Status:** candidato a congelamento — aguardando aprovação do gate da Etapa 0  
+**Status:** congelado
+**Aprovado pelo responsável do produto em:** 07 de setembro de 2026
 **Escopo:** identidade, missão, fronteiras e resultado final do produto  
 
 ---
@@ -926,26 +927,43 @@ ciclo, relançamento, ascensão, reativação ou perpétuo.
 
 ## 18. Gate de fechamento da Etapa 0
 
-A Etapa 0 somente pode ser congelada quando o responsável pelo produto aprovar
-explicitamente que:
+A Etapa 0 foi aprovada pelo responsável do produto em 07 de setembro de 2026,
+com a confirmação explícita de que:
 
-- [ ] o produto central é execução integral de lançamentos;
-- [ ] o NexOS AI é o produto e o GLP é o protocolo executado;
-- [ ] o conhecimento é insumo e a execução é o produto;
-- [ ] o Master Plan é o contrato operacional central;
-- [ ] o mapa de capacidades está completo no nível conceitual;
-- [ ] funil, copy, criativos, vídeos, páginas, infraestrutura, tracking, CRM,
+- [x] o produto central é execução integral de lançamentos;
+- [x] o NexOS AI é o produto e o GLP é o protocolo executado;
+- [x] o conhecimento é insumo e a execução é o produto;
+- [x] o Master Plan é o contrato operacional central;
+- [x] o mapa de capacidades está completo no nível conceitual;
+- [x] funil, copy, criativos, vídeos, páginas, infraestrutura, tracking, CRM,
       leads, grupos, Presença Digital, mensagens, mídia, vendas e otimização
       estão dentro do escopo;
-- [ ] Presença Digital serve à preparação, execução, continuidade e operação
+- [x] Presença Digital serve à preparação, execução, continuidade e operação
       perpétua;
-- [ ] autonomia e intervenção humana estão conceitualmente delimitadas;
-- [ ] o resultado final é operação real e verificável;
-- [ ] roadmap de construção e protocolo operacional não estão confundidos;
-- [ ] referências metodológicas não se tornam nome público nem alegação de
+- [x] autonomia e intervenção humana estão conceitualmente delimitadas;
+- [x] o resultado final é operação real e verificável;
+- [x] roadmap de construção e protocolo operacional não estão confundidos;
+- [x] referências metodológicas não se tornam nome público nem alegação de
       afiliação;
-- [ ] este documento pode governar o inventário da Etapa 1.
+- [x] este documento pode governar o inventário da Etapa 1.
 
-Após aprovação, o status muda de “candidato a congelamento” para “congelado”,
-com data e versão registradas. Alterações posteriores exigem nova versão e
-justificativa explícita.
+### Regra de preservação
+
+O congelamento conceitual não desfaz, substitui ou invalida automaticamente
+trabalho realizado antes desta aprovação.
+
+Implementações, hardening, contratos, integrações, fluxos, testes, agentes e
+capacidades existentes devem ser preservados e classificados nas etapas
+posteriores como:
+
+1. compatíveis e completos;
+2. compatíveis, mas parciais;
+3. válidos, porém pertencentes a outra etapa;
+4. contraditórios e sujeitos a correção explícita.
+
+Nenhum componente deve ser removido ou refeito apenas por ter sido produzido
+antes do congelamento. Alterações exigem uma lacuna ou contradição demonstrada,
+com preservação das capacidades válidas.
+
+Alterações futuras nesta constituição exigem nova versão e justificativa
+explícita.
