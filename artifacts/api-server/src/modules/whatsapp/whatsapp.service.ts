@@ -14,6 +14,7 @@ import { logger } from "../../lib/logger.js";
 import { recordEngagementEvent } from "../launch-sequence/sequence-analytics.service.js";
 import { emitSequenceEvent } from "../launch-sequence/sequence-realtime.js";
 import { runWhatsAppResponseAgent } from "../agents/whatsapp-response.agent.js";
+import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 
 // ─── Meta WhatsApp Business API ───────────────────────────────────────────────
 
@@ -245,6 +246,11 @@ export async function sendWhatsAppDispatch(workspaceId: string, dispatchId: stri
   if (!dispatch) throw new NotFoundError("WhatsApp dispatch not found");
   if (!["queued", "failed"].includes(dispatch.status))
     throw new ValidationError("Dispatch já enviado ou cancelado");
+  await enforceNoMandatoryPause(workspaceId, {
+    campaignId: dispatch.campaignId ?? undefined,
+    channel: "whatsapp",
+    action: "whatsapp_dispatch",
+  });
 
   await db
     .update(whatsappDispatchesTable)
@@ -267,6 +273,11 @@ export async function sendWhatsAppDispatch(workspaceId: string, dispatchId: stri
 
     for (const phone of recipients) {
       try {
+        await enforceNoMandatoryPause(workspaceId, {
+          campaignId: dispatch.campaignId ?? undefined,
+          channel: "whatsapp",
+          action: "whatsapp_dispatch",
+        });
         let result: MetaSendResult;
         if (dispatch.templateName) {
           result = await sendMetaTemplateMessage(
@@ -280,6 +291,7 @@ export async function sendWhatsAppDispatch(workspaceId: string, dispatchId: stri
         }
         results.push(result);
       } catch (err) {
+        if (err instanceof AppError && err.code === "MANDATORY_PAUSE_ACTIVE") throw err;
         failedCount.count++;
         logger.warn({ phone, err }, "WhatsApp send failed for recipient");
       }
@@ -303,7 +315,7 @@ export async function sendWhatsAppDispatch(workspaceId: string, dispatchId: stri
     await db
       .update(whatsappDispatchesTable)
       .set({
-        status: "failed",
+        status: err instanceof AppError && err.code === "MANDATORY_PAUSE_ACTIVE" ? "queued" : "failed",
         errorMessage: err instanceof Error ? err.message : String(err),
       })
       .where(eq(whatsappDispatchesTable.id, dispatchId));
@@ -482,6 +494,10 @@ export async function handleWhatsAppWebhook(payload: unknown) {
             accessToken: integration.accessToken!,
             phoneNumberId,
           };
+          await enforceNoMandatoryPause(integration.workspaceId, {
+            channel: "whatsapp",
+            action: "whatsapp_dispatch",
+          });
           await sendMetaTextMessage(creds, from, aiResult.response);
           log.info({ from, intent: aiResult.intent }, "WhatsApp AI auto-response sent");
         } catch (err) {
@@ -531,6 +547,10 @@ export async function sendWhatsAppSystemNotification(
       phoneNumberId: integration.accountId,
     };
 
+    await enforceNoMandatoryPause(workspaceId, {
+      channel: "whatsapp",
+      action: "whatsapp_dispatch",
+    });
     await sendMetaTextMessage(creds, recipientPhone, message);
     log.info({ workspaceId, recipientPhone: recipientPhone.slice(0, 6) + "***" }, "WA system notification sent");
     return true;

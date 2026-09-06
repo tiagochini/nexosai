@@ -60,6 +60,7 @@ import {
   getInstagramMetrics,
   getTikTokMetrics,
 } from "../social/social.publisher.js";
+import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 
 // ─── [C0.9] CONTENCAO — Redis-based kill-switch ──────────────────────────────
 // Flag persistida em Redis: nexos:flag:disable_video_generation
@@ -344,6 +345,7 @@ export async function publishTestPost(
   customCaption?: string,
 ): Promise<{ success: boolean; platformUrl?: string; platformPostId?: string; error?: string }> {
   const log = logger.child({ component: "presence-test-post", workspaceId, platform });
+  await enforceNoMandatoryPause(workspaceId, { channel: platform, action: "social_publish" });
 
   const provider = PLATFORM_TO_PROVIDER[platform];
   if (!provider) {
@@ -1840,6 +1842,13 @@ export async function publishDuePresencePosts(): Promise<void> {
           }
           continue;
         }
+        // Must run immediately before the outbound adapter; a pause created after
+        // scheduling still blocks the next external action.
+        await enforceNoMandatoryPause(post.workspaceId, {
+          campaignId: post.campaignId ?? undefined,
+          channel: post.platform,
+          action: "social_publish",
+        });
 
         // Claim atômico (CAS) para evitar double-publish quando dois ticks se
         // sobrepõem — só avança se o post AINDA estiver "scheduled".

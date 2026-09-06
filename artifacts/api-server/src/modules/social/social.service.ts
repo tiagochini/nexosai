@@ -20,6 +20,7 @@ import {
   getInstagramMetrics,
   getTikTokMetrics,
 } from "./social.publisher.js";
+import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import jwt from "jsonwebtoken";
 
 // ─── OAuth ────────────────────────────────────────────────────────────────────
@@ -837,6 +838,16 @@ export async function publishPost(postId: string): Promise<SocialPost> {
   if (post.status === "published") return post;
   if (!["scheduled", "draft"].includes(post.status)) {
     throw new AppError(400, `Cannot publish post in status: ${post.status}`, "INVALID_STATUS");
+  }
+  const pauseChannel = post.platform === "instagram" ? "instagram"
+    : post.platform === "facebook_page" ? "facebook"
+      : post.platform === "tiktok" ? "tiktok" : null;
+  if (pauseChannel) {
+    await enforceNoMandatoryPause(post.workspaceId, {
+      campaignId: post.campaignId ?? undefined,
+      channel: pauseChannel,
+      action: "social_publish",
+    });
   }
 
   // Mark as publishing

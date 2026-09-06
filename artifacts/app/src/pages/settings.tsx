@@ -26,7 +26,7 @@ type Tab = "perfil" | "workspace" | "seguranca" | "integracoes" | "identidade" |
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "perfil",       label: "Perfil",          icon: User        },
   { id: "workspace",    label: "Workspace",       icon: Building2   },
-  { id: "autonomia",    label: "Autonomia IA",    icon: ShieldCheck },
+  { id: "autonomia",    label: "Autonomia NexOS AI",    icon: ShieldCheck },
   { id: "compliance",   label: "Identificação",   icon: ShieldCheck },
   { id: "seguranca",    label: "Segurança",       icon: Zap         },
   { id: "integracoes",  label: "Integrações",     icon: Link2       },

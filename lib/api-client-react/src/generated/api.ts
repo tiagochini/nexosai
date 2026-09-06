@@ -47,9 +47,15 @@ import type {
   LaunchSequence,
   ListAutonomyEvidenceParams,
   ListCampaigns200,
+  ListMandatoryPausesParams,
   ListSequenceContacts200,
   ListSequences200,
   LoginInput,
+  MandatoryPauseActiveError,
+  MandatoryPauseInput,
+  MandatoryPauseListResponse,
+  MandatoryPauseResolutionInput,
+  MandatoryPauseResponse,
   MarkOnboardingSeen200,
   MeResponse,
   RefreshToken200,
@@ -815,7 +821,9 @@ export const executeCampaign = async (
 };
 
 export const getExecuteCampaignMutationOptions = <
-  TError = ErrorType<ContractAcceptanceRequiredError>,
+  TError = ErrorType<
+    MandatoryPauseActiveError | ContractAcceptanceRequiredError
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -856,14 +864,17 @@ export type ExecuteCampaignMutationResult = NonNullable<
   Awaited<ReturnType<typeof executeCampaign>>
 >;
 export type ExecuteCampaignMutationBody = BodyType<CampaignExecuteInput>;
-export type ExecuteCampaignMutationError =
-  ErrorType<ContractAcceptanceRequiredError>;
+export type ExecuteCampaignMutationError = ErrorType<
+  MandatoryPauseActiveError | ContractAcceptanceRequiredError
+>;
 
 /**
  * @summary Execute campaign phase
  */
 export const useExecuteCampaign = <
-  TError = ErrorType<ContractAcceptanceRequiredError>,
+  TError = ErrorType<
+    MandatoryPauseActiveError | ContractAcceptanceRequiredError
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -1262,6 +1273,286 @@ export function useListAutonomyEvidence<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List workspace mandatory safety pauses
+ */
+export const getListMandatoryPausesUrl = (
+  params?: ListMandatoryPausesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/autonomy/pauses?${stringifiedParams}`
+    : `/api/autonomy/pauses`;
+};
+
+export const listMandatoryPauses = async (
+  params?: ListMandatoryPausesParams,
+  options?: RequestInit,
+): Promise<MandatoryPauseListResponse> => {
+  return customFetch<MandatoryPauseListResponse>(
+    getListMandatoryPausesUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListMandatoryPausesQueryKey = (
+  params?: ListMandatoryPausesParams,
+) => {
+  return [`/api/autonomy/pauses`, ...(params ? [params] : [])] as const;
+};
+
+export const getListMandatoryPausesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMandatoryPauses>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListMandatoryPausesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listMandatoryPauses>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListMandatoryPausesQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listMandatoryPauses>>
+  > = ({ signal }) =>
+    listMandatoryPauses(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMandatoryPauses>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListMandatoryPausesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMandatoryPauses>>
+>;
+export type ListMandatoryPausesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List workspace mandatory safety pauses
+ */
+
+export function useListMandatoryPauses<
+  TData = Awaited<ReturnType<typeof listMandatoryPauses>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListMandatoryPausesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listMandatoryPauses>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListMandatoryPausesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create an idempotent mandatory safety pause
+ */
+export const getCreateMandatoryPauseUrl = () => {
+  return `/api/autonomy/pauses`;
+};
+
+export const createMandatoryPause = async (
+  mandatoryPauseInput: MandatoryPauseInput,
+  options?: RequestInit,
+): Promise<MandatoryPauseResponse> => {
+  return customFetch<MandatoryPauseResponse>(getCreateMandatoryPauseUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(mandatoryPauseInput),
+  });
+};
+
+export const getCreateMandatoryPauseMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createMandatoryPause>>,
+    TError,
+    { data: BodyType<MandatoryPauseInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createMandatoryPause>>,
+  TError,
+  { data: BodyType<MandatoryPauseInput> },
+  TContext
+> => {
+  const mutationKey = ["createMandatoryPause"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createMandatoryPause>>,
+    { data: BodyType<MandatoryPauseInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createMandatoryPause(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateMandatoryPauseMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createMandatoryPause>>
+>;
+export type CreateMandatoryPauseMutationBody = BodyType<MandatoryPauseInput>;
+export type CreateMandatoryPauseMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create an idempotent mandatory safety pause
+ */
+export const useCreateMandatoryPause = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createMandatoryPause>>,
+    TError,
+    { data: BodyType<MandatoryPauseInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createMandatoryPause>>,
+  TError,
+  { data: BodyType<MandatoryPauseInput> },
+  TContext
+> => {
+  return useMutation(getCreateMandatoryPauseMutationOptions(options));
+};
+
+/**
+ * @summary Resolve a mandatory pause with human evidence
+ */
+export const getResolveMandatoryPauseUrl = (pauseId: string) => {
+  return `/api/autonomy/pauses/${pauseId}/resolve`;
+};
+
+export const resolveMandatoryPause = async (
+  pauseId: string,
+  mandatoryPauseResolutionInput: MandatoryPauseResolutionInput,
+  options?: RequestInit,
+): Promise<MandatoryPauseResponse> => {
+  return customFetch<MandatoryPauseResponse>(
+    getResolveMandatoryPauseUrl(pauseId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(mandatoryPauseResolutionInput),
+    },
+  );
+};
+
+export const getResolveMandatoryPauseMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveMandatoryPause>>,
+    TError,
+    { pauseId: string; data: BodyType<MandatoryPauseResolutionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resolveMandatoryPause>>,
+  TError,
+  { pauseId: string; data: BodyType<MandatoryPauseResolutionInput> },
+  TContext
+> => {
+  const mutationKey = ["resolveMandatoryPause"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resolveMandatoryPause>>,
+    { pauseId: string; data: BodyType<MandatoryPauseResolutionInput> }
+  > = (props) => {
+    const { pauseId, data } = props ?? {};
+
+    return resolveMandatoryPause(pauseId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResolveMandatoryPauseMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resolveMandatoryPause>>
+>;
+export type ResolveMandatoryPauseMutationBody =
+  BodyType<MandatoryPauseResolutionInput>;
+export type ResolveMandatoryPauseMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Resolve a mandatory pause with human evidence
+ */
+export const useResolveMandatoryPause = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveMandatoryPause>>,
+    TError,
+    { pauseId: string; data: BodyType<MandatoryPauseResolutionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof resolveMandatoryPause>>,
+  TError,
+  { pauseId: string; data: BodyType<MandatoryPauseResolutionInput> },
+  TContext
+> => {
+  return useMutation(getResolveMandatoryPauseMutationOptions(options));
+};
 
 /**
  * @summary Get intake data

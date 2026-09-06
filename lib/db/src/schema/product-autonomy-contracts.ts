@@ -19,6 +19,11 @@ export const contractAcceptanceTypeEnum = pgEnum("contract_acceptance_type", [
   "regulated_activity",
   "asset_rights",
 ]);
+export const mandatoryPauseClassEnum = pgEnum("mandatory_pause_class", [
+  "probable_illegality", "fraud", "rights_violation", "severe_account_ban_risk", "overspend", "severe_reputational_crisis",
+]);
+export const mandatoryPauseStatusEnum = pgEnum("mandatory_pause_status", ["active", "resolved"]);
+export const mandatoryPauseSourceTypeEnum = pgEnum("mandatory_pause_source_type", ["user", "automated"]);
 
 export const contractVersionsTable = pgTable(
   "contract_versions",
@@ -65,9 +70,40 @@ export const contractAcceptancesTable = pgTable(
   ],
 );
 
+/** Immutable safety findings. Resolution annotates a finding; it is never deleted. */
+export const mandatoryPausesTable = pgTable(
+  "mandatory_pauses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspacesTable.id, { onDelete: "cascade" }),
+    campaignId: uuid("campaign_id").references(() => campaignsTable.id, { onDelete: "cascade" }),
+    channel: text("channel"),
+    action: text("action"),
+    pauseClass: mandatoryPauseClassEnum("pause_class").notNull(),
+    severity: text("severity").notNull(),
+    status: mandatoryPauseStatusEnum("status").notNull().default("active"),
+    reason: text("reason").notNull(),
+    evidenceSummary: text("evidence_summary").notNull(),
+    sourceActor: text("source_actor").notNull(),
+    sourceType: mandatoryPauseSourceTypeEnum("source_type").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolvedByUserId: uuid("resolved_by_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+    resolutionReason: text("resolution_reason"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("mandatory_pauses_workspace_idempotency_unique").on(table.workspaceId, table.idempotencyKey),
+    index("mandatory_pauses_workspace_status_scope_idx").on(table.workspaceId, table.status, table.campaignId, table.channel, table.action),
+  ],
+);
+
 export const insertContractVersionSchema = createInsertSchema(contractVersionsTable).omit({ id: true, createdAt: true });
 export const insertContractAcceptanceSchema = createInsertSchema(contractAcceptancesTable).omit({ id: true, createdAt: true, acceptedAt: true, revokedAt: true, revokedByUserId: true, revocationReason: true });
 export type InsertContractVersion = z.infer<typeof insertContractVersionSchema>;
 export type ContractVersion = typeof contractVersionsTable.$inferSelect;
 export type InsertContractAcceptance = z.infer<typeof insertContractAcceptanceSchema>;
 export type ContractAcceptance = typeof contractAcceptancesTable.$inferSelect;
+export const insertMandatoryPauseSchema = createInsertSchema(mandatoryPausesTable).omit({ id: true, createdAt: true, updatedAt: true, resolvedAt: true, resolvedByUserId: true, resolutionReason: true });
+export type MandatoryPause = typeof mandatoryPausesTable.$inferSelect;

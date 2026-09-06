@@ -17,7 +17,7 @@ import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
 import type { Logger } from "pino";
-import { enforceLaunchAutonomyGate } from "../autonomy/autonomy.service.js";
+import { enforceLaunchAutonomyGate, enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 
 // ── Execution status ──────────────────────────────────────────────────────────
 
@@ -491,6 +491,11 @@ export async function triggerExecutionPhase(
   }
   // Gate only the transition that starts execution. Existing executions remain untouched.
   await enforceLaunchAutonomyGate(workspaceId, campaignId, actor);
+  await enforceNoMandatoryPause(workspaceId, {
+    campaignId,
+    channel: "campaign",
+    action: "launch",
+  });
 
   await db.insert(auditLogsTable).values({
     workspaceId,

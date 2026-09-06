@@ -8,6 +8,7 @@ import {
   sequenceContactsTable,
 } from "@workspace/db";
 import { NotFoundError, ValidationError, AppError } from "../../lib/errors.js";
+import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import { logger } from "../../lib/logger.js";
 import { env } from "../../lib/env.js";
 import { recordEngagementEvent } from "../launch-sequence/sequence-analytics.service.js";
@@ -339,6 +340,11 @@ export async function sendEmailDispatch(workspaceId: string, dispatchId: string)
   if (!["draft", "scheduled"].includes(dispatch.status))
     throw new ValidationError("Dispatch already sent or cancelled");
   if (!dispatch.htmlContent) throw new ValidationError("No HTML content to send");
+  await enforceNoMandatoryPause(workspaceId, {
+    campaignId: dispatch.campaignId ?? undefined,
+    channel: "email",
+    action: "email_dispatch",
+  });
 
   await db
     .update(emailDispatchesTable)

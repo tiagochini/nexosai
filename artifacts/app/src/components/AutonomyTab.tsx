@@ -3,7 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { 
   useGetAutonomyStatus, getGetAutonomyStatusQueryKey,
   useListAutonomyEvidence, getListAutonomyEvidenceQueryKey,
-  useRevokeAutonomyAcceptance
+  useRevokeAutonomyAcceptance, useListMandatoryPauses, getListMandatoryPausesQueryKey,
+  useResolveMandatoryPause
 } from "@workspace/api-client-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ShieldCheck, Activity, KeyRound, Clock, Loader2, XCircle, FileSignature
+  ShieldCheck, Activity, KeyRound, Clock, Loader2, XCircle, FileSignature, OctagonAlert
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -47,16 +48,24 @@ const TYPE_LABELS: Record<string, string> = {
   regulated_activity: "Atividade Regulada",
   asset_rights: "Direitos de Ativos",
 };
+const PAUSE_LABELS: Record<string, string> = {
+  probable_illegality: "Provável ilegalidade", fraud: "Fraude", rights_violation: "Violação de direitos",
+  severe_account_ban_risk: "Risco grave de banimento", overspend: "Overspend", severe_reputational_crisis: "Crise reputacional grave",
+};
 
 export function AutonomyTab() {
   const queryClient = useQueryClient();
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokeReason, setRevokeReason] = useState("");
+  const [resolvingPauseId, setResolvingPauseId] = useState<string | null>(null);
+  const [pauseResolutionReason, setPauseResolutionReason] = useState("");
 
-  const { data: statusData, isLoading: isLoadingStatus } = useGetAutonomyStatus();
-  const { data: evidenceData, isLoading: isLoadingEvidence } = useListAutonomyEvidence();
+  const { data: statusData, isLoading: isLoadingStatus } = useGetAutonomyStatus(undefined, { query: { queryKey: getGetAutonomyStatusQueryKey(), refetchOnMount: "always", refetchOnWindowFocus: true, refetchInterval: 30_000 } });
+  const { data: evidenceData, isLoading: isLoadingEvidence } = useListAutonomyEvidence(undefined, { query: { queryKey: getListAutonomyEvidenceQueryKey(), refetchOnMount: "always", refetchOnWindowFocus: true, refetchInterval: 30_000 } });
+  const { data: pauseData, isLoading: isLoadingPauses } = useListMandatoryPauses(undefined, { query: { queryKey: getListMandatoryPausesQueryKey(), refetchOnMount: "always", refetchOnWindowFocus: true, refetchInterval: 30_000 } });
 
   const revokeMutation = useRevokeAutonomyAcceptance();
+  const resolvePauseMutation = useResolveMandatoryPause();
 
   const handleRevoke = (acceptanceId: string) => {
     if (!revokeReason.trim()) {
@@ -81,7 +90,21 @@ export function AutonomyTab() {
     );
   };
 
-  if (isLoadingStatus || isLoadingEvidence) {
+  const handleResolvePause = (pauseId: string) => {
+    if (!pauseResolutionReason.trim()) { toast.error("Informe o motivo da resolução."); return; }
+    resolvePauseMutation.mutate({ pauseId, data: { reason: pauseResolutionReason } }, {
+      onSuccess: () => {
+        toast.success("Pausa obrigatória resolvida. A campanha não será retomada automaticamente.");
+        queryClient.invalidateQueries({ queryKey: getListMandatoryPausesQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetAutonomyStatusQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getListAutonomyEvidenceQueryKey() });
+        setResolvingPauseId(null); setPauseResolutionReason("");
+      },
+      onError: () => toast.error("Não foi possível resolver a pausa."),
+    });
+  };
+
+  if (isLoadingStatus || isLoadingEvidence || isLoadingPauses) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-64 w-full rounded-none" />
@@ -92,13 +115,14 @@ export function AutonomyTab() {
 
   const { contract, requiredAcceptanceTypes = [], acceptedAcceptanceTypes = [], missingAcceptanceTypes = [] } = statusData || {};
   const acceptances = evidenceData?.acceptances || [];
+  const pauses = pauseData?.pauses || [];
 
   return (
     <div className="space-y-6">
       <div className="p-4 border border-primary/20 bg-primary/5 flex items-start gap-3">
         <ShieldCheck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
         <div>
-          <h3 className="font-mono text-sm uppercase tracking-widest font-bold text-primary">Autonomia da Inteligência Artificial</h3>
+          <h3 className="font-mono text-sm uppercase tracking-widest font-bold text-primary">Autonomia NexOS AI</h3>
           <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
             Aqui você gerencia os limites de atuação dos agentes. O NexOS permite que a IA tome decisões estratégicas, publique conteúdo e aloque orçamento de mídia.
              <strong> A revogação impede novos lançamentos que dependam desses aceites; operações já iniciadas preservam seu histórico e seguem os controles do Masterplan.</strong>
@@ -232,6 +256,37 @@ export function AutonomyTab() {
               </div>
             ))
           )}
+        </div>
+      </SectionCard>
+      <SectionCard title="Pausas Obrigatórias" icon={OctagonAlert}>
+        <p className="font-mono text-[10px] text-muted-foreground mb-4">Pausas ativas bloqueiam a próxima ação externa correspondente. Uma resolução não retoma campanhas automaticamente.</p>
+        <div className="space-y-3" data-testid="mandatory-pauses-list">
+          {pauses.length === 0 ? (
+            <p className="font-mono text-xs text-muted-foreground text-center py-4 border border-dashed border-border/40">Nenhuma pausa obrigatória registrada.</p>
+          ) : pauses.map((pause) => (
+            <div key={pause.id} className={`border p-4 ${pause.status === "active" ? "border-destructive/40 bg-destructive/5" : "border-border/40 bg-muted/10 opacity-75"}`} data-testid={`mandatory-pause-${pause.id}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-mono text-xs font-bold uppercase">{PAUSE_LABELS[pause.pauseClass] || pause.pauseClass}</div>
+                  <p className="text-xs text-muted-foreground mt-1">{pause.reason}</p>
+                </div>
+                <Badge variant="outline" className={`rounded-none font-mono text-[9px] uppercase ${pause.status === "active" ? "text-destructive border-destructive/40" : "text-success border-success/40"}`}>{pause.status === "active" ? "Ativa" : "Resolvida"}</Badge>
+              </div>
+              <div className="mt-3 font-mono text-[10px] text-muted-foreground">
+                Severidade: <span className="text-foreground">{pause.severity}</span> · Escopo: <span className="text-foreground">{pause.campaignId || "Workspace"}{pause.channel ? ` / ${pause.channel}` : ""}{pause.action ? ` / ${pause.action}` : ""}</span>
+                <br />Evidência segura: {pause.evidenceSummary}
+              </div>
+              {pause.status === "resolved" ? <div className="mt-3 text-[10px] font-mono text-success">Resolvida: {pause.resolutionReason}</div> : (
+                <div className="mt-3 pt-3 border-t border-border/30">
+                  {resolvingPauseId === pause.id ? <div className="flex gap-2">
+                    <Input value={pauseResolutionReason} onChange={(e) => setPauseResolutionReason(e.target.value)} placeholder="Motivo da resolução..." data-testid={`input-resolve-pause-${pause.id}`} className="h-8 font-mono text-xs rounded-none" />
+                    <Button size="sm" onClick={() => handleResolvePause(pause.id)} disabled={resolvePauseMutation.isPending} data-testid={`button-confirm-resolve-pause-${pause.id}`}>Resolver</Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setResolvingPauseId(null); setPauseResolutionReason(""); }}>Cancelar</Button>
+                  </div> : <Button size="sm" variant="ghost" className="font-mono text-[10px] text-destructive uppercase" onClick={() => setResolvingPauseId(pause.id)} data-testid={`button-resolve-pause-${pause.id}`}>Resolver pausa</Button>}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </SectionCard>
     </div>

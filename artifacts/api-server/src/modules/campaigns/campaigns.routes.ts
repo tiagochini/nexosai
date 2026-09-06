@@ -222,6 +222,13 @@ router.patch("/:id/status", async (req, res): Promise<void> => {
   }
 
   try {
+    if (["analyzing", "strategy_ready", "generating", "compliance_review", "awaiting_approval", "executing", "live"].includes(parsed.data.status)) {
+      throw new AppError(
+        409,
+        `Status "${parsed.data.status}" pertence ao motor de execução. Use POST /campaigns/${id}/execute.`,
+        "EXECUTION_STATUS_REQUIRES_EXECUTE_ENDPOINT",
+      );
+    }
     const campaign = await updateCampaignStatus(
       id,
       req.auth.workspaceId,

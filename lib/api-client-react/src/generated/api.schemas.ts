@@ -295,6 +295,182 @@ export interface ContractAcceptanceRequiredError {
   data: ContractAcceptanceRequiredErrorData;
 }
 
+/**
+ * @nullable
+ */
+export type MandatoryPauseChannel =
+  | (typeof MandatoryPauseChannel)[keyof typeof MandatoryPauseChannel]
+  | null;
+
+export const MandatoryPauseChannel = {
+  campaign: "campaign",
+  instagram: "instagram",
+  facebook: "facebook",
+  tiktok: "tiktok",
+  email: "email",
+  whatsapp: "whatsapp",
+} as const;
+
+/**
+ * @nullable
+ */
+export type MandatoryPauseAction =
+  | (typeof MandatoryPauseAction)[keyof typeof MandatoryPauseAction]
+  | null;
+
+export const MandatoryPauseAction = {
+  launch: "launch",
+  social_publish: "social_publish",
+  email_dispatch: "email_dispatch",
+  whatsapp_dispatch: "whatsapp_dispatch",
+} as const;
+
+export type MandatoryPausePauseClass =
+  (typeof MandatoryPausePauseClass)[keyof typeof MandatoryPausePauseClass];
+
+export const MandatoryPausePauseClass = {
+  probable_illegality: "probable_illegality",
+  fraud: "fraud",
+  rights_violation: "rights_violation",
+  severe_account_ban_risk: "severe_account_ban_risk",
+  overspend: "overspend",
+  severe_reputational_crisis: "severe_reputational_crisis",
+} as const;
+
+export type MandatoryPauseStatus =
+  (typeof MandatoryPauseStatus)[keyof typeof MandatoryPauseStatus];
+
+export const MandatoryPauseStatus = {
+  active: "active",
+  resolved: "resolved",
+} as const;
+
+export type MandatoryPauseSourceType =
+  (typeof MandatoryPauseSourceType)[keyof typeof MandatoryPauseSourceType];
+
+export const MandatoryPauseSourceType = {
+  user: "user",
+  automated: "automated",
+} as const;
+
+export interface MandatoryPause {
+  id: string;
+  workspaceId: string;
+  /** @nullable */
+  campaignId?: string | null;
+  /** @nullable */
+  channel?: MandatoryPauseChannel;
+  /** @nullable */
+  action?: MandatoryPauseAction;
+  pauseClass: MandatoryPausePauseClass;
+  severity: string;
+  status: MandatoryPauseStatus;
+  reason: string;
+  evidenceSummary: string;
+  sourceActor: string;
+  sourceType: MandatoryPauseSourceType;
+  idempotencyKey: string;
+  /** @nullable */
+  resolvedAt?: string | null;
+  /** @nullable */
+  resolvedByUserId?: string | null;
+  /** @nullable */
+  resolutionReason?: string | null;
+  createdAt: string;
+}
+
+export type MandatoryPauseInputChannel =
+  (typeof MandatoryPauseInputChannel)[keyof typeof MandatoryPauseInputChannel];
+
+export const MandatoryPauseInputChannel = {
+  campaign: "campaign",
+  instagram: "instagram",
+  facebook: "facebook",
+  tiktok: "tiktok",
+  email: "email",
+  whatsapp: "whatsapp",
+} as const;
+
+export type MandatoryPauseInputAction =
+  (typeof MandatoryPauseInputAction)[keyof typeof MandatoryPauseInputAction];
+
+export const MandatoryPauseInputAction = {
+  launch: "launch",
+  social_publish: "social_publish",
+  email_dispatch: "email_dispatch",
+  whatsapp_dispatch: "whatsapp_dispatch",
+} as const;
+
+export type MandatoryPauseInputPauseClass =
+  (typeof MandatoryPauseInputPauseClass)[keyof typeof MandatoryPauseInputPauseClass];
+
+export const MandatoryPauseInputPauseClass = {
+  probable_illegality: "probable_illegality",
+  fraud: "fraud",
+  rights_violation: "rights_violation",
+  severe_account_ban_risk: "severe_account_ban_risk",
+  overspend: "overspend",
+  severe_reputational_crisis: "severe_reputational_crisis",
+} as const;
+
+export interface MandatoryPauseInput {
+  campaignId?: string;
+  channel?: MandatoryPauseInputChannel;
+  action?: MandatoryPauseInputAction;
+  pauseClass: MandatoryPauseInputPauseClass;
+  /**
+   * @minLength 1
+   * @maxLength 32
+   */
+  severity: string;
+  /**
+   * @minLength 1
+   * @maxLength 2000
+   */
+  reason: string;
+  /**
+   * @minLength 1
+   * @maxLength 2000
+   */
+  evidenceSummary: string;
+  /**
+   * @minLength 8
+   * @maxLength 200
+   */
+  idempotencyKey: string;
+}
+
+export interface MandatoryPauseResolutionInput {
+  /**
+   * @minLength 1
+   * @maxLength 2000
+   */
+  reason: string;
+}
+
+export interface MandatoryPauseResponse {
+  pause: MandatoryPause;
+}
+
+export interface MandatoryPauseListResponse {
+  pauses: MandatoryPause[];
+}
+
+export type MandatoryPauseActiveErrorCode =
+  (typeof MandatoryPauseActiveErrorCode)[keyof typeof MandatoryPauseActiveErrorCode];
+
+export const MandatoryPauseActiveErrorCode = {
+  MANDATORY_PAUSE_ACTIVE: "MANDATORY_PAUSE_ACTIVE",
+} as const;
+
+export type MandatoryPauseActiveErrorData = { [key: string]: unknown };
+
+export interface MandatoryPauseActiveError {
+  error: string;
+  code: MandatoryPauseActiveErrorCode;
+  data: MandatoryPauseActiveErrorData;
+}
+
 export type IntakeSaveInputIntakeData = { [key: string]: unknown };
 
 export interface IntakeSaveInput {
@@ -543,6 +719,11 @@ export type GetAutonomyStatusParams = {
 
 export type ListAutonomyEvidenceParams = {
   campaignId?: string;
+};
+
+export type ListMandatoryPausesParams = {
+  campaignId?: string;
+  activeOnly?: boolean;
 };
 
 export type ListSequences200 = {

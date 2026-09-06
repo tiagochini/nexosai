@@ -363,6 +363,163 @@ export const ListAutonomyEvidenceResponse = zod.object({
 });
 
 /**
+ * @summary List workspace mandatory safety pauses
+ */
+export const ListMandatoryPausesQueryParams = zod.object({
+  campaignId: zod.coerce.string().optional(),
+  activeOnly: zod.coerce.boolean().optional(),
+});
+
+export const ListMandatoryPausesResponse = zod.object({
+  pauses: zod.array(
+    zod.object({
+      id: zod.string(),
+      workspaceId: zod.string(),
+      campaignId: zod.string().nullish(),
+      channel: zod
+        .union([
+          zod.literal("campaign"),
+          zod.literal("instagram"),
+          zod.literal("facebook"),
+          zod.literal("tiktok"),
+          zod.literal("email"),
+          zod.literal("whatsapp"),
+          zod.literal(null),
+        ])
+        .nullish(),
+      action: zod
+        .union([
+          zod.literal("launch"),
+          zod.literal("social_publish"),
+          zod.literal("email_dispatch"),
+          zod.literal("whatsapp_dispatch"),
+          zod.literal(null),
+        ])
+        .nullish(),
+      pauseClass: zod.enum([
+        "probable_illegality",
+        "fraud",
+        "rights_violation",
+        "severe_account_ban_risk",
+        "overspend",
+        "severe_reputational_crisis",
+      ]),
+      severity: zod.string(),
+      status: zod.enum(["active", "resolved"]),
+      reason: zod.string(),
+      evidenceSummary: zod.string(),
+      sourceActor: zod.string(),
+      sourceType: zod.enum(["user", "automated"]),
+      idempotencyKey: zod.string(),
+      resolvedAt: zod.string().nullish(),
+      resolvedByUserId: zod.string().nullish(),
+      resolutionReason: zod.string().nullish(),
+      createdAt: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Create an idempotent mandatory safety pause
+ */
+export const createMandatoryPauseBodySeverityMax = 32;
+
+export const createMandatoryPauseBodyReasonMax = 2000;
+
+export const createMandatoryPauseBodyEvidenceSummaryMax = 2000;
+
+export const createMandatoryPauseBodyIdempotencyKeyMin = 8;
+export const createMandatoryPauseBodyIdempotencyKeyMax = 200;
+
+export const CreateMandatoryPauseBody = zod.object({
+  campaignId: zod.string().optional(),
+  channel: zod
+    .enum(["campaign", "instagram", "facebook", "tiktok", "email", "whatsapp"])
+    .optional(),
+  action: zod
+    .enum(["launch", "social_publish", "email_dispatch", "whatsapp_dispatch"])
+    .optional(),
+  pauseClass: zod.enum([
+    "probable_illegality",
+    "fraud",
+    "rights_violation",
+    "severe_account_ban_risk",
+    "overspend",
+    "severe_reputational_crisis",
+  ]),
+  severity: zod.string().min(1).max(createMandatoryPauseBodySeverityMax),
+  reason: zod.string().min(1).max(createMandatoryPauseBodyReasonMax),
+  evidenceSummary: zod
+    .string()
+    .min(1)
+    .max(createMandatoryPauseBodyEvidenceSummaryMax),
+  idempotencyKey: zod
+    .string()
+    .min(createMandatoryPauseBodyIdempotencyKeyMin)
+    .max(createMandatoryPauseBodyIdempotencyKeyMax),
+});
+
+/**
+ * @summary Resolve a mandatory pause with human evidence
+ */
+export const ResolveMandatoryPauseParams = zod.object({
+  pauseId: zod.coerce.string(),
+});
+
+export const resolveMandatoryPauseBodyReasonMax = 2000;
+
+export const ResolveMandatoryPauseBody = zod.object({
+  reason: zod.string().min(1).max(resolveMandatoryPauseBodyReasonMax),
+});
+
+export const ResolveMandatoryPauseResponse = zod.object({
+  pause: zod.object({
+    id: zod.string(),
+    workspaceId: zod.string(),
+    campaignId: zod.string().nullish(),
+    channel: zod
+      .union([
+        zod.literal("campaign"),
+        zod.literal("instagram"),
+        zod.literal("facebook"),
+        zod.literal("tiktok"),
+        zod.literal("email"),
+        zod.literal("whatsapp"),
+        zod.literal(null),
+      ])
+      .nullish(),
+    action: zod
+      .union([
+        zod.literal("launch"),
+        zod.literal("social_publish"),
+        zod.literal("email_dispatch"),
+        zod.literal("whatsapp_dispatch"),
+        zod.literal(null),
+      ])
+      .nullish(),
+    pauseClass: zod.enum([
+      "probable_illegality",
+      "fraud",
+      "rights_violation",
+      "severe_account_ban_risk",
+      "overspend",
+      "severe_reputational_crisis",
+    ]),
+    severity: zod.string(),
+    status: zod.enum(["active", "resolved"]),
+    reason: zod.string(),
+    evidenceSummary: zod.string(),
+    sourceActor: zod.string(),
+    sourceType: zod.enum(["user", "automated"]),
+    idempotencyKey: zod.string(),
+    resolvedAt: zod.string().nullish(),
+    resolvedByUserId: zod.string().nullish(),
+    resolutionReason: zod.string().nullish(),
+    createdAt: zod.string(),
+  }),
+});
+
+/**
  * @summary Get intake data
  */
 export const GetIntakeParams = zod.object({

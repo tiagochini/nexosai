@@ -12,6 +12,7 @@ import { orchestrateCampaign } from "../agents/command.agent.js";
 import { generateCampaignContent } from "../content/content.service.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import { bridgeCampaignToSequence } from "../launch-sequence/sequence-bridge.service.js";
+import { enforceLaunchAutonomyGate, enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import { logger } from "../../lib/logger.js";
 import { env } from "../../lib/env.js";
 
@@ -251,6 +252,29 @@ async function processExecute(job: Job<CampaignOrchestrationJob>): Promise<void>
     throw new Error(`Campaign ${campaignId} not found`);
   }
 
+  // A paused campaign must never fall through to `live`. Resolving a mandatory
+  // pause only removes the block; resuming the campaign remains an explicit
+  // user-controlled operation.
+  if (campaign.status === "paused") {
+    log.warn({ campaignId }, "Launch worker stopped because campaign is paused");
+    await db.insert(auditLogsTable).values({
+      workspaceId,
+      campaignId,
+      action: "campaign.execution.blocked_paused",
+      actor: "system",
+      data: { currentStatus: campaign.status },
+    });
+    return;
+  }
+
+  // Final worker boundary: acceptances or pauses may change after queueing.
+  await enforceLaunchAutonomyGate(workspaceId, campaignId, "system:orchestration-worker");
+  await enforceNoMandatoryPause(workspaceId, {
+    campaignId,
+    channel: "campaign",
+    action: "launch",
+  });
+
   // approved → executing → live
   if (campaign.status === "approved") {
     await transitionCampaign(campaignId, workspaceId, "executing", "launch phase activated", log, {
@@ -277,6 +301,8 @@ async function processExecute(job: Job<CampaignOrchestrationJob>): Promise<void>
     // has real dispatch items to send. Non-fatal: if this fails the campaign
     // still goes live — operators can manually create sequences as fallback.
     try {
+      await enforceLaunchAutonomyGate(workspaceId, campaignId, "system:orchestration-worker");
+      await enforceNoMandatoryPause(workspaceId, { campaignId, channel: "campaign", action: "launch" });
       const bridge = await bridgeCampaignToSequence(campaignId, workspaceId, log);
       log.info(
         { campaignId, sequenceId: bridge.sequenceId, itemsCreated: bridge.itemsCreated, reason: bridge.reason },
@@ -288,8 +314,19 @@ async function processExecute(job: Job<CampaignOrchestrationJob>): Promise<void>
         "[EXECUTE] Sequence bridge failed (non-fatal) — campaign will still go live",
       );
     }
+  } else if (campaign.status !== "executing") {
+    log.warn({ campaignId, status: campaign.status }, "Launch worker stopped because campaign is not launchable");
+    return;
   }
 
+  const [beforeLive] = await db.select({ status: campaignsTable.status }).from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).limit(1);
+  if (!beforeLive || beforeLive.status === "paused") {
+    log.warn({ campaignId, status: beforeLive?.status }, "Launch worker stopped before live transition");
+    return;
+  }
+  await enforceLaunchAutonomyGate(workspaceId, campaignId, "system:orchestration-worker");
+  await enforceNoMandatoryPause(workspaceId, { campaignId, channel: "campaign", action: "launch" });
   await transitionCampaign(campaignId, workspaceId, "live", "campaign channels active", log);
 
   await db.insert(auditLogsTable).values({

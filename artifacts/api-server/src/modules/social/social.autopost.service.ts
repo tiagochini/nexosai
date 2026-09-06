@@ -9,6 +9,7 @@ import {
 } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
 import { publishToInstagram, publishToFacebook, publishToTikTok } from "./social.publisher.js";
+import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import type { SocialPost, WorkspaceIntegration } from "@workspace/db";
 
 // Maps content piece types → DB provider values to query
@@ -338,6 +339,12 @@ export async function autoPostApprovedContent(
       };
 
       let result;
+      const pauseChannel = platform === "instagram" ? "instagram"
+        : platform === "facebook_page" ? "facebook"
+          : platform === "tiktok" ? "tiktok" : null;
+      if (pauseChannel) await enforceNoMandatoryPause(workspaceId, {
+        campaignId: campaignId || undefined, channel: pauseChannel, action: "social_publish",
+      });
       if (platform === "instagram") {
         result = await publishToInstagram(mockPost, integration);
       } else if (platform === "facebook_page") {
@@ -551,6 +558,12 @@ export async function processScheduledSocialPosts(): Promise<void> {
         const mockPost = { ...post, mediaUrls, status: "publishing" as const };
 
         let result;
+        const pauseChannel = post.platform === "instagram" ? "instagram"
+          : post.platform === "facebook_page" ? "facebook"
+            : post.platform === "tiktok" ? "tiktok" : null;
+        if (pauseChannel) await enforceNoMandatoryPause(post.workspaceId, {
+          campaignId: post.campaignId ?? undefined, channel: pauseChannel, action: "social_publish",
+        });
         if (post.platform === "instagram") {
           result = await publishToInstagram(mockPost as any, integration);
         } else if (post.platform === "facebook_page") {

@@ -225,6 +225,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ContractAcceptanceRequiredError"
+        "423":
+          description: A mandatory safety pause blocks this external action
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MandatoryPauseActiveError"
 
   # ─── Product autonomy contract ─────────────────────────────────────────────
   /autonomy/status:
@@ -305,6 +311,60 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AutonomyEvidenceResponse"
+  /autonomy/pauses:
+    get:
+      operationId: listMandatoryPauses
+      tags: [autonomy]
+      summary: List workspace mandatory safety pauses
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: campaignId
+          in: query
+          schema: { type: string }
+        - name: activeOnly
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Mandatory pause history
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MandatoryPauseListResponse" }
+    post:
+      operationId: createMandatoryPause
+      tags: [autonomy]
+      summary: Create an idempotent mandatory safety pause
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MandatoryPauseInput" }
+      responses:
+        "201":
+          description: Pause recorded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MandatoryPauseResponse" }
+  /autonomy/pauses/{pauseId}/resolve:
+    post:
+      operationId: resolveMandatoryPause
+      tags: [autonomy]
+      summary: Resolve a mandatory pause with human evidence
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/pauseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MandatoryPauseResolutionInput" }
+      responses:
+        "200":
+          description: Pause resolved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MandatoryPauseResponse" }
 
   # ─── Intake ────────────────────────────────────────────────────────────────
   /intake/{campaignId}:
@@ -650,6 +710,11 @@ components:
       required: true
       schema:
         type: string
+    pauseId:
+      name: pauseId
+      in: path
+      required: true
+      schema: { type: string }
 
   schemas:
     HealthStatus:
@@ -913,6 +978,65 @@ components:
               type: array
               items: { type: string, enum: [autonomy, regulated_activity, asset_rights] }
           required: [contract, requiredAcceptanceTypes, missingAcceptanceTypes]
+      required: [error, code, data]
+    MandatoryPause:
+      type: object
+      properties:
+        id: { type: string }
+        workspaceId: { type: string }
+        campaignId: { type: ["string", "null"] }
+        channel: { type: ["string", "null"], enum: [campaign, instagram, facebook, tiktok, email, whatsapp, null] }
+        action: { type: ["string", "null"], enum: [launch, social_publish, email_dispatch, whatsapp_dispatch, null] }
+        pauseClass: { type: string, enum: [probable_illegality, fraud, rights_violation, severe_account_ban_risk, overspend, severe_reputational_crisis] }
+        severity: { type: string }
+        status: { type: string, enum: [active, resolved] }
+        reason: { type: string }
+        evidenceSummary: { type: string }
+        sourceActor: { type: string }
+        sourceType: { type: string, enum: [user, automated] }
+        idempotencyKey: { type: string }
+        resolvedAt: { type: ["string", "null"] }
+        resolvedByUserId: { type: ["string", "null"] }
+        resolutionReason: { type: ["string", "null"] }
+        createdAt: { type: string }
+      required: [id, workspaceId, pauseClass, severity, status, reason, evidenceSummary, sourceActor, sourceType, idempotencyKey, createdAt]
+    MandatoryPauseInput:
+      type: object
+      properties:
+        campaignId: { type: string }
+        channel: { type: string, enum: [campaign, instagram, facebook, tiktok, email, whatsapp] }
+        action: { type: string, enum: [launch, social_publish, email_dispatch, whatsapp_dispatch] }
+        pauseClass: { type: string, enum: [probable_illegality, fraud, rights_violation, severe_account_ban_risk, overspend, severe_reputational_crisis] }
+        severity: { type: string, minLength: 1, maxLength: 32 }
+        reason: { type: string, minLength: 1, maxLength: 2000 }
+        evidenceSummary: { type: string, minLength: 1, maxLength: 2000 }
+        idempotencyKey: { type: string, minLength: 8, maxLength: 200 }
+      required: [pauseClass, severity, reason, evidenceSummary, idempotencyKey]
+    MandatoryPauseResolutionInput:
+      type: object
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 2000 }
+      required: [reason]
+    MandatoryPauseResponse:
+      type: object
+      properties:
+        pause: { $ref: "#/components/schemas/MandatoryPause" }
+      required: [pause]
+    MandatoryPauseListResponse:
+      type: object
+      properties:
+        pauses:
+          type: array
+          items: { $ref: "#/components/schemas/MandatoryPause" }
+      required: [pauses]
+    MandatoryPauseActiveError:
+      type: object
+      properties:
+        error: { type: string }
+        code: { type: string, enum: [MANDATORY_PAUSE_ACTIVE] }
+        data:
+          type: object
+          additionalProperties: {}
       required: [error, code, data]
 
     # ─── Intake ─────────────────────────────────────────────────────────────

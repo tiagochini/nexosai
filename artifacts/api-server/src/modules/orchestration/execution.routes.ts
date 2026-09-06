@@ -3,7 +3,6 @@ import { requireAuth } from "../auth/auth.middleware.js";
 import { runCrossAgentValidation } from "../campaign-brain/cross-validation.service.js";
 import {
   getExecutionStatus,
-  triggerNextPhase,
   triggerStrategyPhase,
   triggerContentPhase,
   triggerExecutionPhase,
@@ -23,6 +22,7 @@ import {
 } from "@workspace/db";
 import { eq, and, inArray, ne, count } from "drizzle-orm";
 import { env } from "../../lib/env.js";
+import { z } from "zod/v4";
 
 const router = Router();
 router.use(requireAuth);
@@ -90,6 +90,40 @@ async function checkCreditsForPhase(
   return { sufficient: true, balance, required, shortage: 0, phaseCost };
 }
 
+/** Single launch gate used by both explicit launch endpoints. Keep all outbound
+ * launch checks here so no route can accidentally bypass them. */
+async function launchCampaign(
+  campaignId: string,
+  workspaceId: string,
+  userId: string,
+  log: Parameters<typeof triggerExecutionPhase>[2],
+) {
+  const [ownedCampaign] = await db.select({ id: campaignsTable.id }).from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).limit(1);
+  if (!ownedCampaign) throw new AppError(404, "Campaign not found", "NOT_FOUND");
+  const integrationCheck = await checkIntegrationsForLaunch(workspaceId, campaignId);
+  if (integrationCheck.status === "blocked") {
+    const categoryList = integrationCheck.missing.map((m) => m.category).join(", ");
+    throw new AppError(422, `Para lançar esta campanha, conecte as integrações necessárias: ${categoryList}. Acesse /integracoes para conectar.`, "MISSING_INTEGRATIONS", { missing: integrationCheck.missing, connectUrl: "/integracoes" });
+  }
+  const allPieces = await db.select({ status: contentPiecesTable.status }).from(contentPiecesTable)
+    .where(eq(contentPiecesTable.campaignId, campaignId));
+  const unapprovedPieces = allPieces.filter((piece) => piece.status !== "approved").length;
+  if (allPieces.length === 0) {
+    throw new AppError(422, "Nenhuma peça de conteúdo encontrada. Gere e aprove o conteúdo antes de lançar.", "NO_CONTENT", { approvalUrl: `/campaigns/${campaignId}/content` });
+  }
+  if (unapprovedPieces > 0) {
+    throw new AppError(422, `${unapprovedPieces} peça${unapprovedPieces > 1 ? "s" : ""} de conteúdo ainda ${unapprovedPieces > 1 ? "precisam" : "precisa"} de aprovação antes do lançamento.`, "CONTENT_NOT_APPROVED", { unapprovedPieces, totalPieces: allPieces.length, approvalUrl: `/campaigns/${campaignId}/content` });
+  }
+  const validation = await runCrossAgentValidation(campaignId, workspaceId, log);
+  if (!validation.isViable) {
+    throw new AppError(422, `Validação cruzada de agentes detectou ${validation.blockers.length} conflito(s) crítico(s): ${validation.blockers[0]?.description ?? "verificar agentes"}`, "CROSS_VALIDATION_FAILED", { blockers: validation.blockers, warnings: validation.warnings, metrics: validation.metrics });
+  }
+  const creditAdvisory = await checkCreditsForPhase(workspaceId, campaignId, "launch");
+  const result = await triggerExecutionPhase(campaignId, workspaceId, log, userId);
+  return { result, creditAdvisory };
+}
+
 // GET /campaigns/:campaignId/execution/status
 router.get("/:campaignId/execution/status", async (req, res): Promise<void> => {
   const campaignId = req.params["campaignId"] as string;
@@ -106,18 +140,30 @@ router.get("/:campaignId/execution/status", async (req, res): Promise<void> => {
   }
 });
 
-// POST /campaigns/:campaignId/execute — smart trigger (picks next phase automatically)
+const executeBodySchema = z.object({ phase: z.enum(["strategy", "content", "launch", "monitor"]) });
+// POST /campaigns/:campaignId/execute — explicit phase only.
 router.post("/:campaignId/execute", async (req, res): Promise<void> => {
   const campaignId = req.params["campaignId"] as string;
+  const parsed = executeBodySchema.safeParse(req.body ?? {});
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" }); return; }
 
   try {
-    const result = await triggerNextPhase(campaignId, req.auth.workspaceId, req.log);
+    if (parsed.data.phase === "launch") {
+      const { result, creditAdvisory } = await launchCampaign(campaignId, req.auth.workspaceId, req.auth.userId, req.log);
+      res.status(202).json({ message: result.queued ? "Lançamento enfileirado — campanha será ativada em instantes" : "Lançamento iniciado diretamente", campaignId, action: "execute", jobId: result.jobId ?? null, queued: result.queued, creditWarning: creditAdvisory.sufficient ? undefined : { balance: creditAdvisory.balance, required: creditAdvisory.required, shortage: creditAdvisory.shortage } });
+      return;
+    }
+    const result = parsed.data.phase === "strategy"
+      ? await triggerStrategyPhase(campaignId, req.auth.workspaceId, req.log)
+      : parsed.data.phase === "content"
+        ? await triggerContentPhase(campaignId, req.auth.workspaceId, req.log)
+        : await triggerMonitor(campaignId, req.auth.workspaceId, req.log);
     res.status(202).json({
       message: result.queued
         ? "Fase enfileirada para execução assíncrona"
         : "Fase iniciada diretamente (Redis indisponível)",
       campaignId,
-      action: result.action,
+      action: parsed.data.phase === "strategy" ? "run_strategy" : parsed.data.phase === "content" ? "generate_content" : "monitor",
       jobId: result.jobId ?? null,
       queued: result.queued,
     });
@@ -698,66 +744,7 @@ router.post("/:campaignId/execute/launch", async (req, res): Promise<void> => {
   const campaignId = req.params["campaignId"] as string;
 
   try {
-    // Campaign-aware integration gate: checks only the integrations required by
-    // THIS campaign's approved content pieces. A campaign with email_sequence needs
-    // email connected; one with ad_copy needs Meta Ads; one with whatsapp_broadcast
-    // needs WhatsApp Business — and so on. Pure content assets (VSL, landing page,
-    // creative_direction) have no integration requirement.
-    const integrationCheck = await checkIntegrationsForLaunch(req.auth.workspaceId, campaignId);
-
-    if (integrationCheck.status === "blocked") {
-      const categoryList = integrationCheck.missing.map((m) => m.category).join(", ");
-      throw new AppError(
-        422,
-        `Para lançar esta campanha, conecte as integrações necessárias: ${categoryList}. Acesse /integracoes para conectar.`,
-        "MISSING_INTEGRATIONS",
-        { missing: integrationCheck.missing, connectUrl: "/integracoes" },
-      );
-    }
-
-    // ── Content approval gate ────────────────────────────────────────────────
-    // Block launch if any content piece is not yet approved.
-    const allPieces = await db
-      .select({ status: contentPiecesTable.status })
-      .from(contentPiecesTable)
-      .where(eq(contentPiecesTable.campaignId, campaignId));
-
-    const totalPieces = allPieces.length;
-    const unapprovedPieces = allPieces.filter(p => p.status !== "approved").length;
-
-    if (totalPieces === 0) {
-      throw new AppError(
-        422,
-        "Nenhuma peça de conteúdo encontrada. Gere e aprove o conteúdo antes de lançar.",
-        "NO_CONTENT",
-        { approvalUrl: `/campaigns/${campaignId}/content` },
-      );
-    }
-
-    if (unapprovedPieces > 0) {
-      throw new AppError(
-        422,
-        `${unapprovedPieces} peça${unapprovedPieces > 1 ? "s" : ""} de conteúdo ainda ${unapprovedPieces > 1 ? "precisam" : "precisa"} de aprovação antes do lançamento.`,
-        "CONTENT_NOT_APPROVED",
-        { unapprovedPieces, totalPieces, approvalUrl: `/campaigns/${campaignId}/content` },
-      );
-    }
-    // ─────────────────────────────────────────────────────────────────────────
-
-    // Cross-Agent Validation — blocks launch if critical financial/alignment conflicts found
-    const validation = await runCrossAgentValidation(campaignId, req.auth.workspaceId, req.log);
-    if (!validation.isViable) {
-      const criticalBlocker = validation.blockers[0];
-      throw new AppError(
-        422,
-        `Validação cruzada de agentes detectou ${validation.blockers.length} conflito(s) crítico(s): ${criticalBlocker?.description ?? "verificar agentes"}`,
-        "CROSS_VALIDATION_FAILED",
-        { blockers: validation.blockers, warnings: validation.warnings, metrics: validation.metrics },
-      );
-    }
-
-    const creditAdvisory = await checkCreditsForPhase(req.auth.workspaceId, campaignId, "launch");
-    const result = await triggerExecutionPhase(campaignId, req.auth.workspaceId, req.log, req.auth.userId);
+    const { result, creditAdvisory } = await launchCampaign(campaignId, req.auth.workspaceId, req.auth.userId, req.log);
     res.status(202).json({
       message: result.queued
         ? "Lançamento enfileirado — campanha será ativada em instantes"
