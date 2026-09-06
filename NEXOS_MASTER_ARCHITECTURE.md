@@ -6,7 +6,16 @@
 
 ## Visão Geral
 
-NEXOS AI é uma plataforma de orquestração de lançamentos digitais. A arquitetura é modular por domínio — cada domínio tem seu próprio service, routes, e opcionalmente worker. Sem imports cruzados entre módulos, exceto através de interfaces explícitas.
+NEXOS AI é o sistema autônomo que executa integralmente o protocolo proprietário
+de lançamentos digitais da NexOS: da inteligência de mercado e do Master Plan
+à produção, operação, verificação, otimização e continuidade. A definição
+conceitual soberana está em
+`docs/ETAPA_0_CONGELAMENTO_CONCEITUAL.md`.
+
+Esta arquitetura descreve a implementação técnica dessa missão. Ela é modular
+por domínio — cada domínio tem seu próprio service, routes e, opcionalmente,
+worker. Não há imports cruzados entre módulos, exceto através de interfaces
+explícitas.
 
 ---
 

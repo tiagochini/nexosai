@@ -2,6 +2,11 @@
 
 **Chave:** `product-autonomy` · **Versão:** `0.2` · **Idioma:** pt-BR
 
+**Derivação conceitual:** este contrato operacional está subordinado à
+`ETAPA_0_CONGELAMENTO_CONCEITUAL.md`. A constituição define o produto e sua
+missão; este contrato define limites de autonomia, responsabilidade, aceite e
+evidência.
+
 Este contrato define a base operacional do NexOS AI. Cada workspace é isolado: dados, campanhas, integrações, decisões e evidências de um cliente não podem ser usados para operar outro workspace.
 
 ## Economia e operação
