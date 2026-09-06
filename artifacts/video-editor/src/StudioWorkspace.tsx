@@ -7,6 +7,7 @@ import {
 import { PRODUCTION_PHASES, type ProductionPhase, type StudioProject } from "./domain/projects";
 import { videoEditorClient } from "./lib/video-editor-client";
 import { ProjectDetail } from "./domain/editor";
+import { configureWorkspaceFolder, forgetWorkspaceFolder, getWorkspaceFolder, requestWorkspaceFolderPermission, saveWorkspaceFile, workspaceFolderName, type AuthorizedDirectoryHandle, type FolderStatus, type WorkspaceIdentity } from "./lib/workspace-folder";
 
 const PHASE_LABELS: Record<ProductionPhase, string> = {
   script: "Roteiro", storyboard: "Storyboard", assets: "Assets & Takes", timeline: "Timeline",
@@ -90,6 +91,37 @@ export function StudioWorkspace({ onPhaseChange, onProjectSelect }: { onPhaseCha
     videoEditorClient.getCapabilities().then(setCapabilities).catch(console.error);
   }, []);
 
+  useEffect(() => {
+    videoEditorClient.getMe().then(({ workspace: current }) => {
+      if (!current) throw new Error("Workspace não encontrado.");
+      const identity = { id: current.id, name: current.name || current.brandName || "workspace" };
+      setWorkspace(identity);
+      return getWorkspaceFolder(identity);
+    }).then(({ handle, status }) => {
+      setWorkspaceHandle(handle); setFolderStatus(status);
+    }).catch(() => setFolderStatus("unavailable"));
+  }, []);
+
+  const configureFolder = async () => {
+    if (!workspace) return;
+    try {
+      if (workspaceHandle && folderStatus === "permission-needed") {
+        setFolderStatus(await requestWorkspaceFolderPermission(workspaceHandle));
+        return;
+      }
+      const handle = await configureWorkspaceFolder(workspace);
+      setWorkspaceHandle(handle); setFolderStatus("connected");
+    } catch (cause) {
+      if ((cause as DOMException)?.name !== "AbortError") setError(cause instanceof Error ? cause.message : "Não foi possível configurar a pasta.");
+    }
+  };
+
+  const forgetFolder = async () => {
+    if (!workspace) return;
+    await forgetWorkspaceFolder(workspace);
+    setWorkspaceHandle(undefined); setFolderStatus("not-configured");
+  };
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -114,6 +146,9 @@ export function StudioWorkspace({ onPhaseChange, onProjectSelect }: { onPhaseCha
   const [purging, setPurging] = useState(false);
   const [importingPackage, setImportingPackage] = useState(false);
   const packageInputRef = useRef<HTMLInputElement>(null);
+  const [workspace, setWorkspace] = useState<WorkspaceIdentity | null>(null);
+  const [folderStatus, setFolderStatus] = useState<FolderStatus>("not-configured");
+  const [workspaceHandle, setWorkspaceHandle] = useState<AuthorizedDirectoryHandle | undefined>();
 
   useEffect(() => {
     fetchProjects().then(projs => {
@@ -250,16 +285,16 @@ export function StudioWorkspace({ onPhaseChange, onProjectSelect }: { onPhaseCha
       const blob = handoff?.blob ?? (duration
         ? await videoEditorClient.getTrailerMedia(selected!, duration, renderJobId)
         : await videoEditorClient.getRenderMedia(selected!, renderJobId));
-        
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = duration ? `trailer-${duration}s-${Date.now()}.mp4` : `master-${Date.now()}.mp4`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-      if (handoff) setDownloadEvidence({ renderJobId, checksum: handoff.checksum, size: handoff.size });
+      if (!workspace) throw new Error("Identidade do workspace ainda não foi carregada.");
+      const saved = await saveWorkspaceFile(blob, duration ? `trailer-${duration}s.mp4` : "master.mp4", workspace, workspaceHandle);
+      if (!saved.verified) {
+        setOperationStatus(saved.fallbackMessage ?? "Download iniciado; a gravação não foi verificada.");
+        return;
+      }
+      setOperationStatus(`Salvo e fechado: ${saved.path} · ${saved.size} bytes · SHA-256 ${saved.checksum ?? "indisponível"}`);
+      if (handoff?.checksum) setDownloadEvidence({ renderJobId, checksum: handoff.checksum, size: handoff.size });
     } catch (e) {
-      alert("Erro ao baixar mídia.");
+      setError(e instanceof Error ? e.message : "Erro ao baixar mídia.");
     }
   };
   const confirmPurge = async () => {
@@ -282,11 +317,13 @@ export function StudioWorkspace({ onPhaseChange, onProjectSelect }: { onPhaseCha
       setOperationStatus("Preparando pacote editável com fontes e timeline...");
       const handoff = await videoEditorClient.downloadEditablePackage(selected);
       if (!handoff.checksum) throw new Error("O servidor não informou o checksum do pacote.");
-      const url = window.URL.createObjectURL(handoff.blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = `projeto-editavel-${Date.now()}.nexosvideo`; a.click();
-      window.URL.revokeObjectURL(url);
-      const confirmation = window.prompt("Confirme somente após salvar o arquivo .nexosvideo. Digite SALVEI O PACOTE EDITÁVEL:");
+      if (!workspace) throw new Error("Identidade do workspace ainda não foi carregada.");
+      const saved = await saveWorkspaceFile(handoff.blob, "projeto-editavel.nexosvideo", workspace, workspaceHandle);
+      if (!saved.verified) {
+        setOperationStatus(saved.fallbackMessage ?? "Download iniciado, mas o NexOS não conseguiu verificar a gravação do pacote.");
+        return;
+      }
+      const confirmation = window.prompt(`Arquivo gravado e fechado em ${saved.path} (${saved.size} bytes; SHA-256 ${saved.checksum ?? "indisponível"}). Confirme após verificar o arquivo. Digite SALVEI O PACOTE EDITÁVEL:`);
       if (confirmation !== "SALVEI O PACOTE EDITÁVEL") {
         setOperationStatus("Pacote baixado, mas ainda não confirmado.");
         return;
@@ -383,6 +420,26 @@ export function StudioWorkspace({ onPhaseChange, onProjectSelect }: { onPhaseCha
             {showCreate ? "Cancelar" : <><Plus className="w-4 h-4" /> Novo Projeto</>}
           </button>
         </div>
+      </div>
+
+      <div className="mx-5 mt-4 rounded-lg border border-border/70 bg-muted/20 p-3" aria-live="polite">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-foreground">Pasta deste workspace</p>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+              {workspace ? `NexOS/${workspaceFolderName(workspace)}` : "Identificando workspace…"}
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {folderStatus === "connected" ? "Conectada — gravação direta autorizada neste dispositivo." : folderStatus === "permission-needed" ? "Permissão necessária — autorize novamente para gravar." : folderStatus === "unavailable" ? "Indisponível neste navegador; downloads vão para Downloads/Arquivos escolhidos pelo sistema." : "Não configurada neste dispositivo."}
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {folderStatus !== "connected" && <button type="button" onClick={() => void configureFolder()} disabled={!workspace || folderStatus === "unavailable"} className="rounded-md border border-primary/40 px-2.5 py-1.5 text-xs font-medium text-primary disabled:opacity-50">{folderStatus === "permission-needed" ? "Autorizar pasta" : "Configurar pasta"}</button>}
+            {folderStatus === "connected" && <button type="button" onClick={() => void configureFolder()} className="rounded-md border border-input px-2.5 py-1.5 text-xs font-medium">Trocar pasta</button>}
+            {folderStatus !== "not-configured" && folderStatus !== "unavailable" && <button type="button" onClick={() => void forgetFolder()} className="rounded-md border border-input px-2.5 py-1.5 text-xs font-medium">Esquecer</button>}
+          </div>
+        </div>
+        <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">Cada dispositivo é autorizado uma vez. A sincronização automática PC↔mobile só ocorre se você escolher uma pasta sincronizada por um provedor; o NexOS não sincroniza pastas locais nem mantém uma cópia na nuvem.</p>
       </div>
 
       {error && (

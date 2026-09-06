@@ -79,3 +79,4 @@
 - [Audiovisual Council and Trailers](audiovisual-council-trailers.md) — specialist debate is compiled by the director into the sole executable prompt plan; trailers are independent exact-duration deliverables.
 - [NexOS Native Media Engine](nexos-native-media-engine.md) — Replit is the control plane; private GPU workers run local approved weights with lease-bound I/O, consent, provenance and no commercial fallback.
 - [Portable Ephemeral Video Projects](portable-ephemeral-video-projects.md) — purge requires confirmed editable .nexosvideo handoff; MP4 alone is insufficient, and imported projects receive fresh scoped identities.
+- [Workspace Device Folders](workspace-device-folders.md) — each device authorizes once; NexOS reuses an IndexedDB directory handle scoped by authoritative workspace ID, with safe browser fallback.

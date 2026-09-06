@@ -38,6 +38,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export const videoEditorClient = {
   apiBase,
+  getMe: () => request<{ user: { id: string; name: string }; workspace: { id: string; name?: string | null; brandName?: string | null } | null }>("/auth/me"),
   listProjects: () => request<StudioProjectCollection>("/video-editor/projects"),
   getProject: (id: string) => request<ProjectDetail>(`/video-editor/projects/${id}`),
   createProject: (input: CreateStudioProjectInput) => request<StudioProject>("/video-editor/projects", {
