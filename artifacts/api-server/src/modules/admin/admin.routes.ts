@@ -3,9 +3,13 @@ import { requireAuth } from "../auth/auth.middleware.js";
 import { getAdminOverview, getAdminFinancials, getAdminPayments, getCampaignCostBreakdown, getAdminDRE, getAdminCRM } from "./admin.service.js";
 import { queryAgentExecutionLogs, getAgentExecutionLogById, getAgentExecutionLogsSummary } from "./audit-logs.service.js";
 import { markPaymentPaid } from "../billing/billing.service.js";
-import { UnauthorizedError, NotFoundError } from "../../lib/errors.js";
+import { UnauthorizedError, NotFoundError, ValidationError } from "../../lib/errors.js";
+import { collectOperationalHealth } from "../../routes/health.js";
+import { getOperationalStatus } from "../operations/operational-status.service.js";
+import { isAdminEmail } from "./admin-access.js";
 import { grantCredits } from "../credits/credits.service.js";
 import { triggerStrategyPhase, triggerContentPhase } from "../orchestration/orchestration.service.js";
+import { getDeadLetter, listDeadLetters, replayDeadLetter } from "../orchestration/dead-letter.service.js";
 import {
   db, inviteCodesTable, usersTable, workspacesTable, plansTable,
   subscriptionPaymentsTable, campaignsTable, creditTransactionsTable,
@@ -13,20 +17,42 @@ import {
 } from "@workspace/db";
 import { eq, desc, count, sql } from "drizzle-orm";
 
-const ADMIN_EMAILS = new Set([
-  "admin@nexos.ai",
-  "founder@nexos.ai",
-  "admin@agencianexos.vip",
-  "founder@agencianexos.vip",
-]);
-
 const router = Router();
 
 function requireAdmin(email: string) {
-  if (!ADMIN_EMAILS.has(email)) {
+  if (!isAdminEmail(email)) {
     throw new UnauthorizedError("Admin access required");
   }
 }
+
+function assertOptionalUuid(value: string | undefined, field: string): void {
+  if (value && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
+    throw new ValidationError(`${field} must be a valid UUID`);
+  }
+}
+
+// GET /api/admin/operations/status — fleet-wide, sanitized operational view.
+// This is deliberately admin-only; regular workspace users must use their
+// product-facing integration screens and can never enumerate another tenant.
+router.get("/operations/status", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const query = req.query as Record<string, string | undefined>;
+  assertOptionalUuid(query["workspaceId"], "workspaceId");
+  assertOptionalUuid(query["campaignId"], "campaignId");
+  const limitValue = query["limit"] ? Number.parseInt(query["limit"], 10) : undefined;
+  const filters = {
+    workspaceId: query["workspaceId"],
+    campaignId: query["campaignId"],
+    provider: query["provider"],
+    correlationId: query["correlationId"],
+    limit: Number.isFinite(limitValue) ? limitValue : undefined,
+  };
+  const [health, operational] = await Promise.all([
+    collectOperationalHealth(),
+    getOperationalStatus(filters),
+  ]);
+  res.status(health.statusCode).json({ health, ...operational });
+});
 
 router.get("/overview", requireAuth, async (req, res): Promise<void> => {
   requireAdmin(req.auth.email);
@@ -444,6 +470,30 @@ router.post("/campaigns/:campaignId/force-retry", requireAuth, async (req, res):
     req.log.info({ campaignId, adminBy: req.auth.email }, "[ADMIN FORCE-RETRY] generating → content re-enqueued");
     res.status(202).json({ retried: true, phase: "content", queued: result.queued });
   }
+});
+
+// Operational records are platform-admin only: they can cover multiple tenants.
+router.get("/dead-letters", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const limit = Number.parseInt(String(req.query["limit"] ?? "100"), 10);
+  res.json({ deadLetters: await listDeadLetters(Number.isFinite(limit) ? limit : 100) });
+});
+
+router.get("/dead-letters/:id", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const record = await getDeadLetter(req.params["id"] as string);
+  if (!record) throw new NotFoundError("Dead-letter record");
+  res.json({ deadLetter: record });
+});
+
+router.post("/dead-letters/:id/replay", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const result = await replayDeadLetter(req.params["id"] as string, req.auth.email);
+  if (!result.accepted) {
+    res.status(409).json({ error: "Replay already claimed or record does not exist", code: "REPLAY_ALREADY_CLAIMED" });
+    return;
+  }
+  res.status(202).json({ replayed: true, replayJobId: result.replayJobId });
 });
 
 export default router;

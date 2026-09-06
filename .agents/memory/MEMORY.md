@@ -73,3 +73,4 @@
 - [Paid Media Execution Boundary](paid-media-execution-boundary.md) — provider mutations are deterministic, snapshot-backed and verified; LLM output never calls ad APIs directly.
 - [Focused Validation Strategy](focused-validation-strategy.md) — prefer risk-focused tests, isolated fixtures and branch-only retests before one decisive E2E pass.
 - [Backend Hardening Invariants](backend-hardening-invariants.md) — tenant scope, atomic credits, fail-closed queue reconciliation and stale-only boot recovery are mandatory.
+- [Autonomous E2E Fixture Safety](autonomous-e2e-fixture-safety.md) — fixtures must not accidentally activate schedulers, recovery loops, AI calls or provider mutations.

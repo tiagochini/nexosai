@@ -15,6 +15,7 @@ import { bridgeCampaignToSequence } from "../launch-sequence/sequence-bridge.ser
 import { enforceLaunchAutonomyGate, enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import { logger } from "../../lib/logger.js";
 import { env } from "../../lib/env.js";
+import { captureTerminalOrchestrationFailure, markDeadLetterReplayCompleted } from "./dead-letter.service.js";
 
 const redisConnection = {
   url: env.REDIS_URL,
@@ -432,8 +433,11 @@ export function initOrchestrationWorker(): Worker | null {
           case "complete":
             await processComplete(job);
             break;
-          default:
-            logger.warn({ action: (job.data as any).action }, "Unknown orchestration action");
+          default: {
+            const action = String(job.data.action);
+            logger.warn({ action }, "Unknown orchestration action");
+            throw new Error(`Unknown orchestration action: ${action}`);
+          }
         }
       },
       {
@@ -482,6 +486,9 @@ export function initOrchestrationWorker(): Worker | null {
 
     worker.on("completed", (job) => {
       logger.info({ jobId: job.id, action: job.data.action }, "Orchestration job completed");
+      markDeadLetterReplayCompleted(job.data).catch((err) =>
+        logger.error({ err, jobId: job.id }, "Could not mark dead-letter replay completed"),
+      );
     });
 
     worker.on("failed", async (job, err) => {
@@ -497,6 +504,13 @@ export function initOrchestrationWorker(): Worker | null {
       // handle it here.
       if (!job) return;
       const { campaignId, workspaceId, action } = job.data;
+      await captureTerminalOrchestrationFailure(job.data, {
+        jobId: job.id,
+        attemptsMade: job.attemptsMade,
+        error: err,
+      }).catch((captureErr) =>
+        logger.error({ captureErr, jobId: job.id }, "Could not persist orchestration dead letter"),
+      );
 
       if (action === "run_strategy") {
         try {
@@ -559,6 +573,7 @@ export async function closeOrchestrationWorker(): Promise<void> {
 export async function executeDirectly(job: CampaignOrchestrationJob, log: typeof logger): Promise<void> {
   const fakeJob = { data: job, id: `direct-${Date.now()}` } as Job<CampaignOrchestrationJob>;
 
+  try {
   switch (job.action) {
     case "run_strategy":
       await processRunStrategy(fakeJob);
@@ -575,5 +590,14 @@ export async function executeDirectly(job: CampaignOrchestrationJob, log: typeof
     case "complete":
       await processComplete(fakeJob);
       break;
+  }
+  } catch (error) {
+    await captureTerminalOrchestrationFailure(job, {
+      jobId: fakeJob.id,
+      attemptsMade: 1,
+      error,
+      source: "direct_fallback",
+    }).catch((captureErr) => log.error({ captureErr }, "Could not persist direct execution dead letter"));
+    throw error;
   }
 }

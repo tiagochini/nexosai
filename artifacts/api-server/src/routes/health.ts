@@ -82,7 +82,7 @@ async function queueBacklogs(): Promise<Record<string, Backlog> | null> {
   }
 }
 
-router.get("/healthz", async (_req, res): Promise<void> => {
+export async function collectOperationalHealth() {
   let dbOk = false;
   let dbLatencyMs = 0;
 
@@ -122,15 +122,22 @@ router.get("/healthz", async (_req, res): Promise<void> => {
    * The response contains only counts and lifecycle timestamps, never URLs,
    * errors, credentials, job payloads, or provider data.
    */
-  res.status(health.statusCode).json({
+  return {
     status: health.status,
+    statusCode: health.statusCode,
     version: process.env["npm_package_version"] ?? "1.0.0",
     env: env.NODE_ENV,
     startedAt,
     uptime: Math.floor(process.uptime()),
     services: health.services,
     schedulers: health.schedulers,
-  });
+  };
+}
+
+router.get("/healthz", async (_req, res): Promise<void> => {
+  const health = await collectOperationalHealth();
+  const { statusCode, ...body } = health;
+  res.status(statusCode).json(body);
 });
 
 export default router;

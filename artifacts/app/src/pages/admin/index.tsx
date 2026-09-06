@@ -719,6 +719,15 @@ export default function AdminPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/admin/operations">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2 shrink-0 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+            >
+              <Activity className="h-3 w-3" />Operations
+            </Button>
+          </Link>
           <Link href="/admin/audit-logs">
             <Button
               variant="outline"

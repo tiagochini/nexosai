@@ -111,6 +111,8 @@ export interface CampaignOrchestrationJob {
   workspaceId: string;
   /** Set only after the no-Redis path atomically claimed the phase in Postgres. */
   directClaimed?: boolean;
+  /** Present only for an admin DLQ replay; never contains the original payload. */
+  deadLetterId?: string;
   action:
     | "start_intake"
     | "run_strategy"

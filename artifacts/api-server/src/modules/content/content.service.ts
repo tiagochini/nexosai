@@ -1,6 +1,7 @@
 import { eq, and, desc, ne, count, inArray, sql } from "drizzle-orm";
 import {
   db,
+  pool,
   campaignsTable,
   contentPiecesTable,
   campaignAgentsTable,
@@ -69,6 +70,31 @@ export interface ContentGenerationResult {
   status: "completed" | "partial" | "failed";
   /** Per-piece execution record — always present, even when all pieces fail. */
   pieceResults: LsPieceContentEntry[];
+}
+
+/** Minimal dedicated pg-client contract; avoids exposing node-postgres as an API dependency. */
+type ContentLockClient = {
+  query: (query: string, values?: readonly string[]) => Promise<{ rows: Array<{ acquired?: boolean }> }>;
+  release: () => void;
+};
+
+/**
+ * Deliberately test-only interruption hook for the checkpoint regression.
+ *
+ * It is gated by NODE_ENV=test as well as an opt-in environment variable; it
+ * cannot be enabled by a production process configuration.  The hook is
+ * checked immediately before starting the next content agent, so every
+ * preceding step has already committed its content_pieces checkpoint.
+ */
+function failAfterPersistedContentStepsForTest(completedFreshSteps: number): void {
+  if (process.env.NODE_ENV !== "test") return;
+  const requested = Number(process.env.NEXOS_TEST_FAIL_CONTENT_AFTER_PERSISTED_STEPS);
+  if (!Number.isSafeInteger(requested) || requested < 1) return;
+  if (completedFreshSteps >= requested) {
+    throw new Error(
+      `[TEST_ONLY_CONTENT_CHECKPOINT_INTERRUPT] interrupted after ${completedFreshSteps} persisted content step(s)`,
+    );
+  }
 }
 
 // PIPELINE_KERNEL: CONTENT_PHASE_ENTRY_STATUSES replaces this local array.
@@ -465,13 +491,20 @@ export async function generateCampaignContent(
   // This prevents B-4: multiple rapid execute/content triggers running the same
   // agents in parallel and creating duplicate content_pieces rows.
   // Lock is session-scoped and released in the finally block at the end of this function.
-  let contentAdvisoryLockHash: number | null = null;
+  // Do not use db.execute() for a session advisory lock: Drizzle uses a pool
+  // and a later query may run on a different session, making unlock unreliable.
+  // Holding this dedicated pg client makes the lock cover the complete LLM +
+  // persistence interval and releases it even when an agent throws.
+  let contentLockClient: ContentLockClient | null = null;
   try {
-    const lockResult = await db.execute(
-      sql`SELECT pg_try_advisory_lock(hashtext(${campaignId})) AS acquired`,
+    contentLockClient = await pool.connect() as unknown as ContentLockClient;
+    const lockResult = await contentLockClient.query(
+      "SELECT pg_try_advisory_lock(hashtext($1)) AS acquired",
+      [campaignId],
     );
-    const row = (Array.isArray(lockResult) ? lockResult[0] : (lockResult as any).rows?.[0]) as Record<string, unknown> | undefined;
-    if (row?.["acquired"] === false) {
+    if (lockResult.rows[0]?.acquired !== true) {
+      contentLockClient.release();
+      contentLockClient = null;
       log.warn({ campaignId }, "[#56] generateCampaignContent: advisory lock already held by concurrent execution — aborting to prevent duplicate content pieces");
       return {
         campaignId,
@@ -483,16 +516,11 @@ export async function generateCampaignContent(
         pieceResults: [],
       };
     }
-    // Lock acquired — compute the hash for the unlock call in finally.
-    // hashtext() returns a 32-bit integer; cast to number is safe.
-    contentAdvisoryLockHash = typeof row?.["acquired"] === "boolean"
-      ? (await db.execute(sql`SELECT hashtext(${campaignId}) AS h`).then(
-          (r) => Number(((Array.isArray(r) ? r[0] : (r as any).rows?.[0]) as any)?.h ?? 0),
-        ).catch(() => null))
-      : null;
   } catch (lockErr) {
-    // Non-fatal: if advisory lock call fails (e.g. permissions), proceed without lock.
-    log.warn({ lockErr, campaignId }, "[#56] Advisory lock check failed — proceeding without lock (non-fatal)");
+    // A database-backed checkpoint cannot safely guarantee convergence without
+    // its serialization lock. Fail closed rather than permitting duplicate work.
+    contentLockClient?.release();
+    throw new Error(`Unable to acquire content generation lock: ${lockErr instanceof Error ? lockErr.message : String(lockErr)}`);
   }
 
   let intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
@@ -854,8 +882,14 @@ export async function generateCampaignContent(
     log.warn({ c3Err, campaignId }, "[C3] Failed to load completed agents for skip-check (non-fatal — pipeline continues)");
   }
 
+  let checkpointSkipsThisRun = 0;
   const skipAgent = (pieceType: string, agentName: string): boolean => {
+    // Fresh successes append to agentsRun below; checkpoint skips append here.
+    // Therefore this exact difference is the number of committed fresh content
+    // steps, including after a resume where old pieces must not count again.
+    failAfterPersistedContentStepsForTest(agentsRun.length - checkpointSkipsThisRun);
     if (!done.has(pieceType)) return false;
+    checkpointSkipsThisRun++;
     agentsRun.push(agentName);
     piecesGenerated++;
     if (skippedPieces.includes(pieceType)) {
@@ -2854,10 +2888,11 @@ export async function generateCampaignContent(
   };
   } finally {
     clearInterval(heartbeatInterval);
-    // ── [#56] Release advisory lock ───────────────────────────────────────────
-    if (contentAdvisoryLockHash !== null) {
-      await db.execute(sql`SELECT pg_advisory_unlock(${contentAdvisoryLockHash})`)
-        .catch((unlockErr) => log.warn({ unlockErr, campaignId }, "[#56] Advisory lock release failed (non-fatal)"));
+    // ── [#56] Release the same session that acquired the advisory lock ────────
+    if (contentLockClient) {
+      await contentLockClient.query("SELECT pg_advisory_unlock(hashtext($1))", [campaignId])
+        .catch((unlockErr: unknown) => log.warn({ unlockErr, campaignId }, "[#56] Advisory lock release failed (non-fatal)"));
+      contentLockClient.release();
     }
   }
 }
