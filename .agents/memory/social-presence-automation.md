@@ -40,4 +40,12 @@ description: Decisions and constraints for the social presence automated publish
 - Add own Instagram accounts directly as app users in Meta Developer Console
 - Demo videos for App Review can be skipped for internal-only use
 
+## Confirmed production behavior
+- The operator logged into their own Instagram account and confirmed the automatic scheduler published the final scheduled content successfully end to end.
+- Treat automatic Instagram publishing as operationally proven for that tested account and scenario; do not generalize the evidence to every account, format, provider, or multiconta routing.
+
+**Why:** Static code inspection previously understated this capability because the successful external publication evidence existed only through the operator's direct observation.
+
+**How to apply:** In audits, classify the tested automatic Instagram publication flow as ready for its validated scope, while keeping untested variants explicitly inconclusive.
+
 **Why:** Established during social presence automation sprint. These decisions must be consistent across all future presence-related work.
