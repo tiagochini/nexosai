@@ -631,6 +631,10 @@ os 37 slots funcionais comparativos e o benchmark estrutural que estava em
 stand-by, está em `docs/ETAPA_1_ANEXO_INVENTARIO_AGENTES.md`. O anexo é parte
 integrante deste inventário, mas não aprova a arquitetura futura.
 
+A revisão explicativa role por role, incluindo especialização, conexão,
+atividade, prontidão e a auditoria da cadeia audiovisual/editor interno, está em
+`docs/ETAPA_1_REVISAO_79_AGENTES.md`.
+
 | Medida | Quantidade encontrada | O que significa |
 |---|---:|---|
 | `AgentRole` no AI gateway | 79 | Identidades aceitas pelo roteador de IA |

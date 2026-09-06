@@ -33,6 +33,10 @@ skills, autonomia, dashboards e Hermes) saiu do stand-by agora **somente como
 benchmark estrutural**. Não fornece nomes a copiar, não é prova de implementação
 e não aprova arquitetura.
 
+A explicação individual de missão, mecanismo, especialização, entrada, saída,
+consumidor, conexão, atividade e prontidão das 79 roles está em
+`docs/ETAPA_1_REVISAO_79_AGENTES.md`.
+
 ## 2. Contagens confirmadas
 
 | Medida | Valor | Evidência |
