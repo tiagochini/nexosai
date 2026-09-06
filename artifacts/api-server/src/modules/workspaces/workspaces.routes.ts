@@ -5,6 +5,11 @@ import { requireAuth } from "../auth/auth.middleware.js";
 import { db, workspacesTable, workspaceIntegrationsTable } from "@workspace/db";
 import { AppError } from "../../lib/errors.js";
 import { testIntegrationCredential } from "../integrations/integration-validator.js";
+import {
+  integrationPurpose,
+  metadataForPurpose,
+  type IntegrationPurpose,
+} from "../integrations/integration-purpose.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -108,6 +113,11 @@ router.post("/me/integrations", async (req, res): Promise<void> => {
   // "tiktok" (organic, front-end only) shares the "tiktok_ads" DB enum value —
   // there is no separate organic-tiktok DB provider (see oauth.routes.ts dbProvider mapping).
   const dbProvider = parsed.data.provider === "tiktok" ? "tiktok_ads" : parsed.data.provider;
+  const purpose: IntegrationPurpose = parsed.data.provider === "tiktok"
+    ? "organic_social"
+    : (parsed.data.provider === "meta_ads" || parsed.data.provider === "tiktok_ads")
+      ? "paid_media"
+      : "organic_social";
 
   const PAYMENT_GATEWAYS = ["stripe", "paypal", "mercado_pago", "pagarme", "asaas", "hotmart", "eduzz", "kiwify", "crypto_native"];
   const isPaymentGateway = PAYMENT_GATEWAYS.includes(dbProvider);
@@ -161,14 +171,16 @@ router.post("/me/integrations", async (req, res): Promise<void> => {
     }
   }
 
-  const [existing] = await db
-    .select({ id: workspaceIntegrationsTable.id })
+  const candidates = await db
+    .select({ id: workspaceIntegrationsTable.id, metadata: workspaceIntegrationsTable.metadata })
     .from(workspaceIntegrationsTable)
     .where(and(
       eq(workspaceIntegrationsTable.workspaceId, req.auth.workspaceId),
       eq(workspaceIntegrationsTable.provider, dbProvider),
-    ))
-    .limit(1);
+    ));
+  const existing = candidates.find((row) =>
+    integrationPurpose((row.metadata ?? null) as Record<string, unknown> | null) === purpose,
+  );
 
   const values = {
     workspaceId: req.auth.workspaceId,
@@ -178,7 +190,7 @@ router.post("/me/integrations", async (req, res): Promise<void> => {
     accountId: pingAccountId,
     accountName: pingAccountName,
     webhookUrl: parsed.data.webhookUrl,
-    metadata: parsed.data.metadata ?? {},
+    metadata: metadataForPurpose(purpose, parsed.data.metadata ?? {}),
     isPaymentGateway,
     blocksExecution: false,
   } as const;

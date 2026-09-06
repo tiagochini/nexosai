@@ -11,6 +11,8 @@ import {
   verifyActionSnapshot,
 } from "../modules/paid-media/paid-media.domain.js";
 import type { ProviderAction, ProviderEntity } from "../modules/paid-media/providers.js";
+import { selectPaidMediaCredential } from "../modules/paid-media/providers.js";
+import { isOrganicSocialIntegration, metadataForPurpose } from "../modules/integrations/integration-purpose.js";
 
 const action: ProviderAction = {
   type: "update_daily_budget", entityId: "entity-1", entityType: "campaign",
@@ -80,6 +82,12 @@ executor.paused = false;
 assert.notStrictEqual(executor.execute("workspace-b", action, entity({ daily_budget: "100" })), first, "equal keys in separate workspaces do not share attempts");
 
 assert.equal(verifyActionSnapshot(action, entity({ daily_budget: "124" })), false, "verification mismatch fails");
+const legacyPage = { id: "page", metadata: { pageId: "page-1" } };
+const instagram = { id: "ig", metadata: metadataForPurpose("organic_social", { pageId: "page-1" }) };
+const paid = { id: "ads", metadata: metadataForPurpose("paid_media", { paidMedia: true }) };
+assert.equal(selectPaidMediaCredential([legacyPage, instagram, paid])?.id, "ads", "paid resolver ignores legacy Page token");
+assert.equal(isOrganicSocialIntegration(paid.metadata), false, "social resolver excludes paid credential");
+assert.equal(isOrganicSocialIntegration(legacyPage.metadata), true, "legacy Page remains organic");
 const immutableBefore = entity({ daily_budget: "100" });
 const rollback = rollbackActionFromSnapshot(action, immutableBefore);
 immutableBefore.data["daily_budget"] = "999";

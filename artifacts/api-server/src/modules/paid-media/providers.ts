@@ -13,6 +13,7 @@ import {
   tikTokRefreshPersistence,
   verifyActionSnapshot,
 } from "./paid-media.domain.js";
+import { isPaidMediaIntegration } from "../integrations/integration-purpose.js";
 
 export type PaidMediaProviderName = "meta_ads" | "tiktok_ads";
 export type PaidMediaEntityKind = "campaign" | "ad_set" | "ad" | "creative";
@@ -88,6 +89,10 @@ export interface PaidMediaProviderAdapter {
 
 type Credential = { integrationId: string; accessToken: string; refreshToken: string | null; expiresAt: Date | null };
 
+export function selectPaidMediaCredential<Row extends { metadata: unknown }>(rows: Row[]): Row | undefined {
+  return rows.find((row) => isPaidMediaIntegration(row.metadata as Record<string, unknown>));
+}
+
 function redact(value: string): string {
   return value
     .replace(/access_token=[^&\s]+/gi, "access_token=[REDACTED]")
@@ -95,16 +100,21 @@ function redact(value: string): string {
 }
 
 async function credential(workspaceId: string, provider: PaidMediaProviderName): Promise<Credential> {
-  const [row] = await db.select({
+  const rows = await db.select({
     integrationId: workspaceIntegrationsTable.id,
     accessToken: workspaceIntegrationsTable.accessToken,
     refreshToken: workspaceIntegrationsTable.refreshToken,
     expiresAt: workspaceIntegrationsTable.tokenExpiresAt,
+    metadata: workspaceIntegrationsTable.metadata,
   }).from(workspaceIntegrationsTable).where(and(
     eq(workspaceIntegrationsTable.workspaceId, workspaceId),
     eq(workspaceIntegrationsTable.provider, provider),
     eq(workspaceIntegrationsTable.status, "connected"),
-  )).limit(1);
+  ));
+  // Do not use provider-only lookup: legacy Facebook Page rows use meta_ads.
+  // integrationPurpose is required for new rows; isPaidMediaIntegration only
+  // accepts the old paidMedia=true/no-pageId shape as migration compatibility.
+  const row = selectPaidMediaCredential(rows);
   if (!row?.accessToken) throw new PaidMediaProviderError("Paid-media integration is not connected.", "AUTH");
   return {
     integrationId: row.integrationId,

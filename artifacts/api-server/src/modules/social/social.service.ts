@@ -22,6 +22,7 @@ import {
 } from "./social.publisher.js";
 import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import jwt from "jsonwebtoken";
+import { isOrganicSocialIntegration, metadataForPurpose } from "../integrations/integration-purpose.js";
 
 // ─── OAuth ────────────────────────────────────────────────────────────────────
 
@@ -161,7 +162,7 @@ export async function handleMetaCallback(
       accountName: page.name,
       accessToken: page.access_token,
       tokenExpiresAt: expiresAt,
-      metadata: { pageId: page.id },
+      metadata: metadataForPurpose("organic_social", { pageId: page.id }),
     });
     savedIntegrations.push(fbIntegration);
 
@@ -174,7 +175,7 @@ export async function handleMetaCallback(
         accountName: ig.name ?? ig.username,
         accessToken: page.access_token,
         tokenExpiresAt: expiresAt,
-        metadata: { username: ig.username, pageId: page.id },
+        metadata: metadataForPurpose("organic_social", { username: ig.username, pageId: page.id }),
       });
       savedIntegrations.push(igIntegration);
     }
@@ -241,7 +242,7 @@ export async function handleTikTokCallback(
     accessToken: tokenData.access_token,
     refreshToken: tokenData.refresh_token ?? null,
     tokenExpiresAt: expiresAt,
-    metadata: { openId },
+    metadata: metadataForPurpose("organic_social", { openId }),
   });
   logger.info({ workspaceId, openId }, "TikTok OAuth completed");
   return integration;
@@ -654,7 +655,7 @@ async function fetchTikTokAnalytics(
 
 export async function getAccountsWithAnalytics(workspaceId: string): Promise<AccountAnalytics[]> {
   // Fetch accounts WITH access tokens for live API calls
-  const accounts = await db
+  const accounts = (await db
     .select({
       id: workspaceIntegrationsTable.id,
       provider: workspaceIntegrationsTable.provider,
@@ -672,7 +673,7 @@ export async function getAccountsWithAnalytics(workspaceId: string): Promise<Acc
         inArray(workspaceIntegrationsTable.provider, ["instagram", "facebook", "meta_ads", "tiktok_ads"]),
         inArray(workspaceIntegrationsTable.status, ["connected", "expired"])
       )
-    );
+    )).filter((account) => isOrganicSocialIntegration(account.metadata as Record<string, unknown>));
 
   const results = await Promise.allSettled(
     accounts.map(async (acct) => {
@@ -1068,7 +1069,9 @@ async function getIntegration(
       )
     )
     .limit(1);
-  return integration;
+  return integration && isOrganicSocialIntegration(integration.metadata as Record<string, unknown>)
+    ? integration
+    : undefined;
 }
 
 async function markFailed(postId: string, error: string): Promise<void> {
@@ -1102,7 +1105,7 @@ async function upsertIntegration(
   }
 ): Promise<WorkspaceIntegration> {
   // Check if integration with same provider + accountId already exists
-  const [existing] = await db
+  const candidates = await db
     .select()
     .from(workspaceIntegrationsTable)
     .where(
@@ -1111,8 +1114,10 @@ async function upsertIntegration(
         eq(workspaceIntegrationsTable.provider, data.provider),
         eq(workspaceIntegrationsTable.accountId, data.accountId)
       )
-    )
-    .limit(1);
+    );
+  const existing = candidates.find((row) =>
+    isOrganicSocialIntegration(row.metadata as Record<string, unknown>),
+  );
 
   if (existing) {
     const [updated] = await db
@@ -1123,7 +1128,7 @@ async function upsertIntegration(
         refreshToken: data.refreshToken ?? null,
         tokenExpiresAt: data.tokenExpiresAt,
         accountName: data.accountName,
-        metadata: data.metadata,
+        metadata: metadataForPurpose("organic_social", data.metadata),
         updatedAt: new Date(),
       })
       .where(eq(workspaceIntegrationsTable.id, existing.id))

@@ -61,6 +61,7 @@ import {
   getTikTokMetrics,
 } from "../social/social.publisher.js";
 import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
+import { isOrganicSocialIntegration } from "../integrations/integration-purpose.js";
 
 // ─── [C0.9] CONTENCAO — Redis-based kill-switch ──────────────────────────────
 // Flag persistida em Redis: nexos:flag:disable_video_generation
@@ -352,7 +353,7 @@ export async function publishTestPost(
     return { success: false, error: `Plataforma ${platform} não suporta publicação automática.` };
   }
 
-  const [integration] = await db
+  const integrations = await db
     .select()
     .from(workspaceIntegrationsTable)
     .where(
@@ -361,8 +362,10 @@ export async function publishTestPost(
         eq(workspaceIntegrationsTable.provider, provider as never),
         eq(workspaceIntegrationsTable.status, "connected"),
       ),
-    )
-    .limit(1);
+    );
+  const integration = integrations.find((row) =>
+    isOrganicSocialIntegration(row.metadata as Record<string, unknown>),
+  );
 
   if (!integration) {
     return {
@@ -997,7 +1000,7 @@ export async function publishBio(
     return { success: false, error: `Plataforma ${platform} não suporta publicação de bio.` };
   }
 
-  const [integration] = await db
+  const integrations = await db
     .select()
     .from(workspaceIntegrationsTable)
     .where(
@@ -1006,8 +1009,10 @@ export async function publishBio(
         eq(workspaceIntegrationsTable.provider, provider as never),
         eq(workspaceIntegrationsTable.status, "connected"),
       ),
-    )
-    .limit(1);
+    );
+  const integration = integrations.find((row) =>
+    isOrganicSocialIntegration(row.metadata as Record<string, unknown>),
+  );
 
   if (!integration?.accessToken || !integration?.accountId) {
     return {
@@ -1122,7 +1127,7 @@ async function syncMetricsForPosts(
   if (candidates.length === 0) return;
 
   const workspaceId = candidates[0].workspaceId;
-  const integrations = await db
+  const integrations = (await db
     .select()
     .from(workspaceIntegrationsTable)
     .where(
@@ -1131,7 +1136,7 @@ async function syncMetricsForPosts(
         inArray(workspaceIntegrationsTable.provider, ["instagram", "meta_ads", "tiktok_ads"] as never[]),
         eq(workspaceIntegrationsTable.status, "connected"),
       ),
-    );
+    )).filter((row) => isOrganicSocialIntegration(row.metadata as Record<string, unknown>));
   const byProvider = new Map(integrations.map((i) => [i.provider as string, i]));
 
   for (const post of candidates.slice(0, 20)) {
@@ -1814,7 +1819,7 @@ export async function publishDuePresencePosts(): Promise<void> {
         }
 
         const provider = PLATFORM_TO_PROVIDER[post.platform];
-        const [integration] = await db
+        const integrations = await db
           .select()
           .from(workspaceIntegrationsTable)
           .where(
@@ -1823,8 +1828,10 @@ export async function publishDuePresencePosts(): Promise<void> {
               eq(workspaceIntegrationsTable.provider, provider as never),
               eq(workspaceIntegrationsTable.status, "connected"),
             ),
-          )
-          .limit(1);
+          );
+        const integration = integrations.find((row) =>
+          isOrganicSocialIntegration(row.metadata as Record<string, unknown>),
+        );
 
         if (!integration) {
           const retryCount = (post.retryCount ?? 0) + 1;

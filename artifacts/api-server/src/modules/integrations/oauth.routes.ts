@@ -5,6 +5,11 @@ import { db, paidMediaAccountsTable, workspaceIntegrationsTable } from "@workspa
 import jwt from "jsonwebtoken";
 import { eq, and } from "drizzle-orm";
 import { logger } from "../../lib/logger.js";
+import {
+  integrationPurpose,
+  metadataForPurpose,
+  type IntegrationPurpose,
+} from "./integration-purpose.js";
 
 const router = Router();
 
@@ -611,39 +616,39 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
       accountName = me.name ?? config.label;
     }
 
-    // Upsert integration — delete ALL existing rows for this workspace+provider first,
-    // then insert a fresh one. This ensures there is always exactly ONE row per provider
-    // per workspace, preventing the duplicate-row problem that occurs when multiple
-    // failed OAuth attempts each created a separate row (no UNIQUE constraint yet on
-    // the composite key).
+    // Provider values are shared by legacy organic and paid integrations.  Match
+    // only the same purpose/account; never replace every row for a provider.
+    const purpose: IntegrationPurpose =
+      provider === "meta_ads" || provider === "tiktok_ads" ? "paid_media" : "organic_social";
     const newMetadata = {
       oauthConnected: true,
       connectedAt: new Date().toISOString(),
       ...metadataExtra,
     };
-
-    await db
-      .delete(workspaceIntegrationsTable)
-      .where(
-        and(
-          eq(workspaceIntegrationsTable.workspaceId, stateData.workspaceId),
-          eq(workspaceIntegrationsTable.provider, config.dbProvider),
-        ),
-      );
-
-    const [integration] = await db.insert(workspaceIntegrationsTable).values({
+    const metadata = metadataForPurpose(purpose, newMetadata);
+    const existingRows = await db.select()
+      .from(workspaceIntegrationsTable)
+      .where(and(
+        eq(workspaceIntegrationsTable.workspaceId, stateData.workspaceId),
+        eq(workspaceIntegrationsTable.provider, config.dbProvider),
+      ));
+    const existing = existingRows.find((row) =>
+      integrationPurpose(row.metadata as Record<string, unknown>) === purpose
+      && (purpose === "paid_media" || row.accountId === accountId),
+    );
+    const values = {
       workspaceId: stateData.workspaceId,
       provider: config.dbProvider,
-      status: "connected",
-      accessToken,
-      refreshToken,
-      tokenExpiresAt,
-      accountId,
-      accountName,
-      isPaymentGateway: false,
-      blocksExecution: false,
-      metadata: newMetadata,
-    }).returning({ id: workspaceIntegrationsTable.id });
+      status: "connected" as const,
+      accessToken, refreshToken, tokenExpiresAt, accountId, accountName,
+      isPaymentGateway: false, blocksExecution: false, metadata,
+    };
+    const [integration] = existing
+      ? await db.update(workspaceIntegrationsTable).set(values)
+        .where(eq(workspaceIntegrationsTable.id, existing.id))
+        .returning({ id: workspaceIntegrationsTable.id })
+      : await db.insert(workspaceIntegrationsTable).values(values)
+        .returning({ id: workspaceIntegrationsTable.id });
 
     // Persist all Meta advertiser accounts discovered at OAuth time. This is
     // intentionally separate from the organic Page/IG integration record and
@@ -664,6 +669,20 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
           timezone: typeof account.timezone === "string" ? account.timezone : "UTC",
           isSelected: account.id === accountId,
           selectedAt: account.id === accountId ? new Date() : null,
+        }).onConflictDoUpdate({
+          target: [
+            paidMediaAccountsTable.workspaceId,
+            paidMediaAccountsTable.provider,
+            paidMediaAccountsTable.providerAccountId,
+          ],
+          // Deliberately retain isSelected/selectedAt and dependent history.
+          set: {
+            integrationId: integration.id,
+            accountName: typeof account.name === "string" ? account.name : null,
+            currency: typeof account.currency === "string" ? account.currency : "USD",
+            timezone: typeof account.timezone === "string" ? account.timezone : "UTC",
+            updatedAt: new Date(),
+          },
         });
       }
     }
