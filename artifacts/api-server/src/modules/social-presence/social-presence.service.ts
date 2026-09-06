@@ -698,7 +698,6 @@ async function generateWeekNow(
   // workspace.settings.globalDmKeywords para que o trigger funcione
   // mesmo em posts antigos (que não têm dmResponseFlow no DB).
   try {
-    const allPlatformPlans: Array<{ posts: typeof plan.posts }> = [];
     // Re-collect dm flows from the posts we just inserted
     const newPosts = await db
       .select({ dmResponseFlow: socialPresencePostsTable.dmResponseFlow })
@@ -723,7 +722,13 @@ async function generateWeekNow(
         .where(eq(workspacesTable.id, workspaceId))
         .limit(1);
       const existing = ((ws?.settings as Record<string, unknown> | null) ?? {});
-      const existingKeywords = (existing.globalDmKeywords as Array<{ keyword: string; flow: unknown }> | undefined) ?? [];
+      const existingKeywords = (
+        existing.globalDmKeywords as Array<{
+          keyword: string;
+          flow: unknown;
+          updatedAt?: string;
+        }> | undefined
+      ) ?? [];
       // Merge: manter keywords existentes, sobrescrever com as novas
       const mergedMap = new Map(existingKeywords.map((k) => [k.keyword, k]));
       for (const [kw, flow] of keywordMap.entries()) {
@@ -2721,7 +2726,7 @@ export async function approveStoryboardGenerateVideo(
               .update(socialPresencePostsTable)
               .set({ mediaGenStatus: null, mediaUrls: sbUrls, errorMessage: null })
               .where(eq(socialPresencePostsTable.id, postId));
-            return updating;
+            return;
           }
           throw new Error("Configure seu avatar em Configurações → Persona para gerar reels com vídeo.");
         }

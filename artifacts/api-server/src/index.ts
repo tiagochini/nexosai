@@ -41,7 +41,7 @@ if (Number.isNaN(port) || port <= 0) {
 
 // [P1] BUILD_TAG — timestamp estático gravado no momento da compilação.
 // Visível nos logs de produção (nível ERROR flui). Prova qual binário está rodando.
-logger.error({ buildTag: "NEXOS_VIDEO_STORAGE_V1", builtAt: "2026-08-13T20:10:22Z" }, "[BUILD_TAG] api-server booting");
+logger.info({ buildTag: "NEXOS_VIDEO_STORAGE_V1", builtAt: "2026-08-13T20:10:22Z" }, "[BUILD_TAG] api-server booting");
 
 // ─── Suppress noisy Redis/ioredis unhandled rejections in dev ─────────────────
 process.on("unhandledRejection", (reason) => {
@@ -245,7 +245,7 @@ Promise.all([
              settings->'persona'->>'heygenVoiceId'  AS voice_id
       FROM workspaces WHERE id = '21aa4337-82db-4671-bd8c-acdbeb9f6495'
     `);
-    logger.error({ personaNoBoot: diag.rows[0] }, "[PERSONA-FIX] Diagnóstico pré-UPDATE");
+    logger.info({ personaNoBoot: diag.rows[0] }, "[PERSONA-FIX] Diagnóstico pré-UPDATE");
 
     const result = await db.execute(sqlRaw`
       UPDATE workspaces
@@ -268,7 +268,7 @@ Promise.all([
     if (result.rowCount && result.rowCount > 0) {
       logger.error({ workspaceId: "21aa4337", newAvatarId: "5279d1ea433e4b9f8715a1b58c811260", newGroupId: "307779b4e7094592b1478ed72fc8ecdf", newVoiceId: "6b7a93651c2b45958dc220e11a71b505" }, "[PERSONA-FIX] Persona atualizada para grupo com consent_status:accepted ✓");
     } else {
-      logger.error({ workspaceId: "21aa4337" }, "[PERSONA-FIX] Sem alteração — valor já atualizado ou workspace não encontrado");
+      logger.info({ workspaceId: "21aa4337" }, "[PERSONA-FIX] Sem alteração — valor já atualizado ou workspace não encontrado");
     }
   })().catch((err) => logger.error({ err }, "Boot cleanup (persona fix) failed")),
 

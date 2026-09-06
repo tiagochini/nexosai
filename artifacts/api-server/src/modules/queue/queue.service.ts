@@ -64,11 +64,14 @@ export async function isRedisAvailable(): Promise<boolean> {
 // by the production worker first — the campaign doesn't exist in the prod DB →
 // RC-010 fires and the job is silently skipped, stalling the dev pipeline.
 // The QUEUE_PREFIX env var (or NODE_ENV fallback) ensures complete isolation:
-//   development → "dev:campaign-orchestration"
-//   production  → "prod:campaign-orchestration" (or just "campaign-orchestration"
+// BullMQ reserves ":" internally and rejects queue names containing it, so use
+// a hyphen as the environment separator.
+//   development → "dev-campaign-orchestration"
+//   production  → "prod-campaign-orchestration" (or just "campaign-orchestration"
 //                  if no prefix is set, to preserve backward-compat with existing jobs)
 const RAW_PREFIX = process.env["QUEUE_PREFIX"] ?? (process.env["NODE_ENV"] === "production" ? "prod" : "dev");
-const QUEUE_PREFIX = RAW_PREFIX ? `${RAW_PREFIX}:` : "";
+const NORMALIZED_PREFIX = RAW_PREFIX.replace(/[^a-zA-Z0-9_-]/g, "-").replace(/-+$/g, "");
+const QUEUE_PREFIX = NORMALIZED_PREFIX ? `${NORMALIZED_PREFIX}-` : "";
 
 export const QUEUE_NAMES = {
   CAMPAIGN_ORCHESTRATION: `${QUEUE_PREFIX}campaign-orchestration`,
