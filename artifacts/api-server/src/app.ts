@@ -79,7 +79,14 @@ app.use("/api/intake/:id/conversation", aiLimiter);
 app.use("/api/campaigns/:id/orchestrate", aiLimiter);
 
 // ─── Body parsing ─────────────────────────────────────────────────────────────
-app.use(express.json({ limit: "10mb" }));
+// Meta's signature covers raw bytes. Its two compatibility endpoints parse their
+// body locally only after signature verification.
+const isMetaWebhook = (req: { url?: string }): boolean => {
+  const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
+  return pathname === "/api/social/webhooks/meta" ||
+    pathname === "/api/social-moderation/webhooks/meta";
+};
+app.use(express.json({ limit: "10mb", type: (req) => !isMetaWebhook(req) }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // ─── Request logging ──────────────────────────────────────────────────────────

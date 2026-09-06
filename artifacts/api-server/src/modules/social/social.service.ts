@@ -23,6 +23,7 @@ import {
 import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import jwt from "jsonwebtoken";
 import { isOrganicSocialIntegration, metadataForPurpose } from "../integrations/integration-purpose.js";
+import { claimMetaWebhookEvent } from "./meta-webhook-evidence.service.js";
 
 // ─── OAuth ────────────────────────────────────────────────────────────────────
 
@@ -32,8 +33,10 @@ const META_SCOPES = [
   "instagram_content_publish",
   "instagram_manage_insights",
   "instagram_business_manage_messages",
+  "instagram_manage_comments",
   "pages_show_list",
   "pages_read_engagement",
+  "pages_manage_engagement",
   "pages_manage_posts",
   "pages_manage_metadata",
   "business_management",
@@ -1002,6 +1005,22 @@ export async function schedulePostsForCampaign(
 
 // ─── Webhook processing ───────────────────────────────────────────────────────
 
+// Both legacy callback URLs delegate DM processing here. This short-lived claim
+// prevents a dual-configured Meta app from advancing the same DM twice. Durable
+// provider-event claims are added with the webhook audit schema.
+const recentMetaDmDeliveries = new Map<string, number>();
+const META_DELIVERY_TTL_MS = 10 * 60 * 1000;
+
+function claimMetaDmDelivery(key: string): boolean {
+  const now = Date.now();
+  for (const [existingKey, receivedAt] of recentMetaDmDeliveries) {
+    if (now - receivedAt > META_DELIVERY_TTL_MS) recentMetaDmDeliveries.delete(existingKey);
+  }
+  if (recentMetaDmDeliveries.has(key)) return false;
+  recentMetaDmDeliveries.set(key, now);
+  return true;
+}
+
 export async function processMetaWebhook(body: unknown): Promise<void> {
   const payload = body as {
     object?: string;
@@ -1033,16 +1052,51 @@ export async function processMetaWebhook(body: unknown): Promise<void> {
       const senderId = msg.sender.id;
       // Ignorar mensagens do próprio bot (echo)
       if (senderId === igAccountId) continue;
+      const deliveryKey = `${igAccountId}:${msg.message.mid || `${msg.timestamp}:${senderId}`}`;
+      if (!claimMetaDmDelivery(deliveryKey)) {
+        logger.info({ igAccountId, deliveryKey }, "Duplicate Meta DM delivery ignored");
+        continue;
+      }
+      const integrations = await db.select({
+        id: workspaceIntegrationsTable.id,
+        workspaceId: workspaceIntegrationsTable.workspaceId,
+        accessToken: workspaceIntegrationsTable.accessToken,
+        metadata: workspaceIntegrationsTable.metadata,
+      }).from(workspaceIntegrationsTable).where(and(
+        eq(workspaceIntegrationsTable.accountId, igAccountId),
+        eq(workspaceIntegrationsTable.provider, "instagram"),
+        eq(workspaceIntegrationsTable.status, "connected"),
+      )).limit(2);
+      const integration = integrations.find((candidate) =>
+        !!candidate.accessToken?.trim() &&
+        isOrganicSocialIntegration(candidate.metadata as Record<string, unknown> | null));
+      if (!integration) {
+        logger.warn({ igAccountId }, "Ignoring unroutable Meta DM webhook account");
+        continue;
+      }
+      const eventClaim = await claimMetaWebhookEvent({
+        workspaceId: integration.workspaceId,
+        integrationId: integration.id,
+        accountId: igAccountId,
+        providerEventId: msg.message.mid || `${msg.timestamp}:${senderId}`,
+        eventType: "instagram_dm",
+        actionKey: "sequence_trigger",
+      });
+      if (!eventClaim.claimed) {
+        logger.info({ igAccountId, deliveryKey }, "Duplicate Meta DM database claim ignored");
+        continue;
+      }
 
       logger.info({ igAccountId, senderId, text: msg.message.text }, "Meta webhook: DM recebida");
 
-      const { handleInstagramDmTrigger } = await import(
+      const { handleInstagramDmTrigger, handleIncomingDmReply } = await import(
         "../social-presence/social-presence.service.js"
       );
       setImmediate(() =>
-        handleInstagramDmTrigger(igAccountId, senderId, msg.message!.text!).catch((err) =>
-          logger.warn({ err }, "Meta webhook: DM trigger error (non-fatal)"),
-        ),
+        Promise.all([
+          handleInstagramDmTrigger(igAccountId, senderId, msg.message!.text!),
+          handleIncomingDmReply(igAccountId, senderId, msg.message!.text!),
+        ]).catch((err) => logger.warn({ err }, "Meta webhook: DM processing error (non-fatal)")),
       );
     }
   }

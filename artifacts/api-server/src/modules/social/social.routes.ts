@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod/v4";
-import crypto from "crypto";
+import express from "express";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { AppError } from "../../lib/errors.js";
 
@@ -24,6 +24,10 @@ import {
   processTikTokWebhook,
   type SupportedPlatform,
 } from "./social.service.js";
+import {
+  parseVerifiedMetaWebhook,
+  verifyMetaWebhookSubscription,
+} from "./meta-webhook.security.js";
 
 const router = Router();
 
@@ -255,38 +259,18 @@ router.post("/campaigns/:campaignId/schedule", requireAuth, async (req, res): Pr
 // ─── Webhooks (public — no auth) ──────────────────────────────────────────────
 
 // Meta webhook verification (GET)
-router.get("/webhooks/meta", (req, res): void => {
-  const verifyToken = process.env["META_WEBHOOK_VERIFY_TOKEN"];
-  const mode = req.query["hub.mode"];
-  const token = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
-
-  if (mode === "subscribe" && token === verifyToken) {
-    res.status(200).send(challenge);
-    return;
-  }
-  res.status(403).json({ error: "Verification failed" });
-});
+router.get("/webhooks/meta", verifyMetaWebhookSubscription);
 
 // Meta webhook events (POST)
-router.post("/webhooks/meta", async (req, res): Promise<void> => {
-  const signature = req.headers["x-hub-signature-256"] as string | undefined;
-  const appSecret = process.env["FACEBOOK_APP_SECRET"];
-
-  if (appSecret && signature) {
-    const expected = `sha256=${crypto
-      .createHmac("sha256", appSecret)
-      .update(JSON.stringify(req.body))
-      .digest("hex")}`;
-
-    if (signature !== expected) {
-      res.status(401).json({ error: "Invalid signature" });
-      return;
-    }
-  }
-
-  await processMetaWebhook(req.body);
+router.post("/webhooks/meta", express.raw({ type: "application/json", limit: "10mb" }), (req, res): void => {
+  const body = parseVerifiedMetaWebhook(req, res);
+  if (body === null) return;
   res.status(200).json({ status: "ok" });
+  // This compatibility endpoint owns DM events only. Comment events are owned
+  // by social-moderation, preventing the same delivery from being processed twice.
+  setImmediate(() => processMetaWebhook(body).catch((err) =>
+    req.log?.error({ err }, "Meta social webhook processing error"),
+  ));
 });
 
 // TikTok webhook events

@@ -80,13 +80,13 @@ interface ProviderConfig {
 const PROVIDER_MAP: Record<string, ProviderConfig> = {
   instagram: {
     platform: "meta",
-    scope: "public_profile,instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,business_management",
+    scope: "public_profile,instagram_basic,instagram_content_publish,instagram_manage_insights,instagram_business_manage_messages,instagram_manage_comments,pages_show_list,pages_read_engagement,pages_manage_engagement,pages_manage_posts,pages_manage_metadata,business_management",
     label: "Instagram Business",
     dbProvider: "instagram",
   },
   facebook: {
     platform: "meta",
-    scope: "public_profile,instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,business_management",
+    scope: "public_profile,instagram_basic,instagram_content_publish,instagram_manage_insights,instagram_business_manage_messages,instagram_manage_comments,pages_show_list,pages_read_engagement,pages_manage_engagement,pages_manage_posts,pages_manage_metadata,business_management",
     label: "Facebook Páginas",
     dbProvider: "instagram",
   },

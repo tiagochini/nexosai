@@ -43,6 +43,8 @@ import type {
 } from "@workspace/db";
 import type { Logger } from "pino";
 import { logger } from "../../lib/logger.js";
+import { isOrganicSocialIntegration } from "../integrations/integration-purpose.js";
+import { claimMetaWebhookEvent, recordMetaSendResult, recordMetaSendStarted } from "../social/meta-webhook-evidence.service.js";
 import {
   runPresencePlannerAgent,
   runPresenceInsightAgent,
@@ -61,7 +63,6 @@ import {
   getTikTokMetrics,
 } from "../social/social.publisher.js";
 import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
-import { isOrganicSocialIntegration } from "../integrations/integration-purpose.js";
 
 // ─── [C0.9] CONTENCAO — Redis-based kill-switch ──────────────────────────────
 // Flag persistida em Redis: nexos:flag:disable_video_generation
@@ -3404,12 +3405,13 @@ export async function processDmSequences(): Promise<void> {
             and(
               eq(workspaceIntegrationsTable.workspaceId, seq.workspaceId),
               eq(workspaceIntegrationsTable.provider, "instagram" as never),
+              eq(workspaceIntegrationsTable.accountId, seq.igAccountId),
               eq(workspaceIntegrationsTable.status, "connected"),
             ),
           )
           .limit(1);
 
-        if (!integration) continue;
+        if (!integration || !integration.accessToken?.trim() || !isOrganicSocialIntegration(integration.metadata as Record<string, unknown> | null)) continue;
 
         // Desistir após MAX_STEP_RETRIES falhas consecutivas no mesmo step
         if ((seq.retryCount ?? 0) >= MAX_STEP_RETRIES) {
@@ -3479,6 +3481,22 @@ export async function processDmSequences(): Promise<void> {
         }
         // ─────────────────────────────────────────────────────────────────────
 
+        const sendEvidence = await claimMetaWebhookEvent({
+          workspaceId: seq.workspaceId,
+          integrationId: integration.id,
+          accountId: seq.igAccountId,
+          providerEventId: `${seq.id}:${seq.currentStep}`,
+          eventType: "instagram_dm",
+          actionKey: "sequence_step",
+          ruleRef: seq.postId ?? undefined,
+        });
+        if (!sendEvidence.claimed) {
+          log.info({ seqId: seq.id, step: seq.currentStep }, "dm-sequence: outbound step already claimed");
+          continue;
+        }
+        const outboundEndpoint = `/${seq.igAccountId}/messages`;
+        const outboundRequest = { recipient: { id: seq.recipientId }, message: { text: step.message } };
+        await recordMetaSendStarted(sendEvidence.id!, outboundEndpoint, outboundRequest);
         // Enviar mensagem principal via Graph API
         const sendRes = await fetch(
           `https://graph.facebook.com/v22.0/${seq.igAccountId}/messages`,
@@ -3495,6 +3513,7 @@ export async function processDmSequences(): Promise<void> {
 
         if (!sendRes.ok) {
           const errBody = await sendRes.text().catch(() => "(unreadable)");
+          await recordMetaSendResult(sendEvidence.id!, { error: `HTTP ${sendRes.status}: ${errBody.slice(0, 500)}` });
           log.error(
             { seqId: seq.id, step: seq.currentStep, status: sendRes.status, errBody },
             "dm-sequence: Graph API rejeitou mensagem — NÃO avançando step",
@@ -3513,6 +3532,11 @@ export async function processDmSequences(): Promise<void> {
             .where(eq(instagramDmSequencesTable.id, seq.id));
           continue;
         }
+        const sendData = await sendRes.clone().json().catch(() => ({})) as { message_id?: string; id?: string };
+        await recordMetaSendResult(sendEvidence.id!, {
+          providerResponse: sendData,
+          providerMessageId: sendData.message_id ?? sendData.id,
+        });
 
         // ✅ Envio bem-sucedido — avançar step e resetar retryCount
         const nextStep = seq.currentStep + 1;
@@ -3568,7 +3592,14 @@ export async function handleInstagramDmTrigger(
       )
       .limit(1);
 
-    if (!integration) return;
+    if (
+      !integration ||
+      !integration.accessToken?.trim() ||
+      !isOrganicSocialIntegration(integration.metadata as Record<string, unknown> | null)
+    ) {
+      log.warn({ igAccountId }, "Ignoring unroutable Meta DM webhook account");
+      return;
+    }
 
     // Buscar posts recentes (últimos 30 dias) com dmResponseFlow
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);

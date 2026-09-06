@@ -11,6 +11,8 @@ import {
   type AIMessage,
 } from "../ai-gateway/ai-gateway.service.js";
 import { logger } from "../../lib/logger.js";
+import { isOrganicSocialIntegration } from "../integrations/integration-purpose.js";
+import { claimMetaWebhookEvent, recordMetaSendResult, recordMetaSendStarted } from "../social/meta-webhook-evidence.service.js";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -42,7 +44,10 @@ export interface ModerationConfig {
   brandVoice: string;
   hostileKeywords: string[];
   ignoredAuthors: string[];
-  verifyToken: string;
+  /** Explicit policy gate for Meta's IG Comment Private Replies API. */
+  enableInstagramPrivateReplies: boolean;
+  /** Explicit keyword -> deterministic first response map (no AI in webhook path). */
+  immediateKeywordReplies: Record<string, string>;
 }
 
 export const DEFAULT_CONFIG: ModerationConfig = {
@@ -56,7 +61,8 @@ export const DEFAULT_CONFIG: ModerationConfig = {
   brandVoice: "",
   hostileKeywords: [],
   ignoredAuthors: [],
-  verifyToken: "nexos_webhook_verify",
+  enableInstagramPrivateReplies: false,
+  immediateKeywordReplies: {},
 };
 
 // ─── Meta Graph API helper ─────────────────────────────────────────────────
@@ -242,9 +248,11 @@ export async function hideComment(
 export async function replyToComment(
   commentId: string,
   replyText: string,
-  accessToken: string
+  accessToken: string,
+  evidenceId?: string,
 ): Promise<string | null> {
   try {
+    if (evidenceId) await recordMetaSendStarted(evidenceId, `/${commentId}/replies`, { message: replyText });
     const res = await metaGraph<{ id: string }>(`/${commentId}/replies`, {
       method: "POST",
       body: JSON.stringify({
@@ -252,10 +260,35 @@ export async function replyToComment(
         access_token: accessToken,
       }),
     });
+    if (evidenceId) await recordMetaSendResult(evidenceId, { providerResponse: res, providerMessageId: res.id });
     return res.id;
   } catch (err) {
+    if (evidenceId) await recordMetaSendResult(evidenceId, { error: err instanceof Error ? err.message : String(err) });
     logger.warn({ err, commentId }, "Failed to reply to comment");
     return null;
+  }
+}
+
+export async function replyPrivatelyToInstagramComment(
+  commentId: string,
+  replyText: string,
+  accessToken: string,
+  evidenceId?: string,
+): Promise<{ id: string | null; error: string | null }> {
+  try {
+    if (evidenceId) await recordMetaSendStarted(evidenceId, `/${commentId}/private_replies`, { message: replyText });
+    // Official Instagram Graph API operation: POST /{ig-comment-id}/private_replies.
+    const res = await metaGraph<{ id: string }>(`/${commentId}/private_replies`, {
+      method: "POST",
+      body: JSON.stringify({ message: replyText, access_token: accessToken }),
+    });
+    if (evidenceId) await recordMetaSendResult(evidenceId, { providerResponse: res, providerMessageId: res.id });
+    return { id: res.id, error: null };
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    if (evidenceId) await recordMetaSendResult(evidenceId, { error });
+    logger.warn({ err, commentId }, "Instagram private comment reply failed");
+    return { id: null, error };
   }
 }
 
@@ -374,6 +407,7 @@ export async function processIncomingComment(opts: {
   authorId: string;
   commentText: string;
   accessToken: string;
+  integrationId?: string;
   /** IG business account ID (entry.id from webhook) — used to trigger DM keyword flows */
   igAccountId?: string;
 }): Promise<void> {
@@ -388,10 +422,18 @@ export async function processIncomingComment(opts: {
     authorId,
     commentText,
     accessToken,
+    integrationId,
     igAccountId,
   } = opts;
 
-  // Idempotency — skip if already processed
+  const eventClaim = await claimMetaWebhookEvent({
+    workspaceId, integrationId, accountId: igAccountId ?? postId,
+    providerEventId: commentId,
+    eventType: platform === "instagram" ? "instagram_comment" : "facebook_comment",
+  });
+  if (!eventClaim.claimed) return;
+
+  // Legacy idempotency for historical comment action rows.
   const existing = await db
     .select({
       id: socialCommentActionsTable.id,
@@ -414,6 +456,33 @@ export async function processIncomingComment(opts: {
   // Skip ignored authors
   if (config.ignoredAuthors.includes(authorId)) return;
 
+  const immediateReply = Object.entries(config.immediateKeywordReplies).find(([keyword]) =>
+    keyword.trim() && commentText.toLocaleLowerCase().includes(keyword.toLocaleLowerCase()),
+  )?.[1]?.trim();
+  if (immediateReply) {
+    const publicReplyId = await replyToComment(commentId, immediateReply, accessToken, eventClaim.id);
+    let privateReply: Record<string, unknown> | null = null;
+    if (platform === "instagram" && config.enableInstagramPrivateReplies) {
+      const privateClaim = await claimMetaWebhookEvent({
+        workspaceId, integrationId, accountId: igAccountId ?? postId, providerEventId: commentId,
+        eventType: "instagram_comment", actionKey: "private_reply",
+      });
+      privateReply = privateClaim.claimed
+        ? await replyPrivatelyToInstagramComment(commentId, immediateReply, accessToken, privateClaim.id)
+        : { error: "already_claimed" };
+    }
+    await db.insert(socialCommentActionsTable).values({
+      workspaceId, campaignId: campaignId ?? undefined, platform, postId, commentId,
+      parentCommentId: parentCommentId ?? undefined, authorName, authorId, commentText,
+      classification: "neutral", confidence: "1", action: publicReplyId ? "replied" : "error",
+      aiReply: immediateReply, platformReplyId: publicReplyId ?? undefined,
+      processingError: publicReplyId ? undefined : "Immediate reply API call failed",
+      processedAt: new Date(),
+      metadata: { deterministicKeywordReply: true, privateReply },
+    });
+    return;
+  }
+
   // Classify
   const { classification, confidence, reasoning } = await classifyComment(
     commentText,
@@ -433,6 +502,7 @@ export async function processIncomingComment(opts: {
   let action: CommentActionType = "ignored";
   let aiReply: string | null = null;
   let platformReplyId: string | null = null;
+  let privateReply: { attempted: boolean; id: string | null; error: string | null } | null = null;
   let error: string | null = null;
 
   try {
@@ -459,7 +529,14 @@ export async function processIncomingComment(opts: {
         workspaceId
       );
       if (aiReply) {
-        platformReplyId = await replyToComment(commentId, aiReply, accessToken);
+        platformReplyId = await replyToComment(commentId, aiReply, accessToken, eventClaim.id);
+        if (platform === "instagram" && config.enableInstagramPrivateReplies) {
+          const privateClaim = await claimMetaWebhookEvent({ workspaceId, integrationId, accountId: igAccountId ?? postId, providerEventId: commentId, eventType: "instagram_comment", actionKey: "private_reply" });
+          privateReply = privateClaim.claimed
+            ? { attempted: true, ...(await replyPrivatelyToInstagramComment(commentId, aiReply, accessToken, privateClaim.id)) }
+            : { attempted: false, id: null, error: "already_claimed" };
+          if (privateReply.error) error = `Private reply failed: ${privateReply.error}`;
+        }
         action = platformReplyId ? "replied" : "error";
         if (!platformReplyId) error = "Reply API call failed";
       }
@@ -474,7 +551,14 @@ export async function processIncomingComment(opts: {
         workspaceId
       );
       if (aiReply) {
-        platformReplyId = await replyToComment(commentId, aiReply, accessToken);
+        platformReplyId = await replyToComment(commentId, aiReply, accessToken, eventClaim.id);
+        if (platform === "instagram" && config.enableInstagramPrivateReplies) {
+          const privateClaim = await claimMetaWebhookEvent({ workspaceId, integrationId, accountId: igAccountId ?? postId, providerEventId: commentId, eventType: "instagram_comment", actionKey: "private_reply" });
+          privateReply = privateClaim.claimed
+            ? { attempted: true, ...(await replyPrivatelyToInstagramComment(commentId, aiReply, accessToken, privateClaim.id)) }
+            : { attempted: false, id: null, error: "already_claimed" };
+          if (privateReply.error) error = `Private reply failed: ${privateReply.error}`;
+        }
         await likeComment(commentId, accessToken);
         action = platformReplyId ? "replied" : "liked";
       } else {
@@ -492,7 +576,14 @@ export async function processIncomingComment(opts: {
         workspaceId
       );
       if (aiReply) {
-        platformReplyId = await replyToComment(commentId, aiReply, accessToken);
+        platformReplyId = await replyToComment(commentId, aiReply, accessToken, eventClaim.id);
+        if (platform === "instagram" && config.enableInstagramPrivateReplies) {
+          const privateClaim = await claimMetaWebhookEvent({ workspaceId, integrationId, accountId: igAccountId ?? postId, providerEventId: commentId, eventType: "instagram_comment", actionKey: "private_reply" });
+          privateReply = privateClaim.claimed
+            ? { attempted: true, ...(await replyPrivatelyToInstagramComment(commentId, aiReply, accessToken, privateClaim.id)) }
+            : { attempted: false, id: null, error: "already_claimed" };
+          if (privateReply.error) error = `Private reply failed: ${privateReply.error}`;
+        }
         action = platformReplyId ? "replied" : "error";
         if (!platformReplyId) error = "Reply API call failed";
       }
@@ -522,7 +613,7 @@ export async function processIncomingComment(opts: {
     platformReplyId: platformReplyId ?? undefined,
     processingError: error ?? undefined,
     processedAt: new Date(),
-    metadata: { reasoning, isKeywordHostile },
+    metadata: { reasoning, isKeywordHostile, privateReply },
   };
 
   if (existing) {
@@ -536,7 +627,7 @@ export async function processIncomingComment(opts: {
         platformReplyId: platformReplyId ?? undefined,
         processingError: error ?? undefined,
         processedAt: new Date(),
-        metadata: { reasoning, isKeywordHostile },
+        metadata: { reasoning, isKeywordHostile, privateReply },
       })
       .where(eq(socialCommentActionsTable.id, existing.id));
   } else {
@@ -709,21 +800,33 @@ export async function overrideCommentAction(
 export async function findWorkspaceByPlatformAccount(
   platform: "instagram" | "facebook_page",
   pageOrAccountId: string
-): Promise<{ workspaceId: string; accessToken: string } | null> {
+): Promise<{ workspaceId: string; integrationId: string; accessToken: string } | null> {
   const provider = platform === "instagram" ? "instagram" : "meta_ads";
 
   const rows = await db
     .select({
       workspaceId: workspaceIntegrationsTable.workspaceId,
+      integrationId: workspaceIntegrationsTable.id,
       accessToken: workspaceIntegrationsTable.accessToken,
       accountId: workspaceIntegrationsTable.accountId,
+      status: workspaceIntegrationsTable.status,
+      metadata: workspaceIntegrationsTable.metadata,
     })
     .from(workspaceIntegrationsTable)
     .where(eq(workspaceIntegrationsTable.provider, provider));
 
-  const match =
-    rows.find((r) => r.accountId === pageOrAccountId) ?? rows[0];
+  const match = rows.find(
+    (r) =>
+      r.accountId === pageOrAccountId &&
+      r.status === "connected" &&
+      typeof r.accessToken === "string" &&
+      r.accessToken.trim().length > 0 &&
+      isOrganicSocialIntegration(r.metadata as Record<string, unknown> | null),
+  );
 
-  if (!match?.accessToken) return null;
-  return { workspaceId: match.workspaceId, accessToken: match.accessToken };
+  if (!match) {
+    logger.warn({ platform, pageOrAccountId }, "Unroutable Meta webhook account");
+    return null;
+  }
+  return { workspaceId: match.workspaceId, integrationId: match.integrationId, accessToken: match.accessToken! };
 }

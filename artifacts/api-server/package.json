@@ -9,7 +9,8 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:psychology": "tsx src/scripts/test-psychology-pipeline.ts",
-    "test:paid-media": "tsx src/scripts/test-paid-media.ts"
+    "test:paid-media": "tsx src/scripts/test-paid-media.ts",
+    "test:meta-app-review": "NODE_ENV=test META_WEBHOOK_ALLOW_UNSIGNED_TESTS=false tsx src/scripts/test-meta-app-review.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

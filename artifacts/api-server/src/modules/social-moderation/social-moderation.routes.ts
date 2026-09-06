@@ -1,4 +1,4 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import { requireAuth } from "../auth/auth.middleware.js";
 import {
   getModerationConfig,
@@ -14,6 +14,12 @@ import {
 } from "./social-moderation.service.js";
 import { db, workspaceIntegrationsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
+import {
+  parseVerifiedMetaWebhook,
+  verifyMetaWebhookSubscription,
+} from "../social/meta-webhook.security.js";
+import { processMetaWebhook } from "../social/social.service.js";
+import { listMetaEvidence } from "../social/meta-webhook-evidence.service.js";
 
 const router = Router();
 
@@ -47,6 +53,13 @@ router.get("/actions", requireAuth, async (req, res): Promise<void> => {
   });
 
   res.json(result);
+});
+
+// App Review evidence is strictly workspace-scoped and token-free by construction.
+router.get("/review-evidence", requireAuth, async (req, res): Promise<void> => {
+  const id = typeof req.query["id"] === "string" ? req.query["id"] : undefined;
+  const events = await listMetaEvidence(req.auth.workspaceId, id);
+  res.json({ events });
 });
 
 // ─── Override (manual action from dashboard) ───────────────────────────────
@@ -135,28 +148,22 @@ router.post("/sync", requireAuth, async (req, res): Promise<void> => {
 
 // ─── Meta Webhook — GET (verification) ────────────────────────────────────
 
-router.get("/webhooks/meta", (req, res): void => {
-  const mode = String(req.query["hub.mode"] ?? "");
-  const token = String(req.query["hub.verify_token"] ?? "");
-  const challenge = String(req.query["hub.challenge"] ?? "");
-
-  if (mode === "subscribe" && token === "nexos_webhook_verify") {
-    req.log.info("Meta webhook verified");
-    res.status(200).send(challenge);
-    return;
-  }
-  res.sendStatus(403);
-});
+router.get("/webhooks/meta", verifyMetaWebhookSubscription);
 
 // ─── Meta Webhook — POST (events) ─────────────────────────────────────────
 
-router.post("/webhooks/meta", (req, res): void => {
+router.post("/webhooks/meta", express.raw({ type: "application/json", limit: "10mb" }), (req, res): void => {
+  const body = parseVerifiedMetaWebhook(req, res);
+  if (body === null) return;
   // Acknowledge immediately — Meta requires < 200ms
   res.sendStatus(200);
 
   setImmediate(async () => {
     try {
-      const body = req.body as {
+      // Keep the historical moderation callback fully compatible for DMs while
+      // centralizing delivery claiming/sequence processing in social.service.
+      await processMetaWebhook(body);
+      const payload = body as {
         object?: string;
         entry?: Array<{
           id: string;
@@ -175,9 +182,9 @@ router.post("/webhooks/meta", (req, res): void => {
         }>;
       };
 
-      if (body.object !== "page" && body.object !== "instagram") return;
+      if (payload.object !== "page" && payload.object !== "instagram") return;
 
-      for (const entry of body.entry ?? []) {
+      for (const entry of payload.entry ?? []) {
         for (const change of entry.changes ?? []) {
           if (change.field !== "comments" && change.field !== "feed")
             continue;
@@ -192,7 +199,7 @@ router.post("/webhooks/meta", (req, res): void => {
           const authorName = val.from?.name ?? "unknown";
           const text = val.message ?? "";
           const platform: CommentPlatform =
-            body.object === "instagram" ? "instagram" : "facebook_page";
+            payload.object === "instagram" ? "instagram" : "facebook_page";
 
           if (!commentId || !text) continue;
 
@@ -200,7 +207,10 @@ router.post("/webhooks/meta", (req, res): void => {
             platform,
             entry.id
           );
-          if (!workspace) continue;
+          if (!workspace) {
+            req.log.warn({ platform, accountId: entry.id, commentId }, "Ignoring unroutable Meta comment webhook");
+            continue;
+          }
 
           await processIncomingComment({
             workspaceId: workspace.workspaceId,
@@ -212,32 +222,12 @@ router.post("/webhooks/meta", (req, res): void => {
             authorId,
             commentText: text,
             accessToken: workspace.accessToken,
+            integrationId: workspace.integrationId,
             // Passa o account ID do entry para o trigger de DM por keyword (ex: "MAPA")
             igAccountId: entry.id,
           });
         }
 
-        // ── DM replies: avança sequência por keyword (SEGUINDO, COMPARTILHEI…) ──────
-        // Instagram envia DMs recebidos via entry.messaging[] — separado de entry.changes[].
-        // Necessário para o fluxo: comentar keyword → seguir → receber conteúdo → compartilhar → bônus.
-        for (const msgEvent of ((entry as Record<string, unknown>).messaging as unknown[] | undefined) ?? []) {
-          const me = msgEvent as Record<string, unknown>;
-          const sender = me?.sender as Record<string, string> | undefined;
-          const msg = me?.message as Record<string, unknown> | undefined;
-          const senderId = sender?.id;
-          const msgText = msg?.text as string | undefined;
-          const isEcho = msg?.is_echo as boolean | undefined;
-          if (!senderId || !msgText || isEcho) continue;
-          // Não processar eco das nossas próprias mensagens
-          if (senderId === entry.id) continue;
-          setImmediate(() =>
-            import("../social-presence/social-presence.service.js")
-              .then(({ handleIncomingDmReply }) =>
-                handleIncomingDmReply(entry.id, senderId, msgText),
-              )
-              .catch(() => {}),
-          );
-        }
       }
     } catch (err) {
       req.log.error({ err }, "Meta webhook processing error");

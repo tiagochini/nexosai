@@ -1,5 +1,6 @@
 import { logger } from "../../lib/logger.js";
 import { publishPost, syncPostMetrics, getDueScheduledPosts } from "./social.service.js";
+import { replayDueMetaWebhookEvents } from "./meta-webhook-evidence.service.js";
 
 // ─── Scheduler poll (when Redis unavailable) ──────────────────────────────────
 
@@ -11,6 +12,7 @@ export function startSocialScheduler(): void {
   // Poll every minute for due posts
   schedulerInterval = setInterval(async () => {
     try {
+      await replayDueMetaWebhookEvents();
       const duePosts = await getDueScheduledPosts();
       if (duePosts.length === 0) return;
 
