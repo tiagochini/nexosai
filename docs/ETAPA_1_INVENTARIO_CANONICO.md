@@ -1,6 +1,6 @@
 # Etapa 1 — Inventário Canônico do NexOS AI
 
-**Versão:** 0.1
+**Versão:** 0.2
 **Status:** inventário baseado em código concluído — aguardando gate da Etapa 1
 **Data da auditoria:** 07 de setembro de 2026
 **Fonte soberana:** `docs/ETAPA_0_CONGELAMENTO_CONCEITUAL.md`
@@ -626,6 +626,11 @@ gates, execução, verificação e encerramento.
 
 Os números anteriores não mediam a mesma coisa.
 
+O censo detalhado, incluindo as 79 roles, os seis departamentos observacionais,
+os 37 slots funcionais comparativos e o benchmark estrutural que estava em
+stand-by, está em `docs/ETAPA_1_ANEXO_INVENTARIO_AGENTES.md`. O anexo é parte
+integrante deste inventário, mas não aprova a arquitetura futura.
+
 | Medida | Quantidade encontrada | O que significa |
 |---|---:|---|
 | `AgentRole` no AI gateway | 79 | Identidades aceitas pelo roteador de IA |
@@ -649,7 +654,25 @@ Isso pode representar helpers especializados, alias, role compartilhada ou
 lacuna contratual. A Etapa 1 não presume que cada arquivo corresponda a um
 agente operacional independente.
 
-### 5.1 Estado geral por família
+### 5.1 Benchmark estrutural retirado do stand-by
+
+O vídeo de referência é usado nesta etapa somente como benchmark de organização:
+
+- 37 capacidades funcionais;
+- seis departamentos;
+- base central de conhecimento;
+- SOPs;
+- skills;
+- níveis de autonomia;
+- dashboards;
+- orquestrador central.
+
+O inventário não copia os nomes apresentados no vídeo e não transforma a
+quantidade 37 em meta de arquivos ou roles. Os 37 slots do anexo são uma lente
+comparativa sobre o GLP: uma capacidade pode exigir vários agentes, serviços,
+skills, SOPs e gates; uma role isolada pode não preencher capacidade alguma.
+
+### 5.2 Estado geral por família
 
 | Família | Estado observado |
 |---|---|
@@ -738,6 +761,8 @@ agente operacional independente.
 ### Contradições ou riscos
 
 - documentos podem chamar roles registradas de agentes operacionais;
+- documentos históricos podem chamar de experimentais agentes que o código atual
+  já aciona no pipeline;
 - a arquitetura declara execução integral antes de sua comprovação uniforme;
 - algumas capacidades críticas terminam em recomendação;
 - fire-and-forget pode ocultar falhas e quebrar continuidade;
@@ -802,6 +827,10 @@ remoção ampla nem reescrita sem análise de impacto.
 12. Aprendizado não fecha comprovadamente o próximo ciclo.
 13. Continuidade/perpétuo ainda não é uma operação adaptativa comprovada.
 14. Documentação está defasada em relação ao código.
+15. Não há contrato canônico uniforme de departamento, SOP, skill, autonomia,
+    dashboard, executor e recovery para cada capacidade/agente.
+16. O orquestrador existente não equivale ainda a um contrato central único que
+    correlacione Master Plan versionado, ação, autoridade, evidência e retomada.
 
 ---
 
@@ -812,6 +841,11 @@ A Etapa 1 poderá ser congelada quando o responsável do produto confirmar que:
 - [ ] as 22 capacidades GLP foram inventariadas;
 - [ ] código, interface e documentação foram considerados;
 - [ ] role, arquivo, prompt e agente operacional foram diferenciados;
+- [ ] as 79 roles e os oito arquivos auxiliares foram censados sem duplicação;
+- [ ] o benchmark dos 37 slots e seis departamentos foi comparado sem copiar sua
+      arquitetura;
+- [ ] base de conhecimento, SOP, skill, autonomia, dashboard e orquestrador
+      foram diferenciados de simples declarações;
 - [ ] geração, execução, verificação e recovery foram diferenciados;
 - [ ] capacidades existentes foram preservadas;
 - [ ] lacunas foram registradas sem implementação prematura;

@@ -11,4 +11,6 @@ NexOS's principal product is the full autonomous execution of the complete launc
 
 Roadmap work must follow the official flowchart order. At the close of every stage, compare its findings and deliverables against the frozen canonical positioning declaration before advancing. Preserve prior work unless a demonstrated contradiction or gap requires an explicit change.
 
+The reference video with 37 agents, six departments, SOPs, skills, autonomy levels, dashboards and a central orchestrator is a structural benchmark only for the roadmap moment that inventories/designs agent operations. The 37 are functional comparison slots, not a required count of roles, files or copied agent names.
+
 Commercial direction: initial market is Brazil but architecture is global from day one. Current intended onboarding fee is R$3,990, followed by credit or tier packages. Target gross margin is 85–99%, subject to separating variable third-party spend and validating unit economics before public launch.
