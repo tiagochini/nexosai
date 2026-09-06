@@ -67,6 +67,7 @@ import LaunchRoom from "@/pages/launch-room/index";
 import LauncherDashboard from "@/pages/launcher/index";
 import RecordingsPage from "@/pages/recordings/index";
 import LeadCapturePage from "@/pages/c/index";
+import PaidMediaPage from "@/pages/paid-media/index";
 import NotFound from "@/pages/not-found";
 import InstitucionalPage from "@/pages/institucional/index";
 import VideoDiarioPage from "@/pages/video-diario/index";
@@ -273,6 +274,9 @@ export default function AppRoutes() {
       </Route>
       <Route path="/social">
         {() => <ProtectedRoute><SocialPage /></ProtectedRoute>}
+      </Route>
+      <Route path="/paid-media">
+        {() => <ProtectedRoute><PaidMediaPage /></ProtectedRoute>}
       </Route>
       <Route path="/vsls">
         {() => <ProtectedRoute><VslsPage /></ProtectedRoute>}

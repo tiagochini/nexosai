@@ -59,6 +59,7 @@ import dailyVideoRouter from "../modules/daily-video/daily-video.routes.js";
 import marketIntelRouter from "../modules/market-intel/market-intel.routes.js";
 import autonomyRouter from "../modules/autonomy/autonomy.routes.js";
 import socialPresenceRouter from "../modules/social-presence/social-presence.routes.js";
+import paidMediaRouter from "../modules/paid-media/paid-media.routes.js";
 import debugRouter from "./debug.routes.js";
 
 const router: IRouter = Router();
@@ -100,6 +101,7 @@ router.use("/simulator", simulatorRouter);
 router.use("/events", serverEventsRouter);
 router.use("/integrations/oauth", oauthRouter);
 router.use("/integrations", integrationValidatorRouter);
+router.use("/paid-media", paidMediaRouter);
 router.use("/integration-chat", integrationChatRouter);
 router.use("/social-moderation", socialModerationRouter);
 router.use("/campaigns", creativesRouter);

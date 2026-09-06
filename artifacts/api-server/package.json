@@ -8,7 +8,8 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:psychology": "tsx src/scripts/test-psychology-pipeline.ts"
+    "test:psychology": "tsx src/scripts/test-psychology-pipeline.ts",
+    "test:paid-media": "tsx src/scripts/test-paid-media.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { env } from "../../lib/env.js";
-import { db, workspaceIntegrationsTable } from "@workspace/db";
+import { db, paidMediaAccountsTable, workspaceIntegrationsTable } from "@workspace/db";
 import jwt from "jsonwebtoken";
 import { eq, and } from "drizzle-orm";
 import { logger } from "../../lib/logger.js";
@@ -311,6 +311,8 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
 
   try {
     let accessToken = "";
+    let refreshToken: string | undefined;
+    let tokenExpiresAt: Date | undefined;
     let accountId = "";
     let accountName = config.label;
     let metadataExtra: Record<string, unknown> = {};
@@ -333,6 +335,42 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
       }
       accessToken = tokenData.access_token;
 
+      // Ads credentials must never use an organic Page or Instagram account as
+      // their advertiser id. Keep organic connection behavior isolated below.
+      if (config.dbProvider === "meta_ads") {
+        const accountsRes = await fetch(
+          `https://graph.facebook.com/v20.0/me/adaccounts?fields=id,name,currency,timezone_name&limit=500&access_token=${encodeURIComponent(accessToken)}`,
+          { signal: AbortSignal.timeout(10_000) },
+        );
+        const accountsData = (await accountsRes.json()) as {
+          data?: Array<{ id?: string; name?: string; currency?: string; timezone_name?: string }>;
+          error?: { message?: string };
+        };
+        if (!accountsRes.ok || accountsData.error) {
+          finishOAuth(false, accountsData.error?.message ?? "Não foi possível descobrir contas de anúncios Meta.");
+          return;
+        }
+        const accounts = (accountsData.data ?? []).filter((account) => !!account.id);
+        if (accounts.length === 0) {
+          finishOAuth(false, "Nenhuma conta de anúncios Meta foi autorizada. Verifique as permissões ads_read e business_management.");
+          return;
+        }
+        // A single account may be selected safely. For multiple advertisers we
+        // persist discovery only and require explicit account selection.
+        const selected = accounts.length === 1 ? accounts[0]! : undefined;
+        accountId = selected?.id ?? "";
+        accountName = selected?.name ?? `${accounts.length} contas de anúncios Meta disponíveis`;
+        metadataExtra = {
+          paidMedia: true,
+          accountSelectionRequired: accounts.length !== 1,
+          discoveredAdAccounts: accounts.map((account) => ({
+            id: account.id?.startsWith("act_") ? account.id : `act_${account.id}`,
+            name: account.name,
+            currency: account.currency,
+            timezone: account.timezone_name,
+          })),
+        };
+      } else {
       // Buscar dados do usuário
       const meRes = await fetch(
         `https://graph.facebook.com/v20.0/me?access_token=${accessToken}&fields=id,name`,
@@ -414,6 +452,7 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
         metadataExtra = { userId: me.id, note: "no_pages_found" };
         logger.warn({ userId: me.id }, "Meta OAuth: nenhuma Página encontrada — escopo pode estar restrito");
       }
+      }
 
     } else if (config.platform === "tiktok") {
       const tokenRes = await fetch(platform.tokenUrl, {
@@ -428,7 +467,7 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
         }),
       });
       const tokenData = (await tokenRes.json()) as {
-        data?: { access_token?: string; open_id?: string };
+        data?: { access_token?: string; open_id?: string; refresh_token?: string; expires_in?: number };
         error?: { code?: string; message?: string };
       };
       if (!tokenData.data?.access_token) {
@@ -437,6 +476,20 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
       }
       accessToken = tokenData.data.access_token;
       accountId = tokenData.data.open_id ?? "";
+      refreshToken = tokenData.data.refresh_token;
+      if (tokenData.data.expires_in) {
+        tokenExpiresAt = new Date(Date.now() + tokenData.data.expires_in * 1000);
+      }
+      // TikTok Ads has advertiser identities distinct from the Login Kit
+      // open_id. Do not claim one was selected until discovery is complete.
+      if (config.dbProvider === "tiktok_ads") {
+        accountId = "";
+        metadataExtra = {
+          paidMedia: true,
+          accountSelectionRequired: true,
+          oauthOpenId: tokenData.data.open_id ?? null,
+        };
+      }
 
     } else if (config.platform === "google") {
       const tokenRes = await fetch(platform.tokenUrl, {
@@ -578,17 +631,42 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
         ),
       );
 
-    await db.insert(workspaceIntegrationsTable).values({
+    const [integration] = await db.insert(workspaceIntegrationsTable).values({
       workspaceId: stateData.workspaceId,
       provider: config.dbProvider,
       status: "connected",
       accessToken,
+      refreshToken,
+      tokenExpiresAt,
       accountId,
       accountName,
       isPaymentGateway: false,
       blocksExecution: false,
       metadata: newMetadata,
-    });
+    }).returning({ id: workspaceIntegrationsTable.id });
+
+    // Persist all Meta advertiser accounts discovered at OAuth time. This is
+    // intentionally separate from the organic Page/IG integration record and
+    // preserves every candidate when user access includes multiple accounts.
+    const discovered = metadataExtra["discoveredAdAccounts"];
+    if (config.dbProvider === "meta_ads" && integration && Array.isArray(discovered)) {
+      for (const raw of discovered) {
+        if (!raw || typeof raw !== "object") continue;
+        const account = raw as { id?: unknown; name?: unknown; currency?: unknown; timezone?: unknown };
+        if (typeof account.id !== "string" || !account.id) continue;
+        await db.insert(paidMediaAccountsTable).values({
+          workspaceId: stateData.workspaceId,
+          integrationId: integration.id,
+          provider: "meta_ads",
+          providerAccountId: account.id,
+          accountName: typeof account.name === "string" ? account.name : null,
+          currency: typeof account.currency === "string" ? account.currency : "USD",
+          timezone: typeof account.timezone === "string" ? account.timezone : "UTC",
+          isSelected: account.id === accountId,
+          selectedAt: account.id === accountId ? new Date() : null,
+        });
+      }
+    }
 
     logger.info({ workspaceId: stateData.workspaceId, provider }, "OAuth integration connected");
     finishOAuth(true);

@@ -70,3 +70,4 @@
 - [HeyGen Consent Gate](heygen-consent-gate.md) — digital_twin group consent_status:"pending" blocks all video gen; look status:"completed" does NOT imply consent granted; pre-flight only checks look, not group.
 - [NexOS Autonomous Agency Doctrine](nexos-autonomous-agency-doctrine.md) — NexOS must replace a full marketing agency: agents plan, act, verify and optimize across isolated product workspaces.
 - [Product Autonomy Contract](product-autonomy-contract.md) — intraplatform optimization is autonomous; interplatform budget moves require approval; launch requires versioned acceptances.
+- [Paid Media Execution Boundary](paid-media-execution-boundary.md) — provider mutations are deterministic, snapshot-backed and verified; LLM output never calls ad APIs directly.

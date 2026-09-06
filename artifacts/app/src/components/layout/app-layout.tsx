@@ -10,7 +10,7 @@ import {
   Bot, Share2, Video, DollarSign, Shield, Settings, Search,
   ChevronDown, User, Users, ShieldCheck, Star, Gauge, Zap,
   Brain, Receipt, Link2, Globe, Clapperboard, Film, ShoppingBag, MessageSquare, Crosshair, Camera,
-  GraduationCap, ExternalLink, Fingerprint, RefreshCw, Radar, Megaphone,
+  GraduationCap, ExternalLink, Fingerprint, RefreshCw, Radar, Megaphone, Target, Activity, FileText, GitCommit, ShieldAlert,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { useAppI18n } from "@/lib/i18n";
@@ -163,6 +163,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       label: tr.nav.tools,
       expertOnly: true,
       items: [
+        { name: "Mídia Autônoma",        href: "/paid-media",        icon: Target, badge: "IA" },
         { name: tr.sidebar.social,       href: "/social",            icon: Share2     },
         { name: tr.sidebar.moderation,   href: "/social/moderation", icon: Shield     },
         { name: tr.sidebar.sequences,    href: "/sequences",         icon: Workflow   },

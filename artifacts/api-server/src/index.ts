@@ -22,6 +22,7 @@ import { getQueue, closeAllQueues, drainQueueAtBoot, QUEUE_NAMES } from "./modul
 import { initOrchestrationWorker, closeOrchestrationWorker } from "./modules/orchestration/orchestration.worker.js";
 import { resumeGeneratingCampaigns } from "./modules/orchestration/orchestration.service.js";
 import { startSocialScheduler, stopSocialScheduler } from "./modules/social/social.worker.js";
+import { startPaidMediaScheduler, stopPaidMediaScheduler } from "./modules/paid-media/paid-media.worker.js";
 import { initSequenceScheduler, closeSequenceScheduler } from "./modules/launch-sequence/sequence-scheduler.worker.js";
 import { startFunnelScheduler } from "./modules/academy/academy-funnel.service.js";
 import { db, campaignAgentsTable, campaignsTable, workspaceIntegrationsTable, workspacesTable, socialPresencePostsTable, socialPresenceConfigTable } from "@workspace/db";
@@ -98,6 +99,7 @@ try {
 
 initOrchestrationWorker();
 startSocialScheduler();
+startPaidMediaScheduler();
 initSequenceScheduler();
 startFunnelScheduler();
 

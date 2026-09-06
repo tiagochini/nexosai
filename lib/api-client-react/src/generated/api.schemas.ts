@@ -688,6 +688,404 @@ export interface CreditsBalance {
   limit?: number;
 }
 
+export type PaidMediaProposalGenerateInputActionType =
+  (typeof PaidMediaProposalGenerateInputActionType)[keyof typeof PaidMediaProposalGenerateInputActionType];
+
+export const PaidMediaProposalGenerateInputActionType = {
+  pause: "pause",
+  resume: "resume",
+  update_daily_budget: "update_daily_budget",
+  update_bid: "update_bid",
+} as const;
+
+export type PaidMediaProposalGenerateInputProposedChange = {
+  [key: string]: unknown;
+};
+
+export type PaidMediaProposalGenerateInputOptimizationOutput = {
+  [key: string]: unknown;
+};
+
+export interface PaidMediaProposalGenerateInput {
+  accountId: string;
+  entityId: string;
+  actionType: PaidMediaProposalGenerateInputActionType;
+  proposedChange: PaidMediaProposalGenerateInputProposedChange;
+  optimizationOutput?: PaidMediaProposalGenerateInputOptimizationOutput;
+  idempotencyKey?: string;
+}
+
+export interface PaidMediaProviderAccount {
+  providerAccountId: string;
+  name: string;
+  currency: string;
+  timezone: string;
+}
+
+export interface PaidMediaAccount {
+  id: string;
+  providerAccountId: string;
+  /** @nullable */
+  accountName?: string | null;
+  currency: string;
+  timezone: string;
+  isSelected: boolean;
+}
+
+export interface PaidMediaAccountDiscoveryResponse {
+  accounts: PaidMediaProviderAccount[];
+  selectionRequired: boolean;
+}
+
+export interface PaidMediaAccountsResponse {
+  accounts: PaidMediaAccount[];
+}
+
+export interface PaidMediaAccountSelectionResponse {
+  accountId: string;
+  providerAccountId: string;
+  selected: boolean;
+}
+
+export interface PaidMediaSyncInput {
+  since?: string;
+  until?: string;
+}
+
+export type PaidMediaSyncErrorEntityType =
+  (typeof PaidMediaSyncErrorEntityType)[keyof typeof PaidMediaSyncErrorEntityType];
+
+export const PaidMediaSyncErrorEntityType = {
+  campaign: "campaign",
+  ad_set: "ad_set",
+  ad: "ad",
+  creative: "creative",
+} as const;
+
+export interface PaidMediaSyncError {
+  entityType: PaidMediaSyncErrorEntityType;
+  message: string;
+}
+
+export interface PaidMediaSyncResult {
+  accountId: string;
+  entitiesUpserted: number;
+  insightsUpserted: number;
+  errors: PaidMediaSyncError[];
+}
+
+export type PaidMediaSyncCursorEntityType =
+  (typeof PaidMediaSyncCursorEntityType)[keyof typeof PaidMediaSyncCursorEntityType];
+
+export const PaidMediaSyncCursorEntityType = {
+  campaign: "campaign",
+  ad_set: "ad_set",
+  ad: "ad",
+  creative: "creative",
+} as const;
+
+export interface PaidMediaSyncCursor {
+  id: string;
+  workspaceId: string;
+  accountId: string;
+  entityType: PaidMediaSyncCursorEntityType;
+  /** @nullable */
+  cursor?: string | null;
+  /** @nullable */
+  syncedThrough?: string | null;
+  /** @nullable */
+  claimedAt?: string | null;
+  /** @nullable */
+  claimToken?: string | null;
+  /** @nullable */
+  lastError?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaidMediaSyncStatusResponse {
+  cursors: PaidMediaSyncCursor[];
+}
+
+/**
+ * @nullable
+ */
+export type PaidMediaPolicyProvider =
+  | (typeof PaidMediaPolicyProvider)[keyof typeof PaidMediaPolicyProvider]
+  | null;
+
+export const PaidMediaPolicyProvider = {
+  meta_ads: "meta_ads",
+  tiktok_ads: "tiktok_ads",
+} as const;
+
+export interface PaidMediaPolicy {
+  id: string;
+  workspaceId: string;
+  /** @nullable */
+  provider?: PaidMediaPolicyProvider;
+  /** @nullable */
+  accountId?: string | null;
+  enabled: boolean;
+  autoExecute: boolean;
+  mandatoryPause: boolean;
+  /** @nullable */
+  mandatoryPauseReason?: string | null;
+  minimumSampleSize: number;
+  minimumDataQualityScore: string;
+  /** @nullable */
+  maxDailyBudgetChangePercent?: string | null;
+  /** @nullable */
+  maxDailyBudgetChangeAbsolute?: string | null;
+  /** @nullable */
+  maxBidChangePercent?: string | null;
+  /** @nullable */
+  acceptedAt?: string | null;
+  /** @nullable */
+  acceptanceExpiresAt?: string | null;
+  /** @nullable */
+  acceptedBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaidMediaPolicyUpdateInput {
+  enabled?: boolean;
+  mandatoryPause?: boolean;
+  /** @nullable */
+  mandatoryPauseReason?: string | null;
+  /** @minimum 0 */
+  minimumSampleSize?: number;
+  /**
+   * @minimum 0
+   * @maximum 1
+   */
+  minimumDataQualityScore?: number;
+  /**
+   * @minimum 0
+   * @nullable
+   */
+  maxDailyBudgetChangePercent?: number | null;
+  /**
+   * @minimum 0
+   * @nullable
+   */
+  maxDailyBudgetChangeAbsolute?: number | null;
+  /**
+   * @minimum 0
+   * @nullable
+   */
+  maxBidChangePercent?: number | null;
+  /** @nullable */
+  acceptanceExpiresAt?: string | null;
+}
+
+export interface PaidMediaPoliciesResponse {
+  policies: PaidMediaPolicy[];
+}
+
+export interface PaidMediaPolicyResponse {
+  policy: PaidMediaPolicy;
+}
+
+export type PaidMediaProposalDecisionInputEvidence = { [key: string]: unknown };
+
+export interface PaidMediaProposalDecisionInput {
+  evidence?: PaidMediaProposalDecisionInputEvidence;
+  comment?: string;
+}
+
+export interface PaidMediaError {
+  error: string;
+  code: string;
+}
+
+export type PaidMediaProposalProvider =
+  (typeof PaidMediaProposalProvider)[keyof typeof PaidMediaProposalProvider];
+
+export const PaidMediaProposalProvider = {
+  meta_ads: "meta_ads",
+  tiktok_ads: "tiktok_ads",
+} as const;
+
+export type PaidMediaProposalActionType =
+  (typeof PaidMediaProposalActionType)[keyof typeof PaidMediaProposalActionType];
+
+export const PaidMediaProposalActionType = {
+  pause: "pause",
+  resume: "resume",
+  update_daily_budget: "update_daily_budget",
+  update_bid: "update_bid",
+  update_creative_status: "update_creative_status",
+  update_creative_rotation: "update_creative_rotation",
+  cross_platform_budget_move: "cross_platform_budget_move",
+} as const;
+
+export type PaidMediaProposalStatus =
+  (typeof PaidMediaProposalStatus)[keyof typeof PaidMediaProposalStatus];
+
+export const PaidMediaProposalStatus = {
+  pending_approval: "pending_approval",
+  approved: "approved",
+  rejected: "rejected",
+  expired: "expired",
+  executing: "executing",
+  verified: "verified",
+  failed: "failed",
+  rolled_back: "rolled_back",
+} as const;
+
+export type PaidMediaProposalMetrics = { [key: string]: unknown };
+
+export type PaidMediaProposalSimulation = { [key: string]: unknown };
+
+export type PaidMediaProposalBeforeAllocation = { [key: string]: unknown };
+
+export type PaidMediaProposalAfterAllocation = { [key: string]: unknown };
+
+export type PaidMediaProposalRequestedChange = { [key: string]: unknown };
+
+export type PaidMediaProposalPolicyDecision = { [key: string]: unknown };
+
+export interface PaidMediaProposal {
+  id: string;
+  workspaceId: string;
+  /** @nullable */
+  accountId?: string | null;
+  /** @nullable */
+  entityId?: string | null;
+  provider: PaidMediaProposalProvider;
+  actionType: PaidMediaProposalActionType;
+  status: PaidMediaProposalStatus;
+  idempotencyKey: string;
+  recommendation: string;
+  metrics: PaidMediaProposalMetrics;
+  simulation: PaidMediaProposalSimulation;
+  beforeAllocation?: PaidMediaProposalBeforeAllocation;
+  afterAllocation?: PaidMediaProposalAfterAllocation;
+  requestedChange?: PaidMediaProposalRequestedChange;
+  policyDecision?: PaidMediaProposalPolicyDecision;
+  expiresAt: string;
+}
+
+export interface PaidMediaProposalResponse {
+  proposal: PaidMediaProposal;
+}
+
+export type PaidMediaActionAttemptStatus =
+  (typeof PaidMediaActionAttemptStatus)[keyof typeof PaidMediaActionAttemptStatus];
+
+export const PaidMediaActionAttemptStatus = {
+  pending: "pending",
+  executing: "executing",
+  succeeded: "succeeded",
+  failed: "failed",
+  verification_failed: "verification_failed",
+  rolled_back: "rolled_back",
+} as const;
+
+export type PaidMediaActionAttemptBeforeSnapshot = { [key: string]: unknown };
+
+/**
+ * @nullable
+ */
+export type PaidMediaActionAttemptProviderResponse = {
+  [key: string]: unknown;
+} | null;
+
+/**
+ * @nullable
+ */
+export type PaidMediaActionAttemptVerificationEvidence = {
+  [key: string]: unknown;
+} | null;
+
+/**
+ * @nullable
+ */
+export type PaidMediaActionAttemptAfterSnapshot = {
+  [key: string]: unknown;
+} | null;
+
+/**
+ * @nullable
+ */
+export type PaidMediaActionAttemptRollbackEvidence = {
+  [key: string]: unknown;
+} | null;
+
+export interface PaidMediaActionAttempt {
+  id: string;
+  proposalId: string;
+  workspaceId: string;
+  attemptNumber: number;
+  status: PaidMediaActionAttemptStatus;
+  idempotencyKey: string;
+  beforeSnapshot: PaidMediaActionAttemptBeforeSnapshot;
+  /** @nullable */
+  providerResponse?: PaidMediaActionAttemptProviderResponse;
+  /** @nullable */
+  verificationEvidence?: PaidMediaActionAttemptVerificationEvidence;
+  /** @nullable */
+  afterSnapshot?: PaidMediaActionAttemptAfterSnapshot;
+  /** @nullable */
+  rollbackEvidence?: PaidMediaActionAttemptRollbackEvidence;
+  /** @nullable */
+  errorCode?: string | null;
+  /** @nullable */
+  errorMessage?: string | null;
+  /** @nullable */
+  startedAt?: string | null;
+  /** @nullable */
+  completedAt?: string | null;
+  createdAt: string;
+}
+
+export interface PaidMediaActionAttemptsResponse {
+  attempts: PaidMediaActionAttempt[];
+}
+
+export interface PaidMediaActionAttemptResponse {
+  attempt: PaidMediaActionAttempt;
+}
+
+export type PaidMediaProviderActionResultEvidence = { [key: string]: unknown };
+
+export interface PaidMediaProviderActionResult {
+  providerRequestId?: string;
+  evidence: PaidMediaProviderActionResultEvidence;
+}
+
+/**
+ * Invalid paid-media request
+ */
+export type PaidMediaValidationErrorResponse = PaidMediaError;
+
+/**
+ * Authentication required
+ */
+export type UnauthorizedErrorResponse = PaidMediaError;
+
+/**
+ * Resource not found
+ */
+export type NotFoundErrorResponse = PaidMediaError;
+
+/**
+ * Paid-media precondition or idempotency conflict
+ */
+export type PaidMediaConflictResponse = PaidMediaError;
+
+/**
+ * Execution blocked by mandatory pause or acceptance
+ */
+export type PaidMediaLockedResponse = PaidMediaError;
+
+/**
+ * Upstream advertising provider failed
+ */
+export type PaidMediaProviderErrorResponse = PaidMediaError;
+
 export type MarkOnboardingSeen200 = {
   ok: boolean;
 };
@@ -755,4 +1153,8 @@ export type AddSequenceContacts201 = {
 
 export type GenerateItemCopy200 = {
   item?: SequenceItem;
+};
+
+export type ListPaidMediaProposals200 = {
+  proposals: PaidMediaProposal[];
 };

@@ -990,3 +990,476 @@ export const GetCreditsBalanceResponse = zod.object({
   used: zod.number().optional(),
   limit: zod.number().optional(),
 });
+
+export const DiscoverPaidMediaAccountsParams = zod.object({
+  provider: zod.enum(["meta_ads", "tiktok_ads"]),
+});
+
+export const DiscoverPaidMediaAccountsResponse = zod.object({
+  accounts: zod.array(
+    zod.object({
+      providerAccountId: zod.string(),
+      name: zod.string(),
+      currency: zod.string(),
+      timezone: zod.string(),
+    }),
+  ),
+  selectionRequired: zod.boolean(),
+});
+
+export const ListPaidMediaAccountsParams = zod.object({
+  provider: zod.enum(["meta_ads", "tiktok_ads"]),
+});
+
+export const ListPaidMediaAccountsResponse = zod.object({
+  accounts: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      providerAccountId: zod.string(),
+      accountName: zod.string().nullish(),
+      currency: zod.string(),
+      timezone: zod.string(),
+      isSelected: zod.boolean(),
+    }),
+  ),
+});
+
+export const SelectPaidMediaAccountParams = zod.object({
+  provider: zod.enum(["meta_ads", "tiktok_ads"]),
+  accountId: zod.coerce.string().uuid(),
+});
+
+export const SelectPaidMediaAccountResponse = zod.object({
+  accountId: zod.string().uuid(),
+  providerAccountId: zod.string(),
+  selected: zod.boolean(),
+});
+
+export const SyncPaidMediaAccountParams = zod.object({
+  accountId: zod.coerce.string().uuid(),
+});
+
+export const SyncPaidMediaAccountBody = zod.object({
+  since: zod.coerce.date().optional(),
+  until: zod.coerce.date().optional(),
+});
+
+export const SyncPaidMediaAccountResponse = zod.object({
+  accountId: zod.string().uuid(),
+  entitiesUpserted: zod.number(),
+  insightsUpserted: zod.number(),
+  errors: zod.array(
+    zod.object({
+      entityType: zod.enum(["campaign", "ad_set", "ad", "creative"]),
+      message: zod.string(),
+    }),
+  ),
+});
+
+export const GetPaidMediaSyncStatusResponse = zod.object({
+  cursors: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      workspaceId: zod.string().uuid(),
+      accountId: zod.string().uuid(),
+      entityType: zod.enum(["campaign", "ad_set", "ad", "creative"]),
+      cursor: zod.string().nullish(),
+      syncedThrough: zod.coerce.date().nullish(),
+      claimedAt: zod.coerce.date().nullish(),
+      claimToken: zod.string().uuid().nullish(),
+      lastError: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+      updatedAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+export const ListPaidMediaPoliciesResponse = zod.object({
+  policies: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      workspaceId: zod.string().uuid(),
+      provider: zod
+        .union([
+          zod.literal("meta_ads"),
+          zod.literal("tiktok_ads"),
+          zod.literal(null),
+        ])
+        .nullish(),
+      accountId: zod.string().uuid().nullish(),
+      enabled: zod.boolean(),
+      autoExecute: zod.boolean(),
+      mandatoryPause: zod.boolean(),
+      mandatoryPauseReason: zod.string().nullish(),
+      minimumSampleSize: zod.number(),
+      minimumDataQualityScore: zod.string(),
+      maxDailyBudgetChangePercent: zod.string().nullish(),
+      maxDailyBudgetChangeAbsolute: zod.string().nullish(),
+      maxBidChangePercent: zod.string().nullish(),
+      acceptedAt: zod.coerce.date().nullish(),
+      acceptanceExpiresAt: zod.coerce.date().nullish(),
+      acceptedBy: zod.string().uuid().nullish(),
+      createdAt: zod.coerce.date(),
+      updatedAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+export const UpdatePaidMediaPolicyParams = zod.object({
+  policyId: zod.coerce.string().uuid(),
+});
+
+export const updatePaidMediaPolicyBodyMinimumSampleSizeMin = 0;
+
+export const updatePaidMediaPolicyBodyMinimumDataQualityScoreMin = 0;
+export const updatePaidMediaPolicyBodyMinimumDataQualityScoreMax = 1;
+
+export const updatePaidMediaPolicyBodyMaxDailyBudgetChangePercentMin = 0;
+
+export const updatePaidMediaPolicyBodyMaxDailyBudgetChangeAbsoluteMin = 0;
+
+export const updatePaidMediaPolicyBodyMaxBidChangePercentMin = 0;
+
+export const UpdatePaidMediaPolicyBody = zod.object({
+  enabled: zod.boolean().optional(),
+  mandatoryPause: zod.boolean().optional(),
+  mandatoryPauseReason: zod.string().nullish(),
+  minimumSampleSize: zod
+    .number()
+    .min(updatePaidMediaPolicyBodyMinimumSampleSizeMin)
+    .optional(),
+  minimumDataQualityScore: zod
+    .number()
+    .min(updatePaidMediaPolicyBodyMinimumDataQualityScoreMin)
+    .max(updatePaidMediaPolicyBodyMinimumDataQualityScoreMax)
+    .optional(),
+  maxDailyBudgetChangePercent: zod
+    .number()
+    .min(updatePaidMediaPolicyBodyMaxDailyBudgetChangePercentMin)
+    .nullish(),
+  maxDailyBudgetChangeAbsolute: zod
+    .number()
+    .min(updatePaidMediaPolicyBodyMaxDailyBudgetChangeAbsoluteMin)
+    .nullish(),
+  maxBidChangePercent: zod
+    .number()
+    .min(updatePaidMediaPolicyBodyMaxBidChangePercentMin)
+    .nullish(),
+  acceptanceExpiresAt: zod.coerce.date().nullish(),
+});
+
+export const UpdatePaidMediaPolicyResponse = zod.object({
+  policy: zod.object({
+    id: zod.string().uuid(),
+    workspaceId: zod.string().uuid(),
+    provider: zod
+      .union([
+        zod.literal("meta_ads"),
+        zod.literal("tiktok_ads"),
+        zod.literal(null),
+      ])
+      .nullish(),
+    accountId: zod.string().uuid().nullish(),
+    enabled: zod.boolean(),
+    autoExecute: zod.boolean(),
+    mandatoryPause: zod.boolean(),
+    mandatoryPauseReason: zod.string().nullish(),
+    minimumSampleSize: zod.number(),
+    minimumDataQualityScore: zod.string(),
+    maxDailyBudgetChangePercent: zod.string().nullish(),
+    maxDailyBudgetChangeAbsolute: zod.string().nullish(),
+    maxBidChangePercent: zod.string().nullish(),
+    acceptedAt: zod.coerce.date().nullish(),
+    acceptanceExpiresAt: zod.coerce.date().nullish(),
+    acceptedBy: zod.string().uuid().nullish(),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+  }),
+});
+
+export const GeneratePaidMediaProposalBody = zod.object({
+  accountId: zod.string().uuid(),
+  entityId: zod.string().uuid(),
+  actionType: zod.enum([
+    "pause",
+    "resume",
+    "update_daily_budget",
+    "update_bid",
+  ]),
+  proposedChange: zod.record(zod.string(), zod.unknown()),
+  optimizationOutput: zod.record(zod.string(), zod.unknown()).optional(),
+  idempotencyKey: zod.string().optional(),
+});
+
+export const ListPaidMediaProposalsResponse = zod.object({
+  proposals: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      workspaceId: zod.string().uuid(),
+      accountId: zod.string().uuid().nullish(),
+      entityId: zod.string().uuid().nullish(),
+      provider: zod.enum(["meta_ads", "tiktok_ads"]),
+      actionType: zod.enum([
+        "pause",
+        "resume",
+        "update_daily_budget",
+        "update_bid",
+        "update_creative_status",
+        "update_creative_rotation",
+        "cross_platform_budget_move",
+      ]),
+      status: zod.enum([
+        "pending_approval",
+        "approved",
+        "rejected",
+        "expired",
+        "executing",
+        "verified",
+        "failed",
+        "rolled_back",
+      ]),
+      idempotencyKey: zod.string(),
+      recommendation: zod.string(),
+      metrics: zod.record(zod.string(), zod.unknown()),
+      simulation: zod.record(zod.string(), zod.unknown()),
+      beforeAllocation: zod.record(zod.string(), zod.unknown()).optional(),
+      afterAllocation: zod.record(zod.string(), zod.unknown()).optional(),
+      requestedChange: zod.record(zod.string(), zod.unknown()).optional(),
+      policyDecision: zod.record(zod.string(), zod.unknown()).optional(),
+      expiresAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+export const GetPaidMediaProposalParams = zod.object({
+  proposalId: zod.coerce.string().uuid(),
+});
+
+export const GetPaidMediaProposalResponse = zod.object({
+  proposal: zod.object({
+    id: zod.string().uuid(),
+    workspaceId: zod.string().uuid(),
+    accountId: zod.string().uuid().nullish(),
+    entityId: zod.string().uuid().nullish(),
+    provider: zod.enum(["meta_ads", "tiktok_ads"]),
+    actionType: zod.enum([
+      "pause",
+      "resume",
+      "update_daily_budget",
+      "update_bid",
+      "update_creative_status",
+      "update_creative_rotation",
+      "cross_platform_budget_move",
+    ]),
+    status: zod.enum([
+      "pending_approval",
+      "approved",
+      "rejected",
+      "expired",
+      "executing",
+      "verified",
+      "failed",
+      "rolled_back",
+    ]),
+    idempotencyKey: zod.string(),
+    recommendation: zod.string(),
+    metrics: zod.record(zod.string(), zod.unknown()),
+    simulation: zod.record(zod.string(), zod.unknown()),
+    beforeAllocation: zod.record(zod.string(), zod.unknown()).optional(),
+    afterAllocation: zod.record(zod.string(), zod.unknown()).optional(),
+    requestedChange: zod.record(zod.string(), zod.unknown()).optional(),
+    policyDecision: zod.record(zod.string(), zod.unknown()).optional(),
+    expiresAt: zod.coerce.date(),
+  }),
+});
+
+export const ApprovePaidMediaProposalParams = zod.object({
+  proposalId: zod.coerce.string().uuid(),
+});
+
+export const ApprovePaidMediaProposalBody = zod.object({
+  evidence: zod.record(zod.string(), zod.unknown()).optional(),
+  comment: zod.string().optional(),
+});
+
+export const ApprovePaidMediaProposalResponse = zod.object({
+  id: zod.string().uuid(),
+  workspaceId: zod.string().uuid(),
+  accountId: zod.string().uuid().nullish(),
+  entityId: zod.string().uuid().nullish(),
+  provider: zod.enum(["meta_ads", "tiktok_ads"]),
+  actionType: zod.enum([
+    "pause",
+    "resume",
+    "update_daily_budget",
+    "update_bid",
+    "update_creative_status",
+    "update_creative_rotation",
+    "cross_platform_budget_move",
+  ]),
+  status: zod.enum([
+    "pending_approval",
+    "approved",
+    "rejected",
+    "expired",
+    "executing",
+    "verified",
+    "failed",
+    "rolled_back",
+  ]),
+  idempotencyKey: zod.string(),
+  recommendation: zod.string(),
+  metrics: zod.record(zod.string(), zod.unknown()),
+  simulation: zod.record(zod.string(), zod.unknown()),
+  beforeAllocation: zod.record(zod.string(), zod.unknown()).optional(),
+  afterAllocation: zod.record(zod.string(), zod.unknown()).optional(),
+  requestedChange: zod.record(zod.string(), zod.unknown()).optional(),
+  policyDecision: zod.record(zod.string(), zod.unknown()).optional(),
+  expiresAt: zod.coerce.date(),
+});
+
+export const RejectPaidMediaProposalParams = zod.object({
+  proposalId: zod.coerce.string().uuid(),
+});
+
+export const RejectPaidMediaProposalBody = zod.object({
+  evidence: zod.record(zod.string(), zod.unknown()).optional(),
+  comment: zod.string().optional(),
+});
+
+export const RejectPaidMediaProposalResponse = zod.object({
+  id: zod.string().uuid(),
+  workspaceId: zod.string().uuid(),
+  accountId: zod.string().uuid().nullish(),
+  entityId: zod.string().uuid().nullish(),
+  provider: zod.enum(["meta_ads", "tiktok_ads"]),
+  actionType: zod.enum([
+    "pause",
+    "resume",
+    "update_daily_budget",
+    "update_bid",
+    "update_creative_status",
+    "update_creative_rotation",
+    "cross_platform_budget_move",
+  ]),
+  status: zod.enum([
+    "pending_approval",
+    "approved",
+    "rejected",
+    "expired",
+    "executing",
+    "verified",
+    "failed",
+    "rolled_back",
+  ]),
+  idempotencyKey: zod.string(),
+  recommendation: zod.string(),
+  metrics: zod.record(zod.string(), zod.unknown()),
+  simulation: zod.record(zod.string(), zod.unknown()),
+  beforeAllocation: zod.record(zod.string(), zod.unknown()).optional(),
+  afterAllocation: zod.record(zod.string(), zod.unknown()).optional(),
+  requestedChange: zod.record(zod.string(), zod.unknown()).optional(),
+  policyDecision: zod.record(zod.string(), zod.unknown()).optional(),
+  expiresAt: zod.coerce.date(),
+});
+
+export const ExecutePaidMediaProposalParams = zod.object({
+  proposalId: zod.coerce.string().uuid(),
+});
+
+export const ExecutePaidMediaProposalResponse = zod.object({
+  id: zod.string().uuid(),
+  proposalId: zod.string().uuid(),
+  workspaceId: zod.string().uuid(),
+  attemptNumber: zod.number(),
+  status: zod.enum([
+    "pending",
+    "executing",
+    "succeeded",
+    "failed",
+    "verification_failed",
+    "rolled_back",
+  ]),
+  idempotencyKey: zod.string(),
+  beforeSnapshot: zod.record(zod.string(), zod.unknown()),
+  providerResponse: zod.record(zod.string(), zod.unknown()).nullish(),
+  verificationEvidence: zod.record(zod.string(), zod.unknown()).nullish(),
+  afterSnapshot: zod.record(zod.string(), zod.unknown()).nullish(),
+  rollbackEvidence: zod.record(zod.string(), zod.unknown()).nullish(),
+  errorCode: zod.string().nullish(),
+  errorMessage: zod.string().nullish(),
+  startedAt: zod.coerce.date().nullish(),
+  completedAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+});
+
+export const ListPaidMediaActionAttemptsResponse = zod.object({
+  attempts: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      proposalId: zod.string().uuid(),
+      workspaceId: zod.string().uuid(),
+      attemptNumber: zod.number(),
+      status: zod.enum([
+        "pending",
+        "executing",
+        "succeeded",
+        "failed",
+        "verification_failed",
+        "rolled_back",
+      ]),
+      idempotencyKey: zod.string(),
+      beforeSnapshot: zod.record(zod.string(), zod.unknown()),
+      providerResponse: zod.record(zod.string(), zod.unknown()).nullish(),
+      verificationEvidence: zod.record(zod.string(), zod.unknown()).nullish(),
+      afterSnapshot: zod.record(zod.string(), zod.unknown()).nullish(),
+      rollbackEvidence: zod.record(zod.string(), zod.unknown()).nullish(),
+      errorCode: zod.string().nullish(),
+      errorMessage: zod.string().nullish(),
+      startedAt: zod.coerce.date().nullish(),
+      completedAt: zod.coerce.date().nullish(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+export const GetPaidMediaActionAttemptParams = zod.object({
+  attemptId: zod.coerce.string().uuid(),
+});
+
+export const GetPaidMediaActionAttemptResponse = zod.object({
+  attempt: zod.object({
+    id: zod.string().uuid(),
+    proposalId: zod.string().uuid(),
+    workspaceId: zod.string().uuid(),
+    attemptNumber: zod.number(),
+    status: zod.enum([
+      "pending",
+      "executing",
+      "succeeded",
+      "failed",
+      "verification_failed",
+      "rolled_back",
+    ]),
+    idempotencyKey: zod.string(),
+    beforeSnapshot: zod.record(zod.string(), zod.unknown()),
+    providerResponse: zod.record(zod.string(), zod.unknown()).nullish(),
+    verificationEvidence: zod.record(zod.string(), zod.unknown()).nullish(),
+    afterSnapshot: zod.record(zod.string(), zod.unknown()).nullish(),
+    rollbackEvidence: zod.record(zod.string(), zod.unknown()).nullish(),
+    errorCode: zod.string().nullish(),
+    errorMessage: zod.string().nullish(),
+    startedAt: zod.coerce.date().nullish(),
+    completedAt: zod.coerce.date().nullish(),
+    createdAt: zod.coerce.date(),
+  }),
+});
+
+export const RollbackPaidMediaActionAttemptParams = zod.object({
+  attemptId: zod.coerce.string().uuid(),
+});
+
+export const RollbackPaidMediaActionAttemptResponse = zod.object({
+  providerRequestId: zod.string().optional(),
+  evidence: zod.record(zod.string(), zod.unknown()),
+});

@@ -36,8 +36,8 @@ export const PRODUCT_AUTONOMY_CONTRACT = {
 
 export type AcceptanceType = "autonomy" | "regulated_activity" | "asset_rights";
 export const MANDATORY_PAUSE_CLASSES = ["probable_illegality", "fraud", "rights_violation", "severe_account_ban_risk", "overspend", "severe_reputational_crisis"] as const;
-export const MANDATORY_PAUSE_CHANNELS = ["campaign", "instagram", "facebook", "tiktok", "email", "whatsapp"] as const;
-export const MANDATORY_PAUSE_ACTIONS = ["launch", "social_publish", "email_dispatch", "whatsapp_dispatch"] as const;
+export const MANDATORY_PAUSE_CHANNELS = ["campaign", "instagram", "facebook", "tiktok", "email", "whatsapp", "meta_ads", "tiktok_ads", "paid_media"] as const;
+export const MANDATORY_PAUSE_ACTIONS = ["launch", "social_publish", "email_dispatch", "whatsapp_dispatch", "paid_media_sync", "paid_media_execute", "paid_media_budget_update", "paid_media_bid_update", "paid_media_pause", "paid_media_resume"] as const;
 export type MandatoryPauseClass = typeof MANDATORY_PAUSE_CLASSES[number];
 export type MandatoryPauseChannel = typeof MANDATORY_PAUSE_CHANNELS[number];
 export type MandatoryPauseAction = typeof MANDATORY_PAUSE_ACTIONS[number];

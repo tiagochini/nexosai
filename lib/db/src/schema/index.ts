@@ -47,3 +47,4 @@ export * from "./fingerprints";
 export * from "./market-intel";
 export * from "./social-presence";
 export * from "./product-autonomy-contracts";
+export * from "./paid-media";

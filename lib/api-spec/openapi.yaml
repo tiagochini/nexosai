@@ -683,7 +683,188 @@ paths:
               schema:
                 $ref: "#/components/schemas/CreditsBalance"
 
-# ─── Components ──────────────────────────────────────────────────────────────
+  # ─── Paid media ────────────────────────────────────────────────────────────
+  /paid-media/accounts/{provider}/discover:
+    get:
+      operationId: discoverPaidMediaAccounts
+      tags: [paid-media]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/PaidMediaProvider" }]
+      responses:
+        "200": { description: Discovered advertiser accounts, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaAccountDiscoveryResponse" } } } }
+        "400": { $ref: "#/components/responses/PaidMediaValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "409": { $ref: "#/components/responses/PaidMediaConflict" }
+        "429": { $ref: "#/components/responses/PaidMediaProviderError" }
+        "502": { $ref: "#/components/responses/PaidMediaProviderError" }
+  /paid-media/accounts/{provider}:
+    get:
+      operationId: listPaidMediaAccounts
+      tags: [paid-media]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/PaidMediaProvider" }]
+      responses:
+        "200": { description: Workspace advertiser accounts, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaAccountsResponse" } } } }
+        "400": { $ref: "#/components/responses/PaidMediaValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+  /paid-media/accounts/{provider}/{accountId}/select:
+    post:
+      operationId: selectPaidMediaAccount
+      tags: [paid-media]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/PaidMediaProvider" }
+        - { $ref: "#/components/parameters/PaidMediaAccountId" }
+      responses:
+        "200": { description: Selected advertiser account, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaAccountSelectionResponse" } } } }
+        "400": { $ref: "#/components/responses/PaidMediaValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+  /paid-media/accounts/{accountId}/sync:
+    post:
+      operationId: syncPaidMediaAccount
+      tags: [paid-media]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/PaidMediaAccountId" }]
+      requestBody: { required: false, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaSyncInput" } } } }
+      responses:
+        "200": { description: Synchronization result, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaSyncResult" } } } }
+        "400": { $ref: "#/components/responses/PaidMediaValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+        "409": { $ref: "#/components/responses/PaidMediaConflict" }
+        "429": { $ref: "#/components/responses/PaidMediaProviderError" }
+        "502": { $ref: "#/components/responses/PaidMediaProviderError" }
+  /paid-media/sync-status:
+    get:
+      operationId: getPaidMediaSyncStatus
+      tags: [paid-media]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Synchronization cursors, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaSyncStatusResponse" } } } }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+  /paid-media/policies:
+    get:
+      operationId: listPaidMediaPolicies
+      tags: [paid-media]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Workspace paid-media policies, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaPoliciesResponse" } } } }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+  /paid-media/policies/{policyId}:
+    put:
+      operationId: updatePaidMediaPolicy
+      tags: [paid-media]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/PaidMediaPolicyId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaPolicyUpdateInput" } } } }
+      responses:
+        "200": { description: Updated policy, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaPolicyResponse" } } } }
+        "400": { $ref: "#/components/responses/PaidMediaValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+  /paid-media/proposals/generate:
+    post:
+      operationId: generatePaidMediaProposal
+      tags: [paid-media]
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaProposalGenerateInput" } } } }
+      responses:
+        "201": { description: Proposal created, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaProposalResponse" } } } }
+        "400": { $ref: "#/components/responses/PaidMediaValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "409": { $ref: "#/components/responses/PaidMediaConflict" }
+        "423": { $ref: "#/components/responses/PaidMediaLocked" }
+        "502": { $ref: "#/components/responses/PaidMediaProviderError" }
+  /paid-media/proposals:
+    get:
+      operationId: listPaidMediaProposals
+      tags: [paid-media]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Proposals, content: { application/json: { schema: { type: object, properties: { proposals: { type: array, items: { $ref: "#/components/schemas/PaidMediaProposal" } } }, required: [proposals] } } } }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+  /paid-media/proposals/{proposalId}:
+    get:
+      operationId: getPaidMediaProposal
+      tags: [paid-media]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: proposalId, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Proposal, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaProposalResponse" } } } }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+  /paid-media/proposals/{proposalId}/approve:
+    post:
+      operationId: approvePaidMediaProposal
+      tags: [paid-media]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/PaidMediaProposalId" }]
+      requestBody: { required: false, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaProposalDecisionInput" } } } }
+      responses:
+        "200": { description: Approved proposal, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaProposal" } } } }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+        "409": { $ref: "#/components/responses/PaidMediaConflict" }
+  /paid-media/proposals/{proposalId}/reject:
+    post:
+      operationId: rejectPaidMediaProposal
+      tags: [paid-media]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/PaidMediaProposalId" }]
+      requestBody: { required: false, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaProposalDecisionInput" } } } }
+      responses:
+        "200": { description: Rejected proposal, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaProposal" } } } }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+        "409": { $ref: "#/components/responses/PaidMediaConflict" }
+  /paid-media/proposals/{proposalId}/execute:
+    post:
+      operationId: executePaidMediaProposal
+      tags: [paid-media]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/PaidMediaProposalId" }]
+      responses:
+        "200": { description: Execution attempt, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaActionAttempt" } } } }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+        "409": { $ref: "#/components/responses/PaidMediaConflict" }
+        "423": { $ref: "#/components/responses/PaidMediaLocked" }
+        "429": { $ref: "#/components/responses/PaidMediaProviderError" }
+        "502": { $ref: "#/components/responses/PaidMediaProviderError" }
+  /paid-media/attempts:
+    get:
+      operationId: listPaidMediaActionAttempts
+      tags: [paid-media]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Workspace action attempts, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaActionAttemptsResponse" } } } }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+  /paid-media/attempts/{attemptId}:
+    get:
+      operationId: getPaidMediaActionAttempt
+      tags: [paid-media]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/PaidMediaAttemptId" }]
+      responses:
+        "200": { description: Action attempt, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaActionAttemptResponse" } } } }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+  /paid-media/attempts/{attemptId}/rollback:
+    post:
+      operationId: rollbackPaidMediaActionAttempt
+      tags: [paid-media]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/PaidMediaAttemptId" }]
+      responses:
+        "200": { description: Rollback result, content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaProviderActionResult" } } } }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+        "409": { $ref: "#/components/responses/PaidMediaConflict" }
+        "423": { $ref: "#/components/responses/PaidMediaLocked" }
+        "429": { $ref: "#/components/responses/PaidMediaProviderError" }
+        "502": { $ref: "#/components/responses/PaidMediaProviderError" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -692,6 +873,31 @@ components:
       bearerFormat: JWT
 
   parameters:
+    PaidMediaProvider:
+      name: provider
+      in: path
+      required: true
+      schema: { type: string, enum: [meta_ads, tiktok_ads] }
+    PaidMediaAccountId:
+      name: accountId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PaidMediaPolicyId:
+      name: policyId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PaidMediaProposalId:
+      name: proposalId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PaidMediaAttemptId:
+      name: attemptId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     campaignId:
       name: campaignId
       in: path
@@ -1392,3 +1598,213 @@ components:
         limit:
           type: integer
       required: [balance]
+
+    PaidMediaProposalGenerateInput:
+      type: object
+      properties:
+        accountId: { type: string, format: uuid }
+        entityId: { type: string, format: uuid }
+        actionType: { type: string, enum: [pause, resume, update_daily_budget, update_bid] }
+        proposedChange: { type: object, additionalProperties: {} }
+        optimizationOutput: { type: object, additionalProperties: {} }
+        idempotencyKey: { type: string }
+      required: [accountId, entityId, actionType, proposedChange]
+    PaidMediaProviderAccount:
+      type: object
+      properties:
+        providerAccountId: { type: string }
+        name: { type: string }
+        currency: { type: string }
+        timezone: { type: string }
+      required: [providerAccountId, name, currency, timezone]
+    PaidMediaAccount:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        providerAccountId: { type: string }
+        accountName: { type: [string, "null"] }
+        currency: { type: string }
+        timezone: { type: string }
+        isSelected: { type: boolean }
+      required: [id, providerAccountId, currency, timezone, isSelected]
+    PaidMediaAccountDiscoveryResponse:
+      type: object
+      properties:
+        accounts: { type: array, items: { $ref: "#/components/schemas/PaidMediaProviderAccount" } }
+        selectionRequired: { type: boolean }
+      required: [accounts, selectionRequired]
+    PaidMediaAccountsResponse:
+      type: object
+      properties: { accounts: { type: array, items: { $ref: "#/components/schemas/PaidMediaAccount" } } }
+      required: [accounts]
+    PaidMediaAccountSelectionResponse:
+      type: object
+      properties:
+        accountId: { type: string, format: uuid }
+        providerAccountId: { type: string }
+        selected: { type: boolean }
+      required: [accountId, providerAccountId, selected]
+    PaidMediaSyncInput:
+      type: object
+      properties:
+        since: { type: string, format: date }
+        until: { type: string, format: date }
+    PaidMediaSyncError:
+      type: object
+      properties: { entityType: { type: string, enum: [campaign, ad_set, ad, creative] }, message: { type: string } }
+      required: [entityType, message]
+    PaidMediaSyncResult:
+      type: object
+      properties:
+        accountId: { type: string, format: uuid }
+        entitiesUpserted: { type: integer }
+        insightsUpserted: { type: integer }
+        errors: { type: array, items: { $ref: "#/components/schemas/PaidMediaSyncError" } }
+      required: [accountId, entitiesUpserted, insightsUpserted, errors]
+    PaidMediaSyncCursor:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        workspaceId: { type: string, format: uuid }
+        accountId: { type: string, format: uuid }
+        entityType: { type: string, enum: [campaign, ad_set, ad, creative] }
+        cursor: { type: [string, "null"] }
+        syncedThrough: { type: [string, "null"], format: date-time }
+        claimedAt: { type: [string, "null"], format: date-time }
+        claimToken: { type: [string, "null"], format: uuid }
+        lastError: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, workspaceId, accountId, entityType, createdAt, updatedAt]
+    PaidMediaSyncStatusResponse:
+      type: object
+      properties: { cursors: { type: array, items: { $ref: "#/components/schemas/PaidMediaSyncCursor" } } }
+      required: [cursors]
+    PaidMediaPolicy:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        workspaceId: { type: string, format: uuid }
+        provider: { type: [string, "null"], enum: [meta_ads, tiktok_ads, null] }
+        accountId: { type: [string, "null"], format: uuid }
+        enabled: { type: boolean }
+        autoExecute: { type: boolean }
+        mandatoryPause: { type: boolean }
+        mandatoryPauseReason: { type: [string, "null"] }
+        minimumSampleSize: { type: integer }
+        minimumDataQualityScore: { type: string }
+        maxDailyBudgetChangePercent: { type: [string, "null"] }
+        maxDailyBudgetChangeAbsolute: { type: [string, "null"] }
+        maxBidChangePercent: { type: [string, "null"] }
+        acceptedAt: { type: [string, "null"], format: date-time }
+        acceptanceExpiresAt: { type: [string, "null"], format: date-time }
+        acceptedBy: { type: [string, "null"], format: uuid }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, workspaceId, enabled, autoExecute, mandatoryPause, minimumSampleSize, minimumDataQualityScore, createdAt, updatedAt]
+    PaidMediaPolicyUpdateInput:
+      type: object
+      properties:
+        enabled: { type: boolean }
+        mandatoryPause: { type: boolean }
+        mandatoryPauseReason: { type: [string, "null"] }
+        minimumSampleSize: { type: integer, minimum: 0 }
+        minimumDataQualityScore: { type: number, minimum: 0, maximum: 1 }
+        maxDailyBudgetChangePercent: { type: [number, "null"], minimum: 0 }
+        maxDailyBudgetChangeAbsolute: { type: [number, "null"], minimum: 0 }
+        maxBidChangePercent: { type: [number, "null"], minimum: 0 }
+        acceptanceExpiresAt: { type: [string, "null"], format: date-time }
+    PaidMediaPoliciesResponse:
+      type: object
+      properties: { policies: { type: array, items: { $ref: "#/components/schemas/PaidMediaPolicy" } } }
+      required: [policies]
+    PaidMediaPolicyResponse:
+      type: object
+      properties: { policy: { $ref: "#/components/schemas/PaidMediaPolicy" } }
+      required: [policy]
+    PaidMediaProposalDecisionInput:
+      type: object
+      properties:
+        evidence: { type: object, additionalProperties: {} }
+        comment: { type: string }
+    PaidMediaError:
+      type: object
+      properties: { error: { type: string }, code: { type: string } }
+      required: [error, code]
+    PaidMediaProposal:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        workspaceId: { type: string, format: uuid }
+        accountId: { type: [string, "null"], format: uuid }
+        entityId: { type: [string, "null"], format: uuid }
+        provider: { type: string, enum: [meta_ads, tiktok_ads] }
+        actionType: { type: string, enum: [pause, resume, update_daily_budget, update_bid, update_creative_status, update_creative_rotation, cross_platform_budget_move] }
+        status: { type: string, enum: [pending_approval, approved, rejected, expired, executing, verified, failed, rolled_back] }
+        idempotencyKey: { type: string }
+        recommendation: { type: string }
+        metrics: { type: object, additionalProperties: {} }
+        simulation: { type: object, additionalProperties: {} }
+        beforeAllocation: { type: object, additionalProperties: {} }
+        afterAllocation: { type: object, additionalProperties: {} }
+        requestedChange: { type: object, additionalProperties: {} }
+        policyDecision: { type: object, additionalProperties: {} }
+        expiresAt: { type: string, format: date-time }
+      required: [id, workspaceId, provider, actionType, status, idempotencyKey, recommendation, metrics, simulation, expiresAt]
+    PaidMediaProposalResponse:
+      type: object
+      properties: { proposal: { $ref: "#/components/schemas/PaidMediaProposal" } }
+      required: [proposal]
+    PaidMediaActionAttempt:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        proposalId: { type: string, format: uuid }
+        workspaceId: { type: string, format: uuid }
+        attemptNumber: { type: integer }
+        status: { type: string, enum: [pending, executing, succeeded, failed, verification_failed, rolled_back] }
+        idempotencyKey: { type: string }
+        beforeSnapshot: { type: object, additionalProperties: {} }
+        providerResponse: { type: [object, "null"], additionalProperties: {} }
+        verificationEvidence: { type: [object, "null"], additionalProperties: {} }
+        afterSnapshot: { type: [object, "null"], additionalProperties: {} }
+        rollbackEvidence: { type: [object, "null"], additionalProperties: {} }
+        errorCode: { type: [string, "null"] }
+        errorMessage: { type: [string, "null"] }
+        startedAt: { type: [string, "null"], format: date-time }
+        completedAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+      required: [id, proposalId, workspaceId, attemptNumber, status, idempotencyKey, beforeSnapshot, createdAt]
+    PaidMediaActionAttemptsResponse:
+      type: object
+      properties: { attempts: { type: array, items: { $ref: "#/components/schemas/PaidMediaActionAttempt" } } }
+      required: [attempts]
+    PaidMediaActionAttemptResponse:
+      type: object
+      properties: { attempt: { $ref: "#/components/schemas/PaidMediaActionAttempt" } }
+      required: [attempt]
+    PaidMediaProviderActionResult:
+      type: object
+      properties:
+        providerRequestId: { type: string }
+        evidence: { type: object, additionalProperties: {} }
+      required: [evidence]
+  responses:
+    PaidMediaValidationError:
+      description: Invalid paid-media request
+      content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaError" } } }
+    UnauthorizedError:
+      description: Authentication required
+      content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaError" } } }
+    NotFoundError:
+      description: Resource not found
+      content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaError" } } }
+    PaidMediaConflict:
+      description: Paid-media precondition or idempotency conflict
+      content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaError" } } }
+    PaidMediaLocked:
+      description: Execution blocked by mandatory pause or acceptance
+      content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaError" } } }
+    PaidMediaProviderError:
+      description: Upstream advertising provider failed
+      content: { application/json: { schema: { $ref: "#/components/schemas/PaidMediaError" } } }

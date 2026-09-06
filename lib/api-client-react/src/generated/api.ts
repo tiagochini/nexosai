@@ -48,6 +48,7 @@ import type {
   ListAutonomyEvidenceParams,
   ListCampaigns200,
   ListMandatoryPausesParams,
+  ListPaidMediaProposals200,
   ListSequenceContacts200,
   ListSequences200,
   LoginInput,
@@ -58,12 +59,35 @@ import type {
   MandatoryPauseResponse,
   MarkOnboardingSeen200,
   MeResponse,
+  NotFoundErrorResponse,
+  PaidMediaAccountDiscoveryResponse,
+  PaidMediaAccountSelectionResponse,
+  PaidMediaAccountsResponse,
+  PaidMediaActionAttempt,
+  PaidMediaActionAttemptResponse,
+  PaidMediaActionAttemptsResponse,
+  PaidMediaConflictResponse,
+  PaidMediaLockedResponse,
+  PaidMediaPoliciesResponse,
+  PaidMediaPolicyResponse,
+  PaidMediaPolicyUpdateInput,
+  PaidMediaProposal,
+  PaidMediaProposalDecisionInput,
+  PaidMediaProposalGenerateInput,
+  PaidMediaProposalResponse,
+  PaidMediaProviderActionResult,
+  PaidMediaProviderErrorResponse,
+  PaidMediaSyncInput,
+  PaidMediaSyncResult,
+  PaidMediaSyncStatusResponse,
+  PaidMediaValidationErrorResponse,
   RefreshToken200,
   RefreshTokenInput,
   RegisterInput,
   SequenceActivationInput,
   SequenceInput,
   TodayResponse,
+  UnauthorizedErrorResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -2853,3 +2877,1457 @@ export function useGetCreditsBalance<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+export const getDiscoverPaidMediaAccountsUrl = (
+  provider: "meta_ads" | "tiktok_ads",
+) => {
+  return `/api/paid-media/accounts/${provider}/discover`;
+};
+
+export const discoverPaidMediaAccounts = async (
+  provider: "meta_ads" | "tiktok_ads",
+  options?: RequestInit,
+): Promise<PaidMediaAccountDiscoveryResponse> => {
+  return customFetch<PaidMediaAccountDiscoveryResponse>(
+    getDiscoverPaidMediaAccountsUrl(provider),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getDiscoverPaidMediaAccountsQueryKey = (
+  provider: "meta_ads" | "tiktok_ads",
+) => {
+  return [`/api/paid-media/accounts/${provider}/discover`] as const;
+};
+
+export const getDiscoverPaidMediaAccountsQueryOptions = <
+  TData = Awaited<ReturnType<typeof discoverPaidMediaAccounts>>,
+  TError = ErrorType<
+    | PaidMediaValidationErrorResponse
+    | UnauthorizedErrorResponse
+    | PaidMediaConflictResponse
+    | PaidMediaProviderErrorResponse
+  >,
+>(
+  provider: "meta_ads" | "tiktok_ads",
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof discoverPaidMediaAccounts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getDiscoverPaidMediaAccountsQueryKey(provider);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof discoverPaidMediaAccounts>>
+  > = ({ signal }) =>
+    discoverPaidMediaAccounts(provider, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!provider,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof discoverPaidMediaAccounts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type DiscoverPaidMediaAccountsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof discoverPaidMediaAccounts>>
+>;
+export type DiscoverPaidMediaAccountsQueryError = ErrorType<
+  | PaidMediaValidationErrorResponse
+  | UnauthorizedErrorResponse
+  | PaidMediaConflictResponse
+  | PaidMediaProviderErrorResponse
+>;
+
+export function useDiscoverPaidMediaAccounts<
+  TData = Awaited<ReturnType<typeof discoverPaidMediaAccounts>>,
+  TError = ErrorType<
+    | PaidMediaValidationErrorResponse
+    | UnauthorizedErrorResponse
+    | PaidMediaConflictResponse
+    | PaidMediaProviderErrorResponse
+  >,
+>(
+  provider: "meta_ads" | "tiktok_ads",
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof discoverPaidMediaAccounts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getDiscoverPaidMediaAccountsQueryOptions(
+    provider,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getListPaidMediaAccountsUrl = (
+  provider: "meta_ads" | "tiktok_ads",
+) => {
+  return `/api/paid-media/accounts/${provider}`;
+};
+
+export const listPaidMediaAccounts = async (
+  provider: "meta_ads" | "tiktok_ads",
+  options?: RequestInit,
+): Promise<PaidMediaAccountsResponse> => {
+  return customFetch<PaidMediaAccountsResponse>(
+    getListPaidMediaAccountsUrl(provider),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListPaidMediaAccountsQueryKey = (
+  provider: "meta_ads" | "tiktok_ads",
+) => {
+  return [`/api/paid-media/accounts/${provider}`] as const;
+};
+
+export const getListPaidMediaAccountsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPaidMediaAccounts>>,
+  TError = ErrorType<
+    PaidMediaValidationErrorResponse | UnauthorizedErrorResponse
+  >,
+>(
+  provider: "meta_ads" | "tiktok_ads",
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPaidMediaAccounts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListPaidMediaAccountsQueryKey(provider);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listPaidMediaAccounts>>
+  > = ({ signal }) =>
+    listPaidMediaAccounts(provider, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!provider,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPaidMediaAccounts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPaidMediaAccountsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPaidMediaAccounts>>
+>;
+export type ListPaidMediaAccountsQueryError = ErrorType<
+  PaidMediaValidationErrorResponse | UnauthorizedErrorResponse
+>;
+
+export function useListPaidMediaAccounts<
+  TData = Awaited<ReturnType<typeof listPaidMediaAccounts>>,
+  TError = ErrorType<
+    PaidMediaValidationErrorResponse | UnauthorizedErrorResponse
+  >,
+>(
+  provider: "meta_ads" | "tiktok_ads",
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPaidMediaAccounts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPaidMediaAccountsQueryOptions(provider, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getSelectPaidMediaAccountUrl = (
+  provider: "meta_ads" | "tiktok_ads",
+  accountId: string,
+) => {
+  return `/api/paid-media/accounts/${provider}/${accountId}/select`;
+};
+
+export const selectPaidMediaAccount = async (
+  provider: "meta_ads" | "tiktok_ads",
+  accountId: string,
+  options?: RequestInit,
+): Promise<PaidMediaAccountSelectionResponse> => {
+  return customFetch<PaidMediaAccountSelectionResponse>(
+    getSelectPaidMediaAccountUrl(provider, accountId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getSelectPaidMediaAccountMutationOptions = <
+  TError = ErrorType<
+    | PaidMediaValidationErrorResponse
+    | UnauthorizedErrorResponse
+    | NotFoundErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof selectPaidMediaAccount>>,
+    TError,
+    { provider: "meta_ads" | "tiktok_ads"; accountId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof selectPaidMediaAccount>>,
+  TError,
+  { provider: "meta_ads" | "tiktok_ads"; accountId: string },
+  TContext
+> => {
+  const mutationKey = ["selectPaidMediaAccount"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof selectPaidMediaAccount>>,
+    { provider: "meta_ads" | "tiktok_ads"; accountId: string }
+  > = (props) => {
+    const { provider, accountId } = props ?? {};
+
+    return selectPaidMediaAccount(provider, accountId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SelectPaidMediaAccountMutationResult = NonNullable<
+  Awaited<ReturnType<typeof selectPaidMediaAccount>>
+>;
+
+export type SelectPaidMediaAccountMutationError = ErrorType<
+  | PaidMediaValidationErrorResponse
+  | UnauthorizedErrorResponse
+  | NotFoundErrorResponse
+>;
+
+export const useSelectPaidMediaAccount = <
+  TError = ErrorType<
+    | PaidMediaValidationErrorResponse
+    | UnauthorizedErrorResponse
+    | NotFoundErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof selectPaidMediaAccount>>,
+    TError,
+    { provider: "meta_ads" | "tiktok_ads"; accountId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof selectPaidMediaAccount>>,
+  TError,
+  { provider: "meta_ads" | "tiktok_ads"; accountId: string },
+  TContext
+> => {
+  return useMutation(getSelectPaidMediaAccountMutationOptions(options));
+};
+
+export const getSyncPaidMediaAccountUrl = (accountId: string) => {
+  return `/api/paid-media/accounts/${accountId}/sync`;
+};
+
+export const syncPaidMediaAccount = async (
+  accountId: string,
+  paidMediaSyncInput?: PaidMediaSyncInput,
+  options?: RequestInit,
+): Promise<PaidMediaSyncResult> => {
+  return customFetch<PaidMediaSyncResult>(
+    getSyncPaidMediaAccountUrl(accountId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(paidMediaSyncInput),
+    },
+  );
+};
+
+export const getSyncPaidMediaAccountMutationOptions = <
+  TError = ErrorType<
+    | PaidMediaValidationErrorResponse
+    | UnauthorizedErrorResponse
+    | NotFoundErrorResponse
+    | PaidMediaConflictResponse
+    | PaidMediaProviderErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof syncPaidMediaAccount>>,
+    TError,
+    { accountId: string; data: BodyType<PaidMediaSyncInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof syncPaidMediaAccount>>,
+  TError,
+  { accountId: string; data: BodyType<PaidMediaSyncInput> },
+  TContext
+> => {
+  const mutationKey = ["syncPaidMediaAccount"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof syncPaidMediaAccount>>,
+    { accountId: string; data: BodyType<PaidMediaSyncInput> }
+  > = (props) => {
+    const { accountId, data } = props ?? {};
+
+    return syncPaidMediaAccount(accountId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SyncPaidMediaAccountMutationResult = NonNullable<
+  Awaited<ReturnType<typeof syncPaidMediaAccount>>
+>;
+export type SyncPaidMediaAccountMutationBody = BodyType<PaidMediaSyncInput>;
+export type SyncPaidMediaAccountMutationError = ErrorType<
+  | PaidMediaValidationErrorResponse
+  | UnauthorizedErrorResponse
+  | NotFoundErrorResponse
+  | PaidMediaConflictResponse
+  | PaidMediaProviderErrorResponse
+>;
+
+export const useSyncPaidMediaAccount = <
+  TError = ErrorType<
+    | PaidMediaValidationErrorResponse
+    | UnauthorizedErrorResponse
+    | NotFoundErrorResponse
+    | PaidMediaConflictResponse
+    | PaidMediaProviderErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof syncPaidMediaAccount>>,
+    TError,
+    { accountId: string; data: BodyType<PaidMediaSyncInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof syncPaidMediaAccount>>,
+  TError,
+  { accountId: string; data: BodyType<PaidMediaSyncInput> },
+  TContext
+> => {
+  return useMutation(getSyncPaidMediaAccountMutationOptions(options));
+};
+
+export const getGetPaidMediaSyncStatusUrl = () => {
+  return `/api/paid-media/sync-status`;
+};
+
+export const getPaidMediaSyncStatus = async (
+  options?: RequestInit,
+): Promise<PaidMediaSyncStatusResponse> => {
+  return customFetch<PaidMediaSyncStatusResponse>(
+    getGetPaidMediaSyncStatusUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetPaidMediaSyncStatusQueryKey = () => {
+  return [`/api/paid-media/sync-status`] as const;
+};
+
+export const getGetPaidMediaSyncStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPaidMediaSyncStatus>>,
+  TError = ErrorType<UnauthorizedErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPaidMediaSyncStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetPaidMediaSyncStatusQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPaidMediaSyncStatus>>
+  > = ({ signal }) => getPaidMediaSyncStatus({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPaidMediaSyncStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPaidMediaSyncStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPaidMediaSyncStatus>>
+>;
+export type GetPaidMediaSyncStatusQueryError =
+  ErrorType<UnauthorizedErrorResponse>;
+
+export function useGetPaidMediaSyncStatus<
+  TData = Awaited<ReturnType<typeof getPaidMediaSyncStatus>>,
+  TError = ErrorType<UnauthorizedErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPaidMediaSyncStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPaidMediaSyncStatusQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getListPaidMediaPoliciesUrl = () => {
+  return `/api/paid-media/policies`;
+};
+
+export const listPaidMediaPolicies = async (
+  options?: RequestInit,
+): Promise<PaidMediaPoliciesResponse> => {
+  return customFetch<PaidMediaPoliciesResponse>(getListPaidMediaPoliciesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPaidMediaPoliciesQueryKey = () => {
+  return [`/api/paid-media/policies`] as const;
+};
+
+export const getListPaidMediaPoliciesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPaidMediaPolicies>>,
+  TError = ErrorType<UnauthorizedErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPaidMediaPolicies>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPaidMediaPoliciesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listPaidMediaPolicies>>
+  > = ({ signal }) => listPaidMediaPolicies({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPaidMediaPolicies>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPaidMediaPoliciesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPaidMediaPolicies>>
+>;
+export type ListPaidMediaPoliciesQueryError =
+  ErrorType<UnauthorizedErrorResponse>;
+
+export function useListPaidMediaPolicies<
+  TData = Awaited<ReturnType<typeof listPaidMediaPolicies>>,
+  TError = ErrorType<UnauthorizedErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPaidMediaPolicies>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPaidMediaPoliciesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getUpdatePaidMediaPolicyUrl = (policyId: string) => {
+  return `/api/paid-media/policies/${policyId}`;
+};
+
+export const updatePaidMediaPolicy = async (
+  policyId: string,
+  paidMediaPolicyUpdateInput: PaidMediaPolicyUpdateInput,
+  options?: RequestInit,
+): Promise<PaidMediaPolicyResponse> => {
+  return customFetch<PaidMediaPolicyResponse>(
+    getUpdatePaidMediaPolicyUrl(policyId),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(paidMediaPolicyUpdateInput),
+    },
+  );
+};
+
+export const getUpdatePaidMediaPolicyMutationOptions = <
+  TError = ErrorType<
+    | PaidMediaValidationErrorResponse
+    | UnauthorizedErrorResponse
+    | NotFoundErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePaidMediaPolicy>>,
+    TError,
+    { policyId: string; data: BodyType<PaidMediaPolicyUpdateInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updatePaidMediaPolicy>>,
+  TError,
+  { policyId: string; data: BodyType<PaidMediaPolicyUpdateInput> },
+  TContext
+> => {
+  const mutationKey = ["updatePaidMediaPolicy"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updatePaidMediaPolicy>>,
+    { policyId: string; data: BodyType<PaidMediaPolicyUpdateInput> }
+  > = (props) => {
+    const { policyId, data } = props ?? {};
+
+    return updatePaidMediaPolicy(policyId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdatePaidMediaPolicyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updatePaidMediaPolicy>>
+>;
+export type UpdatePaidMediaPolicyMutationBody =
+  BodyType<PaidMediaPolicyUpdateInput>;
+export type UpdatePaidMediaPolicyMutationError = ErrorType<
+  | PaidMediaValidationErrorResponse
+  | UnauthorizedErrorResponse
+  | NotFoundErrorResponse
+>;
+
+export const useUpdatePaidMediaPolicy = <
+  TError = ErrorType<
+    | PaidMediaValidationErrorResponse
+    | UnauthorizedErrorResponse
+    | NotFoundErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePaidMediaPolicy>>,
+    TError,
+    { policyId: string; data: BodyType<PaidMediaPolicyUpdateInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updatePaidMediaPolicy>>,
+  TError,
+  { policyId: string; data: BodyType<PaidMediaPolicyUpdateInput> },
+  TContext
+> => {
+  return useMutation(getUpdatePaidMediaPolicyMutationOptions(options));
+};
+
+export const getGeneratePaidMediaProposalUrl = () => {
+  return `/api/paid-media/proposals/generate`;
+};
+
+export const generatePaidMediaProposal = async (
+  paidMediaProposalGenerateInput: PaidMediaProposalGenerateInput,
+  options?: RequestInit,
+): Promise<PaidMediaProposalResponse> => {
+  return customFetch<PaidMediaProposalResponse>(
+    getGeneratePaidMediaProposalUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(paidMediaProposalGenerateInput),
+    },
+  );
+};
+
+export const getGeneratePaidMediaProposalMutationOptions = <
+  TError = ErrorType<
+    | PaidMediaValidationErrorResponse
+    | UnauthorizedErrorResponse
+    | PaidMediaConflictResponse
+    | PaidMediaLockedResponse
+    | PaidMediaProviderErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generatePaidMediaProposal>>,
+    TError,
+    { data: BodyType<PaidMediaProposalGenerateInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generatePaidMediaProposal>>,
+  TError,
+  { data: BodyType<PaidMediaProposalGenerateInput> },
+  TContext
+> => {
+  const mutationKey = ["generatePaidMediaProposal"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generatePaidMediaProposal>>,
+    { data: BodyType<PaidMediaProposalGenerateInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generatePaidMediaProposal(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GeneratePaidMediaProposalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generatePaidMediaProposal>>
+>;
+export type GeneratePaidMediaProposalMutationBody =
+  BodyType<PaidMediaProposalGenerateInput>;
+export type GeneratePaidMediaProposalMutationError = ErrorType<
+  | PaidMediaValidationErrorResponse
+  | UnauthorizedErrorResponse
+  | PaidMediaConflictResponse
+  | PaidMediaLockedResponse
+  | PaidMediaProviderErrorResponse
+>;
+
+export const useGeneratePaidMediaProposal = <
+  TError = ErrorType<
+    | PaidMediaValidationErrorResponse
+    | UnauthorizedErrorResponse
+    | PaidMediaConflictResponse
+    | PaidMediaLockedResponse
+    | PaidMediaProviderErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generatePaidMediaProposal>>,
+    TError,
+    { data: BodyType<PaidMediaProposalGenerateInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generatePaidMediaProposal>>,
+  TError,
+  { data: BodyType<PaidMediaProposalGenerateInput> },
+  TContext
+> => {
+  return useMutation(getGeneratePaidMediaProposalMutationOptions(options));
+};
+
+export const getListPaidMediaProposalsUrl = () => {
+  return `/api/paid-media/proposals`;
+};
+
+export const listPaidMediaProposals = async (
+  options?: RequestInit,
+): Promise<ListPaidMediaProposals200> => {
+  return customFetch<ListPaidMediaProposals200>(
+    getListPaidMediaProposalsUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListPaidMediaProposalsQueryKey = () => {
+  return [`/api/paid-media/proposals`] as const;
+};
+
+export const getListPaidMediaProposalsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPaidMediaProposals>>,
+  TError = ErrorType<UnauthorizedErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPaidMediaProposals>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListPaidMediaProposalsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listPaidMediaProposals>>
+  > = ({ signal }) => listPaidMediaProposals({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPaidMediaProposals>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPaidMediaProposalsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPaidMediaProposals>>
+>;
+export type ListPaidMediaProposalsQueryError =
+  ErrorType<UnauthorizedErrorResponse>;
+
+export function useListPaidMediaProposals<
+  TData = Awaited<ReturnType<typeof listPaidMediaProposals>>,
+  TError = ErrorType<UnauthorizedErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPaidMediaProposals>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPaidMediaProposalsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getGetPaidMediaProposalUrl = (proposalId: string) => {
+  return `/api/paid-media/proposals/${proposalId}`;
+};
+
+export const getPaidMediaProposal = async (
+  proposalId: string,
+  options?: RequestInit,
+): Promise<PaidMediaProposalResponse> => {
+  return customFetch<PaidMediaProposalResponse>(
+    getGetPaidMediaProposalUrl(proposalId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetPaidMediaProposalQueryKey = (proposalId: string) => {
+  return [`/api/paid-media/proposals/${proposalId}`] as const;
+};
+
+export const getGetPaidMediaProposalQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPaidMediaProposal>>,
+  TError = ErrorType<UnauthorizedErrorResponse | NotFoundErrorResponse>,
+>(
+  proposalId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPaidMediaProposal>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetPaidMediaProposalQueryKey(proposalId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPaidMediaProposal>>
+  > = ({ signal }) =>
+    getPaidMediaProposal(proposalId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!proposalId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPaidMediaProposal>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPaidMediaProposalQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPaidMediaProposal>>
+>;
+export type GetPaidMediaProposalQueryError = ErrorType<
+  UnauthorizedErrorResponse | NotFoundErrorResponse
+>;
+
+export function useGetPaidMediaProposal<
+  TData = Awaited<ReturnType<typeof getPaidMediaProposal>>,
+  TError = ErrorType<UnauthorizedErrorResponse | NotFoundErrorResponse>,
+>(
+  proposalId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPaidMediaProposal>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPaidMediaProposalQueryOptions(proposalId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getApprovePaidMediaProposalUrl = (proposalId: string) => {
+  return `/api/paid-media/proposals/${proposalId}/approve`;
+};
+
+export const approvePaidMediaProposal = async (
+  proposalId: string,
+  paidMediaProposalDecisionInput?: PaidMediaProposalDecisionInput,
+  options?: RequestInit,
+): Promise<PaidMediaProposal> => {
+  return customFetch<PaidMediaProposal>(
+    getApprovePaidMediaProposalUrl(proposalId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(paidMediaProposalDecisionInput),
+    },
+  );
+};
+
+export const getApprovePaidMediaProposalMutationOptions = <
+  TError = ErrorType<
+    | UnauthorizedErrorResponse
+    | NotFoundErrorResponse
+    | PaidMediaConflictResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approvePaidMediaProposal>>,
+    TError,
+    { proposalId: string; data: BodyType<PaidMediaProposalDecisionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof approvePaidMediaProposal>>,
+  TError,
+  { proposalId: string; data: BodyType<PaidMediaProposalDecisionInput> },
+  TContext
+> => {
+  const mutationKey = ["approvePaidMediaProposal"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof approvePaidMediaProposal>>,
+    { proposalId: string; data: BodyType<PaidMediaProposalDecisionInput> }
+  > = (props) => {
+    const { proposalId, data } = props ?? {};
+
+    return approvePaidMediaProposal(proposalId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApprovePaidMediaProposalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof approvePaidMediaProposal>>
+>;
+export type ApprovePaidMediaProposalMutationBody =
+  BodyType<PaidMediaProposalDecisionInput>;
+export type ApprovePaidMediaProposalMutationError = ErrorType<
+  UnauthorizedErrorResponse | NotFoundErrorResponse | PaidMediaConflictResponse
+>;
+
+export const useApprovePaidMediaProposal = <
+  TError = ErrorType<
+    | UnauthorizedErrorResponse
+    | NotFoundErrorResponse
+    | PaidMediaConflictResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approvePaidMediaProposal>>,
+    TError,
+    { proposalId: string; data: BodyType<PaidMediaProposalDecisionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof approvePaidMediaProposal>>,
+  TError,
+  { proposalId: string; data: BodyType<PaidMediaProposalDecisionInput> },
+  TContext
+> => {
+  return useMutation(getApprovePaidMediaProposalMutationOptions(options));
+};
+
+export const getRejectPaidMediaProposalUrl = (proposalId: string) => {
+  return `/api/paid-media/proposals/${proposalId}/reject`;
+};
+
+export const rejectPaidMediaProposal = async (
+  proposalId: string,
+  paidMediaProposalDecisionInput?: PaidMediaProposalDecisionInput,
+  options?: RequestInit,
+): Promise<PaidMediaProposal> => {
+  return customFetch<PaidMediaProposal>(
+    getRejectPaidMediaProposalUrl(proposalId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(paidMediaProposalDecisionInput),
+    },
+  );
+};
+
+export const getRejectPaidMediaProposalMutationOptions = <
+  TError = ErrorType<
+    | UnauthorizedErrorResponse
+    | NotFoundErrorResponse
+    | PaidMediaConflictResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectPaidMediaProposal>>,
+    TError,
+    { proposalId: string; data: BodyType<PaidMediaProposalDecisionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectPaidMediaProposal>>,
+  TError,
+  { proposalId: string; data: BodyType<PaidMediaProposalDecisionInput> },
+  TContext
+> => {
+  const mutationKey = ["rejectPaidMediaProposal"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectPaidMediaProposal>>,
+    { proposalId: string; data: BodyType<PaidMediaProposalDecisionInput> }
+  > = (props) => {
+    const { proposalId, data } = props ?? {};
+
+    return rejectPaidMediaProposal(proposalId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectPaidMediaProposalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rejectPaidMediaProposal>>
+>;
+export type RejectPaidMediaProposalMutationBody =
+  BodyType<PaidMediaProposalDecisionInput>;
+export type RejectPaidMediaProposalMutationError = ErrorType<
+  UnauthorizedErrorResponse | NotFoundErrorResponse | PaidMediaConflictResponse
+>;
+
+export const useRejectPaidMediaProposal = <
+  TError = ErrorType<
+    | UnauthorizedErrorResponse
+    | NotFoundErrorResponse
+    | PaidMediaConflictResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectPaidMediaProposal>>,
+    TError,
+    { proposalId: string; data: BodyType<PaidMediaProposalDecisionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof rejectPaidMediaProposal>>,
+  TError,
+  { proposalId: string; data: BodyType<PaidMediaProposalDecisionInput> },
+  TContext
+> => {
+  return useMutation(getRejectPaidMediaProposalMutationOptions(options));
+};
+
+export const getExecutePaidMediaProposalUrl = (proposalId: string) => {
+  return `/api/paid-media/proposals/${proposalId}/execute`;
+};
+
+export const executePaidMediaProposal = async (
+  proposalId: string,
+  options?: RequestInit,
+): Promise<PaidMediaActionAttempt> => {
+  return customFetch<PaidMediaActionAttempt>(
+    getExecutePaidMediaProposalUrl(proposalId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getExecutePaidMediaProposalMutationOptions = <
+  TError = ErrorType<
+    | UnauthorizedErrorResponse
+    | NotFoundErrorResponse
+    | PaidMediaConflictResponse
+    | PaidMediaLockedResponse
+    | PaidMediaProviderErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof executePaidMediaProposal>>,
+    TError,
+    { proposalId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof executePaidMediaProposal>>,
+  TError,
+  { proposalId: string },
+  TContext
+> => {
+  const mutationKey = ["executePaidMediaProposal"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof executePaidMediaProposal>>,
+    { proposalId: string }
+  > = (props) => {
+    const { proposalId } = props ?? {};
+
+    return executePaidMediaProposal(proposalId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ExecutePaidMediaProposalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof executePaidMediaProposal>>
+>;
+
+export type ExecutePaidMediaProposalMutationError = ErrorType<
+  | UnauthorizedErrorResponse
+  | NotFoundErrorResponse
+  | PaidMediaConflictResponse
+  | PaidMediaLockedResponse
+  | PaidMediaProviderErrorResponse
+>;
+
+export const useExecutePaidMediaProposal = <
+  TError = ErrorType<
+    | UnauthorizedErrorResponse
+    | NotFoundErrorResponse
+    | PaidMediaConflictResponse
+    | PaidMediaLockedResponse
+    | PaidMediaProviderErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof executePaidMediaProposal>>,
+    TError,
+    { proposalId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof executePaidMediaProposal>>,
+  TError,
+  { proposalId: string },
+  TContext
+> => {
+  return useMutation(getExecutePaidMediaProposalMutationOptions(options));
+};
+
+export const getListPaidMediaActionAttemptsUrl = () => {
+  return `/api/paid-media/attempts`;
+};
+
+export const listPaidMediaActionAttempts = async (
+  options?: RequestInit,
+): Promise<PaidMediaActionAttemptsResponse> => {
+  return customFetch<PaidMediaActionAttemptsResponse>(
+    getListPaidMediaActionAttemptsUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListPaidMediaActionAttemptsQueryKey = () => {
+  return [`/api/paid-media/attempts`] as const;
+};
+
+export const getListPaidMediaActionAttemptsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPaidMediaActionAttempts>>,
+  TError = ErrorType<UnauthorizedErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPaidMediaActionAttempts>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListPaidMediaActionAttemptsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listPaidMediaActionAttempts>>
+  > = ({ signal }) =>
+    listPaidMediaActionAttempts({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPaidMediaActionAttempts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPaidMediaActionAttemptsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPaidMediaActionAttempts>>
+>;
+export type ListPaidMediaActionAttemptsQueryError =
+  ErrorType<UnauthorizedErrorResponse>;
+
+export function useListPaidMediaActionAttempts<
+  TData = Awaited<ReturnType<typeof listPaidMediaActionAttempts>>,
+  TError = ErrorType<UnauthorizedErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPaidMediaActionAttempts>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPaidMediaActionAttemptsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getGetPaidMediaActionAttemptUrl = (attemptId: string) => {
+  return `/api/paid-media/attempts/${attemptId}`;
+};
+
+export const getPaidMediaActionAttempt = async (
+  attemptId: string,
+  options?: RequestInit,
+): Promise<PaidMediaActionAttemptResponse> => {
+  return customFetch<PaidMediaActionAttemptResponse>(
+    getGetPaidMediaActionAttemptUrl(attemptId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetPaidMediaActionAttemptQueryKey = (attemptId: string) => {
+  return [`/api/paid-media/attempts/${attemptId}`] as const;
+};
+
+export const getGetPaidMediaActionAttemptQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPaidMediaActionAttempt>>,
+  TError = ErrorType<UnauthorizedErrorResponse | NotFoundErrorResponse>,
+>(
+  attemptId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPaidMediaActionAttempt>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetPaidMediaActionAttemptQueryKey(attemptId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPaidMediaActionAttempt>>
+  > = ({ signal }) =>
+    getPaidMediaActionAttempt(attemptId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!attemptId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPaidMediaActionAttempt>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPaidMediaActionAttemptQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPaidMediaActionAttempt>>
+>;
+export type GetPaidMediaActionAttemptQueryError = ErrorType<
+  UnauthorizedErrorResponse | NotFoundErrorResponse
+>;
+
+export function useGetPaidMediaActionAttempt<
+  TData = Awaited<ReturnType<typeof getPaidMediaActionAttempt>>,
+  TError = ErrorType<UnauthorizedErrorResponse | NotFoundErrorResponse>,
+>(
+  attemptId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPaidMediaActionAttempt>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPaidMediaActionAttemptQueryOptions(
+    attemptId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getRollbackPaidMediaActionAttemptUrl = (attemptId: string) => {
+  return `/api/paid-media/attempts/${attemptId}/rollback`;
+};
+
+export const rollbackPaidMediaActionAttempt = async (
+  attemptId: string,
+  options?: RequestInit,
+): Promise<PaidMediaProviderActionResult> => {
+  return customFetch<PaidMediaProviderActionResult>(
+    getRollbackPaidMediaActionAttemptUrl(attemptId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getRollbackPaidMediaActionAttemptMutationOptions = <
+  TError = ErrorType<
+    | UnauthorizedErrorResponse
+    | NotFoundErrorResponse
+    | PaidMediaConflictResponse
+    | PaidMediaLockedResponse
+    | PaidMediaProviderErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rollbackPaidMediaActionAttempt>>,
+    TError,
+    { attemptId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rollbackPaidMediaActionAttempt>>,
+  TError,
+  { attemptId: string },
+  TContext
+> => {
+  const mutationKey = ["rollbackPaidMediaActionAttempt"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rollbackPaidMediaActionAttempt>>,
+    { attemptId: string }
+  > = (props) => {
+    const { attemptId } = props ?? {};
+
+    return rollbackPaidMediaActionAttempt(attemptId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RollbackPaidMediaActionAttemptMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rollbackPaidMediaActionAttempt>>
+>;
+
+export type RollbackPaidMediaActionAttemptMutationError = ErrorType<
+  | UnauthorizedErrorResponse
+  | NotFoundErrorResponse
+  | PaidMediaConflictResponse
+  | PaidMediaLockedResponse
+  | PaidMediaProviderErrorResponse
+>;
+
+export const useRollbackPaidMediaActionAttempt = <
+  TError = ErrorType<
+    | UnauthorizedErrorResponse
+    | NotFoundErrorResponse
+    | PaidMediaConflictResponse
+    | PaidMediaLockedResponse
+    | PaidMediaProviderErrorResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rollbackPaidMediaActionAttempt>>,
+    TError,
+    { attemptId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof rollbackPaidMediaActionAttempt>>,
+  TError,
+  { attemptId: string },
+  TContext
+> => {
+  return useMutation(getRollbackPaidMediaActionAttemptMutationOptions(options));
+};
