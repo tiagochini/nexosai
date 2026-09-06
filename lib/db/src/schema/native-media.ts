@@ -33,12 +33,9 @@ export const nativeMediaConsentTypeEnum = pgEnum("native_media_consent_type", [
 ]);
 
 const projectWorkspaceForeignKey = (table: { workspaceId: unknown; videoProjectId: unknown }, name: string) =>
-  // Publish stage 1: reference the globally unique project id so Replit can
-  // create the parent (workspace_id,id) unique constraint in the same schema
-  // migration. Restore the composite columns after that constraint is live.
   foreignKey({
-    columns: [table.videoProjectId as any],
-    foreignColumns: [videoProjectsTable.id],
+    columns: [table.workspaceId as any, table.videoProjectId as any],
+    foreignColumns: [videoProjectsTable.workspaceId, videoProjectsTable.id],
     name,
   }).onDelete("cascade");
 
