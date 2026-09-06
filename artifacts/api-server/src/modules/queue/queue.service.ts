@@ -69,17 +69,24 @@ export async function isRedisAvailable(): Promise<boolean> {
 //   development → "dev-campaign-orchestration"
 //   production  → "prod-campaign-orchestration" (or just "campaign-orchestration"
 //                  if no prefix is set, to preserve backward-compat with existing jobs)
-const RAW_PREFIX = process.env["QUEUE_PREFIX"] ?? (process.env["NODE_ENV"] === "production" ? "prod" : "dev");
-const NORMALIZED_PREFIX = RAW_PREFIX.replace(/[^a-zA-Z0-9_-]/g, "-").replace(/-+$/g, "");
-const QUEUE_PREFIX = NORMALIZED_PREFIX ? `${NORMALIZED_PREFIX}-` : "";
+export function buildEnvironmentQueueName(
+  baseName: string,
+  options: { queuePrefix?: string; nodeEnv?: string } = {},
+): string {
+  const rawPrefix = options.queuePrefix
+    ?? ((options.nodeEnv ?? process.env["NODE_ENV"]) === "production" ? "prod" : "dev");
+  const normalizedPrefix = rawPrefix.replace(/[^a-zA-Z0-9_-]/g, "-").replace(/-+$/g, "");
+  return normalizedPrefix ? `${normalizedPrefix}-${baseName}` : baseName;
+}
 
 export const QUEUE_NAMES = {
-  CAMPAIGN_ORCHESTRATION: `${QUEUE_PREFIX}campaign-orchestration`,
-  AGENT_EXECUTION: `${QUEUE_PREFIX}agent-execution`,
-  CONTENT_GENERATION: `${QUEUE_PREFIX}content-generation`,
-  EXECUTION_ENGINE: `${QUEUE_PREFIX}execution-engine`,
-  NURTURING: `${QUEUE_PREFIX}nurturing`,
-  ANALYTICS: `${QUEUE_PREFIX}analytics`,
+  CAMPAIGN_ORCHESTRATION: buildEnvironmentQueueName("campaign-orchestration"),
+  AGENT_EXECUTION: buildEnvironmentQueueName("agent-execution"),
+  CONTENT_GENERATION: buildEnvironmentQueueName("content-generation"),
+  EXECUTION_ENGINE: buildEnvironmentQueueName("execution-engine"),
+  NURTURING: buildEnvironmentQueueName("nurturing"),
+  ANALYTICS: buildEnvironmentQueueName("analytics"),
+  SEQUENCE_SCHEDULER: buildEnvironmentQueueName("sequence-scheduler"),
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

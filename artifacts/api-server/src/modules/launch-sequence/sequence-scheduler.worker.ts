@@ -1,4 +1,4 @@
-import { Worker, type Job } from "bullmq";
+import { Queue, Worker, type Job } from "bullmq";
 import { lte, eq, and, inArray } from "drizzle-orm";
 import {
   db,
@@ -19,8 +19,9 @@ import { createEmailDispatch } from "../email-dispatch/email-dispatch.service.js
 import { emitSequenceEvent } from "./sequence-realtime.js";
 import { sendWeeklyReportsToAll } from "../weekly-report/weekly-report.service.js";
 import { triggerStrategyPhase, triggerContentPhase } from "../orchestration/orchestration.service.js";
+import { QUEUE_NAMES } from "../queue/queue.service.js";
 
-const QUEUE_NAME = "sequence-scheduler";
+export const SEQUENCE_SCHEDULER_QUEUE_NAME = QUEUE_NAMES.SEQUENCE_SCHEDULER;
 
 const redisConnection = {
   url: env.REDIS_URL,
@@ -34,7 +35,10 @@ const redisConnection = {
 };
 
 let worker: Worker | null = null;
+let schedulerQueue: Queue | null = null;
 let fallbackInterval: NodeJS.Timeout | null = null;
+let metaRetryWatchdogInterval: NodeJS.Timeout | null = null;
+let metaRetryWatchdogPromise: Promise<void> | null = null;
 
 // A2 FIX (Bug #05) — process-level in-flight guard.
 // Prevents two concurrent calls to processScheduledItems() even if BullMQ
@@ -464,6 +468,12 @@ export async function processScheduledItems(): Promise<void> {
   await processDmSequences().catch((err) =>
     log.warn({ err }, "DM sequence scheduler tick failed — non-blocking"),
   );
+  const { replayDueMetaWebhookEvents } = await import("../social/meta-webhook-evidence.service.js");
+  await replayDueMetaWebhookEvents().catch(() =>
+    // The replay service emits only sanitized counts and identifiers. Never
+    // attach the provider error here because it may contain request data.
+    log.warn("Meta webhook retry scheduler tick failed — non-blocking"),
+  );
 
   const dueItems = await db
     .select({
@@ -831,24 +841,58 @@ function buildWhatsAppMessageForSegment(
 
 // ── BullMQ worker ─────────────────────────────────────────────────────────────
 
-export function initSequenceScheduler(): void {
+export type SequenceSchedulerOptions = {
+  schedulerEveryMs?: number;
+  metaRetryWatchdogEveryMs?: number;
+  disableRedis?: boolean;
+};
+
+async function runMetaRetryWatchdog(): Promise<void> {
+  const log = logger.child({ component: "meta-retry-watchdog" });
+  try {
+    const { replayDueMetaWebhookEvents } = await import("../social/meta-webhook-evidence.service.js");
+    await replayDueMetaWebhookEvents();
+  } catch {
+    // Provider errors may include request data. The replay service logs only
+    // sanitized identifiers/counts, so keep this lifecycle error generic.
+    log.warn("Meta retry watchdog tick failed — non-blocking");
+  }
+}
+
+function scheduleMetaRetryWatchdog(): void {
+  if (metaRetryWatchdogPromise) return;
+  metaRetryWatchdogPromise = runMetaRetryWatchdog().finally(() => {
+    metaRetryWatchdogPromise = null;
+  });
+}
+
+export async function initSequenceScheduler(options: SequenceSchedulerOptions = {}): Promise<void> {
   const log = logger.child({ component: "sequence-scheduler" });
+  if (worker || schedulerQueue || fallbackInterval || metaRetryWatchdogInterval) return;
+  const schedulerEveryMs = options.schedulerEveryMs ?? 60_000;
+  const watchdogEveryMs = options.metaRetryWatchdogEveryMs ?? 10_000;
 
-  if (env.REDIS_URL) {
+  // Narrow resilience path for DB-backed Meta retries only. CAS claims make
+  // overlap across Redis ticks, processes, and this watchdog harmless.
+  metaRetryWatchdogInterval = setInterval(scheduleMetaRetryWatchdog, watchdogEveryMs);
+  metaRetryWatchdogInterval.unref();
+  log.info({ everyMs: watchdogEveryMs }, "Meta retry watchdog started");
+
+  if (env.REDIS_URL && !options.disableRedis) {
     try {
-      const { Queue } = require("bullmq") as typeof import("bullmq");
-
-      const queue = new Queue(QUEUE_NAME, { connection: redisConnection });
-      queue
-        .upsertJobScheduler(
-          "sequence-tick",
-          { every: 60_000 },
-          { name: "tick", data: {}, opts: { removeOnComplete: 5, removeOnFail: 10 } },
-        )
-        .catch((err) => log.warn({ err }, "Failed to register repeatable job — using setInterval fallback"));
+      schedulerQueue = new Queue(SEQUENCE_SCHEDULER_QUEUE_NAME, { connection: redisConnection });
+      await schedulerQueue.upsertJobScheduler(
+        "sequence-tick",
+        { every: schedulerEveryMs },
+        { name: "tick", data: {}, opts: { removeOnComplete: 5, removeOnFail: 10 } },
+      );
+      log.info(
+        { queue: SEQUENCE_SCHEDULER_QUEUE_NAME, everyMs: schedulerEveryMs },
+        "Sequence scheduler tick registered",
+      );
 
       worker = new Worker(
-        QUEUE_NAME,
+        SEQUENCE_SCHEDULER_QUEUE_NAME,
         async (_job: Job) => {
           await safeProcessScheduledItems();
         },
@@ -869,18 +913,27 @@ export function initSequenceScheduler(): void {
         }
       });
 
-      log.info("Sequence scheduler BullMQ worker started (60s tick)");
+      log.info({ queue: SEQUENCE_SCHEDULER_QUEUE_NAME }, "Sequence scheduler BullMQ worker started");
       return;
     } catch (err) {
       log.warn({ err }, "BullMQ unavailable — falling back to setInterval");
+      if (worker) {
+        await worker.close().catch(() => undefined);
+        worker = null;
+      }
+      if (schedulerQueue) {
+        await schedulerQueue.close().catch(() => undefined);
+        schedulerQueue = null;
+      }
     }
   }
 
   fallbackInterval = setInterval(() => {
     safeProcessScheduledItems().catch((err) => log.error({ err }, "Scheduler tick error"));
-  }, 60_000);
+  }, schedulerEveryMs);
+  fallbackInterval.unref();
 
-  log.info("Sequence scheduler started via setInterval (60s) — Redis not available");
+  log.info({ everyMs: schedulerEveryMs }, "Sequence scheduler started via setInterval — Redis not available");
 }
 
 export async function closeSequenceScheduler(): Promise<void> {
@@ -888,8 +941,19 @@ export async function closeSequenceScheduler(): Promise<void> {
     await worker.close();
     worker = null;
   }
+  if (schedulerQueue) {
+    await schedulerQueue.close();
+    schedulerQueue = null;
+  }
   if (fallbackInterval) {
     clearInterval(fallbackInterval);
     fallbackInterval = null;
+  }
+  if (metaRetryWatchdogInterval) {
+    clearInterval(metaRetryWatchdogInterval);
+    metaRetryWatchdogInterval = null;
+  }
+  if (metaRetryWatchdogPromise) {
+    await metaRetryWatchdogPromise;
   }
 }

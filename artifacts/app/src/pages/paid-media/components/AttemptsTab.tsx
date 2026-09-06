@@ -13,11 +13,14 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 
 export function AttemptsTab() {
   const queryClient = useQueryClient();
-  const { data: attemptsData, isLoading } = useListPaidMediaActionAttempts();
+  const { data: attemptsData, isLoading } = useListPaidMediaActionAttempts({
+    query: { queryKey: getListPaidMediaActionAttemptsQueryKey(), refetchInterval: 15000, refetchOnWindowFocus: true }
+  });
   const rollbackMutation = useRollbackPaidMediaActionAttempt();
 
   const [selectedAttempt, setSelectedAttempt] = useState<any>(null);
@@ -84,7 +87,7 @@ export function AttemptsTab() {
                   {att.completedAt ? new Date(att.completedAt).toLocaleString() : 'Processing...'}
                 </td>
                 <td className="p-3 text-right">
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:bg-primary/10 border border-transparent group-hover:border-primary/20">
+                  <Button variant="ghost" size="icon" aria-label="Ver auditoria da transação" className="h-7 w-7 text-primary hover:bg-primary/10 border border-transparent group-hover:border-primary/20">
                     <FileCode2 className="h-3.5 w-3.5" />
                   </Button>
                 </td>
@@ -100,6 +103,9 @@ export function AttemptsTab() {
             <DialogTitle className="text-primary uppercase tracking-widest flex items-center gap-2">
               <FileCode2 className="h-4 w-4" /> Dossiê de Auditoria (Ledger)
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Detalhes da execução no provedor, respostas brutas e evidências de auditoria.
+            </DialogDescription>
           </DialogHeader>
           
           {selectedAttempt && (

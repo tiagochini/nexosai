@@ -55,6 +55,8 @@ export const env = {
   // DRY_RUN_MODE: skips real AI calls, real payments, real ad publishing.
   // All agent executions are simulated and logged with is_dry_run=true.
   DRY_RUN_MODE: process.env["DRY_RUN_MODE"] === "true",
+  // Explicitly guarded below. This is only for running-server E2E harnesses.
+  META_E2E_TEST_MODE: process.env["NODE_ENV"] !== "production" && process.env["META_E2E_TEST_MODE"] === "true",
   // CART_OPEN: when "true", the register gate shows purchase options for public products.
   // Set to "false" during pre-launch (carrinho fechado) — only invite codes / waitlist work.
   CART_OPEN: process.env["CART_OPEN"] === "true",
@@ -79,6 +81,9 @@ export const env = {
 // ─── Production guard ──────────────────────────────────────────────────────────
 
 if (env.NODE_ENV === "production") {
+  if (process.env["META_E2E_TEST_MODE"] === "true") {
+    throw new Error("META_E2E_TEST_MODE must never be enabled in production");
+  }
   const required: Array<keyof typeof env> = ["DATABASE_URL", "SESSION_SECRET"];
   const missing = required.filter((k) => !env[k]);
   if (missing.length > 0) {

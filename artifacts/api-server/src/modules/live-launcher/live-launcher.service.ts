@@ -1,6 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { db, workspaceIntegrationsTable } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
+import { metaGraphFetch } from "../../lib/meta-graph.transport.js";
 
 export interface LiveSession {
   id: string;
@@ -49,7 +50,7 @@ export async function createInstagramBroadcast(
   description: string,
 ): Promise<{ broadcastId: string; streamUrl: string; streamKey: string } | null> {
   try {
-    const res = await fetch(
+    const res = await metaGraphFetch(
       `https://graph.facebook.com/v20.0/${igUserId}/live_videos`,
       {
         method: "POST",
@@ -84,7 +85,7 @@ export async function goLiveOnInstagram(
   broadcastId: string,
 ): Promise<boolean> {
   try {
-    const res = await fetch(
+    const res = await metaGraphFetch(
       `https://graph.facebook.com/v20.0/${broadcastId}?status=LIVE&access_token=${accessToken}`,
       { method: "POST" },
     );
@@ -99,7 +100,7 @@ export async function endInstagramBroadcast(
   broadcastId: string,
 ): Promise<boolean> {
   try {
-    const res = await fetch(
+    const res = await metaGraphFetch(
       `https://graph.facebook.com/v20.0/${broadcastId}?status=VOD&access_token=${accessToken}`,
       { method: "POST" },
     );
@@ -115,7 +116,7 @@ export async function postBroadcastComment(
   message: string,
 ): Promise<void> {
   try {
-    await fetch(`https://graph.facebook.com/v20.0/${broadcastId}/comments`, {
+    await metaGraphFetch(`https://graph.facebook.com/v20.0/${broadcastId}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message, access_token: accessToken }),

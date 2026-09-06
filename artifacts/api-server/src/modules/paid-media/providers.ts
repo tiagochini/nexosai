@@ -4,6 +4,7 @@ import {
   workspaceIntegrationsTable,
 } from "@workspace/db";
 import { env } from "../../lib/env.js";
+import { metaGraphFetch } from "../../lib/meta-graph.transport.js";
 import {
   normalizeMetaAccounts,
   normalizeMetaInsights,
@@ -128,7 +129,9 @@ async function request(url: string, init: RequestInit, token?: string): Promise<
   let response: Response | undefined;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      response = await fetch(url, { ...init, signal: AbortSignal.timeout(15_000) });
+      response = await (url.startsWith("https://graph.facebook.com/")
+        ? metaGraphFetch(url, { ...init, signal: AbortSignal.timeout(15_000) })
+        : fetch(url, { ...init, signal: AbortSignal.timeout(15_000) }));
       if (response.status !== 429 && response.status < 500) break;
       if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 250 * (2 ** attempt)));
     } catch (error) {

@@ -34,6 +34,7 @@ import {
   pollVideoJob,
 } from "../video-production/video-generation.service.js";
 import { env } from "../../lib/env.js";
+import { metaGraphFetch } from "../../lib/meta-graph.transport.js";
 import type {
   SocialPresenceConfig,
   SocialPresencePost,
@@ -1030,7 +1031,7 @@ export async function publishBio(
     if (platform === "instagram") {
       // Instagram Graph API: update IG Business Account biography
       const url = `https://graph.facebook.com/${GV}/${accountId}`;
-      const resp = await fetch(url, {
+      const resp = await metaGraphFetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ biography: bio, access_token: token }),
@@ -1048,7 +1049,7 @@ export async function publishBio(
     if (platform === "facebook") {
       // Facebook Graph API: update Page bio
       const url = `https://graph.facebook.com/${GV}/${accountId}`;
-      const resp = await fetch(url, {
+      const resp = await metaGraphFetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bio, access_token: token }),
@@ -3322,7 +3323,7 @@ async function addStoryToHighlight(
 
   if (existing) {
     // 2a. Adicionar ao destaque existente
-    await fetch(`https://graph.facebook.com/v22.0/${existing.id}`, {
+    await metaGraphFetch(`https://graph.facebook.com/v22.0/${existing.id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ media_ids_to_add: storyMediaId, access_token: token }),
@@ -3330,7 +3331,7 @@ async function addStoryToHighlight(
     log.info({ postId: storyMediaId, highlight: highlightName }, "presence: story adicionada ao destaque existente");
   } else {
     // 2b. Criar novo destaque
-    await fetch(`https://graph.facebook.com/v22.0/${igAccountId}/highlight_albums`, {
+    await metaGraphFetch(`https://graph.facebook.com/v22.0/${igAccountId}/highlight_albums`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -3437,7 +3438,7 @@ export async function processDmSequences(): Promise<void> {
           stepData.reminderMessage &&
           !stepData.reminderSent
         ) {
-          const reminderRes = await fetch(
+          const reminderRes = await metaGraphFetch(
             `https://graph.facebook.com/v22.0/${seq.igAccountId}/messages`,
             {
               method: "POST",
@@ -3498,7 +3499,7 @@ export async function processDmSequences(): Promise<void> {
         const outboundRequest = { recipient: { id: seq.recipientId }, message: { text: step.message } };
         await recordMetaSendStarted(sendEvidence.id!, outboundEndpoint, outboundRequest);
         // Enviar mensagem principal via Graph API
-        const sendRes = await fetch(
+        const sendRes = await metaGraphFetch(
           `https://graph.facebook.com/v22.0/${seq.igAccountId}/messages`,
           {
             method: "POST",

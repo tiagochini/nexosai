@@ -30,26 +30,110 @@ export interface WorkspaceAlert {
 }
 
 let _socket: Socket | null = null;
+let removeRecoveryListeners: (() => void) | null = null;
+let lastAuthErrorLogAt = 0;
+
+const AUTH_ERROR_LOG_INTERVAL_MS = 60_000;
+
+function getAccessToken() {
+  return typeof window === "undefined"
+    ? ""
+    : window.localStorage.getItem("accessToken") ?? "";
+}
+
+/**
+ * Socket.IO reads `socket.auth` for each connection attempt. Updating it here
+ * lets a connection that is retrying through an API restart use a token that
+ * was refreshed while it was offline.
+ */
+function refreshSocketAuth(socket: Socket) {
+  const token = getAccessToken();
+  const currentAuth =
+    typeof socket.auth === "function" ? undefined : socket.auth;
+  if (currentAuth?.token !== token) {
+    socket.auth = { token };
+  }
+}
+
+function isAuthError(error: Error) {
+  return /\b(401|403)\b|auth|token|jwt|unauthori[sz]ed/i.test(
+    error.message,
+  );
+}
+
+function logAuthError(error: Error) {
+  if (!isAuthError(error)) return;
+
+  const now = Date.now();
+  if (now - lastAuthErrorLogAt < AUTH_ERROR_LOG_INTERVAL_MS) return;
+
+  lastAuthErrorLogAt = now;
+  console.warn(
+    "[Socket] Authentication failed; realtime updates will retry after credentials refresh.",
+    error.message,
+  );
+}
+
+function installRecoveryListeners(socket: Socket) {
+  if (typeof window === "undefined") return () => {};
+
+  const reconnectWhenAvailable = () => {
+    if (_socket !== socket || socket.connected) return;
+
+    refreshSocketAuth(socket);
+    // Calling connect while Socket.IO is already retrying is a no-op, while
+    // this also resumes a socket that was disconnected outside its retry loop.
+    socket.connect();
+  };
+
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      reconnectWhenAvailable();
+    }
+  };
+
+  window.addEventListener("online", reconnectWhenAvailable);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+
+  return () => {
+    window.removeEventListener("online", reconnectWhenAvailable);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+  };
+}
 
 function getSocket(): Socket {
-  if (_socket?.connected) return _socket;
+  if (_socket) return _socket;
 
-  const token = localStorage.getItem("accessToken") ?? "";
+  const token = getAccessToken();
 
-  _socket = io({
+  const socket = io({
     path: "/api/socket.io",
     auth: { token },
     transports: ["websocket", "polling"],
     reconnection: true,
-    reconnectionAttempts: 5,
+    // API workflow deployments briefly take the socket endpoint down. Keep
+    // trying, but spread retries out enough that many clients do not stampede
+    // the API as it comes back.
+    reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,
+    reconnectionDelayMax: 30_000,
+    randomizationFactor: 0.5,
+  });
+  _socket = socket;
+
+  socket.io.on("reconnect_attempt", () => {
+    refreshSocketAuth(socket);
   });
 
-  _socket.on("connect_error", (err) => {
-    console.warn("[Socket] connect error:", err.message);
+  socket.on("connect_error", (error) => {
+    // 502s during a restart are expected and Socket.IO will retry them. Only
+    // surface likely credential failures, throttled to avoid console spam.
+    logAuthError(error);
   });
 
-  return _socket;
+  removeRecoveryListeners = installRecoveryListeners(socket);
+
+  return socket;
 }
 
 export function useCampaignSocket(
@@ -69,19 +153,17 @@ export function useCampaignSocket(
       socket.emit("join:campaign", campaignId);
     };
 
-    if (socket.connected) {
-      joinAndListen();
-    } else {
-      socket.once("connect", joinAndListen);
-    }
-
     const handler = (event: CampaignEvent) => {
       if (event.campaignId === campaignId) {
         cbRef.current(event);
       }
     };
 
+    // Keep this listener for the effect lifetime: rooms are left by the
+    // server during a transport restart and must be joined on every connect.
+    socket.on("connect", joinAndListen);
     socket.on("campaign:event", handler);
+    if (socket.connected) joinAndListen();
 
     return () => {
       socket.off("campaign:event", handler);
@@ -110,19 +192,15 @@ export function useWorkspaceSocket(
       socket.emit("join:workspace");
     };
 
-    if (socket.connected) {
-      joinWorkspace();
-    } else {
-      socket.once("connect", joinWorkspace);
-    }
-
     const handler = (alert: WorkspaceAlert) => {
       if (alert.workspaceId === workspaceId) {
         cbRef.current(alert);
       }
     };
 
+    socket.on("connect", joinWorkspace);
     socket.on("workspace:alert", handler);
+    if (socket.connected) joinWorkspace();
 
     return () => {
       socket.off("workspace:alert", handler);
@@ -132,6 +210,8 @@ export function useWorkspaceSocket(
 }
 
 export function disconnectSocket() {
+  removeRecoveryListeners?.();
+  removeRecoveryListeners = null;
   _socket?.disconnect();
   _socket = null;
 }

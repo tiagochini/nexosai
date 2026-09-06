@@ -23,10 +23,16 @@ export function AccountsTab() {
   const [discoveringProvider, setDiscoveringProvider] = useState<ProviderType | null>(null);
   
   // Query both providers
-  const metaAdsQuery = useListPaidMediaAccounts("meta_ads");
-  const tiktokAdsQuery = useListPaidMediaAccounts("tiktok_ads");
+  const metaAdsQuery = useListPaidMediaAccounts("meta_ads", {
+    query: { queryKey: getListPaidMediaAccountsQueryKey("meta_ads"), refetchInterval: 15000, refetchOnWindowFocus: true }
+  });
+  const tiktokAdsQuery = useListPaidMediaAccounts("tiktok_ads", {
+    query: { queryKey: getListPaidMediaAccountsQueryKey("tiktok_ads"), refetchInterval: 15000, refetchOnWindowFocus: true }
+  });
   
-  const { data: syncStatusData } = useGetPaidMediaSyncStatus();
+  const { data: syncStatusData } = useGetPaidMediaSyncStatus({
+    query: { queryKey: getGetPaidMediaSyncStatusQueryKey(), refetchInterval: 15000, refetchOnWindowFocus: true }
+  });
   
   const selectAccount = useSelectPaidMediaAccount();
   const syncAccount = useSyncPaidMediaAccount();

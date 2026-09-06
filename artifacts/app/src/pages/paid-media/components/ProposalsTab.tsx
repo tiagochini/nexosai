@@ -15,11 +15,14 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 
 export function ProposalsTab() {
   const queryClient = useQueryClient();
-  const { data: proposalsData, isLoading } = useListPaidMediaProposals();
+  const { data: proposalsData, isLoading } = useListPaidMediaProposals({
+    query: { queryKey: getListPaidMediaProposalsQueryKey(), refetchInterval: 15000, refetchOnWindowFocus: true }
+  });
   
   const approveMutation = useApprovePaidMediaProposal();
   const rejectMutation = useRejectPaidMediaProposal();
@@ -99,10 +102,10 @@ export function ProposalsTab() {
               
               {prop.status === 'pending_approval' && (
                 <>
-                  <Button variant="outline" size="icon" onClick={() => handleAction('reject', prop.id)} className="h-8 w-8 text-destructive border-destructive/30 hover:bg-destructive/10" disabled={rejectMutation.isPending} title="Rejeitar Otimização">
+                  <Button variant="outline" size="icon" aria-label="Rejeitar Otimização" onClick={() => handleAction('reject', prop.id)} className="h-8 w-8 text-destructive border-destructive/30 hover:bg-destructive/10" disabled={rejectMutation.isPending} title="Rejeitar Otimização">
                     <X className="h-4 w-4" />
                   </Button>
-                  <Button size="icon" onClick={() => handleAction('approve', prop.id)} className="h-8 w-8 bg-success/20 text-success border border-success/30 hover:bg-success/30 hover:text-success-foreground" disabled={approveMutation.isPending} title="Aprovar Modificação">
+                  <Button size="icon" aria-label="Aprovar Modificação" onClick={() => handleAction('approve', prop.id)} className="h-8 w-8 bg-success/20 text-success border border-success/30 hover:bg-success/30 hover:text-success-foreground" disabled={approveMutation.isPending} title="Aprovar Modificação">
                     <Check className="h-4 w-4" />
                   </Button>
                 </>
@@ -124,6 +127,9 @@ export function ProposalsTab() {
             <DialogTitle className="text-primary uppercase tracking-widest flex items-center gap-2">
               <FileText className="h-4 w-4" /> Dossiê de Otimização
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Detalhes técnicos e rationale da IA para esta proposta de otimização de campanha.
+            </DialogDescription>
           </DialogHeader>
           
           {selectedProposal && (

@@ -9,7 +9,9 @@ import { Shield, ShieldAlert, AlertTriangle } from "lucide-react";
 
 export function PoliciesTab() {
   const queryClient = useQueryClient();
-  const { data: policiesData, isLoading } = useListPaidMediaPolicies();
+  const { data: policiesData, isLoading } = useListPaidMediaPolicies({
+    query: { queryKey: getListPaidMediaPoliciesQueryKey(), refetchInterval: 15000, refetchOnWindowFocus: true }
+  });
   const updatePolicy = useUpdatePaidMediaPolicy();
 
   const [editingId, setEditingId] = useState<string | null>(null);

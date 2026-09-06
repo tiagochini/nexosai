@@ -13,6 +13,7 @@ import {
 import { logger } from "../../lib/logger.js";
 import { isOrganicSocialIntegration } from "../integrations/integration-purpose.js";
 import { claimMetaWebhookEvent, recordMetaSendResult, recordMetaSendStarted } from "../social/meta-webhook-evidence.service.js";
+import { metaGraphFetch } from "../../lib/meta-graph.transport.js";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -76,7 +77,7 @@ async function metaGraph<T>(
   if (params) {
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   }
-  const res = await fetch(url.toString(), {
+  const res = await metaGraphFetch(url.toString(), {
     ...fetchOpts,
     headers: { "Content-Type": "application/json", ...fetchOpts.headers },
   });

@@ -25,7 +25,8 @@ import { startSocialScheduler, stopSocialScheduler } from "./modules/social/soci
 import { startPaidMediaScheduler, stopPaidMediaScheduler } from "./modules/paid-media/paid-media.worker.js";
 import { initSequenceScheduler, closeSequenceScheduler } from "./modules/launch-sequence/sequence-scheduler.worker.js";
 import { startFunnelScheduler } from "./modules/academy/academy-funnel.service.js";
-import { db, campaignAgentsTable, campaignsTable, workspaceIntegrationsTable, workspacesTable, socialPresencePostsTable, socialPresenceConfigTable } from "@workspace/db";
+import { cleanupDisconnectedIntegrationDuplicates } from "./modules/integrations/integration-cleanup.service.js";
+import { db, campaignAgentsTable, campaignsTable, socialPresencePostsTable, socialPresenceConfigTable } from "@workspace/db";
 import { eq, and, lt, sql as sqlRaw, like, inArray } from "drizzle-orm";
 
 const rawPort = process.env["PORT"];
@@ -100,7 +101,7 @@ try {
 initOrchestrationWorker();
 startSocialScheduler();
 startPaidMediaScheduler();
-initSequenceScheduler();
+await initSequenceScheduler();
 startFunnelScheduler();
 
 // ── Boot cleanup: recover orphaned campaigns before accepting any requests ────
@@ -145,22 +146,13 @@ Promise.all([
   // below (after agents are marked failed) so content generation resumes from
   // the last checkpoint saved in contentPiecesTable.
 
-  // INTEGRATION-DEDUP: Delete older duplicate rows in workspace_integrations, keeping only the
-  // most recent row per (workspace_id, provider). This fixes the state where multiple failed
-  // OAuth attempts each created a separate disconnected row (no UNIQUE constraint on the pair).
-  // The OAuth upsert now does DELETE + INSERT to prevent new duplicates, but existing ones
-  // in production must be cleaned up at boot. Safe to run on every boot — idempotent.
-  db.execute(sqlRaw`
-    DELETE FROM workspace_integrations
-    WHERE id NOT IN (
-      SELECT DISTINCT ON (workspace_id, provider) id
-      FROM workspace_integrations
-      ORDER BY workspace_id, provider, created_at DESC
-    )
-  `)
-    .then((result) => {
-      if (result.rowCount && result.rowCount > 0) {
-        logger.error({ count: result.rowCount }, "Boot cleanup: removed duplicate workspace_integrations rows");
+  // Only abandoned OAuth debris with an identical logical identity is removed.
+  // The typed service uses the canonical purpose classifier, which distinguishes
+  // legacy organic Meta Pages from paid-media credentials.
+  cleanupDisconnectedIntegrationDuplicates()
+    .then((count) => {
+      if (count > 0) {
+        logger.error({ count }, "Boot cleanup: removed duplicate workspace_integrations rows");
       }
     })
     .catch((err) => logger.error({ err }, "Boot cleanup (integration dedup) failed")),

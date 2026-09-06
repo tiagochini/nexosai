@@ -1,4 +1,5 @@
 import { logger } from "../../lib/logger.js";
+import { metaGraphFetch } from "../../lib/meta-graph.transport.js";
 import type { SocialPost, WorkspaceIntegration } from "@workspace/db";
 
 export type PublishResult = {
@@ -29,7 +30,7 @@ async function metaGraphRequest<T>(
   if (params) {
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   }
-  const res = await fetch(url.toString(), {
+  const res = await metaGraphFetch(url.toString(), {
     ...fetchOptions,
     headers: { "Content-Type": "application/json", ...fetchOptions.headers },
   });
@@ -389,7 +390,7 @@ export async function getTikTokMetrics(
   accessToken: string
 ): Promise<MetricsResult> {
   try {
-    const res = await fetch(
+    const res = await metaGraphFetch(
       "https://open.tiktokapis.com/v2/post/publish/status/fetch/",
       {
         method: "POST",

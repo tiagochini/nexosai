@@ -61,6 +61,8 @@ import autonomyRouter from "../modules/autonomy/autonomy.routes.js";
 import socialPresenceRouter from "../modules/social-presence/social-presence.routes.js";
 import paidMediaRouter from "../modules/paid-media/paid-media.routes.js";
 import debugRouter from "./debug.routes.js";
+import metaE2eRouter from "./meta-e2e.routes.js";
+import { env } from "../lib/env.js";
 
 const router: IRouter = Router();
 
@@ -130,5 +132,9 @@ router.use("/daily-video", dailyVideoRouter);
 router.use("/market-intel", marketIntelRouter);
 router.use("/autonomy", autonomyRouter);
 router.use("/debug", debugRouter);
+// Never expose harness inspection controls outside explicitly gated E2E runs.
+if (env.META_E2E_TEST_MODE && env.NODE_ENV !== "production") {
+  router.use("/e2e", metaE2eRouter);
+}
 
 export default router;

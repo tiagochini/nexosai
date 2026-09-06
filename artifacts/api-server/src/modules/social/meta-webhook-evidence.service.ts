@@ -1,8 +1,11 @@
-import { and, eq, lte, or } from "drizzle-orm";
+import { and, eq, lt, lte, or } from "drizzle-orm";
 import { db, metaWebhookEventsTable, workspaceIntegrationsTable } from "@workspace/db";
 import { isOrganicSocialIntegration } from "../integrations/integration-purpose.js";
+import { metaGraphFetch } from "../../lib/meta-graph.transport.js";
+import { logger } from "../../lib/logger.js";
 
 const MAX_RETRIES = 3;
+const META_RETRY_BASE_DELAY_MS = 10_000;
 const secretKey = /token|secret|authorization|access_token/i;
 
 export function redactMetaEvidence(value: unknown): unknown {
@@ -12,6 +15,13 @@ export function redactMetaEvidence(value: unknown): unknown {
       [key, secretKey.test(key) ? "[REDACTED]" : redactMetaEvidence(entry)]));
   }
   return value;
+}
+
+function sanitizeMetaError(error: string): string {
+  return error
+    .replace(/((?:access_)?token|secret|authorization)\s*([=:])\s*["']?[^"'\s,&}]+/gi, "$1$2[REDACTED]")
+    .replace(/bearer\s+[^,\s]+/gi, "Bearer [REDACTED]")
+    .slice(0, 500);
 }
 
 export async function claimMetaWebhookEvent(input: {
@@ -36,28 +46,52 @@ export async function recordMetaSendStarted(id: string, endpoint: string, reques
   await db.update(metaWebhookEventsTable).set({
     status: "sending", sendStartedAt: new Date(), outboundEndpoint: endpoint,
     outboundRequest: redactMetaEvidence(request) as Record<string, unknown>, updatedAt: new Date(),
-  }).where(eq(metaWebhookEventsTable.id, id));
+  }).where(and(
+    eq(metaWebhookEventsTable.id, id),
+    or(
+      eq(metaWebhookEventsTable.status, "claimed"),
+      eq(metaWebhookEventsTable.status, "retry_claimed"),
+    ),
+  ));
 }
 
 export async function recordMetaSendResult(id: string, result: {
   providerResponse?: unknown; providerMessageId?: string; error?: string;
 }): Promise<void> {
   const now = new Date();
-  const event = await db.select({ receivedAt: metaWebhookEventsTable.receivedAt })
+  const event = await db.select({
+    receivedAt: metaWebhookEventsTable.receivedAt,
+    retryCount: metaWebhookEventsTable.retryCount,
+  })
     .from(metaWebhookEventsTable).where(eq(metaWebhookEventsTable.id, id)).limit(1);
   const latencyMs = event[0] ? now.getTime() - event[0].receivedAt.getTime() : null;
   const failed = !!result.error;
+  // retryCount is incremented atomically when a due event is claimed.  A failed
+  // replay therefore keeps that count and only dead-letters after its final
+  // Graph attempt, rather than before that attempt can be made.
+  const dead = failed && (event[0]?.retryCount ?? 0) >= MAX_RETRIES;
   await db.update(metaWebhookEventsTable).set({
-    status: failed ? "failed" : "sent",
+    status: failed ? (dead ? "dead_letter" : "failed") : "sent",
     sentAt: failed ? undefined : now,
     latencyMs,
     slaStatus: latencyMs === null ? null : latencyMs < 30_000 ? "under_30s" : "over_30s",
     providerResponse: redactMetaEvidence(result.providerResponse ?? {}) as Record<string, unknown>,
     providerMessageId: result.providerMessageId,
-    error: result.error,
-    nextRetryAt: failed ? new Date(now.getTime() + 60_000) : null,
+    error: result.error ? sanitizeMetaError(result.error) : undefined,
+    deadLetterAt: dead ? now : null,
+    nextRetryAt: failed && !dead
+      ? new Date(now.getTime() + META_RETRY_BASE_DELAY_MS * 2 ** (event[0]?.retryCount ?? 0))
+      : null,
     updatedAt: now,
-  }).where(eq(metaWebhookEventsTable.id, id));
+  }).where(and(
+    eq(metaWebhookEventsTable.id, id),
+    // A retry without usable credentials does not start an HTTP request but is
+    // still exclusively owned by this worker.
+    or(
+      eq(metaWebhookEventsTable.status, "sending"),
+      eq(metaWebhookEventsTable.status, "retry_claimed"),
+    ),
+  ));
 }
 
 export async function listMetaEvidence(workspaceId: string, id?: string) {
@@ -67,23 +101,27 @@ export async function listMetaEvidence(workspaceId: string, id?: string) {
   return db.select().from(metaWebhookEventsTable).where(where).orderBy(metaWebhookEventsTable.receivedAt);
 }
 
-/** Claims a retry once; sending is deliberately performed by the original handler's retry integration. */
+/** Atomically claims due retries.  The status and retryCount CAS prevents two workers replaying one row. */
 export async function claimDueMetaWebhookRetries(now = new Date()) {
   const due = await db.select().from(metaWebhookEventsTable).where(and(
     eq(metaWebhookEventsTable.status, "failed"),
     lte(metaWebhookEventsTable.nextRetryAt, now),
+    lt(metaWebhookEventsTable.retryCount, MAX_RETRIES),
   )).limit(50);
   const claimed = [];
   for (const event of due) {
     const retryCount = event.retryCount + 1;
-    const dead = retryCount >= MAX_RETRIES;
     const updated = await db.update(metaWebhookEventsTable).set({
-      status: dead ? "dead_letter" : "retry_claimed",
+      status: "retry_claimed",
       retryCount,
-      deadLetterAt: dead ? now : null,
-      nextRetryAt: dead ? null : new Date(now.getTime() + 60_000 * 2 ** retryCount),
+      nextRetryAt: null,
       updatedAt: now,
-    }).where(and(eq(metaWebhookEventsTable.id, event.id), eq(metaWebhookEventsTable.status, "failed"))).returning();
+    }).where(and(
+      eq(metaWebhookEventsTable.id, event.id),
+      eq(metaWebhookEventsTable.status, "failed"),
+      eq(metaWebhookEventsTable.retryCount, event.retryCount),
+      lte(metaWebhookEventsTable.nextRetryAt, now),
+    )).returning();
     if (updated[0]) claimed.push(updated[0]);
   }
   return claimed;
@@ -91,9 +129,11 @@ export async function claimDueMetaWebhookRetries(now = new Date()) {
 
 export async function replayDueMetaWebhookEvents(): Promise<void> {
   const events = await claimDueMetaWebhookRetries();
+  let sent = 0;
+  let failed = 0;
   for (const event of events) {
-    if (event.status === "dead_letter" || !event.outboundEndpoint) continue;
     try {
+      if (!event.outboundEndpoint) throw new Error("Retry event has no outbound endpoint");
       const rows = await db.select().from(workspaceIntegrationsTable).where(and(
         eq(workspaceIntegrationsTable.accountId, event.accountId),
         eq(workspaceIntegrationsTable.status, "connected"),
@@ -102,11 +142,12 @@ export async function replayDueMetaWebhookEvents(): Promise<void> {
         !!row.accessToken?.trim() && isOrganicSocialIntegration(row.metadata as Record<string, unknown> | null));
       if (!integration?.accessToken) {
         await recordMetaSendResult(event.id, { error: "Retry credential is disconnected, missing, or not organic social" });
+        failed++;
         continue;
       }
       const payload = event.outboundRequest as Record<string, unknown>;
       await recordMetaSendStarted(event.id, event.outboundEndpoint, payload);
-      const response = await fetch(`https://graph.facebook.com/v22.0${event.outboundEndpoint}`, {
+      const response = await metaGraphFetch(`https://graph.facebook.com/v22.0${event.outboundEndpoint}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...payload, access_token: integration.accessToken }),
         signal: AbortSignal.timeout(10_000),
@@ -114,8 +155,21 @@ export async function replayDueMetaWebhookEvents(): Promise<void> {
       const data = await response.json().catch(() => ({})) as { id?: string; error?: { message?: string } };
       if (!response.ok || data.error) throw new Error(data.error?.message ?? `Meta API ${response.status}`);
       await recordMetaSendResult(event.id, { providerResponse: data, providerMessageId: data.id });
+      sent++;
     } catch (error) {
-      await recordMetaSendResult(event.id, { error: error instanceof Error ? error.message : String(error) });
+      failed++;
+      try {
+        await recordMetaSendResult(event.id, { error: error instanceof Error ? error.message : String(error) });
+      } catch {
+        // A persistence problem for one event must not prevent other accounts
+        // from being replayed in this scheduler tick.
+        logger.warn({ eventId: event.id, retryCount: event.retryCount }, "Meta webhook replay result could not be persisted");
+      }
+      // Do not log provider errors: they can echo credentials or request data.
+      logger.warn({ eventId: event.id, retryCount: event.retryCount }, "Meta webhook replay failed; retry scheduled");
     }
+  }
+  if (events.length > 0) {
+    logger.info({ claimed: events.length, sent, failed }, "Meta webhook retry scheduler tick completed");
   }
 }

@@ -11,6 +11,7 @@ import {
 } from "@workspace/db";
 import { NotFoundError, ValidationError, AppError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
+import { metaGraphFetch } from "../../lib/meta-graph.transport.js";
 import { recordEngagementEvent } from "../launch-sequence/sequence-analytics.service.js";
 import { emitSequenceEvent } from "../launch-sequence/sequence-realtime.js";
 import { runWhatsAppResponseAgent } from "../agents/whatsapp-response.agent.js";
@@ -64,7 +65,7 @@ async function sendMetaTextMessage(
   recipientPhone: string,
   message: string,
 ): Promise<MetaSendResult> {
-  const res = await fetch(
+  const res = await metaGraphFetch(
     `https://graph.facebook.com/v21.0/${creds.phoneNumberId}/messages`,
     {
       method: "POST",
@@ -110,7 +111,7 @@ async function sendMetaTemplateMessage(
         ]
       : [];
 
-  const res = await fetch(
+  const res = await metaGraphFetch(
     `https://graph.facebook.com/v21.0/${creds.phoneNumberId}/messages`,
     {
       method: "POST",
