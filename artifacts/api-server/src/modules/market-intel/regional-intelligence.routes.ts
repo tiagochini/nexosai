@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
-import { acknowledgeAlert, aggregateAudienceSegment, createCompetitor, createVerifiedEvidence, finishMonitorRun, getRegionalProfile, listAlerts, listAudienceOpportunities, listAudienceSegments, listCompetitors, listMonitorRuns, listObservations, listPublicInteractionSignals, listVerifiedEvidence, promoteSignalToAudienceOpportunity, recordObservation, startMonitorRun, transitionAudienceOpportunity, upsertPublicInteractionSignal, upsertRegionalProfile } from "./regional-intelligence.service.js";
+import { acknowledgeAlert, aggregateAudienceSegment, campaignOwned, createCompetitor, createVerifiedEvidence, finishMonitorRun, getRegionalProfile, listAlerts, listAudienceOpportunities, listAudienceSegments, listCompetitors, listMonitorRuns, listObservations, listPublicInteractionSignals, listVerifiedEvidence, promoteSignalToAudienceOpportunity, recordObservation, startMonitorRun, transitionAudienceOpportunity, upsertPublicInteractionSignal, upsertRegionalProfile } from "./regional-intelligence.service.js";
 import { acquireCampaignRegionalIntel, regionalAcquisitionHealth } from "./regional-acquisition.service.js";
-import { RADAR_CATALOG, activateRadarEntitlement, radarUsageSummary, requestRadarPurchase } from "./radar-entitlements.service.js";
+import { RADAR_CATALOG, activateRadarEntitlement, createRadarCheckout, getRadarPayment, radarUsageSummary, requestRadarPurchase, selectNoRadar } from "./radar-entitlements.service.js";
 import { AppError } from "../../lib/errors.js";
 
 const router = Router();
@@ -26,6 +26,44 @@ router.post("/purchase-requests", async (req, res) => {
   if (!parsed.success) return void res.status(400).json({ error: "Solicitação comercial Radar inválida.", code: "VALIDATION_ERROR" });
   const result = await requestRadarPurchase(req.auth.workspaceId, req.auth.userId, parsed.data.package, parsed.data.currency, parsed.data.idempotencyKey, parsed.data.notes);
   res.status(result.deduplicated ? 200 : 202).json({ ...result, payment: "pending_sales", message: "Solicitação registrada. A ativação ocorre somente após confirmação comercial." });
+});
+router.post("/checkout", async (req, res): Promise<void> => {
+  const parsed = z.object({
+    package: z.enum(["RADAR_ESSENTIAL", "RADAR_PRO", "RADAR_SCALE", "WAR_ROOM"]),
+    currency: z.literal("BRL"),
+    method: z.enum(["pix", "boleto"]),
+    idempotencyKey: z.string().min(8).max(200),
+    campaignId: z.string().uuid().optional(),
+  }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Checkout Radar inválido.", code: "VALIDATION_ERROR" }); return; }
+  if (parsed.data.package === "WAR_ROOM" && !parsed.data.campaignId) {
+    res.status(400).json({ error: "War Room exige a campanha da janela de lançamento.", code: "CAMPAIGN_REQUIRED" }); return;
+  }
+  if (parsed.data.package === "WAR_ROOM" && !await campaignOwned(req.auth.workspaceId, parsed.data.campaignId!)) {
+    res.status(404).json({ error: "Campanha não encontrada.", code: "CAMPAIGN_NOT_FOUND" }); return;
+  }
+  try {
+    const order = await createRadarCheckout({
+      workspaceId: req.auth.workspaceId, userId: req.auth.userId, userName: req.auth.email, userEmail: req.auth.email,
+      pkg: parsed.data.package, method: parsed.data.method, idempotencyKey: parsed.data.idempotencyKey, campaignId: parsed.data.campaignId,
+    });
+    const provider = order.providerData as { pixData?: unknown; boletoData?: unknown };
+    res.status(201).json({ payment: { ...order, ...provider, fulfillmentStatus: order.status } });
+  } catch (error) { entitlementError(res, error, "Não foi possível criar o checkout Asaas.", 502); }
+});
+router.get("/payments/:paymentId", async (req, res): Promise<void> => {
+  const id = z.string().uuid().safeParse(req.params["paymentId"]);
+  if (!id.success) { res.status(400).json({ error: "paymentId inválido.", code: "VALIDATION_ERROR" }); return; }
+  const order = await getRadarPayment(req.auth.workspaceId, id.data);
+  if (!order) { res.status(404).json({ error: "Pagamento Radar não encontrado.", code: "NOT_FOUND" }); return; }
+  const provider = order.providerData as { pixData?: unknown; boletoData?: unknown };
+  res.json({ payment: { ...order, ...provider, fulfillmentStatus: order.status }, fulfillmentStatus: order.status });
+});
+router.post("/no-radar", async (req, res): Promise<void> => {
+  const parsed = z.object({ idempotencyKey: z.string().min(8).max(200) }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Escolha No Radar inválida.", code: "VALIDATION_ERROR" }); return; }
+  const choice = await selectNoRadar(req.auth.workspaceId, req.auth.userId, parsed.data.idempotencyKey);
+  res.status(201).json({ choice });
 });
 router.post("/entitlement/admin-activate", async (req, res) => {
   const adminEmails = new Set(["admin@nexos.ai", "founder@nexos.ai", "admin@agencianexos.vip", "founder@agencianexos.vip"]);

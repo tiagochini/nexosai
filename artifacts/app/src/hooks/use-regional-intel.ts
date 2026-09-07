@@ -189,3 +189,48 @@ export function useRequestRegionalUpgrade() {
     },
   });
 }
+
+/** Checkout is deliberately separate from the commercial-request path: Asaas only
+ * accepts BRL and an entitlement is never inferred from creating a charge. */
+export function useStartRadarCheckout() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { package: string; method: "pix" | "boleto"; idempotencyKey: string; campaignId?: string }) =>
+      customFetch<{ payment: any }>(`${API}/regional/checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, currency: "BRL" }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["regional-intel", "entitlement"] });
+    },
+  });
+}
+
+// Kept as an alias while callers migrate to the explicit start-checkout name.
+export const useRadarCheckout = useStartRadarCheckout;
+
+export function useRadarPayment(paymentId: string | null) {
+  return useQuery({
+    queryKey: ["regional-intel", "payment", paymentId],
+    queryFn: () => customFetch<{ payment: any; fulfillmentStatus?: string }>(`${API}/regional/payments/${paymentId}`),
+    enabled: !!paymentId,
+    refetchInterval: (query) => {
+      const payment = query.state.data?.payment;
+      return ["fulfilled", "cancelled", "refunded", "overdue", "expired"].includes(payment?.status) ? false : 5000;
+    },
+  });
+}
+
+export function useSelectNoRadar() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (idempotencyKey: string) =>
+      customFetch<{ choice: any }>(`${API}/regional/no-radar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idempotencyKey }),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["regional-intel", "entitlement"] }),
+  });
+}

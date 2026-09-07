@@ -92,7 +92,7 @@ export async function acquireCampaignRegionalIntel(workspaceId: string, campaign
   inFlightRuns.add(lockKey);
   let run: Awaited<ReturnType<typeof startMonitorRun>> | null = null;
   try {
-    const entitlement = await getRadarEntitlement(workspaceId);
+    const entitlement = await getRadarEntitlement(workspaceId, new Date(), campaignId);
     if (!entitlement.active || !entitlement.limits) throw new RadarEntitlementError(402, "RADAR_ENTITLEMENT_REQUIRED", "Uma assinatura Radar ativa é necessária para iniciar uma nova aquisição.");
     if (mode === "detailed" && entitlement.limits.scanCadenceMinutes >= 10080) throw new RadarEntitlementError(409, "RADAR_SCAN_MODE_NOT_INCLUDED", "O pacote Radar atual permite somente a varredura semanal.");
     const [lastRun] = await db.select({ startedAt: regionalMonitorRunsTable.startedAt }).from(regionalMonitorRunsTable).where(and(
@@ -135,7 +135,7 @@ export async function runRegionalAcquisitionSweep(_legacyMode?: AcquisitionMode,
   const active = await db.select({ workspaceId: regionalProfilesTable.workspaceId, campaignId: regionalProfilesTable.campaignId }).from(regionalProfilesTable).innerJoin(campaignsTable, eq(regionalProfilesTable.campaignId, campaignsTable.id)).where(inArray(campaignsTable.status, ["approved", "executing", "live"]));
   // Bounded batches prevent a large tenant set from fanning out provider calls.
   for (let offset = 0; offset < active.length; offset += 4) await Promise.all(active.slice(offset, offset + 4).map(async (row) => {
-    const entitlement = await getRadarEntitlement(row.workspaceId);
+    const entitlement = await getRadarEntitlement(row.workspaceId, new Date(), row.campaignId);
     if (!entitlement.active || !entitlement.limits) return; // no active package, no provider call or reservation
     const mode = radarScheduledMode(entitlement.limits);
     const bucket = Math.floor(Date.now() / (entitlement.limits.scanCadenceMinutes * 60_000));

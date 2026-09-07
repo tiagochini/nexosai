@@ -45,8 +45,11 @@ export function normalizePublicUrl(value: string): string {
   return url.toString();
 }
 export async function campaignOwned(workspaceId: string, campaignId: string) {
-  const [row] = await db.select({ id: campaignsTable.id }).from(campaignsTable).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).limit(1);
-  return Boolean(row);
+  const [row] = await db.select({ workspaceId: campaignsTable.workspaceId }).from(campaignsTable).where(eq(campaignsTable.id, campaignId)).limit(1);
+  return isCampaignOwnedByWorkspace(row?.workspaceId, workspaceId);
+}
+export function isCampaignOwnedByWorkspace(foundWorkspaceId: string | null | undefined, workspaceId: string) {
+  return foundWorkspaceId === workspaceId;
 }
 async function requireCampaign(workspaceId: string, campaignId: string) {
   if (!await campaignOwned(workspaceId, campaignId)) throw new Error("Campanha não encontrada neste workspace.");

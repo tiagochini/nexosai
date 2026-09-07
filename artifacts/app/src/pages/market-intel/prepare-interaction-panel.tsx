@@ -27,7 +27,7 @@ export function PrepareInteractionPanel({ opportunityId, onSuccess, onCancel }: 
         <p className="text-[10px] text-destructive flex items-center gap-1 font-semibold">
           <AlertTriangle className="h-3 w-3" /> Nenhuma capability ou conta conectada compatível.
         </p>
-        <p className="text-[10px] text-destructive/80 mt-1">Conecte contas e ative capabilities na aba Governança para interagir.</p>
+        <p className="text-[10px] text-destructive/80 mt-1">Conecte contas e ative capacidades na aba Radar de Mercado para interagir.</p>
         <Button size="sm" variant="ghost" className="mt-2 text-[10px] h-6" onClick={onCancel}>Fechar</Button>
       </div>
     );

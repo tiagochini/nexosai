@@ -1,284 +1,109 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Shield, Activity, BarChart2, Users, MapPin, Search, Check, Info, ShieldAlert, CheckCircle2 } from "lucide-react";
-import { useRegionalCatalog, useRegionalEntitlement, useRequestRegionalUpgrade } from "@/hooks/use-regional-intel";
+import { Activity, BarChart2, Check, CheckCircle2, Clock, Copy, Info, Loader2, MapPin, QrCode, Receipt, Search, Shield, Users } from "lucide-react";
+import { useGetCampaigns, useRadarPayment, useRegionalCatalog, useRegionalEntitlement, useRequestRegionalUpgrade, useSelectNoRadar, useStartRadarCheckout } from "@/hooks/use-regional-intel";
 import { toast } from "sonner";
 
-interface Props {
-  className?: string;
-}
+interface Props { className?: string }
+const key = () => crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const date = (value?: string | Date | null) => value ? new Date(value).toLocaleDateString("pt-BR") : "—";
+const price = (value: number, currency: "BRL" | "USD") => (value / 100).toLocaleString(currency === "BRL" ? "pt-BR" : "en-US", { style: "currency", currency });
+const cadence = (minutes: number) => minutes >= 1440 ? "Diária" : minutes >= 360 ? "A cada 6 horas" : `${minutes} min`;
 
 export function CapacityTab({ className = "" }: Props) {
   const [currency, setCurrency] = useState<"BRL" | "USD">("BRL");
-  const [requestingPackage, setRequestingPackage] = useState<string | null>(null);
-
+  const [checkout, setCheckout] = useState<{ package: string; name: string; campaignId?: string } | null>(null);
+  const [payment, setPayment] = useState<any>(null);
   const { data: catalogData, isLoading: catalogLoading } = useRegionalCatalog();
-  const { data: entitlementData, isLoading: entitlementLoading } = useRegionalEntitlement();
-  const { mutate: requestUpgrade, isPending: upgrading } = useRequestRegionalUpgrade();
-
-  if (catalogLoading || entitlementLoading) {
-    return (
-      <div className="py-20 text-center">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-        <p className="mt-4 font-mono text-sm uppercase tracking-wider text-muted-foreground">Carregando governança...</p>
-      </div>
-    );
-  }
-
-  const packages = catalogData?.packages || [];
-  const entitlement = entitlementData?.entitlement;
-  const usage = entitlementData?.usage || {};
-  const active = entitlement?.active;
-  const limits = entitlement?.limits;
+  const { data, isLoading: entitlementLoading, refetch } = useRegionalEntitlement();
+  const commercial = useRequestRegionalUpgrade();
+  const startCheckout = useStartRadarCheckout();
+  const { data: campaignsData, isLoading: campaignsLoading } = useGetCampaigns();
+  const noRadar = useSelectNoRadar();
+  const paid = useRadarPayment(payment?.id ?? null);
+  const entitlement = data?.entitlement;
   const subscription = entitlement?.subscription;
-  const pendingRequest = entitlementData?.pendingRequest;
-  const nextEligibleScanAt = entitlementData?.nextEligibleScanAt;
+  const limits = entitlement?.limits;
+  const isTrial = subscription?.source === "subscription_included" || subscription?.entitlementSource === "subscription_included";
+  const trialStart = subscription?.periodStartsAt;
+  const trialEnd = subscription?.periodEndsAt;
+  const daysRemaining = trialEnd ? Math.max(0, Math.ceil((new Date(trialEnd).getTime() - Date.now()) / 86_400_000)) : null;
+  const fulfillment = paid.data?.fulfillmentStatus ?? paid.data?.payment?.fulfillmentStatus ?? payment?.fulfillmentStatus;
+  const activePayment = paid.data?.payment ?? payment;
 
-  const handleRequestUpgrade = (pkg: string) => {
-    setRequestingPackage(pkg);
-    const idempotencyKey = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
-    requestUpgrade(
-      { package: pkg, currency, idempotencyKey },
-      {
-        onSuccess: () => {
-          toast.success("Solicitação comercial registrada com sucesso. A equipe entrará em contato para ativação.");
-          setRequestingPackage(null);
-        },
-        onError: (err: any) => {
-          toast.error(err.message || "Erro ao solicitar pacote.");
-          setRequestingPackage(null);
-        }
-      }
-    );
+  if (catalogLoading || entitlementLoading) return <div className="py-20 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /><p className="mt-4 font-mono text-sm uppercase tracking-wider text-muted-foreground">Carregando Radar de Mercado…</p></div>;
+
+  const begin = (pkg: any) => {
+    if (currency === "USD") {
+      commercial.mutate({ package: pkg.package, currency, idempotencyKey: key() }, {
+        onSuccess: () => toast.success("Solicitação comercial registrada. O checkout Asaas opera apenas em BRL."),
+        onError: (error: Error) => toast.error(error.message || "Não foi possível registrar a solicitação."),
+      });
+      return;
+    }
+    setCheckout({ package: pkg.package, name: pkg.name });
   };
-
-  const formatPrice = (cents: number, cur: "BRL" | "USD") => {
-    return (cents / 100).toLocaleString(cur === "BRL" ? "pt-BR" : "en-US", {
-      style: "currency",
-      currency: cur,
+  const pay = (method: "pix" | "boleto") => {
+    if (!checkout) return;
+    if (checkout.package === "WAR_ROOM" && !checkout.campaignId) {
+      toast.error("Selecione a campanha da janela War Room.");
+      return;
+    }
+    startCheckout.mutate({ package: checkout.package, method, idempotencyKey: key(), campaignId: checkout.campaignId }, {
+      onSuccess: ({ payment: created }) => { setPayment(created); setCheckout(null); },
+      onError: (error: Error) => toast.error(error.message || "Não foi possível criar o checkout Asaas."),
     });
   };
+  const selectNoRadar = () => noRadar.mutate(key(), {
+    onSuccess: () => toast.success("Preferência salva. O histórico continua disponível; novas varreduras e Councils ficam pausados."),
+    onError: (error: Error) => toast.error(error.message || "Não foi possível salvar sua escolha."),
+  });
+  const pix = activePayment?.pixData;
+  const boleto = activePayment?.boletoData;
 
-  const formatCadence = (minutes: number) => {
-    if (minutes >= 10080) return "Semanal";
-    if (minutes >= 1440) return "Diária";
-    if (minutes >= 360) return "A cada 6 horas";
-    if (minutes <= 60) return `${minutes} minutos`;
-    return `${Math.floor(minutes / 60)} horas`;
-  };
-
-  return (
-    <div className={`space-y-10 ${className}`}>
-      {/* Value Proposition Header */}
-      <div className="grid md:grid-cols-2 gap-8 items-center border border-border/50 bg-card/30 p-6 rounded-sm">
-        <div className="space-y-4">
-          <h2 className="font-mono text-lg uppercase tracking-wider flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" /> Governança do Radar
-          </h2>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            O Radar é o motor de inteligência regional do NexOS. Substitua ferramentas fragmentadas e trabalho de agência por inteligência compartilhada e visibilidade contínua de movimentos concorrenciais. 
-          </p>
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            <li className="flex items-start gap-2"><Check className="h-4 w-4 text-primary shrink-0 mt-0.5" /> Identifique gaps de oferta, conteúdo e plataforma antes dos concorrentes, desenvolvendo um posicionamento baseado em evidências.</li>
-            <li className="flex items-start gap-2"><Check className="h-4 w-4 text-primary shrink-0 mt-0.5" /> Priorize oportunidades qualificadas baseadas no calor social determinístico.</li>
-            <li className="flex items-start gap-2"><Check className="h-4 w-4 text-primary shrink-0 mt-0.5" /> Garanta interações assistidas governadas, operando de forma centralizada.</li>
-          </ul>
-        </div>
-        <div className="border border-amber-500/30 bg-amber-500/5 p-5 rounded-sm space-y-3">
-          <h3 className="font-mono text-xs uppercase tracking-wider text-amber-500 flex items-center gap-2">
-            <ShieldAlert className="h-4 w-4" /> Diretrizes de Governança
-          </h3>
-          <p className="text-xs text-muted-foreground">
-            A atividade de varredura e interação do sistema opera estritamente dentro dos limites do seu pacote ativo.
-          </p>
-          <div className="bg-background/50 border border-border/50 p-3 rounded-sm">
-            <p className="text-xs font-medium text-foreground">As interações de terceiros nunca são automáticas.</p>
-            <p className="text-[11px] text-muted-foreground mt-1">
-              O sistema coleta sinais, identifica oportunidades e sugere ações de engajamento, mas a execução final sempre exige aprovação humana, garantindo compliance e brand safety.
-            </p>
-          </div>
-        </div>
+  return <div className={`space-y-8 ${className}`}>
+    <section className="grid lg:grid-cols-2 gap-6 border border-border/50 bg-card/30 p-6 rounded-sm">
+      <div className="space-y-4">
+        <h2 className="font-mono text-lg uppercase tracking-wider flex items-center gap-2"><Shield className="h-5 w-5 text-primary" /> Radar de Mercado</h2>
+        <p className="text-sm text-muted-foreground leading-relaxed">Inteligência contínua para acompanhar concorrentes e mercado com velocidade e fluidez. O Radar reduz testes e mídia desperdiçados ao transformar evidências em decisões adaptadas ao idioma e à região.</p>
+        <ul className="space-y-2 text-sm text-muted-foreground">
+          <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0" />Monitora movimentos concorrenciais e oportunidades de mercado continuamente.</li>
+          <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0" />Acompanha oportunidades conquistadas no ciclo de vida autorizado, com linguagem adaptativa.</li>
+          <li className="flex gap-2"><Check className="h-4 w-4 text-primary shrink-0" />Execução autônoma integralmente governada: sinais e recomendações não enviam contatos sem autorização.</li>
+        </ul>
       </div>
-
-      {/* Current Entitlement & Usage */}
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-border/50 pb-2">
-          <div>
-            <h3 className="font-mono text-base uppercase tracking-wider">Capacidade Atual</h3>
-            <p className="text-xs text-muted-foreground mt-1">Consumo no período vigente.</p>
-          </div>
-          {active && subscription && (
-            <Badge variant="outline" className="text-primary border-primary/30 bg-primary/5 uppercase tracking-widest text-[10px] py-1 px-3">
-              {subscription.package.replace("_", " ")}
-            </Badge>
-          )}
-        </div>
-
-        {active && limits ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <UsageCard icon={BarChart2} label="Campanhas" used={usage.monitored_campaign || 0} total={limits.monitoredCampaigns} />
-            <UsageCard icon={Users} label="Concorrentes" used={usage.competitor || 0} total={limits.competitors} />
-            <UsageCard icon={MapPin} label="Regiões" used={usage.region || 0} total={limits.regions} />
-            <UsageCard icon={Search} label="Análises de Conselho" used={usage.council_run || 0} total={limits.councilRuns} />
-            
-            <div className="col-span-full grid md:grid-cols-3 gap-4 mt-2">
-              <div className="border border-border/50 bg-card/30 p-4 rounded-sm flex items-center justify-between">
-                <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Cadência de Varredura</span>
-                <span className="text-sm font-medium">{formatCadence(limits.scanCadenceMinutes)}</span>
-              </div>
-              <div className="border border-border/50 bg-card/30 p-4 rounded-sm flex items-center justify-between">
-                <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Retenção de Dados</span>
-                <span className="text-sm font-medium">{limits.retentionDays} dias</span>
-              </div>
-              <div className="border border-border/50 bg-card/30 p-4 rounded-sm flex items-center justify-between">
-                <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Período Ativo</span>
-                <span className="text-[10px] font-mono text-right">
-                  Até {new Date(subscription.package === "WAR_ROOM" ? subscription.windowEndsAt : subscription.periodEndsAt).toLocaleDateString("pt-BR")}
-                </span>
-              </div>
-              {nextEligibleScanAt && (
-                <div className="border border-border/50 bg-card/30 p-4 rounded-sm flex items-center justify-between col-span-full md:col-span-1">
-                  <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Próxima Varredura</span>
-                  <span className="text-sm font-medium">{new Date(nextEligibleScanAt).toLocaleString("pt-BR")}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="border border-border/50 rounded-sm p-12 text-center bg-card/30">
-            <Activity className="h-10 w-10 mx-auto text-muted-foreground mb-4 opacity-50" />
-            <p className="font-mono text-sm uppercase tracking-wider mb-2">Nenhum Pacote Ativo</p>
-            <p className="text-xs text-muted-foreground max-w-md mx-auto">
-              Selecione um dos pacotes comerciais abaixo para habilitar o Radar e iniciar a varredura da sua inteligência regional.
-            </p>
-          </div>
-        )}
+      <div className="border border-primary/30 bg-primary/5 p-5 space-y-3">
+        <h3 className="font-mono text-xs uppercase tracking-wider text-primary">Como funciona</h3>
+        <p className="text-xs text-muted-foreground leading-relaxed">A capacidade ativa define cadência, limites e retenção. Após o período incluído, escolha um pacote base ou <strong>No Radar</strong>. Sem pacote, não há novas varreduras custosas ou Councils; o histórico permanece somente para leitura.</p>
+        <p className="text-xs text-muted-foreground leading-relaxed"><strong>War Room</strong> é um adicional de 30 dias para uma campanha/janela de lançamento — não substitui o pacote base.</p>
       </div>
+    </section>
 
-      {/* Catalog & Upgrade */}
-      <div className="space-y-6 pt-4 border-t border-border/50">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <h3 className="font-mono text-base uppercase tracking-wider">Planos e Licenças</h3>
-            <p className="text-xs text-muted-foreground mt-1">O pacote War Room oferece uma janela de aceleração intensa por 30 dias.</p>
-          </div>
-          <div className="flex bg-background border border-border/50 rounded-sm p-1">
-            <button
-              onClick={() => setCurrency("BRL")}
-              className={`px-3 py-1 text-xs font-mono uppercase tracking-widest rounded-sm transition-colors ${currency === "BRL" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              BRL
-            </button>
-            <button
-              onClick={() => setCurrency("USD")}
-              className={`px-3 py-1 text-xs font-mono uppercase tracking-widest rounded-sm transition-colors ${currency === "USD" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              USD
-            </button>
-          </div>
-        </div>
+    {isTrial && <section className="border border-success/40 bg-success/5 p-5 space-y-3">
+      <div className="flex flex-wrap justify-between gap-3"><div><Badge variant="outline" className="border-success/40 text-success">INCLUÍDO NA ASSINATURA NEXOS</Badge><h3 className="font-mono mt-2 text-base">Radar Pro incluído por 3 meses</h3></div><div className="text-right font-mono text-xs"><div>{daysRemaining} dias restantes</div><div className="text-muted-foreground">{date(trialStart)} — {date(trialEnd)}</div></div></div>
+      <p className="text-sm text-muted-foreground">Sem cobrança de Radar neste período: 3 campanhas, 10 concorrentes, varreduras diárias, 3 regiões/idiomas, 100 Council runs por período de 30 dias, retenção de 180 dias e Centro de Interação.</p>
+    </section>}
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {packages.map((pkg: any) => {
-            const isWarRoom = pkg.package === "WAR_ROOM";
-            const isActive = active && subscription?.package === pkg.package;
-            const price = pkg.prices[currency];
+    <section className="space-y-4"><div className="flex justify-between border-b border-border/50 pb-2"><div><h3 className="font-mono text-base uppercase tracking-wider">Capacidade atual</h3><p className="text-xs text-muted-foreground mt-1">Consumo do período ativo.</p></div><Button variant="ghost" size="sm" onClick={() => refetch()}>Atualizar</Button></div>
+      {entitlement?.active && limits ? <><div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4"><Usage icon={BarChart2} label="Campanhas" used={data?.usage?.monitored_campaign || 0} total={limits.monitoredCampaigns}/><Usage icon={Users} label="Concorrentes" used={data?.usage?.competitor || 0} total={limits.competitors}/><Usage icon={MapPin} label="Regiões / idiomas" used={data?.usage?.region || 0} total={limits.regions}/><Usage icon={Search} label="Council runs" used={data?.usage?.council_run || 0} total={limits.councilRuns}/></div><div className="grid sm:grid-cols-3 gap-3 text-xs"><Stat label="Varredura" value={cadence(limits.scanCadenceMinutes)}/><Stat label="Retenção" value={`${limits.retentionDays} dias`}/><Stat label="Vigência" value={`até ${date(subscription?.windowEndsAt ?? subscription?.periodEndsAt)}`}/></div></> : <div className="border border-border/50 p-8 text-center"><Activity className="h-8 w-8 mx-auto text-muted-foreground mb-3"/><p className="font-mono text-sm">SEM PACOTE ATIVO</p><p className="text-xs text-muted-foreground mt-2">Seu histórico está preservado para consulta. Selecione um pacote para retomar novas varreduras e Councils.</p></div>}
+    </section>
 
-            return (
-              <div key={pkg.package} className={`border rounded-sm flex flex-col ${isWarRoom ? "border-amber-500/50 bg-amber-500/5" : isActive ? "border-primary/50 bg-primary/5" : "border-border/50 bg-card/30"}`}>
-                <div className="p-5 border-b border-border/50 space-y-3 flex-1">
-                  <div className="flex justify-between items-start">
-                    <h4 className={`font-mono text-sm uppercase tracking-wider font-bold ${isWarRoom ? "text-amber-500" : "text-foreground"}`}>
-                      {pkg.name}
-                    </h4>
-                    {isWarRoom && <Badge variant="outline" className="text-[9px] uppercase tracking-widest text-amber-500 border-amber-500/30">Lançamento</Badge>}
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-2xl font-bold font-mono">{formatPrice(price, currency)}</p>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                      por {isWarRoom ? "30 dias" : "mês"}
-                    </p>
-                  </div>
-                  
-                  <ul className="pt-4 space-y-2 text-xs text-muted-foreground">
-                    <li className="flex justify-between"><span>Campanhas:</span> <span className="font-mono text-foreground">{pkg.limits.monitoredCampaigns}</span></li>
-                    <li className="flex justify-between"><span>Concorrentes:</span> <span className="font-mono text-foreground">{pkg.limits.competitors}</span></li>
-                    <li className="flex justify-between"><span>Regiões:</span> <span className="font-mono text-foreground">{pkg.limits.regions}</span></li>
-                    <li className="flex justify-between"><span>Análises (Run):</span> <span className="font-mono text-foreground">{pkg.limits.councilRuns}</span></li>
-                    <li className="flex justify-between"><span>Cadência:</span> <span className="font-mono text-foreground">{formatCadence(pkg.limits.scanCadenceMinutes)}</span></li>
-                    <li className="flex justify-between"><span>Retenção:</span> <span className="font-mono text-foreground">{pkg.limits.retentionDays} d</span></li>
-                    
-                    {pkg.limits.interactionCenter && (
-                      <li className="flex items-center gap-1.5 pt-2 text-green-400">
-                        <CheckCircle2 className="h-3 w-3" /> Centro de Interação
-                      </li>
-                    )}
-                    {pkg.limits.executiveIntelligence && (
-                      <li className="flex items-center gap-1.5 pt-1 text-primary">
-                        <CheckCircle2 className="h-3 w-3" /> Inteligência Executiva
-                      </li>
-                    )}
-                  </ul>
-                </div>
-                <div className="p-5 mt-auto">
-                  {isActive ? (
-                    <Button variant="outline" className="w-full border-primary text-primary" disabled>
-                      Plano Atual
-                    </Button>
-                  ) : (
-                    <Button 
-                      className="w-full flex-col h-auto py-2.5" 
-                      variant={isWarRoom ? "default" : "outline"}
-                      onClick={() => handleRequestUpgrade(pkg.package)}
-                      disabled={(upgrading && requestingPackage === pkg.package) || pendingRequest?.package === pkg.package}
-                    >
-                      <span className="uppercase tracking-widest text-xs font-bold">
-                        {pendingRequest?.package === pkg.package
-                          ? "Solicitação em análise"
-                          : upgrading && requestingPackage === pkg.package
-                            ? "Solicitando..."
-                            : "Solicitar Ativação"}
-                      </span>
-                      <span className="text-[9px] opacity-70 mt-0.5">
-                        {pendingRequest?.package === pkg.package ? "Aguardando retorno comercial" : "Sujeito a aprovação comercial"}
-                      </span>
-                    </Button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <p className="text-[10px] text-muted-foreground text-center flex items-center justify-center gap-1.5 pt-4">
-          <Info className="h-3 w-3" /> A ativação do plano ocorre somente após a confirmação pela equipe comercial.
-        </p>
-      </div>
-    </div>
-  );
+    {activePayment && <section className="border border-primary/40 bg-card/50 p-5 space-y-3"><div className="flex items-center gap-2 font-mono text-sm"><Receipt className="h-4 w-4 text-primary"/> Checkout Radar · {activePayment.method === "pix" ? "PIX" : "Boleto"}</div>
+      {fulfillment === "fulfilled" || activePayment.status === "fulfilled" ? <p className="text-sm text-success flex gap-2"><CheckCircle2 className="h-4 w-4"/>Pagamento confirmado e capacidade ativada.</p> : ["overdue", "expired"].includes(activePayment.status) ? <p className="text-sm text-destructive">Este pagamento venceu/expirou e não ativou o Radar. Gere um novo checkout para continuar.</p> : <><p className="text-xs text-muted-foreground">Aguardando confirmação do Asaas e cumprimento da capacidade. O Radar só fica ativo após essa confirmação.</p>{pix?.qrCode && <img className="w-40 bg-white p-2" src={`data:image/png;base64,${pix.qrCode}`} alt="QR Code PIX"/>}{pix?.copiaECola && <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(pix.copiaECola).then(() => toast.success("PIX copiado."))}><Copy className="h-3.5 w-3.5 mr-1"/>Copiar PIX</Button>}{boleto?.barcodeUrl && <Button variant="outline" size="sm" onClick={() => window.open(boleto.barcodeUrl, "_blank", "noopener,noreferrer")}>Abrir boleto</Button>}<p className="text-[11px] text-muted-foreground flex gap-1"><Clock className="h-3 w-3"/>Status: {activePayment.status} {paid.isFetching ? "· atualizando…" : ""}</p></>}</section>}
+
+    {checkout && <section className="border border-primary/40 bg-primary/5 p-5 flex flex-wrap items-center gap-3"><div className="mr-auto"><p className="font-mono text-sm">{checkout.name}</p><p className="text-xs text-muted-foreground">Checkout Asaas em BRL</p></div>
+      {checkout.package === "WAR_ROOM" && <div className="w-full border border-amber-500/30 bg-amber-500/5 p-3 space-y-2"><p className="text-xs text-muted-foreground">A janela War Room dura 30 dias e fica vinculada somente à campanha selecionada; ela não substitui seu pacote Radar base.</p><label className="block font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Campanha da janela</label><select value={checkout.campaignId ?? ""} onChange={(event) => setCheckout(current => current ? { ...current, campaignId: event.target.value || undefined } : current)} disabled={campaignsLoading} className="w-full max-w-md border border-border/50 bg-background px-3 py-2 text-sm"><option value="">{campaignsLoading ? "Carregando campanhas…" : "Selecione uma campanha"}</option>{campaignsData?.campaigns.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaign.title}</option>)}</select>{!campaignsLoading && !campaignsData?.campaigns.length && <p className="text-xs text-destructive">Crie uma campanha antes de contratar uma janela War Room.</p>}</div>}
+      <Button onClick={() => pay("pix")} disabled={startCheckout.isPending || (checkout.package === "WAR_ROOM" && !checkout.campaignId)}><QrCode className="h-4 w-4 mr-1"/>Pagar com PIX</Button><Button variant="outline" onClick={() => pay("boleto")} disabled={startCheckout.isPending || (checkout.package === "WAR_ROOM" && !checkout.campaignId)}>Boleto</Button><Button variant="ghost" onClick={() => setCheckout(null)}>Cancelar</Button></section>}
+
+    <section className="space-y-4 pt-3 border-t border-border/50"><div className="flex justify-between items-end"><div><h3 className="font-mono text-base uppercase tracking-wider">Escolha após o período incluído</h3><p className="text-xs text-muted-foreground mt-1">Valores atuais. Asaas processa somente BRL; USD solicita atendimento comercial.</p></div><div className="border border-border/50 p-1"><button onClick={() => setCurrency("BRL")} className={`px-3 py-1 text-xs ${currency === "BRL" ? "bg-primary/20 text-primary" : ""}`}>BRL</button><button onClick={() => setCurrency("USD")} className={`px-3 py-1 text-xs ${currency === "USD" ? "bg-primary/20 text-primary" : ""}`}>USD</button></div></div>
+      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">{(catalogData?.packages || []).map((pkg: any) => <Package key={pkg.package} pkg={pkg} currency={currency} active={subscription?.package === pkg.package} onChoose={() => begin(pkg)} loading={startCheckout.isPending || commercial.isPending}/>)}
+        <div className="border border-border/50 p-5 flex flex-col"><h4 className="font-mono text-sm">NO RADAR</h4><p className="text-xs text-muted-foreground mt-3 flex-1">Não renovar o Radar. Sem novas varreduras custosas ou Councils; histórico legível.</p><Button variant="outline" className="mt-5" onClick={selectNoRadar} disabled={noRadar.isPending}>Continuar sem Radar</Button></div></div>
+      <p className="text-[10px] text-muted-foreground flex gap-1"><Info className="h-3 w-3"/>O adicional War Room mantém sua natureza de janela separada de 30 dias e não troca o pacote base.</p>
+    </section>
+  </div>;
 }
 
-function UsageCard({ icon: Icon, label, used, total }: { icon: any, label: string, used: number, total: number }) {
-  const percentage = Math.min(Math.round((used / total) * 100), 100);
-  const isNearLimit = percentage >= 90;
-
-  return (
-    <div className="border border-border/50 bg-card/30 p-4 rounded-sm space-y-3">
-      <div className="flex items-center gap-2">
-        <Icon className="h-4 w-4 text-primary" />
-        <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span>
-      </div>
-      <div className="flex items-end justify-between">
-        <span className="text-2xl font-mono">{used}</span>
-        <span className="text-xs text-muted-foreground mb-1">/ {total}</span>
-      </div>
-      <div className="h-1.5 w-full bg-background rounded-full overflow-hidden">
-        <div 
-          className={`h-full rounded-full transition-all ${isNearLimit ? "bg-destructive" : "bg-primary"}`} 
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-    </div>
-  );
-}
+function Usage({ icon: Icon, label, used, total }: any) { const pct = Math.min(100, Math.round((used / total) * 100)); return <div className="border border-border/50 p-4"><div className="flex gap-2 text-xs text-muted-foreground"><Icon className="h-4 w-4 text-primary"/>{label}</div><div className="mt-3 font-mono text-xl">{used}<span className="text-xs text-muted-foreground"> / {total}</span></div><div className="h-1 mt-2 bg-muted"><div className="h-full bg-primary" style={{ width: `${pct}%` }}/></div></div> }
+function Stat({ label, value }: { label: string; value: string }) { return <div className="border border-border/50 p-3 flex justify-between"><span className="text-muted-foreground">{label}</span><span className="font-mono text-right">{value}</span></div> }
+function Package({ pkg, currency, active, onChoose, loading }: any) { const war = pkg.package === "WAR_ROOM"; return <div className={`border p-5 flex flex-col ${war ? "border-amber-500/50" : "border-border/50"}`}><div className="flex justify-between"><h4 className="font-mono text-sm">{pkg.name}</h4>{war && <Badge variant="outline" className="text-amber-500 border-amber-500/30">ADICIONAL</Badge>}</div><p className="font-mono text-xl mt-3">{price(pkg.prices[currency], currency)}</p><p className="text-[10px] text-muted-foreground">{war ? "por janela de 30 dias" : "por 30 dias"}</p><ul className="text-xs text-muted-foreground mt-4 space-y-1 flex-1"><li>{pkg.limits.monitoredCampaigns} campanhas · {pkg.limits.competitors} concorrentes</li><li>{pkg.limits.regions} regiões · {pkg.limits.councilRuns} Councils</li><li>{cadence(pkg.limits.scanCadenceMinutes)} · {pkg.limits.retentionDays} dias de retenção</li></ul><Button className="mt-5" variant={war ? "default" : "outline"} disabled={active || loading} onClick={onChoose}>{active ? "Pacote atual" : currency === "BRL" ? "Escolher e pagar" : "Solicitar comercial"}</Button></div> }

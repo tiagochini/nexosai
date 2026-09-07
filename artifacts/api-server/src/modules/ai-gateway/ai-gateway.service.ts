@@ -287,6 +287,9 @@ export interface AICompletionResult {
   costUsd: number;
   creditsCharged: number;
   usedFallback?: boolean;
+  /** Canonical chain metadata; optional to preserve existing consumers. */
+  credentialMode?: "native" | "replit";
+  attemptCount?: number;
 }
 
 let anthropicClient: Anthropic | null = null;
@@ -319,8 +322,7 @@ export function getAnthropic(): { client: Anthropic; isNative: boolean } {
       });
       anthropicClientIsNative = false;
     } else {
-      anthropicClient = new Anthropic({ apiKey: "missing" });
-      anthropicClientIsNative = false;
+      throw new AICompletionConfigurationError("Anthropic credentials are unavailable");
     }
   }
   return { client: anthropicClient, isNative: anthropicClientIsNative };
@@ -339,8 +341,7 @@ export function getOpenAI(): { client: OpenAI; isNative: boolean } {
       });
       openaiClientIsNative = false;
     } else {
-      openaiClient = new OpenAI({ apiKey: "missing", timeout: LLM_CALL_TIMEOUT_MS });
-      openaiClientIsNative = false;
+      throw new AICompletionConfigurationError("OpenAI credentials are unavailable");
     }
   }
   return { client: openaiClient, isNative: openaiClientIsNative };
@@ -354,7 +355,7 @@ function getGemini(): GoogleGenerativeAI {
       // Use integration API key with default endpoint (proxy handles routing)
       geminiClient = new GoogleGenerativeAI(env.AI_INTEGRATIONS_GEMINI_API_KEY);
     } else {
-      geminiClient = new GoogleGenerativeAI("missing");
+      throw new AICompletionConfigurationError("Gemini credentials are unavailable");
     }
   }
   return geminiClient;
@@ -453,9 +454,14 @@ async function callAnthropic(
   signal?: AbortSignal,
   timeoutMs?: number,
   log?: Logger,
+  credentialMode: "native" | "replit" = "native",
 ): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel: string }> {
-  const { client, isNative } = getAnthropic();
-  const effectiveModel = isNative ? model : ANTHROPIC_INTEGRATION_MODEL;
+  const native = credentialMode === "native";
+  const apiKey = native ? env.ANTHROPIC_API_KEY : env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+  const baseURL = native ? undefined : env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
+  if (!apiKey || (!native && !baseURL)) throw new AICompletionConfigurationError(`Anthropic ${credentialMode} credentials are unavailable`);
+  const client = new Anthropic({ apiKey, ...(baseURL ? { baseURL } : {}) });
+  const effectiveModel = native ? model : ANTHROPIC_INTEGRATION_MODEL;
   const effectiveSignal = withLLMTimeout(signal, timeoutMs);
   const response = await withRetry(
     () =>
@@ -518,17 +524,14 @@ async function callOpenAI(
   signal?: AbortSignal,
   timeoutMs?: number,
   log?: Logger,
-): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel?: string; usedFallback?: boolean }> {
-  const usingIntegration = !env.OPENAI_API_KEY && hasOpenAIIntegration();
+  credentialMode: "native" | "replit" = "native",
+): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel?: string }> {
+  const usingIntegration = credentialMode === "replit";
   const effectiveLog = log ?? noopLogger;
-
-  if (!env.OPENAI_API_KEY && !hasOpenAIIntegration()) {
-    if (hasAnthropicIntegration()) {
-      return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal, timeoutMs, log);
-    }
-  }
-
-  const { client } = getOpenAI();
+  const apiKey = usingIntegration ? env.AI_INTEGRATIONS_OPENAI_API_KEY : env.OPENAI_API_KEY;
+  const baseURL = usingIntegration ? env.AI_INTEGRATIONS_OPENAI_BASE_URL : undefined;
+  if (!apiKey || (usingIntegration && !baseURL)) throw new AICompletionConfigurationError(`OpenAI ${credentialMode} credentials are unavailable`);
+  const client = new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}), timeout: timeoutMs ?? LLM_CALL_TIMEOUT_MS });
   const effectiveModel = usingIntegration ? OPENAI_INTEGRATION_MODEL : model;
   const effectiveSignal = withLLMTimeout(signal, timeoutMs);
 
@@ -537,8 +540,7 @@ async function callOpenAI(
     ? { max_completion_tokens: maxTokens }
     : { max_tokens: maxTokens };
 
-  try {
-    const response = await withRetry(
+  const response = await withRetry(
       () =>
         client.chat.completions.create(
           {
@@ -555,70 +557,12 @@ async function callOpenAI(
       "callOpenAI",
     );
 
-    return {
-      content: response.choices[0]?.message?.content ?? "",
-      inputTokens: response.usage?.prompt_tokens ?? 0,
-      outputTokens: response.usage?.completion_tokens ?? 0,
-      effectiveModel,
-    };
-  } catch (err: unknown) {
-    const isQuotaError =
-      err instanceof Error &&
-      ("status" in err
-        ? (err as { status?: number }).status === 429
-        : err.message.includes("429") || err.message.includes("quota"));
-
-    const isModelAccessError =
-      err instanceof Error &&
-      ("status" in err && (err as { status?: number }).status === 403
-        ? true
-        : "code" in err && (err as { code?: string }).code === "model_not_found");
-
-    // When native key is quota-exhausted or lacks access to the model, fall back to integration proxy or Anthropic
-    if ((isQuotaError || isModelAccessError) && env.OPENAI_API_KEY) {
-      if (hasOpenAIIntegration()) {
-        const integrationClient = new OpenAI({
-          apiKey: env.AI_INTEGRATIONS_OPENAI_API_KEY,
-          baseURL: env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-          timeout: timeoutMs ?? LLM_CALL_TIMEOUT_MS,
-        });
-        const intModel = OPENAI_INTEGRATION_MODEL;
-        const intIsGpt5 = intModel.startsWith("gpt-5") || intModel.startsWith("o4") || intModel.startsWith("o3");
-        const intParams = intIsGpt5 ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens };
-        const intResponse = await withRetry(
-          () =>
-            integrationClient.chat.completions.create(
-              {
-                model: intModel,
-                messages: [
-                  { role: "system", content: systemPrompt },
-                  ...messages.map((m) => ({ role: m.role, content: m.content })),
-                ],
-                ...intParams,
-              },
-              { signal: effectiveSignal },
-            ),
-          effectiveLog,
-          "callOpenAI-integrationFallback",
-        );
-        effectiveLog.warn({ intModel }, "[callOpenAI] FALLBACK: native key quota/access error — using Replit AI Integrations proxy");
-        return {
-          content: intResponse.choices[0]?.message?.content ?? "",
-          inputTokens: intResponse.usage?.prompt_tokens ?? 0,
-          outputTokens: intResponse.usage?.completion_tokens ?? 0,
-          effectiveModel: intModel,
-          usedFallback: true,
-        };
-      }
-      // No integration either — fall back to Anthropic
-      if (hasAnthropicIntegration()) {
-        effectiveLog.warn({}, "[callOpenAI] FALLBACK: switching provider to Anthropic integration — no OpenAI integration available");
-        const r = await callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal, timeoutMs, log);
-        return { ...r, usedFallback: true };
-      }
-    }
-    throw err;
-  }
+  return {
+    content: response.choices[0]?.message?.content ?? "",
+    inputTokens: response.usage?.prompt_tokens ?? 0,
+    outputTokens: response.usage?.completion_tokens ?? 0,
+    effectiveModel,
+  };
 }
 
 async function callGemini(
@@ -629,19 +573,13 @@ async function callGemini(
   signal?: AbortSignal,
   timeoutMs?: number,
   log?: Logger,
-): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel?: string; usedFallback?: boolean }> {
-  const hasGeminiAccess = env.GEMINI_API_KEY || env.AI_INTEGRATIONS_GEMINI_API_KEY;
+  credentialMode: "native" | "replit" = "native",
+): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel?: string }> {
+  const apiKey = credentialMode === "native" ? env.GEMINI_API_KEY : env.AI_INTEGRATIONS_GEMINI_API_KEY;
   const effectiveLog = log ?? noopLogger;
-
-  if (!hasGeminiAccess) {
-    effectiveLog.warn({}, "[callGemini] FALLBACK: no Gemini key configured — routing to Anthropic integration");
-    const r = await callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal, timeoutMs, log);
-    return { ...r, usedFallback: true };
-  }
-
-  try {
-    const client = getGemini();
-    const effectiveModel = env.GEMINI_API_KEY ? model : "gemini-3-flash-preview";
+  if (!apiKey) throw new AICompletionConfigurationError(`Gemini ${credentialMode} credentials are unavailable`);
+  const client = new GoogleGenerativeAI(apiKey);
+  const effectiveModel = credentialMode === "native" ? model : "gemini-3-flash-preview";
     const geminiModel = client.getGenerativeModel({
       model: effectiveModel,
       systemInstruction: systemPrompt,
@@ -668,13 +606,6 @@ async function callGemini(
       outputTokens: response.usageMetadata?.candidatesTokenCount ?? 0,
       effectiveModel,
     };
-  } catch (geminiErr) {
-    // Gemini unavailable or quota exceeded — fall back to Anthropic integration
-    if (hasAnthropicIntegration()) {
-      return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal, timeoutMs, log);
-    }
-    throw geminiErr;
-  }
 }
 
 // ── Vision support (images → Claude) ─────────────────────────────────────────
@@ -902,17 +833,95 @@ export function buildLocaleInstruction(locale: string | null | undefined): strin
   return `\n\nLANGUAGE INSTRUCTION: You MUST respond exclusively in ${lang}. Every word of your output — analysis, copy, labels, JSON values, messages, recommendations — must be written in ${lang}. Do not mix languages.`;
 }
 
-function getDefaultModelForProvider(
-  provider: "anthropic" | "openai" | "gemini",
-): string {
-  switch (provider) {
-    case "anthropic":
-      return hasAnthropicIntegration() ? ANTHROPIC_INTEGRATION_MODEL : ANTHROPIC_NATIVE_MODEL;
-    case "openai":
-      return hasOpenAIIntegration() ? OPENAI_INTEGRATION_MODEL : OPENAI_NATIVE_MODEL;
-    case "gemini":
-      return GEMINI_FLASH_NATIVE;
+export type CompletionCredentialMode = "native" | "replit";
+export interface CanonicalCompletionAttempt {
+  provider: "anthropic" | "openai" | "gemini";
+  credentialMode: CompletionCredentialMode;
+  model: string;
+}
+
+/** The only provider ordering used for text completions. */
+export function planCanonicalCompletionChain(): CanonicalCompletionAttempt[] {
+  return [
+    { provider: "anthropic", credentialMode: "native", model: ANTHROPIC_NATIVE_MODEL },
+    { provider: "openai", credentialMode: "native", model: OPENAI_NATIVE_MODEL },
+    { provider: "gemini", credentialMode: "native", model: GEMINI_NATIVE_MODEL },
+    // Replit is one final stage. Prefer its OpenAI-compatible integration.
+    { provider: "openai", credentialMode: "replit", model: OPENAI_INTEGRATION_MODEL },
+    { provider: "anthropic", credentialMode: "replit", model: ANTHROPIC_INTEGRATION_MODEL },
+  ];
+}
+
+export class AICompletionConfigurationError extends Error {
+  readonly code = "AI_COMPLETION_UNAVAILABLE";
+  constructor(message: string) {
+    super(message);
+    this.name = "AICompletionConfigurationError";
   }
+}
+
+export class AICompletionAggregateError extends Error {
+  readonly code = "AI_COMPLETION_EXHAUSTED";
+  constructor(readonly attempts: Array<{ provider: string; credentialMode: string; reason: string }>) {
+    super("No AI completion provider is currently available");
+    this.name = "AICompletionAggregateError";
+  }
+}
+
+export interface CanonicalChainExecution<T> {
+  value: T;
+  attempt: CanonicalCompletionAttempt;
+  attemptCount: number;
+  usedFallback: boolean;
+  failures: Array<{ provider: string; credentialMode: string; reason: string }>;
+}
+
+/**
+ * Pure, injectable chain executor. It deliberately has no SDK, environment, DB,
+ * or logger dependency so ordering and terminal behavior can be unit tested.
+ */
+export async function executeCanonicalCompletionChain<T>(
+  attempts: CanonicalCompletionAttempt[],
+  isAvailable: (attempt: CanonicalCompletionAttempt) => boolean,
+  run: (attempt: CanonicalCompletionAttempt) => Promise<T>,
+  onSkip?: (attempt: CanonicalCompletionAttempt) => void,
+  onFailure?: (attempt: CanonicalCompletionAttempt, error: unknown) => void,
+): Promise<CanonicalChainExecution<T>> {
+  const failures: Array<{ provider: string; credentialMode: string; reason: string }> = [];
+  let invoked = 0;
+  let available = 0;
+  for (const attempt of attempts) {
+    if (!isAvailable(attempt)) {
+      onSkip?.(attempt);
+      continue;
+    }
+    available++;
+    invoked++;
+    try {
+      const value = await run(attempt);
+      return { value, attempt, attemptCount: invoked, usedFallback: invoked > 1, failures };
+    } catch (error) {
+      failures.push({
+        provider: attempt.provider,
+        credentialMode: attempt.credentialMode,
+        reason: error instanceof Error ? error.message.replace(/sk-[A-Za-z0-9_-]+/g, "[redacted]") : "provider_error",
+      });
+      onFailure?.(attempt, error);
+    }
+  }
+  if (available === 0) throw new AICompletionConfigurationError("No native or Replit AI credentials are configured");
+  throw new AICompletionAggregateError(failures);
+}
+
+function hasCredentials(attempt: CanonicalCompletionAttempt): boolean {
+  if (attempt.credentialMode === "native") {
+    return attempt.provider === "anthropic" ? !!env.ANTHROPIC_API_KEY
+      : attempt.provider === "openai" ? !!env.OPENAI_API_KEY
+      : !!env.GEMINI_API_KEY;
+  }
+  return attempt.provider === "anthropic" ? hasAnthropicIntegration()
+    : attempt.provider === "openai" ? hasOpenAIIntegration()
+    : !!env.AI_INTEGRATIONS_GEMINI_API_KEY;
 }
 
 export async function completeWithAgent(
@@ -928,13 +937,9 @@ export async function completeWithAgent(
   timeoutMs?: number,
 ): Promise<AICompletionResult> {
   const agentConfig = AGENT_PROVIDER_MAP[agentRole];
-  const provider = providerOverride ?? agentConfig.provider;
-  const baseModel = providerOverride
-    ? getDefaultModelForProvider(providerOverride)
-    : agentConfig.model;
-  // On retry fallback mode, swap heavy models for lighter/faster alternatives
-  // to break deterministic failure loops (safety blocks, context overflow, etc.)
-  const model = _fallbackMode && FALLBACK_MODEL_MAP[baseModel] ? FALLBACK_MODEL_MAP[baseModel] : baseModel;
+  // providerOverride remains in this public signature for legacy test callers, but
+  // production completions always use this canonical chain.
+  if (providerOverride) log.warn({ agentRole, providerOverride }, "Ignoring providerOverride: canonical provider order is enforced");
   const effectiveSystem = systemPrompt + buildLocaleInstruction(locale);
   const startTime = Date.now();
   // No AbortSignal by default — background workers must never be killed by timeout.
@@ -942,66 +947,33 @@ export async function completeWithAgent(
   // short-lived ceiling (e.g. interactive intake/briefing chat) can pass timeoutMs
   // explicitly; this never changes the default (LLM_CALL_TIMEOUT_MS) for other callers.
 
-  let result: { content: string; inputTokens: number; outputTokens: number; effectiveModel?: string; usedFallback?: boolean };
-  let internalFallback = false;
-
   const effectiveMaxTokens = maxTokens ?? 16384;
-  switch (provider) {
-    case "anthropic":
-      try {
-        result = await callAnthropic(model, effectiveSystem, messages, effectiveMaxTokens, undefined, timeoutMs, log);
-      } catch (anthropicErr) {
-        log.warn(
-          { agentRole, model, err: String(anthropicErr) },
-          "[completeWithAgent] FALLBACK: Anthropic failed — routing to OpenAI",
-        );
-        // Fallback gets its own (longer) timeout — the caller's ceiling applied to the primary only.
-        result = await callOpenAI(
-          getDefaultModelForProvider("openai"),
-          effectiveSystem,
-          messages,
-          effectiveMaxTokens,
-          undefined,
-          undefined, // no caller timeout — fallback must complete
-          log,
-        );
-        internalFallback = true;
-      }
-      break;
-    case "openai":
-      result = await callOpenAI(model, effectiveSystem, messages, effectiveMaxTokens, undefined, timeoutMs, log);
-      if (result.usedFallback) internalFallback = true;
-      break;
-    case "gemini":
-      try {
-        result = await callGemini(model, effectiveSystem, messages, effectiveMaxTokens, undefined, timeoutMs, log);
-        if (result.usedFallback) internalFallback = true;
-      } catch (geminiErr) {
-        log.warn(
-          { agentRole, model, err: String(geminiErr) },
-          "[completeWithAgent] FALLBACK: Gemini failed — routing to OpenAI",
-        );
-        // Fallback gets its own (longer) timeout — the caller's ceiling applied to the primary only.
-        result = await callOpenAI(
-          getDefaultModelForProvider("openai"),
-          effectiveSystem,
-          messages,
-          effectiveMaxTokens,
-          undefined,
-          undefined, // no caller timeout — fallback must complete
-          log,
-        );
-        internalFallback = true;
-      }
-      break;
-  }
+  const execution = await executeCanonicalCompletionChain(
+    planCanonicalCompletionChain(),
+    hasCredentials,
+    async (attempt) => {
+      const configuredModel = agentConfig.provider === attempt.provider ? agentConfig.model : attempt.model;
+      const attemptModel = _fallbackMode && FALLBACK_MODEL_MAP[configuredModel]
+        ? FALLBACK_MODEL_MAP[configuredModel] : configuredModel;
+      const cappedTokens = Math.min(effectiveMaxTokens, attempt.provider === "gemini" ? 8192 : 16384);
+      log.info({ agentRole, ...attempt, attemptModel, maxTokens: cappedTokens }, "AI completion provider attempt");
+      return attempt.provider === "anthropic"
+        ? callAnthropic(attemptModel, effectiveSystem, messages, cappedTokens, undefined, timeoutMs, log, attempt.credentialMode)
+        : attempt.provider === "openai"
+          ? callOpenAI(attemptModel, effectiveSystem, messages, cappedTokens, undefined, timeoutMs, log, attempt.credentialMode)
+          : callGemini(attemptModel, effectiveSystem, messages, cappedTokens, undefined, timeoutMs, log, attempt.credentialMode);
+    },
+    (attempt) => log.info({ agentRole, ...attempt, reason: "credentials_unavailable" }, "AI completion provider skipped"),
+    (attempt, err) => log.warn({ agentRole, ...attempt, reason: err instanceof Error ? err.message : "provider_error" }, "AI completion provider failed; advancing canonical chain"),
+  );
+  const { value: result, attempt: selected, failures } = execution;
 
   // Use the actual model that was called (may differ from requested model when using integration proxy)
-  const actualModel = result.effectiveModel ?? model;
+  const actualModel = result.effectiveModel ?? selected.model;
 
   const latencyMs = Date.now() - startTime;
   const costUsd = calculateCostUsd(
-    provider,
+    selected.provider,
     actualModel,
     result.inputTokens,
     result.outputTokens,
@@ -1016,7 +988,7 @@ export async function completeWithAgent(
       workspaceId,
       campaignId,
       agentType: agentRole,
-      provider: provider as any,
+      provider: selected.provider as any,
       model: actualModel,
       inputTokens: result.inputTokens,
       outputTokens: result.outputTokens,
@@ -1030,19 +1002,21 @@ export async function completeWithAgent(
   }
 
   log.info(
-    { agentRole, provider, model: actualModel, requestedModel: model, costUsd, creditsCharged, latencyMs },
+    { agentRole, provider: selected.provider, model: actualModel, credentialMode: selected.credentialMode, usedFallback: execution.usedFallback, attemptCount: execution.attemptCount, failures, costUsd, creditsCharged, latencyMs },
     "AI completion",
   );
 
   return {
     content: result.content,
-    provider,
+    provider: selected.provider,
     model: actualModel,
     inputTokens: result.inputTokens,
     outputTokens: result.outputTokens,
     costUsd,
     creditsCharged,
-    usedFallback: internalFallback,
+    usedFallback: execution.usedFallback,
+    credentialMode: selected.credentialMode,
+    attemptCount: execution.attemptCount,
   };
 }
 

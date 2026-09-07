@@ -41,6 +41,26 @@ async function asaasRequest<T>(path: string, options: RequestInit = {}): Promise
   return data;
 }
 
+/** Verify a payment with Asaas; webhook bodies are notifications, never proof of
+ * settlement. Kept minimal so product fulfillment can use the same provider boundary. */
+export async function getAsaasPaymentStatus(paymentId: string): Promise<string> {
+  const payment = await asaasRequest<{ status: string }>(`/payments/${encodeURIComponent(paymentId)}`);
+  return payment.status;
+}
+
+export function isAsaasPaidStatus(status: string | undefined): boolean {
+  return status === "RECEIVED" || status === "CONFIRMED";
+}
+
+/** A reversal notification must agree with Asaas' canonical payment state. */
+export function isAsaasReversalStatus(event: string, status: string | undefined): boolean {
+  if (event === "PAYMENT_REFUNDED") return status === "REFUNDED";
+  if (event === "PAYMENT_OVERDUE") return status === "OVERDUE";
+  if (event === "PAYMENT_DELETED") return status === "DELETED";
+  return (event === "PAYMENT_CHARGEBACK_REQUESTED" || event === "PAYMENT_CHARGEBACK_DISPUTE")
+    && (status === "CHARGEBACK_REQUESTED" || status === "CHARGEBACK_DISPUTE");
+}
+
 async function ensureAsaasCustomer(name: string, email: string, cpfCnpj?: string): Promise<string> {
   const customer = await asaasRequest<{ id: string }>("/customers", {
     method: "POST",
@@ -51,7 +71,7 @@ async function ensureAsaasCustomer(name: string, email: string, cpfCnpj?: string
 
 // ─── PIX via Asaas ───────────────────────────────────────────────────────────
 
-async function createAsaasPix(opts: {
+export async function createAsaasPix(opts: {
   name: string;
   email: string;
   cpfCnpj?: string;
@@ -88,7 +108,7 @@ async function createAsaasPix(opts: {
 
 // ─── Boleto via Asaas ────────────────────────────────────────────────────────
 
-async function createAsaasBoleto(opts: {
+export async function createAsaasBoleto(opts: {
   name: string;
   email: string;
   cpfCnpj?: string;
@@ -620,6 +640,10 @@ export async function processAsaasWebhook(body: unknown): Promise<void> {
   if (event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED") {
     await confirmPaymentByExternalId(asaasId, payload);
   }
+  // Radar orders have a separate immutable payment record. Keeping this call
+  // independent preserves legacy plan/credit-pack fulfillment semantics.
+  const { processRadarAsaasEvent } = await import("../market-intel/radar-entitlements.service.js");
+  await processRadarAsaasEvent(asaasId, event ?? "", payload);
 }
 
 export async function getWorkspaceByPaymentToken(token: string) {

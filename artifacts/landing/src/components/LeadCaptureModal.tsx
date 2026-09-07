@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Users, ArrowRight, CheckCircle2, Loader2, Phone, User, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
 
 const WA_LINK_DEFAULT = "https://wa.me/message/NBJH4EXPAV2EN1";
 const API_BASE = "/api";
@@ -86,7 +87,7 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl
       return;
     }
     if (!phone.trim()) {
-      setErrorMsg("Informe seu WhatsApp para receber o guia.");
+      setErrorMsg("Informe seu WhatsApp para confirmar.");
       return;
     }
     setStep("loading");
@@ -116,12 +117,12 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl
         });
         if (!res.ok && res.status !== 409) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data?.error ?? "Erro ao capturar lead");
+          throw new Error(data?.error ?? "Erro ao processar registro.");
         }
       }
       setStep("success");
       onSuccess?.();
-      setTimeout(openWA, 1200);
+      setTimeout(openWA, 1500);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Tente novamente.";
       setErrorMsg(message);
@@ -129,146 +130,155 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl
     }
   }
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4"
-      aria-modal="true"
-      role="dialog"
-    >
-      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
+    <AnimatePresence>
+      {open && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4"
+          aria-modal="true"
+          role="dialog"
+        >
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-background/80 backdrop-blur-lg"
+            onClick={onClose}
+          />
 
-      <div className="relative z-10 w-full sm:max-w-md bg-card border border-border/40 rounded-t-2xl sm:rounded-none shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="flex items-start justify-between px-6 pt-6 pb-0">
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary/60 mb-2">
-              — Guia Gratuito · NexOS —
-            </div>
-            <h2 className="font-mono font-black text-xl uppercase tracking-tight text-foreground leading-snug whitespace-pre-line">
-              {title ?? "Receba o guia\nno seu WhatsApp"}
-            </h2>
-            {subtitle && (
-              <p className="font-mono text-xs text-muted-foreground mt-1.5 leading-relaxed">{subtitle}</p>
-            )}
-          </div>
-          <button onClick={onClose} className="text-muted-foreground/50 hover:text-foreground transition-colors mt-0.5 ml-4 shrink-0">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.95 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="relative z-10 w-full sm:max-w-md bg-card/90 backdrop-blur-2xl border border-border/80 rounded-t-3xl sm:rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden"
+          >
+            {/* Glossy top highlight */}
+            <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
 
-        <div className="px-6 py-6">
-          {/* FORM / ERROR */}
-          {(step === "form" || step === "error") && (
-            <form onSubmit={handleSubmit} className="space-y-3">
-
-              {/* Nome completo */}
-              <div className="space-y-1.5">
-                <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">
-                  Nome completo <span className="text-primary/60">*</span>
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    placeholder="Seu nome completo"
-                    required
-                    className="w-full bg-background border border-border/40 rounded-none pl-9 pr-4 h-11 font-mono text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/60 transition-colors"
-                  />
+            <div className="flex items-start justify-between px-8 pt-8 pb-2">
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary mb-3 font-semibold">
+                  Acesso Antecipado NexOS
                 </div>
-              </div>
-
-              {/* Email */}
-              <div className="space-y-1.5">
-                <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">
-                  Email <span className="text-primary/60">*</span>
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    placeholder="seu@email.com"
-                    required
-                    className="w-full bg-background border border-border/40 rounded-none pl-9 pr-4 h-11 font-mono text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/60 transition-colors"
-                  />
-                </div>
-              </div>
-
-              {/* WhatsApp */}
-              <div className="space-y-1.5">
-                <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">
-                  WhatsApp <span className="text-primary/60">*</span>
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={e => setPhone(e.target.value)}
-                    placeholder="(11) 99999-9999"
-                    required
-                    autoFocus
-                    className="w-full bg-background border border-border/40 rounded-none pl-9 pr-4 h-11 font-mono text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/60 transition-colors"
-                  />
-                </div>
-              </div>
-
-              {errorMsg && (
-                <p className="font-mono text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-2">
-                  {errorMsg}
+                <h2 className="font-sans font-black text-2xl tracking-tight text-foreground leading-snug whitespace-pre-line">
+                  {title ?? "Garanta seu Lugar\nna Lista Prioritária"}
+                </h2>
+                <p className="font-sans text-sm text-muted-foreground mt-2 font-light">
+                  {subtitle ?? "Você será notificado assim que as licenças estiverem liberadas. Receba o diagnóstico estratégico no WhatsApp."}
                 </p>
-              )}
-
-              <Button type="submit" className="btn-weapon-primary w-full rounded-none font-mono uppercase tracking-widest font-black h-13 gap-2 text-sm">
-                <Users className="h-4 w-4" /> Enviar Guia no WhatsApp
-              </Button>
-
-              <p className="font-mono text-[10px] text-center text-muted-foreground/30 leading-relaxed">
-                Sem spam. Somente conteúdo de lançamento e o link do guia.
-                Você pode sair quando quiser.
-              </p>
-            </form>
-          )}
-
-          {/* LOADING */}
-          {step === "loading" && (
-            <div className="py-8 flex flex-col items-center gap-4 text-center">
-              <Loader2 className="h-10 w-10 text-primary animate-spin" />
-              <div>
-                <div className="font-mono font-black text-base uppercase tracking-tight">Registrando...</div>
-                <div className="font-mono text-xs text-muted-foreground/50 mt-1">Preparando seu guia</div>
               </div>
-            </div>
-          )}
-
-          {/* SUCCESS */}
-          {step === "success" && (
-            <div className="py-6 flex flex-col items-center gap-5 text-center">
-              <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
-                <CheckCircle2 className="h-8 w-8 text-primary" />
-              </div>
-              <div>
-                <div className="font-mono font-black text-lg uppercase tracking-tight mb-1">Tudo certo!</div>
-                <div className="font-mono text-sm text-muted-foreground/70 leading-relaxed">
-                  Abrindo WhatsApp agora...<br />
-                  Você vai receber o link do guia direto no chat.
-                </div>
-              </div>
-              <Button onClick={openWA} className="btn-weapon-primary w-full rounded-none font-mono uppercase tracking-widest font-black h-12 gap-2 text-xs">
-                Abrir WhatsApp <ArrowRight className="h-4 w-4" />
-              </Button>
-              <button onClick={onClose} className="font-mono text-[10px] text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors">
-                Fechar
+              <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-white/5">
+                <X className="h-5 w-5" />
               </button>
             </div>
-          )}
+
+            <div className="px-8 pb-8 pt-4">
+              {(step === "form" || step === "error") && (
+                <motion.form
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  onSubmit={handleSubmit}
+                  className="space-y-4"
+                >
+                  <div className="space-y-1.5">
+                    <label className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-semibold ml-1">
+                      Nome completo
+                    </label>
+                    <div className="relative group">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        placeholder="Como você se chama?"
+                        required
+                        className="w-full bg-background/50 border border-border/80 rounded-xl pl-11 pr-4 h-12 font-sans text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-semibold ml-1">
+                      Email principal
+                    </label>
+                    <div className="relative group">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        placeholder="seu@email.com"
+                        required
+                        className="w-full bg-background/50 border border-border/80 rounded-xl pl-11 pr-4 h-12 font-sans text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-semibold ml-1">
+                      WhatsApp
+                    </label>
+                    <div className="relative group">
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={e => setPhone(e.target.value)}
+                        placeholder="(11) 99999-9999"
+                        required
+                        className="w-full bg-background/50 border border-border/80 rounded-xl pl-11 pr-4 h-12 font-sans text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
+                      />
+                    </div>
+                  </div>
+
+                  {errorMsg && (
+                    <motion.p initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="font-sans text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3">
+                      {errorMsg}
+                    </motion.p>
+                  )}
+
+                  <Button type="submit" className="w-full h-14 mt-4 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_20px_rgba(0,229,255,0.4)] rounded-xl font-sans font-bold text-base transition-all tracking-wide flex items-center justify-center gap-2">
+                    <Users className="h-5 w-5" /> Entrar na Lista Prioritária
+                  </Button>
+
+                  <p className="font-sans text-xs text-center text-muted-foreground/60 leading-relaxed pt-2 font-light">
+                    Sem compromisso comercial prévio. Sua privacidade preservada.
+                  </p>
+                </motion.form>
+              )}
+
+              {step === "loading" && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-12 flex flex-col items-center gap-6 text-center">
+                  <Loader2 className="h-12 w-12 text-primary animate-spin drop-shadow-[0_0_10px_rgba(0,229,255,0.5)]" />
+                  <div>
+                    <div className="font-sans font-bold text-xl tracking-tight">Reservando Lugar...</div>
+                    <div className="font-mono text-xs text-muted-foreground mt-2 uppercase tracking-widest">Preparando seu diagnóstico</div>
+                  </div>
+                </motion.div>
+              )}
+
+              {step === "success" && (
+                <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="py-8 flex flex-col items-center gap-6 text-center">
+                  <div className="w-20 h-20 rounded-full bg-success/10 border border-success/30 flex items-center justify-center shadow-[0_0_30px_rgba(0,255,163,0.2)]">
+                    <CheckCircle2 className="h-10 w-10 text-success" />
+                  </div>
+                  <div>
+                    <div className="font-sans font-black text-2xl tracking-tight mb-2">Lugar Reservado!</div>
+                    <div className="font-sans text-base text-muted-foreground leading-relaxed font-light">
+                      Você está na lista prioritária.<br />
+                      Redirecionando para o WhatsApp para acesso aos materiais.
+                    </div>
+                  </div>
+                  <Button onClick={openWA} className="w-full h-14 bg-foreground text-background hover:bg-foreground/90 rounded-xl font-sans font-bold text-base transition-all flex items-center justify-center gap-2 mt-2">
+                    Acessar WhatsApp <ArrowRight className="h-5 w-5" />
+                  </Button>
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
         </div>
-      </div>
-    </div>
+      )}
+    </AnimatePresence>
   );
 }

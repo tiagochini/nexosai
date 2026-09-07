@@ -2,9 +2,8 @@
  * NexOS LLM Router
  *
  * Central routing layer for all LLM calls.
- * Selects the optimal provider per task type, retries with automatic fallback
- * on failure (timeout, auth error, rate limit, any exception), and logs every
- * routing decision with structured tags for observability.
+ * Applies task token guidance only. Provider selection and fallback are owned by
+ * completeWithAgent so routed and direct callers share one canonical chain.
  *
  * Task types:
  *   strategic_deep_copy  → Claude primary, GPT fallback
@@ -34,19 +33,6 @@ export type LLMTaskType =
   | "long_context"
   | "emergency_recovery";
 
-// Provider call chain per task type — tried left-to-right until success
-const TASK_PROVIDER_CHAINS: Record<
-  LLMTaskType,
-  ("anthropic" | "openai" | "gemini")[]
-> = {
-  strategic_deep_copy: ["anthropic", "openai"],
-  structured_json:     ["openai",    "anthropic", "gemini"],
-  summarization:       ["gemini",    "openai"],
-  validation:          ["openai",    "anthropic"],
-  long_context:        ["gemini",    "openai"],
-  emergency_recovery:  ["gemini",    "openai", "anthropic"],
-};
-
 // Max output tokens guidance per task type.
 // strategic_deep_copy and long_context use 16000 to support large campaign outputs
 // (email sequences, content calendars, VSL scripts) without truncation.
@@ -62,17 +48,7 @@ export const TASK_MAX_OUTPUT_TOKENS: Record<LLMTaskType, number> = {
   emergency_recovery:  4096,
 };
 
-// Hard per-provider output token caps. Values come from the models active in
-// ai-gateway.service.ts: claude-sonnet-4-6 (Anthropic), gpt-5.5 (OpenAI), gemini-3-flash-preview (Gemini).
-// effectiveMaxTokens is clamped to min(requested, provider_cap) before every call so
-// task-type defaults can never exceed what the provider actually supports.
-const PROVIDER_MAX_OUTPUT_TOKENS: Record<"anthropic" | "openai" | "gemini", number> = {
-  anthropic: 16000, // claude-sonnet-4-6 safe cap (extended-output beta not enabled)
-  openai:    16384, // gpt-5.5 max output tokens
-  gemini:     8192, // gemini-3-flash-preview output limit
-};
-
-// Agent role → task type mapping (governs which provider chain to use).
+// Agent role → task type mapping (governs token guidance, never provider order).
 // Only includes valid AgentRole values — see ai-gateway.service.ts for the full type.
 const AGENT_TASK_MAP: Partial<Record<AgentRole, LLMTaskType>> = {
   // Claude-first: strategic depth, persuasion, copy, identity
@@ -82,7 +58,6 @@ const AGENT_TASK_MAP: Partial<Record<AgentRole, LLMTaskType>> = {
   perpetual_launch_manager: "strategic_deep_copy",
   continuous_sales_manager: "strategic_deep_copy",
   offer:                    "strategic_deep_copy",
-  market_intel:             "strategic_deep_copy",
   product_builder:          "strategic_deep_copy",
   video_strategy:           "strategic_deep_copy",
   copywriter:               "strategic_deep_copy",
@@ -105,7 +80,8 @@ const AGENT_TASK_MAP: Partial<Record<AgentRole, LLMTaskType>> = {
   domino:                   "strategic_deep_copy",
   whatsapp_response:        "strategic_deep_copy",
   testimonial_curator:      "strategic_deep_copy",
-  // GPT-first: JSON schemas, structured output, audits, targeting
+  // JSON schemas, structured output, audits, targeting
+  market_intel:             "structured_json",
   execution_governor:       "structured_json",
   financial_projector:      "structured_json",
   launch_sequence_builder:  "structured_json",
@@ -122,7 +98,7 @@ const AGENT_TASK_MAP: Partial<Record<AgentRole, LLMTaskType>> = {
   compliance:               "validation",
   ad_critic:                "validation",
   product_validator:        "validation",
-  // Gemini-first: summarization, analytics, debriefs
+  // Summarization, analytics, debriefs
   analytics:                "summarization",
   optimization:             "summarization",
   memory_compression:       "summarization",
@@ -174,75 +150,12 @@ export async function routedComplete(
   maxTokensOverride?: number,
 ): Promise<RouterResult> {
   const taskType = getTaskType(agentRole);
-  const chain = TASK_PROVIDER_CHAINS[taskType];
-
-  let lastError: unknown;
-  let attemptCount = 0;
-
-  for (const providerOverride of chain) {
-    attemptCount++;
-    const t0 = Date.now();
-    try {
-      log.info(
-        { campaignId, agentRole, taskType, providerOverride, attempt: attemptCount },
-        "[LLM_ROUTER] Attempting provider",
-      );
-      // Clamp to the lower of: task-type default (or caller override) vs hard provider cap.
-      // This ensures no call ever requests more tokens than the active model supports.
-      const requested = maxTokensOverride && maxTokensOverride > TASK_MAX_OUTPUT_TOKENS[taskType]
-        ? maxTokensOverride
-        : TASK_MAX_OUTPUT_TOKENS[taskType];
-      const effectiveMaxTokens = Math.min(requested, PROVIDER_MAX_OUTPUT_TOKENS[providerOverride]);
-      const result = await completeWithAgent(
-        agentRole,
-        systemPrompt,
-        messages,
-        workspaceId,
-        log,
-        campaignId,
-        locale,
-        providerOverride,
-        effectiveMaxTokens,
-      );
-      log.info(
-        {
-          campaignId,
-          agentRole,
-          taskType,
-          provider: result.provider,
-          model: result.model,
-          latencyMs: Date.now() - t0,
-          usedFallback: attemptCount > 1,
-        },
-        "[LLM_ROUTER] Provider succeeded",
-      );
-      return {
-        ...result,
-        taskType,
-        attemptCount,
-        usedFallback: attemptCount > 1 || result.usedFallback === true,
-      };
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      lastError = err;
-      log.warn(
-        {
-          campaignId,
-          agentRole,
-          taskType,
-          providerOverride,
-          attempt: attemptCount,
-          latencyMs: Date.now() - t0,
-          error: errMsg,
-        },
-        "[LLM_ROUTER] Provider failed — trying next in chain",
-      );
-    }
-  }
-
-  log.error(
-    { campaignId, agentRole, taskType, totalAttempts: attemptCount },
-    "[LLM_ROUTER] All providers exhausted — pipeline step will fail",
-  );
-  throw lastError ?? new Error(`LLM router: all providers exhausted for ${agentRole}`);
+  const t0 = Date.now();
+  const requested = maxTokensOverride && maxTokensOverride > TASK_MAX_OUTPUT_TOKENS[taskType]
+    ? maxTokensOverride : TASK_MAX_OUTPUT_TOKENS[taskType];
+  // Each provider is capped inside completeWithAgent after canonical selection;
+  // do not globally truncate a 16k Anthropic/OpenAI request for Gemini.
+  const result = await completeWithAgent(agentRole, systemPrompt, messages, workspaceId, log, campaignId, locale, undefined, requested);
+  log.info({ campaignId, agentRole, taskType, provider: result.provider, model: result.model, latencyMs: Date.now() - t0, usedFallback: result.usedFallback === true }, "[LLM_ROUTER] Canonical completion succeeded");
+  return { ...result, taskType, attemptCount: result.attemptCount ?? 1, usedFallback: result.usedFallback === true };
 }
