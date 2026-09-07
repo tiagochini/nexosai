@@ -1,5 +1,5 @@
 import { eq, and, desc, isNotNull, isNull } from "drizzle-orm";
-import { db, launchRecordingsTable, recordingFoldersTable } from "@workspace/db";
+import { db, launchRecordingsTable, recordingFoldersTable, workspacesTable } from "@workspace/db";
 import type { RecordingEvent } from "@workspace/db";
 import { ZipArchive } from "archiver";
 import type { Response, Request } from "express";
@@ -87,6 +87,26 @@ async function ensureWorkspaceRecordingOrganization(workspaceId: string) {
         eq(launchRecordingsTable.recordingMode, "manual"),
       )),
   ]);
+}
+
+export async function organizeAllWorkspaceRecordings() {
+  const workspaces = await db.select({ id: workspacesTable.id }).from(workspacesTable);
+  let organized = 0;
+  let failed = 0;
+  const batchSize = 25;
+
+  for (let offset = 0; offset < workspaces.length; offset += batchSize) {
+    const batch = workspaces.slice(offset, offset + batchSize);
+    const results = await Promise.allSettled(
+      batch.map(({ id }) => ensureWorkspaceRecordingOrganization(id)),
+    );
+    for (const result of results) {
+      if (result.status === "fulfilled") organized += 1;
+      else failed += 1;
+    }
+  }
+
+  return { total: workspaces.length, organized, failed };
 }
 
 async function workspaceFolder(folderId: string, workspaceId: string) {

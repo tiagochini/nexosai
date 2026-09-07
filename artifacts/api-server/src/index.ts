@@ -27,6 +27,7 @@ import { initSequenceScheduler, closeSequenceScheduler } from "./modules/launch-
 import { startFunnelScheduler } from "./modules/academy/academy-funnel.service.js";
 import { cleanupDisconnectedIntegrationDuplicates } from "./modules/integrations/integration-cleanup.service.js";
 import { recoverStudioRenders } from "./modules/video-editor/audiovisual-studio.service.js";
+import { organizeAllWorkspaceRecordings } from "./modules/recording/recording.service.js";
 import { db, campaignAgentsTable, campaignsTable, socialPresencePostsTable, socialPresenceConfigTable, socialPostsTable } from "@workspace/db";
 import { eq, and, lt, sql as sqlRaw, like, inArray } from "drizzle-orm";
 
@@ -126,6 +127,14 @@ startMetricsSyncScheduler(async () => db
   startPaidMediaScheduler();
   await initSequenceScheduler();
   startFunnelScheduler();
+}
+
+function scheduleRecordingOrganizationSweep(): void {
+  setImmediate(() => {
+    void organizeAllWorkspaceRecordings()
+      .then((result) => logger.info(result, "Recording folders organized for all workspaces"))
+      .catch((err) => logger.error({ err }, "Recording folder organization sweep failed"));
+  });
 }
 
 Promise.all([
@@ -301,6 +310,7 @@ Promise.all([
       process.exit(1);
     }
     logger.info({ port }, "NexOS AI API Server listening");
+    scheduleRecordingOrganizationSweep();
   });
 }).catch(async (err) => {
   logger.error({ err }, "Boot cleanup failed — starting server anyway to avoid complete outage");
@@ -309,6 +319,7 @@ Promise.all([
   );
   httpServer.listen(port, () => {
     logger.info({ port }, "NexOS AI API Server listening (cleanup failed)");
+    scheduleRecordingOrganizationSweep();
   });
 });
 

@@ -10,6 +10,7 @@ import {
   ensureSystemRecordingFolder,
   listFolders,
   listRecordings,
+  organizeAllWorkspaceRecordings,
   recordingResponse,
   renameFolder,
   startRecording,
@@ -59,6 +60,13 @@ try {
       isNull(launchRecordingsTable.folderId),
     ));
   assert.equal(legacyRowsBefore.some((row) => row.id === recording.id), true);
+  const sweep = await organizeAllWorkspaceRecordings();
+  assert.equal(sweep.failed, 0);
+  const [organizedPersisted] = await db.select({ folderId: launchRecordingsTable.folderId })
+    .from(launchRecordingsTable)
+    .where(eq(launchRecordingsTable.id, recording.id))
+    .limit(1);
+  assert.ok(organizedPersisted?.folderId);
   const organizedRows = await listRecordings(workspaceId);
   const organizedLegacy = organizedRows.find((row) => row.id === recording.id);
   assert.equal(organizedLegacy?.recordingMode, "manual");
