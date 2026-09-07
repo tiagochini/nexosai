@@ -11,6 +11,7 @@ import {
 import { AppError, NotFoundError } from "../../lib/errors.js";
 import { randomUUID, scryptSync } from "node:crypto";
 import { getGCSObjectMeta } from "../../lib/gcs-recordings.js";
+import { getApprovedMasterplan } from "../masterplan/masterplan.service.js";
 
 export type NativeOperation = "text_to_video" | "image_to_video" | "avatar_animation" | "voice_clone" | "tts" | "lip_sync" | "upscale" | "timeline_render" | "qc_extract";
 type ObjectRef = { key: string; sha256: string; mimeType?: string };
@@ -70,9 +71,21 @@ export async function revokeNativeConsent(workspaceId: string, consentId: string
   });
 }
 
-export async function submitNativeJob(workspaceId: string, videoProjectId: string, input: { operation: NativeOperation; request?: Record<string, unknown>; inputObjects?: ObjectRef[]; modelId?: string; modelRevision?: string; requiredLicense?: string; consentSubject?: string; maxAttempts?: number }) {
-  const [project] = await db.select({ id: videoProjectsTable.id }).from(videoProjectsTable).where(and(eq(videoProjectsTable.id, videoProjectId), eq(videoProjectsTable.workspaceId, workspaceId))).limit(1);
+export async function submitNativeJob(workspaceId: string, videoProjectId: string, input: { operation: NativeOperation; request?: Record<string, unknown>; inputObjects?: ObjectRef[]; modelId?: string; modelRevision?: string; requiredLicense?: string; consentSubject?: string; maxAttempts?: number; idempotencyKey?: string; masterplanVersionId?: string; contextFingerprint?: string }) {
+  if (input.idempotencyKey && !/^[a-zA-Z0-9:_-]{8,200}$/.test(input.idempotencyKey)) throw new AppError(400, "Idempotency key is invalid", "INVALID_IDEMPOTENCY_KEY");
+  const [project] = await db.select({ id: videoProjectsTable.id, campaignId: videoProjectsTable.campaignId }).from(videoProjectsTable).where(and(eq(videoProjectsTable.id, videoProjectId), eq(videoProjectsTable.workspaceId, workspaceId))).limit(1);
   if (!project) throw new NotFoundError("Projeto de vídeo");
+  if (input.idempotencyKey) {
+    const [existing] = await db.select().from(nativeMediaJobsTable).where(and(eq(nativeMediaJobsTable.workspaceId, workspaceId), eq(nativeMediaJobsTable.videoProjectId, videoProjectId), eq(nativeMediaJobsTable.idempotencyKey, input.idempotencyKey))).limit(1);
+    if (existing) return existing;
+  }
+  // A campaign-bound render is an execution boundary, not planning output. It
+  // must resolve the same approved dossier that authorized the operation.
+  const approved = project.campaignId ? await getApprovedMasterplan(workspaceId, project.campaignId) : undefined;
+  if (project.campaignId && !approved) throw new AppError(428, "A campaign video job requires an approved Masterplan snapshot", "MASTERPLAN_APPROVAL_REQUIRED");
+  if (approved && ((input.masterplanVersionId && input.masterplanVersionId !== approved.id) || (input.contextFingerprint && input.contextFingerprint !== approved.contextFingerprint))) {
+    throw new AppError(409, "Video job dossier binding does not match the approved snapshot", "MASTERPLAN_CONTEXT_MISMATCH");
+  }
   const refs = input.inputObjects ?? [];
   if (!refs.every(validRef)) throw new AppError(400, "Inputs must be private object keys with SHA-256 hashes", "INVALID_OBJECT_REFERENCE");
   if (needsConsent(input.operation)) {
@@ -88,8 +101,11 @@ export async function submitNativeJob(workspaceId: string, videoProjectId: strin
   return db.transaction(async tx => {
     const consentId = needsConsent(input.operation) ? (await tx.select({ id: nativeMediaConsentsTable.id }).from(nativeMediaConsentsTable).where(and(eq(nativeMediaConsentsTable.workspaceId, workspaceId), eq(nativeMediaConsentsTable.subjectReference, input.consentSubject!), inArray(nativeMediaConsentsTable.consentType, consentTypesFor(input.operation)), isNull(nativeMediaConsentsTable.revokedAt))).limit(1))[0]?.id : undefined;
     if (needsConsent(input.operation) && !consentId) throw new AppError(403, "Consent was revoked before enqueue", "CONSENT_REQUIRED");
-    const [job] = await tx.insert(nativeMediaJobsTable).values({ workspaceId, videoProjectId, operation: input.operation, requestedModelId: input.modelId, requestedModelRevision: input.modelRevision, requiredLicense: input.requiredLicense, consentId, request: input.request ?? {}, inputObjects: refs, maxAttempts: input.maxAttempts ?? 3 }).returning();
-    await tx.insert(nativeMediaJobEventsTable).values({ workspaceId, videoProjectId, jobId: job!.id, eventType: "submitted" });
+    const [job] = await tx.insert(nativeMediaJobsTable).values({ workspaceId, videoProjectId, operation: input.operation, requestedModelId: input.modelId, requestedModelRevision: input.modelRevision, requiredLicense: input.requiredLicense, consentId, request: input.request ?? {}, inputObjects: refs, maxAttempts: input.maxAttempts ?? 3, idempotencyKey: input.idempotencyKey, masterplanVersionId: approved?.id, contextFingerprint: approved?.contextFingerprint }).returning();
+    await tx.insert(nativeMediaJobEventsTable).values([
+      { workspaceId, videoProjectId, jobId: job!.id, eventType: "planned", details: { evidenceState: "planned", masterplanVersionId: approved?.id ?? null, contextFingerprint: approved?.contextFingerprint ?? null } },
+      { workspaceId, videoProjectId, jobId: job!.id, eventType: "submitted" },
+    ]);
     return job!;
   });
 }
@@ -139,7 +155,10 @@ export async function acknowledgeNativeJob(workspaceId: string, workerId: string
   const job = await assertNativeLease(workspaceId, workerId, jobId, token);
   const [updated] = await db.update(nativeMediaJobsTable).set({ status: "running", startedAt: job.startedAt ?? new Date(), leaseExpiresAt: new Date(Date.now() + 60_000) }).where(and(eq(nativeMediaJobsTable.id, jobId), eq(nativeMediaJobsTable.status, "leased"), eq(nativeMediaJobsTable.leaseToken, token))).returning();
   if (!updated) throw new AppError(409, "Job is no longer leasable", "INVALID_LEASE");
-  await db.insert(nativeMediaJobEventsTable).values({ workspaceId, videoProjectId: job.videoProjectId, jobId, workerId, eventType: "acknowledged" }); return updated;
+  await db.insert(nativeMediaJobEventsTable).values([
+    { workspaceId, videoProjectId: job.videoProjectId, jobId, workerId, eventType: "attempted", details: { evidenceState: "attempted" } },
+    { workspaceId, videoProjectId: job.videoProjectId, jobId, workerId, eventType: "acknowledged" },
+  ]); return updated;
 }
 export async function progressNativeJob(workspaceId: string, workerId: string, jobId: string, token: string, progress: number) {
   if (!Number.isFinite(progress) || progress < 0 || progress > 100) throw new AppError(400, "Progress must be a finite percentage between 0 and 100", "INVALID_PROGRESS");
@@ -159,8 +178,15 @@ export async function renewNativeLease(workspaceId: string, workerId: string, jo
   if (!updated) throw new AppError(409, "Lease expired before renewal", "INVALID_LEASE");
   return updated;
 }
-export async function completeNativeJob(workspaceId: string, workerId: string, jobId: string, token: string, telemetry: { modelId: string; modelRevision?: string; modelLicense?: string; gpu?: Record<string, unknown>; runtime?: Record<string, unknown>; gpuSeconds: string; estimatedGpuCost: string }) {
+export async function completeNativeJob(workspaceId: string, workerId: string, jobId: string, token: string, telemetry: { modelId: string; modelRevision?: string; modelLicense?: string; gpu?: Record<string, unknown>; runtime?: Record<string, unknown>; executionBackend: "cpu" | "gpu"; gpuSeconds: string; estimatedGpuCost: string }) {
   const job = await assertNativeLease(workspaceId, workerId, jobId, token);
+  const gpuSeconds = Number(telemetry.gpuSeconds);
+  if (!Number.isFinite(gpuSeconds) || gpuSeconds < 0) throw new AppError(400, "gpuSeconds must be a non-negative number", "INVALID_GPU_TELEMETRY");
+  const [worker] = await db.select({ gpuInfo: nativeMediaWorkersTable.gpuInfo }).from(nativeMediaWorkersTable).where(and(eq(nativeMediaWorkersTable.id, workerId), eq(nativeMediaWorkersTable.workspaceId, workspaceId))).limit(1);
+  const workerHasCuda = (worker?.gpuInfo as Record<string, unknown> | undefined)?.["cuda"] === true;
+  if ((telemetry.executionBackend === "gpu" && (!workerHasCuda || gpuSeconds <= 0)) || (telemetry.executionBackend === "cpu" && gpuSeconds !== 0)) {
+    throw new AppError(409, "Execution backend conflicts with worker GPU evidence", "GPU_TRUTH_MISMATCH");
+  }
   const output = job.outputObjects as ObjectRef[];
   const selected = (job.request as Record<string, unknown>).selectedCapability as Capability | undefined;
   if (!selected) throw new AppError(409, "Leased capability evidence is missing", "CAPABILITY_EVIDENCE_MISSING");
@@ -179,9 +205,15 @@ export async function completeNativeJob(workspaceId: string, workerId: string, j
   return db.transaction(async tx => {
     const [done] = await tx.update(nativeMediaJobsTable).set({ status: "succeeded", outputObjects: output, completedAt: new Date(), leaseExpiresAt: null }).where(and(eq(nativeMediaJobsTable.id, jobId), eq(nativeMediaJobsTable.workspaceId, workspaceId), eq(nativeMediaJobsTable.leasedWorkerId, workerId), eq(nativeMediaJobsTable.status, "running"), eq(nativeMediaJobsTable.leaseToken, token), gt(nativeMediaJobsTable.leaseExpiresAt, new Date()))).returning();
     if (!done) throw new AppError(409, "Job completion was rejected", "INVALID_LEASE");
-    await tx.insert(nativeMediaProvenanceTable).values(output.map(o => ({ workspaceId, videoProjectId: job.videoProjectId, jobId, workerId, outputObjectKey: o.key, outputSha256: o.sha256, modelId, modelRevision, modelLicense: job.requiredLicense, gpu: {}, runtime: { serverVerified: true }, sourceInputs: job.inputObjects })));
-    await tx.insert(nativeMediaUsageTable).values({ workspaceId, videoProjectId: job.videoProjectId, jobId, workerId, modelId, gpuSeconds: telemetry.gpuSeconds, estimatedGpuCost: telemetry.estimatedGpuCost, telemetry: { gpuSeconds: telemetry.gpuSeconds, estimatedGpuCost: telemetry.estimatedGpuCost, serverVerifiedOutput: true } });
-    await tx.insert(nativeMediaJobEventsTable).values({ workspaceId, videoProjectId: job.videoProjectId, jobId, workerId, eventType: "completed" }); return done;
+    const truth = { executionBackend: telemetry.executionBackend, gpuSeconds: telemetry.gpuSeconds, workerCudaAdvertised: workerHasCuda, serverVerifiedOutput: true };
+    await tx.insert(nativeMediaProvenanceTable).values(output.map(o => ({ workspaceId, videoProjectId: job.videoProjectId, jobId, workerId, outputObjectKey: o.key, outputSha256: o.sha256, modelId, modelRevision, modelLicense: job.requiredLicense, gpu: telemetry.gpu ?? truth, runtime: { ...(telemetry.runtime ?? {}), ...truth }, sourceInputs: job.inputObjects })));
+    await tx.insert(nativeMediaUsageTable).values({ workspaceId, videoProjectId: job.videoProjectId, jobId, workerId, modelId, gpuSeconds: telemetry.gpuSeconds, estimatedGpuCost: telemetry.estimatedGpuCost, telemetry: { ...truth, estimatedGpuCost: telemetry.estimatedGpuCost } });
+    // Artifact verification is evidence of materialization only; QC and provider
+    // confirmation are deliberately not implied by a successful local job.
+    await tx.insert(nativeMediaJobEventsTable).values([
+      { workspaceId, videoProjectId: job.videoProjectId, jobId, workerId, eventType: "artifact_qc", details: { evidenceState: "artifact_qc", status: "not_run", artifactServerVerified: true } },
+      { workspaceId, videoProjectId: job.videoProjectId, jobId, workerId, eventType: "completed" },
+    ]); return done;
   });
 }
 export async function failNativeJob(workspaceId: string, workerId: string, jobId: string, token: string, message: string) {
@@ -195,4 +227,13 @@ export async function cancelNativeJob(workspaceId: string, videoProjectId: strin
   if (!job) throw new NotFoundError("Native media job"); await db.insert(nativeMediaJobEventsTable).values({ workspaceId, videoProjectId, jobId, eventType: "cancelled" }); return job;
 }
 export async function getNativeJob(workspaceId: string, videoProjectId: string, jobId: string) { const [job] = await db.select().from(nativeMediaJobsTable).where(and(eq(nativeMediaJobsTable.id, jobId), eq(nativeMediaJobsTable.workspaceId, workspaceId), eq(nativeMediaJobsTable.videoProjectId, videoProjectId))).limit(1); if (!job) throw new NotFoundError("Native media job"); return job; }
-export async function nativeJobTelemetry(workspaceId: string, videoProjectId: string, jobId: string) { await getNativeJob(workspaceId, videoProjectId, jobId); return Promise.all([db.select().from(nativeMediaProvenanceTable).where(and(eq(nativeMediaProvenanceTable.workspaceId, workspaceId), eq(nativeMediaProvenanceTable.jobId, jobId))), db.select().from(nativeMediaUsageTable).where(and(eq(nativeMediaUsageTable.workspaceId, workspaceId), eq(nativeMediaUsageTable.jobId, jobId)))]); }
+/** Tenant-scoped evidence lineage. `provider_confirmed` is absent for native work
+ * unless a provider adapter writes a receipt; completed never implies it. */
+export async function nativeJobTelemetry(workspaceId: string, videoProjectId: string, jobId: string) {
+  await getNativeJob(workspaceId, videoProjectId, jobId);
+  return Promise.all([
+    db.select().from(nativeMediaProvenanceTable).where(and(eq(nativeMediaProvenanceTable.workspaceId, workspaceId), eq(nativeMediaProvenanceTable.jobId, jobId))),
+    db.select().from(nativeMediaUsageTable).where(and(eq(nativeMediaUsageTable.workspaceId, workspaceId), eq(nativeMediaUsageTable.jobId, jobId))),
+    db.select().from(nativeMediaJobEventsTable).where(and(eq(nativeMediaJobEventsTable.workspaceId, workspaceId), eq(nativeMediaJobEventsTable.videoProjectId, videoProjectId), eq(nativeMediaJobEventsTable.jobId, jobId))).orderBy(nativeMediaJobEventsTable.createdAt),
+  ]);
+}

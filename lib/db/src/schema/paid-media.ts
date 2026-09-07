@@ -17,6 +17,8 @@ import { z } from "zod/v4";
 import { usersTable } from "./users";
 import { workspaceIntegrationsTable } from "./workspace-integrations";
 import { workspacesTable } from "./workspaces";
+import { campaignsTable } from "./campaigns";
+import { masterplanVersionsTable } from "./masterplan-versions";
 
 /** Providers that have an executable paid-media adapter. */
 export const paidMediaProviderEnum = pgEnum("paid_media_provider", [
@@ -65,6 +67,31 @@ export const paidMediaAttemptStatusEnum = pgEnum("paid_media_attempt_status", [
   "failed",
   "verification_failed",
   "rolled_back",
+]);
+
+/** CBO budgets live at campaign level; ABO budgets live at ad-set level. */
+export const paidMediaBudgetStrategyEnum = pgEnum("paid_media_budget_strategy", [
+  "cbo",
+  "abo",
+]);
+
+export const paidMediaEventSourceEnum = pgEnum("paid_media_event_source", [
+  "browser",
+  "server",
+  "crm",
+]);
+
+export const paidMediaReconciliationStatusEnum = pgEnum("paid_media_reconciliation_status", [
+  "reconciled",
+  "partial",
+  "unattributed",
+]);
+export const paidMediaEventDeliveryStatusEnum = pgEnum("paid_media_event_delivery_status", [
+  "pending",
+  "sent",
+  "failed",
+  "capability_blocked",
+  "consent_withheld",
 ]);
 
 // A selected advertiser account. OAuth credentials remain solely in
@@ -251,6 +278,9 @@ export const paidMediaProposalsTable = pgTable(
     workspaceId: uuid("workspace_id")
       .notNull()
       .references(() => workspacesTable.id, { onDelete: "cascade" }),
+    campaignId: uuid("campaign_id").references(() => campaignsTable.id, { onDelete: "set null" }),
+    masterplanVersionId: uuid("masterplan_version_id").references(() => masterplanVersionsTable.id, { onDelete: "restrict" }),
+    contextFingerprint: text("context_fingerprint"),
     accountId: uuid("account_id").references(() => paidMediaAccountsTable.id, { onDelete: "set null" }),
     entityId: uuid("entity_id").references(() => paidMediaEntitiesTable.id, { onDelete: "set null" }),
     provider: paidMediaProviderEnum("provider").notNull(),
@@ -333,6 +363,119 @@ export const paidMediaActionAttemptsTable = pgTable(
   ],
 );
 
+// A provider pixel (Meta) or event dataset (TikTok).  This stores identifiers
+// and diagnostics only; provider credentials remain in workspace_integrations.
+export const paidMediaDatasetsTable = pgTable(
+  "paid_media_datasets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspacesTable.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id").notNull().references(() => paidMediaAccountsTable.id, { onDelete: "cascade" }),
+    provider: paidMediaProviderEnum("provider").notNull(),
+    providerDatasetId: text("provider_dataset_id").notNull(),
+    name: text("name"),
+    // An opaque public identifier supplied by the customer integration. It is
+    // intentionally not an Ads provider credential.
+    ingestionKey: text("ingestion_key").notNull(),
+    lastEventAt: timestamp("last_event_at", { withTimezone: true }),
+    lastDiagnosticAt: timestamp("last_diagnostic_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("paid_media_datasets_account_provider_dataset_unique").on(table.accountId, table.provider, table.providerDatasetId),
+    uniqueIndex("paid_media_datasets_ingestion_key_unique").on(table.ingestionKey),
+    index("paid_media_datasets_workspace_account_idx").on(table.workspaceId, table.accountId),
+  ],
+);
+
+/** Immutable event receipts. The source event id is the cross-channel dedupe key. */
+export const paidMediaEventReceiptsTable = pgTable(
+  "paid_media_event_receipts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspacesTable.id, { onDelete: "cascade" }),
+    datasetId: uuid("dataset_id").notNull().references(() => paidMediaDatasetsTable.id, { onDelete: "cascade" }),
+    source: paidMediaEventSourceEnum("source").notNull(),
+    eventId: text("event_id").notNull(),
+    eventName: text("event_name").notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    eventMatchKeys: jsonb("event_match_keys").notNull().default({}),
+    payload: jsonb("payload").notNull().default({}),
+    deliveryStatus: paidMediaEventDeliveryStatusEnum("delivery_status").notNull().default("pending"),
+    providerAttemptedAt: timestamp("provider_attempted_at", { withTimezone: true }),
+    providerResponse: jsonb("provider_response"),
+    providerErrorCode: text("provider_error_code"),
+    providerErrorMessage: text("provider_error_message"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("paid_media_event_receipts_dataset_event_unique").on(table.datasetId, table.eventId),
+    index("paid_media_event_receipts_workspace_occurred_idx").on(table.workspaceId, table.occurredAt),
+  ],
+);
+
+export const paidMediaAttributionTouchpointsTable = pgTable(
+  "paid_media_attribution_touchpoints",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspacesTable.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id").references(() => paidMediaAccountsTable.id, { onDelete: "set null" }),
+    entityId: uuid("entity_id").references(() => paidMediaEntitiesTable.id, { onDelete: "set null" }),
+    provider: paidMediaProviderEnum("provider"),
+    externalTouchpointId: text("external_touchpoint_id").notNull(),
+    clickId: text("click_id"),
+    utmSource: text("utm_source"),
+    utmCampaign: text("utm_campaign"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    metadata: jsonb("metadata").notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("paid_media_touchpoints_workspace_external_unique").on(table.workspaceId, table.externalTouchpointId),
+    index("paid_media_touchpoints_workspace_click_idx").on(table.workspaceId, table.clickId),
+  ],
+);
+
+export const paidMediaConversionsTable = pgTable(
+  "paid_media_conversions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspacesTable.id, { onDelete: "cascade" }),
+    touchpointId: uuid("touchpoint_id").references(() => paidMediaAttributionTouchpointsTable.id, { onDelete: "set null" }),
+    externalConversionId: text("external_conversion_id").notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    currency: text("currency").notNull(),
+    value: decimal("value", { precision: 18, scale: 6 }).notNull().default("0"),
+    reconciliationStatus: paidMediaReconciliationStatusEnum("reconciliation_status").notNull().default("unattributed"),
+    metadata: jsonb("metadata").notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("paid_media_conversions_workspace_external_unique").on(table.workspaceId, table.externalConversionId),
+    index("paid_media_conversions_workspace_occurred_idx").on(table.workspaceId, table.occurredAt),
+  ],
+);
+
+export const paidMediaBudgetStrategiesTable = pgTable(
+  "paid_media_budget_strategies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspacesTable.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id").notNull().references(() => paidMediaAccountsTable.id, { onDelete: "cascade" }),
+    campaignEntityId: uuid("campaign_entity_id").notNull().references(() => paidMediaEntitiesTable.id, { onDelete: "cascade" }),
+    strategy: paidMediaBudgetStrategyEnum("strategy").notNull(),
+    observedAt: timestamp("observed_at", { withTimezone: true }).notNull().defaultNow(),
+    providerData: jsonb("provider_data").notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("paid_media_budget_strategies_campaign_unique").on(table.campaignEntityId),
+    index("paid_media_budget_strategies_workspace_account_idx").on(table.workspaceId, table.accountId),
+  ],
+);
+
 export const insertPaidMediaAccountSchema = createInsertSchema(paidMediaAccountsTable).omit({
   id: true, createdAt: true, updatedAt: true, discoveredAt: true,
 });
@@ -349,6 +492,10 @@ export type PaidMediaInsight = typeof paidMediaInsightsTable.$inferSelect;
 export type PaidMediaPolicy = typeof paidMediaPoliciesTable.$inferSelect;
 export type PaidMediaProposal = typeof paidMediaProposalsTable.$inferSelect;
 export type PaidMediaActionAttempt = typeof paidMediaActionAttemptsTable.$inferSelect;
+export type PaidMediaDataset = typeof paidMediaDatasetsTable.$inferSelect;
+export type PaidMediaEventReceipt = typeof paidMediaEventReceiptsTable.$inferSelect;
+export type PaidMediaAttributionTouchpoint = typeof paidMediaAttributionTouchpointsTable.$inferSelect;
+export type PaidMediaConversion = typeof paidMediaConversionsTable.$inferSelect;
 export type InsertPaidMediaAccount = z.infer<typeof insertPaidMediaAccountSchema>;
 export type InsertPaidMediaEntity = z.infer<typeof insertPaidMediaEntitySchema>;
 export type InsertPaidMediaProposal = z.infer<typeof insertPaidMediaProposalSchema>;

@@ -102,11 +102,18 @@ def main():
                 inputs.append(str(dest))
             output=work/"output"
             argv=[str(value).replace("{output}",str(output)).replace("{inputs}",json.dumps(inputs)) for value in command]
+            started=time.monotonic()
             result=subprocess.run(argv,check=False,env={**os.environ,"NATIVE_MEDIA_JOB":json.dumps(job),"NATIVE_MEDIA_INPUTS":json.dumps(inputs),"NATIVE_MEDIA_OUTPUT":str(output)})
+            elapsed=max(time.monotonic()-started, 0.001)
             if result.returncode or not output.is_file() or output.stat().st_size == 0: raise RuntimeError(f"Plugin failed ({result.returncode})")
             mime=cfg.get("outputMimeTypes",{}).get(operation,"video/mp4")
             put_file(f"/jobs/{job['id']}/output",output,mime,job["leaseToken"])
-            post("/complete",{"jobId":job["id"],"leaseToken":job["leaseToken"],"telemetry":{"modelId":next((c.get("modelId") for c in caps if c["operation"]==operation),"deterministic-local"),"gpuSeconds":"0","estimatedGpuCost":"0"}})
+            # The deterministic ffmpeg tools can run on a CUDA host but are not
+            # GPU inference. Never turn host availability into a GPU-work claim.
+            gpu_inference = operation in ("text_to_video","image_to_video","avatar_animation","voice_clone","tts","lip_sync")
+            backend = "gpu" if gpu_inference else "cpu"
+            gpu_seconds = f"{elapsed:.3f}" if gpu_inference else "0"
+            post("/complete",{"jobId":job["id"],"leaseToken":job["leaseToken"],"telemetry":{"modelId":next((c.get("modelId") for c in caps if c["operation"]==operation),"deterministic-local"),"executionBackend":backend,"gpuSeconds":gpu_seconds,"estimatedGpuCost":"0","runtime":{"cudaDetected":True,"measurement":"wall_clock_gpu_capability_window" if gpu_inference else "cpu_deterministic_tool"}}})
         except Exception as exc:
             post("/fail",{"jobId":job["id"],"leaseToken":job["leaseToken"],"message":str(exc)[:1000]})
         finally:

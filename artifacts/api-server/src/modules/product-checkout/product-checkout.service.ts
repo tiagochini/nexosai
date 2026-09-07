@@ -1,8 +1,9 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db, productsTable, productSalesTable, sequenceContactsTable, workspaceIntegrationsTable, type Product, type ProductSale } from "@workspace/db";
 import { AppError, NotFoundError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
 import type { CardInputData } from "../billing/billing.service.js";
+import { recordCheckoutStarted, recordPaidSale, recordRefundedSale } from "../lifecycle/lifecycle.service.js";
 
 // ─── Asaas helpers — workspace key takes priority over platform key ───────────
 
@@ -204,6 +205,7 @@ export async function initiateProductCheckout(opts: {
   method: "pix" | "boleto" | "credit_card";
   card?: CardInputData;
   installmentCount?: number;
+  purchaserReferralCode?: string;
 }): Promise<ProductSale> {
   const product = await getProduct(opts.productId);
   if (!product || !product.active) throw new NotFoundError("Produto não encontrado ou inativo");
@@ -336,18 +338,28 @@ export async function initiateProductCheckout(opts: {
     cardData,
     paidAt: initialStatus === "paid" ? new Date() : null,
     expiresAt,
-    metadata: { productName: product.name, sequenceId: product.sequenceId },
+    metadata: { productName: product.name, sequenceId: product.sequenceId, ...(opts.purchaserReferralCode ? { purchaserReferralCode: opts.purchaserReferralCode } : {}) },
   }).returning();
 
   if (!sale) throw new AppError(500, "Erro ao criar venda", "DB_ERROR");
+  await recordCheckoutStarted(sale);
 
   // If credit card approved immediately, convert the lead
   if (initialStatus === "paid") {
+    await recordPaidSale(sale);
     setImmediate(() => convertLeadByEmail(opts.buyerEmail, product.sequenceId ?? null, sale.id).catch(() => {}));
   }
 
   logger.info({ saleId: sale.id, productId: opts.productId, method: opts.method, chargedCents }, "Product checkout initiated");
   return sale;
+}
+
+export async function refundProductSaleByExternalId(externalId: string): Promise<void> {
+  const [sale] = await db.select().from(productSalesTable).where(eq(productSalesTable.externalId, externalId)).limit(1);
+  if (!sale || sale.status === "refunded") return;
+  const [refunded] = await db.update(productSalesTable).set({ status: "refunded", updatedAt: new Date() })
+    .where(and(eq(productSalesTable.id, sale.id), inArray(productSalesTable.status, ["paid", "expired"]))).returning();
+  if (refunded) await recordRefundedSale(refunded);
 }
 
 export async function getSale(saleId: string): Promise<ProductSale | null> {
@@ -367,9 +379,12 @@ export async function confirmProductSaleByExternalId(externalId: string): Promis
   if (!sale) return;
   if (sale.status === "paid") return;
 
-  await db.update(productSalesTable)
+  const [paidSale] = await db.update(productSalesTable)
     .set({ status: "paid", paidAt: new Date(), updatedAt: new Date() })
-    .where(eq(productSalesTable.id, sale.id));
+    .where(and(eq(productSalesTable.id, sale.id), inArray(productSalesTable.status, ["pending", "expired"])))
+    .returning();
+  if (!paidSale) return;
+  await recordPaidSale(paidSale);
 
   const meta = sale.metadata as { sequenceId?: string } | null;
   setImmediate(() =>

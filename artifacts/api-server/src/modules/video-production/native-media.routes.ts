@@ -59,14 +59,14 @@ tenant.post("/consents", requireAuth, async (req, res) => {
 });
 tenant.delete("/consents/:consentId", requireAuth, async (req, res) => res.json({ consent: await revokeNativeConsent(req.auth.workspaceId, uuid.parse(req.params.consentId)) }));
 tenant.post("/projects/:projectId/jobs", requireAuth, async (req, res) => {
-  const body = z.object({ operation: operations, request: z.record(z.string(), z.unknown()).optional(), inputObjects: z.array(ref).max(50).optional(), modelId: z.string().max(200).optional(), modelRevision: z.string().max(200).optional(), requiredLicense: z.string().max(200).optional(), consentSubject: z.string().max(300).optional(), maxAttempts: z.number().int().min(1).max(10).optional() }).parse(req.body);
+  const body = z.object({ operation: operations, request: z.record(z.string(), z.unknown()).optional(), inputObjects: z.array(ref).max(50).optional(), modelId: z.string().max(200).optional(), modelRevision: z.string().max(200).optional(), requiredLicense: z.string().max(200).optional(), consentSubject: z.string().max(300).optional(), maxAttempts: z.number().int().min(1).max(10).optional(), idempotencyKey: z.string().min(8).max(200).optional(), masterplanVersionId: uuid.optional(), contextFingerprint: z.string().length(64).optional() }).parse(req.body);
   res.status(202).json({ job: await submitNativeJob(req.auth.workspaceId, uuid.parse(req.params.projectId), body) });
 });
 tenant.get("/projects/:projectId/jobs/:jobId", requireAuth, async (req, res) => res.json({ job: await getNativeJob(req.auth.workspaceId, uuid.parse(req.params.projectId), uuid.parse(req.params.jobId)) }));
 tenant.delete("/projects/:projectId/jobs/:jobId", requireAuth, async (req, res) => res.json({ job: await cancelNativeJob(req.auth.workspaceId, uuid.parse(req.params.projectId), uuid.parse(req.params.jobId)) }));
 tenant.get("/projects/:projectId/jobs/:jobId/provenance", requireAuth, async (req, res) => {
-  const [provenance, usage] = await nativeJobTelemetry(req.auth.workspaceId, uuid.parse(req.params.projectId), uuid.parse(req.params.jobId));
-  res.json({ provenance, usage });
+  const [provenance, usage, evidence] = await nativeJobTelemetry(req.auth.workspaceId, uuid.parse(req.params.projectId), uuid.parse(req.params.jobId));
+  res.json({ provenance, usage, evidence });
 });
 
 function canonical(req: import("express").Request, timestamp: string, nonce: string) {
@@ -174,7 +174,7 @@ internal.post("/ack", async (req, res) => { const b = leaseBody.parse(req.body),
 internal.post("/progress", async (req, res) => { const b = leaseBody.extend({ progress: z.number() }).parse(req.body), p = principal(req); await progressNativeJob(p.workspaceId, p.id, b.jobId, b.leaseToken, b.progress); res.status(204).end(); });
 internal.post("/renew", async (req, res) => { const b = leaseBody.parse(req.body), p = principal(req); res.json({ job: await renewNativeLease(p.workspaceId, p.id, b.jobId, b.leaseToken) }); });
 internal.post("/complete", async (req, res) => {
-  const b = leaseBody.extend({ telemetry: z.object({ modelId: z.string(), modelRevision: z.string().optional(), modelLicense: z.string().optional(), gpu: z.record(z.string(), z.unknown()).optional(), runtime: z.record(z.string(), z.unknown()).optional(), gpuSeconds: z.string(), estimatedGpuCost: z.string() }) }).strict().parse(req.body);
+  const b = leaseBody.extend({ telemetry: z.object({ modelId: z.string(), modelRevision: z.string().optional(), modelLicense: z.string().optional(), gpu: z.record(z.string(), z.unknown()).optional(), runtime: z.record(z.string(), z.unknown()).optional(), executionBackend: z.enum(["cpu", "gpu"]), gpuSeconds: z.string(), estimatedGpuCost: z.string() }) }).strict().parse(req.body);
   const p = principal(req); res.json({ job: await completeNativeJob(p.workspaceId, p.id, b.jobId, b.leaseToken, b.telemetry) });
 });
 internal.post("/fail", async (req, res) => { const b = leaseBody.extend({ message: z.string().min(1).max(2000) }).parse(req.body), p = principal(req); await failNativeJob(p.workspaceId, p.id, b.jobId, b.leaseToken, b.message); res.status(204).end(); });

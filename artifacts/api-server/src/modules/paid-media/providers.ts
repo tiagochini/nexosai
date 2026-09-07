@@ -1,6 +1,8 @@
 import { and, eq } from "drizzle-orm";
+import { createHash } from "node:crypto";
 import {
   db,
+  paidMediaAccountsTable,
   workspaceIntegrationsTable,
 } from "@workspace/db";
 import { env } from "../../lib/env.js";
@@ -65,6 +67,23 @@ export type ProviderActionResult = {
   evidence: Record<string, unknown>;
 };
 
+export type PaidMediaProviderCapabilities = {
+  creativePause: "supported" | "unsupported";
+  pixelDatasetDiagnostics: "supported" | "unsupported";
+  cboAboObservation: "supported" | "unsupported";
+  conversionsApi: "supported" | "unsupported";
+  reason?: string;
+};
+export type MetaCapiEvent = {
+  eventName: string;
+  eventId: string;
+  eventTime: Date;
+  userData: Record<string, string>;
+  customData: Record<string, unknown>;
+};
+export type ProviderConversionResult = { providerRequestId?: string; evidence: Record<string, unknown> };
+export type MetaCapiTransport = (url: string, init: RequestInit) => Promise<Response>;
+
 export class PaidMediaProviderError extends Error {
   constructor(
     message: string,
@@ -86,6 +105,8 @@ export interface PaidMediaProviderAdapter {
   verifyAction(workspaceId: string, accountId: string, action: ProviderAction): Promise<{ verified: boolean; evidence: Record<string, unknown> }>;
   rollbackAction(workspaceId: string, accountId: string, action: ProviderAction, before: ProviderEntity): Promise<ProviderActionResult>;
   refreshCredential(workspaceId: string): Promise<void>;
+  capabilities(): PaidMediaProviderCapabilities;
+  sendConversionEvent(workspaceId: string, accountId: string, datasetId: string, event: MetaCapiEvent): Promise<ProviderConversionResult>;
 }
 
 type Credential = { integrationId: string; accessToken: string; refreshToken: string | null; expiresAt: Date | null };
@@ -100,7 +121,56 @@ function redact(value: string): string {
     .replace(/("?(?:access_)?token"?\s*[:=]\s*"?)[^",\s}]+/gi, "$1[REDACTED]");
 }
 
-async function credential(workspaceId: string, provider: PaidMediaProviderName): Promise<Credential> {
+function sha256(value: string): string {
+  return createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
+}
+
+/** Builds the narrow, consent-safe payload accepted by Meta's /{pixel}/events endpoint. */
+export function normalizeMetaCapiEvent(input: {
+  eventName: unknown; eventId: unknown; occurredAt: unknown;
+  matchKeys?: Record<string, unknown>; payload?: Record<string, unknown>;
+}): MetaCapiEvent {
+  if (typeof input.eventName !== "string" || !/^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(input.eventName)
+    || typeof input.eventId !== "string" || !input.eventId) throw new PaidMediaProviderError("Meta event name and event_id are invalid.", "PRECONDITION_FAILED", 400);
+  const eventTime = new Date(String(input.occurredAt));
+  if (Number.isNaN(eventTime.getTime())) throw new PaidMediaProviderError("Meta event time is invalid.", "PRECONDITION_FAILED", 400);
+  const match = input.matchKeys ?? {};
+  const raw = (key: string) => typeof match[key] === "string" && match[key].trim() ? String(match[key]) : undefined;
+  const userData: Record<string, string> = {};
+  const email = raw("email"); if (email) userData["em"] = sha256(email);
+  const phone = raw("phone"); if (phone) userData["ph"] = sha256(phone.replace(/\D/g, ""));
+  const externalId = raw("externalId"); if (externalId) userData["external_id"] = sha256(externalId);
+  for (const key of ["fbp", "fbc"] as const) { const value = raw(key); if (value) userData[key] = value; }
+  const payload = input.payload ?? {};
+  const customData: Record<string, unknown> = {};
+  if (typeof payload["currency"] === "string" && /^[A-Z]{3}$/.test(payload["currency"])) customData["currency"] = payload["currency"];
+  if (typeof payload["value"] === "number" && Number.isFinite(payload["value"]) && payload["value"] >= 0) customData["value"] = payload["value"];
+  if (typeof payload["orderId"] === "string") customData["order_id"] = payload["orderId"];
+  if (Array.isArray(payload["contentIds"]) && payload["contentIds"].every((item) => typeof item === "string")) customData["content_ids"] = payload["contentIds"];
+  if (typeof payload["contentType"] === "string") customData["content_type"] = payload["contentType"];
+  return { eventName: input.eventName, eventId: input.eventId, eventTime, userData, customData };
+}
+
+/** Exported adapter seam: tests can supply a fake transport without touching global fetch. */
+export async function sendMetaCapiRequest(
+  pixelId: string, token: string, event: MetaCapiEvent, transport: MetaCapiTransport = metaGraphFetch,
+): Promise<ProviderConversionResult> {
+  if (!pixelId) throw new PaidMediaProviderError("Meta pixel/dataset external ID is required.", "PRECONDITION_FAILED", 409);
+  const response = await transport(`https://graph.facebook.com/v20.0/${encodeURIComponent(pixelId)}/events`, {
+    method: "POST", headers: { "Content-Type": "application/json", "X-NexOS-Idempotency-Key": event.eventId },
+    body: JSON.stringify({ data: [{ event_name: event.eventName, event_time: Math.floor(event.eventTime.getTime() / 1000), event_id: event.eventId, action_source: "website", user_data: event.userData, ...(Object.keys(event.customData).length ? { custom_data: event.customData } : {}) }], access_token: token }),
+  });
+  const body = await response.json().catch(() => ({})) as Record<string, unknown>;
+  if (!response.ok) {
+    const raw = redact(JSON.stringify(body));
+    if (response.status === 401 || response.status === 403) throw new PaidMediaProviderError(`Meta Conversions API credential or scope was rejected: ${raw}`, "AUTH", response.status);
+    if (response.status === 429) throw new PaidMediaProviderError("Meta Conversions API rate limit exceeded.", "RATE_LIMITED", response.status);
+    throw new PaidMediaProviderError(`Meta Conversions API returned HTTP ${response.status}: ${raw}`, "PROVIDER_ERROR", response.status);
+  }
+  return { providerRequestId: typeof body["trace_id"] === "string" ? body["trace_id"] : undefined, evidence: body };
+}
+
+async function credential(workspaceId: string, provider: PaidMediaProviderName, expectedIntegrationId?: string): Promise<Credential> {
   const rows = await db.select({
     integrationId: workspaceIntegrationsTable.id,
     accessToken: workspaceIntegrationsTable.accessToken,
@@ -115,7 +185,9 @@ async function credential(workspaceId: string, provider: PaidMediaProviderName):
   // Do not use provider-only lookup: legacy Facebook Page rows use meta_ads.
   // integrationPurpose is required for new rows; isPaidMediaIntegration only
   // accepts the old paidMedia=true/no-pageId shape as migration compatibility.
-  const row = selectPaidMediaCredential(rows);
+  const row = expectedIntegrationId
+    ? rows.find((candidate) => candidate.integrationId === expectedIntegrationId && isPaidMediaIntegration(candidate.metadata as Record<string, unknown>))
+    : selectPaidMediaCredential(rows);
   if (!row?.accessToken) throw new PaidMediaProviderError("Paid-media integration is not connected.", "AUTH");
   return {
     integrationId: row.integrationId,
@@ -160,11 +232,26 @@ function entityPath(type: PaidMediaEntityKind): string {
 class MetaAdsAdapter implements PaidMediaProviderAdapter {
   readonly provider = "meta_ads" as const;
   private readonly base = "https://graph.facebook.com/v20.0";
+  capabilities(): PaidMediaProviderCapabilities {
+    return {
+      creativePause: "unsupported",
+      pixelDatasetDiagnostics: "supported",
+      cboAboObservation: "supported",
+      conversionsApi: "supported",
+      reason: "Creative status mutation requires a provider-specific creative executor and is not sent by this adapter.",
+    };
+  }
 
   async refreshCredential(_workspaceId: string): Promise<void> {
     // Meta long-lived tokens are renewed by exchanging the current token. There
     // is no refresh_token; callers must reconnect if Meta rejects the exchange.
     throw new PaidMediaProviderError("Meta Ads credentials do not support refresh tokens; reconnect the integration.", "AUTH");
+  }
+  async sendConversionEvent(workspaceId: string, accountId: string, datasetId: string, event: MetaCapiEvent): Promise<ProviderConversionResult> {
+    const [account] = await db.select({ integrationId: paidMediaAccountsTable.integrationId, provider: paidMediaAccountsTable.provider })
+      .from(paidMediaAccountsTable).where(and(eq(paidMediaAccountsTable.id, accountId), eq(paidMediaAccountsTable.workspaceId, workspaceId))).limit(1);
+    if (!account || account.provider !== this.provider) throw new PaidMediaProviderError("Dataset account ownership could not be verified.", "PRECONDITION_FAILED", 409);
+    return sendMetaCapiRequest(datasetId, (await credential(workspaceId, this.provider, account.integrationId)).accessToken, event);
   }
 
   private async token(workspaceId: string): Promise<string> {
@@ -184,7 +271,7 @@ class MetaAdsAdapter implements PaidMediaProviderAdapter {
 
   async listEntities(workspaceId: string, accountId: string, type: PaidMediaEntityKind): Promise<ProviderEntity[]> {
     const token = await this.token(workspaceId);
-    const fields = "id,name,status,updated_time,campaign_id,adset_id";
+    const fields = "id,name,status,updated_time,campaign_id,adset_id,daily_budget,bid_amount,campaign_budget_optimization";
     const data = await request(this.url(`${accountId}/${entityPath(type)}`, token, { fields, limit: "500" }), {}, token);
     const rows = Array.isArray(data["data"]) ? data["data"] as Array<Record<string, unknown>> : [];
     return rows.map((row) => ({
@@ -242,6 +329,15 @@ class MetaAdsAdapter implements PaidMediaProviderAdapter {
 class TikTokAdsAdapter implements PaidMediaProviderAdapter {
   readonly provider = "tiktok_ads" as const;
   private readonly base = "https://business-api.tiktok.com/open_api/v1.3";
+  capabilities(): PaidMediaProviderCapabilities {
+    return {
+      creativePause: "unsupported",
+      pixelDatasetDiagnostics: "supported",
+      cboAboObservation: "supported",
+      conversionsApi: "unsupported",
+      reason: "TikTok creative-level status mutation is not available through this executor.",
+    };
+  }
   async refreshCredential(workspaceId: string): Promise<void> {
     const cred = await credential(workspaceId, this.provider);
     if (!cred.refreshToken || !env.TIKTOK_CLIENT_KEY || !env.TIKTOK_CLIENT_SECRET) throw new PaidMediaProviderError("TikTok Ads refresh token is unavailable; reconnect the integration.", "AUTH");
@@ -249,6 +345,9 @@ class TikTokAdsAdapter implements PaidMediaProviderAdapter {
     const data = body["data"] as Record<string, unknown> | undefined;
     if (!data?.["access_token"]) throw new PaidMediaProviderError("TikTok Ads did not return a refreshed credential.", "AUTH");
     await db.update(workspaceIntegrationsTable).set(tikTokRefreshPersistence(cred, data)).where(eq(workspaceIntegrationsTable.id, cred.integrationId));
+  }
+  async sendConversionEvent(_workspaceId: string, _accountId: string, _datasetId: string, _event: MetaCapiEvent): Promise<ProviderConversionResult> {
+    throw new PaidMediaProviderError("TikTok Events API transport is not implemented by this adapter.", "UNSUPPORTED", 409);
   }
   private async token(workspaceId: string): Promise<string> {
     const cred = await credential(workspaceId, this.provider);
@@ -312,4 +411,8 @@ const adapters: Record<PaidMediaProviderName, PaidMediaProviderAdapter> = {
 
 export function paidMediaProvider(provider: PaidMediaProviderName): PaidMediaProviderAdapter {
   return adapters[provider];
+}
+
+export function paidMediaProviderCapabilities(provider: PaidMediaProviderName): PaidMediaProviderCapabilities {
+  return adapters[provider].capabilities();
 }

@@ -26,7 +26,8 @@ export const nativeMediaJobStatusEnum = pgEnum("native_media_job_status", [
 ]);
 export const nativeMediaEventTypeEnum = pgEnum("native_media_event_type", [
   "submitted", "leased", "acknowledged", "progress", "completed", "failed",
-  "cancelled", "lease_expired", "retry_scheduled",
+  "cancelled", "lease_expired", "retry_scheduled", "planned", "attempted",
+  "provider_confirmed", "artifact_qc",
 ]);
 export const nativeMediaConsentTypeEnum = pgEnum("native_media_consent_type", [
   "voice_clone", "voice_synthesis", "likeness", "avatar_animation", "lip_sync",
@@ -49,6 +50,10 @@ export const nativeMediaJobsTable = pgTable("native_media_jobs", {
   requestedModelId: text("requested_model_id"),
   requestedModelRevision: text("requested_model_revision"),
   requiredLicense: text("required_license"),
+  /** Immutable approved campaign dossier binding, when this project belongs to a campaign. */
+  masterplanVersionId: uuid("masterplan_version_id"),
+  contextFingerprint: text("context_fingerprint"),
+  idempotencyKey: text("idempotency_key"),
   consentId: uuid("consent_id"),
   request: jsonb("request").notNull().default({}), // prompt/settings; never media bytes or URLs
   inputObjects: jsonb("input_objects").notNull().default([]), // [{key,sha256,mimeType}]
@@ -71,6 +76,7 @@ export const nativeMediaJobsTable = pgTable("native_media_jobs", {
   index("native_media_jobs_queue_idx").on(table.status, table.operation, table.submittedAt),
   index("native_media_jobs_project_idx").on(table.workspaceId, table.videoProjectId, table.createdAt),
   index("native_media_jobs_lease_idx").on(table.leaseExpiresAt),
+  uniqueIndex("native_media_jobs_workspace_project_idempotency_uidx").on(table.workspaceId, table.videoProjectId, table.idempotencyKey),
 ]);
 
 export const nativeMediaWorkersTable = pgTable("native_media_workers", {

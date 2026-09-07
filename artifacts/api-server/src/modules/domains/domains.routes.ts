@@ -1,0 +1,11 @@
+import { Router } from "express";
+import { z } from "zod/v4";
+import { requireAuth } from "../auth/auth.middleware.js";
+import { checkAvailability, registerDomain, renewDomain, upsertDnsRecord } from "./domains.service.js";
+const router = Router(); router.use(requireAuth);
+const key = z.string().min(8).max(200);
+router.post("/availability", async (req, res): Promise<void> => { const p = z.object({ domain: z.string(), idempotencyKey: key }).safeParse(req.body); if (!p.success) { res.status(400).json({ error: p.error.message, code: "VALIDATION_ERROR" }); return; } res.json(await checkAvailability(req.auth.workspaceId, p.data.domain, p.data.idempotencyKey)); });
+router.post("/register", async (req, res): Promise<void> => { const p = z.object({ domain: z.string(), years: z.number().int().min(1).max(10).default(1), idempotencyKey: key }).safeParse(req.body); if (!p.success) { res.status(400).json({ error: p.error.message, code: "VALIDATION_ERROR" }); return; } res.status(202).json(await registerDomain(req.auth.workspaceId, p.data.domain, p.data.years, p.data.idempotencyKey)); });
+router.post("/:domainId/renew", async (req, res): Promise<void> => { const p = z.object({ years: z.number().int().min(1).max(10).default(1), idempotencyKey: key }).safeParse(req.body); if (!p.success) { res.status(400).json({ error: p.error.message, code: "VALIDATION_ERROR" }); return; } res.status(202).json(await renewDomain(req.auth.workspaceId, req.params["domainId"] as string, p.data.years, p.data.idempotencyKey)); });
+router.put("/:domainId/dns", async (req, res): Promise<void> => { const p = z.object({ type: z.enum(["A", "AAAA", "CNAME", "TXT", "MX"]), name: z.string().min(1), value: z.string().min(1), ttl: z.number().int().min(60).max(86400).default(300), idempotencyKey: key }).safeParse(req.body); if (!p.success) { res.status(400).json({ error: p.error.message, code: "VALIDATION_ERROR" }); return; } res.status(202).json(await upsertDnsRecord(req.auth.workspaceId, req.params["domainId"] as string, p.data, p.data.idempotencyKey)); });
+export default router;

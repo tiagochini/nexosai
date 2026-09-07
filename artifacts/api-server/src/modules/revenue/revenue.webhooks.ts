@@ -12,6 +12,7 @@ import {
 } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
 import { AppError } from "../../lib/errors.js";
+import { recordExternalRevenueLifecycle } from "../lifecycle/lifecycle.service.js";
 
 // ─── Hotmart ──────────────────────────────────────────────────────────────────
 
@@ -382,6 +383,12 @@ async function saveRevenueEvent(data: {
     isRecurring: data.isRecurring,
     webhookPayload: data.webhookPayload,
   });
+  if (["sale", "refund", "subscription_renewal", "subscription_cancel", "upsell", "order_bump"].includes(data.eventType)) {
+    await recordExternalRevenueLifecycle({
+      workspaceId: data.workspaceId, eventType: data.eventType as "sale" | "refund" | "subscription_renewal" | "subscription_cancel" | "upsell" | "order_bump",
+      transactionId: data.transactionId, email: data.customerEmail, name: data.customerName, netAmountCents: data.netAmountCents,
+    });
+  }
 
   // ── Auto-convert sequence contacts on confirmed sale ──────────────────────
   if (

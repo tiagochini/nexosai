@@ -72,22 +72,29 @@ try {
   await acknowledgeNativeJob(primary, worker.id, job.id, leased!.leaseToken!);
   await expectCode("INVALID_PROGRESS", () => progressNativeJob(primary, worker.id, job.id, leased!.leaseToken!, 101));
   await progressNativeJob(primary, worker.id, job.id, leased!.leaseToken!, 50);
+  // A CUDA-less worker cannot convert a GPU label into GPU execution evidence.
+  await expectCode("GPU_TRUTH_MISMATCH", () => completeNativeJob(primary, worker.id, job.id, leased!.leaseToken!,
+    { modelId: "local-test", executionBackend: "gpu", gpuSeconds: "1", estimatedGpuCost: "0" }));
 
   // Prefix and hash are independently server-verified; neither can materialize usage.
   await expectCode("OUTPUT_NOT_STAGED", () => completeNativeJob(primary, worker.id, job.id, leased!.leaseToken!,
-    { modelId: "local-test", gpuSeconds: "0", estimatedGpuCost: "0" }));
+    { modelId: "local-test", executionBackend: "cpu", gpuSeconds: "0", estimatedGpuCost: "0" }));
   setNativeObjectMetadataVerifierForTest(async () => ({ contentType: "video/mp4", size: 1, sha256: hash("b") }));
   const key = `native-media/${primary}/${p1.id}/${job.id}/result.mp4`;
   await db.update(nativeMediaJobsTable).set({ outputObjects: [{ key, sha256: hash("a") }] }).where(eq(nativeMediaJobsTable.id, job.id));
   await expectCode("OUTPUT_HASH_MISMATCH", () => completeNativeJob(primary, worker.id, job.id, leased!.leaseToken!,
-    { modelId: "local-test", gpuSeconds: "0", estimatedGpuCost: "0" }));
+    { modelId: "local-test", executionBackend: "cpu", gpuSeconds: "0", estimatedGpuCost: "0" }));
   assert.equal((await nativeJobTelemetry(primary, p1.id, job.id))[0].length, 0);
 
   setNativeObjectMetadataVerifierForTest(async () => ({ contentType: "video/mp4", size: 1, sha256: hash("a") }));
   await completeNativeJob(primary, worker.id, job.id, leased!.leaseToken!,
-    { modelId: "local-test", modelRevision: "r1", gpuSeconds: "0", estimatedGpuCost: "0" });
-  const [provenance, usage] = await nativeJobTelemetry(primary, p1.id, job.id);
+    { modelId: "local-test", modelRevision: "r1", executionBackend: "cpu", gpuSeconds: "0", estimatedGpuCost: "0" });
+  const [provenance, usage, evidence] = await nativeJobTelemetry(primary, p1.id, job.id);
   assert.equal(provenance.length, 1); assert.equal(usage.length, 1);
+  assert.equal((usage[0]?.telemetry as { executionBackend?: string }).executionBackend, "cpu");
+  assert.ok(evidence.some(event => event.eventType === "planned"));
+  assert.ok(evidence.some(event => event.eventType === "attempted"));
+  assert.ok(evidence.some(event => event.eventType === "artifact_qc" && (event.details as { status?: string }).status === "not_run"));
 
   // Explicit operation-appropriate consent is required, and revocation takes effect.
   await expectCode("CONSENT_REQUIRED", () => submitNativeJob(primary, p1.id, { operation: "voice_clone", consentSubject: "actor" }));
@@ -113,6 +120,12 @@ try {
   const active = leases.find((entry) => entry?.id === concurrent.id)!;
   await cancelNativeJob(primary, p1.id, concurrent.id);
   await expectCode("INVALID_STATUS", () => failNativeJob(primary, active!.leasedWorkerId!, concurrent.id, active!.leaseToken!, "cancelled worker"));
+
+  const idemKey = `job-${marker}-idempotent`;
+  const once = await submitNativeJob(primary, p1.id, { operation: "text_to_video", modelId: "local-test", modelRevision: "r1", idempotencyKey: idemKey });
+  const again = await submitNativeJob(primary, p1.id, { operation: "text_to_video", modelId: "local-test", modelRevision: "r1", idempotencyKey: idemKey });
+  assert.equal(again.id, once.id, "an idempotent retry must not create another attempted execution");
+  await cancelNativeJob(primary, p1.id, once.id);
 
   // An expired lease is requeued from the polling path and may be retried.
   const retry = await submitNativeJob(primary, p1.id, { operation: "text_to_video", modelId: "local-test", modelRevision: "r1" });

@@ -22,6 +22,8 @@ export const groupStatusEnum = pgEnum("group_status", [
   "active",
   "inactive",
   "archived",
+  "capability_blocked",
+  "sync_failed",
 ]);
 
 export const campaignGroupsTable = pgTable("campaign_groups", {
@@ -39,6 +41,10 @@ export const campaignGroupsTable = pgTable("campaign_groups", {
   description: text("description"),
   segment: text("segment"),
   memberCount: integer("member_count").default(0),
+  integrationId: uuid("integration_id"),
+  lifecycleStatus: text("lifecycle_status").notNull().default("planning"),
+  lifecycleError: text("lifecycle_error"),
+  lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
   status: groupStatusEnum("status").notNull().default("active"),
   metadata: jsonb("metadata").notNull().default({}).$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

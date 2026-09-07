@@ -1,7 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import {
   db, paidMediaAccountsTable, paidMediaEntitiesTable, paidMediaInsightsTable,
-  paidMediaSyncCursorsTable,
+  paidMediaSyncCursorsTable, paidMediaBudgetStrategiesTable,
 } from "@workspace/db";
 import { paidMediaProvider, type PaidMediaEntityKind, type PaidMediaProviderName } from "./providers.js";
 
@@ -31,6 +31,24 @@ export async function syncPaidMediaAccount(workspaceId: string, accountId: strin
           target: [paidMediaEntitiesTable.accountId, paidMediaEntitiesTable.providerEntityId, paidMediaEntitiesTable.entityType],
           set: { parentProviderEntityId: entity.parentProviderEntityId, name: entity.name, status: entity.status, version: entity.version, providerData: entity.data, lastSyncedAt: new Date(), updatedAt: new Date() },
         });
+        // This is observed provider state, not a budget mutation or campaign
+        // creation. Meta exposes CBO explicitly; an absent/false value is ABO.
+        if (entityType === "campaign" && account.provider === "meta_ads"
+          && typeof entity.data["campaign_budget_optimization"] === "boolean") {
+          await db.insert(paidMediaBudgetStrategiesTable).values({
+            workspaceId, accountId: account.id,
+            campaignEntityId: (await db.select({ id: paidMediaEntitiesTable.id }).from(paidMediaEntitiesTable).where(and(
+              eq(paidMediaEntitiesTable.accountId, account.id),
+              eq(paidMediaEntitiesTable.providerEntityId, entity.providerEntityId),
+              eq(paidMediaEntitiesTable.entityType, "campaign"),
+            )).limit(1))[0]!.id,
+            strategy: entity.data["campaign_budget_optimization"] ? "cbo" : "abo",
+            providerData: entity.data,
+          }).onConflictDoUpdate({
+            target: [paidMediaBudgetStrategiesTable.campaignEntityId],
+            set: { strategy: entity.data["campaign_budget_optimization"] ? "cbo" : "abo", providerData: entity.data, observedAt: new Date(), updatedAt: new Date() },
+          });
+        }
         entitiesUpserted++;
       }
       const entityRows = await db.select({ id: paidMediaEntitiesTable.id, providerEntityId: paidMediaEntitiesTable.providerEntityId })

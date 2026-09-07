@@ -5,6 +5,7 @@ import {
   workspaceIntegrationsTable,
   campaignsTable,
   contentPiecesTable,
+  executionEvidenceTable,
   type InsertSocialPost,
   type SocialPost,
   type WorkspaceIntegration,
@@ -24,6 +25,8 @@ import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import jwt from "jsonwebtoken";
 import { isOrganicSocialIntegration, metadataForPurpose } from "../integrations/integration-purpose.js";
 import { claimMetaWebhookEvent } from "./meta-webhook-evidence.service.js";
+import { getApprovedMasterplan, matchesApprovedDossier } from "../masterplan/masterplan.service.js";
+import { ingestInboundCommunityEvent } from "../community/community.service.js";
 import {
   assertSocialAccountEntitlement,
   canonicalNetworkForProvider,
@@ -749,13 +752,22 @@ export async function createPost(
 ): Promise<SocialPost> {
   const integration = await getIntegration(workspaceId, data.integrationId);
   if (!integration) throw new NotFoundError("Integration not found");
+  if (data.campaignId) {
+    const [campaign] = await db.select({ id: campaignsTable.id }).from(campaignsTable).where(and(eq(campaignsTable.id, data.campaignId), eq(campaignsTable.workspaceId, workspaceId))).limit(1);
+    if (!campaign) throw new NotFoundError("Campaign not found");
+  }
+  const approved = data.campaignId ? await getApprovedMasterplan(workspaceId, data.campaignId) : undefined;
 
   const [post] = await db
     .insert(socialPostsTable)
-    .values({ ...data, workspaceId })
+    .values({ ...data, workspaceId, masterplanVersionId: approved?.id, contextFingerprint: approved?.contextFingerprint })
     .returning();
 
   if (!post) throw new AppError(500, "Falha ao criar post", "DB_ERROR");
+  await db.insert(executionEvidenceTable).values({
+    workspaceId, campaignId: post.campaignId, masterplanVersionId: approved?.id, contextFingerprint: approved?.contextFingerprint,
+    subjectType: "social_post", subjectId: post.id, state: "planned", details: { platform: post.platform, postType: post.postType },
+  });
   logger.info({ workspaceId, postId: post.id, platform: post.platform }, "Social post created");
   return post;
 }
@@ -844,6 +856,10 @@ export async function publishPost(workspaceId: string, postId: string): Promise<
   if (!["scheduled", "draft"].includes(post.status)) {
     throw new AppError(400, `Cannot publish post in status: ${post.status}`, "INVALID_STATUS");
   }
+  const approvedDossier = post.campaignId ? await getApprovedMasterplan(workspaceId, post.campaignId) : undefined;
+  if (!matchesApprovedDossier(approvedDossier, post)) {
+    throw new AppError(409, "Social post dossier is stale or no longer approved; regenerate it from the current dossier", "MASTERPLAN_CONTEXT_MISMATCH");
+  }
   const pauseChannel = post.platform === "instagram" ? "instagram"
     : post.platform === "facebook_page" ? "facebook"
       : post.platform === "tiktok" ? "tiktok" : null;
@@ -860,6 +876,10 @@ export async function publishPost(workspaceId: string, postId: string): Promise<
     .update(socialPostsTable)
     .set({ status: "publishing", updatedAt: new Date() })
     .where(and(eq(socialPostsTable.id, postId), eq(socialPostsTable.workspaceId, workspaceId)));
+  await db.insert(executionEvidenceTable).values({
+    workspaceId, campaignId: post.campaignId, masterplanVersionId: post.masterplanVersionId, contextFingerprint: post.contextFingerprint,
+    subjectType: "social_post", subjectId: post.id, state: "attempted", details: { platform: post.platform },
+  });
 
   const integration = await getIntegration(workspaceId, post.integrationId);
   if (!integration || integration.status !== "connected") {
@@ -908,6 +928,11 @@ export async function publishPost(workspaceId: string, postId: string): Promise<
     })
     .where(and(eq(socialPostsTable.id, postId), eq(socialPostsTable.workspaceId, workspaceId)))
     .returning();
+  await db.insert(executionEvidenceTable).values({
+    workspaceId, campaignId: post.campaignId, masterplanVersionId: post.masterplanVersionId, contextFingerprint: post.contextFingerprint,
+    subjectType: "social_post", subjectId: post.id, state: "provider_confirmed",
+    details: { platform: post.platform, providerPostId: result.platformPostId ?? null, providerUrl: result.platformUrl ?? null },
+  });
 
   logger.info({ postId, platform: post.platform, platformPostId: result.platformPostId }, "Post published");
   return updated!;
@@ -1045,7 +1070,7 @@ export async function processMetaWebhook(body: unknown): Promise<void> {
 
     // Mensagens diretas (DM) — dispara fluxos de resposta automatizados
     for (const msg of entry.messaging ?? []) {
-      if (!msg.message?.text) continue;
+      if (!msg.message?.mid) continue;
       // entry.id é o ID da conta Instagram que recebeu a mensagem
       const igAccountId = entry.id;
       const senderId = msg.sender.id;
@@ -1073,6 +1098,20 @@ export async function processMetaWebhook(body: unknown): Promise<void> {
         logger.warn({ igAccountId }, "Ignoring unroutable Meta DM webhook account");
         continue;
       }
+      const normalized = await ingestInboundCommunityEvent(integration.workspaceId, {
+        channel: "instagram",
+        providerEventId: msg.message.mid,
+        providerMessageId: msg.message.mid,
+        providerConversationId: senderId,
+        providerParticipantId: senderId,
+        body: msg.message.text,
+        occurredAt: new Date(msg.timestamp),
+        integrationId: integration.id,
+        payload: msg as unknown as Record<string, unknown>,
+      });
+      if (normalized.duplicate) continue;
+      // Only text DMs can enter the existing keyword-response foundation.
+      if (!msg.message.text) continue;
       const eventClaim = await claimMetaWebhookEvent({
         workspaceId: integration.workspaceId,
         integrationId: integration.id,

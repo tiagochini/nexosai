@@ -41,11 +41,14 @@
     ,"test:regional-intelligence-unit": "tsx src/scripts/test-regional-intelligence-unit.ts"
     ,"test:regional-intelligence-db": "REGIONAL_INTEL_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-regional-intelligence-db.ts"
     ,"test:interaction-governance-unit": "NODE_ENV=test tsx src/scripts/test-interaction-governance-unit.ts"
+    ,"test:community-unit": "NODE_ENV=test tsx src/scripts/test-community-unit.ts"
     ,"test:interaction-governance-db": "INTERACTION_GOVERNANCE_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-interaction-governance-db.ts"
     ,"test:radar-entitlements-db": "RADAR_ENTITLEMENT_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-radar-entitlements-db.ts"
     ,"test:radar-checkout-unit": "tsx src/scripts/test-radar-checkout-unit.ts"
+    ,"test:lifecycle-db": "LIFECYCLE_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-lifecycle-db.ts"
     ,"test:canonical-completion-chain": "tsx src/scripts/test-canonical-completion-chain.ts"
     ,"test:waitlist-launch-capacity": "tsx src/scripts/test-waitlist-launch-capacity.ts"
+    ,"test:domains-landing-foundations": "DOMAINS_LANDING_DB_TESTS=true tsx src/scripts/test-domains-landing-foundations.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

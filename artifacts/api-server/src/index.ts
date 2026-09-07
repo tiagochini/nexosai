@@ -24,6 +24,7 @@ import { resumeGeneratingCampaigns } from "./modules/orchestration/orchestration
 import { startSocialScheduler, startMetricsSyncScheduler, stopSocialScheduler, stopMetricsSyncScheduler } from "./modules/social/social.worker.js";
 import { startPaidMediaScheduler, stopPaidMediaScheduler } from "./modules/paid-media/paid-media.worker.js";
 import { initSequenceScheduler, closeSequenceScheduler } from "./modules/launch-sequence/sequence-scheduler.worker.js";
+import { startLifecycleScheduler, stopLifecycleScheduler } from "./modules/lifecycle/lifecycle.worker.js";
 import { startFunnelScheduler } from "./modules/academy/academy-funnel.service.js";
 import { startRegionalAcquisitionScheduler, stopRegionalAcquisitionScheduler } from "./modules/market-intel/regional-acquisition.service.js";
 import { cleanupDisconnectedIntegrationDuplicates } from "./modules/integrations/integration-cleanup.service.js";
@@ -127,6 +128,7 @@ startMetricsSyncScheduler(async () => db
   .where(eq(socialPostsTable.status, "published")));
   startPaidMediaScheduler();
   await initSequenceScheduler();
+  startLifecycleScheduler();
   startFunnelScheduler();
 }
 
@@ -332,6 +334,7 @@ async function shutdown(signal: string): Promise<void> {
   stopMetricsSyncScheduler();
   stopRegionalAcquisitionScheduler();
   await closeSequenceScheduler();
+  stopLifecycleScheduler();
   await closeOrchestrationWorker();
   await closeAllQueues();
   httpServer.close(() => {

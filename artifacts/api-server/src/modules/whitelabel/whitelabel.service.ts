@@ -5,6 +5,7 @@ import {
   whitelabelConfigsTable,
   workspacesTable,
   plansTable,
+  domainsTable,
   type WhitelabelConfig,
   type WhiteLabelTheme,
   DEFAULT_THEME,
@@ -185,6 +186,25 @@ export async function initiateDomainVerification(
 
   const verifyToken = config.domainVerifyToken ?? crypto.randomBytes(16).toString("hex");
 
+  // Keep the legacy white-label configuration and the domain lifecycle model
+  // bound to the same tenant. This is intentionally not a DNS mutation.
+  const [existingDomain] = await db
+    .select()
+    .from(domainsTable)
+    .where(eq(domainsTable.domain, domain))
+    .limit(1);
+  if (existingDomain && existingDomain.workspaceId !== workspaceId) {
+    throw new AppError(409, "Domínio já pertence a outro workspace", "DOMAIN_OWNERSHIP_CONFLICT");
+  }
+  if (!existingDomain) {
+    await db.insert(domainsTable).values({
+      workspaceId,
+      domain,
+      type: "custom",
+      lifecycleStatus: "active",
+    });
+  }
+
   await db
     .update(whitelabelConfigsTable)
     .set({
@@ -247,6 +267,11 @@ export async function verifyDomain(workspaceId: string): Promise<{
         .update(workspacesTable)
         .set({ customDomain: config.customDomain })
         .where(eq(workspacesTable.id, workspaceId));
+
+      await db
+        .update(domainsTable)
+        .set({ dnsVerified: true, sslStatus: "pending" })
+        .where(and(eq(domainsTable.workspaceId, workspaceId), eq(domainsTable.domain, config.customDomain)));
 
       logger.info({ workspaceId, domain: config.customDomain }, "Domain verified");
     }

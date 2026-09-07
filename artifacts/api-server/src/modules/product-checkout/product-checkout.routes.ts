@@ -11,6 +11,7 @@ import {
   getProductCardInstallments,
   getSale,
   confirmProductSaleByExternalId,
+  refundProductSaleByExternalId,
 } from "./product-checkout.service.js";
 
 const router = Router();
@@ -93,6 +94,7 @@ const checkoutSchema = z.object({
   method: z.enum(["pix", "boleto", "credit_card"]),
   card: cardSchema.optional(),
   installmentCount: z.number().int().min(1).max(21).optional(),
+  purchaserReferralCode: z.string().min(4).max(64).optional(),
 });
 
 router.post("/:productId/checkout", async (req, res): Promise<void> => {
@@ -120,9 +122,8 @@ router.get("/sales/:saleId", async (req, res): Promise<void> => {
 router.post("/webhooks/asaas", async (req, res): Promise<void> => {
   const payload = req.body as { event?: string; payment?: { id?: string } };
   const asaasId = payload.payment?.id;
-  if (asaasId && (payload.event === "PAYMENT_RECEIVED" || payload.event === "PAYMENT_CONFIRMED")) {
-    await confirmProductSaleByExternalId(asaasId);
-  }
+  if (asaasId && (payload.event === "PAYMENT_RECEIVED" || payload.event === "PAYMENT_CONFIRMED")) await confirmProductSaleByExternalId(asaasId);
+  if (asaasId && (payload.event === "PAYMENT_REFUNDED" || payload.event === "PAYMENT_CHARGEBACK_REQUESTED")) await refundProductSaleByExternalId(asaasId);
   res.json({ received: true });
 });
 

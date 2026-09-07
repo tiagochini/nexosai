@@ -3,23 +3,47 @@ import { and, eq } from "drizzle-orm";
 import {
   db,
   paidMediaAccountsTable,
+  paidMediaDatasetsTable,
+  paidMediaBudgetStrategiesTable,
   paidMediaPoliciesTable,
   paidMediaProposalsTable,
   paidMediaActionAttemptsTable,
   paidMediaSyncCursorsTable,
   workspaceIntegrationsTable,
 } from "@workspace/db";
+import { randomUUID } from "node:crypto";
 import { requireAuth } from "../auth/auth.middleware.js";
 import {
   PaidMediaProviderError,
   paidMediaProvider,
+  paidMediaProviderCapabilities,
   type PaidMediaProviderName,
 } from "./providers.js";
 import { syncPaidMediaAccount } from "./sync.service.js";
 import { decideProposal, executeProposal, rollbackAttempt } from "./actions.service.js";
 import { generateProposal } from "./proposals.service.js";
+import { datasetDiagnostics, recordDatasetEvent, reconciliationSummary, upsertConversion, upsertTouchpoint } from "./attribution.service.js";
 
 const router = Router();
+// This is deliberately before requireAuth: browser/server tags identify a
+// dataset by a randomly generated opaque key, never by a workspace id or Ads
+// credential. The lookup scopes every write to that dataset's workspace.
+router.post("/events/ingest", async (req, res): Promise<void> => {
+  const key = typeof req.header("x-paid-media-ingestion-key") === "string" ? req.header("x-paid-media-ingestion-key")! : "";
+  const [dataset] = key ? await db.select({
+    id: paidMediaDatasetsTable.id, workspaceId: paidMediaDatasetsTable.workspaceId,
+    accountId: paidMediaDatasetsTable.accountId,
+    provider: paidMediaDatasetsTable.provider, providerDatasetId: paidMediaDatasetsTable.providerDatasetId,
+  }).from(paidMediaDatasetsTable).where(eq(paidMediaDatasetsTable.ingestionKey, key)).limit(1) : [];
+  if (!dataset) { res.status(401).json({ error: "A valid dataset ingestion key is required.", code: "DATASET_AUTH_FAILED" }); return; }
+  try {
+    const source = req.body?.source;
+    if (source !== "browser" && source !== "server") throw new Error("source must be browser or server.");
+    res.status(202).json(await recordDatasetEvent(dataset, { ...req.body, source }));
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "Invalid event.", code: "VALIDATION_ERROR" });
+  }
+});
 router.use(requireAuth);
 
 function providerFrom(value: unknown): PaidMediaProviderName | undefined {
@@ -90,6 +114,48 @@ router.get("/accounts/:provider", async (req, res): Promise<void> => {
     eq(paidMediaAccountsTable.provider, provider),
   ));
   res.json({ accounts });
+});
+
+router.get("/providers/capabilities", (_req, res): void => {
+  res.json({ providers: ["meta_ads", "tiktok_ads"].map((provider) => ({ provider, capabilities: paidMediaProviderCapabilities(provider as PaidMediaProviderName) })) });
+});
+router.get("/budget-strategies", async (req, res): Promise<void> => {
+  res.json({ strategies: await db.select().from(paidMediaBudgetStrategiesTable).where(eq(paidMediaBudgetStrategiesTable.workspaceId, req.auth.workspaceId)) });
+});
+
+router.get("/datasets", async (req, res): Promise<void> => {
+  // Do not re-disclose browser ingestion keys in ordinary diagnostics/listing.
+  res.json({ datasets: await db.select({
+    id: paidMediaDatasetsTable.id, workspaceId: paidMediaDatasetsTable.workspaceId,
+    accountId: paidMediaDatasetsTable.accountId, provider: paidMediaDatasetsTable.provider,
+    providerDatasetId: paidMediaDatasetsTable.providerDatasetId, name: paidMediaDatasetsTable.name,
+    lastEventAt: paidMediaDatasetsTable.lastEventAt, lastDiagnosticAt: paidMediaDatasetsTable.lastDiagnosticAt,
+    createdAt: paidMediaDatasetsTable.createdAt, updatedAt: paidMediaDatasetsTable.updatedAt,
+  }).from(paidMediaDatasetsTable).where(eq(paidMediaDatasetsTable.workspaceId, req.auth.workspaceId)) });
+});
+router.post("/datasets", async (req, res): Promise<void> => {
+  const provider = providerFrom(req.body?.provider);
+  if (!provider || typeof req.body?.accountId !== "string" || typeof req.body?.providerDatasetId !== "string" || !req.body.providerDatasetId) {
+    res.status(400).json({ error: "provider, accountId and providerDatasetId are required.", code: "VALIDATION_ERROR" }); return;
+  }
+  const [account] = await db.select().from(paidMediaAccountsTable).where(and(eq(paidMediaAccountsTable.id, req.body.accountId), eq(paidMediaAccountsTable.workspaceId, req.auth.workspaceId), eq(paidMediaAccountsTable.provider, provider))).limit(1);
+  if (!account) { res.status(404).json({ error: "Provider account not found in this workspace.", code: "ACCOUNT_NOT_FOUND" }); return; }
+  const [dataset] = await db.insert(paidMediaDatasetsTable).values({ workspaceId: req.auth.workspaceId, accountId: account.id, provider, providerDatasetId: req.body.providerDatasetId, name: typeof req.body.name === "string" ? req.body.name : null, ingestionKey: randomUUID() }).onConflictDoNothing().returning();
+  if (!dataset) { res.status(409).json({ error: "Dataset is already registered.", code: "DATASET_EXISTS" }); return; }
+  res.status(201).json({ dataset });
+});
+router.get("/datasets/:datasetId/diagnostics", async (req, res): Promise<void> => {
+  try { res.json(await datasetDiagnostics(req.auth.workspaceId, req.params["datasetId"])); } catch (error) { res.status(404).json({ error: error instanceof Error ? error.message : "Dataset not found.", code: "DATASET_NOT_FOUND" }); }
+});
+
+router.post("/attribution/touchpoints", async (req, res): Promise<void> => {
+  try { res.status(201).json({ touchpoint: await upsertTouchpoint(req.auth.workspaceId, req.body ?? {}) }); } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Invalid touchpoint.", code: "VALIDATION_ERROR" }); }
+});
+router.post("/attribution/conversions", async (req, res): Promise<void> => {
+  try { res.status(201).json({ conversion: await upsertConversion(req.auth.workspaceId, req.body ?? {}) }); } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Invalid conversion.", code: "VALIDATION_ERROR" }); }
+});
+router.get("/attribution/reconciliation", async (req, res): Promise<void> => {
+  try { res.json(await reconciliationSummary(req.auth.workspaceId, String(req.query["since"] ?? ""), String(req.query["until"] ?? ""))); } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Invalid reconciliation range.", code: "VALIDATION_ERROR" }); }
 });
 
 router.post("/accounts/:provider/:accountId/select", async (req, res): Promise<void> => {
@@ -168,7 +234,7 @@ router.get("/proposals", async (req, res): Promise<void> => {
 });
 router.post("/proposals/generate", async (req, res): Promise<void> => {
   const actionType = req.body?.actionType;
-  if (!["pause", "resume", "update_daily_budget", "update_bid"].includes(actionType) || typeof req.body?.accountId !== "string" || typeof req.body?.entityId !== "string" || !req.body?.proposedChange) {
+  if (!["pause", "resume", "update_daily_budget", "update_bid", "update_creative_status"].includes(actionType) || typeof req.body?.accountId !== "string" || typeof req.body?.entityId !== "string" || !req.body?.proposedChange) {
     res.status(400).json({ error: "accountId, entityId, actionType and proposedChange are required.", code: "VALIDATION_ERROR" }); return;
   }
   try { res.status(201).json({ proposal: await generateProposal(req.auth.workspaceId, req.body) }); } catch (error) { sendProviderError(res, error); }

@@ -16,6 +16,7 @@ import { recordEngagementEvent } from "../launch-sequence/sequence-analytics.ser
 import { emitSequenceEvent } from "../launch-sequence/sequence-realtime.js";
 import { runWhatsAppResponseAgent } from "../agents/whatsapp-response.agent.js";
 import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
+import { authorizeAutonomousResponse, ingestInboundCommunityEvent } from "../community/community.service.js";
 
 // ─── Meta WhatsApp Business API ───────────────────────────────────────────────
 
@@ -431,7 +432,7 @@ export async function handleWhatsAppWebhook(payload: unknown) {
           ? String((msg["text"] as Record<string, unknown>)?.["body"] ?? "")
           : "";
 
-      if (!body || !from) continue;
+       if (!from) continue;
       processed++;
 
       log.info({ from, body: body.substring(0, 50) }, "Incoming WhatsApp message");
@@ -440,6 +441,7 @@ export async function handleWhatsAppWebhook(payload: unknown) {
         .select({
           workspaceId: workspaceIntegrationsTable.workspaceId,
           accessToken: workspaceIntegrationsTable.accessToken,
+          integrationId: workspaceIntegrationsTable.id,
         })
         .from(workspaceIntegrationsTable)
         .where(
@@ -452,6 +454,22 @@ export async function handleWhatsAppWebhook(payload: unknown) {
         .limit(1);
 
       if (!integration) continue;
+        const providerMessageId = String(msg["id"] ?? "");
+        if (!providerMessageId) {
+          log.warn({ from }, "Ignoring WhatsApp inbound message without provider id");
+          continue;
+        }
+        const normalized = await ingestInboundCommunityEvent(integration.workspaceId, {
+          channel: "whatsapp", providerEventId: providerMessageId, providerMessageId,
+          providerConversationId: from, providerParticipantId: from, body: body || undefined,
+          occurredAt: new Date(Number(msg["timestamp"] ?? 0) * 1000 || Date.now()),
+          integrationId: integration.integrationId, payload: msg,
+        });
+        // Meta can redeliver; a duplicate must never generate another response.
+        if (normalized.duplicate || !normalized.message) continue;
+        // Non-text messages are durably retained in the inbox but are not
+        // eligible for the text response agent.
+        if (!body) continue;
 
       const [contact] = await db
         .select({ id: sequenceContactsTable.id, sequenceId: sequenceContactsTable.sequenceId })
@@ -479,6 +497,11 @@ export async function handleWhatsAppWebhook(payload: unknown) {
           );
 
           if (!aiResult.shouldRespond || !aiResult.response) return;
+          const authorization = await authorizeAutonomousResponse(integration.workspaceId, normalized.message.id);
+          if (!authorization.allowed) {
+            log.info({ from, reason: authorization.reason }, "WhatsApp autonomous response blocked by durable policy");
+            return;
+          }
 
           if (aiResult.requiresHuman) {
             emitSequenceEvent({

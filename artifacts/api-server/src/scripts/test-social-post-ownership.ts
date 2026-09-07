@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   db,
+  executionEvidenceTable,
   pool,
   socialPostsTable,
   workspaceIntegrationsTable,
 } from "@workspace/db";
-import { NotFoundError } from "../lib/errors.js";
+import { AppError, NotFoundError } from "../lib/errors.js";
 import {
   getMetaE2eGraphCalls,
   resetMetaE2eGraphCalls,
@@ -107,7 +108,8 @@ try {
   assert.equal(metricsAfter.status, metricsBefore.status, "foreign metrics sync must not change status");
   assert.deepEqual(metricsAfter.metrics, metricsBefore.metrics, "foreign metrics sync must not change metrics");
 
-  // A valid owner request still uses the process-local E2E Graph transport.
+  // Local ownership alone cannot authorize a provider mutation: a post without
+  // an approved immutable dossier must fail before Graph and emit no receipt.
   resetMetaE2eGraphCalls();
   const synced = await syncPostMetrics(workspaceB, metricsTarget.id);
   assert.equal(synced.status, "published");
@@ -115,9 +117,17 @@ try {
   assert.match(getMetaE2eGraphCalls()[0]!.path, new RegExp(`/${metricsTarget.platformPostId}/insights$`));
 
   resetMetaE2eGraphCalls();
-  const published = await publishPost(workspaceB, publishTarget.id);
-  assert.equal(published.status, "published");
-  assert.equal(getMetaE2eGraphCalls().length, 3, "owner image publish reaches the E2E Graph mock safely");
+  await assert.rejects(() => publishPost(workspaceB, publishTarget.id), (error: unknown) =>
+    error instanceof AppError && error.code === "MASTERPLAN_CONTEXT_MISMATCH",
+  );
+  assert.equal(getMetaE2eGraphCalls().length, 0, "missing dossier must not reach Graph");
+  const confirmed = await db.select().from(executionEvidenceTable).where(and(
+    eq(executionEvidenceTable.workspaceId, workspaceB),
+    eq(executionEvidenceTable.subjectType, "social_post"),
+    eq(executionEvidenceTable.subjectId, publishTarget.id),
+    eq(executionEvidenceTable.state, "provider_confirmed"),
+  ));
+  assert.equal(confirmed.length, 0, "rejected publication must not emit provider-confirmed evidence");
 
   console.log("social post workspace ownership integration test passed");
 } finally {

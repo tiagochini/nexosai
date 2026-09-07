@@ -314,6 +314,8 @@ export async function autoPostApprovedContent(
         id: piece.id,
         workspaceId,
         campaignId: campaignId || null,
+        masterplanVersionId: null,
+        contextFingerprint: null,
         contentPieceId: pieceId,
         integrationId: integration.id,
         platform,

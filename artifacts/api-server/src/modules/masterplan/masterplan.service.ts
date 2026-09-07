@@ -6,6 +6,20 @@ import { PRODUCT_AUTONOMY_CONTRACT } from "../autonomy/autonomy.service.js";
 import { latestRegionalIntelligenceSummary } from "../market-intel/regional-intelligence.service.js";
 
 type Json = Record<string, unknown>;
+export type ApprovedDossierBinding = {
+  campaignId: string | null | undefined;
+  masterplanVersionId: string | null | undefined;
+  contextFingerprint: string | null | undefined;
+};
+/** Pure fail-closed predicate shared by provider mutation boundaries. */
+export function matchesApprovedDossier(
+  approved: { id: string; contextFingerprint: string } | null | undefined,
+  binding: ApprovedDossierBinding,
+): boolean {
+  return Boolean(binding.campaignId && binding.masterplanVersionId && binding.contextFingerprint
+    && approved && approved.id === binding.masterplanVersionId
+    && approved.contextFingerprint === binding.contextFingerprint);
+}
 const object = (value: unknown): Json => value && typeof value === "object" && !Array.isArray(value) ? value as Json : {};
 export function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalize);

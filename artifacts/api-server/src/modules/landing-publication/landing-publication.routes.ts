@@ -1,0 +1,10 @@
+import { Router } from "express";
+import { z } from "zod/v4";
+import { requireAuth } from "../auth/auth.middleware.js";
+import { deployLanding, generateLandingRevision, resolvePublishedLanding } from "./landing-publication.service.js";
+const router = Router();
+const source = z.object({ pageTitle: z.string(), metaTitle: z.string(), metaDescription: z.string(), sections: z.array(z.object({ headline: z.string(), subheadline: z.string().optional(), bodyContent: z.string(), cta: z.object({ text: z.string() }).optional(), aboveTheFold: z.boolean().optional() })) });
+router.get("/resolve", async (req, res): Promise<void> => { const host = String(req.query["host"] ?? req.headers.host ?? "").split(":")[0]!; const slug = String(req.query["slug"] ?? ""); const page = await resolvePublishedLanding(host, slug); if (!page) { res.status(404).json({ error: "Página não encontrada", code: "NOT_FOUND" }); return; } res.json({ page }); });
+router.post("/revisions", requireAuth, async (req, res): Promise<void> => { const p = z.object({ campaignId: z.string().uuid().optional(), title: z.string().min(1).max(160), slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/), source, leadCaptureSequenceId: z.string().uuid().optional() }).safeParse(req.body); if (!p.success) { res.status(400).json({ error: p.error.message, code: "VALIDATION_ERROR" }); return; } res.status(201).json(await generateLandingRevision(req.auth.workspaceId, p.data)); });
+router.post("/:pageId/deploy", requireAuth, async (req, res): Promise<void> => { const p = z.object({ revisionId: z.string().uuid(), domainId: z.string().uuid().optional(), idempotencyKey: z.string().min(8).max(200) }).safeParse(req.body); if (!p.success) { res.status(400).json({ error: p.error.message, code: "VALIDATION_ERROR" }); return; } res.status(202).json(await deployLanding(req.auth.workspaceId, req.params["pageId"] as string, p.data)); });
+export default router;

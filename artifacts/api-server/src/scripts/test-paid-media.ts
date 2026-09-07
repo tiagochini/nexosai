@@ -12,7 +12,7 @@ import {
   verifyActionSnapshot,
 } from "../modules/paid-media/paid-media.domain.js";
 import type { ProviderAction, ProviderEntity } from "../modules/paid-media/providers.js";
-import { selectPaidMediaCredential } from "../modules/paid-media/providers.js";
+import { normalizeMetaCapiEvent, selectPaidMediaCredential, sendMetaCapiRequest } from "../modules/paid-media/providers.js";
 import { isOrganicSocialIntegration, metadataForPurpose } from "../modules/integrations/integration-purpose.js";
 
 const action: ProviderAction = {
@@ -96,6 +96,27 @@ executor.paused = false;
 assert.notStrictEqual(executor.execute("workspace-b", action, entity({ daily_budget: "100" })), first, "equal keys in separate workspaces do not share attempts");
 
 assert.equal(verifyActionSnapshot(action, entity({ daily_budget: "124" })), false, "verification mismatch fails");
+// CAPI contract tests inject HTTP only at the exported adapter boundary. No
+// global fetch, credentials, or provider endpoint is used by this test.
+const capiEvent = normalizeMetaCapiEvent({
+  eventName: "Purchase", eventId: "evt-1", occurredAt: "2025-01-01T12:00:00.000Z",
+  matchKeys: { email: "Customer@Example.test ", phone: "+55 (11) 99999-0000", fbp: "fb.1.x.y" },
+  payload: { currency: "BRL", value: 19.9, orderId: "order-1", ignoredSensitiveField: "do-not-send" },
+});
+assert.equal(capiEvent.userData.em?.length, 64, "email is hashed before CAPI transport");
+assert.equal(capiEvent.userData.ph?.length, 64, "phone is hashed before CAPI transport");
+assert.equal((capiEvent.customData as Record<string, unknown>)["ignoredSensitiveField"], undefined, "custom data is allowlisted");
+let capiRequest: { url: string; init: RequestInit } | undefined;
+await sendMetaCapiRequest("pixel-123", "test-token", capiEvent, async (url, init) => {
+  capiRequest = { url, init };
+  return new Response(JSON.stringify({ events_received: 1, trace_id: "trace-1" }), { status: 200 });
+});
+assert.equal(capiRequest?.url, "https://graph.facebook.com/v20.0/pixel-123/events");
+const capiBody = JSON.parse(String(capiRequest?.init.body)) as { data: Array<Record<string, unknown>>; access_token: string };
+assert.equal(capiBody.data[0]?.["event_id"], "evt-1");
+assert.equal(capiBody.data[0]?.["action_source"], "website");
+assert.equal(capiBody.access_token, "test-token");
+assert.equal(JSON.stringify(capiBody).includes("Customer@Example.test"), false, "raw identifiers never cross the CAPI adapter boundary");
 const legacyPage = { id: "page", metadata: { pageId: "page-1" } };
 const instagram = { id: "ig", metadata: metadataForPurpose("organic_social", { pageId: "page-1" }) };
 const paid = { id: "ads", metadata: metadataForPurpose("paid_media", { paidMedia: true }) };

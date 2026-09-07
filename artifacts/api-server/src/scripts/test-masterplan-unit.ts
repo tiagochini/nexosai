@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { calculateMasterplanReadiness, canonicalize, deterministicHash } from "../modules/masterplan/masterplan.service.js";
+import { calculateMasterplanReadiness, canonicalize, deterministicHash, matchesApprovedDossier } from "../modules/masterplan/masterplan.service.js";
 import { campaignContextPreamble } from "../modules/agents/campaign-action-context.js";
 
 // Pure, no-migration test: deliberately does not touch a development database.
@@ -26,4 +26,9 @@ assert.equal(blocked.blockers.length, 3, "strategy and pending clarification blo
 assert.match(campaignContextPreamble(false), /FALLBACK LEGADO EXPLÍCITO/);
 assert.doesNotMatch(campaignContextPreamble(true), /FALLBACK LEGADO EXPLÍCITO/);
 assert.match(campaignContextPreamble(true), /Masterplan aprovado/);
+const approvedDossier = { id: "approved-v2", contextFingerprint: "f".repeat(64) };
+assert.equal(matchesApprovedDossier(approvedDossier, { campaignId: "campaign-1", masterplanVersionId: "approved-v2", contextFingerprint: "f".repeat(64) }), true);
+assert.equal(matchesApprovedDossier(approvedDossier, { campaignId: "campaign-1", masterplanVersionId: null, contextFingerprint: "f".repeat(64) }), false, "missing dossier must fail closed");
+assert.equal(matchesApprovedDossier(approvedDossier, { campaignId: "campaign-1", masterplanVersionId: "approved-v1", contextFingerprint: "f".repeat(64) }), false, "superseded dossier must fail closed");
+assert.equal(matchesApprovedDossier(approvedDossier, { campaignId: "campaign-1", masterplanVersionId: "approved-v2", contextFingerprint: "e".repeat(64) }), false, "stale fingerprint must fail closed");
 console.log("masterplan pure unit tests passed (DB isolation/materialize/approval require explicit migration application)");

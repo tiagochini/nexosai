@@ -14,6 +14,7 @@ import { workspacesTable } from "./workspaces";
 import { workspaceIntegrationsTable } from "./workspace-integrations";
 import { campaignsTable } from "./campaigns";
 import { contentPiecesTable } from "./content";
+import { masterplanVersionsTable } from "./masterplan-versions";
 
 export const socialPlatformEnum = pgEnum("social_platform", [
   "instagram",
@@ -61,6 +62,8 @@ export const socialPostsTable = pgTable("social_posts", {
   campaignId: uuid("campaign_id").references(() => campaignsTable.id, {
     onDelete: "set null",
   }),
+  masterplanVersionId: uuid("masterplan_version_id").references(() => masterplanVersionsTable.id, { onDelete: "restrict" }),
+  contextFingerprint: text("context_fingerprint"),
   contentPieceId: uuid("content_piece_id").references(
     () => contentPiecesTable.id,
     { onDelete: "set null" }

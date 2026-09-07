@@ -1,7 +1,8 @@
 import { and, eq, gt } from "drizzle-orm";
-import { db, contractAcceptancesTable, mandatoryPausesTable, paidMediaAccountsTable, paidMediaActionAttemptsTable, paidMediaApprovalsTable, paidMediaEntitiesTable, paidMediaPoliciesTable, paidMediaProposalsTable } from "@workspace/db";
+import { db, contractAcceptancesTable, executionEvidenceTable, mandatoryPausesTable, paidMediaAccountsTable, paidMediaActionAttemptsTable, paidMediaApprovalsTable, paidMediaEntitiesTable, paidMediaPoliciesTable, paidMediaProposalsTable } from "@workspace/db";
 import { paidMediaProvider, PaidMediaProviderError, type ProviderAction } from "./providers.js";
 import { hasConsistentRollbackOwnership, policyAllows, requiresHumanApproval } from "./paid-media.domain.js";
+import { getApprovedMasterplan, matchesApprovedDossier } from "../masterplan/masterplan.service.js";
 
 export async function evaluatePolicy(workspaceId: string, accountId: string, action: ProviderAction, sampleSize: number, quality: number) {
   const [account] = await db.select().from(paidMediaAccountsTable).where(and(eq(paidMediaAccountsTable.id, accountId), eq(paidMediaAccountsTable.workspaceId, workspaceId))).limit(1);
@@ -37,6 +38,10 @@ export async function executeProposal(workspaceId: string, proposalId: string) {
   if (!proposal || !proposal.accountId || !proposal.entityId) throw new Error("Executable proposal not found.");
   if (proposal.status !== "approved") throw new PaidMediaProviderError("Proposal requires human approval before execution.", "PRECONDITION_FAILED", 409);
   if (proposal.expiresAt <= new Date()) throw new PaidMediaProviderError("Proposal has expired.", "PRECONDITION_FAILED", 409);
+  const approvedDossier = proposal.campaignId ? await getApprovedMasterplan(workspaceId, proposal.campaignId) : undefined;
+  if (!matchesApprovedDossier(approvedDossier, proposal)) {
+    throw new PaidMediaProviderError("Proposal dossier is missing or stale; create and approve a new proposal from the current dossier.", "PRECONDITION_FAILED", 409);
+  }
   const [pause] = await db.select({ id: mandatoryPausesTable.id }).from(mandatoryPausesTable).where(and(eq(mandatoryPausesTable.workspaceId, workspaceId), eq(mandatoryPausesTable.status, "active"))).limit(1);
   if (pause) throw new PaidMediaProviderError("Execution is blocked by an active mandatory pause.", "PRECONDITION_FAILED", 423);
   const [acceptance] = await db.select({ id: contractAcceptancesTable.id }).from(contractAcceptancesTable).where(and(eq(contractAcceptancesTable.workspaceId, workspaceId), eq(contractAcceptancesTable.acceptanceType, "autonomy"), eq(contractAcceptancesTable.revokedAt, null as never))).limit(1);
@@ -56,6 +61,11 @@ export async function executeProposal(workspaceId: string, proposalId: string) {
   const action: ProviderAction = { ...(proposal.requestedChange as ProviderAction), entityId: entity.providerEntityId, entityType: entity.entityType, expectedVersion: entity.version ?? undefined, idempotencyKey: proposal.idempotencyKey };
   const before = await adapter.getEntitySnapshot(workspaceId, account.providerAccountId, action.entityId, action.entityType);
   const [attempt] = await db.insert(paidMediaActionAttemptsTable).values({ proposalId, workspaceId, attemptNumber: 1, idempotencyKey: attemptIdempotencyKey, beforeSnapshot: before, status: "executing", startedAt: new Date() }).returning();
+  await db.insert(executionEvidenceTable).values({
+    workspaceId, campaignId: proposal.campaignId, masterplanVersionId: proposal.masterplanVersionId,
+    contextFingerprint: proposal.contextFingerprint, subjectType: "paid_media_attempt",
+    subjectId: attempt!.id, state: "attempted", details: { proposalId, provider: proposal.provider, actionType: proposal.actionType },
+  });
   await db.update(paidMediaProposalsTable).set({ status: "executing" }).where(eq(paidMediaProposalsTable.id, proposalId));
   try {
     const response = await adapter.applyAction(workspaceId, account.providerAccountId, action);
@@ -63,6 +73,11 @@ export async function executeProposal(workspaceId: string, proposalId: string) {
     const status = verification.verified ? "succeeded" as const : "verification_failed" as const;
     await db.update(paidMediaActionAttemptsTable).set({ status, providerResponse: response.evidence, verificationEvidence: verification.evidence, completedAt: new Date() }).where(eq(paidMediaActionAttemptsTable.id, attempt.id));
     await db.update(paidMediaProposalsTable).set({ status: verification.verified ? "verified" : "failed" }).where(eq(paidMediaProposalsTable.id, proposalId));
+    if (verification.verified) await db.insert(executionEvidenceTable).values({
+      workspaceId, campaignId: proposal.campaignId, masterplanVersionId: proposal.masterplanVersionId,
+      contextFingerprint: proposal.contextFingerprint, subjectType: "paid_media_attempt",
+      subjectId: attempt!.id, state: "provider_confirmed", details: { providerRequestId: response.providerRequestId ?? null, providerResponse: response.evidence, verification: verification.evidence },
+    });
     return { ...attempt, status, verification };
   } catch (error) {
     await db.update(paidMediaActionAttemptsTable).set({ status: "failed", errorMessage: error instanceof Error ? error.message : "Execution failed.", completedAt: new Date() }).where(eq(paidMediaActionAttemptsTable.id, attempt.id));

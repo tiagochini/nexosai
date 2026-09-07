@@ -28,7 +28,7 @@ const updateGroupSchema = z.object({
   description: z.string().max(1000).optional(),
   segment: z.string().max(50).optional(),
   memberCount: z.number().int().min(0).optional(),
-  status: z.enum(["active", "inactive", "archived"]).optional(),
+  status: z.enum(["active", "inactive", "archived", "capability_blocked", "sync_failed"]).optional(),
 });
 
 // GET /campaigns/:campaignId/groups

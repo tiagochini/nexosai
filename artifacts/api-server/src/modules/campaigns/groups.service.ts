@@ -66,7 +66,7 @@ export async function updateCampaignGroup(
     description: string;
     segment: string;
     memberCount: number;
-    status: "active" | "inactive" | "archived";
+    status: "active" | "inactive" | "archived" | "capability_blocked" | "sync_failed";
   }>,
 ): Promise<CampaignGroup> {
   const [updated] = await db

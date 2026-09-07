@@ -109,6 +109,7 @@ export function verifyActionSnapshot(action: Pick<ProviderAction, "type" | "chan
   if (action.type === "resume") return after.status === "ACTIVE" || after.status === "ENABLE";
   if (action.type === "update_daily_budget") return String(after.data["daily_budget"] ?? after.data["budget"]) === String(action.changes["dailyBudget"]);
   if (action.type === "update_bid") return String(after.data["bid_amount"] ?? after.data["bid_price"]) === String(action.changes["bidAmount"]);
+  if (action.type === "update_creative_status") return after.status === action.changes["status"];
   return false;
 }
 
@@ -118,8 +119,8 @@ export function rollbackActionFromSnapshot(action: ProviderAction, before: Provi
     : action.type === "update_bid" ? { bidAmount: before.data["bid_amount"] ?? before.data["bid_price"] } : {};
   return {
     ...action,
-    type: Object.keys(changes).length ? action.type : (before.status === "PAUSED" || before.status === "DISABLE" ? "pause" : "resume"),
-    changes,
+    type: action.type === "update_creative_status" ? "update_creative_status" : Object.keys(changes).length ? action.type : (before.status === "PAUSED" || before.status === "DISABLE" ? "pause" : "resume"),
+    changes: action.type === "update_creative_status" ? { status: before.status === "PAUSED" ? "PAUSED" : "ACTIVE" } : changes,
     expectedVersion: undefined,
     idempotencyKey: `${action.idempotencyKey}:rollback`,
   };

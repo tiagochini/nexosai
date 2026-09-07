@@ -89,7 +89,7 @@ try {
   const bytes = await readFile(video); const outputUrl = `${base}/jobs/${job.id}/output`; const putAuth = signed("PUT", outputUrl, worker.id, bytes);
   const put = await fetch(outputUrl, { method: "PUT", headers: { ...putAuth.headers, "x-native-lease-token": leased.leaseToken, "content-type": "video/mp4", "content-length": String(bytes.length) }, body: bytes });
   assert.equal(put.status, 201, await put.text());
-  assert.equal((await jsonCall(base, worker.id, "/complete", { jobId: job.id, leaseToken: leased.leaseToken, telemetry: { modelId: "forged", gpuSeconds: "0", estimatedGpuCost: "0" } })).status, 200);
+  assert.equal((await jsonCall(base, worker.id, "/complete", { jobId: job.id, leaseToken: leased.leaseToken, telemetry: { modelId: "forged", executionBackend: "cpu", gpuSeconds: "0", estimatedGpuCost: "0" } })).status, 200);
   assert.equal((await db.select().from(nativeMediaJobsTable).where(eq(nativeMediaJobsTable.id, job.id)))[0]?.status, "succeeded");
   assert.equal((await db.select().from(nativeMediaProvenanceTable).where(eq(nativeMediaProvenanceTable.jobId, job.id))).length, 1);
   assert.equal((await db.select().from(nativeMediaUsageTable).where(eq(nativeMediaUsageTable.jobId, job.id))).length, 1);
