@@ -155,3 +155,37 @@ export function useGetCampaigns() {
     queryFn: () => customFetch<{ campaigns: { id: string; title: string; status: string }[] }>("/api/campaigns"),
   });
 }
+
+export function useRegionalCatalog() {
+  return useQuery({
+    queryKey: ["regional-intel", "catalog"],
+    queryFn: () => customFetch<{ packages: any[] }>(`${API}/regional/catalog`),
+  });
+}
+
+export function useRegionalEntitlement() {
+  return useQuery({
+    queryKey: ["regional-intel", "entitlement"],
+    queryFn: () => customFetch<{
+      entitlement: any;
+      usage: Record<string, number>;
+      pendingRequest: { package: string; currency: string; createdAt: string } | null;
+      nextEligibleScanAt: string | null;
+    }>(`${API}/regional/entitlement`),
+  });
+}
+
+export function useRequestRegionalUpgrade() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { package: string; currency: string; idempotencyKey: string; notes?: string }) =>
+      customFetch<{ request: any }>(`${API}/regional/purchase-requests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["regional-intel", "entitlement"] });
+    },
+  });
+}

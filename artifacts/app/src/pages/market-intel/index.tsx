@@ -9,6 +9,7 @@ import {
   DollarSign, Share2, Zap, MessageSquare, X, Loader2, HelpCircle, MapPin
 } from "lucide-react";
 import { RegionalIntelDashboard } from "./regional-intel-dashboard";
+import { CapacityTab } from "./capacity-tab";
 import { useGetCampaigns } from "@/hooks/use-regional-intel";
 
 const API = "/api/market-intel";
@@ -649,6 +650,7 @@ export default function MarketIntelPage() {
         <TabsList className="mb-6 bg-background border border-border/50">
           <TabsTrigger value="reports" className="data-[state=active]:bg-card/50">Análises de Mercado</TabsTrigger>
           <TabsTrigger value="regional" className="data-[state=active]:bg-card/50">Radar Regional</TabsTrigger>
+          <TabsTrigger value="capacity" className="data-[state=active]:bg-card/50">Governança & Capacidade</TabsTrigger>
         </TabsList>
 
         <TabsContent value="reports" className="space-y-6 mt-0">
@@ -830,6 +832,10 @@ export default function MarketIntelPage() {
               <RegionalIntelDashboard campaignId={selectedRegionalCampaignId} />
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="capacity" className="mt-0">
+          <CapacityTab />
         </TabsContent>
       </Tabs>
     </div>

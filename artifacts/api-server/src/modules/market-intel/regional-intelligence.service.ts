@@ -7,6 +7,7 @@ import {
   regionalAudienceSegmentsTable,
 } from "@workspace/db";
 import { calculateDeterministicHeat } from "./regional-audience-scoring.js";
+import { reserveRadarUsage } from "./radar-entitlements.service.js";
 export { calculateDeterministicHeat, type DeterministicHeatInput } from "./regional-audience-scoring.js";
 
 type Json = Record<string, unknown>;
@@ -56,9 +57,17 @@ export async function upsertRegionalProfile(workspaceId: string, campaignId: str
   const values = { region, locale, config, countryCode: geo.countryCode ? normalizeCountryCode(geo.countryCode) : null, subdivision: geo.subdivision?.trim() || null, city: geo.city?.trim() || null, postalCode: geo.postalCode?.trim() || null, address: geo.address ?? {}, timezone: geo.timezone ? validateIanaTimezone(geo.timezone) : null, languages: geo.languages ?? [], operatingRegions: geo.operatingRegions ?? [], residenceRegion: geo.residenceRegion ?? {}, serviceRegion: geo.serviceRegion ?? {}, geoProvenance: geo.geoProvenance ?? {}, geoConfidence: geo.geoConfidence ?? null, updatedAt: new Date() };
   const [existing] = await db.select().from(regionalProfilesTable).where(and(eq(regionalProfilesTable.workspaceId, workspaceId), eq(regionalProfilesTable.campaignId, campaignId))).limit(1);
   if (existing) {
+    // A profile is one monitored campaign. Region/language capacity only grows
+    // when new language targets are added, so repeated saves never double charge.
+    const before = new Set((Array.isArray(existing.languages) ? existing.languages : []).filter((x): x is string => typeof x === "string"));
+    const added = (geo.languages ?? []).filter((language) => !before.has(language));
+    if (added.length) await reserveRadarUsage({ workspaceId, campaignId, dimension: "region", quantity: added.length, idempotencyKey: `region:${campaignId}:${added.sort().join(",")}`, metadata: { targets: added } });
     const [updated] = await db.update(regionalProfilesTable).set(values).where(eq(regionalProfilesTable.id, existing.id)).returning();
     return updated!;
   }
+  const targets = [...new Set((geo.languages ?? []).map((language) => language.trim()).filter(Boolean))];
+  await reserveRadarUsage({ workspaceId, campaignId, dimension: "monitored_campaign", idempotencyKey: `monitored-campaign:${campaignId}` });
+  await reserveRadarUsage({ workspaceId, campaignId, dimension: "region", quantity: Math.max(1, targets.length), idempotencyKey: `region:${campaignId}:${targets.sort().join(",") || region.trim().toLowerCase()}`, metadata: { region, targets } });
   const [created] = await db.insert(regionalProfilesTable).values({ workspaceId, campaignId, ...values }).returning();
   return created!;
 }
@@ -70,6 +79,18 @@ export async function getRegionalProfile(workspaceId: string, campaignId: string
 export async function createCompetitor(workspaceId: string, campaignId: string, input: { name: string; kind: "direct" | "indirect" | "substitute" | "aspirational" | "emerging"; websiteUrl?: string; notes?: string }) {
   await requireCampaign(workspaceId, campaignId);
   const normalizedWebsiteUrl = input.websiteUrl ? normalizePublicUrl(input.websiteUrl) : null;
+  if (normalizedWebsiteUrl) {
+    const [existing] = await db.select({ id: regionalCompetitorsTable.id }).from(regionalCompetitorsTable).where(and(eq(regionalCompetitorsTable.workspaceId, workspaceId), eq(regionalCompetitorsTable.campaignId, campaignId), eq(regionalCompetitorsTable.normalizedWebsiteUrl, normalizedWebsiteUrl))).limit(1);
+    if (existing) throw new Error("Concorrente com esta URL já existe na campanha.");
+  }
+  if (!normalizedWebsiteUrl) {
+    const existingNames = await db.select({ id: regionalCompetitorsTable.id, name: regionalCompetitorsTable.name }).from(regionalCompetitorsTable).where(and(eq(regionalCompetitorsTable.workspaceId, workspaceId), eq(regionalCompetitorsTable.campaignId, campaignId)));
+    if (existingNames.some((row) => row.name.trim().toLowerCase() === input.name.trim().toLowerCase())) throw new Error("Concorrente com este nome já existe na campanha.");
+  }
+  // URL is the stable identity; name-only entries use a deterministic normalized
+  // name and are still protected from accidental repeat submissions.
+  const identity = normalizedWebsiteUrl ?? `name:${input.name.trim().toLowerCase()}`;
+  await reserveRadarUsage({ workspaceId, campaignId, dimension: "competitor", idempotencyKey: `competitor:${campaignId}:${identity}`, metadata: { identity } });
   const [row] = await db.insert(regionalCompetitorsTable).values({ workspaceId, campaignId, name: input.name.trim(), kind: input.kind, websiteUrl: input.websiteUrl?.trim() ?? null, normalizedWebsiteUrl, notes: input.notes?.trim() ?? null }).onConflictDoNothing().returning();
   if (!row) throw new Error("Concorrente com esta URL já existe na campanha.");
   return row;

@@ -4,11 +4,16 @@ import { requireAuth } from "../auth/auth.middleware.js";
 import { createInteractionOpportunity, decideInteractionDraft, getInteractionOpportunity, governOpportunity, listInteractionOpportunities, markInteractionOperatorExecuted, prepareRegionalAudienceInteraction, proposeInteractionDraft, recordInteractionOutcome, upsertInteractionPolicy, registerInteractionCapability, runInteractionCouncil } from "./interaction-governance.service.js";
 import { db, interactionGovernancePoliciesTable, interactionPlatformCapabilitiesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { AppError } from "../../lib/errors.js";
 
 const router = Router();
 router.use(requireAuth);
 const json = z.record(z.string(), z.unknown());
 const action = z.enum(["public_comment", "private_message", "reply", "follow_up"]);
+const entitlementError = (res: import("express").Response, error: unknown) => {
+  if (error instanceof AppError) return res.status(error.statusCode).json({ error: error.message, code: error.code, details: error.data });
+  return res.status(422).json({ error: error instanceof Error ? error.message : "Conselho indisponível.", code: "COUNCIL_UNAVAILABLE" });
+};
 
 router.get("/policies", async (req, res) => {
   const [policy] = await db.select().from(interactionGovernancePoliciesTable).where(eq(interactionGovernancePoliciesTable.workspaceId, req.auth.workspaceId)).limit(1);
@@ -77,7 +82,7 @@ router.post("/opportunities/:id/council", async (req, res) => {
   try {
     const result = await runInteractionCouncil(req.auth.workspaceId, req.params.id);
     res.status(result.gate.decision === "blocked" ? 409 : 201).json(result);
-  } catch (e) { res.status(422).json({ error: e instanceof Error ? e.message : "Conselho indisponível." }); }
+  } catch (e) { entitlementError(res, e); }
 });
 router.post("/opportunities/:id/proposals", async (req, res) => {
   const parsed = z.object({ content: z.string().min(1).max(4000), ctaLevel: z.number().int().min(0).max(5), councilAssessment: json.optional() }).safeParse(req.body);

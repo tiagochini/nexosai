@@ -8,6 +8,7 @@ import {
 } from "@workspace/db";
 import { completeWithAgentSafe } from "../ai-gateway/ai-gateway.service.js";
 import { logger } from "../../lib/logger.js";
+import { reserveRadarUsage } from "./radar-entitlements.service.js";
 
 type Action = "public_comment" | "private_message" | "reply" | "follow_up";
 type Json = Record<string, unknown>;
@@ -172,6 +173,12 @@ export async function runInteractionCouncil(workspaceId: string, opportunityId: 
     const detail = await getInteractionOpportunity(workspaceId, opportunityId);
     if (!detail) throw new Error("Oportunidade não encontrada.");
     const opportunity = detail.opportunity;
+    // The Council is an external-cost operation. The workspace-scoped key makes
+    // retries and concurrent requests consume a single, auditable allowance.
+    await reserveRadarUsage({
+      workspaceId, campaignId: opportunity.campaignId ?? undefined, dimension: "council_run",
+      idempotencyKey: `council:${opportunityId}`, metadata: { opportunityId },
+    });
     const assessment = parseInteractionCouncil(await provider({ workspaceId, opportunity: { action: opportunity.action, platform: opportunity.platform, evidence: bounded(opportunity.evidence as Json), context: bounded(opportunity.context as Json), riskScore: opportunity.riskScore, contactable: opportunity.contactable, assetOwned: opportunity.assetOwned, conversationOwned: opportunity.conversationOwned } }));
     const recommendedAction = String(assessment["recommendedAction"]);
     if (recommendedAction !== opportunity.action && recommendedAction !== "observe_only" && recommendedAction !== "do_not_interact") {

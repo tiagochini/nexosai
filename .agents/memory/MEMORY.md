@@ -89,3 +89,4 @@
 - [Resume From Last Checkpoint](resume-from-last-checkpoint.md) — continue roadmap work at the exact unfinished action; never restart completed waves just because time passed.
 - [Competitive Audience Radar](competitive-audience-radar.md) — public positive competitor interactions become evidence-backed audience opportunities, never automatically contactable leads.
 - [Interaction Governance Protocol](interaction-governance-protocol.md) — third-party engagement is assisted by default; deterministic gates, workspace-wide quotas and official capabilities override every AI recommendation.
+- [Radar Commercial Packaging](radar-commercial-packaging.md) — sell competitive intelligence by operating intensity; capacity is enforced before costly work, and pending sales never imply payment.

@@ -3,6 +3,8 @@ import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { acknowledgeAlert, aggregateAudienceSegment, createCompetitor, createVerifiedEvidence, finishMonitorRun, getRegionalProfile, listAlerts, listAudienceOpportunities, listAudienceSegments, listCompetitors, listMonitorRuns, listObservations, listPublicInteractionSignals, listVerifiedEvidence, promoteSignalToAudienceOpportunity, recordObservation, startMonitorRun, transitionAudienceOpportunity, upsertPublicInteractionSignal, upsertRegionalProfile } from "./regional-intelligence.service.js";
 import { acquireCampaignRegionalIntel, regionalAcquisitionHealth } from "./regional-acquisition.service.js";
+import { RADAR_CATALOG, activateRadarEntitlement, radarUsageSummary, requestRadarPurchase } from "./radar-entitlements.service.js";
+import { AppError } from "../../lib/errors.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -10,6 +12,28 @@ const campaign = z.string().uuid();
 const json = z.record(z.string(), z.unknown());
 const evidenceSchema = z.object({ competitorId: z.string().uuid().optional(), url: z.string().url().max(4000), title: z.string().max(1000).optional(), sourceType: z.string().max(100).optional(), claim: z.string().min(1).max(10000), payload: json.optional(), observedAt: z.coerce.date().optional() });
 const pageLimit = (value: unknown) => Math.min(Math.max(Number(value) || 50, 1), 100);
+const entitlementError = (res: import("express").Response, error: unknown, fallback: string, status = 400) => {
+  if (error instanceof AppError) return res.status(error.statusCode).json({ error: error.message, code: error.code, details: error.data });
+  return res.status(status).json({ error: error instanceof Error ? error.message : fallback, code: "RADAR_OPERATION_FAILED" });
+};
+
+// Radar uses a pending-sales request because the existing billing provider only sells
+// platform plans/credit packs; this endpoint never represents payment as completed.
+router.get("/catalog", (_req, res) => res.json({ packages: Object.values(RADAR_CATALOG) }));
+router.get("/entitlement", async (req, res) => res.json(await radarUsageSummary(req.auth.workspaceId)));
+router.post("/purchase-requests", async (req, res) => {
+  const parsed = z.object({ package: z.enum(["RADAR_ESSENTIAL", "RADAR_PRO", "RADAR_SCALE", "WAR_ROOM"]), currency: z.enum(["BRL", "USD"]).default("BRL"), idempotencyKey: z.string().min(8).max(200), notes: z.string().max(1000).optional() }).safeParse(req.body);
+  if (!parsed.success) return void res.status(400).json({ error: "Solicitação comercial Radar inválida.", code: "VALIDATION_ERROR" });
+  const result = await requestRadarPurchase(req.auth.workspaceId, req.auth.userId, parsed.data.package, parsed.data.currency, parsed.data.idempotencyKey, parsed.data.notes);
+  res.status(result.deduplicated ? 200 : 202).json({ ...result, payment: "pending_sales", message: "Solicitação registrada. A ativação ocorre somente após confirmação comercial." });
+});
+router.post("/entitlement/admin-activate", async (req, res) => {
+  const adminEmails = new Set(["admin@nexos.ai", "founder@nexos.ai", "admin@agencianexos.vip", "founder@agencianexos.vip"]);
+  if (!adminEmails.has(req.auth.email)) return void res.status(403).json({ error: "Acesso restrito a administradores.", code: "FORBIDDEN" });
+  const parsed = z.object({ package: z.enum(["RADAR_ESSENTIAL", "RADAR_PRO", "RADAR_SCALE", "WAR_ROOM"]), currency: z.enum(["BRL", "USD"]).default("BRL") }).safeParse(req.body);
+  if (!parsed.success) return void res.status(400).json({ error: "Ativação Radar inválida.", code: "VALIDATION_ERROR" });
+  res.status(201).json({ entitlement: await activateRadarEntitlement(req.auth.workspaceId, parsed.data.package, parsed.data.currency, req.auth.userId) });
+});
 
 router.get("/acquisition/health", (_req, res) => res.json({ scheduler: regionalAcquisitionHealth(), paused: process.env["REGIONAL_INTEL_ACQUISITION_PAUSED"] === "true" }));
 router.post("/campaigns/:campaignId/acquisition/run-now", async (req, res) => {
@@ -18,9 +42,7 @@ router.post("/campaigns/:campaignId/acquisition/run-now", async (req, res) => {
   try {
     const key = parsed.data.idempotencyKey ?? `manual:${parsed.data.mode}:${new Date().toISOString().slice(0, 13)}`;
     res.status(202).json(await acquireCampaignRegionalIntel(req.auth.workspaceId, req.params.campaignId, parsed.data.mode, key));
-  } catch (e) {
-    res.status(503).json({ error: e instanceof Error ? e.message : "Aquisição indisponível." });
-  }
+  } catch (e) { entitlementError(res, e, "Aquisição indisponível.", 503); }
 });
 
 router.get("/campaigns/:campaignId/config", async (req, res) => {
@@ -30,13 +52,13 @@ router.get("/campaigns/:campaignId/config", async (req, res) => {
 router.put("/campaigns/:campaignId/config", async (req, res) => {
   const parsed = z.object({ region: z.string().min(2).max(500), locale: z.string().min(2).max(20).default("pt-BR"), config: json.default({}), countryCode: z.string().length(2).optional(), subdivision: z.string().max(200).optional(), city: z.string().max(200).optional(), postalCode: z.string().max(30).optional(), address: json.optional(), timezone: z.string().max(100).optional(), languages: z.array(z.string().min(2).max(20)).max(20).optional(), operatingRegions: z.array(json).max(100).optional(), residenceRegion: json.optional(), serviceRegion: json.optional(), geoProvenance: json.optional(), geoConfidence: z.number().int().min(0).max(100).optional(), referralGeography: z.object({ origin: json, destination: json }).optional() }).safeParse(req.body);
   if (!parsed.success) return void res.status(400).json({ error: "Configuração regional inválida." });
-  try { const { region, locale, config, referralGeography, ...geo } = parsed.data; res.json({ profile: await upsertRegionalProfile(req.auth.workspaceId, req.params.campaignId, region, locale, { ...config, referralGeography: referralGeography ?? config["referralGeography"] }, geo) }); } catch (e) { res.status(400).json({ error: e instanceof Error ? e.message : "Configuração regional inválida." }); }
+  try { const { region, locale, config, referralGeography, ...geo } = parsed.data; res.json({ profile: await upsertRegionalProfile(req.auth.workspaceId, req.params.campaignId, region, locale, { ...config, referralGeography: referralGeography ?? config["referralGeography"] }, geo) }); } catch (e) { entitlementError(res, e, "Configuração regional inválida."); }
 });
 router.get("/campaigns/:campaignId/competitors", async (req, res) => { try { res.json({ competitors: await listCompetitors(req.auth.workspaceId, req.params.campaignId) }); } catch { res.status(404).json({ error: "Campanha não encontrada." }); } });
 router.post("/campaigns/:campaignId/competitors", async (req, res) => {
   const parsed = z.object({ name: z.string().min(1).max(500), kind: z.enum(["direct", "indirect", "substitute", "aspirational", "emerging"]), websiteUrl: z.string().url().max(4000).optional(), notes: z.string().max(5000).optional() }).safeParse(req.body);
   if (!parsed.success) return void res.status(400).json({ error: "Concorrente inválido." });
-  try { res.status(201).json({ competitor: await createCompetitor(req.auth.workspaceId, req.params.campaignId, parsed.data) }); } catch (e) { res.status(409).json({ error: e instanceof Error ? e.message : "Não foi possível criar concorrente." }); }
+  try { res.status(201).json({ competitor: await createCompetitor(req.auth.workspaceId, req.params.campaignId, parsed.data) }); } catch (e) { entitlementError(res, e, "Não foi possível criar concorrente.", 409); }
 });
 router.post("/campaigns/:campaignId/evidence", async (req, res) => {
   const parsed = evidenceSchema.safeParse(req.body); if (!parsed.success) return void res.status(400).json({ error: "Evidência pública verificada inválida." });

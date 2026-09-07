@@ -1,10 +1,11 @@
 import OpenAI from "openai";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { campaignsTable, db, regionalCompetitorsTable, regionalMonitorRunsTable, regionalProfilesTable } from "@workspace/db";
 import { env } from "../../lib/env.js";
 import { logger } from "../../lib/logger.js";
 import { getSchedulerHealth, registerScheduler, runSchedulerTick } from "../operations/scheduler-health.registry.js";
 import { createCompetitor, createVerifiedEvidence, normalizePublicUrl, recordObservation, startMonitorRun, finishMonitorRun } from "./regional-intelligence.service.js";
+import { getRadarEntitlement, RadarEntitlementError, radarScheduledMode, reserveRadarUsage } from "./radar-entitlements.service.js";
 
 type Json = Record<string, unknown>;
 export type AcquisitionMode = "lightweight" | "detailed";
@@ -89,8 +90,18 @@ export async function acquireCampaignRegionalIntel(workspaceId: string, campaign
   )).limit(1);
   if (previous) return { run: await startMonitorRun(workspaceId, campaignId, idempotencyKey), deduplicated: true, persisted: 0 };
   inFlightRuns.add(lockKey);
-  const run = await startMonitorRun(workspaceId, campaignId, idempotencyKey);
+  let run: Awaited<ReturnType<typeof startMonitorRun>> | null = null;
   try {
+    const entitlement = await getRadarEntitlement(workspaceId);
+    if (!entitlement.active || !entitlement.limits) throw new RadarEntitlementError(402, "RADAR_ENTITLEMENT_REQUIRED", "Uma assinatura Radar ativa é necessária para iniciar uma nova aquisição.");
+    if (mode === "detailed" && entitlement.limits.scanCadenceMinutes >= 10080) throw new RadarEntitlementError(409, "RADAR_SCAN_MODE_NOT_INCLUDED", "O pacote Radar atual permite somente a varredura semanal.");
+    const [lastRun] = await db.select({ startedAt: regionalMonitorRunsTable.startedAt }).from(regionalMonitorRunsTable).where(and(
+      eq(regionalMonitorRunsTable.workspaceId, workspaceId), eq(regionalMonitorRunsTable.campaignId, campaignId),
+    )).orderBy(desc(regionalMonitorRunsTable.startedAt)).limit(1);
+    const elapsed = lastRun?.startedAt ? Date.now() - lastRun.startedAt.getTime() : Number.POSITIVE_INFINITY;
+    if (elapsed < entitlement.limits.scanCadenceMinutes * 60_000) throw new RadarEntitlementError(429, "RADAR_SCAN_NOT_DUE", `A próxima varredura estará disponível após a cadência de ${entitlement.limits.scanCadenceMinutes} minutos.`, { nextEligibleAt: new Date(lastRun!.startedAt!.getTime() + entitlement.limits.scanCadenceMinutes * 60_000) });
+    await reserveRadarUsage({ workspaceId, campaignId, dimension: mode === "lightweight" ? "light_scan" : "detailed_scan", idempotencyKey: `scan:${idempotencyKey}`, metadata: { mode } });
+    run = await startMonitorRun(workspaceId, campaignId, idempotencyKey);
     const [profile] = await db.select().from(regionalProfilesTable).where(and(eq(regionalProfilesTable.workspaceId, workspaceId), eq(regionalProfilesTable.campaignId, campaignId))).limit(1);
     const [campaign] = await db.select().from(campaignsTable).where(and(eq(campaignsTable.workspaceId, workspaceId), eq(campaignsTable.id, campaignId))).limit(1);
     if (!profile || !campaign) throw new Error("Active regional profile/campaign not found.");
@@ -110,7 +121,7 @@ export async function acquireCampaignRegionalIntel(workspaceId: string, campaign
     const completed = await finishMonitorRun(workspaceId, run.id, "completed", { mode, candidates: candidates.length, persisted });
     return { run: completed ?? run, deduplicated: false, persisted };
   } catch (error) {
-    await finishMonitorRun(workspaceId, run.id, "failed", { mode }, error instanceof Error ? error.message.slice(0, 2000) : "Acquisition failed");
+    if (run) await finishMonitorRun(workspaceId, run.id, "failed", { mode }, error instanceof Error ? error.message.slice(0, 2000) : "Acquisition failed");
     throw error;
   } finally {
     inFlightRuns.delete(lockKey);
@@ -119,23 +130,27 @@ export async function acquireCampaignRegionalIntel(workspaceId: string, campaign
 
 let timer: ReturnType<typeof setInterval> | null = null;
 const schedulerName = "regional-intelligence-acquisition";
-export async function runRegionalAcquisitionSweep(mode: AcquisitionMode, provider?: RegionalAcquisitionProvider) {
+export async function runRegionalAcquisitionSweep(_legacyMode?: AcquisitionMode, provider?: RegionalAcquisitionProvider) {
   if (process.env["REGIONAL_INTEL_ACQUISITION_PAUSED"] === "true") return;
   const active = await db.select({ workspaceId: regionalProfilesTable.workspaceId, campaignId: regionalProfilesTable.campaignId }).from(regionalProfilesTable).innerJoin(campaignsTable, eq(regionalProfilesTable.campaignId, campaignsTable.id)).where(inArray(campaignsTable.status, ["approved", "executing", "live"]));
-  const period = mode === "lightweight" ? new Date().toISOString().slice(0, 10) : `${new Date().getUTCFullYear()}-W${Math.ceil((((Date.now() - Date.UTC(new Date().getUTCFullYear(), 0, 1)) / 86400000) + new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1)).getUTCDay() + 1) / 7)}`;
   // Bounded batches prevent a large tenant set from fanning out provider calls.
   for (let offset = 0; offset < active.length; offset += 4) await Promise.all(active.slice(offset, offset + 4).map(async (row) => {
-    await acquireCampaignRegionalIntel(row.workspaceId, row.campaignId, mode, `scheduled:${mode}:${period}`, provider).catch((error) => logger.warn({ campaignId: row.campaignId, err: error }, "Regional acquisition campaign failed"));
+    const entitlement = await getRadarEntitlement(row.workspaceId);
+    if (!entitlement.active || !entitlement.limits) return; // no active package, no provider call or reservation
+    const mode = radarScheduledMode(entitlement.limits);
+    const bucket = Math.floor(Date.now() / (entitlement.limits.scanCadenceMinutes * 60_000));
+    await acquireCampaignRegionalIntel(row.workspaceId, row.campaignId, mode, `scheduled:${mode}:${bucket}`, provider).catch((error) => logger.warn({ campaignId: row.campaignId, err: error }, "Regional acquisition campaign failed"));
   }));
 }
 export function startRegionalAcquisitionScheduler() {
   if (timer) return;
-  registerScheduler(schedulerName, 26 * 60 * 60_000);
+  // Fifteen minutes is the shortest sellable cadence (War Room). Entitlement
+  // checks above keep this inexpensive for all other workspaces.
+  registerScheduler(schedulerName, 16 * 60_000);
   const tick = () => runSchedulerTick(schedulerName, async () => {
-    await runRegionalAcquisitionSweep("lightweight");
-    if (new Date().getUTCDay() === 0) await runRegionalAcquisitionSweep("detailed");
+    await runRegionalAcquisitionSweep();
   }).catch(() => logger.error("Regional acquisition scheduler tick failed"));
-  timer = setInterval(tick, Number(process.env["REGIONAL_INTEL_DAILY_INTERVAL_MS"] ?? 24 * 60 * 60_000));
+  timer = setInterval(tick, Number(process.env["REGIONAL_INTEL_ACQUISITION_INTERVAL_MS"] ?? 15 * 60_000));
   setImmediate(tick);
 }
 export function stopRegionalAcquisitionScheduler() { if (timer) { clearInterval(timer); timer = null; } }
