@@ -5,7 +5,8 @@ import {
   paidMediaAccountsTable, paidMediaEntitiesTable, paidMediaInsightsTable,
   paidMediaPoliciesTable, paidMediaProposalsTable, paidMediaApprovalsTable,
   paidMediaActionAttemptsTable, metaWebhookEventsTable, instagramDmSequencesTable,
-  socialPresencePostsTable,
+  socialPresencePostsTable, radarOrdersTable, radarPurchaseRequestsTable,
+  radarSubscriptionsTable, radarUsageLedgerTable,
 } from "@workspace/db";
 
 export type E2eManifest = {
@@ -120,6 +121,12 @@ export async function cleanupE2eFixtures(manifest: Pick<E2eManifest, "marker" | 
       !user.email.endsWith("@e2e.invalid") || !user.name.startsWith(`${manifest.marker} `))) {
       throw new Error("Refusing cleanup: manifest includes a non-E2E user");
     }
+    // These all have workspace-level cascade FKs, but deleting them explicitly
+    // keeps fixture cleanup correct even if a disposable DB predates those FKs.
+    await tx.delete(radarUsageLedgerTable).where(inArray(radarUsageLedgerTable.workspaceId, manifest.workspaces));
+    await tx.delete(radarSubscriptionsTable).where(inArray(radarSubscriptionsTable.workspaceId, manifest.workspaces));
+    await tx.delete(radarOrdersTable).where(inArray(radarOrdersTable.workspaceId, manifest.workspaces));
+    await tx.delete(radarPurchaseRequestsTable).where(inArray(radarPurchaseRequestsTable.workspaceId, manifest.workspaces));
     await tx.delete(paidMediaActionAttemptsTable).where(inArray(paidMediaActionAttemptsTable.workspaceId, manifest.workspaces));
     await tx.delete(paidMediaApprovalsTable).where(inArray(paidMediaApprovalsTable.workspaceId, manifest.workspaces));
     await tx.delete(paidMediaProposalsTable).where(inArray(paidMediaProposalsTable.workspaceId, manifest.workspaces));

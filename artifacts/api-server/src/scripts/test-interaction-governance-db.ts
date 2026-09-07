@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { db, interactionExecutionsTable, interactionOpportunitiesTable, interactionRecipientsTable, workspaceIntegrationsTable } from "@workspace/db";
 import { cleanupE2eFixtures, markerFromSuffix, seedE2eFixtures } from "./e2e-fixtures.js";
 import { createInteractionOpportunity, decideInteractionDraft, getInteractionOpportunity, governOpportunity, markInteractionOperatorExecuted, proposeInteractionDraft, recordInteractionOutcome, registerInteractionCapability, runInteractionCouncil, upsertInteractionPolicy } from "../modules/market-intel/interaction-governance.service.js";
+import { activateRadarEntitlement } from "../modules/market-intel/radar-entitlements.service.js";
 
 assert.equal(process.env.INTERACTION_GOVERNANCE_DB_TESTS, "true", "Set INTERACTION_GOVERNANCE_DB_TESTS=true only for a disposable migrated DB.");
 assert.equal(process.env.NODE_ENV, "test", "Interaction governance DB tests require NODE_ENV=test.");
@@ -11,6 +12,9 @@ const [workspaceId, foreignWorkspaceId] = fixtures.workspaces;
 const policy = { enabled: true, windowMinutes: 60, workspaceCeiling: 1, accountCeiling: 10, competitorCeiling: 10, postCeiling: 10, recipientCeiling: 10, recipientCooldownMinutes: 60, maximumRiskScore: 50, requireApproval: true, purpose: "test", jurisdictionCodes: ["BR"], retentionDays: 1 };
 let integrationIds: string[] = [];
 try {
+  // Council runs are Radar-gated. Seed a genuine entitlement rather than
+  // weakening the production gate for this disposable DB fixture.
+  await activateRadarEntitlement(workspaceId!, "RADAR_PRO", "BRL");
   await upsertInteractionPolicy(workspaceId!, policy);
   await upsertInteractionPolicy(foreignWorkspaceId!, policy);
   const integrations = await db.insert(workspaceIntegrationsTable).values([

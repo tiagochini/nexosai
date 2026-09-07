@@ -4,7 +4,7 @@ import { campaignsTable, db, regionalCompetitorsTable, regionalMonitorRunsTable,
 import { env } from "../../lib/env.js";
 import { logger } from "../../lib/logger.js";
 import { getSchedulerHealth, registerScheduler, runSchedulerTick } from "../operations/scheduler-health.registry.js";
-import { createCompetitor, createVerifiedEvidence, normalizePublicUrl, recordObservation, startMonitorRun, finishMonitorRun } from "./regional-intelligence.service.js";
+import { campaignOwned, createCompetitor, createVerifiedEvidence, normalizePublicUrl, recordObservation, startMonitorRun, finishMonitorRun } from "./regional-intelligence.service.js";
 import { getRadarEntitlement, RadarEntitlementError, radarScheduledMode, reserveRadarUsage } from "./radar-entitlements.service.js";
 
 type Json = Record<string, unknown>;
@@ -80,6 +80,9 @@ async function retry<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 export async function acquireCampaignRegionalIntel(workspaceId: string, campaignId: string, mode: AcquisitionMode, idempotencyKey: string, provider: RegionalAcquisitionProvider = new OpenAIWebSearchProvider()) {
+  // Ownership must be resolved before any entitlement, cadence, run-state, or
+  // provider work so a foreign tenant cannot probe or consume this campaign.
+  if (!await campaignOwned(workspaceId, campaignId)) throw new Error("Campanha não encontrada neste workspace.");
   const lockKey = `${workspaceId}:${campaignId}:${idempotencyKey}`;
   if (inFlightRuns.has(lockKey)) throw new Error("Regional acquisition already running for this idempotency key.");
   // Check before startMonitorRun because its legacy return contract deliberately

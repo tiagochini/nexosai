@@ -5,6 +5,13 @@ import { db, launchSequencesTable, sequenceContactsTable, auditLogsTable } from 
 import { logger } from "../../lib/logger.js";
 import { completeWithAgent } from "../ai-gateway/ai-gateway.service.js";
 import { env } from "../../lib/env.js";
+import { isLaunchSource, reserveLaunchSeat } from "../waitlist/launch-reservation.service.js";
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character]!);
+}
 
 async function sendLeadConfirmationEmail(opts: {
   toEmail: string;
@@ -15,7 +22,9 @@ async function sendLeadConfirmationEmail(opts: {
   const apiKey = env.RESEND_API_KEY;
   if (!apiKey) return;
   const from = `NexOS AI <${env.RESEND_FROM_EMAIL}>`;
-  const firstName = opts.toName?.split(" ")[0] ?? "Olá";
+  const firstName = escapeHtml(opts.toName?.split(" ")[0] ?? "Olá");
+  const sequenceName = escapeHtml(opts.sequenceName);
+  const referralUrl = escapeHtml(opts.referralUrl);
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#0a0a0f;font-family:monospace;color:#e2e8f0;">
@@ -26,13 +35,13 @@ async function sendLeadConfirmationEmail(opts: {
     </div>
     <p style="font-size:15px;line-height:1.6;margin:0 0 16px;">Olá, <strong>${firstName}</strong>!</p>
     <p style="font-size:14px;line-height:1.6;color:#94a3b8;margin:0 0 24px;">
-      Você foi registrado com sucesso em <strong style="color:#e2e8f0;">${opts.sequenceName}</strong>.
+      Você foi registrado com sucesso em <strong style="color:#e2e8f0;">${sequenceName}</strong>.
       A equipe NexOS AI entrará em contato com próximas novidades.
     </p>
     ${opts.referralUrl ? `<div style="border:1px solid #00f0ff22;background:#00f0ff08;padding:16px;margin-bottom:24px;">
       <p style="font-size:11px;color:#00f0ff;text-transform:uppercase;letter-spacing:0.2em;margin:0 0 8px;">Seu link de indicação exclusivo</p>
       <p style="font-size:13px;color:#94a3b8;margin:0 0 4px;">Compartilhe e ganhe prioridade na fila de acesso:</p>
-      <a href="${opts.referralUrl}" style="color:#00f0ff;font-size:12px;word-break:break-all;">${opts.referralUrl}</a>
+      <a href="${referralUrl}" style="color:#00f0ff;font-size:12px;word-break:break-all;">${referralUrl}</a>
     </div>` : ""}
     <div style="border-top:1px solid #ffffff0d;padding-top:16px;margin-top:8px;">
       <span style="font-size:11px;color:#475569;letter-spacing:0.1em;">lancamento@agencianexos.vip · agencianexos.vip</span>
@@ -77,6 +86,7 @@ const leadCaptureSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   email: z.email().optional(),
   phone: z.string().max(30).optional(),
+  whatsapp: z.string().max(30).optional(),
   source: z.string().max(100).optional(),
   utmSource: z.string().max(100).optional(),
   utmMedium: z.string().max(100).optional(),
@@ -211,6 +221,31 @@ router.post("/:sequenceId", async (req, res): Promise<void> => {
     return;
   }
 
+  // Landing PLF traffic must reserve through the same locked waitlist path as
+  // the direct landing form. The sequence contact remains the attribution
+  // record, while waitlist is the authoritative seat ledger.
+  const requestedLaunchSeat = isLaunchSource(body.source);
+  const reservationPhone = body.whatsapp ?? body.phone;
+  let launchReserved = false;
+  if (requestedLaunchSeat) {
+    if (!reservationPhone) {
+      res.status(400).json({ error: "Informe telefone para reservar sua vaga inicial" });
+      return;
+    }
+    const reservation = await reserveLaunchSeat({
+      name: body.name ?? "Lead NexOS",
+      whatsapp: reservationPhone,
+      email: body.email,
+      segment: "individual",
+      source: body.source,
+    });
+    if (!reservation) {
+      res.status(409).json({ error: "As vagas iniciais foram encerradas.", code: "LAUNCH_CAPACITY_REACHED" });
+      return;
+    }
+    launchReserved = reservation.launchReserved;
+  }
+
   // Deduplicate by email within sequence
   if (body.email) {
     const [existing] = await db
@@ -225,7 +260,12 @@ router.post("/:sequenceId", async (req, res): Promise<void> => {
       .limit(1);
 
     if (existing) {
-      res.json({ captured: true, duplicate: true, message: "Lead já registrado nesta sequência" });
+      res.json({
+        captured: true,
+        duplicate: true,
+        launchReserved,
+        message: "Lead já registrado nesta sequência",
+      });
       return;
     }
   }
@@ -347,6 +387,7 @@ router.post("/:sequenceId", async (req, res): Promise<void> => {
   res.status(201).json({
     captured: true,
     duplicate: false,
+    launchReserved,
     contactId: contact.id,
     referralCode,
     referralUrl,

@@ -40,6 +40,8 @@ function formatPhone(raw: string): string {
 interface Props {
   open: boolean;
   onClose: () => void;
+  closed?: boolean;
+  onCapacityReached?: () => void;
   onSuccess?: () => void;
   redirectUrl?: string;
   title?: string;
@@ -47,8 +49,7 @@ interface Props {
 }
 
 type Step = "form" | "loading" | "success" | "error";
-
-export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl, title, subtitle }: Props) {
+export default function LeadCaptureModal({ open, onClose, closed = false, onCapacityReached, onSuccess, redirectUrl, title, subtitle }: Props) {
   const [step, setStep] = useState<Step>("form");
   const [name, setName]   = useState("");
   const [email, setEmail] = useState("");
@@ -57,10 +58,10 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl
 
   useEffect(() => {
     if (open) {
-      setStep("form");
+      setStep(closed && !getSeqId() ? "error" : "form");
       setErrorMsg("");
     }
-  }, [open]);
+  }, [open, closed]);
 
   useEffect(() => {
     if (open) {
@@ -119,8 +120,14 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl
         body:    JSON.stringify(payload),
       });
 
-      if (!res.ok && res.status !== 409) {
-        const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 409 && data?.code === "LAUNCH_CAPACITY_REACHED") {
+        onCapacityReached?.();
+        setErrorMsg("Turma inicial encerrada. A data de reabertura é desconhecida; fale com a equipe pelo WhatsApp.");
+        setStep("error");
+        return;
+      }
+      if (!res.ok) {
         throw new Error(data?.error ?? "Não foi possível confirmar seu registro. Verifique os dados e tente novamente.");
       }
 
@@ -167,7 +174,7 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl
                   {title ?? "Entre na Lista de Abertura"}
                 </h2>
                 <p className="font-sans text-sm text-muted-foreground mt-2 font-light">
-                  {subtitle ?? "O sistema está em fase de homologação final. Cadastre-se para ser notificado assim que o checkout oficial for liberado. Sem custos."}
+                  {subtitle ?? "Reserve sua vaga para a abertura inicial. Os detalhes do lançamento e do contato chegarão por e-mail ou WhatsApp."}
                 </p>
               </div>
               <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-white/5">
@@ -176,7 +183,13 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl
             </div>
 
             <div className="px-8 pb-8 pt-4">
-              {(step === "form" || step === "error") && (
+              {closed && !getSeqId() ? (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-8 text-center space-y-5">
+                  <div className="font-sans font-black text-2xl">Turma inicial encerrada</div>
+                  <p className="font-sans text-sm text-muted-foreground leading-relaxed">As 100 vagas iniciais de pré-lançamento foram encerradas. Não há data prevista para reabertura e as condições futuras podem ser diferentes.</p>
+                  <Button onClick={openWA} className="w-full h-14 bg-foreground text-background hover:bg-foreground/90 rounded-xl font-sans font-bold">Falar com equipe no WhatsApp <ArrowRight className="ml-2 h-5 w-5" /></Button>
+                </motion.div>
+              ) : (step === "form" || step === "error") && (
                 <motion.form
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -241,7 +254,7 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl
                   )}
 
                   <Button type="submit" className="w-full h-14 mt-4 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_20px_rgba(0,229,255,0.4)] rounded-xl font-sans font-bold text-base transition-all tracking-wide flex items-center justify-center gap-2">
-                    <Users className="h-5 w-5" /> Entrar na Lista de Abertura
+                    <Users className="h-5 w-5" /> Reservar uma das 100 vagas iniciais
                   </Button>
 
                   <p className="font-sans text-xs text-center text-muted-foreground/60 leading-relaxed pt-2 font-light">
@@ -268,8 +281,8 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl
                   <div>
                     <div className="font-sans font-black text-2xl tracking-tight mb-2">Lugar Reservado!</div>
                     <div className="font-sans text-sm text-muted-foreground leading-relaxed font-light">
-                      O seu registro foi confirmado na lista de abertura. Nenhum valor foi cobrado.<br /><br />
-                      Você receberá um e-mail de aviso com antecedência assim que os acessos estiverem liberados e o lançamento iniciar.
+                      Você reservou uma das 100 vagas iniciais de pré-lançamento. Nenhum valor foi cobrado.<br /><br />
+                      Os detalhes do lançamento e do contato chegarão por e-mail ou WhatsApp. Depois que as 100 vagas iniciais encerrarem, não há data para reabertura e as condições futuras podem ser diferentes.
                     </div>
                   </div>
                   <Button onClick={openWA} className="w-full h-14 bg-foreground text-background hover:bg-foreground/90 rounded-xl font-sans font-bold text-base transition-all flex items-center justify-center gap-2 mt-4">

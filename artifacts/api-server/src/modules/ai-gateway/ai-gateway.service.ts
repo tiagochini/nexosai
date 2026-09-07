@@ -254,7 +254,6 @@ export async function transcribeAudio(
   mimeType = "audio/webm",
   log: Logger,
 ): Promise<string> {
-  const { client: openaiAudioClient } = getOpenAI();
   const base64Data = audioBase64.includes(",") ? audioBase64.split(",")[1]! : audioBase64;
   const buffer = Buffer.from(base64Data, "base64");
   const ext = mimeType.includes("mp4") ? "mp4"
@@ -266,16 +265,56 @@ export async function transcribeAudio(
 
   const { toFile } = await import("openai");
   const file = await toFile(buffer, `audio.${ext}`, { type: mimeType });
+  const attempts: Array<{ credentialMode: CompletionCredentialMode; client: OpenAI }> = [];
 
-  const transcription = await openaiAudioClient.audio.transcriptions.create({
-    file,
-    model: "whisper-1",
-    language: "pt",
-    response_format: "text",
-  });
+  // Whisper is an OpenAI transcription endpoint. Anthropic has no equivalent
+  // endpoint and Gemini's text-generation audio input is not wire-compatible
+  // with this API, so neither is sent this multipart payload.
+  if (env.OPENAI_API_KEY) {
+    attempts.push({
+      credentialMode: "native",
+      client: new OpenAI({ apiKey: env.OPENAI_API_KEY, timeout: LLM_CALL_TIMEOUT_MS }),
+    });
+  }
+  if (hasOpenAIIntegration()) {
+    attempts.push({
+      credentialMode: "replit",
+      client: new OpenAI({
+        apiKey: env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+        timeout: LLM_CALL_TIMEOUT_MS,
+      }),
+    });
+  }
+  if (attempts.length === 0) {
+    throw new AICompletionConfigurationError(
+      "Audio transcription requires native OpenAI credentials or the configured Replit OpenAI integration",
+    );
+  }
 
-  log.info({ mimeType, ext, bytes: buffer.length }, "Audio transcribed via Whisper");
-  return typeof transcription === "string" ? transcription : String(transcription);
+  let lastError: unknown;
+  for (const [index, attempt] of attempts.entries()) {
+    try {
+      const transcription = await attempt.client.audio.transcriptions.create({
+        file,
+        model: "whisper-1",
+        language: "pt",
+        response_format: "text",
+      });
+      log.info(
+        { mimeType, ext, bytes: buffer.length, credentialMode: attempt.credentialMode, attemptCount: index + 1 },
+        "Audio transcribed via OpenAI-compatible transcription endpoint",
+      );
+      return typeof transcription === "string" ? transcription : String(transcription);
+    } catch (error) {
+      lastError = error;
+      log.warn(
+        { credentialMode: attempt.credentialMode, attemptCount: index + 1, err: error instanceof Error ? error.message : String(error) },
+        "Audio transcription provider failed; advancing compatible fallback chain",
+      );
+    }
+  }
+  throw lastError;
 }
 
 export interface AICompletionResult {
@@ -308,6 +347,10 @@ function hasAnthropicIntegration(): boolean {
 
 export function hasOpenAIIntegration(): boolean {
   return !!(env.AI_INTEGRATIONS_OPENAI_BASE_URL && env.AI_INTEGRATIONS_OPENAI_API_KEY);
+}
+
+function hasGeminiIntegration(): boolean {
+  return !!(env.AI_INTEGRATIONS_GEMINI_BASE_URL && env.AI_INTEGRATIONS_GEMINI_API_KEY);
 }
 
 export function getAnthropic(): { client: Anthropic; isNative: boolean } {
@@ -351,8 +394,7 @@ function getGemini(): GoogleGenerativeAI {
   if (!geminiClient) {
     if (env.GEMINI_API_KEY) {
       geminiClient = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-    } else if (env.AI_INTEGRATIONS_GEMINI_API_KEY) {
-      // Use integration API key with default endpoint (proxy handles routing)
+    } else if (hasGeminiIntegration()) {
       geminiClient = new GoogleGenerativeAI(env.AI_INTEGRATIONS_GEMINI_API_KEY);
     } else {
       throw new AICompletionConfigurationError("Gemini credentials are unavailable");
@@ -387,7 +429,7 @@ function withLLMTimeout(signal?: AbortSignal, timeoutMs: number = LLM_CALL_TIMEO
 // Only retries transient failures (network errors, 502/504, our own timeout
 // abort). Never retries 4xx errors (bad request, context length exceeded,
 // auth, etc.) — those are deterministic and retrying just burns tokens/credits.
-const RETRYABLE_STATUS_CODES = new Set([502, 504]);
+const RETRYABLE_STATUS_CODES = new Set([500, 502, 503, 504]);
 const RETRYABLE_ERROR_CODES = new Set(["ETIMEDOUT", "ECONNRESET", "ECONNREFUSED", "ENOTFOUND", "EPIPE", "EAI_AGAIN"]);
 const RETRYABLE_MESSAGE_PATTERN = /LLM_CALL_TIMEOUT|ETIMEDOUT|ECONNRESET|ECONNREFUSED|ENOTFOUND|EPIPE|fetch failed|network error|socket hang up/i;
 
@@ -576,14 +618,15 @@ async function callGemini(
   credentialMode: "native" | "replit" = "native",
 ): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel?: string }> {
   const apiKey = credentialMode === "native" ? env.GEMINI_API_KEY : env.AI_INTEGRATIONS_GEMINI_API_KEY;
+  const baseUrl = credentialMode === "replit" ? env.AI_INTEGRATIONS_GEMINI_BASE_URL : undefined;
   const effectiveLog = log ?? noopLogger;
-  if (!apiKey) throw new AICompletionConfigurationError(`Gemini ${credentialMode} credentials are unavailable`);
+  if (!apiKey || (credentialMode === "replit" && !baseUrl)) throw new AICompletionConfigurationError(`Gemini ${credentialMode} credentials are unavailable`);
   const client = new GoogleGenerativeAI(apiKey);
   const effectiveModel = credentialMode === "native" ? model : "gemini-3-flash-preview";
     const geminiModel = client.getGenerativeModel({
       model: effectiveModel,
       systemInstruction: systemPrompt,
-    });
+    }, baseUrl ? { baseUrl } : undefined);
 
     const history = messages.slice(0, -1).map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
@@ -846,9 +889,10 @@ export function planCanonicalCompletionChain(): CanonicalCompletionAttempt[] {
     { provider: "anthropic", credentialMode: "native", model: ANTHROPIC_NATIVE_MODEL },
     { provider: "openai", credentialMode: "native", model: OPENAI_NATIVE_MODEL },
     { provider: "gemini", credentialMode: "native", model: GEMINI_NATIVE_MODEL },
-    // Replit is one final stage. Prefer its OpenAI-compatible integration.
+    // Replit integrations are one final phase, never interleaved with native providers.
     { provider: "openai", credentialMode: "replit", model: OPENAI_INTEGRATION_MODEL },
     { provider: "anthropic", credentialMode: "replit", model: ANTHROPIC_INTEGRATION_MODEL },
+    { provider: "gemini", credentialMode: "replit", model: GEMINI_NATIVE_MODEL },
   ];
 }
 
@@ -899,7 +943,9 @@ export async function executeCanonicalCompletionChain<T>(
     invoked++;
     try {
       const value = await run(attempt);
-      return { value, attempt, attemptCount: invoked, usedFallback: invoked > 1, failures };
+      // attemptCount is billable provider calls only; usedFallback reflects the
+      // selected canonical phase even when earlier credentials were unavailable.
+      return { value, attempt, attemptCount: invoked, usedFallback: attempts.indexOf(attempt) > 0, failures };
     } catch (error) {
       failures.push({
         provider: attempt.provider,
@@ -921,7 +967,7 @@ function hasCredentials(attempt: CanonicalCompletionAttempt): boolean {
   }
   return attempt.provider === "anthropic" ? hasAnthropicIntegration()
     : attempt.provider === "openai" ? hasOpenAIIntegration()
-    : !!env.AI_INTEGRATIONS_GEMINI_API_KEY;
+    : hasGeminiIntegration();
 }
 
 export async function completeWithAgent(

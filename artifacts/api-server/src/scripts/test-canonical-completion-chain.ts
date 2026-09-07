@@ -9,7 +9,14 @@ import {
 
 const plan = planCanonicalCompletionChain();
 const labels = plan.map(a => `${a.credentialMode}:${a.provider}`);
-assert.deepEqual(labels, ["native:anthropic", "native:openai", "native:gemini", "replit:openai", "replit:anthropic"]);
+assert.deepEqual(labels, [
+  "native:anthropic",
+  "native:openai",
+  "native:gemini",
+  "replit:openai",
+  "replit:anthropic",
+  "replit:gemini",
+]);
 assert.equal(new Set(labels).size, labels.length, "chain must have no duplicate/cycle entries");
 
 async function scenario(available: string[], successful: string) {
@@ -47,10 +54,55 @@ assert.deepEqual(test.invoked, ["native:anthropic", "native:openai", "native:gem
 assert.equal(test.result.attempt.credentialMode, "replit");
 assert.equal(test.result.usedFallback, true);
 
-// A failed Replit OpenAI attempt stays in the final Replit stage and never cycles native.
-test = await scenario(["replit:openai", "replit:anthropic"], "replit:anthropic");
-assert.deepEqual(test.invoked, ["replit:openai", "replit:anthropic"]);
-assert.equal(test.result.attemptCount, 2, "skipped native credentials are not attempts");
+// Replit is a final phase: it never cycles back to native, and Gemini is the
+// last compatible Replit completion endpoint.
+test = await scenario(["replit:openai", "replit:anthropic", "replit:gemini"], "replit:gemini");
+assert.deepEqual(test.invoked, ["replit:openai", "replit:anthropic", "replit:gemini"]);
+assert.equal(test.result.attemptCount, 3, "skipped native credentials are not attempts");
+assert.equal(test.result.attempt.provider, "gemini");
+
+test = await scenario(["replit:anthropic"], "replit:anthropic");
+assert.deepEqual(test.invoked, ["replit:anthropic"]);
+assert.equal(test.result.attemptCount, 1, "only configured credentials count as attempts");
+assert.equal(test.result.usedFallback, true, "a selected Replit phase is still a canonical fallback");
+
+// Every credential matrix resolves to the first available configured endpoint.
+for (let mask = 1; mask < 2 ** labels.length; mask++) {
+  const available = labels.filter((_, index) => (mask & (1 << index)) !== 0);
+  const expected = available[0]!;
+  const matrix = await executeCanonicalCompletionChain(
+    plan,
+    attempt => available.includes(`${attempt.credentialMode}:${attempt.provider}`),
+    async attempt => `${attempt.credentialMode}:${attempt.provider}`,
+  );
+  assert.equal(matrix.value, expected, `credential matrix ${mask} selected wrong provider`);
+  assert.equal(matrix.attemptCount, 1, `credential matrix ${mask} invoked an unavailable provider`);
+}
+
+// Provider errors—including rate limiting, server failures and timeouts—must
+// advance the deterministic chain. These are mocked errors; no SDK/network call
+// or credentials are involved.
+for (const error of [
+  Object.assign(new Error("rate limited"), { status: 429 }),
+  Object.assign(new Error("upstream unavailable"), { status: 503 }),
+  Object.assign(new Error("LLM_CALL_TIMEOUT"), { name: "AbortError" }),
+]) {
+  const invoked: string[] = [];
+  const execution = await executeCanonicalCompletionChain(
+    plan,
+    attempt => ["native:anthropic", "native:openai"].includes(`${attempt.credentialMode}:${attempt.provider}`),
+    async attempt => {
+      const id = `${attempt.credentialMode}:${attempt.provider}`;
+      invoked.push(id);
+      if (id === "native:anthropic") throw error;
+      return id;
+    },
+  );
+  assert.deepEqual(invoked, ["native:anthropic", "native:openai"]);
+  assert.equal(execution.value, "native:openai");
+  assert.equal(execution.failures.length, 1);
+  assert.equal(execution.failures[0]?.provider, "anthropic");
+}
 
 let runners = 0;
 await assert.rejects(

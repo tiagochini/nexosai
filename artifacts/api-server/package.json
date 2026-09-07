@@ -45,6 +45,7 @@
     ,"test:radar-entitlements-db": "RADAR_ENTITLEMENT_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-radar-entitlements-db.ts"
     ,"test:radar-checkout-unit": "tsx src/scripts/test-radar-checkout-unit.ts"
     ,"test:canonical-completion-chain": "tsx src/scripts/test-canonical-completion-chain.ts"
+    ,"test:waitlist-launch-capacity": "tsx src/scripts/test-waitlist-launch-capacity.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

@@ -1,19 +1,44 @@
 import { Router } from "express";
 import { z } from "zod/v4";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db, waitlistTable, workspaceIntegrationsTable } from "@workspace/db";
 import { env } from "../../lib/env.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { logger } from "../../lib/logger.js";
+import {
+  isLaunchSource,
+  reserveLaunchSeat,
+  type LaunchReservationResult,
+} from "./launch-reservation.service.js";
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character]!);
+}
 
 async function sendWaitlistConfirmationEmail(opts: {
   toEmail: string;
   name: string;
+  launchReservation?: boolean;
 }): Promise<void> {
   const apiKey = env.RESEND_API_KEY;
   if (!apiKey) return;
   const from = `NexOS AI <${env.RESEND_FROM_EMAIL}>`;
-  const firstName = opts.name.split(" ")[0] ?? opts.name;
+  const firstName = escapeHtml(opts.name.split(" ")[0] ?? opts.name);
+  const launchCopy = opts.launchReservation
+    ? `<p style="font-size:14px;line-height:1.6;color:#94a3b8;margin:0 0 16px;">
+       Você reservou uma das <strong style="color:#e2e8f0;">100 vagas iniciais de pré-lançamento</strong>.
+     </p>
+     <p style="font-size:14px;line-height:1.6;color:#94a3b8;margin:0 0 24px;">
+       Sua reserva está confirmada para a abertura inicial. Os detalhes do lançamento e do contato chegarão por e-mail ou WhatsApp. Depois que as primeiras 100 vagas encerrarem, não há data prevista para reabertura e preço ou condições futuras podem ser diferentes.
+     </p>`
+    : `<p style="font-size:14px;line-height:1.6;color:#94a3b8;margin:0 0 24px;">
+       Nossa equipe analisará seu perfil e, quando liberado, você receberá seu <strong style="color:#00f0ff;">código de acesso exclusivo</strong> pelo WhatsApp.
+     </p>
+     <div style="border:1px solid #00f0ff22;background:#00f0ff08;padding:16px;margin-bottom:24px;">
+       <p style="font-size:13px;color:#94a3b8;margin:0;">⏳ Prazo de análise: até <strong style="color:#e2e8f0;">72 horas úteis</strong>. Aguarde nosso contato no WhatsApp informado.</p>
+     </div>`;
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#0a0a0f;font-family:monospace;color:#e2e8f0;">
@@ -26,12 +51,7 @@ async function sendWaitlistConfirmationEmail(opts: {
     <p style="font-size:14px;line-height:1.6;color:#94a3b8;margin:0 0 16px;">
       Sua solicitação de acesso à <strong style="color:#e2e8f0;">plataforma NexOS AI</strong> foi recebida com sucesso.
     </p>
-    <p style="font-size:14px;line-height:1.6;color:#94a3b8;margin:0 0 24px;">
-      Nossa equipe analisará seu perfil e, quando liberado, você receberá seu <strong style="color:#00f0ff;">código de acesso exclusivo</strong> pelo WhatsApp.
-    </p>
-    <div style="border:1px solid #00f0ff22;background:#00f0ff08;padding:16px;margin-bottom:24px;">
-      <p style="font-size:13px;color:#94a3b8;margin:0;">⏳ Prazo de análise: até <strong style="color:#e2e8f0;">72 horas úteis</strong>. Aguarde nosso contato no WhatsApp informado.</p>
-    </div>
+    ${launchCopy}
     <div style="border-top:1px solid #ffffff0d;padding-top:16px;margin-top:8px;">
       <span style="font-size:11px;color:#475569;letter-spacing:0.1em;">lancamento@agencianexos.vip · agencianexos.vip</span>
     </div>
@@ -76,9 +96,9 @@ async function notifyAdminNewLead(opts: {
     </div>
     <p style="font-size:16px;font-weight:700;margin:0 0 20px;color:#fff;">Novo solicitante de acesso!</p>
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <tr><td style="padding:8px 0;color:#94a3b8;width:110px;">Nome</td><td style="padding:8px 0;color:#fff;font-weight:700;">${opts.name}</td></tr>
-      <tr><td style="padding:8px 0;color:#94a3b8;">WhatsApp</td><td style="padding:8px 0;color:#00f0ff;">${opts.whatsapp}</td></tr>
-      ${opts.email ? `<tr><td style="padding:8px 0;color:#94a3b8;">Email</td><td style="padding:8px 0;color:#e2e8f0;">${opts.email}</td></tr>` : ""}
+      <tr><td style="padding:8px 0;color:#94a3b8;width:110px;">Nome</td><td style="padding:8px 0;color:#fff;font-weight:700;">${escapeHtml(opts.name)}</td></tr>
+      <tr><td style="padding:8px 0;color:#94a3b8;">WhatsApp</td><td style="padding:8px 0;color:#00f0ff;">${escapeHtml(opts.whatsapp)}</td></tr>
+      ${opts.email ? `<tr><td style="padding:8px 0;color:#94a3b8;">Email</td><td style="padding:8px 0;color:#e2e8f0;">${escapeHtml(opts.email)}</td></tr>` : ""}
       <tr><td style="padding:8px 0;color:#94a3b8;">Segmento</td><td style="padding:8px 0;color:#e2e8f0;">${segmentLabel}</td></tr>
       <tr><td style="padding:8px 0;color:#94a3b8;">Horário</td><td style="padding:8px 0;color:#e2e8f0;">${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</td></tr>
     </table>
@@ -179,37 +199,43 @@ router.post("/", async (req, res): Promise<void> => {
 
   const { name, whatsapp, email, segment, source } = parsed.data;
 
-  const [existing] = await db
-    .select({ id: waitlistTable.id, segment: waitlistTable.segment })
-    .from(waitlistTable)
-    .where(eq(waitlistTable.whatsapp, whatsapp))
-    .limit(1);
+  const requestedLaunchSeat = isLaunchSource(source);
+  let result: LaunchReservationResult;
 
-  if (existing) {
-    res.json({
-      joined: true,
-      duplicate: true,
-      segment: existing.segment,
-      message: "Você já está na lista. Aguarde nosso contato no WhatsApp.",
-    });
-    return;
+  if (requestedLaunchSeat) {
+    const reservation = await reserveLaunchSeat({ name, whatsapp, email, segment, source });
+    if (!reservation) {
+      res.status(409).json({ error: "As vagas iniciais foram encerradas.", code: "LAUNCH_CAPACITY_REACHED" });
+      return;
+    }
+    result = reservation;
+  } else {
+    const [existing] = await db
+      .select({ id: waitlistTable.id, segment: waitlistTable.segment, source: waitlistTable.source })
+      .from(waitlistTable)
+      .where(eq(waitlistTable.whatsapp, whatsapp))
+      .limit(1);
+    if (existing) {
+      res.json({
+        joined: true,
+        duplicate: true,
+        segment: existing.segment,
+        launchReserved: isLaunchSource(existing.source),
+        message: "Você já está na lista. Aguarde nosso contato no WhatsApp.",
+      });
+      return;
+    }
+    await db.insert(waitlistTable).values({ name, whatsapp, email: email ?? null, segment, source: source ?? null });
+    result = { duplicate: false, segment, launchReserved: false };
   }
 
-  await db.insert(waitlistTable).values({
-    name,
-    whatsapp,
-    email: email ?? null,
-    segment,
-    source: source ?? null,
-  });
-
   // Fire-and-forget: confirmação para o lead + alerta para o admin (paralelo, não-bloqueante)
-  setImmediate(() => {
+  if (!result.duplicate) setImmediate(() => {
     const tasks: Promise<void>[] = [];
 
     if (email) {
       tasks.push(
-        sendWaitlistConfirmationEmail({ toEmail: email, name }).catch((err) =>
+        sendWaitlistConfirmationEmail({ toEmail: email, name, launchReservation: requestedLaunchSeat }).catch((err) =>
           logger.warn({ err }, "Waitlist confirmation email error"),
         ),
       );
@@ -224,28 +250,13 @@ router.post("/", async (req, res): Promise<void> => {
     Promise.all(tasks).catch(() => {});
   });
 
-  res.status(201).json({
+  res.status(result.duplicate ? 200 : 201).json({
     joined: true,
-    duplicate: false,
-    segment,
-    message: "Você entrou na lista de espera!",
+    duplicate: result.duplicate,
+    segment: result.segment,
+    launchReserved: result.launchReserved,
+    message: result.duplicate ? "Você já tem uma vaga inicial reservada." : "Você entrou na lista de espera!",
   });
-});
-
-// GET /api/waitlist/count — public
-router.get("/count", async (_req, res): Promise<void> => {
-  const rows = await db
-    .select({
-      segment: waitlistTable.segment,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(waitlistTable)
-    .groupBy(waitlistTable.segment);
-
-  const total = rows.reduce((acc, r) => acc + r.count, 0);
-  const bySegment = Object.fromEntries(rows.map(r => [r.segment, r.count]));
-
-  res.json({ total, bySegment });
 });
 
 // GET /api/waitlist/launch-config — public

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { and, eq } from "drizzle-orm";
 import {
   db, campaignsTable, regionalAlertsTable, regionalChangeEventsTable,
+  radarSubscriptionsTable,
 } from "@workspace/db";
 import {
   aggregateAudienceSegment, createCompetitor, createVerifiedEvidence, getRegionalProfile,
@@ -10,6 +11,7 @@ import {
   upsertPublicInteractionSignal, upsertRegionalProfile,
 } from "../modules/market-intel/regional-intelligence.service.js";
 import { acquireCampaignRegionalIntel, buildRegionalQueries, type RegionalAcquisitionProvider } from "../modules/market-intel/regional-acquisition.service.js";
+import { RADAR_CATALOG, activateRadarEntitlement } from "../modules/market-intel/radar-entitlements.service.js";
 import { cleanupE2eFixtures, markerFromSuffix, seedE2eFixtures } from "./e2e-fixtures.js";
 
 assert.equal(process.env.REGIONAL_INTEL_DB_TESTS, "true", "Set REGIONAL_INTEL_DB_TESTS=true only for a migrated disposable development DB.");
@@ -21,6 +23,14 @@ let campaignId: string | undefined;
 try {
   const [campaign] = await db.insert(campaignsTable).values({ workspaceId: workspaceId!, title: "Regional intelligence DB test" }).returning();
   campaignId = campaign!.id;
+  // Acquisition and monitoring must exercise the production Radar gate with
+  // a real active entitlement; do not bypass the gate in this DB test. This
+  // fixture alone disables cadence so distinct synchronous acquisition cases
+  // can run; every other RADAR_PRO limit remains production-accurate.
+  const entitlement = await activateRadarEntitlement(workspaceId!, "RADAR_PRO", "BRL");
+  await db.update(radarSubscriptionsTable).set({
+    limitsSnapshot: { ...RADAR_CATALOG.RADAR_PRO.limits, scanCadenceMinutes: 0 },
+  }).where(eq(radarSubscriptionsTable.id, entitlement.id));
   const observedAt = new Date("2026-01-02T10:00:00.000Z");
 
   const profile = await upsertRegionalProfile(workspaceId!, campaignId, "São Paulo, BR", "pt-BR", { radiusKm: 30, referralGeography: { origin: { countryCode: "BR" }, destination: { countryCode: "DE" } } }, { countryCode: "BR", subdivision: "SP", city: "São Paulo", postalCode: "01000-000", address: { line1: "Av. Paulista 1", countryCode: "BR" }, timezone: "America/Sao_Paulo", languages: ["pt-BR"], operatingRegions: [{ countryCode: "BR" }, { countryCode: "DE" }], residenceRegion: { countryCode: "BR" }, serviceRegion: { countryCode: "DE" }, geoProvenance: { source: "declared" }, geoConfidence: 100 });
@@ -55,6 +65,7 @@ try {
   await assert.rejects(() => acquireCampaignRegionalIntel(workspaceId!, campaignId!, "lightweight", "regional-acquisition-failed-001", failingFake), /fake provider unavailable/);
   assert.equal((await listCompetitors(workspaceId!, campaignId)).length, countBeforeFailure, "provider failure has no persistence");
   await assert.rejects(() => acquireCampaignRegionalIntel(foreignWorkspaceId!, campaignId!, "lightweight", "regional-acquisition-tenant-001", citedFake), /não encontrada/, "foreign workspace cannot acquire campaign data");
+  assert.equal(fakeCalls, 1, "foreign acquisition never invokes the provider");
   let releaseOverlap!: () => void;
   // The second call races an in-flight acquisition rather than a completed run.
   let enter!: () => void;

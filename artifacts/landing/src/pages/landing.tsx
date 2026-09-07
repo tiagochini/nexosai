@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { motion } from "framer-motion";
 import LeadCaptureModal from "@/components/LeadCaptureModal";
 import { Button } from "@/components/ui/button";
@@ -13,29 +13,39 @@ import { Link } from "wouter";
 
 export default function LandingPage() {
   const [isCaptureOpen, setCaptureOpen] = useState(false);
-  const openCapture = () => setCaptureOpen(true);
+  const [closed, setClosed] = useState(false);
+  const handleCapacityReached = useCallback(() => {
+    setClosed(true);
+  }, []);
+  const openCapture = () => {
+    if (closed) {
+      window.open("https://wa.me/message/NBJH4EXPAV2EN1", "_blank", "noopener,noreferrer");
+      return;
+    }
+    setCaptureOpen(true);
+  };
   const closeCapture = () => setCaptureOpen(false);
 
   return (
     <div className="min-h-[100dvh] bg-background text-foreground flex flex-col selection:bg-primary/30 scroll-smooth">
       <Background />
-      <Nav openCapture={openCapture} />
+      <Nav openCapture={openCapture} closed={closed} />
 
       <main className="flex-1">
-        <HeroSection openCapture={openCapture} />
+        <HeroSection openCapture={openCapture} closed={closed} />
         <PainSection />
         <MechanismSection />
-        <TransformationSection openCapture={openCapture} />
+        <TransformationSection openCapture={openCapture} closed={closed} />
         <BreadthSection />
         <OperationalProofSection />
         <CommercialSection />
         <ObjectionSection />
         <AnticipationSection />
-        <CtaSection openCapture={openCapture} />
+        <CtaSection openCapture={openCapture} closed={closed} />
       </main>
 
       <Footer />
-      <LeadCaptureModal open={isCaptureOpen} onClose={closeCapture} />
+      <LeadCaptureModal open={isCaptureOpen} onClose={closeCapture} closed={closed} onCapacityReached={handleCapacityReached} />
     </div>
   );
 }
@@ -50,7 +60,7 @@ function Background() {
   );
 }
 
-function Nav({ openCapture }: { openCapture: () => void }) {
+function Nav({ openCapture, closed }: { openCapture: () => void; closed: boolean }) {
   return (
     <nav className="fixed top-0 inset-x-0 z-50 border-b border-border/40 bg-background/60 backdrop-blur-xl transition-all">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -66,7 +76,7 @@ function Nav({ openCapture }: { openCapture: () => void }) {
             Entrar
           </Link>
           <Button onClick={openCapture} aria-label="Entrar na Lista de Abertura" data-testid="nav-guide-button" className="font-mono text-xs uppercase tracking-widest font-bold h-10 px-6 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_20px_rgba(0,229,255,0.4)] transition-all rounded-md">
-            Lista de Abertura
+            {closed ? "Turma inicial encerrada" : "Lista de Abertura"}
           </Button>
         </div>
       </div>
@@ -74,7 +84,7 @@ function Nav({ openCapture }: { openCapture: () => void }) {
   );
 }
 
-function HeroSection({ openCapture }: { openCapture: () => void }) {
+function HeroSection({ openCapture, closed }: { openCapture: () => void; closed: boolean }) {
   const scrollToMechanism = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     document.getElementById('mecanismo')?.scrollIntoView({ behavior: 'smooth' });
@@ -109,12 +119,17 @@ function HeroSection({ openCapture }: { openCapture: () => void }) {
 
           <div className="flex flex-col sm:flex-row gap-4">
             <Button onClick={openCapture} aria-label="Entrar na Lista de Abertura" data-testid="hero-cta-button" className="h-14 px-8 text-sm sm:text-base font-bold rounded-lg bg-foreground text-background hover:bg-foreground/90 transition-all font-sans tracking-wide">
-              Entrar na Lista de Abertura <ArrowRight className="ml-2 h-5 w-5" />
+              {closed ? "Turma inicial encerrada" : "Reservar vaga inicial"} <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             <Button variant="outline" onClick={scrollToMechanism} aria-label="Ver como a operação funciona" className="h-14 px-8 text-sm sm:text-base font-semibold rounded-lg border-border bg-card/30 hover:bg-card hover:border-primary/50 transition-all text-foreground backdrop-blur-md">
               Ver como a operação funciona
             </Button>
           </div>
+          <p className="mt-5 font-mono text-xs uppercase tracking-wider text-muted-foreground">
+            {closed
+              ? "As 100 vagas iniciais foram encerradas. Reabertura sem data prevista; condições atuais podem não permanecer."
+              : "A abertura inicial terá apenas 100 vagas de pré-lançamento."}
+          </p>
         </motion.div>
       </div>
 
@@ -259,7 +274,7 @@ function MechanismSection() {
   );
 }
 
-function TransformationSection({ openCapture }: { openCapture: () => void }) {
+function TransformationSection({ openCapture, closed }: { openCapture: () => void; closed: boolean }) {
   return (
     <section className="py-32 relative">
       <div className="max-w-7xl mx-auto px-6 text-center">
@@ -277,7 +292,7 @@ function TransformationSection({ openCapture }: { openCapture: () => void }) {
             Imagine um centro de comando onde aprovações substituem microgerenciamento. Você define o posicionamento, valida a oferta e aprova os recursos; o sistema planeja, escreve, publica, distribui anúncios e engaja leads, preservando seu tom de voz em cada contato.
           </p>
           <Button onClick={openCapture} className="h-14 px-8 text-sm sm:text-base font-bold rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-all font-sans tracking-wide shadow-[0_0_20px_rgba(138,43,226,0.3)]">
-            Entrar na Lista de Abertura <ArrowRight className="ml-2 h-5 w-5" />
+            {closed ? "Turma inicial encerrada" : "Reservar vaga inicial"} <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </motion.div>
       </div>
@@ -552,10 +567,10 @@ function AnticipationSection() {
               O Lançamento Exige Responsabilidade.
             </h2>
             <p className="text-lg text-muted-foreground font-light mb-8">
-              O checkout público está e permanecerá fechado. Só abriremos os pagamentos quando a integração profunda e governada com o ecossistema Meta Ads estiver homologada com os controles e verificações necessários, protegendo contas corporativas. Não apressaremos a base arquitetural.
+              A NexOS está pronta para centralizar sua operação comercial com automação, governança e controle. A abertura inicial foi desenhada para receber os primeiros operadores com a atenção que uma nova operação exige.
             </p>
             <p className="text-base text-foreground/80 font-mono tracking-wide uppercase">
-              O acesso aos convites será liberado exclusivamente para a lista prioritária.
+              A abertura inicial terá somente 100 vagas de pré-lançamento.
             </p>
           </div>
         </div>
@@ -564,7 +579,7 @@ function AnticipationSection() {
   );
 }
 
-function CtaSection({ openCapture }: { openCapture: () => void }) {
+function CtaSection({ openCapture, closed }: { openCapture: () => void; closed: boolean }) {
   return (
     <section className="py-32 relative overflow-hidden border-t border-border/50">
       <div className="absolute inset-0 bg-primary/5" />
@@ -575,8 +590,13 @@ function CtaSection({ openCapture }: { openCapture: () => void }) {
           Pronto para unificar<br />sua execução comercial?
         </h2>
         <Button onClick={openCapture} className="h-16 px-10 text-base sm:text-lg font-bold rounded-xl bg-foreground text-background hover:bg-foreground/90 transition-all font-sans tracking-wide shadow-2xl">
-          Entrar na Lista de Abertura <ArrowRight className="ml-2 h-6 w-6" />
+          {closed ? "Turma inicial encerrada" : "Reservar vaga inicial"} <ArrowRight className="ml-2 h-6 w-6" />
         </Button>
+        <p className="mt-5 text-sm text-muted-foreground">
+          {closed
+            ? "As 100 vagas iniciais foram encerradas. Fale com a equipe no WhatsApp; não há data para reabertura e as condições atuais podem não permanecer."
+            : "A abertura inicial terá apenas 100 vagas de pré-lançamento."}
+        </p>
       </div>
     </section>
   );
