@@ -9,6 +9,7 @@ import { createHash } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { db, campaignsTable, agentClarificationRequestsTable } from "@workspace/db";
 import type { AgentRole } from "../ai-gateway/ai-gateway.service.js";
+import { getApprovedMasterplan } from "../masterplan/masterplan.service.js";
 
 export interface CampaignActionContext {
   block: string;
@@ -63,6 +64,10 @@ const ROLE_SECTIONS: Record<string, string[]> = {
 };
 
 const DEFAULT_SECTIONS = ["objective", "market", "strategy", "offer_psychology", "launch", "constraints", "decisions", "clarifications"];
+export function campaignContextPreamble(hasApprovedMasterplan: boolean): string {
+  const header = "## CONTEXTO DE AÇÃO DA CAMPANHA — FONTE CANÔNICA\n\n> Precedência: Masterplan aprovado > contexto de ação da campanha > contexto do chamador > doutrina genérica.\n> Use somente estes fatos persistidos; não invente nem substitua decisões aprovadas.\n\n";
+  return hasApprovedMasterplan ? header : `${header}> FALLBACK LEGADO EXPLÍCITO: não há Masterplan aprovado; contexto abaixo é derivado dos dados legados da campanha.\n\n`;
+}
 
 function unavailable(reason: string): CampaignActionContext {
   const block = `## CONTEXTO DE AÇÃO DA CAMPANHA — INDISPONÍVEL\n\n${reason}\nNão infira nem use dados de outra campanha.\n\n---\n`;
@@ -103,14 +108,17 @@ export async function buildCampaignActionContext(
     return unavailable("A campanha não existe neste workspace ou não está disponível.");
   }
 
+  const approvedMasterplan = await getApprovedMasterplan(workspaceId, campaignId);
   const memory = asObject(campaign.memoryData);
-  const sourceVersion = `${campaign.updatedAt.toISOString()}:${String(memory.version ?? "")}`;
+  const sourceVersion = `${campaign.updatedAt.toISOString()}:${String(memory.version ?? "")}:${approvedMasterplan?.contextFingerprint ?? "legacy"}`;
   const key = `${workspaceId}:${campaignId}:${agentRole}:${sourceVersion}`;
   const hit = cache.get(key);
   if (hit && hit.expiresAt > Date.now()) return hit.value;
 
   const brain = asObject(campaign.brainData);
   const intake = asObject(campaign.intakeData);
+  // An approved Masterplan is the immutable operating contract. Legacy campaigns
+  // deliberately retain the prior assembled context until a version exists.
   const answered = await db.select({
     agentRole: agentClarificationRequestsTable.agentRole,
     question: agentClarificationRequestsTable.question,
@@ -122,6 +130,15 @@ export async function buildCampaignActionContext(
   )).limit(12);
 
   const source: Record<string, unknown> = {
+    masterplan: approvedMasterplan ? {
+      version: approvedMasterplan.version,
+      contentHash: approvedMasterplan.contentHash,
+      contextFingerprint: approvedMasterplan.contextFingerprint,
+      readiness: { score: approvedMasterplan.readinessScore, status: approvedMasterplan.readinessStatus, blockers: approvedMasterplan.readinessBlockers },
+      allowedActions: approvedMasterplan.allowedActions,
+      requiredApprovals: approvedMasterplan.requiredApprovals,
+      snapshot: approvedMasterplan.snapshot,
+    } : undefined,
     objective: { campaign: { title: campaign.title, type: campaign.type, status: campaign.status, locale: campaign.locale }, intake },
     strategy: campaign.strategyData,
     market: { targeting: campaign.targetingData, audience: campaign.audienceData, profile: brain["profileData"] },
@@ -138,10 +155,12 @@ export async function buildCampaignActionContext(
     decisions: { approved: Array.isArray(memory.approvedDecisions) ? memory.approvedDecisions.slice(-8) : [], relevantMemory: Array.isArray(memory.campaignLearnings) ? memory.campaignLearnings.slice(-5) : [] },
   };
 
-  const requested = ROLE_SECTIONS[agentRole] ?? DEFAULT_SECTIONS;
+  const requested = approvedMasterplan
+    ? ["masterplan", ...(ROLE_SECTIONS[agentRole] ?? DEFAULT_SECTIONS)]
+    : ROLE_SECTIONS[agentRole] ?? DEFAULT_SECTIONS;
   const sections: string[] = [];
   let truncated = false;
-  let body = "## CONTEXTO DE AÇÃO DA CAMPANHA — FONTE CANÔNICA\n\n> Precedência: contexto de ação aprovado da campanha > contexto do chamador > doutrina genérica.\n> Use somente estes fatos persistidos; não invente nem substitua decisões aprovadas.\n\n";
+  let body = campaignContextPreamble(Boolean(approvedMasterplan));
   for (const name of requested) {
     const value = source[name];
     if (value === undefined || (typeof value === "object" && Object.keys(asObject(value)).length === 0)) continue;

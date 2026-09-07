@@ -12,6 +12,7 @@ import { AppError, NotFoundError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
 import { isValidTransition } from "../campaigns/campaign-state-machine.js";
 import { transitionCampaign } from "../campaigns/campaigns.service.js";
+import { getApprovedMasterplan, getCurrentMasterplan } from "../masterplan/masterplan.service.js";
 
 const PRODUCT_AUTONOMY_CONTRACT_SNAPSHOT = {
   title: "Contrato de Produto e Autonomia — v0.2",
@@ -217,6 +218,17 @@ export async function enforceLaunchAutonomyGate(workspaceId: string, campaignId:
     .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).limit(1);
   if (!campaign) throw new NotFoundError("Campaign");
   if (campaign.executionStartedAt) return;
+  // Preserve legacy execution: only campaigns that opted into versioning require
+  // an approved Masterplan. This avoids retroactively blocking live production.
+  const currentMasterplan = await getCurrentMasterplan(workspaceId, campaignId);
+  if (currentMasterplan) {
+    const approvedMasterplan = await getApprovedMasterplan(workspaceId, campaignId);
+    if (!approvedMasterplan) {
+      await db.insert(auditLogsTable).values({ workspaceId, campaignId, action: "masterplan.execution_blocked", actor, data: { masterplanId: currentMasterplan.id, version: currentMasterplan.version, status: currentMasterplan.status, contextFingerprint: currentMasterplan.contextFingerprint } });
+      throw new AppError(428, "Masterplan aprovado é necessário antes do lançamento.", "MASTERPLAN_APPROVAL_REQUIRED", { version: currentMasterplan.version });
+    }
+    await db.insert(auditLogsTable).values({ workspaceId, campaignId, action: "masterplan.execution_gate_passed", actor, data: { masterplanId: approvedMasterplan.id, version: approvedMasterplan.version, contentHash: approvedMasterplan.contentHash, contextFingerprint: approvedMasterplan.contextFingerprint } });
+  }
   const status = await getAutonomyStatus(workspaceId, campaignId);
   if (status.missingAcceptanceTypes.length) {
     await db.insert(auditLogsTable).values({ workspaceId, campaignId, action: "contract.execution_blocked", actor, data: { contractKey: status.contract.key, contractVersion: status.contract.version, contractHash: status.contract.hash, requiredAcceptanceTypes: status.requiredAcceptanceTypes, missingAcceptanceTypes: status.missingAcceptanceTypes } });

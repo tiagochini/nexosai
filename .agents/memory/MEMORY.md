@@ -84,3 +84,4 @@
 - [Publish CHECK Validation](publish-check-validation.md) — validate dev CHECK constraints before publishing a new table; inline CREATE TABLE cannot contain NOT VALID.
 - [Commercial-Neutral Entitlements](commercial-neutral-entitlements.md) — workspace and social-account capacity are configurable plan capabilities, independent of pricing strategy.
 - [Recording Library Finalization](recording-library-finalization.md) — raw uploads bypass JSON parsing; media becomes ready only after storage confirmation and remains in workspace-scoped system folders.
+- [Canonical Masterplan Versioning](canonical-masterplan-versioning.md) — approved campaign plans are immutable authorities bound to context, authorization, evidence and readiness.

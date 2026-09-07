@@ -29,6 +29,13 @@
       "when": 1774483200002,
       "tag": "0007_recording_folders",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1774483200003,
+      "tag": "0008_masterplan_versions",
+      "breakpoints": true
     }
   ]
 }

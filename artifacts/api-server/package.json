@@ -34,7 +34,9 @@
     ,"test:native-media-e2e": "pnpm run test:native-media-control-plane && NODE_ENV=test tsx src/scripts/test-native-media-http.ts && pnpm run test:timeline-render-compiler && pnpm run test:native-media-worker-self-test"
     ,"test:ephemeral-video-e2e": "NODE_ENV=test tsx src/scripts/test-ephemeral-video-e2e.ts",
     "test:workspace-folder": "tsx ../video-editor/src/lib/workspace-folder.test.ts",
-    "test:recording-folders": "tsx src/scripts/test-recording-folders.ts"
+    "test:recording-folders": "tsx src/scripts/test-recording-folders.ts",
+    "test:masterplan-unit": "tsx src/scripts/test-masterplan-unit.ts"
+    ,"test:masterplan-db": "MASTERPLAN_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-masterplan-db.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",
