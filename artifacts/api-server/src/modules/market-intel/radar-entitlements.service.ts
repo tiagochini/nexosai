@@ -13,15 +13,21 @@ export type RadarLimits = {
 export type RadarChoice = RadarPackage | "NO_RADAR";
 const DAY = 86_400_000;
 /** Central, deployment-configurable launch date. Do not use a customer's first
- * login: legacy paid accounts start no earlier than the commercial launch. */
-export const RADAR_COMMERCIAL_LAUNCH_DATE = new Date(process.env["RADAR_COMMERCIAL_LAUNCH_DATE"] ?? "2026-09-08T00:00:00.000Z");
+ * login: when configured, legacy paid accounts start no earlier than the
+ * commercial launch. Without an official date, do not invent one. */
+const configuredRadarLaunchDate = process.env["RADAR_COMMERCIAL_LAUNCH_DATE"];
+const parsedRadarLaunchDate = configuredRadarLaunchDate ? new Date(configuredRadarLaunchDate) : null;
+export const RADAR_COMMERCIAL_LAUNCH_DATE =
+  parsedRadarLaunchDate && !Number.isNaN(parsedRadarLaunchDate.getTime()) ? parsedRadarLaunchDate : null;
 const plusCalendarDays = (date: Date, days: number) => {
   const next = new Date(date);
   next.setUTCDate(next.getUTCDate() + days);
   return next;
 };
-export function includedRadarTrialWindow(paidSubscriptionStartsAt: Date, launchDate = RADAR_COMMERCIAL_LAUNCH_DATE) {
-  const startsAt = new Date(Math.max(paidSubscriptionStartsAt.getTime(), launchDate.getTime()));
+export function includedRadarTrialWindow(paidSubscriptionStartsAt: Date, launchDate: Date | null = RADAR_COMMERCIAL_LAUNCH_DATE) {
+  const startsAt = launchDate
+    ? new Date(Math.max(paidSubscriptionStartsAt.getTime(), launchDate.getTime()))
+    : new Date(paidSubscriptionStartsAt);
   return { startsAt, endsAt: plusCalendarDays(startsAt, 90) };
 }
 export function isTerminalRadarPaymentStatus(status: string | undefined): boolean {

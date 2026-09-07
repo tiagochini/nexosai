@@ -10,6 +10,9 @@ assert.equal(legacy.endsAt.toISOString(), "2026-08-30T00:00:00.000Z", "included 
 const newCustomer = includedRadarTrialWindow(new Date("2026-06-15T00:00:00.000Z"), launch);
 assert.equal(newCustomer.startsAt.toISOString(), "2026-06-15T00:00:00.000Z");
 assert.equal(newCustomer.endsAt.toISOString(), "2026-09-13T00:00:00.000Z");
+const withoutOfficialLaunch = includedRadarTrialWindow(new Date("2026-07-10T00:00:00.000Z"), null);
+assert.equal(withoutOfficialLaunch.startsAt.toISOString(), "2026-07-10T00:00:00.000Z", "without an official launch date, the paid date is authoritative");
+assert.equal(withoutOfficialLaunch.endsAt.toISOString(), "2026-10-08T00:00:00.000Z");
 assert.equal(RADAR_CATALOG.RADAR_PRO.prices.BRL, 149700, "BRL amount is server catalog owned");
 assert.equal(RADAR_CATALOG.RADAR_PRO.limits.councilRuns, 100);
 assert.equal(radarScheduledMode(RADAR_CATALOG.RADAR_PRO.limits), "detailed");
