@@ -1,12 +1,11 @@
 import React, { useCallback, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import LeadCaptureModal from "@/components/LeadCaptureModal";
 import { Button } from "@/components/ui/button";
-import nexosLogo from "/nexos-logo.png";
 import { Link } from "wouter";
 import {
   ArrowRight, Users, Video, Workflow,
-  Activity, Target, Layers, Lock, ShieldCheck, Search, Megaphone, CheckSquare
+  Activity, Target, Layers, Lock, ShieldCheck, Search, Megaphone
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -57,7 +56,7 @@ function Nav({ openCapture, closed }: { openCapture: () => void; closed: boolean
     <nav className="sticky top-0 z-50 border-b-2 border-border bg-background/95 backdrop-blur-sm">
       <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between border-x-2 border-border bg-background">
         <div className="flex items-center gap-4">
-          <img src={nexosLogo} alt="NexOS" className="h-10 w-10 object-contain grayscale contrast-200" />
+          <img src="/nexos_ai_logo_1024x1024.png" alt="NexOS" className="h-10 w-10 object-contain" />
           <div className="hidden sm:block">
             <div className="font-display font-black text-2xl tracking-tighter uppercase leading-none">NEXOS</div>
             <div className="font-mono text-[10px] uppercase tracking-widest text-primary font-bold">Agência Autônoma</div>
@@ -110,7 +109,7 @@ function HeroSection({ openCapture, closed }: { openCapture: () => void; closed:
           </h1>
 
           <p className="text-lg sm:text-2xl text-muted-foreground max-w-3xl leading-relaxed mb-12 font-sans font-medium">
-            Da pesquisa de mercado inicial à retenção do cliente. Uma agência autônoma que cria sua oferta, produz as páginas, edita os vídeos, roda os anúncios no Meta Ads e gerencia seu CRM — sem você precisar conectar ferramentas ou explicar o produto de novo a cada etapa.
+            Uma agência autônoma de execução ponta a ponta. Após suas regras e aprovação inicial, a NexOS registra e configura domínios, publica as páginas online, renderiza vídeos, posta conteúdos, ativa anúncios nas redes corretas, gerencia grupos e qualifica leads no CRM. Sem exigir intervenção humana a cada clique.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4">
@@ -156,25 +155,25 @@ function RealWorkSection() {
           <WorkCard
             number="02"
             title="Produção de Vídeo"
-            desc="Roteiriza, corta e edita vídeos curtos e VSLs. Usa suas gravações reais ou gera os vídeos automaticamente integrando avatares HeyGen e vozes ElevenLabs."
+            desc="Processa áudio e vídeo usando infraestrutura GPU própria. Roteiriza, corta e renderiza usando gravações reais, ou gera vídeos 100% autônomos com clones de voz e avatares hiper-realistas."
             icon={<Video className="w-8 h-8 text-primary" />}
           />
           <WorkCard
             number="03"
             title="Landings & Criativos"
-            desc="Gera copy e design para landing pages focadas em conversão, além de produzir criativos estáticos de alta performance alinhados à sua identidade."
+            desc="Registra o domínio, estrutura a arquitetura de conversão, escreve a copy, desenha o layout e coloca a landing page no ar, além de produzir criativos estáticos de alta performance."
             icon={<Layers className="w-8 h-8 text-primary" />}
           />
           <WorkCard
             number="04"
-            title="Tráfego (Meta Ads)"
-            desc="Cria, sobe e gerencia campanhas no Facebook e Instagram. Testa criativos, distribui verba e pausa o que não dá ROI — seguindo suas regras e limites de conta."
+            title="Tráfego Pago Multi-Canal"
+            desc="Cria, sobe e gerencia campanhas em todas as redes e buscadores aderentes ao seu público. Testa criativos, distribui verba e pausa o que não dá ROI — seguindo as regras da sua conta."
             icon={<Target className="w-8 h-8 text-primary" />}
           />
           <WorkCard
             number="05"
-            title="Social Media & Grupos"
-            desc="Agenda e publica posts no Instagram, responde directs e modera comunidades e grupos, mantendo o aquecimento e a antecipação da audiência."
+            title="Distribuição Orgânica & Grupos"
+            desc="Publica conteúdos autonomamente em múltiplos canais orgânicos, responde mensagens e modera comunidades, mantendo o aquecimento e a distribuição ativa onde sua audiência está."
             icon={<Megaphone className="w-8 h-8 text-primary" />}
           />
           <WorkCard
@@ -202,36 +201,106 @@ function WorkCard({ number, title, desc, icon }: any) {
   );
 }
 
+const archSteps = [
+  {
+    id: "niche",
+    title: "Pesquisa de Nicho e Análise de Concorrentes",
+    status: "Concluído",
+    sees: "Avaliações de concorrentes, debates em redes sociais, tendências de busca e buracos em produtos similares.",
+    decides: "A dor exata não resolvida e o perfil do comprador mais propenso à conversão imediata.",
+    creates: "Matrizes de objeções, relatórios de inteligência de mercado e mapas de empatia operacionais.",
+    publishes: "Consolida as diretrizes no Dossiê interno, proibindo que agentes assumam premissas genéricas.",
+    measures: "Densidade da demanda, sofisticação do mercado e viabilidade."
+  },
+  {
+    id: "offer",
+    title: "Definição de Oferta e Ganchos (War Room)",
+    status: "Concluído",
+    sees: "O Dossiê validado cruzado com o seu histórico real de campanhas e custos de aquisição passados.",
+    decides: "A promessa central irrecusável, bônus para elevar ticket, ancoragem de preço e ângulos de vendas (ganchos).",
+    creates: "Estruturas argumentativas completas para VSLs, páginas de vendas e anúncios.",
+    publishes: "Deixa a arquitetura de persuasão pronta para ser materializada nos formatos finais.",
+    measures: "Alinhamento lógico com objeções e coerência com a política da marca."
+  },
+  {
+    id: "creative",
+    title: "Copy, Design e Renderização Audiovisual",
+    status: "Ativo",
+    highlight: true,
+    sees: "Os ganchos definidos, o tom de voz imutável do Dossiê e o pacote visual da sua empresa.",
+    decides: "Quais formatos (estático, reel vertical, página longa) entregam a oferta com mais eficácia.",
+    creates: "Copy impecável, interfaces otimizadas, e vídeos 100% renderizados na nossa GPU (via vozes clonadas ou avatares).",
+    publishes: "Registra os domínios, aponta servidores DNS e coloca a landing page no ar sem fricção humana.",
+    measures: "Velocidade da página (LCP), coesão visual e retenção estimada."
+  },
+  {
+    id: "distribution",
+    title: "Distribuição Orgânica e Grupos",
+    status: "Ativo",
+    sees: "Picos de engajamento do seu nicho, algoritmos de distribuição e interações pendentes das comunidades.",
+    decides: "A ordem de publicação, as respostas certas em direct e como moderar o aquecimento de um grupo.",
+    creates: "Legendas precisas, interações de moderação em WhatsApp/Telegram e alertas automáticos.",
+    publishes: "Executa os posts em todas as redes orgânicas vinculadas nos horários estipulados.",
+    measures: "Crescimento de base, taxa de respostas orgânicas e retenção nos grupos de lançamento."
+  },
+  {
+    id: "ads",
+    title: "Operação de Tráfego Pago",
+    status: "Ativo",
+    sees: "Os criativos recém-produzidos, a landing ativa, os públicos do pixel e as regras de orçamento diário.",
+    decides: "Onde testar a verba primeiro (CBO/ABO), pausas de criativos fadigados e realocações de lances.",
+    creates: "Estruturas completas de campanha nas plataformas de anúncio mais rentáveis para a oferta.",
+    publishes: "Ativa publicações patrocinadas conectadas ao seu cartão de crédito nas redes de pesquisa e social.",
+    measures: "CPA real, ROAS, fadiga de criativos e CTR cruzado (direto nos dashboards oficiais)."
+  },
+  {
+    id: "crm",
+    title: "Vendas, Retenção e Onboarding",
+    status: "Ativo",
+    sees: "Leads quentes, eventos de abandono de carrinho, compras confirmadas e conversas interrompidas.",
+    decides: "A hora exata de invocar recuperação ativa, quebrar a objeção que falta ou dar boas-vindas VIP.",
+    creates: "Fluxos invisíveis de e-mail marketing, disparos via WhatsApp e alertas de alta prioridade.",
+    publishes: "Envia comunicações 1-a-1 diretamente para a base, sustentando o LTV do cliente a longo prazo.",
+    measures: "Taxa de recuperação, churn, engajamento com onboarding e vendas cruzadas (upsell)."
+  }
+];
+
 function ArchitectureSection() {
+  const [activeStep, setActiveStep] = useState<string | null>(null);
+
   return (
     <section className="py-24 sm:py-32 border-b-2 border-border bg-background">
       <div className="px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+          <div className="lg:sticky lg:top-32">
             <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-4 font-bold">A Quebra de Silos</h2>
             <p className="text-4xl sm:text-5xl font-display font-black uppercase tracking-tighter leading-tight mb-8">
               Você é o gargalo que traduz a mesma estratégia para cinco áreas diferentes.
             </p>
             <div className="space-y-6 text-lg text-muted-foreground font-sans">
               <p>O custo real da sua operação não está nas mensalidades de software. Está na perda de tração diária.</p>
-              <p>É o e-mail que sai fora de sincronia com o anúncio. É a agência de design que erra o tom da marca. É o gestor de tráfego otimizando campanhas às cegas sem feedback do CRM.</p>
-              <p className="font-bold text-foreground">Com a NexOS, o cérebro é unificado.</p>
-              <p>A pesquisa consolidada pela IA orienta o texto. O estrategista instrui o copywriter, que entrega o material ao gestor de anúncios e atualiza o conhecimento do SDR. Toda a operação consome a mesma matriz de inteligência de ponta a ponta.</p>
+              <p>Com a NexOS, o cérebro é unificado e <strong className="text-foreground">autônomo</strong>.</p>
+              <p>A inteligência orienta o texto. O estrategista instrui a renderização, que sobe as páginas online e entrega os vídeos ao tráfego. Toda a operação consome a mesma matriz — executando a campanha inteira sem você precisar intervir a cada etapa.</p>
+              <p className="font-mono text-xs uppercase tracking-widest text-primary pt-4 hidden lg:block animate-pulse">
+                [ Selecione um nó operacional ao lado para inspecionar ]
+              </p>
             </div>
           </div>
 
-          <div className="relative border-2 border-border p-8 bg-card">
-            <div className="absolute top-0 right-0 p-4 font-mono text-[10px] font-bold tracking-widest text-muted-foreground uppercase border-b-2 border-l-2 border-border bg-background">
+          <div className="relative border-2 border-border p-4 sm:p-8 bg-card">
+            <div className="absolute top-0 right-0 p-4 font-mono text-[10px] font-bold tracking-widest text-muted-foreground uppercase border-b-2 border-l-2 border-border bg-background hidden sm:block">
               Arquitetura Operacional
             </div>
 
-            <div className="mt-8 space-y-4">
-              <ArchNode title="Pesquisa de Nicho e Análise de Concorrentes" status="Concluído" />
-              <ArchNode title="Definição de Oferta e Ganchos (War Room)" status="Concluído" />
-              <ArchNode title="Criação de Copy, Design e Vídeos (HeyGen/ElevenLabs)" status="Ativo" highlight />
-              <ArchNode title="Distribuição de Conteúdo e Grupos" status="Ativo" />
-              <ArchNode title="Operação Meta Ads (Publicação e Otimização)" status="Ativo" />
-              <ArchNode title="Acompanhamento CRM (Vendas e Onboarding)" status="Ativo" />
+            <div className="mt-8 space-y-2">
+              {archSteps.map(step => (
+                <ArchNode
+                  key={step.id}
+                  step={step}
+                  isActive={activeStep === step.id}
+                  onClick={() => setActiveStep(activeStep === step.id ? null : step.id)}
+                />
+              ))}
             </div>
           </div>
         </div>
@@ -240,15 +309,54 @@ function ArchitectureSection() {
   );
 }
 
-function ArchNode({ title, status, highlight = false }: any) {
+function ArchNode({ step, isActive, onClick }: any) {
   return (
-    <div className={`border-2 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${highlight ? 'border-primary bg-primary/5' : 'border-border bg-background'}`}>
-      <span className={`font-display font-bold uppercase tracking-tight text-foreground`}>{title}</span>
-      <div className="flex items-center gap-2">
-        <span className={`w-2 h-2 ${highlight ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
-        <span className={`font-mono text-[10px] uppercase font-bold tracking-widest ${highlight ? 'text-primary' : 'text-muted-foreground'}`}>{status}</span>
+    <button
+      onClick={onClick}
+      className={`w-full text-left border-2 p-4 flex flex-col gap-2 transition-colors focus:outline-none focus:border-primary ${step.highlight ? 'border-primary bg-primary/5 hover:bg-primary/10' : 'border-border bg-background hover:bg-card'} ${isActive ? 'border-primary' : ''}`}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 w-full">
+        <span className="font-display font-bold uppercase tracking-tight text-foreground">{step.title}</span>
+        <div className="flex items-center gap-2">
+          <span className={`w-2 h-2 ${step.highlight ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
+          <span className={`font-mono text-[10px] uppercase font-bold tracking-widest ${step.highlight ? 'text-primary' : 'text-muted-foreground'}`}>{step.status}</span>
+        </div>
       </div>
-    </div>
+
+      <AnimatePresence>
+        {isActive && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="pt-6 pb-2 space-y-4 font-sans text-sm border-t-2 border-border/50 mt-4">
+               <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[100px_1fr] gap-4">
+                 <span className="font-mono text-[10px] text-muted-foreground uppercase font-bold tracking-widest pt-1">Observa</span>
+                 <span className="text-foreground/90">{step.sees}</span>
+               </div>
+               <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[100px_1fr] gap-4">
+                 <span className="font-mono text-[10px] text-muted-foreground uppercase font-bold tracking-widest pt-1">Decide</span>
+                 <span className="text-foreground/90">{step.decides}</span>
+               </div>
+               <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[100px_1fr] gap-4">
+                 <span className="font-mono text-[10px] text-muted-foreground uppercase font-bold tracking-widest pt-1">Cria</span>
+                 <span className="text-foreground/90">{step.creates}</span>
+               </div>
+               <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[100px_1fr] gap-4">
+                 <span className="font-mono text-[10px] text-primary uppercase font-bold tracking-widest pt-1">Executa</span>
+                 <span className="text-foreground/90 font-medium">{step.publishes}</span>
+               </div>
+               <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[100px_1fr] gap-4">
+                 <span className="font-mono text-[10px] text-muted-foreground uppercase font-bold tracking-widest pt-1">Mede</span>
+                 <span className="text-foreground/90">{step.measures}</span>
+               </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </button>
   );
 }
 
@@ -263,7 +371,7 @@ function OperationalScopeSection() {
             <ShieldCheck className="w-10 h-10 text-primary mb-6" />
             <h3 className="font-display font-bold text-xl uppercase tracking-tight mb-4">Autorização Estrita</h3>
             <p className="text-muted-foreground font-sans">
-              As ações externas (publicar posts, subir campanhas no Meta, enviar e-mails) só acontecem após sua aprovação ou dentro de limites pré-estabelecidos por você.
+              As ações externas (publicar posts, subir campanhas de tráfego, enviar e-mails) só acontecem após sua aprovação ou dentro de limites pré-estabelecidos por você.
             </p>
           </div>
 
@@ -271,7 +379,7 @@ function OperationalScopeSection() {
             <Workflow className="w-10 h-10 text-primary mb-6" />
             <h3 className="font-display font-bold text-xl uppercase tracking-tight mb-4">Workspaces Isolados</h3>
             <p className="text-muted-foreground font-sans">
-              Perfeito para agências de lançamento. Os dados, a inteligência e as estratégias de um cliente jamais se misturam com as demais operações do seu portfólio.
+              Perfeito para separar múltiplos produtos e serviços da mesma empresa, ou isolar clientes de agências. Os dados, a inteligência e as estratégias nunca se misturam.
             </p>
           </div>
 
@@ -279,7 +387,7 @@ function OperationalScopeSection() {
             <Activity className="w-10 h-10 text-primary mb-6" />
             <h3 className="font-display font-bold text-xl uppercase tracking-tight mb-4">Métricas Reais. Fim.</h3>
             <p className="text-muted-foreground font-sans">
-              O sistema baseia-se em dados empíricos puxados diretamente do Meta Ads e do seu CRM. Nenhuma IA inventando números de conversão para o painel parecer completo. O que está lá é o que o dinheiro comprou.
+              O sistema baseia-se em dados empíricos puxados diretamente de canais reais de tráfego e do seu CRM. Nenhuma IA inventando números de conversão para o painel parecer completo.
             </p>
           </div>
         </div>
@@ -293,9 +401,9 @@ function ProofOfLogicSection() {
     <section className="py-24 sm:py-32 border-b-2 border-border bg-background">
       <div className="px-6">
         <div className="max-w-4xl mb-16">
-          <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-4 font-bold">Lógica de Execução</h2>
+          <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-4 font-bold">Lógica de Execução e Coerência</h2>
           <p className="text-4xl sm:text-5xl font-display font-black uppercase tracking-tighter leading-tight">
-            Como garantimos que a estratégia não vire um frankenstein de IA.
+            Como garantimos que a autonomia não crie um frankenstein de IA genérica.
           </p>
         </div>
 
@@ -304,30 +412,30 @@ function ProofOfLogicSection() {
             <div className="border-l-4 border-primary pl-6">
               <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">1. O Cérebro Único (Dossiê)</h3>
               <p className="text-muted-foreground font-sans leading-relaxed text-lg">
-                Sua marca não tem "várias vozes". A NexOS cria um Dossiê mestre da campanha. Se o seu público odeia agressividade, essa regra bloqueia o roteirista de vídeo, modera o copywriter de e-mail e dita o tom dos seus anúncios no Meta.
+                Modelos rasos cometem erros de lógica e causam contradições bizarras. A NexOS resolve isso criando um Dossiê mestre imutável para a campanha. O mesmo arquivo de regras bloqueia o roteirista de vídeo, baliza o copywriter e dita o tom dos anúncios — evitando saídas genéricas.
               </p>
             </div>
 
             <div className="border-l-4 border-primary pl-6">
-              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">2. Revisão Humana Opcional</h3>
+              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">2. Autonomia com Trava de Segurança</h3>
               <p className="text-muted-foreground font-sans leading-relaxed text-lg">
-                Você pode automatizar 100% da publicação ou ligar a trava de segurança. No modo seguro, a NexOS escreve os 30 posts, edita os 10 reels e agenda as campanhas no Meta, mas elas só sobem após o seu "Aprovado" na interface.
+                Você pode automatizar a publicação a 100% ou exigir revisão. A NexOS desenha a página, edita os vídeos, formata os anúncios e prepara as postagens. Eles vão ao ar e o domínio é registrado assim que você dá o seu "Aprovado" — sem exigir o trabalho braçal de montar a peça na ferramenta.
               </p>
             </div>
           </div>
 
           <div className="space-y-12">
             <div className="border-l-4 border-primary pl-6">
-              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">3. Dados, Não Alucinações</h3>
+              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">3. Fim das Decisões Ruins</h3>
               <p className="text-muted-foreground font-sans leading-relaxed text-lg">
-                Quando a agência autônoma relata que um criativo saturou, ela não está "adivinhando". Ela cruzou o CTR do Meta Ads com a conversão do seu CRM e com as aberturas do seu e-mail. Se ela sugere pausar, é porque o CPA subiu.
+                IAs tradicionais falham por não verem o quadro inteiro. Quando a agência autônoma relata que um criativo saturou e decide pausá-lo nas redes, ela cruzou o CTR de cliques reais com as conversões no seu CRM. Nenhuma decisão superficial é tomada sem cruzamento de dados empíricos.
               </p>
             </div>
 
             <div className="border-l-4 border-primary pl-6">
-              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">4. Memória Institucional</h3>
+              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">4. Memória Institucional Ativa</h3>
               <p className="text-muted-foreground font-sans leading-relaxed text-lg">
-                Ferramentas genéricas esquecem quem você é a cada nova sessão. A NexOS armazena os vencedores e perdedores. O que não funcionou no mês passado já está marcado como "Não Fazer" para a campanha atual.
+                Repetições maçantes acontecem quando a IA perde o contexto. A NexOS armazena vencedores, perdedores e lições aprendidas. O erro e a objeção que não funcionaram no mês passado já estão internalizados como regras de restrição permanente para a campanha atual.
               </p>
             </div>
           </div>
@@ -361,6 +469,15 @@ function ScarcitySection({ openCapture, closed }: { openCapture: () => void; clo
         <div className="mt-8 font-mono text-sm font-bold uppercase tracking-widest opacity-80">
           {closed ? "As vagas foram preenchidas." : "A ordem de reserva define a prioridade de ativação."}
         </div>
+
+        <div className="mt-16 pt-8 border-t-2 border-primary-foreground/20">
+          <p className="font-display font-bold text-2xl uppercase tracking-tight mb-3">
+            Esta landing page foi criada e colocada no ar pelos agentes da NexOS.
+          </p>
+          <p className="font-sans font-medium text-lg opacity-90">
+            Entre na lista agora e acesse nosso grupo para ver a operação acontecendo nos bastidores.
+          </p>
+        </div>
       </div>
     </section>
   );
@@ -371,13 +488,14 @@ function Footer() {
     <footer className="border-t-2 border-border bg-background py-12 px-6 text-center sm:text-left">
       <div className="max-w-[1400px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-6">
         <div className="flex items-center gap-3">
-          <img src={nexosLogo} alt="NexOS" className="h-8 w-8 object-contain grayscale" />
+          <img src="/nexos_ai_logo_1024x1024.png" alt="NexOS" className="h-8 w-8 object-contain" />
           <span className="font-display font-black text-xl uppercase tracking-tighter text-muted-foreground">NexOS</span>
         </div>
 
         <div className="flex gap-6 font-mono text-xs uppercase tracking-widest font-bold text-muted-foreground">
-          <Link href="/termos" className="hover:text-primary transition-colors">Termos de Uso</Link>
-          <Link href="/privacidade" className="hover:text-primary transition-colors">Privacidade</Link>
+          <Link href="/terms" className="hover:text-primary transition-colors">Termos de Uso</Link>
+          <Link href="/privacy" className="hover:text-primary transition-colors">Privacidade</Link>
+          <Link href="/data-deletion" className="hover:text-primary transition-colors">Exclusão de Dados</Link>
         </div>
 
         <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground">

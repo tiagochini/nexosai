@@ -15,6 +15,12 @@ For launch communication, HeyGen, ElevenLabs and Meta Ads are approved operation
 
 **How to apply:** Present avatar video, cloned voice and Meta Ads execution as available NexOS features. Keep internal validation separate from public copy and from release summaries.
 
+Public copy must sell NexOS-owned outcomes rather than provider names: it creates and publishes landing pages with domain setup, runs campaign-relevant paid and organic channels, and produces audiovisual assets through its own GPU capability.
+
+**Why:** The owner corrected language that understated execution (“generate copy/design”) and made the product sound dependent on third-party brands instead of its own autonomous delivery.
+
+**How to apply:** Use verbs such as register, configure, publish, activate, distribute, manage and optimize. Explain that initial rules authorize autonomous execution without approval at every click. Include multi-product/service workspace isolation.
+
 The landing must lead with the buyer's expensive coordination problem and the operational transformation, not with agent counts, architecture or governance. Its memorable commercial thesis is that companies should stop hiring disconnected parts to execute one strategy; NexOS carries one market decision through the full commercial lifecycle without losing context.
 
 **Why:** A visually strong but architecture-led version was rejected as weak in hooks, content and sales logic. Competitor research showed that effective category leaders sell a concrete replacement for the buyer's current reality before explaining the technology.
