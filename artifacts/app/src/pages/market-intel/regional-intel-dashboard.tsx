@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   Globe, AlertTriangle, Crosshair, Users, Activity, BarChart2, Plus,
-  MapPin, Shield, Clock, CheckCircle2, Zap, Loader2
+  MapPin, Shield, Clock, CheckCircle2, Zap, Loader2, MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,13 +11,17 @@ import {
   useAcknowledgeAlert, useRegionalSignals, useRegionalOpportunities, useTransitionOpportunity,
   useRegionalSegments, useRunAcquisition, useRegionalAcquisitionHealth
 } from "@/hooks/use-regional-intel";
+import { InteractionsTab } from "./interactions-tab";
+
+import { PrepareInteractionPanel } from "./prepare-interaction-panel";
 
 interface Props {
   campaignId: string;
 }
 
 export function RegionalIntelDashboard({ campaignId }: Props) {
-  const [activeTab, setActiveTab] = useState<"overview" | "opportunities" | "competitors" | "config" | "engine">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "opportunities" | "competitors" | "config" | "engine" | "interactions">("overview");
+  const [selectedInteractionId, setSelectedInteractionId] = useState<string | null>(null);
 
   return (
     <div className="space-y-6">
@@ -27,6 +31,7 @@ export function RegionalIntelDashboard({ campaignId }: Props) {
           { id: "opportunities", label: "Oportunidades", icon: Crosshair },
           { id: "competitors", label: "Concorrentes", icon: Shield },
           { id: "engine", label: "Aquisição", icon: Activity },
+          { id: "interactions", label: "Interações", icon: MessageSquare },
           { id: "config", label: "Configuração", icon: Globe },
         ].map((t) => (
           <button
@@ -44,9 +49,10 @@ export function RegionalIntelDashboard({ campaignId }: Props) {
       </div>
 
       {activeTab === "overview" && <OverviewTab campaignId={campaignId} />}
-      {activeTab === "opportunities" && <OpportunitiesTab campaignId={campaignId} />}
+      {activeTab === "opportunities" && <OpportunitiesTab campaignId={campaignId} setActiveTab={setActiveTab} onInteractionPrepared={(id) => { setSelectedInteractionId(id); setActiveTab("interactions"); }} />}
       {activeTab === "competitors" && <CompetitorsTab campaignId={campaignId} />}
       {activeTab === "engine" && <EngineTab campaignId={campaignId} />}
+      {activeTab === "interactions" && <InteractionsTab campaignId={campaignId} preselectedId={selectedInteractionId} />}
       {activeTab === "config" && <ConfigTab campaignId={campaignId} />}
     </div>
   );
@@ -154,9 +160,11 @@ function OverviewTab({ campaignId }: Props) {
   );
 }
 
-function OpportunitiesTab({ campaignId }: Props) {
+function OpportunitiesTab({ campaignId, setActiveTab, onInteractionPrepared }: Props & { setActiveTab: (t: any) => void; onInteractionPrepared: (id: string) => void }) {
   const { data, isLoading } = useRegionalOpportunities(campaignId);
   const { mutate: transition, isPending: transitioning } = useTransitionOpportunity();
+
+  const [preparingId, setPreparingId] = useState<string | null>(null);
 
   if (isLoading) return <div className="py-10 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>;
 
@@ -225,9 +233,9 @@ function OpportunitiesTab({ campaignId }: Props) {
                         Qualificar
                       </Button>
                     )}
-                    {(opp.lifecycle === "qualified" || opp.lifecycle === "observed") && opp.contactPermission === "permitted" && (
-                      <Button size="sm" disabled={transitioning} onClick={() => transition({ opportunityId: opp.id, lifecycle: "ready_for_activation", campaignId })}>
-                        Preparar Ativação
+                    {(opp.lifecycle === "qualified" || opp.lifecycle === "observed") && (
+                      <Button size="sm" variant="secondary" onClick={() => setPreparingId(opp.id)}>
+                        Preparar Interação
                       </Button>
                     )}
                     {(opp.lifecycle === "ready_for_activation") && opp.contactPermission === "permitted" && (
@@ -241,6 +249,13 @@ function OpportunitiesTab({ campaignId }: Props) {
                       </p>
                     )}
                   </div>
+                  {preparingId === opp.id && (
+                    <PrepareInteractionPanel
+                      opportunityId={opp.id}
+                      onCancel={() => setPreparingId(null)}
+                      onSuccess={(createdOpportunityId) => onInteractionPrepared(createdOpportunityId)}
+                    />
+                  )}
                 </div>
               </div>
             </div>

@@ -40,6 +40,8 @@
     ,"test:regional-audience-unit": "tsx src/scripts/test-regional-audience-scoring.ts"
     ,"test:regional-intelligence-unit": "tsx src/scripts/test-regional-intelligence-unit.ts"
     ,"test:regional-intelligence-db": "REGIONAL_INTEL_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-regional-intelligence-db.ts"
+    ,"test:interaction-governance-unit": "NODE_ENV=test tsx src/scripts/test-interaction-governance-unit.ts"
+    ,"test:interaction-governance-db": "INTERACTION_GOVERNANCE_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-interaction-governance-db.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

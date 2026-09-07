@@ -47,6 +47,13 @@ function compact(value: unknown, max = SECTION_LIMIT): { text: string; truncated
 const ROLE_SECTIONS: Record<string, string[]> = {
   compliance: ["objective", "constraints", "offer_psychology", "decisions", "clarifications"],
   media_buyer: ["objective", "market", "strategy", "offer_psychology", "sales", "launch", "constraints", "decisions"],
+  // Competitive regional intelligence is bounded in the market section and is
+  // deliberately available to every social/content/launch/paid-media executor.
+  social_media: ["objective", "market", "strategy", "offer_psychology", "launch", "constraints", "decisions"],
+  presence_planner: ["objective", "market", "strategy", "offer_psychology", "launch", "constraints", "decisions"],
+  content_calendar: ["objective", "market", "strategy", "offer_psychology", "launch", "constraints", "decisions"],
+  launch_manager: ["objective", "market", "strategy", "offer_psychology", "sales", "launch", "constraints", "decisions"],
+  perpetual_launch_manager: ["objective", "market", "strategy", "offer_psychology", "sales", "launch", "constraints", "decisions"],
   targeting: ["objective", "market", "strategy", "constraints", "clarifications"],
   market_intel: ["objective", "market", "strategy", "constraints"],
   profile_builder: ["objective", "market", "constraints", "clarifications"],

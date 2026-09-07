@@ -55,3 +55,4 @@ export * from "./orchestration-dead-letters";
 export * from "./native-media";
 export * from "./masterplan-versions";
 export * from "./regional-intelligence";
+export * from "./interaction-governance";
