@@ -28,7 +28,13 @@ interface Sale {
   status: string;
   pixData?: { qrCode?: string; copiaECola?: string; expiresAt?: string } | null;
   boletoData?: { barcodeUrl?: string; barcode?: string; dueDate?: string } | null;
-  cardData?: { last4?: string; brand?: string; status?: string } | null;
+  cardData?: { last4?: string; brand?: string; status?: string; installmentCount?: number; installmentValueCents?: number } | null;
+}
+
+interface CardInstallmentOption {
+  installmentCount: number;
+  installmentValueCents: number;
+  totalCents: number;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -112,7 +118,7 @@ function PaymentDisplay({ sale, onPaid }: { sale: Sale; onPaid: () => void }) {
             <div>
               <div className="font-mono text-lg font-bold uppercase tracking-widest text-success">Pagamento aprovado!</div>
               <p className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mt-1">
-                {card?.brand} •••• {card?.last4} · {amountBrl}
+                {card?.brand} •••• {card?.last4} · {card?.installmentCount ?? 1}x de {fmtBRL(card?.installmentValueCents ?? sale.amountCents)}
               </p>
             </div>
           </>
@@ -122,7 +128,7 @@ function PaymentDisplay({ sale, onPaid }: { sale: Sale; onPaid: () => void }) {
             <div>
               <div className="font-mono text-sm font-bold text-foreground">Processando pagamento...</div>
               <p className="font-mono text-[11px] text-muted-foreground mt-1">
-                {card?.brand} •••• {card?.last4} · {amountBrl}
+                {card?.brand} •••• {card?.last4} · {card?.installmentCount ?? 1}x de {fmtBRL(card?.installmentValueCents ?? sale.amountCents)}
               </p>
             </div>
           </>
@@ -233,11 +239,36 @@ function CheckoutForm({ product, onSale }: { product: PublicProduct; onSale: (s:
   const [cardYear, setCardYear] = useState("");
   const [cardCvv, setCardCvv] = useState("");
   const [cardCpf, setCardCpf] = useState("");
+  const [installmentOptions, setInstallmentOptions] = useState<CardInstallmentOption[]>([]);
+  const [installmentCount, setInstallmentCount] = useState(1);
+  const [installmentsLoading, setInstallmentsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const cardFeeAmount = Math.round(product.priceCents * 1.035);
-  const chargedAmount = method === "credit_card" ? cardFeeAmount : product.priceCents;
+  const selectedInstallment = installmentOptions.find((option) => option.installmentCount === installmentCount);
+  const chargedAmount = method === "credit_card" ? (selectedInstallment?.totalCents ?? product.priceCents) : product.priceCents;
+
+  useEffect(() => {
+    if (method !== "credit_card" || installmentOptions.length > 0) return;
+    let cancelled = false;
+    setInstallmentsLoading(true);
+    fetch(`/api/products/${product.id}/installments`)
+      .then(async (response) => {
+        const data = await response.json() as { options?: CardInstallmentOption[]; error?: string };
+        if (!response.ok || !data.options?.length) throw new Error(data.error ?? "Parcelamento indisponível.");
+        if (!cancelled) {
+          setInstallmentOptions(data.options);
+          setInstallmentCount(data.options[0]?.installmentCount ?? 1);
+        }
+      })
+      .catch((err: Error) => {
+        if (!cancelled) setError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setInstallmentsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [method, installmentOptions.length, product.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -252,6 +283,7 @@ function CheckoutForm({ product, onSale }: { product: PublicProduct; onSale: (s:
         method,
       };
       if (method === "credit_card") {
+        body.installmentCount = installmentCount;
         body.card = {
           holderName: cardHolder,
           number: cardNumber.replace(/\s/g, ""),
@@ -282,7 +314,7 @@ function CheckoutForm({ product, onSale }: { product: PublicProduct; onSale: (s:
   const methods = [
     { value: "pix" as const, label: "PIX", sub: "Instantâneo · QR Code", icon: QrCode },
     { value: "boleto" as const, label: "Boleto", sub: "Vence em 3 dias", icon: FileText },
-    { value: "credit_card" as const, label: "Cartão", sub: `+3,5% · ${fmtBRL(cardFeeAmount)}`, icon: CreditCard },
+    { value: "credit_card" as const, label: "Cartão", sub: "À vista ou parcelado", icon: CreditCard },
   ];
 
   return (
@@ -337,6 +369,23 @@ function CheckoutForm({ product, onSale }: { product: PublicProduct; onSale: (s:
             <Lock className="h-3 w-3" /> Dados do cartão · Cobrança segura via Asaas
           </div>
           <div className="space-y-1.5">
+            <Label htmlFor="card-installments" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Parcelamento</Label>
+            <select
+              id="card-installments"
+              value={installmentCount}
+              onChange={(event) => setInstallmentCount(Number(event.target.value))}
+              disabled={installmentsLoading || installmentOptions.length === 0}
+              className="w-full h-10 border border-border bg-background px-3 font-mono text-xs text-foreground disabled:opacity-50"
+            >
+              {installmentsLoading && <option>Calculando opções...</option>}
+              {!installmentsLoading && installmentOptions.map((option) => (
+                <option key={option.installmentCount} value={option.installmentCount}>
+                  {option.installmentCount}x de {fmtBRL(option.installmentValueCents)} · total {fmtBRL(option.totalCents)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
             <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Nome no cartão</Label>
             <Input value={cardHolder} onChange={e => setCardHolder(e.target.value)} placeholder="NOME SOBRENOME" required={method === "credit_card"} className="rounded-none uppercase" />
           </div>
@@ -371,9 +420,6 @@ function CheckoutForm({ product, onSale }: { product: PublicProduct; onSale: (s:
           <div className="space-y-1.5">
             <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">CPF do titular</Label>
             <Input value={cardCpf} onChange={e => setCardCpf(e.target.value)} placeholder="000.000.000-00" className="rounded-none" />
-          </div>
-          <div className="font-mono text-[10px] text-yellow-400/80 border border-yellow-400/20 bg-yellow-400/5 px-3 py-2">
-            Taxa de 3,5% aplicada para pagamento via cartão · Total: {fmtBRL(cardFeeAmount)}
           </div>
         </div>
       )}

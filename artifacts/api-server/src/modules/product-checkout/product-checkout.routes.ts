@@ -8,6 +8,7 @@ import {
   updateProduct,
   deleteProduct,
   initiateProductCheckout,
+  getProductCardInstallments,
   getSale,
   confirmProductSaleByExternalId,
 } from "./product-checkout.service.js";
@@ -80,12 +81,18 @@ router.get("/:productId/public", async (req, res): Promise<void> => {
   });
 });
 
+router.get("/:productId/installments", async (req, res): Promise<void> => {
+  const options = await getProductCardInstallments(req.params["productId"] as string);
+  res.json({ options });
+});
+
 const checkoutSchema = z.object({
   buyerName: z.string().min(1).max(200),
   buyerEmail: z.string().email(),
   buyerCpf: z.string().optional(),
   method: z.enum(["pix", "boleto", "credit_card"]),
   card: cardSchema.optional(),
+  installmentCount: z.number().int().min(1).max(21).optional(),
 });
 
 router.post("/:productId/checkout", async (req, res): Promise<void> => {

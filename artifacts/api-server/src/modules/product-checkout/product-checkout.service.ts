@@ -70,8 +70,80 @@ async function ensureCustomer(apiKey: string, base: string, name: string, email:
   return customer.id;
 }
 
-export function applyCardFee(cents: number): number {
-  return Math.round(cents * 1.035);
+export type CardInstallmentOption = {
+  installmentCount: number;
+  installmentValueCents: number;
+  totalCents: number;
+};
+
+type AsaasSimulation = {
+  value: number;
+  creditCard: {
+    netValue: number;
+    installment: {
+      paymentNetValue: number;
+      paymentValue: number;
+    };
+  } | null;
+};
+
+const installmentCache = new Map<string, { expiresAt: number; options: CardInstallmentOption[] }>();
+
+async function simulateCardPayment(apiKey: string, base: string, valueCents: number, installmentCount: number): Promise<AsaasSimulation> {
+  return asaasRequest<AsaasSimulation>(apiKey, base, "/payments/simulate", {
+    method: "POST",
+    body: JSON.stringify({
+      value: valueCents / 100,
+      installmentCount,
+      billingTypes: ["CREDIT_CARD"],
+    }),
+  });
+}
+
+async function buildGrossedUpInstallment(
+  apiKey: string,
+  base: string,
+  contractedCents: number,
+  installmentCount: number,
+): Promise<CardInstallmentOption> {
+  let chargedCents = contractedCents;
+  let simulation: AsaasSimulation | null = null;
+
+  // The Asaas simulator is authoritative. Iterate until its net amount matches
+  // the contracted amount, so the buyer sees the final financed values.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    simulation = await simulateCardPayment(apiKey, base, chargedCents, installmentCount);
+    if (!simulation.creditCard) throw new AppError(502, "O Asaas não retornou condições para cartão", "ASAAS_SIMULATION_UNAVAILABLE");
+    const netCents = Math.round(simulation.creditCard.netValue * 100);
+    const difference = contractedCents - netCents;
+    if (Math.abs(difference) <= 1) break;
+    chargedCents = Math.max(contractedCents, chargedCents + difference);
+  }
+
+  if (!simulation?.creditCard) throw new AppError(502, "O Asaas não retornou condições para cartão", "ASAAS_SIMULATION_UNAVAILABLE");
+  return {
+    installmentCount,
+    installmentValueCents: Math.round(simulation.creditCard.installment.paymentValue * 100),
+    totalCents: Math.round(simulation.value * 100),
+  };
+}
+
+export async function getProductCardInstallments(productId: string): Promise<CardInstallmentOption[]> {
+  const product = await getProduct(productId);
+  if (!product || !product.active) throw new NotFoundError("Produto não encontrado ou inativo");
+
+  const cacheKey = `${product.id}:${product.priceCents}`;
+  const cached = installmentCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.options;
+
+  const { apiKey, base } = await resolveAsaas(product.workspaceId);
+  const options = await Promise.all(
+    Array.from({ length: 21 }, (_, index) =>
+      buildGrossedUpInstallment(apiKey, base, product.priceCents, index + 1)
+    )
+  );
+  installmentCache.set(cacheKey, { expiresAt: Date.now() + 15 * 60_000, options });
+  return options;
 }
 
 // ─── Product CRUD (workspace owner) ──────────────────────────────────────────
@@ -131,12 +203,23 @@ export async function initiateProductCheckout(opts: {
   buyerCpf?: string;
   method: "pix" | "boleto" | "credit_card";
   card?: CardInputData;
+  installmentCount?: number;
 }): Promise<ProductSale> {
   const product = await getProduct(opts.productId);
   if (!product || !product.active) throw new NotFoundError("Produto não encontrado ou inativo");
 
   const baseCents = product.priceCents;
-  const chargedCents = opts.method === "credit_card" ? applyCardFee(baseCents) : baseCents;
+  const installmentCount = opts.method === "credit_card" ? (opts.installmentCount ?? 1) : 1;
+  if (installmentCount < 1 || installmentCount > 21) {
+    throw new AppError(400, "Quantidade de parcelas inválida", "INVALID_INSTALLMENT_COUNT");
+  }
+  const installmentOption = opts.method === "credit_card"
+    ? (await getProductCardInstallments(product.id)).find((option) => option.installmentCount === installmentCount)
+    : null;
+  if (opts.method === "credit_card" && !installmentOption) {
+    throw new AppError(400, "Condição de parcelamento indisponível", "INSTALLMENT_UNAVAILABLE");
+  }
+  const chargedCents = installmentOption?.totalCents ?? baseCents;
   const dueDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]!;
   const description = `${product.name} — compra`;
 
@@ -198,7 +281,9 @@ export async function initiateProductCheckout(opts: {
       body: JSON.stringify({
         customer: customerId,
         billingType: "CREDIT_CARD",
-        value: chargedCents / 100,
+        ...(installmentCount > 1
+          ? { installmentCount, totalValue: chargedCents / 100 }
+          : { value: chargedCents / 100 }),
         dueDate,
         description,
         creditCard: {
@@ -223,6 +308,8 @@ export async function initiateProductCheckout(opts: {
       brand: payment.creditCard?.creditCardBrand ?? "VISA",
       status: payment.status,
       asaasId: payment.id,
+      installmentCount,
+      installmentValueCents: installmentOption?.installmentValueCents ?? chargedCents,
     };
     externalId = payment.id;
     expiresAt = new Date();

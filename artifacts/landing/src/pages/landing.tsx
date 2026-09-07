@@ -201,7 +201,7 @@ function ExecutionGapSection({ openCapture, closed }: { openCapture: () => void;
             Coloque a ideia em produção agora e pague parcelado no cartão.
           </p>
           <p className="font-sans mt-3 text-background/70 max-w-3xl">
-            A NexOS estrutura e executa a operação completa. O pagamento parcelado será processado pelo Asaas nas condições disponíveis para o seu cartão. Juros, tarifas e demais encargos do parcelamento são integralmente pagos pelo comprador.
+            A NexOS estrutura e executa a operação completa. No checkout, você vê as opções disponíveis e escolhe a quantidade e o valor das parcelas antes de pagar.
           </p>
         </div>
         <Button onClick={openCapture} className="h-16 px-8 rounded-none bg-primary text-primary-foreground hover:bg-primary/90 font-display font-black uppercase tracking-wide">
@@ -538,7 +538,7 @@ function ScarcitySection({ openCapture, closed }: { openCapture: () => void; clo
           Apenas 100 Operações no Lançamento.
         </h2>
         <p className="text-xl font-sans font-medium mb-12 opacity-90 max-w-2xl mx-auto">
-          Se o que impediu você até agora foi o custo e a complexidade de montar uma agência inteira, esta abertura foi desenhada para remover esse bloqueio: execução ponta a ponta e pagamento parcelado no cartão. Juros, tarifas e demais encargos do parcelamento ficam por conta do comprador. O acesso inicial é restrito. Não há exceções.
+          Se o que impediu você até agora foi o custo e a complexidade de montar uma agência inteira, esta abertura foi desenhada para remover esse bloqueio: execução ponta a ponta e pagamento parcelado no cartão. Você confere as opções e escolhe a melhor condição no checkout. O acesso inicial é restrito. Não há exceções.
         </p>
 
         <Button

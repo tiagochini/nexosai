@@ -44,3 +44,9 @@ The initial pre-launch cohort is strictly limited to 100 real reservations. Once
 **Why:** Scarcity is part of the launch strategy, but it must be operationally enforced rather than presented as decorative copy.
 
 **How to apply:** The API is the private source of truth and must atomically reject reservation 101. Do not expose capacity status, reserved count or remaining count publicly; the landing may state only the fixed 100-seat limit.
+
+Card installments must be priced from the live Asaas sales simulator, never from a fixed percentage in NexOS code. Buyer-facing copy shows only the available installment count, final amount per installment and final total; it does not explain fee allocation.
+
+**Why:** The owner explicitly rejected public language about who pays interest or fees and wants the buyer to compare final Asaas-calculated options before choosing.
+
+**How to apply:** Use the Asaas payment simulation result as the authoritative condition, submit the chosen installment count to Asaas, and keep legal/accounting treatment separate from sales and checkout copy.

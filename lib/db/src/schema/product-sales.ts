@@ -21,6 +21,8 @@ export type CardData = {
   brand?: string;
   status?: string;
   asaasId?: string;
+  installmentCount?: number;
+  installmentValueCents?: number;
 };
 
 export const productSalesTable = pgTable("product_sales", {

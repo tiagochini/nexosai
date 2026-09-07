@@ -106,8 +106,8 @@ export default function TermsOfService() {
           <p className="text-gray-300 leading-relaxed">
             Pagamentos são processados por meio de gateways de pagamento de terceiros. O NexOS
             não armazena dados de cartão de crédito. Quando o usuário optar pelo parcelamento,
-            todos os juros, tarifas e demais encargos aplicados pelo gateway ou pela instituição
-            financeira serão de responsabilidade do comprador e acrescidos ao valor contratado.
+            as opções disponíveis, o valor de cada parcela e o valor total serão apresentados
+            antes da confirmação do pagamento.
             Reembolsos são avaliados caso a caso conforme nossa política de reembolso.
           </p>
         </section>
