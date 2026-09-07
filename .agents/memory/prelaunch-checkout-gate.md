@@ -33,6 +33,12 @@ The approved landing direction is human, direct and operational: strong editoria
 
 **How to apply:** Preserve the current visual and writing direction in future landing edits. Avoid abstract labels, empty superlatives, invented social proof and redesigns that return to glossy AI-template patterns.
 
+The landing must speak directly to aspiring digital-product operators who understand launch, traffic or creator models but remain blocked by the cost and complexity of execution. Frame NexOS as the agency that turns the idea into a live, operated system—not another course or plan.
+
+**Why:** The owner specifically approved the editorial display and asked that the message go deeper into the pain of accumulated courses, fear of wasting ad budget, unaffordable agencies and seeing online business models without being able to replicate the underlying operation.
+
+**How to apply:** Keep the approved display while leading with recognizable stalled-execution scenes. Move from pain to concrete delivery: offer, copy, video, domain, landing, ads, CRM, onboarding and optimization performed end-to-end.
+
 The initial pre-launch cohort is strictly limited to 100 real reservations. Once filled, registration closes with no promised reopening date; pricing and conditions offered in a future reopening may change.
 
 **Why:** Scarcity is part of the launch strategy, but it must be operationally enforced rather than presented as decorative copy.

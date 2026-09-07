@@ -33,6 +33,7 @@ export default function LandingPage() {
 
       <main className="flex-1 border-x-2 border-border max-w-[1400px] w-full mx-auto bg-background">
         <HeroSection openCapture={openCapture} closed={closed} />
+        <ExecutionGapSection openCapture={openCapture} closed={closed} />
         <RealWorkSection />
         <ArchitectureSection />
         <OperationalScopeSection />
@@ -99,7 +100,7 @@ function HeroSection({ openCapture, closed }: { openCapture: () => void; closed:
           <div className="inline-flex items-center gap-3 px-4 py-2 border-2 border-primary bg-primary/5 mb-10">
             <span className="w-2 h-2 bg-primary animate-pulse" />
             <span className="font-mono text-xs uppercase tracking-[0.2em] text-primary font-bold">
-              OPERAÇÃO COMERCIAL PRONTA
+              DA IDEIA À OPERAÇÃO NO AR
             </span>
           </div>
 
@@ -109,12 +110,12 @@ function HeroSection({ openCapture, closed }: { openCapture: () => void; closed:
           </h1>
 
           <p className="text-lg sm:text-2xl text-muted-foreground max-w-3xl leading-relaxed mb-12 font-sans font-medium">
-            Uma agência autônoma de execução ponta a ponta. Após suas regras e aprovação inicial, a NexOS registra e configura domínios, publica as páginas online, renderiza vídeos, posta conteúdos, ativa anúncios nas redes corretas, gerencia grupos e qualifica leads no CRM. Sem exigir intervenção humana a cada clique.
+            Você já entendeu o modelo. Talvez até tenha comprado cursos de lançamento, tráfego ou conteúdo. O que ainda não conseguiu foi transformar tudo isso em uma operação funcionando. A NexOS assume a execução cara, técnica e fragmentada para finalmente colocar sua ideia em produção — de ponta a ponta.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4">
             <Button onClick={openCapture} data-testid="hero-cta-button" className="h-16 px-10 text-base font-display font-bold rounded-none bg-foreground text-background hover:bg-muted-foreground transition-colors uppercase tracking-wide">
-              {closed ? "Turma inicial encerrada" : "Garantir Vaga de Abertura"} <ArrowRight className="ml-3 h-5 w-5" />
+              {closed ? "Turma inicial encerrada" : "Tirar Minha Ideia do Papel"} <ArrowRight className="ml-3 h-5 w-5" />
             </Button>
             <Button variant="outline" onClick={scrollToWork} className="h-16 px-10 text-base font-display font-bold rounded-none border-2 border-border bg-transparent hover:bg-card transition-colors text-foreground uppercase tracking-wide">
               Ver Trabalho Concreto
@@ -134,14 +135,90 @@ function HeroSection({ openCapture, closed }: { openCapture: () => void; closed:
   );
 }
 
+const executionPains = [
+  {
+    marker: "01 / CURSOS",
+    title: "Você aprendeu a estratégia. A campanha nunca saiu do rascunho.",
+    body: "Módulos assistidos, anotações prontas, frameworks salvos. Mas ainda faltam a oferta, a copy, os criativos, a página, os anúncios e alguém capaz de fazer tudo conversar."
+  },
+  {
+    marker: "02 / TRÁFEGO",
+    title: "Você sabe que precisa anunciar. Só não pode pagar para aprender errando.",
+    body: "Configurar conta, pixel, público, criativo, verba e remarketing ao mesmo tempo transforma cada clique em risco. O medo de queimar dinheiro paralisa antes do primeiro teste."
+  },
+  {
+    marker: "03 / AGÊNCIA",
+    title: "Uma agência resolveria. Se coubesse no caixa de quem ainda nem lançou.",
+    body: "Estrategista, copywriter, designer, editor, gestor de tráfego e CRM separados custam antes de gerar a primeira venda — e ainda deixam você responsável por coordenar todos eles."
+  },
+  {
+    marker: "04 / RENDA ONLINE",
+    title: "Você enxerga pessoas monetizando. Não enxerga como replicar a máquina.",
+    body: "Curso, comunidade, canal, consultoria, infoproduto: o modelo parece simples quando está pronto. Por trás dele existe uma operação inteira que ninguém mostra funcionando em conjunto."
+  }
+];
+
+function ExecutionGapSection({ openCapture, closed }: { openCapture: () => void; closed: boolean }) {
+  return (
+    <section className="border-b-2 border-border bg-background">
+      <div className="grid grid-cols-1 lg:grid-cols-[0.85fr_1.15fr]">
+        <div className="px-6 py-24 sm:py-32 lg:border-r-2 border-border bg-primary text-primary-foreground flex flex-col justify-between gap-16">
+          <div>
+            <div className="font-mono text-xs uppercase tracking-[0.2em] font-bold mb-8">O problema não é falta de informação</div>
+            <h2 className="text-5xl sm:text-7xl font-display font-black uppercase tracking-tighter leading-[0.92]">
+              Você não precisa de mais um curso.
+            </h2>
+            <p className="text-2xl sm:text-3xl font-display font-bold uppercase tracking-tight mt-8 border-t-2 border-primary-foreground/30 pt-8">
+              Precisa de uma operação que faça.
+            </p>
+          </div>
+          <div className="font-mono text-xs uppercase tracking-widest leading-relaxed max-w-md opacity-80">
+            A distância entre “eu sei o que deveria fazer” e “minha campanha está vendendo” é execução.
+          </div>
+        </div>
+
+        <div className="bg-card">
+          {executionPains.map((pain) => (
+            <article key={pain.marker} className="p-7 sm:p-10 border-b-2 last:border-b-0 border-border group hover:bg-background transition-colors">
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary font-bold mb-4">{pain.marker}</div>
+              <h3 className="font-display font-black text-2xl sm:text-3xl uppercase tracking-tight leading-tight max-w-3xl">
+                {pain.title}
+              </h3>
+              <p className="text-muted-foreground text-base sm:text-lg leading-relaxed mt-4 max-w-3xl">{pain.body}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 lg:items-center px-6 py-12 sm:px-10 bg-foreground text-background">
+        <div>
+          <div className="font-mono text-xs uppercase tracking-widest font-bold mb-3">Condição de abertura</div>
+          <p className="font-display text-2xl sm:text-4xl font-black uppercase tracking-tight leading-tight max-w-4xl">
+            Coloque a ideia em produção agora e pague parcelado no cartão.
+          </p>
+          <p className="font-sans mt-3 text-background/70 max-w-3xl">
+            A NexOS estrutura e executa a operação completa. O pagamento parcelado será processado pelo Asaas nas condições disponíveis para o seu cartão. Juros, tarifas e demais encargos do parcelamento são integralmente pagos pelo comprador.
+          </p>
+        </div>
+        <Button onClick={openCapture} className="h-16 px-8 rounded-none bg-primary text-primary-foreground hover:bg-primary/90 font-display font-black uppercase tracking-wide">
+          {closed ? "Turma encerrada" : "Quero colocar no ar"} <ArrowRight className="ml-3 h-5 w-5" />
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 function RealWorkSection() {
   return (
     <section id="trabalho-concreto" className="py-24 sm:py-32 border-b-2 border-border relative bg-card scroll-mt-20">
       <div className="px-6">
         <div className="mb-16">
-          <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-4 font-bold">O Escopo do Sistema</h2>
+          <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-4 font-bold">A solução não é outra aula</h2>
           <p className="text-4xl sm:text-5xl font-display font-black uppercase tracking-tighter leading-tight max-w-4xl">
-            O que a NexOS faz todos os dias pela sua operação.
+            Você chega com a ideia. A NexOS constrói e opera o que faltava.
+          </p>
+          <p className="mt-6 text-lg text-muted-foreground max-w-3xl leading-relaxed">
+            Não entregamos um plano para você montar sozinho. Entregamos a pesquisa, a oferta, os ativos, a infraestrutura, a distribuição e o acompanhamento funcionando como uma única operação.
           </p>
         </div>
 
@@ -149,37 +226,37 @@ function RealWorkSection() {
           <WorkCard
             number="01"
             title="Inteligência & Oferta"
-            desc="O sistema varre o mercado, estuda seus concorrentes e estrutura ângulos de venda, ganchos e promessas para os próximos 30 dias de campanha."
+            desc="Transforma sua ideia em uma oferta vendável: encontra a dor, estuda o mercado, mapeia concorrentes e estrutura promessa, preço, bônus, objeções e ganchos para a campanha."
             icon={<Search className="w-8 h-8 text-primary" />}
           />
           <WorkCard
             number="02"
             title="Produção de Vídeo"
-            desc="Processa áudio e vídeo usando infraestrutura GPU própria. Roteiriza, corta e renderiza usando gravações reais, ou gera vídeos 100% autônomos com clones de voz e avatares hiper-realistas."
+            desc="Você não precisa virar editor nem montar um estúdio. A NexOS roteiriza, produz, corta e renderiza vídeos usando gravações reais ou produção autônoma com voz e avatar."
             icon={<Video className="w-8 h-8 text-primary" />}
           />
           <WorkCard
             number="03"
             title="Landings & Criativos"
-            desc="Registra o domínio, estrutura a arquitetura de conversão, escreve a copy, desenha o layout e coloca a landing page no ar, além de produzir criativos estáticos de alta performance."
+            desc="Não entrega um wireframe. Registra o domínio, escreve a copy, desenha a página, conecta a captura, produz os criativos e coloca tudo no ar."
             icon={<Layers className="w-8 h-8 text-primary" />}
           />
           <WorkCard
             number="04"
             title="Tráfego Pago Multi-Canal"
-            desc="Cria, sobe e gerencia campanhas em todas as redes e buscadores aderentes ao seu público. Testa criativos, distribui verba e pausa o que não dá ROI — seguindo as regras da sua conta."
+            desc="Tira a campanha do gerenciador e coloca em circulação: cria públicos, sobe anúncios, testa criativos, acompanha verba e pausa o que não responde — dentro das suas regras."
             icon={<Target className="w-8 h-8 text-primary" />}
           />
           <WorkCard
             number="05"
             title="Distribuição Orgânica & Grupos"
-            desc="Publica conteúdos autonomamente em múltiplos canais orgânicos, responde mensagens e modera comunidades, mantendo o aquecimento e a distribuição ativa onde sua audiência está."
+            desc="Converte uma ideia em presença contínua: publica, aquece, responde e modera canais e comunidades sem deixar todo o calendário depender da sua energia."
             icon={<Megaphone className="w-8 h-8 text-primary" />}
           />
           <WorkCard
             number="06"
             title="Vendas & Retenção"
-            desc="Acompanha o pipeline no CRM, envia e-mails de onboarding para novos clientes, recupera carrinhos abandonados e aciona campanhas de indicação."
+            desc="A venda não termina no checkout. Acompanha leads no CRM, recupera abandonos, recebe compradores, conduz onboarding, trabalha retenção e ativa indicações."
             icon={<Users className="w-8 h-8 text-primary" />}
           />
         </div>
@@ -275,10 +352,11 @@ function ArchitectureSection() {
           <div className="lg:sticky lg:top-32">
             <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-4 font-bold">A Quebra de Silos</h2>
             <p className="text-4xl sm:text-5xl font-display font-black uppercase tracking-tighter leading-tight mb-8">
-              Você é o gargalo que traduz a mesma estratégia para cinco áreas diferentes.
+              Seu projeto não travou por falta de potencial. Travou porque você virou o operador de cinco profissões.
             </p>
             <div className="space-y-6 text-lg text-muted-foreground font-sans">
-              <p>O custo real da sua operação não está nas mensalidades de software. Está na perda de tração diária.</p>
+              <p>Você deveria decidir o que quer construir. Em vez disso, tenta aprender copy, design, edição, tráfego, automação e vendas ao mesmo tempo.</p>
+              <p>O custo real não está só nas ferramentas. Está nos meses sem publicar, no anúncio que nunca foi testado e na oferta que continua dentro de um documento.</p>
               <p>Com a NexOS, o cérebro é unificado e <strong className="text-foreground">autônomo</strong>.</p>
               <p>A inteligência orienta o texto. O estrategista instrui a renderização, que sobe as páginas online e entrega os vídeos ao tráfego. Toda a operação consome a mesma matriz — executando a campanha inteira sem você precisar intervir a cada etapa.</p>
               <p className="font-mono text-xs uppercase tracking-widest text-primary pt-4 hidden lg:block animate-pulse">
@@ -456,7 +534,7 @@ function ScarcitySection({ openCapture, closed }: { openCapture: () => void; clo
           Apenas 100 Operações no Lançamento.
         </h2>
         <p className="text-xl font-sans font-medium mb-12 opacity-90 max-w-2xl mx-auto">
-          Uma agência autônoma exige governança robusta e suporte dedicado nos primeiros dias. Para garantir a estabilidade do ecossistema, o acesso inicial é severamente restrito. Não há exceções.
+          Se o que impediu você até agora foi o custo e a complexidade de montar uma agência inteira, esta abertura foi desenhada para remover esse bloqueio: execução ponta a ponta e pagamento parcelado no cartão. Juros, tarifas e demais encargos do parcelamento ficam por conta do comprador. O acesso inicial é restrito. Não há exceções.
         </p>
 
         <Button
