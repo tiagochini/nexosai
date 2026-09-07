@@ -3,18 +3,47 @@ import { useLocation } from "wouter";
 import { setAuthTokenGetter, setUnauthorizedHandler } from "@workspace/api-client-react/custom-fetch";
 import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
 import type { User, Workspace } from "@workspace/api-client-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react/custom-fetch";
 
 // ── Synchronous module-level init — ensures token is sent even on the very
 // first request before AuthProvider's useEffect has had a chance to run.
 setAuthTokenGetter(() => localStorage.getItem("accessToken"));
 
-interface Plan {
+export interface Plan {
   id: string;
   name: string;
   slug: string;
   creditsMonthly: number;
   maxCampaigns: number;
   whiteLabel: boolean;
+}
+
+export interface WorkspaceDetail {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  planId: string;
+  createdAt: string;
+}
+
+export interface WorkspaceEntitlements {
+  maxWorkspaces: number;
+  allowedSocialNetworks: string[];
+  maxAccountsPerNetwork: Record<string, number>;
+}
+
+export interface WorkspaceUsage {
+  workspacesUsed: number;
+  connectedAccountsByNetwork: Record<string, number>;
+}
+
+export interface WorkspacesResponse {
+  workspaces: WorkspaceDetail[];
+  activeWorkspaceId: string;
+  entitlements: WorkspaceEntitlements;
+  usage: WorkspaceUsage;
 }
 
 interface AuthContextType {
@@ -27,6 +56,10 @@ interface AuthContextType {
   isAdmin: boolean;
   logout: () => void;
   silentRefresh: () => Promise<boolean>;
+  workspacesData: WorkspacesResponse | null;
+  isWorkspacesLoading: boolean;
+  switchWorkspace: (workspaceId: string) => Promise<void>;
+  createWorkspace: (name: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -59,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
   const [, setLocation] = useLocation();
   const refreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const queryClient = useQueryClient();
 
   // ── Silent refresh implementation ─────────────────────────────────────────
   const silentRefresh = async (): Promise<boolean> => {
@@ -114,6 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setToken(null);
+    queryClient.clear();
     setLocation("/login");
   };
 
@@ -124,6 +159,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       queryKey: getGetMeQueryKey(),
     },
   });
+
+  const { data: workspacesData, isLoading: isWorkspacesLoading } = useQuery({
+    queryKey: ["/api/auth/workspaces"],
+    queryFn: () => customFetch<WorkspacesResponse>("/api/auth/workspaces"),
+    enabled: !!token,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const switchWorkspace = async (workspaceId: string) => {
+    const res = await customFetch<{ accessToken: string; refreshToken: string }>(`/api/auth/workspaces/${workspaceId}/switch`, {
+      method: "POST"
+    });
+    setToken(res.accessToken, res.refreshToken);
+    // Clear user-scoped cache
+    queryClient.clear();
+    await queryClient.invalidateQueries();
+    setLocation("/");
+  };
+
+  const createWorkspace = async (name: string) => {
+    const res = await customFetch<{ workspace: WorkspaceDetail; accessToken: string; refreshToken: string }>("/api/auth/workspaces", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    setToken(res.accessToken, res.refreshToken);
+    queryClient.clear();
+    await queryClient.invalidateQueries();
+    setLocation("/");
+  };
 
   // On /me failure: try refresh once, only logout if refresh also fails
   useEffect(() => {
@@ -151,6 +216,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAdmin,
       logout,
       silentRefresh,
+      workspacesData: workspacesData ?? null,
+      isWorkspacesLoading,
+      switchWorkspace,
+      createWorkspace,
     }}>
       {children}
     </AuthContext.Provider>

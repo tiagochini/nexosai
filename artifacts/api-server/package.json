@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:psychology": "tsx src/scripts/test-psychology-pipeline.ts",
     "test:credit-concurrency": "tsx src/scripts/test-credit-concurrency.ts",
+    "test:workspace-entitlements": "tsx src/scripts/test-workspace-entitlements.ts",
     "test:orchestration-fallback-race": "tsx src/scripts/test-orchestration-fallback-race.ts",
     "test:content-coherence-idor": "NODE_ENV=test tsx src/scripts/test-content-coherence-idor.ts",
     "test:paid-media": "tsx src/scripts/test-paid-media.ts",
@@ -32,7 +33,8 @@
     ,"test:native-media-worker-self-test": "python3 ../../services/native-media-worker/test_worker_self_test.py"
     ,"test:native-media-e2e": "pnpm run test:native-media-control-plane && NODE_ENV=test tsx src/scripts/test-native-media-http.ts && pnpm run test:timeline-render-compiler && pnpm run test:native-media-worker-self-test"
     ,"test:ephemeral-video-e2e": "NODE_ENV=test tsx src/scripts/test-ephemeral-video-e2e.ts",
-    "test:workspace-folder": "tsx ../video-editor/src/lib/workspace-folder.test.ts"
+    "test:workspace-folder": "tsx ../video-editor/src/lib/workspace-folder.test.ts",
+    "test:recording-folders": "tsx src/scripts/test-recording-folders.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

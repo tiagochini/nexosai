@@ -1,5 +1,5 @@
-import { eq, and, desc } from "drizzle-orm";
-import { db, launchRecordingsTable } from "@workspace/db";
+import { eq, and, desc, isNotNull } from "drizzle-orm";
+import { db, launchRecordingsTable, recordingFoldersTable } from "@workspace/db";
 import type { RecordingEvent } from "@workspace/db";
 import { ZipArchive } from "archiver";
 import type { Response, Request } from "express";
@@ -13,6 +13,7 @@ import {
   getGCSRecordingSize,
   createGCSReadStream,
   isGCSKey,
+  deleteGCSObject,
 } from "../../lib/gcs-recordings.js";
 
 function nowIso() { return new Date().toISOString(); }
@@ -33,10 +34,55 @@ function calcActiveDuration(rec: typeof launchRecordingsTable.$inferSelect): num
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 
-export async function startRecording(workspaceId: string, name: string, campaignId?: string) {
+export type RecordingMode = "manual" | "automatic";
+type StartOptions = { campaignId?: string; recordingMode?: RecordingMode; folderId?: string };
+
+function slugify(name: string): string {
+  return name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 72) || "pasta";
+}
+
+const SYSTEM_FOLDERS: Record<RecordingMode, { name: string; slug: string }> = {
+  automatic: { name: "Gravações automáticas", slug: "gravacoes-automaticas" },
+  manual: { name: "Uploads manuais", slug: "uploads-manuais" },
+};
+
+/** Atomic upsert plus read makes default folder creation safe under concurrent requests. */
+export async function ensureSystemRecordingFolder(workspaceId: string, systemType: RecordingMode) {
+  const definition = SYSTEM_FOLDERS[systemType];
+  await db.insert(recordingFoldersTable).values({
+    workspaceId, name: definition.name, slug: definition.slug, systemType, isSystem: true,
+  }).onConflictDoNothing();
+  const [folder] = await db.select().from(recordingFoldersTable).where(and(
+    eq(recordingFoldersTable.workspaceId, workspaceId),
+    eq(recordingFoldersTable.systemType, systemType),
+    eq(recordingFoldersTable.isSystem, true),
+  )).limit(1);
+  if (!folder) throw new Error("Não foi possível preparar a pasta do sistema");
+  return folder;
+}
+
+async function workspaceFolder(folderId: string, workspaceId: string) {
+  const [folder] = await db.select().from(recordingFoldersTable).where(and(
+    eq(recordingFoldersTable.id, folderId), eq(recordingFoldersTable.workspaceId, workspaceId),
+  )).limit(1);
+  return folder ?? null;
+}
+
+export async function startRecording(workspaceId: string, name: string, options: StartOptions = {}) {
+  const recordingMode = options.recordingMode ?? "manual";
+  const folder = options.folderId
+    ? await workspaceFolder(options.folderId, workspaceId)
+    : await ensureSystemRecordingFolder(workspaceId, recordingMode);
+  if (!folder) throw new RecordingFolderNotFoundError();
+  if (folder.isSystem && folder.systemType !== recordingMode) {
+    throw new RecordingFolderModeMismatchError();
+  }
   const [rec] = await db.insert(launchRecordingsTable).values({
     workspaceId,
-    campaignId: campaignId ?? null,
+    campaignId: options.campaignId ?? null,
+    folderId: folder.id,
+    recordingMode,
     name,
     state: "recording",
     events: [],
@@ -47,6 +93,59 @@ export async function startRecording(workspaceId: string, name: string, campaign
   return rec!;
 }
 
+export class RecordingFolderNotFoundError extends Error {}
+export class ProtectedRecordingFolderError extends Error {}
+export class RecordingFolderModeMismatchError extends Error {}
+
+export async function listFolders(workspaceId: string) {
+  await Promise.all([
+    ensureSystemRecordingFolder(workspaceId, "automatic"),
+    ensureSystemRecordingFolder(workspaceId, "manual"),
+  ]);
+  return db.select().from(recordingFoldersTable)
+    .where(eq(recordingFoldersTable.workspaceId, workspaceId))
+    .orderBy(desc(recordingFoldersTable.isSystem), recordingFoldersTable.name);
+}
+
+export async function createFolder(workspaceId: string, name: string) {
+  const baseSlug = slugify(name);
+  // A random suffix avoids a read-then-write race while retaining a human-readable slug.
+  const slug = `${baseSlug}-${crypto.randomUUID().slice(0, 8)}`;
+  const [folder] = await db.insert(recordingFoldersTable).values({ workspaceId, name, slug }).returning();
+  return folder!;
+}
+
+export async function renameFolder(id: string, workspaceId: string, name: string) {
+  const folder = await workspaceFolder(id, workspaceId);
+  if (!folder) return null;
+  if (folder.isSystem) throw new ProtectedRecordingFolderError();
+  const [updated] = await db.update(recordingFoldersTable).set({ name, updatedAt: new Date() })
+    .where(and(eq(recordingFoldersTable.id, id), eq(recordingFoldersTable.workspaceId, workspaceId))).returning();
+  return updated!;
+}
+
+export async function deleteFolder(id: string, workspaceId: string) {
+  const folder = await workspaceFolder(id, workspaceId);
+  if (!folder) return false;
+  if (folder.isSystem) throw new ProtectedRecordingFolderError();
+  const manualFallback = await ensureSystemRecordingFolder(workspaceId, "manual");
+  const automaticFallback = await ensureSystemRecordingFolder(workspaceId, "automatic");
+  await db.transaction(async (tx) => {
+    await tx.update(launchRecordingsTable).set({ folderId: manualFallback.id }).where(and(
+      eq(launchRecordingsTable.folderId, id), eq(launchRecordingsTable.workspaceId, workspaceId),
+      eq(launchRecordingsTable.recordingMode, "manual"),
+    ));
+    await tx.update(launchRecordingsTable).set({ folderId: automaticFallback.id }).where(and(
+      eq(launchRecordingsTable.folderId, id), eq(launchRecordingsTable.workspaceId, workspaceId),
+      eq(launchRecordingsTable.recordingMode, "automatic"),
+    ));
+    await tx.delete(recordingFoldersTable).where(and(
+      eq(recordingFoldersTable.id, id), eq(recordingFoldersTable.workspaceId, workspaceId),
+    ));
+  });
+  return true;
+}
+
 // ─── Get single recording ─────────────────────────────────────────────────────
 
 export async function getRecording(recordingId: string, workspaceId: string) {
@@ -55,7 +154,17 @@ export async function getRecording(recordingId: string, workspaceId: string) {
     .from(launchRecordingsTable)
     .where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)))
     .limit(1);
-  return rec ?? null;
+  return rec ? recordingResponse(rec) : null;
+}
+
+/** Never expose local filesystem paths or object-storage keys in API payloads. */
+export function recordingResponse(rec: typeof launchRecordingsTable.$inferSelect) {
+  const { videoPath, ...safe } = rec;
+  return {
+    ...safe,
+    hasVideo: Boolean(videoPath),
+    videoUrl: videoPath ? `/api/recordings/${rec.id}/video` : null,
+  };
 }
 
 // ─── Add event ────────────────────────────────────────────────────────────────
@@ -87,7 +196,7 @@ export async function addEvent(
   const [updated] = await db
     .update(launchRecordingsTable)
     .set({ events })
-    .where(eq(launchRecordingsTable.id, recordingId))
+    .where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)))
     .returning();
   return updated!;
 }
@@ -118,7 +227,7 @@ export async function pauseRecording(recordingId: string, workspaceId: string) {
       pausedAt: new Date(),
       events: (rec.events as RecordingEvent[]).concat(pauseEvent),
     })
-    .where(eq(launchRecordingsTable.id, recordingId))
+    .where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)))
     .returning();
   return updated!;
 }
@@ -153,7 +262,7 @@ export async function resumeRecording(recordingId: string, workspaceId: string) 
       totalPausedMs: newTotalPaused,
       events: (rec.events as RecordingEvent[]).concat(resumeEvent),
     })
-    .where(eq(launchRecordingsTable.id, recordingId))
+    .where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)))
     .returning();
   return updated!;
 }
@@ -166,7 +275,8 @@ export async function stopRecording(recordingId: string, workspaceId: string) {
     .from(launchRecordingsTable)
     .where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)))
     .limit(1);
-  if (!rec || rec.state === "stopped") return null;
+  if (!rec) return null;
+  if (rec.state === "stopped") return rec;
 
   let totalPaused = rec.totalPausedMs;
   if (rec.state === "paused" && rec.pausedAt) {
@@ -176,7 +286,7 @@ export async function stopRecording(recordingId: string, workspaceId: string) {
   const [updated] = await db
     .update(launchRecordingsTable)
     .set({ state: "stopped", stoppedAt: new Date(), pausedAt: null, totalPausedMs: totalPaused })
-    .where(eq(launchRecordingsTable.id, recordingId))
+    .where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)))
     .returning();
   return updated!;
 }
@@ -190,39 +300,62 @@ export async function uploadVideo(recordingId: string, workspaceId: string, req:
     .where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)))
     .limit(1);
   if (!rec) return null;
+  const requestContentType = req.headers["content-type"]?.split(";")[0]?.trim().toLowerCase();
+  const videoMimeType = requestContentType?.startsWith("video/") ? requestContentType : "video/webm";
+  // Legacy rows predate folders; assign their mode's system folder during finalization.
+  const finalFolder = rec.folderId
+    ? await workspaceFolder(rec.folderId, workspaceId)
+    : await ensureSystemRecordingFolder(workspaceId, rec.recordingMode === "automatic" ? "automatic" : "manual");
+  if (!finalFolder) throw new RecordingFolderNotFoundError();
 
   await mkdir(UPLOADS_DIR, { recursive: true });
   const filepath = path.join(UPLOADS_DIR, `${recordingId}.webm`);
   const ws = createWriteStream(filepath);
 
-  await pipeline(req, ws);
+  try {
+    await pipeline(req, ws);
+  } catch (err) {
+    await db.update(launchRecordingsTable).set({
+      finalizationStatus: "failed", finalizationError: "Falha ao receber o arquivo de vídeo",
+    }).where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)));
+    throw err;
+  }
 
   const fileStat = await stat(filepath);
   logger.info({ recordingId, size: fileStat.size }, "Recording video saved locally, uploading to GCS");
 
-  // Save local path first so the video is immediately serveable
+  // Keep the durable state processing until object storage confirms the upload.
   await db
     .update(launchRecordingsTable)
-    .set({ videoPath: filepath, videoSize: fileStat.size, videoUploadedAt: new Date() })
-    .where(eq(launchRecordingsTable.id, recordingId));
+    .set({
+      folderId: finalFolder.id,
+      videoPath: filepath,
+      videoSize: fileStat.size,
+      videoMimeType,
+      finalizationStatus: "processing",
+      finalizationError: null,
+      finalizedAt: null,
+    })
+    .where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)));
 
-  // Fire-and-forget GCS upload — swaps videoPath to GCS key on success
-  setImmediate(async () => {
-    try {
-      const gcsKey = await uploadRecordingToGCS(filepath, recordingId);
-      await db
-        .update(launchRecordingsTable)
-        .set({ videoPath: gcsKey })
-        .where(eq(launchRecordingsTable.id, recordingId));
-      // Remove local temp file after successful GCS upload
-      await unlink(filepath).catch(() => undefined);
-      logger.info({ recordingId, gcsKey }, "Recording uploaded to GCS and local temp removed");
-    } catch (err) {
-      logger.error({ err, recordingId }, "GCS upload failed — keeping local file as fallback");
-    }
-  });
-
-  return { path: filepath, size: fileStat.size };
+  try {
+    const gcsKey = await uploadRecordingToGCS(filepath, recordingId, videoMimeType);
+    const finalizedAt = new Date();
+    const [updated] = await db.update(launchRecordingsTable).set({
+      videoPath: gcsKey, videoUploadedAt: new Date(), finalizationStatus: "ready",
+      finalizedAt, finalizationError: null, state: "stopped",
+      stoppedAt: rec.stoppedAt ?? finalizedAt, pausedAt: null,
+    }).where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId))).returning();
+    await unlink(filepath).catch(() => undefined);
+    logger.info({ recordingId, gcsKey }, "Recording uploaded to GCS");
+    return { size: fileStat.size, recording: recordingResponse(updated!) };
+  } catch (err) {
+    logger.error({ err, recordingId }, "Recording upload finalization failed");
+    await db.update(launchRecordingsTable).set({
+      finalizationStatus: "failed", finalizationError: "Falha ao enviar o vídeo ao storage. Tente novamente.",
+    }).where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)));
+    return { size: fileStat.size, recording: null };
+  }
 }
 
 // ─── Serve video (with Range header support for seeking) ──────────────────────
@@ -240,7 +373,7 @@ export async function serveVideo(recordingId: string, workspaceId: string, res: 
   if (!rec.videoPath) { res.status(404).json({ error: "Vídeo ainda não foi enviado para o servidor" }); return; }
 
   const rangeHeader = (res.req as Request).headers.range;
-  res.setHeader("Content-Type", "video/webm");
+  res.setHeader("Content-Type", rec.videoMimeType ?? "video/webm");
   res.setHeader("Accept-Ranges", "bytes");
 
   // ── GCS path ──────────────────────────────────────────────────────────────
@@ -298,15 +431,24 @@ export async function deleteRecording(recordingId: string, workspaceId: string) 
     .limit(1);
   if (!rec) return false;
   if (rec.videoPath) {
-    try { await unlink(rec.videoPath); } catch {}
+    try {
+      if (isGCSKey(rec.videoPath)) await deleteGCSObject(rec.videoPath);
+      else await unlink(rec.videoPath);
+    } catch (err) {
+      logger.error({ err, recordingId }, "Recording storage deletion failed");
+      throw new Error("Não foi possível excluir o arquivo de vídeo");
+    }
   }
-  await db.delete(launchRecordingsTable).where(eq(launchRecordingsTable.id, recordingId));
+  await db.delete(launchRecordingsTable).where(and(
+    eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId),
+  ));
   return true;
 }
 
 // ─── List ─────────────────────────────────────────────────────────────────────
 
-export async function listRecordings(workspaceId: string) {
+export async function listRecordings(workspaceId: string, folderId?: string) {
+  if (folderId && !await workspaceFolder(folderId, workspaceId)) throw new RecordingFolderNotFoundError();
   return db
     .select({
       id: launchRecordingsTable.id,
@@ -317,13 +459,26 @@ export async function listRecordings(workspaceId: string) {
       pausedAt: launchRecordingsTable.pausedAt,
       stoppedAt: launchRecordingsTable.stoppedAt,
       totalPausedMs: launchRecordingsTable.totalPausedMs,
-      videoPath: launchRecordingsTable.videoPath,
       videoSize: launchRecordingsTable.videoSize,
+      videoMimeType: launchRecordingsTable.videoMimeType,
       videoUploadedAt: launchRecordingsTable.videoUploadedAt,
+      hasVideo: isNotNull(launchRecordingsTable.videoPath),
+      folderId: launchRecordingsTable.folderId,
+      folderName: recordingFoldersTable.name,
+      folderSlug: recordingFoldersTable.slug,
+      folderIsSystem: recordingFoldersTable.isSystem,
+      recordingMode: launchRecordingsTable.recordingMode,
+      finalizedAt: launchRecordingsTable.finalizedAt,
+      finalizationStatus: launchRecordingsTable.finalizationStatus,
+      finalizationError: launchRecordingsTable.finalizationError,
       createdAt: launchRecordingsTable.createdAt,
     })
     .from(launchRecordingsTable)
-    .where(eq(launchRecordingsTable.workspaceId, workspaceId))
+    .leftJoin(recordingFoldersTable, and(
+      eq(recordingFoldersTable.id, launchRecordingsTable.folderId),
+      eq(recordingFoldersTable.workspaceId, workspaceId),
+    ))
+    .where(folderId ? and(eq(launchRecordingsTable.workspaceId, workspaceId), eq(launchRecordingsTable.folderId, folderId)) : eq(launchRecordingsTable.workspaceId, workspaceId))
     .orderBy(desc(launchRecordingsTable.createdAt));
 }
 

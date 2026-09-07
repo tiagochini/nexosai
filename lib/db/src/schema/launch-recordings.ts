@@ -1,4 +1,6 @@
-import { pgTable, text, uuid, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, integer, jsonb, check } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { recordingFoldersTable } from "./recording-folders";
 
 export type RecordingState = "recording" | "paused" | "stopped";
 
@@ -29,6 +31,7 @@ export type RecordingEvent = {
 export const launchRecordingsTable = pgTable("launch_recordings", {
   id: uuid("id").primaryKey().defaultRandom(),
   workspaceId: uuid("workspace_id").notNull(),
+  folderId: uuid("folder_id").references(() => recordingFoldersTable.id, { onDelete: "set null" }),
   campaignId: uuid("campaign_id"),
   name: text("name").notNull(),
   state: text("state").notNull().default("recording"), // RecordingState
@@ -40,6 +43,14 @@ export const launchRecordingsTable = pgTable("launch_recordings", {
   // Video file stored on server
   videoPath: text("video_path"),
   videoSize: integer("video_size"), // bytes
+  videoMimeType: text("video_mime_type"),
   videoUploadedAt: timestamp("video_uploaded_at", { withTimezone: true }),
+  recordingMode: text("recording_mode").notNull().default("manual"), // manual | automatic
+  finalizedAt: timestamp("finalized_at", { withTimezone: true }),
+  finalizationStatus: text("finalization_status").notNull().default("pending"), // pending | processing | ready | failed
+  finalizationError: text("finalization_error"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  check("launch_recordings_recording_mode_check", sql`${table.recordingMode} in ('manual', 'automatic')`),
+  check("launch_recordings_finalization_status_check", sql`${table.finalizationStatus} in ('pending', 'processing', 'ready', 'failed')`),
+]);

@@ -10,6 +10,7 @@ import {
   metadataForPurpose,
   type IntegrationPurpose,
 } from "./integration-purpose.js";
+import { assertSocialAccountEntitlement } from "../auth/workspace-entitlements.service.js";
 
 const router = Router();
 
@@ -620,6 +621,13 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
     // only the same purpose/account; never replace every row for a provider.
     const purpose: IntegrationPurpose =
       provider === "meta_ads" || provider === "tiktok_ads" ? "paid_media" : "organic_social";
+    // OAuth callbacks are another account-creation path. Paid-media accounts
+    // remain outside organic social entitlements; the existing account check in
+    // the guard keeps OAuth reconnects idempotent.
+    if (purpose === "organic_social" &&
+      (provider === "instagram" || provider === "facebook" || provider === "tiktok")) {
+      await assertSocialAccountEntitlement(stateData.workspaceId, provider, accountId);
+    }
     const newMetadata = {
       oauthConnected: true,
       connectedAt: new Date().toISOString(),

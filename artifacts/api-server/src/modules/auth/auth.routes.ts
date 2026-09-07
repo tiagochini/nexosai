@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod/v4";
-import { registerUser, loginUser, refreshTokens } from "./auth.service.js";
+import { issueTokens, registerUser, loginUser, refreshTokens } from "./auth.service.js";
+import { createOwnedWorkspace, getWorkspaceOverview } from "./workspaces.service.js";
 import { requireAuth } from "./auth.middleware.js";
 import { db, usersTable, workspacesTable, plansTable, inviteCodesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
@@ -26,6 +27,9 @@ const loginSchema = z.object({
 
 const refreshSchema = z.object({
   refreshToken: z.string(),
+});
+const createWorkspaceSchema = z.object({
+  name: z.string().trim().min(2).max(120),
 });
 
 // GET /api/auth/platform-status — public, tells the frontend if cart is open
@@ -139,6 +143,54 @@ router.post("/refresh", async (req, res): Promise<void> => {
 
   try {
     const tokens = await refreshTokens(parsed.data.refreshToken, req.log);
+    res.json(tokens);
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+// Owner-only workspace foundation. Membership is intentionally not modeled.
+router.get("/workspaces", requireAuth, async (req, res): Promise<void> => {
+  try {
+    res.json(await getWorkspaceOverview(req.auth.userId, req.auth.workspaceId));
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+router.post("/workspaces", requireAuth, async (req, res): Promise<void> => {
+  const parsed = createWorkspaceSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+  try {
+    const workspace = await createOwnedWorkspace(req.auth.userId, req.auth.workspaceId, parsed.data.name);
+    const tokens = issueTokens({ id: req.auth.userId, email: req.auth.email }, workspace.id);
+    req.log.info({ userId: req.auth.userId, workspaceId: workspace.id }, "Owner workspace created");
+    res.status(201).json({ workspace, ...tokens });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+router.post("/workspaces/:id/switch", requireAuth, async (req, res): Promise<void> => {
+  try {
+    const overview = await getWorkspaceOverview(req.auth.userId, req.params["id"] as string);
+    const tokens = issueTokens({ id: req.auth.userId, email: req.auth.email }, overview.activeWorkspaceId);
+    req.log.info({ userId: req.auth.userId, workspaceId: overview.activeWorkspaceId }, "Owner workspace switched");
     res.json(tokens);
   } catch (err) {
     if (err instanceof AppError) {

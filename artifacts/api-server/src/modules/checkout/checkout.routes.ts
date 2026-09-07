@@ -41,7 +41,7 @@ function signAccess(payload: { userId: string; workspaceId: string; email: strin
   });
 }
 
-function signRefresh(payload: { userId: string }): string {
+function signRefresh(payload: { userId: string; workspaceId: string }): string {
   return jwt.sign(payload, env.JWT_REFRESH_SECRET, {
     expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions["expiresIn"],
   });
@@ -250,7 +250,7 @@ router.post("/simulate", async (req, res): Promise<void> => {
     res.json({
       success: true,
       accessToken: signAccess(payload),
-      refreshToken: signRefresh({ userId }),
+      refreshToken: signRefresh({ userId, workspaceId }),
       expiresIn: 15 * 60,
       isNewUser,
       startingCredits,
@@ -301,7 +301,7 @@ router.post("/initiate", async (req, res): Promise<void> => {
     res.json({
       success: true,
       accessToken: signAccess(payload),
-      refreshToken: signRefresh({ userId }),
+      refreshToken: signRefresh({ userId, workspaceId }),
       expiresIn: 15 * 60,
       isNewUser,
       startingCredits,

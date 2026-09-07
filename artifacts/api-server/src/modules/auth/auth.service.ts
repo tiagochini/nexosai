@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { db, usersTable, workspacesTable, plansTable } from "@workspace/db";
 import { env } from "../../lib/env.js";
 import {
@@ -51,10 +51,19 @@ export function signAccess(payload: TokenPayload): string {
   });
 }
 
-function signRefresh(payload: Pick<TokenPayload, "userId">): string {
+function signRefresh(payload: Pick<TokenPayload, "userId" | "workspaceId">): string {
   return jwt.sign(payload, env.JWT_REFRESH_SECRET, {
     expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions["expiresIn"],
   });
+}
+
+export function issueTokens(user: { id: string; email: string }, workspaceId: string): AuthTokens {
+  const payload: TokenPayload = { userId: user.id, workspaceId, email: user.email };
+  return {
+    accessToken: signAccess(payload),
+    refreshToken: signRefresh({ userId: user.id, workspaceId }),
+    expiresIn: 8 * 60 * 60,
+  };
 }
 
 export async function registerUser(
@@ -154,17 +163,7 @@ export async function registerUser(
     });
   }
 
-  const payload: TokenPayload = {
-    userId: user.id,
-    workspaceId: workspace.id,
-    email: user.email,
-  };
-
-  return {
-    accessToken: signAccess(payload),
-    refreshToken: signRefresh({ userId: user.id }),
-    expiresIn: 8 * 60 * 60,
-  };
+  return issueTokens(user, workspace.id);
 }
 
 export async function loginUser(
@@ -189,7 +188,8 @@ export async function loginUser(
   const [workspace] = await db
     .select()
     .from(workspacesTable)
-    .where(eq(workspacesTable.ownerId, user.id))
+    .where(and(eq(workspacesTable.ownerId, user.id), eq(workspacesTable.status, "active")))
+    .orderBy(asc(workspacesTable.createdAt), asc(workspacesTable.id))
     .limit(1);
 
   if (!workspace) {
@@ -217,27 +217,17 @@ export async function loginUser(
     }
   }
 
-  const payload: TokenPayload = {
-    userId: user.id,
-    workspaceId: workspace.id,
-    email: user.email,
-  };
-
-  return {
-    accessToken: signAccess(payload),
-    refreshToken: signRefresh({ userId: user.id }),
-    expiresIn: 8 * 60 * 60,
-  };
+  return issueTokens(user, workspace.id);
 }
 
 export async function refreshTokens(
   refreshToken: string,
   log: Logger,
 ): Promise<AuthTokens> {
-  let decoded: { userId: string };
+  let decoded: { userId: string; workspaceId?: string };
   try {
     decoded = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as {
-      userId: string;
+      userId: string; workspaceId?: string;
     };
   } catch {
     throw new UnauthorizedError("Invalid refresh token");
@@ -253,27 +243,22 @@ export async function refreshTokens(
     throw new UnauthorizedError("User not found");
   }
 
-  const [workspace] = await db
+  const ownedWorkspaces = await db
     .select()
     .from(workspacesTable)
-    .where(eq(workspacesTable.ownerId, user.id))
-    .limit(1);
+    .where(and(eq(workspacesTable.ownerId, user.id), eq(workspacesTable.status, "active")))
+    .orderBy(asc(workspacesTable.createdAt), asc(workspacesTable.id));
+  // Legacy refresh tokens had no workspace claim. Their deterministic fallback
+  // is the oldest active owned workspace. Scoped tokens never silently move.
+  const workspace = decoded.workspaceId
+    ? ownedWorkspaces.find((candidate) => candidate.id === decoded.workspaceId)
+    : ownedWorkspaces[0];
 
   if (!workspace) {
-    throw new NotFoundError("Workspace");
+    throw new UnauthorizedError("Selected workspace is no longer available");
   }
 
-  const payload: TokenPayload = {
-    userId: user.id,
-    workspaceId: workspace.id,
-    email: user.email,
-  };
-
-  return {
-    accessToken: signAccess(payload),
-    refreshToken: signRefresh({ userId: user.id }),
-    expiresIn: 8 * 60 * 60,
-  };
+  return issueTokens(user, workspace.id);
 }
 
 export function verifyAccessToken(token: string): TokenPayload {

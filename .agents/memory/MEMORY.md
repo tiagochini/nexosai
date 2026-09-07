@@ -81,3 +81,5 @@
 - [Portable Ephemeral Video Projects](portable-ephemeral-video-projects.md) — purge requires confirmed editable .nexosvideo handoff; MP4 alone is insufficient, and imported projects receive fresh scoped identities.
 - [Workspace Device Folders](workspace-device-folders.md) — each device authorizes once; NexOS reuses an IndexedDB directory handle scoped by authoritative workspace ID, with safe browser fallback.
 - [Publish FK Ordering](publish-fk-ordering.md) — Replit may emit new foreign keys before their new parent unique constraint; stage composite tenant FKs across two publishes.
+- [Commercial-Neutral Entitlements](commercial-neutral-entitlements.md) — workspace and social-account capacity are configurable plan capabilities, independent of pricing strategy.
+- [Recording Library Finalization](recording-library-finalization.md) — raw uploads bypass JSON parsing; media becomes ready only after storage confirmation and remains in workspace-scoped system folders.

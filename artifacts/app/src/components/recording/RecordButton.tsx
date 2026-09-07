@@ -47,7 +47,8 @@ interface RecordingMeta {
   pausedAt: string | null;
   stoppedAt: string | null;
   totalPausedMs: number;
-  videoPath: string | null;
+  hasVideo?: boolean;
+  finalizationStatus?: "pending" | "processing" | "ready" | "failed";
   videoSize: number | null;
   videoUploadedAt: string | null;
 }
@@ -129,7 +130,7 @@ function triggerDeviceDownload(blob: Blob, filename: string) {
 }
 
 async function uploadVideoToServer(blob: Blob, recordingId: string): Promise<void> {
-  const token = localStorage.getItem("accessToken") || localStorage.getItem("nexos_access_token");
+  const token = localStorage.getItem("accessToken") || localStorage.getItem("nexos_token");
   const res = await fetch(`/api/recordings/${recordingId}/upload`, {
     method: "POST",
     headers: {
@@ -199,7 +200,7 @@ function PreflightDialog({
             <div className="w-2.5 h-2.5 rounded-full bg-destructive animate-pulse" />
             <span className="font-mono text-sm uppercase tracking-widest font-bold">Configurar Gravação</span>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+          <button onClick={onClose} aria-label="Fechar" className="text-muted-foreground hover:text-foreground transition-colors">
             <XCircle className="h-4 w-4" />
           </button>
         </div>
@@ -755,7 +756,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       const data = await customFetch<{ recording: RecordingMeta }>("/api/recordings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, campaignId }),
+        body: JSON.stringify({ name, campaignId, recordingMode: "automatic" }),
       });
       rec = data.recording;
     } catch {
@@ -803,7 +804,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       // Auto-download to device gallery immediately
       const safeName = name.replace(/[^a-z0-9]/gi, "_").slice(0, 40);
       triggerDeviceDownload(blob, `${safeName}_${Date.now()}.webm`);
-      toast.success("📥 Vídeo salvo na pasta Downloads do device.");
+      toast.success("Download da cópia local iniciado.");
 
       // Upload to server
       const currentRec = recordingRef.current;
@@ -812,12 +813,20 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
         try {
           await uploadVideoToServer(blob, currentRec.id);
           setUploadDone(true);
-          toast.success("Vídeo enviado ao servidor. Abrindo editor...", { duration: 3000 });
-          // Auto-navigate to video editor
-          setTimeout(() => {
-            setLocation(`/video-editor?recordingId=${currentRec.id}`);
-            setOpen(true);
-          }, 2000);
+          toast.success(
+            <div className="flex flex-col gap-1">
+              <span className="font-bold">Vídeo salvo com sucesso!</span>
+              <span className="text-xs">Disponível na pasta "Gravações automáticas".</span>
+              <Button
+                variant="link"
+                className="p-0 h-auto text-xs text-primary justify-start mt-1"
+                onClick={() => { setLocation("/recordings"); setOpen(false); }}
+              >
+                Abrir galeria →
+              </Button>
+            </div>,
+            { duration: 5000 }
+          );
         } catch {
           setUploadDone(false);
           toast.error("Upload ao servidor falhou — use o arquivo baixado localmente.");
@@ -941,8 +950,34 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
     triggerDeviceDownload(videoBlob, `${safeName}.webm`);
   };
 
-  const downloadZip = () => {
-    if (recording) window.open(`/api/recordings/${recording.id}/export`, "_blank");
+  const retryServerUpload = async () => {
+    if (!videoBlob || !recording) return;
+    setUploading(true);
+    try {
+      await uploadVideoToServer(videoBlob, recording.id);
+      setUploadDone(true);
+      toast.success('Vídeo salvo em "Gravações automáticas".');
+    } catch {
+      setUploadDone(false);
+      toast.error("O reenvio falhou. A cópia local continua disponível para nova tentativa.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const downloadZip = async () => {
+    if (!recording) return;
+    const token = localStorage.getItem("accessToken") ?? localStorage.getItem("nexos_token");
+    try {
+      const response = await fetch(`/api/recordings/${recording.id}/export`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!response.ok) throw new Error("Falha ao exportar");
+      const blob = await response.blob();
+      triggerDeviceDownload(blob, `${recording.name.replace(/[^a-z0-9]/gi, "_").slice(0, 40)}.zip`);
+    } catch {
+      toast.error("Não foi possível exportar a timeline.");
+    }
   };
 
   const openInEditor = () => {
@@ -992,7 +1027,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       {/* ── Minimized pill ── */}
       {minimized && hasActive && createPortal(
         <button
-          onClick={() => setMinimized(false)}
+          onClick={() => setMinimized(false)} aria-label="Restaurar painel"
           className={`fixed bottom-6 right-6 z-[9000] flex items-center gap-2 px-3 py-2 border
             text-xs font-mono uppercase tracking-widest shadow-lg transition-all
             ${uiState === "paused"
@@ -1063,7 +1098,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
               <div className="w-px h-8 bg-white/20" />
               <button
                 onClick={() => setCamPaused(p => !p)}
-                title={camPaused ? "Reativar câmera" : "Pausar câmera"}
+                title={camPaused ? "Reativar câmera" : "Pausar câmera"} aria-label={camPaused ? "Reativar câmera" : "Pausar câmera"}
                 className={`flex items-center gap-1.5 px-3 py-2.5 hover:bg-white/10 transition-colors ${camPaused ? "opacity-40" : ""}`}
               >
                 <Camera className={`h-3.5 w-3.5 ${camPaused ? "opacity-50" : ""}`} />
@@ -1095,7 +1130,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
               <div className="w-px h-8 bg-black/20" />
               <button
                 onClick={() => setCamPaused(p => !p)}
-                title={camPaused ? "Reativar câmera" : "Pausar câmera"}
+                title={camPaused ? "Reativar câmera" : "Pausar câmera"} aria-label={camPaused ? "Reativar câmera" : "Pausar câmera"}
                 className={`flex items-center gap-1.5 px-3 py-2.5 hover:bg-black/10 transition-colors ${camPaused ? "opacity-40" : ""}`}
               >
                 <Camera className="h-3.5 w-3.5" />
@@ -1122,11 +1157,11 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
             <div className="flex items-center gap-1">
               {hasActive && (
                 <button onClick={() => { setMinimized(true); setOpen(false); }}
-                  className="p-1.5 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-colors" title="Minimizar">
+                  className="p-1.5 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-colors" title="Minimizar" aria-label="Minimizar">
                   <Minimize2 className="h-3.5 w-3.5" />
                 </button>
               )}
-              <button onClick={() => setOpen(false)} className="p-1.5 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-colors">
+              <button onClick={() => setOpen(false)} aria-label="Fechar painel" className="p-1.5 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-colors">
                 <XCircle className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -1234,14 +1269,27 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
                 )}
 
                 {!uploading && !uploadDone && videoBlob && (
-                  <div className="flex items-center gap-2 px-3 py-2 border border-yellow-400/30 bg-yellow-400/5">
-                    <AlertTriangle className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
-                    <p className="font-mono text-[10px] text-yellow-400">Upload falhou — use o download local</p>
+                  <div className="space-y-2 border border-yellow-400/30 bg-yellow-400/5 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-yellow-400" />
+                      <p className="font-mono text-[10px] text-yellow-400">
+                        O vídeo ainda não foi salvo na biblioteca.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 w-full rounded-none font-mono text-[10px] uppercase tracking-widest"
+                      onClick={() => void retryServerUpload()}
+                    >
+                      <Loader2 className="mr-2 h-3.5 w-3.5" />
+                      Tentar enviar novamente
+                    </Button>
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <Button variant="outline" size="sm" onClick={openInEditor}
+                  <Button variant="outline" size="sm" onClick={openInEditor} disabled={!uploadDone}
                     className="w-full rounded-none font-mono text-[11px] uppercase tracking-widest border-primary/40 text-primary hover:bg-primary/10">
                     <Video className="h-3.5 w-3.5 mr-2" />Abrir no Editor de Vídeo NexOS
                   </Button>
@@ -1253,7 +1301,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
                     </Button>
                   )}
 
-                  <Button variant="outline" size="sm" onClick={downloadZip}
+                  <Button variant="outline" size="sm" onClick={() => void downloadZip()}
                     className="w-full rounded-none font-mono text-[11px] uppercase tracking-widest">
                     <Download className="h-3.5 w-3.5 mr-2" />Exportar Timeline (.zip)
                   </Button>

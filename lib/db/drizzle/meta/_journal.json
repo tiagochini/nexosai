@@ -15,6 +15,20 @@
       "when": 1774483200000,
       "tag": "0003_ephemeral_video_media",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774483200001,
+      "tag": "0006_plan_entitlements",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1774483200002,
+      "tag": "0007_recording_folders",
+      "breakpoints": true
     }
   ]
 }

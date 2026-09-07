@@ -47,11 +47,12 @@ export function isGCSKey(videoPath: string): boolean {
 export async function uploadRecordingToGCS(
   localPath: string,
   recordingId: string,
+  contentType = "video/webm",
 ): Promise<string> {
   const key = recordingObjectKey(recordingId);
   await gcs.bucket(bucketId()).upload(localPath, {
     destination: key,
-    contentType: "video/webm",
+    contentType,
     resumable: false,
   });
   return key;

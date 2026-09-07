@@ -86,9 +86,15 @@ const isMetaWebhook = (req: { url?: string }): boolean => {
   return pathname === "/api/social/webhooks/meta" ||
     pathname === "/api/social-moderation/webhooks/meta";
 };
+const isJsonRequest = (req: { headers?: Record<string, string | string[] | undefined> }): boolean => {
+  const value = req.headers?.["content-type"];
+  const contentType = Array.isArray(value) ? value[0] : value;
+  return typeof contentType === "string" &&
+    (contentType.toLowerCase().includes("application/json") || contentType.toLowerCase().includes("+json"));
+};
 app.use(express.json({
   limit: "10mb",
-  type: (req) => !isMetaWebhook(req),
+  type: (req) => !isMetaWebhook(req) && isJsonRequest(req),
   verify: (req, _res, buf) => { (req as typeof req & { rawBody?: Buffer }).rawBody = Buffer.from(buf); },
 }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));

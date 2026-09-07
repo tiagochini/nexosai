@@ -1,4 +1,9 @@
-import { db, plansTable } from "./index.js";
+import {
+  db,
+  defaultAllowedSocialNetworks,
+  defaultMaxAccountsPerNetwork,
+  plansTable,
+} from "./index.js";
 import { sql } from "drizzle-orm";
 
 // ── Modelo de negócio NexOS AI ────────────────────────────────────────────────
@@ -38,6 +43,9 @@ const plans = [
     maxCampaigns: 3,
     maxVideosPerCampaign: 5,
     maxDomains: 1,
+    maxWorkspaces: 1,
+    allowedSocialNetworks: defaultAllowedSocialNetworks,
+    maxAccountsPerNetwork: defaultMaxAccountsPerNetwork,
     whiteLabel: false,
     multiNurturingChannels: false,
     features: [
@@ -63,6 +71,9 @@ const plans = [
     maxCampaigns: 10,
     maxVideosPerCampaign: 5,
     maxDomains: 10,
+    maxWorkspaces: 1,
+    allowedSocialNetworks: defaultAllowedSocialNetworks,
+    maxAccountsPerNetwork: defaultMaxAccountsPerNetwork,
     whiteLabel: true,
     multiNurturingChannels: true,
     features: [
@@ -95,6 +106,9 @@ async function seed() {
           priceOnboarding: sql`excluded.price_onboarding`,
           creditsMonthly: sql`excluded.credits_monthly`,
           maxCampaigns: sql`excluded.max_campaigns`,
+          maxWorkspaces: sql`excluded.max_workspaces`,
+          allowedSocialNetworks: sql`excluded.allowed_social_networks`,
+          maxAccountsPerNetwork: sql`excluded.max_accounts_per_network`,
           features: sql`excluded.features`,
           whiteLabel: sql`excluded.white_label`,
           multiNurturingChannels: sql`excluded.multi_nurturing_channels`,

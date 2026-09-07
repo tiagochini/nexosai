@@ -24,6 +24,10 @@ import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import jwt from "jsonwebtoken";
 import { isOrganicSocialIntegration, metadataForPurpose } from "../integrations/integration-purpose.js";
 import { claimMetaWebhookEvent } from "./meta-webhook-evidence.service.js";
+import {
+  assertSocialAccountEntitlement,
+  canonicalNetworkForProvider,
+} from "../auth/workspace-entitlements.service.js";
 
 // ─── OAuth ────────────────────────────────────────────────────────────────────
 
@@ -1153,6 +1157,10 @@ async function upsertIntegration(
     metadata: Record<string, unknown>;
   }
 ): Promise<WorkspaceIntegration> {
+  const network = canonicalNetworkForProvider(data.provider);
+  if (network) {
+    await assertSocialAccountEntitlement(workspaceId, network, data.accountId);
+  }
   // Check if integration with same provider + accountId already exists
   const candidates = await db
     .select()

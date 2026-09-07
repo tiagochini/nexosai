@@ -11,6 +11,7 @@ import {
   ChevronDown, User, Users, ShieldCheck, Star, Gauge, Zap,
   Brain, Receipt, Link2, Globe, Clapperboard, Film, ShoppingBag, MessageSquare, Crosshair, Camera,
   GraduationCap, ExternalLink, Fingerprint, RefreshCw, Radar, Megaphone, Target, Activity, FileText, GitCommit, ShieldAlert,
+  ChevronsUpDown, Check, Plus, Loader2
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { useAppI18n } from "@/lib/i18n";
@@ -19,12 +20,96 @@ import { RecordButton } from "@/components/recording/RecordButton";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { GlobalSearch, useGlobalSearch } from "@/components/global-search";
 import { toast } from "sonner";
 import { AppTour, hasDoneTour, markTourDone } from "@/components/AppTour";
 import { useWorkspaceSocket } from "@/lib/socket";
+
+function WorkspaceSwitcher({ onNav, isMobileHeader }: { onNav?: () => void; isMobileHeader?: boolean }) {
+  const { workspacesData, switchWorkspace, workspace } = useAuth();
+  const [switching, setSwitching] = useState(false);
+
+  if (!workspacesData) return null;
+
+  const handleSwitch = async (id: string) => {
+    if (id === workspace?.id || switching) return;
+    setSwitching(true);
+    try {
+      await switchWorkspace(id);
+      onNav?.();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao trocar de workspace");
+      setSwitching(false);
+    }
+  };
+
+  const triggerButton = isMobileHeader ? (
+    <button
+      disabled={switching}
+      title={workspace?.name || "Selecionar workspace"}
+      className="flex min-w-0 w-full items-center gap-1.5 px-2 py-1.5 bg-muted/20 border border-border/50 rounded-sm hover:bg-muted/40 transition-colors disabled:opacity-50"
+    >
+      <span className="font-mono text-[10px] font-semibold truncate text-foreground uppercase tracking-wider">
+        {switching ? "Trocando..." : (workspace?.name || "...")}
+      </span>
+      {switching ? <Loader2 className="h-3 w-3 text-muted-foreground animate-spin shrink-0" /> : <ChevronsUpDown className="h-3 w-3 text-muted-foreground shrink-0" />}
+    </button>
+  ) : (
+    <button
+      disabled={switching}
+      title={workspace?.name || "Selecionar workspace"}
+      className="flex items-center justify-between w-full px-3 py-2 bg-muted/20 border border-border/50 rounded-sm hover:bg-muted/40 transition-colors disabled:opacity-50"
+    >
+      <div className="flex flex-col items-start min-w-0">
+        <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground/60 mb-0.5">Operação</span>
+        <div className="flex items-center gap-2 max-w-full">
+          <span className="font-mono text-xs font-semibold truncate text-foreground">
+            {switching ? "Trocando..." : (workspace?.name || "...")}
+          </span>
+        </div>
+      </div>
+      {switching ? <Loader2 className="h-3.5 w-3.5 text-muted-foreground animate-spin shrink-0" /> : <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+    </button>
+  );
+
+  return (
+    <div className={isMobileHeader ? "min-w-0 w-full" : "px-3 py-3 border-b border-border/50 shrink-0"}>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          {triggerButton}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-[240px] rounded-none border border-primary/20 bg-card/95 backdrop-blur-xl font-mono">
+          <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">Suas Operações</DropdownMenuLabel>
+          <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-border/30">
+            {workspacesData.workspaces.map(ws => (
+              <DropdownMenuItem
+                key={ws.id}
+                onClick={() => handleSwitch(ws.id)}
+                className="cursor-pointer rounded-none focus:bg-primary/10 py-2.5"
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex flex-col min-w-0">
+                    <span className="truncate text-xs font-semibold">{ws.name}</span>
+                    <span className="text-[9px] uppercase tracking-widest text-muted-foreground mt-0.5">{ws.id.slice(0, 8)}...</span>
+                  </div>
+                  {ws.id === workspace?.id && <Check className="h-3.5 w-3.5 text-primary ml-2 shrink-0" />}
+                </div>
+              </DropdownMenuItem>
+            ))}
+          </div>
+          <DropdownMenuSeparator className="bg-border/30" />
+          <DropdownMenuItem asChild className="cursor-pointer rounded-none focus:bg-primary/10 text-primary py-2.5">
+            <Link href="/settings?tab=workspace" onClick={onNav}>
+              <Plus className="h-3.5 w-3.5 mr-2" /> <span className="text-xs uppercase tracking-widest">Gerenciar Workspaces</span>
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
 
 function AdminTopupButton({ onSuccess, compact }: { onSuccess: () => void; compact?: boolean }) {
   const [loading, setLoading] = useState(false);
@@ -230,6 +315,8 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
           </div>
         </Link>
       </div>
+
+      <WorkspaceSwitcher onNav={onNav} />
 
       {/* Nav groups */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5 scrollbar-thin scrollbar-thumb-border/30">
@@ -460,7 +547,7 @@ function TopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
   const { open: isSearchOpen, setOpen: setSearchOpen } = useGlobalSearch();
 
   return (
-    <header className="h-16 border-b border-border/50 bg-background/95 backdrop-blur-sm flex items-center justify-between px-4 shrink-0">
+    <header className="h-16 min-w-0 overflow-hidden border-b border-border/50 bg-background/95 backdrop-blur-sm flex items-center justify-between gap-2 px-3 shrink-0 sm:px-4">
       <button
         onClick={onMenuOpen}
         className="p-2 hover:bg-muted/30 rounded-sm transition-colors md:hidden"
@@ -468,8 +555,8 @@ function TopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
         <Menu className="h-5 w-5 text-muted-foreground" />
       </button>
 
-      <div className="flex-1 flex items-center justify-center md:justify-start md:ml-0 gap-2">
-        <Link href="/">
+      <div className="min-w-0 flex-1 flex items-center justify-center md:justify-start md:ml-0 gap-2">
+        <Link href="/" className="hidden sm:block">
           <div className="flex items-center gap-2 cursor-pointer md:hidden group">
             <img
               src={nexosLogo}
@@ -477,21 +564,24 @@ function TopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
               className="h-8 w-8 object-contain transition-all duration-300"
               style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.65))" }}
             />
-            <div className="font-mono font-black text-sm uppercase tracking-widest leading-none whitespace-nowrap">NEXOS</div>
+            <div className="font-mono font-black text-sm uppercase tracking-widest leading-none whitespace-nowrap hidden sm:block">NEXOS</div>
           </div>
         </Link>
+        <div className="md:hidden min-w-0 flex-1 flex justify-center">
+          <WorkspaceSwitcher isMobileHeader />
+        </div>
         <div className="hidden md:block text-[11px] font-mono uppercase tracking-widest text-muted-foreground/40">
           {workspace?.name}
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <RecordButton />
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setSearchOpen(true)}
-          className="h-9 w-9 rounded-sm hover:bg-muted/30"
+          className="hidden h-9 w-9 rounded-sm hover:bg-muted/30 sm:inline-flex"
         >
           <Search className="h-4 w-4 text-muted-foreground" />
         </Button>
@@ -556,8 +646,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <TopBar onMenuOpen={() => setMobileOpen(true)} />
-        <main className="flex-1 overflow-y-auto flex flex-col min-h-0">
-          <div className="p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto flex flex-col flex-1 min-h-0">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto flex flex-col min-h-0">
+          <div className="mx-auto flex min-h-0 w-full min-w-0 max-w-[1400px] flex-1 flex-col p-4 md:p-6 lg:p-8">
             {children}
           </div>
           <div className="shrink-0 py-3 px-6 flex justify-center">

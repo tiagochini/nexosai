@@ -15,7 +15,17 @@ import {
   Wifi, WifiOff, Plus, XCircle, AlertTriangle, Link2, Globe,
   Mic, Square, Upload, Fingerprint, Wand2,
   Headphones, Camera, Sparkles, Video, UserCheck, UserX, ChevronRight, Trash2,
+  Settings as SettingsIcon, ShieldAlert, RefreshCw,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import nexosLogo from "/nexos-logo.png";
 import { useLocation } from "wouter";
@@ -245,22 +255,18 @@ function ProfileTab() {
 
 // ── Workspace Tab ─────────────────────────────────────────────────────────────
 function WorkspaceTab() {
-  const { workspace, plan } = useAuth();
+  const { workspace, workspacesData, switchWorkspace, createWorkspace, isWorkspacesLoading } = useAuth();
   const queryClient = useQueryClient();
   const [wsName, setWsName] = useState(workspace?.name ?? "");
   const [saving, setSaving] = useState(false);
 
-  const { data: creditsData } = useGetCreditsBalance({
-    query: { queryKey: getGetCreditsBalanceQueryKey() },
-  });
+  // Switch state
+  const [switchingTo, setSwitchingTo] = useState<string | null>(null);
 
-  const { data: plansData } = useQuery({
-    queryKey: ["/api/plans"],
-    queryFn: async () => {
-      return customFetch<{ plans: { id: string; name: string; slug: string; priceMonthlyBrl: string; creditsMonthly: number; maxCampaigns: number; whiteLabel: boolean }[] }>("/api/plans")
-        .catch(() => ({ plans: [] as { id: string; name: string; slug: string; priceMonthlyBrl: string; creditsMonthly: number; maxCampaigns: number; whiteLabel: boolean }[] }));
-    },
-  });
+  // Create state
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newWsName, setNewWsName] = useState("");
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => { setWsName(workspace?.name ?? ""); }, [workspace?.name]);
 
@@ -282,136 +288,248 @@ function WorkspaceTab() {
     }
   };
 
-  const usedPct = plan?.creditsMonthly
-    ? Math.min(100, Math.round(((plan.creditsMonthly - (creditsData?.balance ?? 0)) / plan.creditsMonthly) * 100))
-    : 0;
-  const remaining = creditsData?.balance ?? 0;
-  const total = plan?.creditsMonthly ?? 0;
+  const handleCreate = async () => {
+    if (newWsName.trim().length < 2) {
+      toast.error("O nome deve ter no mínimo 2 caracteres.");
+      return;
+    }
+    setCreating(true);
+    try {
+      await createWorkspace(newWsName.trim());
+      setNewWsName("");
+      setIsCreateOpen(false);
+      toast.success("Workspace criado e ativo.");
+    } catch (err: any) {
+      if (err?.message?.includes("WORKSPACE_LIMIT_REACHED")) {
+        toast.error("Limite de workspaces atingido para o seu plano.");
+      } else {
+        toast.error(err.message || "Erro ao criar workspace.");
+      }
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleSwitch = async (id: string) => {
+    if (id === workspace?.id || switchingTo) return;
+    setSwitchingTo(id);
+    try {
+      await switchWorkspace(id);
+      toast.success("Operação trocada com sucesso.");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao trocar operação.");
+    } finally {
+      setSwitchingTo(null);
+    }
+  };
+
+  const usage = workspacesData?.usage;
+  const entitlements = workspacesData?.entitlements;
+  const workspaces = workspacesData?.workspaces || [];
+  const limitsReached = usage && entitlements ? usage.workspacesUsed >= entitlements.maxWorkspaces : false;
 
   return (
     <div className="space-y-6">
-      <SectionCard title="Configurações do Workspace" icon={Building2}>
-        <FieldRow label="Nome do Workspace" sublabel="Nome da sua operação">
-          <div className="flex gap-3">
+      <SectionCard title="Sua Operação Atual" icon={Building2}>
+        <div className="bg-primary/5 border border-primary/20 p-4 mb-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl -mr-10 -mt-10" />
+          <div className="font-mono text-[10px] uppercase tracking-widest text-primary mb-1">Um Workspace por Cliente/Marca</div>
+          <p className="font-mono text-xs text-muted-foreground leading-relaxed max-w-2xl relative z-10">
+            A arquitetura da NexOS exige que cada cliente, marca ou operação independente possua seu próprio workspace.
+            Isso isola dados de mercado, integrações, faturamento e garante que os agentes não misturem informações entre projetos diferentes.
+          </p>
+        </div>
+
+        <FieldRow label="Nome do Workspace" sublabel="Sua operação ativa no momento">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <Input
               value={wsName}
               onChange={(e) => setWsName(e.target.value)}
+              title={workspace?.name}
               className="font-mono h-10 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary focus-visible:border-primary flex-1"
               placeholder="Nome da sua empresa"
             />
             <Button
               onClick={() => void handleSave()}
               disabled={saving || wsName.trim() === (workspace?.name ?? "")}
-              className="rounded-none font-mono uppercase text-xs tracking-widest h-10 px-4 btn-weapon-primary shrink-0"
+              className="w-full rounded-none font-mono uppercase text-xs tracking-widest h-10 px-4 btn-weapon-primary shrink-0 sm:w-auto"
             >
-              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Salvar"}
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Renomear"}
             </Button>
-          </div>
-        </FieldRow>
-
-        <FieldRow label="Plano Atual" sublabel="Acesso vitalício · pagamento único">
-          <div className="flex items-center gap-3">
-            <Badge variant="outline" className="rounded-none font-mono text-xs uppercase tracking-widest text-primary border-primary/40 bg-primary/10">
-              {plan?.name ?? "—"}
-            </Badge>
-            <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-              {total > 0 ? `${total} créditos incluídos` : ""}
-            </span>
-          </div>
-        </FieldRow>
-
-        <FieldRow label="Créditos do agente" sublabel="Saldo disponível">
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="font-mono text-2xl font-bold text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]">
-                {remaining.toLocaleString("pt-BR")}
-              </span>
-              <span className="font-mono text-xs text-muted-foreground">
-                de {total.toLocaleString("pt-BR")} cr
-              </span>
-            </div>
-            <div className="h-1.5 w-full bg-muted/40 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{
-                  width: `${100 - usedPct}%`,
-                  background: remaining < total * 0.1
-                    ? "hsl(var(--destructive))"
-                    : remaining < total * 0.3
-                    ? "hsl(45 100% 50%)"
-                    : "hsl(var(--primary))",
-                  boxShadow: "0 0 6px hsl(var(--primary) / 0.4)",
-                }}
-              />
-            </div>
-            <div className="flex justify-between">
-              <span className="font-mono text-xs text-muted-foreground">{usedPct}% utilizado</span>
-              {remaining < total * 0.15 && (
-                <span className="font-mono text-xs text-destructive animate-pulse">⚠ Créditos baixos</span>
-              )}
-            </div>
           </div>
         </FieldRow>
       </SectionCard>
 
-      {plansData?.plans && plansData.plans.length > 0 && (
-        <SectionCard title="Planos Disponíveis" icon={Zap}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {plansData.plans.map((p) => {
-              const isCurrent = p.slug === plan?.slug;
-              return (
+      <SectionCard title="Capacidade do Ambiente" icon={SettingsIcon}>
+        {isWorkspacesLoading ? (
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="h-6 w-6 text-primary animate-spin" />
+          </div>
+        ) : usage && entitlements ? (
+          <div className="space-y-6">
+            <FieldRow label="Workspaces" sublabel="Operações independentes">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-mono text-xs text-foreground font-semibold">{usage.workspacesUsed} em uso</span>
+                <span className="font-mono text-xs text-muted-foreground">de {entitlements.maxWorkspaces} permitidos</span>
+              </div>
+              <div className="h-1.5 w-full bg-muted/40 rounded-full overflow-hidden">
                 <div
-                  key={p.id}
-                  className={`border p-4 relative transition-all ${
-                    isCurrent
-                      ? "border-primary/40 bg-primary/5"
-                      : "border-border/40 bg-card/40 hover:border-primary/20"
-                  }`}
-                >
-                  {isCurrent && (
-                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent" />
-                  )}
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <div className="font-mono font-bold text-sm uppercase tracking-widest">{p.name}</div>
-                      <div className="font-mono text-xs text-muted-foreground mt-0.5">
-                        R$ {parseFloat(p.priceMonthlyBrl).toLocaleString("pt-BR")} — acesso único
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${Math.min(100, (usage.workspacesUsed / entitlements.maxWorkspaces) * 100)}%`,
+                    background: limitsReached ? "hsl(var(--destructive))" : "hsl(var(--primary))",
+                  }}
+                />
+              </div>
+            </FieldRow>
+
+            <FieldRow label="Redes Sociais Permitidas" sublabel="Plataformas habilitadas neste ambiente">
+              <div className="flex flex-wrap gap-2">
+                {entitlements.allowedSocialNetworks.map(net => (
+                  <Badge key={net} variant="outline" className="rounded-none font-mono text-[10px] uppercase tracking-widest text-primary border-primary/40 bg-primary/10">
+                    {net}
+                  </Badge>
+                ))}
+              </div>
+            </FieldRow>
+
+            <FieldRow label="Contas Conectadas" sublabel="Capacidade configurada separadamente para cada rede social">
+              <div className="space-y-4">
+                {entitlements.allowedSocialNetworks.map(net => {
+                  const connected = usage.connectedAccountsByNetwork[net] || 0;
+                  const max = entitlements.maxAccountsPerNetwork[net] ?? 0;
+                  return (
+                    <div key={net}>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-mono text-[10px] text-foreground uppercase tracking-widest">{net}</span>
+                        <span className="font-mono text-[10px] text-muted-foreground">{connected} / {max}</span>
+                      </div>
+                      <div className="h-1 w-full bg-muted/20 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-700 bg-primary/60"
+                          style={{ width: max > 0 ? `${Math.min(100, (connected / max) * 100)}%` : "0%" }}
+                        />
                       </div>
                     </div>
-                    {isCurrent && (
-                      <Badge variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest text-primary border-primary/40 bg-primary/10">
-                        Ativo
-                      </Badge>
+                  );
+                })}
+              </div>
+            </FieldRow>
+          </div>
+        ) : (
+          <div className="py-8 text-center font-mono text-sm text-muted-foreground">Dados de capacidade não disponíveis.</div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Minhas Operações" icon={Building2}>
+        {isWorkspacesLoading ? (
+          <div className="py-8 flex justify-center">
+            <Loader2 className="h-6 w-6 text-primary animate-spin" />
+          </div>
+        ) : !workspacesData ? (
+          <div className="py-8 text-center font-mono text-sm text-muted-foreground">Erro ao carregar workspaces.</div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
+                {workspaces.length} Operação(ões) Encontrada(s)
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {workspaces.map(ws => {
+                const isActive = ws.id === workspace?.id;
+                return (
+                  <div key={ws.id} className={`flex flex-col items-stretch justify-between gap-3 p-4 border transition-all sm:flex-row sm:items-center ${isActive ? "border-primary/50 bg-primary/5 shadow-[inset_0_0_12px_hsl(var(--primary)/0.08)]" : "border-border/40 bg-card/40 hover:border-primary/30"}`}>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="truncate font-mono font-semibold text-sm" title={ws.name}>{ws.name}</span>
+                        {isActive && <Badge variant="outline" className="rounded-none font-mono text-[9px] uppercase tracking-widest text-primary border-primary/40 bg-primary/10 py-0 h-4">Atual</Badge>}
+                      </div>
+                      <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+                        ID: {ws.id.slice(0, 12)}... · Criado em {new Date(ws.createdAt).toLocaleDateString("pt-BR")}
+                      </div>
+                    </div>
+                    {!isActive && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={switchingTo === ws.id}
+                        onClick={() => void handleSwitch(ws.id)}
+                        className="w-full rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-outline sm:w-auto"
+                      >
+                        {switchingTo === ws.id ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <RefreshCw className="h-3 w-3 mr-1.5" />}
+                        {switchingTo === ws.id ? "Trocando..." : "Trocar para esta"}
+                      </Button>
                     )}
                   </div>
-                  <div className="space-y-1.5 mb-4">
-                    {[
-                      `${p.creditsMonthly.toLocaleString("pt-BR")} créditos incluídos`,
-                      `${p.maxCampaigns} campanhas simultâneas`,
-                      ...(p.whiteLabel ? ["White-label incluso"] : []),
-                    ].map((feat) => (
-                      <div key={feat} className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
-                        <CheckCircle2 className="h-3 w-3 text-success shrink-0" />
-                        {feat}
-                      </div>
-                    ))}
-                  </div>
-                  {!isCurrent && (
-                    <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest w-full btn-weapon-outline">
-                      <ExternalLink className="h-3 w-3 mr-1.5" />
-                      Mudar para este plano
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+
+            <div className="pt-4 border-t border-border/30 mt-6 flex flex-col items-start gap-4">
+               {limitsReached ? (
+                 <div className="w-full p-4 border border-destructive/30 bg-destructive/10">
+                   <div className="flex items-start gap-3">
+                     <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                     <div>
+                       <div className="font-mono text-xs font-bold text-destructive uppercase tracking-widest">Limite Atingido</div>
+                       <div className="font-mono text-xs text-destructive/80 mt-1">Você atingiu o limite de {entitlements?.maxWorkspaces} operações para a capacidade deste ambiente.</div>
+                     </div>
+                   </div>
+                 </div>
+               ) : null}
+
+               <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                 <DialogTrigger asChild>
+                   <Button disabled={limitsReached} className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary">
+                     <Plus className="h-3.5 w-3.5 mr-2" />
+                     Nova Operação
+                   </Button>
+                 </DialogTrigger>
+                 <DialogContent className="rounded-none border border-primary/30 bg-card/95 backdrop-blur-xl sm:max-w-[425px]">
+                   <DialogHeader>
+                     <DialogTitle className="font-mono uppercase tracking-widest text-primary text-sm">Criar Operação</DialogTitle>
+                     <DialogDescription className="font-mono text-xs text-muted-foreground leading-relaxed mt-2">
+                       Crie um ambiente isolado para um novo cliente ou marca. Mantenha os dados separados para o agente atuar com contexto preciso.
+                     </DialogDescription>
+                   </DialogHeader>
+                   <div className="py-4 space-y-4">
+                     <div className="space-y-2">
+                       <Label htmlFor="new-ws-name" className="font-mono text-xs uppercase tracking-widest">Nome da Operação</Label>
+                       <Input
+                         id="new-ws-name"
+                         value={newWsName}
+                         onChange={e => setNewWsName(e.target.value)}
+                          aria-describedby="new-ws-name-help"
+                         placeholder="Ex: Agência XYZ ou Cliente Alpha"
+                         className="font-mono h-10 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary"
+                       />
+                        <p id="new-ws-name-help" className="font-mono text-[10px] text-muted-foreground">
+                          {newWsName.length > 0 && newWsName.trim().length < 2
+                            ? "Digite pelo menos 2 caracteres."
+                            : "Use o nome do cliente, marca ou operação."}
+                        </p>
+                     </div>
+                   </div>
+                   <DialogFooter>
+                     <Button variant="outline" onClick={() => setIsCreateOpen(false)} className="rounded-none font-mono text-xs uppercase tracking-widest btn-weapon-outline">
+                       Cancelar
+                     </Button>
+                     <Button onClick={() => void handleCreate()} disabled={creating || newWsName.trim().length < 2} className="rounded-none font-mono text-xs uppercase tracking-widest btn-weapon-primary">
+                       {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : null}
+                       Criar e Acessar
+                     </Button>
+                   </DialogFooter>
+                 </DialogContent>
+               </Dialog>
+            </div>
           </div>
-        </SectionCard>
-      )}
+        )}
+      </SectionCard>
     </div>
   );
 }
-
 // ── Security Tab ──────────────────────────────────────────────────────────────
 function SecurityTab() {
   const [current, setCurrent] = useState("");
@@ -2257,7 +2375,7 @@ export default function Settings() {
   const [tab, setTab] = useState<Tab>(initialTab);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6 overflow-x-hidden">
       <div className="border-b border-border/50 pb-5">
         <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
           Configurações
@@ -2268,7 +2386,7 @@ export default function Settings() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-0.5 border border-border/40 bg-card/30 p-0.5 w-full overflow-x-auto scrollbar-none">
+      <div className="grid w-full min-w-0 grid-cols-7 gap-0.5 overflow-hidden border border-border/40 bg-card/30 p-0.5 sm:flex sm:overflow-x-auto scrollbar-none">
         {TABS.map((t) => {
           const Icon = t.icon;
           const active = tab === t.id;
@@ -2276,7 +2394,7 @@ export default function Settings() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 font-mono text-[10px] sm:text-xs uppercase tracking-widest transition-all flex-1 justify-center whitespace-nowrap
+              className={`flex min-w-0 items-center justify-center gap-1 px-1 py-2 font-mono text-[10px] uppercase tracking-widest transition-all sm:flex-1 sm:gap-1.5 sm:px-4 sm:text-xs
                 ${active
                   ? "bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.3)]"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/30"

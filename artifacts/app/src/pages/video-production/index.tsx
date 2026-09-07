@@ -72,8 +72,9 @@ interface FilmingBrief {
 interface Recording {
   id: string;
   name: string;
-  status: string;
-  videoPath?: string;
+  state: "recording" | "paused" | "stopped";
+  hasVideo: boolean;
+  finalizationStatus: "pending" | "processing" | "ready" | "failed";
   videoSize?: number;
   createdAt: string;
 }
@@ -161,7 +162,13 @@ const SCENE_TYPE_COLORS: Record<string, string> = {
 
 // ─── Create Project Modal ─────────────────────────────────────────────────────
 
-function CreateProjectForm({ onCreated }: { onCreated: (p: VideoProject) => void }) {
+function CreateProjectForm({
+  onCreated,
+  providerConfigured,
+}: {
+  onCreated: (p: VideoProject) => void;
+  providerConfigured?: boolean;
+}) {
   const [title, setTitle] = useState("");
   const [format, setFormat] = useState("vsl");
   const [hasUserFace, setHasUserFace] = useState(false);
@@ -270,6 +277,43 @@ function CreateProjectForm({ onCreated }: { onCreated: (p: VideoProject) => void
             <option value="avatar">Avatar digital NexOS</option>
             <option value="voice_clone">Clonar minha voz com IA</option>
           </select>
+        </div>
+      )}
+      {providerConfigured === false && (
+        <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+            <div className="min-w-0 flex-1">
+              <div className="font-mono text-xs font-bold text-amber-300">
+                Produção 100% IA indisponível neste momento
+              </div>
+              <p className="mt-1 font-mono text-[11px] leading-relaxed text-muted-foreground">
+                Você ainda pode criar o projeto, gerar roteiro e storyboard. Na etapa de produção,
+                grave o material no modo Híbrido ou abra o NexOS Studio para editar mídias existentes.
+              </p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="font-mono text-[11px]"
+                  onClick={() => {
+                    setHasUserFace(true);
+                    setVoiceStyle("narrator");
+                  }}
+                >
+                  <Camera className="mr-1.5 h-3.5 w-3.5" />
+                  Preparar modo Híbrido
+                </Button>
+                <Button asChild type="button" variant="outline" size="sm" className="font-mono text-[11px]">
+                  <a href="/video-editor/">
+                    <Clapperboard className="mr-1.5 h-3.5 w-3.5" />
+                    Abrir NexOS Studio
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
       <div className="grid grid-cols-2 gap-4">
@@ -1249,15 +1293,19 @@ export default function VideoProductionPage() {
       // 1 — create recording entry linked to this video project
       const createRes = await customFetch<{ recording: { id: string } }>("/api/recordings", {
         method: "POST",
-        body: JSON.stringify({ name: `Gravação — ${selected.title}` }),
+        body: JSON.stringify({ name: `Gravação — ${selected.title}`, recordingMode: "manual" }),
       });
       const recId = createRes.recording.id;
 
       // 2 — upload raw video blob (streaming)
+      const token = localStorage.getItem("accessToken") ?? localStorage.getItem("nexos_token");
+      if (!token) throw new Error("Sua sessão expirou. Entre novamente para enviar o vídeo.");
       const uploadRes = await fetch(`/api/recordings/${recId}/upload?mode=hybrid`, {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": hybridFile.type || "video/webm" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": hybridFile.type || "video/webm",
+        },
         body: hybridFile,
       });
       if (!uploadRes.ok) throw new Error("Upload falhou");
@@ -1397,7 +1445,7 @@ export default function VideoProductionPage() {
             {provider && !provider.configured && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-yellow-500/30 bg-yellow-500/10">
                 <AlertCircle className="h-3.5 w-3.5 text-yellow-400" />
-                <span className="font-mono text-[10px] text-yellow-400">Geração de vídeo em breve</span>
+                <span className="font-mono text-[10px] text-yellow-400">Provedor não configurado</span>
               </div>
             )}
             {provider?.configured && (
@@ -1472,7 +1520,7 @@ export default function VideoProductionPage() {
           {creating && !selected && (
             <div className="border border-border/40 rounded-xl p-6 bg-background/40">
               <div className="font-mono text-sm font-bold mb-4">Novo Projeto de Vídeo</div>
-              <CreateProjectForm onCreated={handleCreated} />
+              <CreateProjectForm onCreated={handleCreated} providerConfigured={provider?.configured} />
             </div>
           )}
 
@@ -1512,30 +1560,21 @@ export default function VideoProductionPage() {
 
               {/* Provider warning */}
               {provider && !provider.configured && (
-                <div className="border border-primary/20 rounded-xl p-5 bg-primary/5">
+                <div className="border border-amber-500/20 rounded-xl p-5 bg-amber-500/5">
                   <div className="flex items-start gap-3">
-                    <Sparkles className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                    <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="font-mono text-sm font-bold text-foreground mb-1">Geração de vídeo IA — em breve</div>
+                      <div className="font-mono text-sm font-bold text-amber-500 mb-1">Geração de Vídeo 100% IA Temporariamente Indisponível</div>
                       <div className="font-mono text-xs text-muted-foreground mb-3">
-                        A NexOS vai oferecer geração de vídeo com IA diretamente pelo painel — sem precisar contratar nenhum provedor externo.
-                        Você usa créditos NexOS e paga conforme consome.
+                        Não há um provedor de vídeo configurado ou ativo neste momento para processamento 100% autônomo.
+                        Para dar andamento imediato na produção do seu vídeo:
                       </div>
-                      <div className="grid grid-cols-3 gap-2 mb-4">
-                        {[
-                          { label: "Preview 720p", cost: "50 créditos/cena", icon: "🎬" },
-                          { label: "Avatar com lip-sync", cost: "80 créditos/cena", icon: "👤" },
-                          { label: "Vídeo HD Final", cost: "150 créditos/cena", icon: "✨" },
-                        ].map(p => (
-                          <div key={p.label} className="border border-border/40 rounded-lg px-3 py-2 bg-background/40">
-                            <div className="font-mono text-base mb-1">{p.icon}</div>
-                            <div className="font-mono text-[11px] font-bold text-foreground">{p.label}</div>
-                            <div className="font-mono text-[10px] text-primary">{p.cost}</div>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="font-mono text-[10px] text-muted-foreground">
-                        Roteiro e storyboard já funcionam. Geração de clipes estará disponível em breve para todos os planos.
+                      <ul className="font-mono text-xs text-muted-foreground list-disc ml-5 mb-4 space-y-1">
+                        <li><strong>Modo Híbrido:</strong> Altere para Híbrido, grave com a sua própria câmera, e envie para a IA apenas legendar e cortar.</li>
+                        <li><strong>NexOS Studio:</strong> Utilize o Studio (Editor Completo) para renderizar projetos em <strong>Digital Twin</strong> caso possua motor próprio.</li>
+                      </ul>
+                      <div className="font-mono text-[10px] text-muted-foreground italic">
+                        Roteiro e storyboard (ideação) já funcionam perfeitamente para qualquer modo.
                       </div>
                     </div>
                   </div>
@@ -1862,11 +1901,19 @@ export default function VideoProductionPage() {
                         <span>{provider?.videoProvider ?? "Runway ML / Kling"}</span>
                       </div>
                       {!provider?.configured && (
-                        <div className="font-mono text-[10px] text-primary/70 mb-3 flex items-center gap-1.5">
-                          <Sparkles className="h-3 w-3" />Geração de clipes via créditos NexOS — em breve
+                        <div className="border border-amber-500/20 bg-amber-500/5 p-3 rounded-lg mb-4">
+                          <div className="font-mono text-xs text-amber-500 font-bold flex items-center gap-1.5 mb-1.5">
+                            <AlertCircle className="h-4 w-4" /> Geração de Vídeo Indisponível
+                          </div>
+                          <div className="font-mono text-[10px] text-muted-foreground leading-relaxed">
+                            Nenhum provedor de vídeo está configurado no momento. Como alternativa, utilize o modo <strong>Híbrido</strong> para gravar seu próprio vídeo e utilizar o editor IA, ou utilize a plataforma de <strong>Studio</strong> avançada.
+                          </div>
+                          <Button variant="outline" size="sm" className="mt-3 font-mono text-[10px]" onClick={() => setHybridMode("recording")}>
+                            Mudar para modo Híbrido
+                          </Button>
                         </div>
                       )}
-                      <Button onClick={generatePreview} disabled={actionLoading} className="font-mono">
+                      <Button onClick={generatePreview} disabled={actionLoading || !provider?.configured} className="font-mono">
                         {actionLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
                         Gerar Preview dos Clipes
                       </Button>
@@ -1943,7 +1990,7 @@ export default function VideoProductionPage() {
                                   </div>
                                 </div>
                               </div>
-                              {rec.videoPath && (
+                              {rec.hasVideo && rec.finalizationStatus === "ready" && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -1997,7 +2044,17 @@ export default function VideoProductionPage() {
                       {selected.config.hasUserFace ? "80" : "150"} créditos/cena · {(selected.config.hasUserFace ? 80 : 150) * selected.storyboard.length} total
                     </span>
                   </div>
-                  <Button onClick={generateFinal} disabled={actionLoading} className="font-mono">
+                  {!provider?.configured && (
+                    <div className="border border-amber-500/20 bg-amber-500/5 p-3 rounded-lg mb-4">
+                      <div className="font-mono text-xs text-amber-500 font-bold flex items-center gap-1.5 mb-1.5">
+                        <AlertCircle className="h-4 w-4" /> Geração de Vídeo Indisponível
+                      </div>
+                      <div className="font-mono text-[10px] text-muted-foreground leading-relaxed">
+                        Nenhum provedor de vídeo está configurado no momento. Como alternativa, utilize o modo <strong>Híbrido</strong> para gravar seu próprio vídeo e utilizar o editor IA, ou utilize a plataforma de <strong>Studio</strong> avançada.
+                      </div>
+                    </div>
+                  )}
+                  <Button onClick={generateFinal} disabled={actionLoading || !provider?.configured} className="font-mono">
                     {actionLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Video className="h-4 w-4 mr-2" />}
                     Gerar Vídeo Final HD
                   </Button>

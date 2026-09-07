@@ -28,6 +28,7 @@ export * from "./whatsapp-dispatches";
 export * from "./sequence-contacts";
 export * from "./waitlist";
 export * from "./launch-recordings";
+export * from "./recording-folders";
 export * from "./client-profiles";
 export * from "./social-comment-actions";
 export * from "./meta-webhook-events";

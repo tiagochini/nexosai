@@ -1,28 +1,54 @@
-import { useState, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useRef, useMemo, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import {
   Video, Upload, Trash2, Edit2, RefreshCw,
   Clock, HardDrive, CheckCircle2, Plus,
   Film, ChevronRight, Camera, Play, X,
+  Folder as FolderIcon, AlertCircle, AlertTriangle,
+  Search, Check, FolderOpen, MoreVertical, Pencil, Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
+} from "@/components/ui/dialog";
+
+interface Folder {
+  id: string;
+  name: string;
+  slug: string;
+  isSystem: boolean;
+  systemType: "automatic" | "manual" | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface Recording {
   id: string;
   name: string;
   state: "recording" | "paused" | "stopped";
-  videoPath?: string;
+  hasVideo: boolean;
   videoSize?: number;
   duration?: number;
   campaignId?: string;
   createdAt: string;
+  folderId?: string;
+  recordingMode?: "manual" | "automatic";
+  finalizedAt?: string;
+  finalizationStatus?: "pending" | "processing" | "ready" | "failed";
+  finalizationError?: string;
 }
 
 function statusLabel(rec: Recording) {
-  if (rec.state === "stopped" && rec.videoPath) return { label: "Pronto", color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" };
+  if (rec.state === "stopped" && rec.finalizationStatus === "ready" && rec.hasVideo) return { label: "Pronto", color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" };
   if (rec.state === "stopped") return { label: "Sem vídeo", color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/20" };
   if (rec.state === "paused")  return { label: "Pausada",   color: "bg-orange-500/15 text-orange-400 border-orange-500/20" };
   return { label: "Gravando", color: "bg-blue-500/15 text-blue-400 border-blue-500/20" };
@@ -39,45 +65,31 @@ function formatDuration(seconds: number) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-function useApiAuth() {
-  const token = typeof window !== "undefined" ? localStorage.getItem("nexos_token") : "";
-  return (path: string, opts?: RequestInit) =>
-    fetch(`/api${path}`, {
-      ...opts,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        ...(opts?.headers ?? {}),
-      },
-    }).then((r) => {
-      if (!r.ok) throw new Error(`API ${path} → ${r.status}`);
-      return r.json();
-    });
-}
-
 // ── Video Preview Modal ────────────────────────────────────────────────────────
 function VideoPreviewModal({ rec, token, onClose }: { rec: Recording; token: string; onClose: () => void }) {
   const streamUrl = `/api/recordings/${rec.id}/video-stream?token=${encodeURIComponent(token)}`;
   return (
-    <div className="fixed inset-0 z-[8000] flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onClose}>
-      <div className="relative w-full max-w-3xl mx-4" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between bg-card border border-border/50 px-4 py-3 rounded-t-xl">
+    <div className="fixed inset-0 z-[8000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="relative w-full max-w-4xl mx-auto flex flex-col max-h-full" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between bg-card border border-border/50 px-4 py-3 rounded-t-xl shrink-0">
           <div>
             <div className="font-mono text-sm font-bold">{rec.name}</div>
             {rec.videoSize && (
               <div className="font-mono text-xs text-muted-foreground">{formatBytes(rec.videoSize)}{rec.duration ? ` · ${formatDuration(rec.duration)}` : ""}</div>
             )}
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+          <button onClick={onClose} aria-label="Fechar preview" className="text-muted-foreground hover:text-foreground transition-colors p-1 bg-muted/30 rounded-md">
             <X className="h-5 w-5" />
           </button>
         </div>
-        <video
-          src={streamUrl}
-          controls
-          autoPlay
-          className="w-full rounded-b-xl bg-black max-h-[60vh] object-contain"
-        />
+        <div className="bg-black/90 rounded-b-xl overflow-hidden relative flex-1 min-h-0 flex items-center justify-center">
+          <video
+            src={streamUrl}
+            controls
+            autoPlay
+            className="w-full h-full object-contain max-h-[75vh]"
+          />
+        </div>
       </div>
     </div>
   );
@@ -85,46 +97,130 @@ function VideoPreviewModal({ rec, token, onClose }: { rec: Recording; token: str
 
 export default function RecordingsPage() {
   const [, navigate] = useLocation();
-  const api = useApiAuth();
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const retryInputRef = useRef<HTMLInputElement>(null);
+  const token = typeof window !== "undefined" ? (localStorage.getItem("accessToken") ?? localStorage.getItem("nexos_token") ?? "") : "";
+
+  const [selectedFolderId, setSelectedFolderId] = useState<string | "all">("all");
+  const [search, setSearch] = useState("");
+
   const [uploading, setUploading] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   const [previewRec, setPreviewRec] = useState<Recording | null>(null);
 
-  const token = typeof window !== "undefined" ? (localStorage.getItem("nexos_token") ?? "") : "";
+  // Folder Dialogs
+  const [folderDialogOpen, setFolderDialogOpen] = useState(false);
+  const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
+  const [folderName, setFolderName] = useState("");
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["/api/recordings"],
-    queryFn: () => api("/recordings") as Promise<{ recordings: Recording[] }>,
+  const [deletingFolder, setDeletingFolder] = useState<Folder | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+
+  // -- Queries --
+  const { data: foldersData, isLoading: isLoadingFolders, error: foldersError, refetch: refetchFolders } = useQuery({
+    queryKey: ["/api/recordings/folders"],
+    queryFn: () => customFetch<{ folders: Folder[] }>("/api/recordings/folders"),
+    refetchInterval: 60_000,
+  });
+
+  const { data: recordingsData, isLoading: isLoadingRecordings, error: recordingsError, refetch: refetchRecordings } = useQuery({
+    queryKey: ["/api/recordings", selectedFolderId],
+    queryFn: () => customFetch<{ recordings: Recording[] }>(`/api/recordings${selectedFolderId !== "all" ? `?folderId=${selectedFolderId}` : ""}`),
     refetchInterval: 15_000,
   });
 
-  const recordings = data?.recordings ?? [];
+  const folders = foldersData?.folders ?? [];
+  const recordings = recordingsData?.recordings ?? [];
 
+  const filteredRecordings = useMemo(() => {
+    if (!search.trim()) return recordings;
+    const lower = search.toLowerCase();
+    return recordings.filter(r => r.name.toLowerCase().includes(lower));
+  }, [recordings, search]);
+
+  // -- Mutations --
+  const saveFolderMut = useMutation({
+    mutationFn: async (name: string) => {
+      if (editingFolder) {
+        return customFetch(`/api/recordings/folders/${editingFolder.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+        });
+      } else {
+        return customFetch(`/api/recordings/folders`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+        });
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/recordings/folders"] });
+      setFolderDialogOpen(false);
+      toast.success(editingFolder ? "Pasta renomeada" : "Pasta criada");
+    },
+    onError: () => toast.error("Erro ao salvar pasta"),
+  });
+
+  const deleteFolderMut = useMutation({
+    mutationFn: async (id: string) => {
+      return customFetch(`/api/recordings/folders/${id}`, { method: "DELETE" });
+    },
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: ["/api/recordings/folders"] });
+      if (selectedFolderId === id) setSelectedFolderId("all");
+      setDeletingFolder(null);
+      toast.success("Pasta excluída");
+    },
+    onError: () => toast.error("Erro ao excluir pasta"),
+  });
+
+  // -- Actions --
   async function handleUpload() {
     if (!uploadFile) return;
     setUploading(true);
     try {
-      const createRes = await fetch("/api/recordings", {
+      // Manual uploads may use custom folders, but never the automatic system folder.
+      const selectedFolder = selectedFolderId === "all"
+        ? undefined
+        : folders.find((folder) => folder.id === selectedFolderId);
+      const manualFolder = folders.find((folder) => folder.systemType === "manual");
+      const targetFolderId = selectedFolder && !selectedFolder.isSystem
+        ? selectedFolder.id
+        : manualFolder?.id;
+
+      const createRes = await customFetch<{ recording: Recording }>("/api/recordings", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ name: uploadFile.name }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: uploadFile.name,
+          recordingMode: "manual",
+          ...(targetFolderId ? { folderId: targetFolderId } : {})
+        }),
       });
-      if (!createRes.ok) throw new Error("Erro ao criar gravação");
-      const { recording } = await createRes.json() as { recording: Recording };
+
+      const { recording } = createRes;
 
       const uploadRes = await fetch(`/api/recordings/${recording.id}/upload`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` }, // customFetch handles auth, but fetch needs it
         body: uploadFile,
       });
-      if (!uploadRes.ok) throw new Error("Erro ao enviar vídeo");
+
+      if (!uploadRes.ok) {
+        throw new Error(await uploadRes.text().catch(() => "Erro no upload"));
+      }
+
       setUploadFile(null);
       void qc.invalidateQueries({ queryKey: ["/api/recordings"] });
+      toast.success("Upload concluído com sucesso");
     } catch (e) {
       console.error(e);
+      toast.error("Erro ao enviar vídeo: " + (e instanceof Error ? e.message : "Desconhecido"));
     } finally {
       setUploading(false);
     }
@@ -133,227 +229,476 @@ export default function RecordingsPage() {
   async function deleteRecording(id: string) {
     setDeletingId(id);
     try {
-      await api(`/recordings/${id}`, { method: "DELETE" });
-      void qc.invalidateQueries({ queryKey: ["/api/recordings"] });
-    } catch { } finally { setDeletingId(null); }
+      await customFetch(`/api/recordings/${id}`, { method: "DELETE" });
+      qc.setQueriesData<{ recordings: Recording[] }>(
+        { queryKey: ["/api/recordings"] },
+        (current) => current
+          ? { ...current, recordings: current.recordings.filter((recording) => recording.id !== id) }
+          : current,
+      );
+      await qc.invalidateQueries({ queryKey: ["/api/recordings"] });
+      toast.success("Gravação excluída");
+    } catch (e) {
+      toast.error("Erro ao excluir gravação");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  async function retryRecordingUpload(file: File) {
+    if (!retryingId) return;
+    try {
+      const response = await fetch(`/api/recordings/${retryingId}/upload`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": file.type || "video/webm",
+        },
+        body: file,
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Falha ao reenviar o arquivo");
+      }
+      await qc.invalidateQueries({ queryKey: ["/api/recordings"] });
+      toast.success("Vídeo reenviado e salvo na pasta original");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao reenviar o arquivo");
+    } finally {
+      setRetryingId(null);
+      if (retryInputRef.current) retryInputRef.current.value = "";
+    }
+  }
+
+  function openFolderDialog(folder?: Folder) {
+    setEditingFolder(folder || null);
+    setFolderName(folder ? folder.name : "");
+    setFolderDialogOpen(true);
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[calc(100dvh-4rem)] bg-background flex flex-col md:flex-row">
       {previewRec && (
         <VideoPreviewModal rec={previewRec} token={token} onClose={() => setPreviewRec(null)} />
       )}
+      <input
+        ref={retryInputRef}
+        type="file"
+        accept="video/*,.webm,.mp4,.mov,.avi"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) void retryRecordingUpload(file);
+        }}
+      />
 
-      <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="font-mono text-2xl font-bold tracking-tight">Gravações</h1>
-            <p className="font-mono text-sm text-muted-foreground mt-1">
-              Seus vídeos gravados para edição com IA no modo híbrido
-            </p>
-          </div>
-          <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="font-mono">
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Gravação
+      {/* Sidebar Folders */}
+      <aside className="w-full md:w-64 lg:w-72 border-b md:border-b-0 md:border-r border-border/50 bg-card/20 flex flex-col shrink-0">
+        <div className="p-4 border-b border-border/50 flex items-center justify-between shrink-0">
+          <h2 className="font-mono text-sm uppercase tracking-widest font-bold">Pastas</h2>
+          <Button variant="ghost" size="icon" aria-label="Nova pasta" className="h-8 w-8 text-muted-foreground" onClick={() => openFolderDialog()}>
+            <Plus className="h-4 w-4" />
           </Button>
         </div>
+        <div className="p-3 space-y-1 overflow-y-auto flex-1">
+          <button
+            onClick={() => setSelectedFolderId("all")}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-mono transition-colors",
+              selectedFolderId === "all" ? "bg-primary/10 text-primary font-bold" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <FolderIcon className="h-4 w-4 shrink-0" />
+              <span>Todas as gravações</span>
+            </div>
+          </button>
 
-        {/* Upload area */}
-        <div
-          className={cn(
-            "border-2 border-dashed border-border/40 rounded-xl p-8 text-center transition-colors cursor-pointer",
-            "hover:border-primary/40 hover:bg-primary/5 group",
-            uploadFile && "border-primary/60 bg-primary/5",
-          )}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="video/*,.webm,.mp4,.mov,.avi"
-            className="hidden"
-            onChange={e => setUploadFile(e.target.files?.[0] ?? null)}
-          />
-          {uploadFile ? (
-            <div className="space-y-3">
-              <CheckCircle2 className="h-10 w-10 text-primary mx-auto" />
-              <div className="font-mono text-base font-bold">{uploadFile.name}</div>
-              <div className="font-mono text-sm text-muted-foreground">
-                {formatBytes(uploadFile.size)} · Clique para trocar
-              </div>
-              <Button
-                onClick={e => { e.stopPropagation(); void handleUpload(); }}
-                disabled={uploading}
-                className="font-mono mt-2"
-              >
-                {uploading
-                  ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Enviando…</>
-                  : <><Upload className="h-4 w-4 mr-2" />Enviar Gravação</>
-                }
-              </Button>
+          {isLoadingFolders ? (
+            <div className="py-4 flex justify-center"><RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+          ) : foldersError ? (
+            <div className="py-4 px-3 text-xs font-mono text-destructive flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" /> Erro ao carregar pastas
             </div>
           ) : (
-            <div className="space-y-2">
-              <Upload className="h-10 w-10 text-muted-foreground/40 mx-auto group-hover:text-primary transition-colors" />
-              <div className="font-mono text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                Clique para selecionar ou arraste um vídeo aqui
+            <>
+              {folders.map(folder => (
+                <div key={folder.id} className={cn(
+                  "group flex items-center justify-between px-3 py-2 rounded-lg text-sm font-mono transition-colors",
+                  selectedFolderId === folder.id ? "bg-primary/10 text-primary font-bold" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                )}>
+                  <button
+                    className="flex-1 flex items-center gap-2 text-left truncate mr-2"
+                    onClick={() => setSelectedFolderId(folder.id)}
+                  >
+                    {folder.isSystem ? <FolderOpen className="h-4 w-4 shrink-0 opacity-70" /> : <FolderIcon className="h-4 w-4 shrink-0" />}
+                    <span className="truncate">{folder.name}</span>
+                  </button>
+
+                  {!folder.isSystem && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button aria-label="Opções da pasta" className="opacity-0 group-hover:opacity-100 hover:text-foreground p-1 rounded-md hover:bg-background transition-all shrink-0">
+                          <MoreVertical className="h-3.5 w-3.5" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="font-mono text-xs">
+                        <DropdownMenuItem onClick={() => openFolderDialog(folder)}>
+                          <Pencil className="h-3.5 w-3.5 mr-2" /> Renomear
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-400 focus:text-red-400 focus:bg-red-400/10" onClick={() => setDeletingFolder(folder)}>
+                          <Trash2 className="h-3.5 w-3.5 mr-2" /> Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="px-6 py-6 border-b border-border/50 flex flex-col sm:flex-row sm:items-end justify-between gap-4 shrink-0">
+          <div>
+            <h1 className="font-mono text-2xl font-bold tracking-tight">
+              {selectedFolderId === "all" ? "Todas as gravações" : folders.find(f => f.id === selectedFolderId)?.name || "Gravações"}
+            </h1>
+            <p className="font-mono text-sm text-muted-foreground mt-1">
+              Biblioteca de vídeos brutos e uploads
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar gravação..."
+                className="pl-9 w-full sm:w-64 font-mono text-sm bg-card/30"
+              />
+            </div>
+            <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="font-mono shrink-0">
+              <Plus className="h-4 w-4 mr-2" />
+              Upload
+            </Button>
+          </div>
+        </div>
+
+        <div className="p-6 flex-1 overflow-y-auto space-y-6">
+          {/* Upload area */}
+          <div
+            className={cn(
+              "border-2 border-dashed border-border/40 rounded-xl p-8 text-center transition-colors cursor-pointer",
+              "hover:border-primary/40 hover:bg-primary/5 group",
+              uploadFile && "border-primary/60 bg-primary/5",
+              uploading && "pointer-events-none opacity-80"
+            )}
+            onClick={() => !uploading && fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="video/*,.webm,.mp4,.mov,.avi"
+              className="hidden"
+              onChange={e => {
+                if (e.target.files?.[0]) setUploadFile(e.target.files[0]);
+                e.target.value = ''; // reset so same file can be chosen again
+              }}
+            />
+            {uploadFile ? (
+              <div className="space-y-3">
+                <CheckCircle2 className="h-10 w-10 text-primary mx-auto" />
+                <div className="font-mono text-base font-bold">{uploadFile.name}</div>
+                <div className="font-mono text-sm text-muted-foreground">
+                  {formatBytes(uploadFile.size)} · Clique para trocar
+                </div>
+                <Button
+                  onClick={e => { e.stopPropagation(); void handleUpload(); }}
+                  disabled={uploading}
+                  className="font-mono mt-2"
+                >
+                  {uploading
+                    ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Enviando…</>
+                    : <><Upload className="h-4 w-4 mr-2" />Confirmar Upload</>
+                  }
+                </Button>
               </div>
-              <div className="font-mono text-xs text-muted-foreground/60">MP4, MOV, WebM — até 2GB</div>
+            ) : (
+              <div className="space-y-2">
+                <Upload className="h-10 w-10 text-muted-foreground/40 mx-auto group-hover:text-primary transition-colors" />
+                <div className="font-mono text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                  Clique para selecionar ou arraste um vídeo aqui
+                </div>
+                <div className="font-mono text-xs text-muted-foreground/60">MP4, MOV, WebM — até 2GB</div>
+              </div>
+            )}
+          </div>
+
+          {/* Recordings grid */}
+          {isLoadingRecordings ? (
+            <div className="flex flex-col items-center justify-center py-20 space-y-4">
+              <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+              <span className="font-mono text-sm text-muted-foreground">Carregando gravações...</span>
+            </div>
+          ) : recordingsError ? (
+            <div className="flex flex-col items-center justify-center py-20 space-y-4 border border-destructive/20 bg-destructive/5 rounded-xl">
+              <AlertTriangle className="h-8 w-8 text-destructive/80" />
+              <span className="font-mono text-sm text-destructive">Falha ao carregar gravações</span>
+              <Button variant="outline" size="sm" onClick={() => refetchRecordings()} className="font-mono">
+                Tentar novamente
+              </Button>
+            </div>
+          ) : filteredRecordings.length === 0 ? (
+            <div className="text-center py-20 space-y-3">
+              <Film className="h-12 w-12 text-muted-foreground/30 mx-auto" />
+              <div className="font-mono text-sm text-muted-foreground">
+                {search ? "Nenhuma gravação encontrada para esta busca" : "Nenhuma gravação nesta pasta"}
+              </div>
+              {!search && (
+                <div className="font-mono text-xs text-muted-foreground/60">
+                  Faça um upload ou utilize o NexOS Launcher para gravar
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground flex justify-between">
+                <span>{filteredRecordings.length} gravação{filteredRecordings.length !== 1 ? "ões" : ""}</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-4">
+                {filteredRecordings.map(rec => {
+                  const { label, color } = statusLabel(rec);
+                  const hasVideo = rec.finalizationStatus === "ready" && rec.hasVideo;
+                  const isProcessing = rec.finalizationStatus === "pending" || rec.finalizationStatus === "processing";
+                  const isFailed = rec.finalizationStatus === "failed";
+
+                  return (
+                    <div
+                      key={rec.id}
+                      className="border border-border/40 rounded-xl p-4 bg-background/60 hover:bg-background/80 transition-colors flex flex-col gap-3 group"
+                    >
+                      <div className="flex items-start gap-4">
+                        {/* Thumbnail / Play button */}
+                        <button
+                          className={cn(
+                            "shrink-0 w-24 h-16 rounded-lg bg-muted/30 border border-border/30 flex items-center justify-center relative overflow-hidden",
+                            hasVideo && "cursor-pointer hover:border-primary/50 group/thumb",
+                          )}
+                          disabled={!hasVideo}
+                          onClick={() => hasVideo && setPreviewRec(rec)}
+                          title={hasVideo ? "Pré-visualizar vídeo" : undefined}
+                        >
+                          {hasVideo ? (
+                            <>
+                              <Camera className="h-6 w-6 text-primary/60 transition-opacity group-hover/thumb:opacity-0" />
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity bg-primary/10">
+                                <Play className="h-8 w-8 text-primary fill-primary" />
+                              </div>
+                            </>
+                          ) : isProcessing ? (
+                            <RefreshCw className="h-6 w-6 text-blue-400/60 animate-spin" />
+                          ) : (
+                            <Video className="h-6 w-6 text-muted-foreground/30" />
+                          )}
+                        </button>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <div className="font-mono text-sm font-bold truncate" title={rec.name}>{rec.name}</div>
+                            <Badge variant="outline" className={cn("font-mono text-[9px] uppercase tracking-widest shrink-0", color)}>
+                              {label}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-x-3 gap-y-1 font-mono text-[11px] text-muted-foreground flex-wrap">
+                            {rec.videoSize ? (
+                              <span className="flex items-center gap-1">
+                                <HardDrive className="h-3 w-3" />
+                                {formatBytes(rec.videoSize)}
+                              </span>
+                            ) : null}
+                            {rec.duration ? (
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {formatDuration(rec.duration)}
+                              </span>
+                            ) : null}
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {new Date(rec.createdAt).toLocaleDateString("pt-BR", {
+                                day: "2-digit", month: "short", year: "numeric",
+                              })}
+                            </span>
+                            {rec.recordingMode && (
+                              <span className="text-muted-foreground/60 border border-border/50 px-1 rounded bg-card/30">
+                                {rec.recordingMode === "manual" ? "Upload" : "NexOS"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Processing Status / Errors */}
+                      {isProcessing && (
+                        <div className="px-3 py-2 rounded bg-blue-500/5 border border-blue-500/10 flex items-center gap-2">
+                          <RefreshCw className="h-3.5 w-3.5 text-blue-400 animate-spin" />
+                          <span className="font-mono text-xs text-blue-400">Processando arquivo de vídeo...</span>
+                        </div>
+                      )}
+                      {isFailed && (
+                        <div className="px-3 py-2 rounded bg-red-500/5 border border-red-500/10 flex items-start gap-2">
+                          <AlertTriangle className="h-3.5 w-3.5 text-red-400 shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <div className="font-mono text-xs text-red-400 font-bold">Falha no processamento</div>
+                            {rec.finalizationError && (
+                              <div className="font-mono text-[10px] text-red-400/80 mt-0.5 break-words">{rec.finalizationError}</div>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="mt-2 h-7 font-mono text-[10px]"
+                              onClick={() => {
+                                setRetryingId(rec.id);
+                                retryInputRef.current?.click();
+                              }}
+                            >
+                              <Upload className="mr-1.5 h-3.5 w-3.5" />
+                              Reenviar arquivo
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      <div className="pt-2 flex items-center justify-between border-t border-border/30 mt-auto">
+                        <div className="flex gap-2">
+                           {hasVideo && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="font-mono text-[11px] h-7 px-2 text-primary hover:text-primary hover:bg-primary/10"
+                              onClick={() => setPreviewRec(rec)}
+                            >
+                              <Play className="h-3.5 w-3.5 mr-1.5" />
+                              Play
+                            </Button>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {hasVideo && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="font-mono text-[11px] h-7 px-2.5 bg-card/50"
+                                onClick={() => navigate(`/video-editor?recordingId=${rec.id}`)}
+                              >
+                                <Edit2 className="h-3.5 w-3.5 mr-1.5" />
+                                Editar
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="font-mono text-[11px] h-7 px-2.5 bg-card/50"
+                                onClick={() => window.open(`/api/recordings/${rec.id}/video-stream?token=${encodeURIComponent(token)}&download=1`, "_blank")}
+                                title="Baixar arquivo original"
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          )}
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-red-400 hover:bg-red-400/10"
+                            disabled={deletingId === rec.id}
+                            onClick={() => void deleteRecording(rec.id)}
+                            title="Excluir gravação" aria-label="Excluir gravação"
+                          >
+                            {deletingId === rec.id
+                              ? <RefreshCw className="h-3 w-3 animate-spin" />
+                              : <Trash2 className="h-3 w-3" />
+                            }
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
+      </main>
 
-        {/* Recordings grid */}
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : recordings.length === 0 ? (
-          <div className="text-center py-20 space-y-3">
-            <Film className="h-12 w-12 text-muted-foreground/30 mx-auto" />
-            <div className="font-mono text-sm text-muted-foreground">Nenhuma gravação ainda</div>
-            <div className="font-mono text-xs text-muted-foreground/60">
-              Grave seus vídeos seguindo o roteiro do NexOS e faça upload aqui para edição com IA
+      {/* -- Dialogs -- */}
+      <Dialog open={folderDialogOpen} onOpenChange={setFolderDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-mono">{editingFolder ? "Renomear pasta" : "Nova pasta"}</DialogTitle>
+            <DialogDescription className="font-mono text-xs">
+              {editingFolder
+                ? "Altere o nome usado para organizar suas gravações."
+                : "Crie uma pasta personalizada para organizar vídeos deste workspace."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Nome da pasta</label>
+              <Input
+                value={folderName}
+                onChange={e => setFolderName(e.target.value)}
+                placeholder="Ex: Lançamento Nov/2023"
+                className="font-mono"
+                autoFocus
+                onKeyDown={e => {
+                  if (e.key === "Enter" && folderName.trim()) saveFolderMut.mutate(folderName.trim());
+                }}
+              />
             </div>
           </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-              {recordings.length} gravação{recordings.length !== 1 ? "ões" : ""}
-            </div>
-            {recordings.map(rec => {
-              const { label, color } = statusLabel(rec);
-              const hasVideo = rec.state === "stopped" && rec.videoPath;
-              return (
-                <div
-                  key={rec.id}
-                  className="border border-border/40 rounded-xl p-5 bg-background/60 hover:bg-background/80 transition-colors"
-                >
-                  <div className="flex items-start gap-4">
-                    {/* Thumbnail / Play button */}
-                    <button
-                      className={cn(
-                        "shrink-0 w-20 h-14 rounded-lg bg-muted/30 border border-border/30 flex items-center justify-center relative group/thumb overflow-hidden",
-                        hasVideo && "cursor-pointer hover:border-primary/50",
-                      )}
-                      disabled={!hasVideo}
-                      onClick={() => hasVideo && setPreviewRec(rec)}
-                      title={hasVideo ? "Pré-visualizar vídeo" : undefined}
-                    >
-                      {hasVideo ? (
-                        <>
-                          <Camera className="h-6 w-6 text-primary/60 transition-opacity group-hover/thumb:opacity-0" />
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity bg-primary/10">
-                            <Play className="h-7 w-7 text-primary fill-primary" />
-                          </div>
-                        </>
-                      ) : (
-                        <Video className="h-6 w-6 text-muted-foreground/30" />
-                      )}
-                    </button>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFolderDialogOpen(false)} className="font-mono">Cancelar</Button>
+            <Button
+              onClick={() => saveFolderMut.mutate(folderName.trim())}
+              disabled={!folderName.trim() || saveFolderMut.isPending}
+              className="font-mono"
+            >
+              {saveFolderMut.isPending ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="font-mono text-sm font-bold truncate">{rec.name}</div>
-                        <Badge variant="outline" className={cn("font-mono text-[10px] shrink-0", color)}>
-                          {label}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-3 font-mono text-xs text-muted-foreground flex-wrap">
-                        {rec.videoSize && (
-                          <span className="flex items-center gap-1">
-                            <HardDrive className="h-3 w-3" />
-                            {formatBytes(rec.videoSize)}
-                          </span>
-                        )}
-                        {rec.duration && (
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatDuration(rec.duration)}
-                          </span>
-                        )}
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {new Date(rec.createdAt).toLocaleDateString("pt-BR", {
-                            day: "2-digit", month: "short", year: "numeric",
-                          })}
-                        </span>
-                        {hasVideo && (
-                          <button
-                            className="flex items-center gap-1 text-primary/60 hover:text-primary transition-colors"
-                            onClick={() => setPreviewRec(rec)}
-                          >
-                            <Play className="h-3 w-3" />
-                            Preview
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      {hasVideo && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="font-mono text-xs"
-                          onClick={() => navigate(`/video-editor?recordingId=${rec.id}`)}
-                        >
-                          <Edit2 className="h-3.5 w-3.5 mr-1.5" />
-                          Editar
-                        </Button>
-                      )}
-                      {rec.state === "stopped" && rec.campaignId && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="font-mono text-xs"
-                          onClick={() => navigate(`/video-production`)}
-                        >
-                          <ChevronRight className="h-3.5 w-3.5 mr-1" />
-                          Projeto
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-red-400"
-                        disabled={deletingId === rec.id}
-                        onClick={() => void deleteRecording(rec.id)}
-                      >
-                        {deletingId === rec.id
-                          ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                          : <Trash2 className="h-3.5 w-3.5" />
-                        }
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* CTA to video production */}
-        <div className="border border-border/30 rounded-xl p-5 bg-background/40 flex items-center justify-between">
-          <div>
-            <div className="font-mono text-sm font-bold">Modo Híbrido</div>
-            <div className="font-mono text-xs text-muted-foreground mt-1">
-              Crie um projeto de vídeo, grave seguindo o roteiro e edite aqui com IA
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            className="font-mono text-sm shrink-0"
-            onClick={() => navigate("/video-production")}
-          >
-            <Film className="h-4 w-4 mr-2" />
-            Produção de Vídeo
-          </Button>
-        </div>
-      </div>
+      <Dialog open={!!deletingFolder} onOpenChange={(o) => !o && setDeletingFolder(null)}>
+        <DialogContent className="sm:max-w-md border-red-500/20">
+          <DialogHeader>
+            <DialogTitle className="font-mono text-red-500">Excluir pasta?</DialogTitle>
+            <DialogDescription className="font-mono text-sm pt-2">
+              Tem certeza que deseja excluir a pasta <strong className="text-foreground">{deletingFolder?.name}</strong>?
+              As gravações dentro dela não serão excluídas, apenas movidas para a visualização geral.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setDeletingFolder(null)} className="font-mono">Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => deletingFolder && deleteFolderMut.mutate(deletingFolder.id)}
+              disabled={deleteFolderMut.isPending}
+              className="font-mono"
+            >
+              {deleteFolderMut.isPending ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Excluir Pasta
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

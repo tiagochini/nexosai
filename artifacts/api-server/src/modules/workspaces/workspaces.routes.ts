@@ -10,6 +10,10 @@ import {
   metadataForPurpose,
   type IntegrationPurpose,
 } from "../integrations/integration-purpose.js";
+import {
+  assertSocialAccountEntitlement,
+  canonicalNetworkForProvider,
+} from "../auth/workspace-entitlements.service.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -172,15 +176,24 @@ router.post("/me/integrations", async (req, res): Promise<void> => {
   }
 
   const candidates = await db
-    .select({ id: workspaceIntegrationsTable.id, metadata: workspaceIntegrationsTable.metadata })
+    .select({
+      id: workspaceIntegrationsTable.id,
+      metadata: workspaceIntegrationsTable.metadata,
+      accountId: workspaceIntegrationsTable.accountId,
+    })
     .from(workspaceIntegrationsTable)
     .where(and(
       eq(workspaceIntegrationsTable.workspaceId, req.auth.workspaceId),
       eq(workspaceIntegrationsTable.provider, dbProvider),
     ));
   const existing = candidates.find((row) =>
-    integrationPurpose((row.metadata ?? null) as Record<string, unknown> | null) === purpose,
+    integrationPurpose((row.metadata ?? null) as Record<string, unknown> | null) === purpose
+    && (row.accountId ?? null) === (pingAccountId ?? null),
   );
+  const network = canonicalNetworkForProvider(dbProvider);
+  if (network) {
+    await assertSocialAccountEntitlement(req.auth.workspaceId, network, pingAccountId);
+  }
 
   const values = {
     workspaceId: req.auth.workspaceId,
@@ -203,7 +216,9 @@ router.post("/me/integrations", async (req, res): Promise<void> => {
         .returning()
     : await db.insert(workspaceIntegrationsTable).values(values).returning();
 
-  res.status(existing ? 200 : 201).json({ integration, validationDetail });
+  // Credentials are write-only. Never echo a submitted or stored token.
+  const { accessToken: _accessToken, refreshToken: _refreshToken, ...safeIntegration } = integration;
+  res.status(existing ? 200 : 201).json({ integration: safeIntegration, validationDetail });
 });
 
 // ── Profile picture proxy ─────────────────────────────────────────────────────

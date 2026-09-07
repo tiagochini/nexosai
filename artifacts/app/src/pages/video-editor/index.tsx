@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useSearch } from "wouter";
+import { useSearch, useLocation } from "wouter";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,7 @@ import {
   Loader2, CheckCircle2, Video, Trash2, Info, Plus, Type,
   Image as ImageIcon, Mic, Wind, Sparkles, Film, Eye,
   AlignLeft, Globe, Layers, Undo2, Redo2, Save, Copy,
-  ChevronLeft, ChevronRight, Circle, StopCircle,
+  ChevronLeft, ChevronRight, Circle, StopCircle, AlertCircle,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -129,6 +129,11 @@ export default function VideoEditorPage() {
   const search = useSearch();
   const params = new URLSearchParams(search);
   const recordingId = params.get("recordingId") ?? "";
+  const projectId = params.get("projectId") ?? "";
+  const [, setLocation] = useLocation();
+
+  const [loadingRecording, setLoadingRecording] = useState(false);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
 
   // ── Restore persisted project (lazy — runs once at module init) ────────────
   const _saved = loadSavedProject();
@@ -310,18 +315,42 @@ export default function VideoEditorPage() {
   // ── Load recording from server ─────────────────────────────────────────────
   useEffect(() => {
     if (!recordingId) return;
-    void (async () => {
+    let isMounted = true;
+    const loadRec = async () => {
+      setLoadingRecording(true);
+      setRecordingError(null);
       try {
-        const token = localStorage.getItem("nexos_token") ?? "";
+        const token = localStorage.getItem("accessToken") ?? localStorage.getItem("nexos_token") ?? "";
+        if (!token) throw new Error("Autenticação necessária para carregar a gravação.");
+
         const res = await fetch(`/api/recordings/${recordingId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (!res.ok) return;
-        const data = await res.json() as { recording?: { id: string; name: string; videoPath?: string } };
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) throw new Error("Acesso não autorizado à gravação.");
+          if (res.status === 404) throw new Error("Gravação não encontrada.");
+          throw new Error(`Falha ao carregar gravação (HTTP ${res.status}).`);
+        }
+
+        const data = await res.json() as { recording?: { id: string; name: string; hasVideo?: boolean } };
         const rec = data.recording;
-        if (rec?.videoPath) addClipFromUrl(`/api/recordings/${rec.id}/video-stream?token=${encodeURIComponent(token)}`, rec.name);
-      } catch { /* silent */ }
-    })();
+        if (!rec) throw new Error("Dados da gravação inválidos ou vazios.");
+
+        if (rec.hasVideo && isMounted) {
+          addClipFromUrl(`/api/recordings/${rec.id}/video-stream?token=${encodeURIComponent(token)}`, rec.name);
+        } else if (isMounted) {
+          setRecordingError("O arquivo de vídeo desta gravação não está disponível.");
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setRecordingError(err.message || "Erro desconhecido ao carregar gravação.");
+        }
+      } finally {
+        if (isMounted) setLoadingRecording(false);
+      }
+    };
+    void loadRec();
+    return () => { isMounted = false; };
   }, [recordingId]);
 
   // ── Auto-save on every meaningful state change (debounced 2s) ───────────────
@@ -901,6 +930,59 @@ export default function VideoEditorPage() {
     { id: "export", label: "Exportar", icon: <Download className="h-3.5 w-3.5" /> },
   ];
 
+  const handleBack = () => {
+    if (window.history.length > 2) {
+      window.history.back();
+    } else if (recordingId) {
+      setLocation("/recordings");
+    } else if (projectId) {
+      setLocation(`/video-production?projectId=${projectId}`);
+    } else {
+      setLocation("/video-production");
+    }
+  };
+
+  const importFileRef = useRef<HTMLInputElement>(null);
+
+  const handleImportLegacyProject = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const raw = event.target?.result as string;
+        const parsed = JSON.parse(raw) as Partial<SavedProject>;
+        if (parsed.version !== 2) {
+          toast.error("Formato de projeto inválido ou incompatível com esta versão do editor leve.");
+          return;
+        }
+
+        setProjectTitle(parsed.projectTitle || "Meu Vídeo");
+        setProjectDescription(parsed.projectDescription || "");
+        setClips(parsed.clips?.map(c => ({
+          id: c.id,
+          name: c.name,
+          duration: c.duration,
+          inPoint: c.inPoint,
+          outPoint: c.outPoint,
+          url: c.url ?? "",
+        })) || []);
+        setActiveClipId(parsed.activeClipId ?? null);
+        setOverlays(parsed.overlays || []);
+        setCaptions(parsed.captions || []);
+        setNarrationVolume(parsed.narrationVolume ?? 0.9);
+        setNarrationDelay(parsed.narrationDelay ?? 0);
+        setBgMusicVolume(parsed.bgMusicVolume ?? 0.3);
+        setAmbientVolume(parsed.ambientVolume ?? 0.2);
+        toast.success("Projeto leve importado com sucesso.");
+      } catch (err) {
+        toast.error("Falha ao ler o arquivo. Tem certeza que é um projeto .nexos.json válido?");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
   // ── Frame number display ───────────────────────────────────────────────────
   const frameNumber = activeClip ? Math.round(currentTime * 30) : 0;
 
@@ -912,20 +994,18 @@ export default function VideoEditorPage() {
         {/* Header */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <Link href="/">
-              <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest text-muted-foreground hover:text-foreground">
-                <ArrowLeft className="h-3 w-3 mr-2" />Dashboard
-              </Button>
-            </Link>
+            <Button onClick={handleBack} variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="h-3 w-3 mr-2" />Voltar
+            </Button>
             <div className="w-px h-4 bg-border" />
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 border border-primary/40 bg-primary/10 flex items-center justify-center">
                 <Scissors className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <h1 className="font-mono font-black text-lg uppercase tracking-wide leading-none">Editor de Vídeo</h1>
+                <h1 className="font-mono font-black text-lg uppercase tracking-wide leading-none">Editor Leve</h1>
                 <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-                  NexOS · Multi-clip · Narração ao Vivo
+                  NexOS · Edição Rápida (.nexos.json)
                 </p>
               </div>
             </div>
@@ -946,14 +1026,24 @@ export default function VideoEditorPage() {
               className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2 gap-1">
               <Save className="h-3.5 w-3.5" />Salvar
             </Button>
+
+            {/* Import/Export buttons */}
+            <Button variant="ghost" size="sm" onClick={() => importFileRef.current?.click()}
+              className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2 gap-1"
+              title="Importar projeto legado leve (.nexos.json)">
+              <Upload className="h-3.5 w-3.5" />Importar Leve
+            </Button>
+            <input type="file" accept=".nexos.json,application/json" ref={importFileRef} className="hidden" onChange={handleImportLegacyProject} />
+
             <Button variant="ghost" size="sm" onClick={downloadProjectFile}
-              className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2 gap-1">
-              <Copy className="h-3.5 w-3.5" />Exportar JSON
+              className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2 gap-1"
+              title="Exportar projeto leve. Para edição completa, use o Studio (.nexosvideo)">
+              <Copy className="h-3.5 w-3.5" />Exportar Leve
             </Button>
             {clips.length > 0 && (
               <Button variant="ghost" size="sm" onClick={() => {
                 if (confirm("Limpar projeto e começar do zero?")) clearSavedProject();
-              }} className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2 gap-1 text-muted-foreground hover:text-destructive">
+              }} className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2 gap-1 text-muted-foreground hover:text-destructive" aria-label="Novo projeto">
                 <Trash2 className="h-3.5 w-3.5" />Novo
               </Button>
             )}
@@ -993,7 +1083,20 @@ export default function VideoEditorPage() {
 
             {/* Video player */}
             <div className="border border-border/50 bg-black relative aspect-video group">
-              {!activeClip ? (
+              {loadingRecording ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
+                  <p className="font-mono text-xs uppercase tracking-widest text-primary/70">Carregando Gravação...</p>
+                </div>
+              ) : recordingError ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-destructive p-6 text-center">
+                  <AlertCircle className="h-10 w-10 opacity-80" />
+                  <p className="font-mono text-sm uppercase tracking-wider">{recordingError}</p>
+                  <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="mt-2 font-mono text-xs uppercase">
+                    Tentar Novamente
+                  </Button>
+                </div>
+              ) : !activeClip ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
                   <Film className="h-12 w-12 opacity-20" />
                   <p className="font-mono text-xs uppercase tracking-widest opacity-50">Nenhum vídeo carregado</p>
@@ -1401,7 +1504,7 @@ export default function VideoEditorPage() {
                           </button>
                         )}
                         <button onClick={e => { e.stopPropagation(); removeClip(clip.id); }}
-                          className="text-muted-foreground hover:text-destructive transition-colors shrink-0">
+                          className="text-muted-foreground hover:text-destructive transition-colors shrink-0" aria-label="Remover clipe">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
@@ -1547,7 +1650,7 @@ export default function VideoEditorPage() {
                       <Upload className="h-3 w-3 mr-1.5" />
                       {bgMusicFile ? bgMusicFile.name.slice(0, 20) + "…" : "Carregar"}
                     </Button>
-                    {bgMusicFile && <button onClick={() => setBgMusicFile(null)} className="text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>}
+                    {bgMusicFile && <button onClick={() => setBgMusicFile(null)} className="text-muted-foreground hover:text-destructive transition-colors" aria-label="Remover música"><Trash2 className="h-3.5 w-3.5" /></button>}
                   </div>
                   {bgMusicFile && (
                     <div className="flex items-center gap-2">
@@ -1570,7 +1673,7 @@ export default function VideoEditorPage() {
                       <Upload className="h-3 w-3 mr-1.5" />
                       {ambientFile ? ambientFile.name.slice(0, 20) + "…" : "Carregar"}
                     </Button>
-                    {ambientFile && <button onClick={() => setAmbientFile(null)} className="text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>}
+                    {ambientFile && <button onClick={() => setAmbientFile(null)} className="text-muted-foreground hover:text-destructive transition-colors" aria-label="Remover ambiente"><Trash2 className="h-3.5 w-3.5" /></button>}
                   </div>
                   {ambientFile && (
                     <div className="flex items-center gap-2">
@@ -1621,7 +1724,7 @@ export default function VideoEditorPage() {
                           <Upload className="h-3 w-3 mr-1.5" />
                           {narrationFile ? narrationFile.name.slice(0, 20) + "…" : "Carregar áudio"}
                         </Button>
-                        {narrationFile && <button onClick={() => setNarrationFile(null)} className="text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>}
+                        {narrationFile && <button onClick={() => setNarrationFile(null)} className="text-muted-foreground hover:text-destructive transition-colors" aria-label="Remover narração"><Trash2 className="h-3.5 w-3.5" /></button>}
                       </div>
                       {narrationFile && (
                         <>
