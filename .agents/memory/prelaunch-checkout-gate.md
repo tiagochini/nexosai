@@ -50,3 +50,9 @@ Card installments must be priced from the live Asaas sales simulator, never from
 **Why:** The owner explicitly rejected public language about who pays interest or fees and wants the buyer to compare final Asaas-calculated options before choosing.
 
 **How to apply:** Use the Asaas payment simulation result as the authoritative condition, submit the chosen installment count to Asaas, and keep legal/accounting treatment separate from sales and checkout copy.
+
+Until the complete Asaas installment checkout is validated end to end, the landing may only say that card installments are available and that conditions appear at checkout. Do not publicly promise “up to 21x” before validation.
+
+**Why:** The owner approved the conservative wording to avoid promising a card-brand-dependent maximum before final checkout homologation.
+
+**How to apply:** Current wording: “Pagamento parcelado no cartão. Consulte as condições disponíveis no checkout.” After validation, it may become “Parcele em até 21x… sujeito às condições disponíveis para o seu cartão.”

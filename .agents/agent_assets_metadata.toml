@@ -53,72 +53,84 @@ id = "Am3AKOGMz4EZf6QdTqhBd"
 uri = "file://artifacts/app/public/nexos_ai_logo_1024x1024.png"
 type = "image"
 title = "NexOS AI — Logo 1024x1024 PNG (sem distorção)"
+logical_id = "9920821f-5510-4080-807d-86252a1f5234"
 
 [[outputs]]
 id = "8ocnlupuZgEt6LFPfXcxR"
 uri = "file://scripts/nexos-audit-report.pdf"
 type = "pdf"
 title = "NEXOS AI — Relatório de Auditoria Estrutural"
+logical_id = "74acdc11-9afd-4c3d-9df7-bfe223f24c35"
 
 [[outputs]]
 id = "uRqu7MAw-Z7fPXBfuwle0"
 uri = "file://attached_assets/catalog-mapa-gratis.png"
 type = "image"
 title = "Catálogo 1 — PDF Grátis (Mapa dos Primeiros R$10K)"
+logical_id = "e561bc94-efbf-418d-8f6a-6f6809f6e9bc"
 
 [[outputs]]
 id = "gAZ7hU0w3mRi3L1egJfLZ"
 uri = "file://attached_assets/catalog-nexos-ai.png"
 type = "image"
 title = "3. NexOS AI — Sistema de Lançamento"
+logical_id = "b1205758-2a01-4d73-babd-b327fee599c6"
 
 [[outputs]]
 id = "AgQUV2dt20OLEnHkNyWUs"
 uri = "file://attached_assets/catalog-nexos-academy.png"
 type = "image"
 title = "4. NexOS Academy — Método de Lançamento"
+logical_id = "44e6a84a-ca87-4745-a4f0-e33b25f7f89c"
 
 [[outputs]]
 id = "Ce_HTJsHapP3lDNqRIJIk"
 uri = "file://attached_assets/catalog-guia-audiencia.png"
 type = "image"
 title = "1. Guia Gratuito — Os 7 Erros da Sua Audiência"
+logical_id = "efe64e0e-b2a8-4772-9834-865751e86a5c"
 
 [[outputs]]
 id = "bPMYPmjDXHfRRICy3T1Qi"
 uri = "file://attached_assets/catalog-mapa-10k.png"
 type = "image"
 title = "2. Mapa dos Primeiros R$10K"
+logical_id = "200b34f5-66ca-451a-bf6b-06e37656f37e"
 
 [[outputs]]
 id = "ToPGNGc34afZEKs73nAia"
 uri = "file://scripts/NexOS_AI_Investor_Prospect_v2.pdf"
 type = "pdf"
 title = "NexOS AI — Investor Prospect v2.1 · Layout corrigido · Agency removida"
+logical_id = "4b9cae59-cf72-41f2-a1e6-cc5e504f63e5"
 
 [[outputs]]
 id = "kqdXj9p50IJjMvsmTC1zs"
 uri = "file://attached_assets/NexOS_AI_Prospect_Paper_PT_v2_2026.pdf"
 type = "pdf"
 title = "NexOS AI — Prospect Paper v2.0 PT (corrigido)"
+logical_id = "9468cde0-a510-47a8-ba53-b7ec7e4c2058"
 
 [[outputs]]
 id = "Zv_beudWcUrBdL8wX_zub"
 uri = "file://attached_assets/NexOS_AI_Prospect_Paper_EN_v2_2026.pdf"
 type = "pdf"
 title = "NexOS AI — Prospect Paper v2.0 EN (corrigido)"
+logical_id = "99d7fb09-d3ac-4c7d-9b13-694a36d820ab"
 
 [[outputs]]
 id = "JUpN1R2ccreGm58vbmrcY"
 uri = "file://attached_assets/NexOS_AI_Technical_Handoff.pdf"
 type = "pdf"
 title = "NexOS AI — Technical Handoff (corrigido)"
+logical_id = "b6fa2297-63df-4064-be9a-511a659b0338"
 
 [[outputs]]
 id = "jvY4i-tCYNQTKNw9ZhNSl"
 uri = "file://NEXOS_AUDITORIA_ARQUITETURA_2026.rtf"
 type = "unspecified"
 title = "NexOS — Relatório de Auditoria de Arquitetura (Jul 2026)"
+logical_id = "9b74b9a3-dc3b-4776-8622-b35aa06bcf58"
 
 [[outputs]]
 id = "HSrnfgJB2BNcRH25yAYLK"
@@ -126,3 +138,32 @@ uri = "file://INVENTARIO_AGENTES_NEXOS.md"
 type = "text"
 title = "Inventário Completo — Identidade Especializada dos Agentes NexOS AI"
 description = "Relatório completo de doctrinas, frameworks, fórmulas, bibliotecas e estruturas de output de todos os agentes. 64 agentes · ~80 autores referenciados · 17 bibliotecas de maestria."
+logical_id = "4614f4e4-0987-44e1-b8be-f2cc74239d36"
+
+[[outputs]]
+id = "kgqn9LuUbmzeVacy9hxvq"
+uri = "file://research/notes.md"
+type = "text"
+title = "Pesquisa: parcelamento para clientes NexOS"
+description = "Plano e registro vivo das evidências sobre Koin e alternativas de financiamento."
+logical_id = "834b0ba2-7adf-4056-9840-daa526bf8067"
+content_hash = "sha256:0eebbf05db8493a44628cee9b83fbe8d7ecce052005537992e6d49936dd92eee"
+size = 1888
+mtime_ms = 1788807866044
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:73b667a4-51ad-4d73-9ccb-20133f1322c1/834b0ba2-7adf-4056-9840-daa526bf8067/57727889-9fc9-490c-ad8e-6c88b32ba9b5"
+storage_version_token = "1788807866883460"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "kNWRGKF1SQx2SB2GzHOBm"
+uri = "file://research/koin-e-alternativas-relatorio.md"
+type = "text"
+title = "Koin e alternativas para parcelamento NexOS"
+description = "Análise das páginas públicas, políticas, riscos e opções de financiamento para até 24 parcelas."
+logical_id = "7dd4e4a4-ef2c-4924-88f5-3a012799232d"
+content_hash = "sha256:591453a2d24ad747e9683b6769862db580b45fe9e9d8842a880b92f30623d0f1"
+size = 13213
+mtime_ms = 1788808177200
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:73b667a4-51ad-4d73-9ccb-20133f1322c1/7dd4e4a4-ef2c-4924-88f5-3a012799232d/db060a74-31ec-413d-8823-3492951eb063"
+storage_version_token = "1788808178201403"
+content_type = "text/markdown"

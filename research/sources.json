@@ -1,0 +1,77 @@
+{
+  "generatedAt": "2026-09-07",
+  "sources": [
+    {
+      "id": 1,
+      "title": "Koin Pix Parcelado",
+      "url": "https://www.koin.com.br/pix-parcelado",
+      "tier": 3
+    },
+    {
+      "id": 2,
+      "title": "Koin institucional",
+      "url": "https://www.koin.com.br/",
+      "tier": 3
+    },
+    {
+      "id": 3,
+      "title": "Pagaleve benefícios e-commerce",
+      "url": "https://www.pagaleve.com.br/blog/beneficios-pixparcelado-ecommerce/",
+      "tier": 3
+    },
+    {
+      "id": 4,
+      "title": "Parcelex",
+      "url": "https://parcelex.com.br/",
+      "tier": 3
+    },
+    {
+      "id": 5,
+      "title": "Código de Defesa do Consumidor",
+      "url": "https://www.planalto.gov.br/ccivil_03/leis/l8078compilado.htm",
+      "tier": 1
+    },
+    {
+      "id": 6,
+      "title": "Mercado Pago Linha de Crédito",
+      "url": "https://www.mercadopago.com.br/developers/en/docs/checkout-api-payments/integration-configuration/installments-without-card.md",
+      "tier": 2
+    },
+    {
+      "id": 7,
+      "title": "Pagar.me Link de Pagamento",
+      "url": "https://docs.pagar.me/reference/checkout-link.md",
+      "tier": 2
+    },
+    {
+      "id": 8,
+      "title": "Asaas antecipação",
+      "url": "https://blog.asaas.com/plataforma-de-antecipacao-de-recebiveis/",
+      "tier": 3
+    },
+    {
+      "id": 9,
+      "title": "PagBank Link de Pagamento",
+      "url": "https://blog.pagbank.com.br/link-de-pagamento-pagbank/",
+      "tier": 3
+    },
+    {
+      "id": 10,
+      "title": "BCB Instituições de pagamento",
+      "url": "https://www.bcb.gov.br/estabilidadefinanceira/instituicaopagamento",
+      "tier": 1
+    },
+    {
+      "id": 11,
+      "title": "BCB Resolução 277",
+      "url": "https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?numero=277&tipo=Resolu%C3%A7%C3%A3o%20BCB",
+      "tier": 1
+    },
+    {
+      "id": 12,
+      "title": "LGPD",
+      "url": "https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm",
+      "tier": 1
+    }
+  ]
+}

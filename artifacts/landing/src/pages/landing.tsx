@@ -201,7 +201,7 @@ function ExecutionGapSection({ openCapture, closed }: { openCapture: () => void;
             Coloque a ideia em produção agora e pague parcelado no cartão.
           </p>
           <p className="font-sans mt-3 text-background/70 max-w-3xl">
-            A NexOS estrutura e executa a operação completa. No checkout, você vê as opções disponíveis e escolhe a quantidade e o valor das parcelas antes de pagar.
+            A NexOS estrutura e executa a operação completa. Pagamento parcelado no cartão. Consulte as condições disponíveis no checkout.
           </p>
         </div>
         <Button onClick={openCapture} className="h-16 px-8 rounded-none bg-primary text-primary-foreground hover:bg-primary/90 font-display font-black uppercase tracking-wide">
