@@ -6,7 +6,8 @@ import nexosLogo from "/nexos-logo.png";
 import {
   ArrowRight, Users, Video, Workflow, BookOpen, Globe, Database,
   ShieldCheck, Zap, Activity, Target, ShieldAlert, Fingerprint,
-  Layers, LockKeyhole, RefreshCcw, Lock, Infinity as InfinityIcon, HelpCircle
+  Layers, LockKeyhole, RefreshCcw, Lock, Infinity as InfinityIcon, HelpCircle,
+  TrendingUp, MonitorPlay, Presentation
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -16,7 +17,7 @@ export default function LandingPage() {
   const closeCapture = () => setCaptureOpen(false);
 
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col selection:bg-primary/30">
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col selection:bg-primary/30 scroll-smooth">
       <Background />
       <Nav openCapture={openCapture} />
 
@@ -25,8 +26,8 @@ export default function LandingPage() {
         <PainSection />
         <MechanismSection />
         <TransformationSection openCapture={openCapture} />
-        <OperationalProofSection />
         <BreadthSection />
+        <OperationalProofSection />
         <CommercialSection />
         <ObjectionSection />
         <AnticipationSection />
@@ -38,7 +39,6 @@ export default function LandingPage() {
     </div>
   );
 }
-
 function Background() {
   return (
     <div className="fixed inset-0 z-[-1] overflow-hidden pointer-events-none bg-background">
@@ -58,15 +58,15 @@ function Nav({ openCapture }: { openCapture: () => void }) {
           <img src={nexosLogo} alt="NexOS" className="h-10 w-10 object-contain drop-shadow-[0_0_12px_rgba(0,229,255,0.4)]" />
           <div className="hidden sm:block">
             <div className="font-sans font-bold text-xl tracking-wide uppercase">NexOS</div>
-            <div className="font-mono text-[10px] uppercase tracking-widest text-primary/80">Operating System</div>
+            <div className="font-mono text-[10px] uppercase tracking-widest text-primary/80">Sistema Operacional</div>
           </div>
         </div>
         <div className="flex items-center gap-6">
           <Link href="/login" aria-label="Entrar no sistema" data-testid="nav-login-link" className="font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground hidden sm:block transition-colors">
             Entrar
           </Link>
-          <Button onClick={openCapture} aria-label="Entrar na Lista Prioritária" data-testid="nav-guide-button" className="font-mono text-xs uppercase tracking-widest font-bold h-10 px-6 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_20px_rgba(0,229,255,0.4)] transition-all rounded-md">
-            Lista Prioritária
+          <Button onClick={openCapture} aria-label="Entrar na Lista de Abertura" data-testid="nav-guide-button" className="font-mono text-xs uppercase tracking-widest font-bold h-10 px-6 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_20px_rgba(0,229,255,0.4)] transition-all rounded-md">
+            Lista de Abertura
           </Button>
         </div>
       </div>
@@ -75,6 +75,11 @@ function Nav({ openCapture }: { openCapture: () => void }) {
 }
 
 function HeroSection({ openCapture }: { openCapture: () => void }) {
+  const scrollToMechanism = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    document.getElementById('mecanismo')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <section className="relative min-h-[100dvh] flex flex-col justify-center pt-20 overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 w-full relative z-10">
@@ -87,27 +92,27 @@ function HeroSection({ openCapture }: { openCapture: () => void }) {
           <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full border border-primary/20 bg-primary/5 mb-8 backdrop-blur-md">
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_10px_rgba(0,229,255,0.8)]" />
             <span className="font-mono text-[11px] sm:text-xs uppercase tracking-[0.2em] text-primary font-semibold">
-              Acesso Antecipado e Preparação
+              Sistema Operacional Comercial
             </span>
           </div>
 
-          <h1 className="text-5xl sm:text-7xl lg:text-[6.5rem] font-sans font-black leading-[1.05] tracking-tight mb-8">
-            O Sistema Operacional<br />
+          <h1 className="text-5xl sm:text-7xl lg:text-[5.5rem] font-sans font-black leading-[1.05] tracking-tight mb-8">
+            Pare de contratar partes<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-secondary to-accent pb-2">
-              Que Executa Por Você.
+              para executar uma estratégia inteira.
             </span>
           </h1>
 
           <p className="text-lg sm:text-2xl text-muted-foreground max-w-2xl leading-relaxed mb-12 font-light">
-            Sua operação de marketing e vendas governada por 64 agentes especializados compartilhando a mesma inteligência de mercado. O lançamento oficial se aproxima. Prepare-se.
+            Sua decisão de negócio não pode se perder na troca de mãos. Da inteligência à retenção, a primeira operação comercial centralizada onde a execução nunca dilui a sua visão.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button onClick={openCapture} aria-label="Entrar na Lista Prioritária" data-testid="hero-cta-button" className="h-14 px-8 text-sm sm:text-base font-bold rounded-lg bg-foreground text-background hover:bg-foreground/90 transition-all font-sans tracking-wide">
-              Entrar na Lista Prioritária <ArrowRight className="ml-2 h-5 w-5" />
+            <Button onClick={openCapture} aria-label="Entrar na Lista de Abertura" data-testid="hero-cta-button" className="h-14 px-8 text-sm sm:text-base font-bold rounded-lg bg-foreground text-background hover:bg-foreground/90 transition-all font-sans tracking-wide">
+              Entrar na Lista de Abertura <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button variant="outline" onClick={openCapture} aria-label="Receber Diagnóstico" className="h-14 px-8 text-sm sm:text-base font-semibold rounded-lg border-border bg-card/30 hover:bg-card hover:border-primary/50 transition-all text-foreground backdrop-blur-md">
-              Receber Diagnóstico
+            <Button variant="outline" onClick={scrollToMechanism} aria-label="Ver como a operação funciona" className="h-14 px-8 text-sm sm:text-base font-semibold rounded-lg border-border bg-card/30 hover:bg-card hover:border-primary/50 transition-all text-foreground backdrop-blur-md">
+              Ver como a operação funciona
             </Button>
           </div>
         </motion.div>
@@ -131,21 +136,21 @@ function PainSection() {
             viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.7, ease: "easeOut" }}
           >
-            <div className="font-mono text-xs uppercase tracking-[0.3em] text-destructive mb-6">A Causa Raiz da Estagnação</div>
+            <div className="font-mono text-xs uppercase tracking-[0.3em] text-destructive mb-6">A Exaustão da Fragmentação</div>
             <h2 className="text-4xl sm:text-5xl font-sans font-bold leading-tight mb-8">
-              Você gasta mais tempo<br />
-              integrando do que<br />
-              <span className="text-destructive">escalando.</span>
+              Você é o gargalo que <br />
+              <span className="text-destructive">traduz a mesma estratégia</span><br />
+              para cinco áreas diferentes.
             </h2>
             <p className="text-lg text-muted-foreground leading-relaxed mb-8 font-light">
-              A maioria das empresas sangra receita nas entrelinhas operacionais. Quando a agência atrasa a cópia, a automação de e-mail desincroniza da oferta, e o gestor de tráfego opera às cegas. A fragmentação devora suas margens através do esforço brutal de coordenar partes quebradas.
+              O custo real da sua operação não está nas mensalidades. Está na perda de tração diária. O trabalho braçal para cobrir os buracos da operação está devorando a sua margem de lucro e a sua energia como fundador.
             </p>
             <div className="space-y-5 border-l border-border/50 pl-6 ml-2">
               {[
-                "Dezenas de ferramentas fragmentadas cobrando por assento.",
-                "Falta de contexto compartilhado entre estratégia e execução.",
-                "Agências lentas entregando partes isoladas do ecossistema.",
-                "Trabalho manual interminável cobrindo falhas de integração."
+                "A agência terceirizada que não entende o produto ou erra o tom da marca.",
+                "O e-mail de vendas que dispara fora de sincronia com o anúncio atual.",
+                "O gestor de tráfego operando às cegas sem retroalimentação do seu CRM.",
+                "Dezenas de assinaturas de software isolados cobrando por assento."
               ].map((item, i) => (
                 <div key={i} className="flex items-start gap-4">
                   <div className="w-1.5 h-1.5 rounded-full bg-destructive mt-2 shrink-0 shadow-[0_0_8px_rgba(255,51,102,0.8)]" />
@@ -165,13 +170,13 @@ function PainSection() {
             <div className="absolute inset-0 bg-gradient-to-br from-destructive/10 to-transparent blur-3xl rounded-full" />
             <div className="relative border border-border/60 bg-card/40 backdrop-blur-xl rounded-3xl p-8 sm:p-12 overflow-hidden shadow-2xl">
                <div className="flex flex-col gap-6">
-                 <BrokenNode title="Plataforma de Anúncios (Ads)" delay={0} />
-                 <BrokenNode title="CRM e Sequências de Email" delay={0.2} />
-                 <BrokenNode title="SDR e Equipe de Vendas" delay={0.4} />
+                 <BrokenNode title="Agência & Freelancers" delay={0} />
+                 <BrokenNode title="Plataformas de Anúncios" delay={0.2} />
+                 <BrokenNode title="Disparos e Automações" delay={0.4} />
                </div>
                <div className="mt-8 pt-8 border-t border-border/50 text-center">
                  <p className="font-mono text-xs uppercase tracking-widest text-destructive font-semibold">
-                   Modelos isolados quebram na escala
+                   Toda troca de mãos dilui a conversão
                  </p>
                </div>
             </div>
@@ -210,16 +215,18 @@ function MechanismSection() {
             viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.7 }}
           >
-            <div className="font-mono text-xs uppercase tracking-[0.3em] text-primary mb-6">O Mecanismo Único Integrado</div>
+            <div id="mecanismo" className="font-mono text-xs uppercase tracking-[0.3em] text-primary mb-6 scroll-mt-32">
+              A Transição Operacional
+            </div>
             <h2 className="text-4xl sm:text-5xl font-sans font-black leading-tight mb-8">
-              Inteligência de Mercado<br />
-              <span className="text-primary">Transformada em Execução.</span>
+              Do sinal do mercado à<br />
+              <span className="text-primary">campanha pronta para aprovação.</span>
             </h2>
             <p className="text-lg text-muted-foreground leading-relaxed mb-6 font-light">
-              Em vez de conectar ferramentas independentes com fluxos frágeis, o NexOS unifica o cérebro da operação. 64 agentes especializados — de redatores a estrategistas — operam dentro do mesmo ecossistema, consumindo a exata mesma verdade sobre seu mercado e avatar.
+              Uma decisão. Um contexto. Toda a operação na mesma direção. Em vez de operar painéis vazios e gerenciar pessoas que não conversam entre si, o NexOS unifica o cérebro da operação.
             </p>
             <p className="text-lg text-muted-foreground leading-relaxed font-light">
-              A pesquisa consolidada altera a cópia do anúncio instantaneamente. O insight fechado no CRM reajusta a segmentação. A inteligência é centralizada; a execução é coordenada, governada e implacável.
+              Os 64 agentes operacionais compartilham a mesma inteligência de mercado. A pesquisa consolidada orienta o texto. O estrategista instrui o copywriter, que entrega o material ao gestor de tráfego e atualiza o conhecimento do SDR de ponta a ponta.
             </p>
           </motion.div>
           <motion.div
@@ -233,10 +240,10 @@ function MechanismSection() {
                 <InfinityIcon className="w-32 h-32" />
              </div>
              {[
-               { title: "Radar & Contexto", icon: <Globe className="w-5 h-5" /> },
-               { title: "Geração de Oferta", icon: <Target className="w-5 h-5" /> },
-               { title: "Governança de Mídia", icon: <ShieldCheck className="w-5 h-5" /> },
-               { title: "Ciclo de Vida CRM", icon: <Users className="w-5 h-5" /> }
+               { title: "Inteligência Ativa", icon: <Globe className="w-5 h-5" /> },
+               { title: "Definição de Oferta", icon: <Target className="w-5 h-5" /> },
+               { title: "Mídia & Distribuição", icon: <TrendingUp className="w-5 h-5" /> },
+               { title: "Fechamento (CRM)", icon: <Users className="w-5 h-5" /> }
              ].map((node, i) => (
                 <div key={i} className="border border-primary/20 bg-card/80 p-6 rounded-2xl flex flex-col items-center justify-center text-center z-10 backdrop-blur-md hover:border-primary/50 transition-colors">
                   <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">
@@ -262,15 +269,15 @@ function TransformationSection({ openCapture }: { openCapture: () => void }) {
           viewport={{ once: true }}
           className="max-w-3xl mx-auto"
         >
-          <div className="font-mono text-xs uppercase tracking-[0.3em] text-secondary mb-6">O Futuro Próximo da Sua Operação</div>
+          <div className="font-mono text-xs uppercase tracking-[0.3em] text-secondary mb-6">O Novo Padrão Executivo</div>
           <h2 className="text-4xl sm:text-5xl font-sans font-black leading-tight mb-6">
-            Você Define a Estratégia.<br />O Ecossistema Entrega o Restante.
+            Você Define a Direção.<br />O Sistema Entrega o Restante.
           </h2>
           <p className="text-lg text-muted-foreground font-light mb-12">
-            Imagine um centro de comando onde aprovações substituem microgerenciamento. Você direciona a meta, a oferta e governa o tom; o sistema planeja, escreve, publica, distribui e engaja, preservando o contexto global.
+            Imagine um centro de comando onde aprovações substituem microgerenciamento. Você define o posicionamento, valida a oferta e aprova os recursos; o sistema planeja, escreve, publica, distribui anúncios e engaja leads, preservando seu tom de voz em cada contato.
           </p>
           <Button onClick={openCapture} className="h-14 px-8 text-sm sm:text-base font-bold rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-all font-sans tracking-wide shadow-[0_0_20px_rgba(138,43,226,0.3)]">
-            Garantir Acesso Antecipado <ArrowRight className="ml-2 h-5 w-5" />
+            Entrar na Lista de Abertura <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </motion.div>
       </div>
@@ -278,37 +285,9 @@ function TransformationSection({ openCapture }: { openCapture: () => void }) {
   );
 }
 
-function OperationalProofSection() {
-  const features = [
-    {
-      icon: <Layers className="w-6 h-6 text-primary" />,
-      title: "Contexto Canônico Compartilhado",
-      desc: "A operação inteira consome a mesma verdade. O que o Radar descobre, os agentes de copy utilizam instantaneamente."
-    },
-    {
-      icon: <ShieldAlert className="w-6 h-6 text-secondary" />,
-      title: "Execução Governada",
-      desc: "Nenhuma ação externa ocorre no escuro. Disparos e publicações são controlados por validações rigorosas de permissão e APIs."
-    },
-    {
-      icon: <Fingerprint className="w-6 h-6 text-accent" />,
-      title: "Fato vs. Inferência",
-      desc: "O sistema segrega dados empíricos do mercado de deduções criativas, garantindo que campanhas sejam fundamentadas na realidade."
-    },
-    {
-      icon: <LockKeyhole className="w-6 h-6 text-primary" />,
-      title: "Workspaces Multi-Tenant",
-      desc: "Isolamento absoluto de dados para agências e múltiplas marcas. Inteligência e faturamento de cada operação permanecem bloqueados."
-    },
-    {
-      icon: <RefreshCcw className="w-6 h-6 text-success" />,
-      title: "Direitos Validados",
-      desc: "O acesso a recursos será liberado dinamicamente via verificação rigorosa de entitlements comerciais (quando o sistema abrir)."
-    }
-  ];
-
+function BreadthSection() {
   return (
-    <section className="py-32 relative bg-card/20 border-t border-border/30">
+    <section className="py-32 relative border-t border-border/30 bg-card/20">
       <div className="max-w-7xl mx-auto px-6">
         <div className="mb-20 text-center max-w-3xl mx-auto">
           <motion.div
@@ -316,17 +295,110 @@ function OperationalProofSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <div className="font-mono text-xs uppercase tracking-[0.3em] text-success mb-6">Evidência Operacional</div>
+            <div className="font-mono text-xs uppercase tracking-[0.3em] text-primary mb-6">Cobertura Integral</div>
             <h2 className="text-4xl sm:text-5xl font-sans font-black leading-tight mb-6">
-              A Transparência do Sistema.<br />Sem Falsas Promessas.
+              A profundidade do <span className="text-primary">Ciclo de Vida</span>
             </h2>
             <p className="text-lg text-muted-foreground font-light">
-              Não exibimos depoimentos fabricados nem garantimos resultados irreais. Exibimos a realidade arquitetural de uma máquina desenvolvida estritamente para governança, consistência e escala.
+              Toda a fundação comercial da sua marca presente de ponta a ponta — sem perder conversão no abismo entre ferramentas soltas.
             </p>
           </motion.div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <BentoCard
+            icon={<Globe />}
+            title="Inteligência de Mercado"
+            desc="Monitoramento autônomo de concorrentes, tendências de nicho e análise de sentimento em tempo real para nutrir campanhas."
+          />
+          <BentoCard
+            icon={<Target />}
+            title="Estratégia e Oferta"
+            desc="O War Room. Planejamento em janela de 30 dias onde ângulos de venda, promessas e objeções são consolidados."
+          />
+          <BentoCard
+            icon={<Presentation />}
+            title="Conteúdo e Audiovisual"
+            desc="Criação massiva alinhada à estratégia: roteiros de vídeo, cópia persuasiva e integração opcional com clones digitais."
+          />
+          <BentoCard
+            icon={<Workflow />}
+            title="Distribuição e Mídia Paga"
+            desc="Gestão rigorosa de publicações sociais e aprovação rígida de tráfego, respeitando os limites da sua conta comercial Meta Ads."
+          />
+          <BentoCard
+            icon={<Users />}
+            title="Vendas, CRM e Retenção"
+            desc="Gestão do funil de pipeline onde agentes acompanham cada lead, realizam o onboarding e maximizam o valor da carteira."
+          />
+          <BentoCard
+            icon={<BookOpen />}
+            title="Workspaces de Agência"
+            desc="Isolamento cirúrgico de clientes. A inteligência, os dados e os acessos de uma marca nunca se misturam com a da outra."
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function BentoCard({ icon, title, desc }: any) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.1 }}
+      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      className="relative group overflow-hidden rounded-3xl border border-border/80 bg-background/50 p-8 backdrop-blur-xl flex flex-col hover:border-primary/30 transition-colors"
+    >
+      <div className="w-12 h-12 rounded-xl bg-card/80 border border-border flex items-center justify-center mb-6 text-foreground shadow-lg">
+        {React.cloneElement(icon, { className: "w-6 h-6 text-primary" })}
+      </div>
+      <h3 className="text-xl font-sans font-bold mb-3 tracking-tight">{title}</h3>
+      <p className="text-muted-foreground leading-relaxed text-sm font-light">{desc}</p>
+    </motion.div>
+  )
+}
+
+function OperationalProofSection() {
+  const features = [
+    {
+      icon: <Layers className="w-6 h-6 text-primary" />,
+      title: "Contexto Único",
+      desc: "A operação inteira consome a mesma matriz. O que o Radar descobre, o agente de copy utiliza imediatamente no e-mail."
+    },
+    {
+      icon: <ShieldAlert className="w-6 h-6 text-secondary" />,
+      title: "Execução Governada",
+      desc: "As ações externas respeitam autorizações, limites e controles definidos, garantindo previsibilidade em cada publicação ou disparo."
+    },
+    {
+      icon: <Fingerprint className="w-6 h-6 text-accent" />,
+      title: "Fato vs. Inferência",
+      desc: "O sistema segrega dados empíricos do mercado de deduções de IA, tornando o limite entre evidência e dedução visível para fundamentar suas decisões."
+    }
+  ];
+
+  return (
+    <section className="py-32 relative border-t border-border/30">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="mb-20 text-center max-w-3xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <div className="font-mono text-xs uppercase tracking-[0.3em] text-success mb-6">A Prova Operacional</div>
+            <h2 className="text-4xl sm:text-5xl font-sans font-black leading-tight mb-6">
+              Capacidade Concreta.<br />Sem métricas inventadas.
+            </h2>
+            <p className="text-lg text-muted-foreground font-light">
+              Exibimos a realidade arquitetural de uma máquina desenvolvida estritamente para governança, consistência e escala, projetada para não quebrar com a complexidade do seu crescimento.
+            </p>
+          </motion.div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 justify-center">
           {features.map((f, i) => (
             <motion.div
               key={i}
@@ -334,9 +406,9 @@ function OperationalProofSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.1 }}
               transition={{ delay: i * 0.1, duration: 0.6 }}
-              className="border border-border/60 bg-background/50 p-8 rounded-3xl flex flex-col hover:border-primary/40 transition-all backdrop-blur-sm"
+              className="border border-border/60 bg-card/30 p-8 rounded-3xl flex flex-col hover:border-primary/40 transition-all backdrop-blur-sm"
             >
-              <div className="w-12 h-12 rounded-xl bg-card border border-border flex items-center justify-center mb-6 shadow-lg">
+              <div className="w-12 h-12 rounded-xl bg-background border border-border flex items-center justify-center mb-6 shadow-lg">
                 {f.icon}
               </div>
               <h3 className="text-xl font-sans font-bold mb-3 text-foreground">{f.title}</h3>
@@ -349,97 +421,9 @@ function OperationalProofSection() {
   );
 }
 
-function BreadthSection() {
-  return (
-    <section className="py-32 relative border-y border-border/30">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="mb-20 text-center max-w-3xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <div className="font-mono text-xs uppercase tracking-[0.3em] text-primary mb-6">O Escopo Funcional</div>
-            <h2 className="text-4xl sm:text-5xl font-sans font-black leading-tight mb-6">
-              Escala Canônica via <span className="text-primary">NexOS</span>
-            </h2>
-            <p className="text-lg text-muted-foreground font-light">
-              Os 64 agentes operacionais cobrem a vastidão do seu ciclo de vida. Do radar inicial à retenção final do cliente.
-            </p>
-          </motion.div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-min">
-          <BentoCard
-            colSpan="md:col-span-2"
-            icon={<Globe />}
-            title="Radar de Mercado"
-            subtitle="Inteligência de Competidores"
-            desc="O Radar Pro garante monitoramento contínuo das tendências do seu nicho (e será incluído nos primeiros 90 dias do futuro plano completo)."
-            glowColor="bg-primary/20"
-            delay={0.1}
-          />
-          <BentoCard
-            colSpan="md:col-span-1"
-            icon={<Target />}
-            title="War Room"
-            subtitle="Orquestração"
-            desc="Planejamento em janela de 30 dias. Agentes de oferta e psicologia definem a direção."
-            glowColor="bg-secondary/20"
-            delay={0.2}
-          />
-          <BentoCard
-            colSpan="md:col-span-1"
-            icon={<Users />}
-            title="SDR e CRM"
-            subtitle="Ciclo de Vida"
-            desc="Suporte, onboarding e indicações automatizados aprendendo a cada fechamento."
-            glowColor="bg-accent/20"
-            delay={0.3}
-          />
-          <BentoCard
-            colSpan="md:col-span-2"
-            icon={<Workflow />}
-            title="Mídia Paga Governada"
-            subtitle="Publicação Social"
-            desc="Ações externas rigorosamente bloqueadas até que capacidades, permissões e integrações completas (como Meta Ads) estejam garantidas."
-            glowColor="bg-secondary/20"
-            delay={0.4}
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function BentoCard({ colSpan, icon, title, subtitle, desc, glowColor, delay }: any) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.1 }}
-      transition={{ duration: 0.7, delay, ease: [0.16, 1, 0.3, 1] }}
-      className={`relative group overflow-hidden rounded-3xl border border-border/80 bg-card/60 p-8 sm:p-10 backdrop-blur-xl ${colSpan} flex flex-col justify-between hover:border-primary/30 transition-colors`}
-    >
-      <div className={`absolute -top-32 -right-32 w-64 h-64 rounded-full blur-[100px] transition-opacity duration-700 opacity-20 group-hover:opacity-60 ${glowColor}`} />
-
-      <div className="relative z-10 flex flex-col h-full">
-        <div>
-          <div className="w-14 h-14 rounded-2xl bg-background/90 border border-border flex items-center justify-center mb-8 text-foreground shadow-xl">
-            {React.cloneElement(icon, { className: "w-7 h-7" })}
-          </div>
-          <h3 className="text-2xl sm:text-3xl font-sans font-bold mb-3 tracking-tight">{title}</h3>
-          <h4 className="font-mono text-xs uppercase tracking-[0.2em] text-primary mb-6">{subtitle}</h4>
-        </div>
-        <p className="text-muted-foreground leading-relaxed text-base sm:text-lg font-light">{desc}</p>
-      </div>
-    </motion.div>
-  )
-}
-
 function CommercialSection() {
   return (
-    <section className="py-32 relative bg-card/10">
+    <section className="py-32 relative bg-card/20 border-t border-border/30">
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <motion.div
@@ -448,18 +432,18 @@ function CommercialSection() {
             viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.7 }}
           >
-            <div className="font-mono text-xs uppercase tracking-[0.3em] text-secondary mb-6">A Lógica Comercial</div>
+            <div className="font-mono text-xs uppercase tracking-[0.3em] text-secondary mb-6">Arquitetura de Valor</div>
             <h2 className="text-4xl sm:text-5xl font-sans font-black leading-tight mb-8">
-              A Licença Completa será a<br />
+              A orquestração total é a <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
-                Escolha de Maior Valor.
+                Escolha de Maior Retorno.
               </span>
             </h2>
             <p className="text-lg text-muted-foreground leading-relaxed mb-6 font-light">
-              A verdadeira genialidade do NexOS reside no contexto compartilhado. O valor se multiplica quando a operação inteira trabalha uníssona.
+              O mercado tradicional vende "soluções pontuais". Nós oferecemos coerência estrutural. No momento da abertura, a licença integral entregará a conexão de todas as fases da sua máquina de aquisição.
             </p>
             <p className="text-lg text-muted-foreground leading-relaxed mb-10 font-light">
-              No momento da abertura oficial, você poderá entrar através de capacidades avulsas (standalone), mas elas carregarão um prêmio de 30% a 50% refletindo o custo da fragmentação. A licença completa é estruturalmente o melhor caminho.
+              Após a abertura oficial, capacidades avulsas poderão ser contratadas separadamente, porém carregarão um custo 30% a 50% superior ao seu peso na licença completa — refletindo a perda de tração natural da fragmentação. O Radar Pro de Inteligência Ativa será incluído na licença completa nos 90 dias inaugurais.
             </p>
           </motion.div>
 
@@ -468,7 +452,7 @@ function CommercialSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="rounded-3xl border border-border bg-card/40 p-8 sm:p-12 shadow-2xl relative overflow-hidden backdrop-blur-xl"
+            className="rounded-3xl border border-border bg-background/50 p-8 sm:p-12 shadow-2xl relative overflow-hidden backdrop-blur-xl"
           >
             <div className="absolute -bottom-20 -right-20 opacity-10">
               <Database className="w-72 h-72" />
@@ -476,7 +460,7 @@ function CommercialSection() {
             <div className="relative z-10">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-secondary/30 bg-secondary/10 mb-8">
                 <span className="font-mono text-xs uppercase tracking-[0.2em] text-secondary font-semibold">
-                  Estrutura Futura
+                  Mapeamento Futuro
                 </span>
               </div>
               <h3 className="text-3xl font-sans font-bold mb-10 tracking-tight">O Custo de Não Integrar</h3>
@@ -485,16 +469,16 @@ function CommercialSection() {
                 <div className="flex justify-between items-end border-b border-border/50 pb-4">
                   <div>
                     <span className="block text-foreground font-semibold mb-1">Módulos Avulsos</span>
-                    <span className="block text-xs font-mono text-muted-foreground uppercase">Fragmentado</span>
+                    <span className="block text-xs font-mono text-muted-foreground uppercase">Retenção de Silos</span>
                   </div>
                   <span className="font-mono text-destructive font-bold">+30% a 50%</span>
                 </div>
                 <div className="flex justify-between items-end pt-2">
                   <div>
                     <span className="block text-xl text-primary font-bold mb-1">Licença Completa NexOS</span>
-                    <span className="block text-xs font-mono text-primary/70 uppercase tracking-widest">Acesso Unificado</span>
+                    <span className="block text-xs font-mono text-primary/70 uppercase tracking-widest">Execução Alinhada</span>
                   </div>
-                  <span className="font-sans text-xl font-bold text-foreground">Maior Valor</span>
+                  <span className="font-sans text-xl font-bold text-foreground">Melhor Proposta</span>
                 </div>
               </div>
             </div>
@@ -510,27 +494,27 @@ function ObjectionSection() {
     <section className="py-32 relative border-t border-border/30">
       <div className="max-w-7xl mx-auto px-6">
         <div className="mb-20 text-center max-w-3xl mx-auto">
-          <div className="font-mono text-xs uppercase tracking-[0.3em] text-accent mb-6">Clarificando a Operação</div>
+          <div className="font-mono text-xs uppercase tracking-[0.3em] text-accent mb-6">Transparência Tática</div>
           <h2 className="text-4xl sm:text-5xl font-sans font-black leading-tight mb-6">
-            Dúvidas Fundamentais.
+            Lidando com a Realidade.
           </h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           <ObjectionCard
             title="A Inteligência Artificial soará robótica?"
-            desc="Não. Os agentes do NexOS operam com contexto profundo sobre o seu mercado, seu tom de voz e diretrizes de marca, evitando o padrão genérico de interfaces comuns."
+            desc="Apenas se não possuir direcionamento. Nossos agentes escrevem baseados num dossiê denso da sua estratégia comercial, objeções reais da audiência e o tom específico aprovado pela sua marca."
           />
           <ObjectionCard
-            title="Perderei o controle de orçamentos e anúncios?"
-            desc="O sistema é fundamentado na governança rígida. Todas as ações externas exigem sua aprovação explícita. Nada é gasto ou publicado sem o seu consentimento."
+            title="Perderei o controle de orçamentos e aprovações?"
+            desc="O sistema é fundamentado na governança rígida. As ações externas respeitam autorizações, limites e controles definidos por você, garantindo que a operação escale com segurança."
           />
           <ObjectionCard
-            title="Serei forçado a assinar todos os módulos?"
-            desc="O NexOS é flexível. Embora a orquestração total seja o caminho de maior retorno, permitiremos a contratação de componentes avulsos no futuro."
+            title="Terei acesso à interface se eu não assinar o pacote completo?"
+            desc="Sim. Módulos que você não assinar no futuro estarão visíveis como somente-leitura. O valor total reside na arquitetura destravada e operando unida."
           />
           <ObjectionCard
-            title="Como a estrutura lida com meus clientes de agência?"
-            desc="Utilizamos Workspaces isolados. A inteligência, os dados e o faturamento de cada operação que você atende permanecem em ambientes separados."
+            title="Isso é apropriado para Agências de Lançamento?"
+            desc="Sim. Construímos workspaces logicamente isolados. Assim, a inteligência consolidada de um cliente nunca influencia ou cruza dados confidenciais com as demais operações de sua agência."
           />
         </div>
       </div>
@@ -565,13 +549,13 @@ function AnticipationSection() {
           <div className="relative z-10 text-center max-w-3xl mx-auto">
             <Lock className="w-12 h-12 text-primary mx-auto mb-6" />
             <h2 className="text-3xl sm:text-4xl font-sans font-black leading-tight mb-6 text-foreground">
-              O Lançamento Oficial<br />Requer Perfeição.
+              O Lançamento Exige Responsabilidade.
             </h2>
             <p className="text-lg text-muted-foreground font-light mb-8">
-              O NexOS não é um experimento frágil. O checkout público está rigorosamente bloqueado até que todo o ecossistema — especialmente a integração de anúncios governada na rede Meta — esteja homologado para proteger sua marca em alta escala. Não apressaremos a infraestrutura.
+              O checkout público está e permanecerá fechado. Só abriremos os pagamentos quando a integração profunda e governada com o ecossistema Meta Ads estiver homologada com os controles e verificações necessários, protegendo contas corporativas. Não apressaremos a base arquitetural.
             </p>
             <p className="text-base text-foreground/80 font-mono tracking-wide uppercase">
-              O momento exige antecipação. Somente a lista prioritária receberá o acesso.
+              O acesso aos convites será liberado exclusivamente para a lista prioritária.
             </p>
           </div>
         </div>
@@ -582,47 +566,37 @@ function AnticipationSection() {
 
 function CtaSection({ openCapture }: { openCapture: () => void }) {
   return (
-    <section className="py-32 relative overflow-hidden">
+    <section className="py-32 relative overflow-hidden border-t border-border/50">
       <div className="absolute inset-0 bg-primary/5" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] bg-primary/20 blur-[150px] rounded-full mix-blend-screen pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] bg-primary/10 blur-[150px] rounded-full mix-blend-screen pointer-events-none" />
 
       <div className="max-w-4xl mx-auto px-6 relative z-10 text-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-        >
-          <Zap className="w-16 h-16 text-primary mx-auto mb-8 drop-shadow-[0_0_15px_rgba(0,229,255,0.6)]" />
-          <h2 className="text-5xl sm:text-7xl font-sans font-black leading-tight mb-8 tracking-tight">
-            A Vanguarda Começa Aqui.
-          </h2>
-          <p className="text-xl text-muted-foreground mb-12 font-light">
-            Entre para a lista prioritária, consuma os materiais preparatórios e posicione sua operação antes da abertura oficial dos portões.
-          </p>
-          <Button onClick={openCapture} aria-label="Entrar na Lista Prioritária" data-testid="footer-cta-button" className="h-16 px-12 text-lg font-bold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 hover:shadow-[0_0_30px_rgba(0,229,255,0.5)] transition-all font-sans tracking-wide">
-            Entrar na Lista Prioritária
-          </Button>
-        </motion.div>
+        <h2 className="text-4xl sm:text-6xl font-sans font-black leading-tight mb-8">
+          Pronto para unificar<br />sua execução comercial?
+        </h2>
+        <Button onClick={openCapture} className="h-16 px-10 text-base sm:text-lg font-bold rounded-xl bg-foreground text-background hover:bg-foreground/90 transition-all font-sans tracking-wide shadow-2xl">
+          Entrar na Lista de Abertura <ArrowRight className="ml-2 h-6 w-6" />
+        </Button>
       </div>
     </section>
-  )
+  );
 }
 
 function Footer() {
   return (
-    <footer className="py-12 border-t border-border bg-background relative z-10">
-      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <img src={nexosLogo} alt="NexOS" className="h-8 w-8 object-contain opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all" />
-          <span className="font-sans text-sm font-medium text-muted-foreground">© {new Date().getFullYear()} NexOS AI. Todos os direitos reservados.</span>
+    <footer className="border-t border-border/40 py-12 bg-background relative z-10">
+      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="flex items-center gap-2">
+          <img src={nexosLogo} alt="NexOS Logo" className="h-6 w-6 object-contain grayscale opacity-50" />
+          <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">© 2025 NexOS</span>
         </div>
-        <div className="flex gap-8">
-          <Link href="/terms" aria-label="Termos de Serviço" data-testid="footer-terms-link" className="text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Termos</Link>
-          <Link href="/privacy" aria-label="Política de Privacidade" data-testid="footer-privacy-link" className="text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Privacidade</Link>
-          <Link href="/data-deletion" aria-label="Exclusão de Dados" data-testid="footer-data-link" className="text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Dados</Link>
+        <div className="flex flex-wrap justify-center gap-6">
+          <Link href="/terms" className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">Termos de Serviço</Link>
+          <Link href="/privacy" className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">Política de Privacidade</Link>
+          <Link href="/data-deletion" className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">Exclusão de Dados</Link>
         </div>
       </div>
     </footer>
-  )
+  );
 }
+// End of landing page.

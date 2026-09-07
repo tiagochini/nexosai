@@ -14,7 +14,6 @@ function getSeqId(): string | null {
     return null;
   }
 }
-
 function getUtms(): Record<string, string> {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -97,9 +96,12 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl
     const utms  = getUtms();
 
     const payload: Record<string, string> = {
-      phone: formatPhone(phone),
       name:  name.trim(),
       email: email.trim().toLowerCase(),
+      whatsapp: formatPhone(phone),
+      segment: "individual",
+      source: "landing-plf",
+      ...(seqId ? { phone: formatPhone(phone) } : {}), // Fallback map for seq endpoint if it strictly expects phone
       utmSource:   utms.utm_source   ?? "landing",
       utmMedium:   utms.utm_medium   ?? "organico",
       utmCampaign: utms.utm_campaign ?? "guia_gratuito",
@@ -109,22 +111,23 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl
     };
 
     try {
-      if (seqId) {
-        const res = await fetch(`${API_BASE}/lead-capture/${seqId}`, {
-          method:  "POST",
-          headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify(payload),
-        });
-        if (!res.ok && res.status !== 409) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data?.error ?? "Erro ao processar registro.");
-        }
+      const endpoint = seqId ? `${API_BASE}/lead-capture/${seqId}` : `${API_BASE}/waitlist`;
+
+      const res = await fetch(endpoint, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(payload),
+      });
+
+      if (!res.ok && res.status !== 409) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error ?? "Não foi possível confirmar seu registro. Verifique os dados e tente novamente.");
       }
+
       setStep("success");
       onSuccess?.();
-      setTimeout(openWA, 1500);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Tente novamente.";
+      const message = err instanceof Error ? err.message : "Ocorreu um erro inesperado. Tente novamente.";
       setErrorMsg(message);
       setStep("error");
     }
@@ -153,7 +156,6 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="relative z-10 w-full sm:max-w-md bg-card/90 backdrop-blur-2xl border border-border/80 rounded-t-3xl sm:rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden"
           >
-            {/* Glossy top highlight */}
             <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
 
             <div className="flex items-start justify-between px-8 pt-8 pb-2">
@@ -162,10 +164,10 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl
                   Acesso Antecipado NexOS
                 </div>
                 <h2 className="font-sans font-black text-2xl tracking-tight text-foreground leading-snug whitespace-pre-line">
-                  {title ?? "Garanta seu Lugar\nna Lista Prioritária"}
+                  {title ?? "Entre na Lista de Abertura"}
                 </h2>
                 <p className="font-sans text-sm text-muted-foreground mt-2 font-light">
-                  {subtitle ?? "Você será notificado assim que as licenças estiverem liberadas. Receba o diagnóstico estratégico no WhatsApp."}
+                  {subtitle ?? "O sistema está em fase de homologação final. Cadastre-se para ser notificado assim que o checkout oficial for liberado. Sem custos."}
                 </p>
               </div>
               <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-white/5">
@@ -239,11 +241,11 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl
                   )}
 
                   <Button type="submit" className="w-full h-14 mt-4 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_20px_rgba(0,229,255,0.4)] rounded-xl font-sans font-bold text-base transition-all tracking-wide flex items-center justify-center gap-2">
-                    <Users className="h-5 w-5" /> Entrar na Lista Prioritária
+                    <Users className="h-5 w-5" /> Entrar na Lista de Abertura
                   </Button>
 
                   <p className="font-sans text-xs text-center text-muted-foreground/60 leading-relaxed pt-2 font-light">
-                    Sem compromisso comercial prévio. Sua privacidade preservada.
+                    Sua privacidade é preservada. Não enviamos spam.
                   </p>
                 </motion.form>
               )}
@@ -252,8 +254,8 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-12 flex flex-col items-center gap-6 text-center">
                   <Loader2 className="h-12 w-12 text-primary animate-spin drop-shadow-[0_0_10px_rgba(0,229,255,0.5)]" />
                   <div>
-                    <div className="font-sans font-bold text-xl tracking-tight">Reservando Lugar...</div>
-                    <div className="font-mono text-xs text-muted-foreground mt-2 uppercase tracking-widest">Preparando seu diagnóstico</div>
+                    <div className="font-sans font-bold text-xl tracking-tight">Confirmando lugar...</div>
+                    <div className="font-mono text-xs text-muted-foreground mt-2 uppercase tracking-widest">Salvando seu registro</div>
                   </div>
                 </motion.div>
               )}
@@ -265,13 +267,13 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl
                   </div>
                   <div>
                     <div className="font-sans font-black text-2xl tracking-tight mb-2">Lugar Reservado!</div>
-                    <div className="font-sans text-base text-muted-foreground leading-relaxed font-light">
-                      Você está na lista prioritária.<br />
-                      Redirecionando para o WhatsApp para acesso aos materiais.
+                    <div className="font-sans text-sm text-muted-foreground leading-relaxed font-light">
+                      O seu registro foi confirmado na lista de abertura. Nenhum valor foi cobrado.<br /><br />
+                      Você receberá um e-mail de aviso com antecedência assim que os acessos estiverem liberados e o lançamento iniciar.
                     </div>
                   </div>
-                  <Button onClick={openWA} className="w-full h-14 bg-foreground text-background hover:bg-foreground/90 rounded-xl font-sans font-bold text-base transition-all flex items-center justify-center gap-2 mt-2">
-                    Acessar WhatsApp <ArrowRight className="h-5 w-5" />
+                  <Button onClick={openWA} className="w-full h-14 bg-foreground text-background hover:bg-foreground/90 rounded-xl font-sans font-bold text-base transition-all flex items-center justify-center gap-2 mt-4">
+                    Falar com equipe no WhatsApp <ArrowRight className="h-5 w-5" />
                   </Button>
                 </motion.div>
               )}
@@ -282,3 +284,4 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl
     </AnimatePresence>
   );
 }
+// End of lead capture modal.
