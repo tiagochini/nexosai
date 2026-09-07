@@ -17,6 +17,7 @@
     "test:meta-e2e-harness": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-meta-e2e-harness.ts",
     "test:meta-webhook-retry": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-meta-webhook-retry.ts",
     "test:social-post-ownership": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-social-post-ownership.ts",
+    "test:presence-carousel": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-presence-carousel.ts",
     "test:e2e-seed": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/e2e-seed.ts",
     "test:e2e-cleanup": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/e2e-cleanup.ts",
     "test:e2e-fixtures": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-e2e-fixtures.ts",

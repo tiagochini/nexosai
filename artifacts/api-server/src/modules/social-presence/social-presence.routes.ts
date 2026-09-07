@@ -76,6 +76,7 @@ const postPatchSchema = z.object({
   visualDirection: z.string().max(2000).optional(),
   videoScript: z.string().max(4000).nullable().optional(),
   mediaUrls: z.array(z.string().url()).max(10).optional(),
+  storyboardUrls: z.array(z.string().url()).max(10).optional(),
   postingTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   scheduledFor: z.string().optional(),
   status: z.enum(["cancelled", "published", "draft"]).optional(),
@@ -230,16 +231,23 @@ router.post("/posts/:id/media/generate-storyboard", async (req, res): Promise<vo
   const schema = z.object({
     visualDirection: z.string().max(2000).optional(),
     videoScript: z.string().max(4000).nullable().optional(),
+    slideCount: z.number().int().min(2).max(10).optional(),
   });
   const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Dados de storyboard inválidos. slideCount deve estar entre 2 e 10." });
+    return;
+  }
   // Salvar edições se fornecidas
-  if (parsed.success && (parsed.data.visualDirection !== undefined || parsed.data.videoScript !== undefined)) {
+  if (parsed.data.visualDirection !== undefined || parsed.data.videoScript !== undefined) {
     await updatePost(req.auth.workspaceId, id, {
       visualDirection: parsed.data.visualDirection,
       videoScript: parsed.data.videoScript,
     }).catch(() => {});
   }
-  const post = await generatePostStoryboard(req.auth.workspaceId, id, req.log);
+  const post = await generatePostStoryboard(req.auth.workspaceId, id, req.log, {
+    slideCount: parsed.data.slideCount,
+  });
   if (!post) { res.status(404).json({ error: "Post não encontrado." }); return; }
   res.status(202).json({ post });
 });

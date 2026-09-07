@@ -88,7 +88,10 @@ export async function publishToInstagram(
     const mediaUrls = post.mediaUrls as string[];
     const caption = buildCaption(post.caption, post.hashtags as string[]);
 
-    if (post.postType === "carousel" && mediaUrls.length > 1) {
+    if (post.postType === "carousel") {
+      if (mediaUrls.length < 2 || mediaUrls.length > 10) {
+        return { success: false, error: "Instagram carousels require between 2 and 10 media items." };
+      }
       // Create child containers
       const childIds: string[] = [];
       for (const url of mediaUrls) {
@@ -105,6 +108,12 @@ export async function publishToInstagram(
           }
         );
         childIds.push(child.id);
+        // A carousel parent can only reference children once each is processed.
+        await waitForInstagramContainer(
+          child.id,
+          token,
+          isVideo ? 300_000 : 30_000,
+        );
       }
       // Create carousel container
       const container = await metaGraphRequest<{ id: string }>(
@@ -224,6 +233,40 @@ export async function publishToFacebook(
 
     const caption = buildCaption(post.caption, post.hashtags as string[]);
     const mediaUrls = post.mediaUrls as string[];
+
+    if (post.postType === "carousel") {
+      if (mediaUrls.length < 2 || mediaUrls.length > 10) {
+        return { success: false, error: "Facebook albums require between 2 and 10 media items." };
+      }
+
+      // Facebook albums are published by first creating unpublished page photos,
+      // then attaching their media IDs to one feed post. This preserves slide order.
+      const photoIds: string[] = [];
+      for (const url of mediaUrls) {
+        const photo = await metaGraphRequest<{ id: string }>(`/${pageId}/photos`, {
+          method: "POST",
+          body: JSON.stringify({
+            url,
+            published: false,
+            access_token: token,
+          }),
+        });
+        photoIds.push(photo.id);
+      }
+      const result = await metaGraphRequest<{ id: string }>(`/${pageId}/feed`, {
+        method: "POST",
+        body: JSON.stringify({
+          message: caption,
+          attached_media: photoIds.map((media_fbid) => ({ media_fbid })),
+          access_token: token,
+        }),
+      });
+      return {
+        success: true,
+        platformPostId: result.id,
+        platformUrl: `https://www.facebook.com/${result.id}`,
+      };
+    }
 
     let endpoint = `/${pageId}/feed`;
     const body: Record<string, unknown> = {

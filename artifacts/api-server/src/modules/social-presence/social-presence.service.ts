@@ -920,6 +920,7 @@ export interface PostPatch {
   visualDirection?: string;
   videoScript?: string | null;
   mediaUrls?: string[];
+  storyboardUrls?: string[];
   postingTime?: string;
   scheduledFor?: string;
   status?: "cancelled" | "published" | "draft";
@@ -953,6 +954,13 @@ export async function updatePost(
   if (patch.visualDirection !== undefined) set.visualDirection = patch.visualDirection;
   if (patch.videoScript !== undefined) set.videoScript = patch.videoScript;
   if (patch.mediaUrls !== undefined) set.mediaUrls = patch.mediaUrls;
+  if (patch.storyboardUrls !== undefined) {
+    const isCarousel = ["carousel", "feed_carousel"].includes(post.format);
+    if (isCarousel && patch.storyboardUrls.length > 0 && patch.storyboardUrls.length < 2) {
+      throw new Error("Carrosséis exigem ao menos 2 slides.");
+    }
+    set.storyboardUrls = patch.storyboardUrls;
+  }
   if (patch.postingTime !== undefined) {
     set.postingTime = patch.postingTime;
     set.scheduledFor = computeScheduledFor(
@@ -984,7 +992,10 @@ export async function updatePost(
   const [updated] = await db
     .update(socialPresencePostsTable)
     .set(set)
-    .where(eq(socialPresencePostsTable.id, postId))
+    .where(and(
+      eq(socialPresencePostsTable.id, postId),
+      eq(socialPresencePostsTable.workspaceId, workspaceId),
+    ))
     .returning();
   return updated;
 }
@@ -1337,7 +1348,10 @@ export async function publishPostNow(
         errorMessage: `Bloqueado após ${MANUAL_RETRY_LIMIT} retentativas manuais. Intervenção técnica necessária.`,
         manualRetryCount: newManualRetryCount,
       })
-      .where(eq(socialPresencePostsTable.id, postId))
+      .where(and(
+        eq(socialPresencePostsTable.id, postId),
+        eq(socialPresencePostsTable.workspaceId, workspaceId),
+      ))
       .returning();
 
     emitWorkspaceAlert(
@@ -1371,7 +1385,10 @@ export async function publishPostNow(
       retryCount: 0,
       manualRetryCount: newManualRetryCount,
     })
-    .where(eq(socialPresencePostsTable.id, postId))
+    .where(and(
+      eq(socialPresencePostsTable.id, postId),
+      eq(socialPresencePostsTable.workspaceId, workspaceId),
+    ))
     .returning();
 
   // Emit a warning alert when the operator is on their last allowed manual retry.
@@ -1568,13 +1585,14 @@ export async function publishDuePresencePosts(): Promise<void> {
             return url;
           }),
         );
-        const needsMedia = post.platform === "instagram" || post.platform === "tiktok";
+        const isCarouselFormat = ["carousel", "feed_carousel"].includes(post.format);
+        const needsMedia = post.platform === "instagram" || post.platform === "tiktok" || isCarouselFormat;
         // Stories can be image or video depending on storyMediaType chosen by the operator.
         // storyMediaType === "image" → treat as image (storyboard → approve); otherwise → video.
         const isStoryImage = post.format === "story" && (post as Record<string, unknown>).storyMediaType === "image";
         const isVideoFormat = (post.format === "reel" || post.format === "feed_video" || post.format === "story") && !isStoryImage;
         // Image formats are Instagram feed posts that don't need video (includes image-mode stories)
-        const isImageFormat = (!isVideoFormat && post.platform === "instagram") || isStoryImage;
+        const isImageFormat = (!isVideoFormat && (post.platform === "instagram" || isCarouselFormat)) || isStoryImage;
         if (needsMedia && mediaUrls.length === 0) {
           // ── Vídeo: gerenciar pipeline de storyboard → aprovação → vídeo ───────
           if (isVideoFormat) {
@@ -1758,6 +1776,13 @@ export async function publishDuePresencePosts(): Promise<void> {
             }
             // null / idle / failed → auto-gerar agora
             log.info({ postId: post.id, platform: post.platform, format: post.format }, "presence: sem mídia — iniciando geração automática de imagem (draft p/ aprovação)");
+            // Carousels must always be generated through the multi-slide pipeline.
+            // It persists a 2-slide ordered storyboard by default and requires the
+            // operator to approve the whole sequence before scheduling.
+            if (isCarouselFormat) {
+              await generatePostStoryboard(post.workspaceId, post.id, log);
+              continue;
+            }
             await db
               .update(socialPresencePostsTable)
               .set({ status: "draft", mediaGenStatus: "storyboard_generating", errorMessage: null, storyboardUrls: [] })
@@ -1898,7 +1923,7 @@ export async function publishDuePresencePosts(): Promise<void> {
             if (post.format === "feed_video" && !hasVideoMedia) return "feed_image";
             if (post.format === "reel") return "reel";
             if (post.format === "story") return "story";
-            if (post.format === "carousel") return "carousel";
+            if (["carousel", "feed_carousel"].includes(post.format)) return "carousel";
             if (post.format === "feed_video") return "feed_video";
             return "feed_image";
           })() as never,
@@ -2059,11 +2084,17 @@ export async function preGeneratePresenceMedia(): Promise<void> {
     for (const post of upcoming) {
       try {
         // Only Instagram and TikTok need storyboard-based media
-        const needsMedia = post.platform === "instagram" || post.platform === "tiktok";
+        const isCarouselFormat = ["carousel", "feed_carousel"].includes(post.format);
+        const needsMedia = post.platform === "instagram" || post.platform === "tiktok" || isCarouselFormat;
         if (!needsMedia) continue;
 
         const rawMediaUrls = Array.isArray(post.mediaUrls) ? (post.mediaUrls as string[]) : [];
         if (rawMediaUrls.length > 0) continue; // already has media — skip
+
+        if (isCarouselFormat) {
+          await generatePostStoryboard(post.workspaceId, post.id, log);
+          continue;
+        }
 
         const isStoryImage =
           post.format === "story" && (post as Record<string, unknown>).storyMediaType === "image";
@@ -2456,6 +2487,7 @@ export async function generatePostStoryboard(
   workspaceId: string,
   postId: string,
   log: Logger,
+  options: { slideCount?: number } = {},
 ): Promise<SocialPresencePost | null> {
   const [post] = await db
     .select()
@@ -2463,55 +2495,84 @@ export async function generatePostStoryboard(
     .where(and(eq(socialPresencePostsTable.id, postId), eq(socialPresencePostsTable.workspaceId, workspaceId)))
     .limit(1);
   if (!post) return null;
+  if (
+    options.slideCount !== undefined &&
+    (options.slideCount < 2 || options.slideCount > 10)
+  ) {
+    throw new Error("Carrosséis aceitam entre 2 e 10 slides.");
+  }
 
   const [updating] = await db
     .update(socialPresencePostsTable)
     .set({ mediaGenStatus: "storyboard_generating", storyboardUrls: [], mediaJobId: null, mediaJobProvider: null })
-    .where(eq(socialPresencePostsTable.id, postId))
+    .where(and(
+      eq(socialPresencePostsTable.id, postId),
+      eq(socialPresencePostsTable.workspaceId, workspaceId),
+    ))
     .returning();
 
   setImmediate(async () => {
     try {
       const businessContext = await fetchBusinessContextForWorkspace(workspaceId);
-      const { buf: imgBuf, mimeType, isAI } = await generateStoryboardFrame(
-        post.visualDirection,
-        post.caption,
-        post.platform,
-        post.format,
-        log,
-        post.videoScript,
-        businessContext,
-      );
-
-      // Upload imediatamente ao GCS — nunca armazenar base64 no banco
-      const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg").replace("svg+xml", "svg") ?? "png";
-      const key = presenceStoryboardObjectKey(workspaceId, postId, 0).replace(/\.png$/, `.${ext}`);
-      await uploadBufferToGCS(imgBuf, key, mimeType);
-      const serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`;
+      const isCarousel = ["carousel", "feed_carousel"].includes(post.format);
+      const slideCount = isCarousel ? options.slideCount ?? 2 : 1;
+      // Generate and persist sequentially so the JSON array is the publishing order.
+      // The shared brief makes slides a coherent narrative rather than duplicate images.
+      const frames: Array<{ serveUrl: string; isAI: boolean }> = [];
+      for (let slideIndex = 0; slideIndex < slideCount; slideIndex++) {
+        const slideBrief = isCarousel
+          ? `${post.visualDirection}\n\nCAROUSEL SERIES: slide ${slideIndex + 1} of ${slideCount}. Keep the same visual identity, subject, palette and typography across the ordered series. This slide must advance the narrative and not duplicate another slide.`
+          : post.visualDirection;
+        const { buf: imgBuf, mimeType, isAI } = await generateStoryboardFrame(
+          slideBrief,
+          post.caption,
+          post.platform,
+          post.format,
+          log,
+          post.videoScript,
+          businessContext,
+        );
+        const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg").replace("svg+xml", "svg") ?? "png";
+        const key = presenceStoryboardObjectKey(workspaceId, postId, slideIndex).replace(/\.png$/, `.${ext}`);
+        await uploadBufferToGCS(imgBuf, key, mimeType);
+        frames.push({
+          serveUrl: `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`,
+          isAI,
+        });
+      }
+      const storyboardUrls = frames.map((frame) => frame.serveUrl);
+      const isAI = frames.every((frame) => frame.isAI);
 
       // Determinar se o formato é de imagem (não precisa de vídeo)
       const isVideoFmt = ["reel", "feed_video"].includes(post.format) ||
         (post.format === "story" && (post as Record<string, unknown>).storyMediaType !== "image");
 
-      if (isAI && !isVideoFmt) {
+      if (isAI && !isVideoFmt && !isCarousel) {
         // Imagem IA real → auto-aprovação direta, pronto para publicar
         await db
           .update(socialPresencePostsTable)
-          .set({ mediaUrls: [serveUrl], storyboardUrls: [serveUrl], mediaGenStatus: null, errorMessage: null, status: "scheduled" })
-          .where(eq(socialPresencePostsTable.id, postId));
-        log.info({ postId, key }, "presence: storyboard on-demand IA auto-aprovado ✓");
+          .set({ mediaUrls: storyboardUrls, storyboardUrls, mediaGenStatus: null, errorMessage: null, status: "scheduled" })
+          .where(and(eq(socialPresencePostsTable.id, postId), eq(socialPresencePostsTable.workspaceId, workspaceId)));
+        log.info({ postId }, "presence: storyboard on-demand IA auto-aprovado ✓");
       } else if (isAI && isVideoFmt) {
         await db
           .update(socialPresencePostsTable)
-          .set({ mediaGenStatus: "storyboard_ready", storyboardUrls: [serveUrl] })
-          .where(eq(socialPresencePostsTable.id, postId));
-        log.info({ postId, key }, "presence: storyboard on-demand de vídeo pronto ✓");
+          .set({ mediaGenStatus: "storyboard_ready", storyboardUrls })
+          .where(and(eq(socialPresencePostsTable.id, postId), eq(socialPresencePostsTable.workspaceId, workspaceId)));
+        log.info({ postId }, "presence: storyboard on-demand de vídeo pronto ✓");
+      } else if (isAI) {
+        // Carousel requires explicit approval of its complete ordered sequence.
+        await db
+          .update(socialPresencePostsTable)
+          .set({ mediaGenStatus: "storyboard_ready", storyboardUrls, errorMessage: null })
+          .where(and(eq(socialPresencePostsTable.id, postId), eq(socialPresencePostsTable.workspaceId, workspaceId)));
+        log.info({ postId, slides: storyboardUrls.length }, "presence: carousel storyboard ready for approval ✓");
       } else {
         await db
           .update(socialPresencePostsTable)
-          .set({ mediaGenStatus: "storyboard_draft", storyboardUrls: [serveUrl] })
-          .where(eq(socialPresencePostsTable.id, postId));
-        log.info({ postId, key }, "presence: rascunho SVG on-demand criado");
+          .set({ mediaGenStatus: "storyboard_draft", storyboardUrls })
+          .where(and(eq(socialPresencePostsTable.id, postId), eq(socialPresencePostsTable.workspaceId, workspaceId)));
+        log.info({ postId, slides: storyboardUrls.length }, "presence: rascunho SVG on-demand criado");
       }
     } catch (err) {
       log.warn({ err, postId }, "presence: storyboard generation failed");
@@ -2521,7 +2582,7 @@ export async function generatePostStoryboard(
           mediaGenStatus: "failed",
           errorMessage: `Storyboard falhou: ${err instanceof Error ? err.message : String(err)}`,
         })
-        .where(eq(socialPresencePostsTable.id, postId));
+        .where(and(eq(socialPresencePostsTable.id, postId), eq(socialPresencePostsTable.workspaceId, workspaceId)));
     }
   });
 
@@ -2930,7 +2991,7 @@ export async function attachUploadedMedia(
   const [updated] = await db
     .update(socialPresencePostsTable)
     .set({ mediaUrls: [serveUrl], mediaGenStatus: null, mediaJobId: null })
-    .where(eq(socialPresencePostsTable.id, postId))
+    .where(and(eq(socialPresencePostsTable.id, postId), eq(socialPresencePostsTable.workspaceId, workspaceId)))
     .returning();
   return updated;
 }
@@ -2951,44 +3012,45 @@ export async function approveStoryboardAsImage(
     .limit(1);
   if (!post) return null;
 
-  const storyboardEntry = (post.storyboardUrls as string[] | null)?.[0];
-  if (!storyboardEntry) {
+  const isCarousel = ["carousel", "feed_carousel"].includes(post.format);
+  const storyboardEntries = (post.storyboardUrls as string[] | null) ?? [];
+  if (storyboardEntries.length === 0) {
     throw new Error("Storyboard ainda não disponível. Aguarde a geração ou gere novamente.");
   }
+  if (isCarousel && (storyboardEntries.length < 2 || storyboardEntries.length > 10)) {
+    throw new Error("Carrosséis exigem entre 2 e 10 slides ordenados antes da aprovação.");
+  }
 
-  let serveUrl: string;
-
-  if (storyboardEntry.startsWith("data:image/")) {
-    // Legado: base64 ainda no banco — fazer upload agora
-    const match = storyboardEntry.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
-    if (!match) throw new Error("Formato interno do storyboard inválido.");
-    const mimeType = match[1];
-    const b64 = match[2];
-    const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg").replace("svg+xml", "svg") ?? "png";
-    const buf = Buffer.from(b64, "base64");
-    const key = presenceMediaObjectKey(workspaceId, postId, `${Date.now()}-storyboard.${ext}`);
-    await uploadBufferToGCS(buf, key, mimeType);
-    serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`;
-    log.info({ postId, key, mimeType }, "presence: storyboard (legado base64) enviado ao GCS ✓");
-  } else if (storyboardEntry.includes("/api/presence/media/serve")) {
-    // Novo caminho: já foi enviado ao GCS durante a geração — reutilizar URL
-    // Bloquear SVG: Instagram/TikTok rejeitam SVG com "Only photo or video accepted"
+  const entriesToApprove = isCarousel ? storyboardEntries : [storyboardEntries[0]!];
+  const mediaUrls: string[] = [];
+  for (let index = 0; index < entriesToApprove.length; index++) {
+    const storyboardEntry = entriesToApprove[index]!;
+    if (storyboardEntry.startsWith("data:image/")) {
+      const match = storyboardEntry.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+      if (!match) throw new Error("Formato interno do storyboard inválido.");
+      const mimeType = match[1];
+      const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg").replace("svg+xml", "svg") ?? "png";
+      const key = presenceMediaObjectKey(workspaceId, postId, `${Date.now()}-storyboard-${index}.${ext}`);
+      await uploadBufferToGCS(Buffer.from(match[2], "base64"), key, mimeType);
+      mediaUrls.push(`${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`);
+      continue;
+    }
+    if (!storyboardEntry.includes("/api/presence/media/serve")) {
+      throw new Error("Formato do storyboard não reconhecido.");
+    }
     if (storyboardEntry.includes(".svg") || post.mediaGenStatus === "storyboard_draft") {
       throw new Error(
         "Este é um rascunho gerado sem IA (SVG) e não pode ser publicado diretamente. " +
         "Use 'Tentar gerar imagem novamente' para obter uma imagem real, ou faça upload de uma imagem/vídeo próprio.",
       );
     }
-    serveUrl = storyboardEntry;
-    log.info({ postId, serveUrl }, "presence: storyboard já no GCS — aprovado como imagem final ✓");
-  } else {
-    throw new Error("Formato do storyboard não reconhecido.");
+    mediaUrls.push(storyboardEntry);
   }
 
   const [updated] = await db
     .update(socialPresencePostsTable)
     .set({
-      mediaUrls: [serveUrl],
+      mediaUrls,
       mediaGenStatus: null,
       storyboardUrls: [],
       mediaJobId: null,
@@ -2996,7 +3058,7 @@ export async function approveStoryboardAsImage(
       errorMessage: null,
       status: "scheduled",
     })
-    .where(eq(socialPresencePostsTable.id, postId))
+    .where(and(eq(socialPresencePostsTable.id, postId), eq(socialPresencePostsTable.workspaceId, workspaceId)))
     .returning();
   return updated;
 }

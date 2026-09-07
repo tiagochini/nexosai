@@ -60,6 +60,11 @@ export function MediaProductionDrawer({
   const [persona, setPersona] = useState<Persona | null>(null);
   const [editedDirection, setEditedDirection] = useState(initialPost.visualDirection);
   const [editedScript, setEditedScript] = useState(initialPost.videoScript ?? "");
+  const [carouselSlideCount, setCarouselSlideCount] = useState(
+    ["carousel", "feed_carousel"].includes(initialPost.format) && initialPost.storyboardUrls?.length
+      ? initialPost.storyboardUrls.length
+      : 2
+  );
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // Avatar selector state
@@ -147,6 +152,7 @@ export function MediaProductionDrawer({
           body: JSON.stringify({
             visualDirection: editedDirection,
             videoScript: editedScript || null,
+            ...(["carousel", "feed_carousel"].includes(currentPost.format) ? { slideCount: carouselSlideCount } : {}),
           }),
         },
       );
@@ -340,6 +346,18 @@ export function MediaProductionDrawer({
     }
   };
 
+  const handleUpdateStoryboardUrls = async (newUrls: string[]) => {
+    try {
+      const { post: updated } = await customFetch<{ post: MediaPresencePost }>(
+        `/api/presence/posts/${currentPost.id}`,
+        { method: "PATCH", body: JSON.stringify({ storyboardUrls: newUrls }) }
+      );
+      updatePost(updated);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Erro ao atualizar slides.");
+    }
+  };
+
   const content = (
     <div
       className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 sm:items-center sm:p-4"
@@ -411,9 +429,12 @@ export function MediaProductionDrawer({
               editedDirection={editedDirection}
               editedScript={editedScript}
               storyMediaType={storyMediaType}
+              carouselSlideCount={carouselSlideCount}
+              onCarouselSlideCountChange={setCarouselSlideCount}
               onEditDirection={setEditedDirection}
               onEditScript={setEditedScript}
               onChangeStoryMediaType={changeStoryMediaType}
+              onUpdateStoryboardUrls={handleUpdateStoryboardUrls}
               onGenerateStoryboard={generateStoryboard}
               onGenerateVideo={generateVideo}
               onApproveImage={approveImage}
@@ -464,9 +485,12 @@ function AITabContent({
   editedDirection,
   editedScript,
   storyMediaType,
+  carouselSlideCount,
+  onCarouselSlideCountChange,
   onEditDirection,
   onEditScript,
   onChangeStoryMediaType,
+  onUpdateStoryboardUrls,
   onGenerateStoryboard,
   onGenerateVideo,
   onApproveImage,
@@ -492,9 +516,12 @@ function AITabContent({
   editedDirection: string;
   editedScript: string;
   storyMediaType: "image" | "video";
+  carouselSlideCount: number;
+  onCarouselSlideCountChange: (count: number) => void;
   onEditDirection: (v: string) => void;
   onEditScript: (v: string) => void;
   onChangeStoryMediaType: (type: "image" | "video") => void;
+  onUpdateStoryboardUrls: (urls: string[]) => void;
   onGenerateStoryboard: () => void;
   onGenerateVideo: () => void;
   onApproveImage: () => void;
@@ -517,6 +544,7 @@ function AITabContent({
   const step = post.mediaGenStatus;
   // Formats that produce a final image (not video).
   // Stories can be either image or video — decided by storyMediaType.
+  const isCarouselFormat = ["carousel", "feed_carousel"].includes(post.format);
   const isImageFormat =
     post.format === "story"
       ? storyMediaType === "image"
@@ -726,7 +754,7 @@ function AITabContent({
           <span className="rounded-full bg-primary w-5 h-5 flex items-center justify-center text-[10px] text-primary-foreground font-bold shrink-0">1</span>
           <span className="font-medium text-foreground">Direção Visual</span>
           <ArrowRight className="h-3 w-3 shrink-0" />
-          <span className="opacity-50 flex items-center gap-1"><span className="rounded-full border border-border w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0">2</span>{isImageFormat ? "Imagem" : "Storyboard"}</span>
+          <span className="opacity-50 flex items-center gap-1"><span className="rounded-full border border-border w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0">2</span>{isImageFormat ? (isCarouselFormat ? "Imagens" : "Imagem") : "Storyboard"}</span>
           {!isImageFormat && <>
             <ArrowRight className="h-3 w-3 shrink-0 opacity-50" />
             <span className="opacity-50 flex items-center gap-1"><span className="rounded-full border border-border w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0">3</span>Vídeo</span>
@@ -734,6 +762,28 @@ function AITabContent({
         </div>
 
         <div className="space-y-3">
+          {isCarouselFormat && (
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5 flex justify-between">
+                <span>Número de Slides</span>
+                <span className="text-foreground">{carouselSlideCount}</span>
+              </label>
+              <input
+                type="range"
+                min="2"
+                max="10"
+                step="1"
+                value={carouselSlideCount}
+                onChange={(e) => onCarouselSlideCountChange(Number(e.target.value))}
+                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+              />
+              <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                <span>2</span>
+                <span>10</span>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1.5">
               Direção Visual
@@ -766,12 +816,12 @@ function AITabContent({
 
         <Button onClick={onGenerateStoryboard} disabled={busy || !editedDirection.trim()} className="w-full">
           {busy
-            ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Gerando imagem...</>
-            : <><Wand2 className="mr-2 h-4 w-4" /> {isImageFormat ? "Gerar Imagem com IA" : "Gerar Storyboard (baixa resolução)"}</>}
+            ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Gerando {isCarouselFormat ? "slides" : "imagem"}...</>
+            : <><Wand2 className="mr-2 h-4 w-4" /> {isImageFormat ? (isCarouselFormat ? `Gerar ${carouselSlideCount} Slides com IA` : "Gerar Imagem com IA") : "Gerar Storyboard (baixa resolução)"}</>}
         </Button>
         <p className="text-center text-xs text-muted-foreground">
           {isImageFormat
-            ? "A IA gera a imagem final baseada na sua direção visual. Você aprova antes de publicar."
+            ? (isCarouselFormat ? "A IA gera os slides do carrossel baseada na sua direção visual. Você pode revisar e reordenar antes de publicar." : "A IA gera a imagem final baseada na sua direção visual. Você aprova antes de publicar.")
             : "A IA cria um storyboard de baixa resolução para aprovação antes de gerar o vídeo final."}
         </p>
       </div>
@@ -802,26 +852,33 @@ function AITabContent({
           <span className="opacity-50">Direção Visual</span>
           <ArrowRight className="h-3 w-3 shrink-0" />
           <span className="rounded-full bg-primary w-5 h-5 flex items-center justify-center text-[10px] text-primary-foreground font-bold shrink-0">2</span>
-          <span className="font-medium text-foreground">{isImageFormat ? "Imagem Gerada" : "Storyboard"}</span>
+          <span className="font-medium text-foreground">{isImageFormat ? (isCarouselFormat ? "Slides Gerados" : "Imagem Gerada") : "Storyboard"}</span>
           {!isImageFormat && <>
             <ArrowRight className="h-3 w-3 shrink-0 opacity-50" />
             <span className="opacity-50 flex items-center gap-1"><span className="rounded-full border border-border w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0">3</span>Vídeo</span>
           </>}
         </div>
 
-        <div className="rounded-xl border border-border overflow-hidden bg-background/50">
-          {post.storyboardUrls?.[0] ? (
-            <img
-              src={post.storyboardUrls[0]}
-              alt={isImageFormat ? "Imagem gerada pela IA" : "Storyboard preview"}
-              className="w-full object-cover max-h-80"
-            />
-          ) : (
-            <div className="flex items-center justify-center h-40 text-muted-foreground">
-              <ImageIcon className="h-8 w-8 opacity-40" />
-            </div>
-          )}
-        </div>
+        {isCarouselFormat ? (
+          <CarouselEditor
+            urls={post.storyboardUrls || []}
+            onUpdate={onUpdateStoryboardUrls}
+          />
+        ) : (
+          <div className="rounded-xl border border-border overflow-hidden bg-background/50">
+            {post.storyboardUrls?.[0] ? (
+              <img
+                src={post.storyboardUrls[0]}
+                alt={isImageFormat ? "Imagem gerada pela IA" : "Storyboard preview"}
+                className="w-full object-cover max-h-80"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-40 text-muted-foreground">
+                <ImageIcon className="h-8 w-8 opacity-40" />
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="rounded-lg border border-border bg-background/40 p-3 text-xs text-muted-foreground">
           <strong className="text-foreground">Direção visual:</strong> {post.visualDirection}
@@ -829,10 +886,10 @@ function AITabContent({
 
         <div className="flex flex-col gap-2">
           {isImageFormat ? (
-            <Button onClick={onApproveImage} disabled={busy} className="w-full">
+            <Button onClick={onApproveImage} disabled={busy || (isCarouselFormat && (post.storyboardUrls?.length || 0) < 2)} className="w-full">
               {busy
-                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando imagem...</>
-                : <><CheckCircle2 className="mr-2 h-4 w-4" /> Usar esta imagem no post</>}
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando {isCarouselFormat ? "slides" : "imagem"}...</>
+                : <><CheckCircle2 className="mr-2 h-4 w-4" /> {isCarouselFormat ? "Aprovar conjunto de slides" : "Usar esta imagem no post"}</>}
             </Button>
           ) : (
             <Button onClick={onGenerateVideo} disabled={busy} className="w-full">
@@ -842,7 +899,7 @@ function AITabContent({
             </Button>
           )}
           <Button variant="outline" onClick={onReset} disabled={busy} className="w-full text-xs">
-            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Editar direção e {isImageFormat ? "gerar nova imagem" : "regenerar storyboard"}
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Editar direção e {isImageFormat ? (isCarouselFormat ? "gerar novos slides" : "gerar nova imagem") : "regenerar storyboard"}
           </Button>
         </div>
         {!isImageFormat && (
@@ -1065,6 +1122,114 @@ function AITabContent({
       <Button onClick={onReset} variant="outline" className="mt-2">
         <Wand2 className="mr-2 h-4 w-4" /> Começar produção
       </Button>
+    </div>
+  );
+}
+
+function CarouselEditor({
+  urls,
+  onUpdate,
+}: {
+  urls: string[];
+  onUpdate: (urls: string[]) => void;
+}) {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  if (!urls.length) return null;
+
+  const currentUrl = urls[activeIndex];
+
+  const handleRemove = (index: number) => {
+    const next = [...urls];
+    next.splice(index, 1);
+    if (activeIndex >= next.length) {
+      setActiveIndex(Math.max(0, next.length - 1));
+    }
+    onUpdate(next);
+  };
+
+  const handleMove = (index: number, direction: -1 | 1) => {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= urls.length) return;
+    const next = [...urls];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    if (activeIndex === index) setActiveIndex(nextIndex);
+    else if (activeIndex === nextIndex) setActiveIndex(index);
+    onUpdate(next);
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Main Preview */}
+      <div className="rounded-xl border border-border overflow-hidden bg-black/50 relative aspect-[4/5] sm:aspect-video flex items-center justify-center">
+        <img
+          src={currentUrl}
+          alt={`Slide ${activeIndex + 1}`}
+          className="w-full h-full object-contain"
+        />
+        <div className="absolute top-3 left-3 bg-black/60 text-white text-xs font-mono px-2 py-1 rounded-md backdrop-blur-sm">
+          {activeIndex + 1} / {urls.length}
+        </div>
+
+        {urls.length > 1 && (
+          <>
+            <button
+              onClick={() => setActiveIndex(prev => Math.max(0, prev - 1))}
+              disabled={activeIndex === 0}
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black disabled:opacity-30 disabled:cursor-not-allowed backdrop-blur-sm transition-colors"
+            >
+              <ArrowRight className="h-4 w-4 rotate-180" />
+            </button>
+            <button
+              onClick={() => setActiveIndex(prev => Math.min(urls.length - 1, prev + 1))}
+              disabled={activeIndex === urls.length - 1}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black disabled:opacity-30 disabled:cursor-not-allowed backdrop-blur-sm transition-colors"
+            >
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Thumbnails Row */}
+      <div className="flex gap-2 overflow-x-auto pb-2 snap-x hide-scrollbar">
+        {urls.map((url, i) => (
+          <div
+            key={url + i}
+            className={`relative w-20 h-20 shrink-0 rounded-lg overflow-hidden border-2 snap-start group cursor-pointer transition-colors ${
+              i === activeIndex ? "border-primary" : "border-transparent hover:border-primary/50"
+            }`}
+            onClick={() => setActiveIndex(i)}
+          >
+            <img src={url} alt={`Thumb ${i + 1}`} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+              <button
+                className="w-5 h-5 rounded bg-black/80 hover:bg-primary flex items-center justify-center text-white disabled:opacity-30"
+                onClick={(e) => { e.stopPropagation(); handleMove(i, -1); }}
+                disabled={i === 0}
+              >
+                <ArrowRight className="h-3 w-3 rotate-180" />
+              </button>
+              <button
+                className="w-5 h-5 rounded bg-destructive/80 hover:bg-destructive flex items-center justify-center text-white"
+                onClick={(e) => { e.stopPropagation(); handleRemove(i); }}
+              >
+                <X className="h-3 w-3" />
+              </button>
+              <button
+                className="w-5 h-5 rounded bg-black/80 hover:bg-primary flex items-center justify-center text-white disabled:opacity-30"
+                onClick={(e) => { e.stopPropagation(); handleMove(i, 1); }}
+                disabled={i === urls.length - 1}
+              >
+                <ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
+            <div className="absolute top-1 left-1 bg-black/80 text-white text-[9px] px-1 rounded">
+              {i + 1}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
