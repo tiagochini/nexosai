@@ -1,0 +1,240 @@
+Sim. Isso deve ser tratado como **upsell ou capacidade incluída apenas nos planos superiores**, porque gera custo variável contínuo por campanha, concorrente, frequência e volume de oportunidades analisadas.
+
+## Custo atual estimado
+
+A implementação atual executa, por campanha regional ativa:
+
+- uma varredura leve por dia;
+- uma varredura detalhada por semana;
+- Conselho NexOS somente quando uma oportunidade é selecionada;
+- banco, evidências, classificação e relatórios;
+- nenhuma chamada de IA contínua por pessoa observada.
+
+Isso equivale a aproximadamente **34 varreduras por campanha/mês**.
+
+### Preços de referência
+
+O coletor utiliza `gpt-5-mini`:
+
+- entrada: aproximadamente **US$ 0,25 por milhão de tokens**;
+- saída: aproximadamente **US$ 2 por milhão de tokens**;
+- Web Search: aproximadamente **US$ 10 por mil chamadas** para modelos de raciocínio, mais tokens de conteúdo pesquisado.
+
+Fontes oficiais:
+
+- [OpenAI GPT-5 mini](https://developers.openai.com/api/docs/models/gpt-5-mini)
+- [OpenAI API pricing](https://developers.openai.com/api/docs/pricing)
+
+Uma resposta pode realizar mais de uma chamada interna de busca. Por isso, não devemos calcular como se cada varredura custasse exatamente um centavo.
+
+## Estimativa mensal por campanha monitorada
+
+| Operação | Custo provável |
+|---|---:|
+| 30 varreduras leves | US$ 0,35–1,10 |
+| 4–5 varreduras detalhadas | US$ 0,10–0,40 |
+| Processamento e relatórios | US$ 0,05–0,30 |
+| Conselhos de interação | US$ 0,01–0,10 por oportunidade |
+| Banco, logs e filas | baixo, mas cresce com retenção |
+| **Base por campanha/mês** | **US$ 0,50–2,00** |
+
+Esse valor é para a frequência atual e busca pública citada. Ainda não inclui eventual cobrança específica de APIs sociais, proxies autorizados ou fornecedores externos.
+
+## Estimativa por workspace
+
+### Workspace pequeno
+
+- uma campanha monitorada;
+- até 3 concorrentes;
+- 20 Conselhos NexOS por mês.
+
+**Custo estimado:** US$ 1–4/mês.
+
+### Workspace profissional
+
+- três campanhas;
+- 10 concorrentes;
+- 100 Conselhos NexOS;
+- mais histórico e relatórios.
+
+**Custo estimado:** US$ 5–15/mês.
+
+### Workspace intensivo
+
+- dez campanhas;
+- dezenas de concorrentes;
+- 500 Conselhos NexOS;
+- múltiplas contas e regiões.
+
+**Custo estimado:** US$ 20–60/mês.
+
+Esses números devem ser tratados como faixa inicial. O custo real precisa ser medido em produção por 30 dias.
+
+---
+
+# Monitoramento de alta frequência muda tudo
+
+O custo cresce conforme a frequência.
+
+| Frequência | Execuções mensais por campanha |
+|---|---:|
+| Semanal | 4–5 |
+| Diário | 30 |
+| A cada 6 horas | 120 |
+| A cada hora | 720 |
+| A cada 15 minutos | 2.880 |
+
+Monitorar a cada 15 minutos custa aproximadamente **85 vezes mais** que o scheduler atual de 34 execuções mensais.
+
+Uma operação de alta frequência pode chegar a:
+
+- **US$ 30–150 por campanha/mês**;
+- mais custos de APIs sociais;
+- mais armazenamento;
+- mais geração de relatórios;
+- mais Conselhos NexOS;
+- mais risco operacional.
+
+Portanto, “detectar campanha do concorrente em menos de 15 minutos” deve ser um produto premium, ativado apenas durante janelas de lançamento.
+
+---
+
+# Modelo comercial recomendado
+
+## 1. Radar Essencial — incluído nos planos superiores
+
+- uma campanha monitorada;
+- até 3 concorrentes;
+- varredura semanal;
+- relatório para Mercado e Social Media;
+- sem Conselho de Interação ou com pequena franquia;
+- retenção limitada.
+
+Custo NexOS: muito baixo.
+
+Serve para demonstrar valor e incentivar upgrade.
+
+## 2. Radar Competitivo Pro — upsell
+
+Sugestão de preço:
+
+- **US$ 49–99 por workspace/mês**;
+- ou equivalente na moeda do cliente.
+
+Inclui:
+
+- varredura diária;
+- até 10 concorrentes;
+- concorrentes diretos, indiretos e substitutos;
+- relatórios para Social Media e Lançamentos;
+- classificação de oportunidades;
+- 100 Conselhos NexOS por mês;
+- Central de Interações assistidas;
+- múltiplas regiões.
+
+Custo provável: US$ 5–15.  
+Margem bruta potencial: aproximadamente 70–90%, dependendo do suporte.
+
+## 3. Competitive Intelligence Scale
+
+Sugestão de preço:
+
+- **US$ 199–499 por workspace/mês**.
+
+Inclui:
+
+- várias campanhas;
+- mais concorrentes;
+- vários países e idiomas;
+- múltiplas contas sociais;
+- 500–2.000 Conselhos;
+- relatórios executivos;
+- alertas rápidos;
+- histórico mais longo;
+- integrações oficiais disponíveis;
+- monitoramento reforçado durante lançamentos.
+
+## 4. War Room de Lançamento
+
+Cobrança adicional por período:
+
+- **US$ 99–499 por lançamento**;
+- duração de 7, 14 ou 30 dias.
+
+Inclui:
+
+- monitoramento a cada 15–60 minutos;
+- alertas de mudanças;
+- análise de ofertas concorrentes;
+- recomendações rápidas;
+- criação de respostas e campanhas;
+- Conselho NexOS prioritário.
+
+Esse formato é importante porque o custo elevado ocorre durante uma janela específica, não durante o ano inteiro.
+
+---
+
+# Como cobrar corretamente
+
+Não vender apenas “quantidade de concorrentes”. A unidade econômica deve combinar:
+
+```text
+campanhas monitoradas
+× frequência de varredura
+× concorrentes
+× regiões/idiomas
++ Conselhos NexOS utilizados
++ retenção
++ adaptadores oficiais premium
+```
+
+## Créditos incluídos
+
+Sugestão de unidades:
+
+- 1 varredura leve = 1 crédito de Radar;
+- 1 varredura detalhada = 3–5 créditos;
+- 1 Conselho NexOS = 1 crédito;
+- 1 War Room de 24 horas = franquia própria;
+- relatórios agregados não geram cobrança adicional quando reutilizam dados existentes.
+
+O usuário deve ver:
+
+- créditos utilizados;
+- próxima varredura;
+- custo previsto;
+- campanhas ativas;
+- oportunidades analisadas;
+- economia gerada pela deduplicação.
+
+---
+
+# Proteções de margem
+
+Para evitar custo invisível:
+
+1. Cobrar por campanha monitorada, não apenas por workspace.
+2. Limitar concorrentes por plano.
+3. Manter varredura diária como padrão.
+4. Usar alta frequência somente em War Rooms.
+5. Não reanalisar evidência já processada.
+6. Usar fingerprints e cache.
+7. Consolidar vários concorrentes em uma única busca quando possível.
+8. Usar Conselho NexOS somente em oportunidades qualificadas.
+9. Colocar teto mensal de Conselhos.
+10. Pausar automaticamente workspaces sem campanha ativa.
+11. Expirar evidências conforme a retenção contratada.
+12. Medir custo real por workspace e campanha.
+
+# Recomendação final
+
+**Sim, deve ser upsell.**
+
+Eu estruturaria assim:
+
+- relatório semanal básico: incluído em planos premium;
+- monitoramento diário + Radar + Conselho: **add-on Pro**;
+- alta frequência e inteligência de lançamento: **War Room separado**;
+- grandes operações: plano Scale com contrato de uso.
+
+O custo bruto de IA é relativamente baixo na configuração atual. O valor comercial, porém, é alto porque o produto entrega inteligência contínua, campanhas mais pontuais e uma fila de oportunidades qualificadas. Portanto, o preço deve ser baseado no **valor produzido e na intensidade operacional**, não apenas em um pequeno markup sobre tokens.
