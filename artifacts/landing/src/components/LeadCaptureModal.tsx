@@ -161,16 +161,15 @@ export default function LeadCaptureModal({ open, onClose, closed = false, onCapa
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="relative z-10 w-full sm:max-w-md bg-card/90 backdrop-blur-2xl border border-border/80 rounded-t-3xl sm:rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden"
+            className="relative z-10 w-full sm:max-w-md bg-card border-2 border-border shadow-2xl overflow-hidden"
           >
-            <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
 
             <div className="flex items-start justify-between px-8 pt-8 pb-2">
               <div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary mb-3 font-semibold">
-                  Acesso Antecipado NexOS
+                <div className="font-mono text-xs uppercase tracking-widest text-primary mb-3 font-semibold">
+                  Acesso Antecipado
                 </div>
-                <h2 className="font-sans font-black text-2xl tracking-tight text-foreground leading-snug whitespace-pre-line">
+                <h2 className="font-display font-bold text-2xl tracking-tight text-foreground leading-snug whitespace-pre-line">
                   {title ?? "Entre na Lista de Abertura"}
                 </h2>
                 <p className="font-sans text-sm text-muted-foreground mt-2 font-light">
@@ -187,17 +186,17 @@ export default function LeadCaptureModal({ open, onClose, closed = false, onCapa
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-8 text-center space-y-5">
                   <div className="font-sans font-black text-2xl">Turma inicial encerrada</div>
                   <p className="font-sans text-sm text-muted-foreground leading-relaxed">As 100 vagas iniciais de pré-lançamento foram encerradas. Não há data prevista para reabertura e as condições futuras podem ser diferentes.</p>
-                  <Button onClick={openWA} className="w-full h-14 bg-foreground text-background hover:bg-foreground/90 rounded-xl font-sans font-bold">Falar com equipe no WhatsApp <ArrowRight className="ml-2 h-5 w-5" /></Button>
+                  <Button onClick={openWA} className="w-full h-14 bg-foreground text-background hover:bg-foreground/90 font-display font-bold">Falar com equipe no WhatsApp <ArrowRight className="ml-2 h-5 w-5" /></Button>
                 </motion.div>
               ) : (step === "form" || step === "error") && (
                 <motion.form
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   onSubmit={handleSubmit}
-                  className="space-y-4"
+                  className="space-y-5"
                 >
-                  <div className="space-y-1.5">
-                    <label className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-semibold ml-1">
+                  <div className="space-y-2">
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
                       Nome completo
                     </label>
                     <div className="relative group">
@@ -208,13 +207,13 @@ export default function LeadCaptureModal({ open, onClose, closed = false, onCapa
                         onChange={e => setName(e.target.value)}
                         placeholder="Como você se chama?"
                         required
-                        className="w-full bg-background/50 border border-border/80 rounded-xl pl-11 pr-4 h-12 font-sans text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
+                        className="w-full bg-background border border-border pl-11 pr-4 h-12 font-sans text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary transition-colors rounded-none"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-semibold ml-1">
+                  <div className="space-y-2">
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
                       Email principal
                     </label>
                     <div className="relative group">
@@ -225,13 +224,13 @@ export default function LeadCaptureModal({ open, onClose, closed = false, onCapa
                         onChange={e => setEmail(e.target.value)}
                         placeholder="seu@email.com"
                         required
-                        className="w-full bg-background/50 border border-border/80 rounded-xl pl-11 pr-4 h-12 font-sans text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
+                        className="w-full bg-background border border-border pl-11 pr-4 h-12 font-sans text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary transition-colors rounded-none"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-semibold ml-1">
+                  <div className="space-y-2">
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
                       WhatsApp
                     </label>
                     <div className="relative group">
@@ -242,18 +241,18 @@ export default function LeadCaptureModal({ open, onClose, closed = false, onCapa
                         onChange={e => setPhone(e.target.value)}
                         placeholder="(11) 99999-9999"
                         required
-                        className="w-full bg-background/50 border border-border/80 rounded-xl pl-11 pr-4 h-12 font-sans text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
+                        className="w-full bg-background border border-border pl-11 pr-4 h-12 font-sans text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary transition-colors rounded-none"
                       />
                     </div>
                   </div>
 
                   {errorMsg && (
-                    <motion.p initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="font-sans text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3">
+                    <motion.p initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="font-sans text-sm text-destructive bg-destructive/10 border border-destructive px-4 py-3">
                       {errorMsg}
                     </motion.p>
                   )}
 
-                  <Button type="submit" className="w-full h-14 mt-4 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_20px_rgba(0,229,255,0.4)] rounded-xl font-sans font-bold text-base transition-all tracking-wide flex items-center justify-center gap-2">
+                  <Button type="submit" className="w-full h-14 mt-4 bg-primary text-primary-foreground hover:bg-primary/90 font-display font-bold text-base transition-colors tracking-wide flex items-center justify-center gap-2 rounded-none">
                     <Users className="h-5 w-5" /> Reservar uma das 100 vagas iniciais
                   </Button>
 
@@ -265,9 +264,9 @@ export default function LeadCaptureModal({ open, onClose, closed = false, onCapa
 
               {step === "loading" && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-12 flex flex-col items-center gap-6 text-center">
-                  <Loader2 className="h-12 w-12 text-primary animate-spin drop-shadow-[0_0_10px_rgba(0,229,255,0.5)]" />
+                  <Loader2 className="h-12 w-12 text-primary animate-spin" />
                   <div>
-                    <div className="font-sans font-bold text-xl tracking-tight">Confirmando lugar...</div>
+                    <div className="font-display font-bold text-xl tracking-tight">Confirmando lugar...</div>
                     <div className="font-mono text-xs text-muted-foreground mt-2 uppercase tracking-widest">Salvando seu registro</div>
                   </div>
                 </motion.div>
@@ -275,17 +274,17 @@ export default function LeadCaptureModal({ open, onClose, closed = false, onCapa
 
               {step === "success" && (
                 <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="py-8 flex flex-col items-center gap-6 text-center">
-                  <div className="w-20 h-20 rounded-full bg-success/10 border border-success/30 flex items-center justify-center shadow-[0_0_30px_rgba(0,255,163,0.2)]">
-                    <CheckCircle2 className="h-10 w-10 text-success" />
+                  <div className="w-20 h-20 rounded-none bg-primary/10 border-2 border-primary flex items-center justify-center">
+                    <CheckCircle2 className="h-10 w-10 text-primary" />
                   </div>
                   <div>
-                    <div className="font-sans font-black text-2xl tracking-tight mb-2">Lugar Reservado!</div>
+                    <div className="font-display font-black text-2xl tracking-tight mb-2">Lugar Reservado!</div>
                     <div className="font-sans text-sm text-muted-foreground leading-relaxed font-light">
                       Você reservou uma das 100 vagas iniciais de pré-lançamento. Nenhum valor foi cobrado.<br /><br />
                       Os detalhes do lançamento e do contato chegarão por e-mail ou WhatsApp. Depois que as 100 vagas iniciais encerrarem, não há data para reabertura e as condições futuras podem ser diferentes.
                     </div>
                   </div>
-                  <Button onClick={openWA} className="w-full h-14 bg-foreground text-background hover:bg-foreground/90 rounded-xl font-sans font-bold text-base transition-all flex items-center justify-center gap-2 mt-4">
+                  <Button onClick={openWA} className="w-full h-14 bg-foreground text-background hover:bg-foreground/90 rounded-none font-display font-bold text-base transition-colors flex items-center justify-center gap-2 mt-4">
                     Falar com equipe no WhatsApp <ArrowRight className="h-5 w-5" />
                   </Button>
                 </motion.div>

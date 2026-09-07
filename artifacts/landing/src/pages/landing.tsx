@@ -3,20 +3,20 @@ import { motion } from "framer-motion";
 import LeadCaptureModal from "@/components/LeadCaptureModal";
 import { Button } from "@/components/ui/button";
 import nexosLogo from "/nexos-logo.png";
-import {
-  ArrowRight, Users, Video, Workflow, BookOpen, Globe, Database,
-  ShieldCheck, Zap, Activity, Target, ShieldAlert, Fingerprint,
-  Layers, LockKeyhole, RefreshCcw, Lock, Infinity as InfinityIcon, HelpCircle,
-  TrendingUp, MonitorPlay, Presentation
-} from "lucide-react";
 import { Link } from "wouter";
+import {
+  ArrowRight, Users, Video, Workflow,
+  Activity, Target, Layers, Lock, ShieldCheck, Search, Megaphone, CheckSquare
+} from "lucide-react";
 
 export default function LandingPage() {
   const [isCaptureOpen, setCaptureOpen] = useState(false);
   const [closed, setClosed] = useState(false);
+
   const handleCapacityReached = useCallback(() => {
     setClosed(true);
   }, []);
+
   const openCapture = () => {
     if (closed) {
       window.open("https://wa.me/message/NBJH4EXPAV2EN1", "_blank", "noopener,noreferrer");
@@ -24,59 +24,55 @@ export default function LandingPage() {
     }
     setCaptureOpen(true);
   };
+
   const closeCapture = () => setCaptureOpen(false);
 
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col selection:bg-primary/30 scroll-smooth">
-      <Background />
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col selection:bg-primary selection:text-primary-foreground scroll-smooth bg-grid-pattern relative">
+      <div className="noise-overlay" />
       <Nav openCapture={openCapture} closed={closed} />
 
-      <main className="flex-1">
+      <main className="flex-1 border-x-2 border-border max-w-[1400px] w-full mx-auto bg-background">
         <HeroSection openCapture={openCapture} closed={closed} />
-        <PainSection />
-        <MechanismSection />
-        <TransformationSection openCapture={openCapture} closed={closed} />
-        <BreadthSection />
-        <OperationalProofSection />
-        <CommercialSection />
-        <ObjectionSection />
-        <AnticipationSection />
-        <CtaSection openCapture={openCapture} closed={closed} />
+        <RealWorkSection />
+        <ArchitectureSection />
+        <OperationalScopeSection />
+        <ProofOfLogicSection />
+        <ScarcitySection openCapture={openCapture} closed={closed} />
       </main>
 
       <Footer />
-      <LeadCaptureModal open={isCaptureOpen} onClose={closeCapture} closed={closed} onCapacityReached={handleCapacityReached} />
-    </div>
-  );
-}
-function Background() {
-  return (
-    <div className="fixed inset-0 z-[-1] overflow-hidden pointer-events-none bg-background">
-      <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] bg-primary/10 blur-[140px] rounded-full mix-blend-screen" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] bg-secondary/10 blur-[130px] rounded-full mix-blend-screen" />
-      <div className="absolute top-[40%] left-[60%] w-[30vw] h-[30vw] bg-accent/5 blur-[100px] rounded-full mix-blend-screen" />
-      <div className="noise-overlay" />
+      <LeadCaptureModal
+        open={isCaptureOpen}
+        onClose={closeCapture}
+        closed={closed}
+        onCapacityReached={handleCapacityReached}
+      />
     </div>
   );
 }
 
 function Nav({ openCapture, closed }: { openCapture: () => void; closed: boolean }) {
   return (
-    <nav className="fixed top-0 inset-x-0 z-50 border-b border-border/40 bg-background/60 backdrop-blur-xl transition-all">
-      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <img src={nexosLogo} alt="NexOS" className="h-10 w-10 object-contain drop-shadow-[0_0_12px_rgba(0,229,255,0.4)]" />
+    <nav className="sticky top-0 z-50 border-b-2 border-border bg-background/95 backdrop-blur-sm">
+      <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between border-x-2 border-border bg-background">
+        <div className="flex items-center gap-4">
+          <img src={nexosLogo} alt="NexOS" className="h-10 w-10 object-contain grayscale contrast-200" />
           <div className="hidden sm:block">
-            <div className="font-sans font-bold text-xl tracking-wide uppercase">NexOS</div>
-            <div className="font-mono text-[10px] uppercase tracking-widest text-primary/80">Sistema Operacional</div>
+            <div className="font-display font-black text-2xl tracking-tighter uppercase leading-none">NEXOS</div>
+            <div className="font-mono text-[10px] uppercase tracking-widest text-primary font-bold">Agência Autônoma</div>
           </div>
         </div>
         <div className="flex items-center gap-6">
-          <Link href="/login" aria-label="Entrar no sistema" data-testid="nav-login-link" className="font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground hidden sm:block transition-colors">
-            Entrar
+          <Link href="/login" aria-label="Entrar no sistema" data-testid="nav-login-link" className="font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-primary hidden sm:block transition-colors font-bold">
+            [ Log in ]
           </Link>
-          <Button onClick={openCapture} aria-label="Entrar na Lista de Abertura" data-testid="nav-guide-button" className="font-mono text-xs uppercase tracking-widest font-bold h-10 px-6 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_20px_rgba(0,229,255,0.4)] transition-all rounded-md">
-            {closed ? "Turma inicial encerrada" : "Lista de Abertura"}
+          <Button
+            onClick={openCapture}
+            data-testid="nav-guide-button"
+            className="font-mono text-xs uppercase tracking-widest font-bold h-12 px-6 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors rounded-none"
+          >
+            {closed ? "Vagas Esgotadas" : "Reservar Vaga"}
           </Button>
         </div>
       </div>
@@ -85,271 +81,107 @@ function Nav({ openCapture, closed }: { openCapture: () => void; closed: boolean
 }
 
 function HeroSection({ openCapture, closed }: { openCapture: () => void; closed: boolean }) {
-  const scrollToMechanism = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const scrollToWork = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    document.getElementById('mecanismo')?.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('trabalho-concreto')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
-    <section className="relative min-h-[100dvh] flex flex-col justify-center pt-20 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6 w-full relative z-10">
+    <section className="relative min-h-[90dvh] flex flex-col justify-center border-b-2 border-border overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--primary)_0%,transparent_15%)] opacity-20 pointer-events-none" />
+
+      <div className="px-6 py-20 relative z-10 w-full">
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-          className="max-w-4xl"
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="max-w-5xl"
         >
-          <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full border border-primary/20 bg-primary/5 mb-8 backdrop-blur-md">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_10px_rgba(0,229,255,0.8)]" />
-            <span className="font-mono text-[11px] sm:text-xs uppercase tracking-[0.2em] text-primary font-semibold">
-              Sistema Operacional Comercial
+          <div className="inline-flex items-center gap-3 px-4 py-2 border-2 border-primary bg-primary/5 mb-10">
+            <span className="w-2 h-2 bg-primary animate-pulse" />
+            <span className="font-mono text-xs uppercase tracking-[0.2em] text-primary font-bold">
+              OPERAÇÃO COMERCIAL PRONTA
             </span>
           </div>
 
-          <h1 className="text-5xl sm:text-7xl lg:text-[5.5rem] font-sans font-black leading-[1.05] tracking-tight mb-8">
-            Pare de contratar partes<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-secondary to-accent pb-2">
-              para executar uma estratégia inteira.
-            </span>
+          <h1 className="text-5xl sm:text-7xl lg:text-[7rem] font-display font-black leading-[0.95] tracking-tighter mb-8 uppercase text-foreground">
+            Pare de contratar partes <br/>
+            <span className="text-primary">para executar uma<br/>estratégia inteira.</span>
           </h1>
 
-          <p className="text-lg sm:text-2xl text-muted-foreground max-w-2xl leading-relaxed mb-12 font-light">
-            Sua decisão de negócio não pode se perder na troca de mãos. Da inteligência à retenção, a primeira operação comercial centralizada onde a execução nunca dilui a sua visão.
+          <p className="text-lg sm:text-2xl text-muted-foreground max-w-3xl leading-relaxed mb-12 font-sans font-medium">
+            Da pesquisa de mercado inicial à retenção do cliente. Uma agência autônoma que cria sua oferta, produz as páginas, edita os vídeos, roda os anúncios no Meta Ads e gerencia seu CRM — sem você precisar conectar ferramentas ou explicar o produto de novo a cada etapa.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button onClick={openCapture} aria-label="Entrar na Lista de Abertura" data-testid="hero-cta-button" className="h-14 px-8 text-sm sm:text-base font-bold rounded-lg bg-foreground text-background hover:bg-foreground/90 transition-all font-sans tracking-wide">
-              {closed ? "Turma inicial encerrada" : "Reservar vaga inicial"} <ArrowRight className="ml-2 h-5 w-5" />
+            <Button onClick={openCapture} data-testid="hero-cta-button" className="h-16 px-10 text-base font-display font-bold rounded-none bg-foreground text-background hover:bg-muted-foreground transition-colors uppercase tracking-wide">
+              {closed ? "Turma inicial encerrada" : "Garantir Vaga de Abertura"} <ArrowRight className="ml-3 h-5 w-5" />
             </Button>
-            <Button variant="outline" onClick={scrollToMechanism} aria-label="Ver como a operação funciona" className="h-14 px-8 text-sm sm:text-base font-semibold rounded-lg border-border bg-card/30 hover:bg-card hover:border-primary/50 transition-all text-foreground backdrop-blur-md">
-              Ver como a operação funciona
+            <Button variant="outline" onClick={scrollToWork} className="h-16 px-10 text-base font-display font-bold rounded-none border-2 border-border bg-transparent hover:bg-card transition-colors text-foreground uppercase tracking-wide">
+              Ver Trabalho Concreto
             </Button>
           </div>
-          <p className="mt-5 font-mono text-xs uppercase tracking-wider text-muted-foreground">
-            {closed
-              ? "As 100 vagas iniciais foram encerradas. Reabertura sem data prevista; condições atuais podem não permanecer."
-              : "A abertura inicial terá apenas 100 vagas de pré-lançamento."}
-          </p>
-        </motion.div>
-      </div>
 
-      <div className="absolute right-[-15%] top-[10%] w-[70%] h-[90%] pointer-events-none opacity-30 mix-blend-screen hidden lg:block">
-        <div className="w-full h-full bg-[radial-gradient(circle_at_center,rgba(138,43,226,0.15)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_at_center,black_10%,transparent_60%)] animate-[pulse_6s_ease-in-out_infinite]" />
-      </div>
-    </section>
-  );
-}
-
-function PainSection() {
-  return (
-    <section className="py-32 relative">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.7, ease: "easeOut" }}
-          >
-            <div className="font-mono text-xs uppercase tracking-[0.3em] text-destructive mb-6">A Exaustão da Fragmentação</div>
-            <h2 className="text-4xl sm:text-5xl font-sans font-bold leading-tight mb-8">
-              Você é o gargalo que <br />
-              <span className="text-destructive">traduz a mesma estratégia</span><br />
-              para cinco áreas diferentes.
-            </h2>
-            <p className="text-lg text-muted-foreground leading-relaxed mb-8 font-light">
-              O custo real da sua operação não está nas mensalidades. Está na perda de tração diária. O trabalho braçal para cobrir os buracos da operação está devorando a sua margem de lucro e a sua energia como fundador.
-            </p>
-            <div className="space-y-5 border-l border-border/50 pl-6 ml-2">
-              {[
-                "A agência terceirizada que não entende o produto ou erra o tom da marca.",
-                "O e-mail de vendas que dispara fora de sincronia com o anúncio atual.",
-                "O gestor de tráfego operando às cegas sem retroalimentação do seu CRM.",
-                "Dezenas de assinaturas de software isolados cobrando por assento."
-              ].map((item, i) => (
-                <div key={i} className="flex items-start gap-4">
-                  <div className="w-1.5 h-1.5 rounded-full bg-destructive mt-2 shrink-0 shadow-[0_0_8px_rgba(255,51,102,0.8)]" />
-                  <span className="font-mono text-sm sm:text-base text-foreground/80 leading-relaxed">{item}</span>
-                </div>
-              ))}
+          <div className="mt-8 flex items-center gap-4">
+            <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground font-bold border-l-2 border-primary pl-4 py-1">
+              {closed
+                ? "LIMITE DE 100 OPERAÇÕES ATINGIDO. SEM PREVISÃO DE REABERTURA."
+                : "REGRAS DE ACESSO: APENAS 100 VAGAS DISPONÍVEIS NO PRÉ-LANÇAMENTO."}
             </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
-            className="relative"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-destructive/10 to-transparent blur-3xl rounded-full" />
-            <div className="relative border border-border/60 bg-card/40 backdrop-blur-xl rounded-3xl p-8 sm:p-12 overflow-hidden shadow-2xl">
-               <div className="flex flex-col gap-6">
-                 <BrokenNode title="Agência & Freelancers" delay={0} />
-                 <BrokenNode title="Plataformas de Anúncios" delay={0.2} />
-                 <BrokenNode title="Disparos e Automações" delay={0.4} />
-               </div>
-               <div className="mt-8 pt-8 border-t border-border/50 text-center">
-                 <p className="font-mono text-xs uppercase tracking-widest text-destructive font-semibold">
-                   Toda troca de mãos dilui a conversão
-                 </p>
-               </div>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function BrokenNode({ title, delay }: { title: string, delay: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0.4, x: 10 }}
-      animate={{ opacity: [0.4, 1, 0.4], x: [10, 0, 10] }}
-      transition={{ duration: 5, repeat: Infinity, delay, ease: "easeInOut" }}
-      className="flex items-center justify-between border border-destructive/20 bg-destructive/5 p-5 rounded-xl backdrop-blur-sm"
-    >
-      <span className="font-sans font-semibold text-foreground">{title}</span>
-      <div className="flex items-center gap-2 text-destructive bg-destructive/10 px-3 py-1 rounded-full">
-        <Activity className="h-4 w-4" />
-        <span className="font-mono text-[10px] uppercase tracking-wider font-bold">Desconectado</span>
-      </div>
-    </motion.div>
-  )
-}
-
-function MechanismSection() {
-  return (
-    <section className="py-32 relative bg-card/10 border-y border-border/30">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.7 }}
-          >
-            <div id="mecanismo" className="font-mono text-xs uppercase tracking-[0.3em] text-primary mb-6 scroll-mt-32">
-              A Transição Operacional
-            </div>
-            <h2 className="text-4xl sm:text-5xl font-sans font-black leading-tight mb-8">
-              Do sinal do mercado à<br />
-              <span className="text-primary">campanha pronta para aprovação.</span>
-            </h2>
-            <p className="text-lg text-muted-foreground leading-relaxed mb-6 font-light">
-              Uma decisão. Um contexto. Toda a operação na mesma direção. Em vez de operar painéis vazios e gerenciar pessoas que não conversam entre si, o NexOS unifica o cérebro da operação.
-            </p>
-            <p className="text-lg text-muted-foreground leading-relaxed font-light">
-              Os 64 agentes operacionais compartilham a mesma inteligência de mercado. A pesquisa consolidada orienta o texto. O estrategista instrui o copywriter, que entrega o material ao gestor de tráfego e atualiza o conhecimento do SDR de ponta a ponta.
-            </p>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.7, delay: 0.2 }}
-            className="grid grid-cols-2 gap-4 relative"
-          >
-             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary/30 z-0">
-                <InfinityIcon className="w-32 h-32" />
-             </div>
-             {[
-               { title: "Inteligência Ativa", icon: <Globe className="w-5 h-5" /> },
-               { title: "Definição de Oferta", icon: <Target className="w-5 h-5" /> },
-               { title: "Mídia & Distribuição", icon: <TrendingUp className="w-5 h-5" /> },
-               { title: "Fechamento (CRM)", icon: <Users className="w-5 h-5" /> }
-             ].map((node, i) => (
-                <div key={i} className="border border-primary/20 bg-card/80 p-6 rounded-2xl flex flex-col items-center justify-center text-center z-10 backdrop-blur-md hover:border-primary/50 transition-colors">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">
-                    {node.icon}
-                  </div>
-                  <span className="font-sans font-bold text-sm text-foreground">{node.title}</span>
-                </div>
-             ))}
-          </motion.div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function TransformationSection({ openCapture, closed }: { openCapture: () => void; closed: boolean }) {
-  return (
-    <section className="py-32 relative">
-      <div className="max-w-7xl mx-auto px-6 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="max-w-3xl mx-auto"
-        >
-          <div className="font-mono text-xs uppercase tracking-[0.3em] text-secondary mb-6">O Novo Padrão Executivo</div>
-          <h2 className="text-4xl sm:text-5xl font-sans font-black leading-tight mb-6">
-            Você Define a Direção.<br />O Sistema Entrega o Restante.
-          </h2>
-          <p className="text-lg text-muted-foreground font-light mb-12">
-            Imagine um centro de comando onde aprovações substituem microgerenciamento. Você define o posicionamento, valida a oferta e aprova os recursos; o sistema planeja, escreve, publica, distribui anúncios e engaja leads, preservando seu tom de voz em cada contato.
-          </p>
-          <Button onClick={openCapture} className="h-14 px-8 text-sm sm:text-base font-bold rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-all font-sans tracking-wide shadow-[0_0_20px_rgba(138,43,226,0.3)]">
-            {closed ? "Turma inicial encerrada" : "Reservar vaga inicial"} <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
+          </div>
         </motion.div>
       </div>
     </section>
   );
 }
 
-function BreadthSection() {
+function RealWorkSection() {
   return (
-    <section className="py-32 relative border-t border-border/30 bg-card/20">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="mb-20 text-center max-w-3xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <div className="font-mono text-xs uppercase tracking-[0.3em] text-primary mb-6">Cobertura Integral</div>
-            <h2 className="text-4xl sm:text-5xl font-sans font-black leading-tight mb-6">
-              A profundidade do <span className="text-primary">Ciclo de Vida</span>
-            </h2>
-            <p className="text-lg text-muted-foreground font-light">
-              Toda a fundação comercial da sua marca presente de ponta a ponta — sem perder conversão no abismo entre ferramentas soltas.
-            </p>
-          </motion.div>
+    <section id="trabalho-concreto" className="py-24 sm:py-32 border-b-2 border-border relative bg-card scroll-mt-20">
+      <div className="px-6">
+        <div className="mb-16">
+          <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-4 font-bold">O Escopo do Sistema</h2>
+          <p className="text-4xl sm:text-5xl font-display font-black uppercase tracking-tighter leading-tight max-w-4xl">
+            O que a NexOS faz todos os dias pela sua operação.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <BentoCard
-            icon={<Globe />}
-            title="Inteligência de Mercado"
-            desc="Monitoramento autônomo de concorrentes, tendências de nicho e análise de sentimento em tempo real para nutrir campanhas."
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-[2px] border-2 border-border bg-border">
+          <WorkCard
+            number="01"
+            title="Inteligência & Oferta"
+            desc="O sistema varre o mercado, estuda seus concorrentes e estrutura ângulos de venda, ganchos e promessas para os próximos 30 dias de campanha."
+            icon={<Search className="w-8 h-8 text-primary" />}
           />
-          <BentoCard
-            icon={<Target />}
-            title="Estratégia e Oferta"
-            desc="O War Room. Planejamento em janela de 30 dias onde ângulos de venda, promessas e objeções são consolidados."
+          <WorkCard
+            number="02"
+            title="Produção de Vídeo"
+            desc="Roteiriza, corta e edita vídeos curtos e VSLs. Usa suas gravações reais ou gera os vídeos automaticamente integrando avatares HeyGen e vozes ElevenLabs."
+            icon={<Video className="w-8 h-8 text-primary" />}
           />
-          <BentoCard
-            icon={<Presentation />}
-            title="Conteúdo e Audiovisual"
-            desc="Criação massiva alinhada à estratégia: roteiros de vídeo, cópia persuasiva e integração opcional com clones digitais."
+          <WorkCard
+            number="03"
+            title="Landings & Criativos"
+            desc="Gera copy e design para landing pages focadas em conversão, além de produzir criativos estáticos de alta performance alinhados à sua identidade."
+            icon={<Layers className="w-8 h-8 text-primary" />}
           />
-          <BentoCard
-            icon={<Workflow />}
-            title="Distribuição e Mídia Paga"
-            desc="Gestão rigorosa de publicações sociais e aprovação rígida de tráfego, respeitando os limites da sua conta comercial Meta Ads."
+          <WorkCard
+            number="04"
+            title="Tráfego (Meta Ads)"
+            desc="Cria, sobe e gerencia campanhas no Facebook e Instagram. Testa criativos, distribui verba e pausa o que não dá ROI — seguindo suas regras e limites de conta."
+            icon={<Target className="w-8 h-8 text-primary" />}
           />
-          <BentoCard
-            icon={<Users />}
-            title="Vendas, CRM e Retenção"
-            desc="Gestão do funil de pipeline onde agentes acompanham cada lead, realizam o onboarding e maximizam o valor da carteira."
+          <WorkCard
+            number="05"
+            title="Social Media & Grupos"
+            desc="Agenda e publica posts no Instagram, responde directs e modera comunidades e grupos, mantendo o aquecimento e a antecipação da audiência."
+            icon={<Megaphone className="w-8 h-8 text-primary" />}
           />
-          <BentoCard
-            icon={<BookOpen />}
-            title="Workspaces de Agência"
-            desc="Isolamento cirúrgico de clientes. A inteligência, os dados e os acessos de uma marca nunca se misturam com a da outra."
+          <WorkCard
+            number="06"
+            title="Vendas & Retenção"
+            desc="Acompanha o pipeline no CRM, envia e-mails de onboarding para novos clientes, recupera carrinhos abandonados e aciona campanhas de indicação."
+            icon={<Users className="w-8 h-8 text-primary" />}
           />
         </div>
       </div>
@@ -357,220 +189,97 @@ function BreadthSection() {
   );
 }
 
-function BentoCard({ icon, title, desc }: any) {
+function WorkCard({ number, title, desc, icon }: any) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.1 }}
-      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-      className="relative group overflow-hidden rounded-3xl border border-border/80 bg-background/50 p-8 backdrop-blur-xl flex flex-col hover:border-primary/30 transition-colors"
-    >
-      <div className="w-12 h-12 rounded-xl bg-card/80 border border-border flex items-center justify-center mb-6 text-foreground shadow-lg">
-        {React.cloneElement(icon, { className: "w-6 h-6 text-primary" })}
+    <div className="bg-background p-8 flex flex-col group hover:bg-card transition-colors">
+      <div className="flex justify-between items-start mb-12">
+        <span className="font-mono text-4xl font-black text-muted-foreground/30 group-hover:text-primary transition-colors">{number}</span>
+        {icon}
       </div>
-      <h3 className="text-xl font-sans font-bold mb-3 tracking-tight">{title}</h3>
-      <p className="text-muted-foreground leading-relaxed text-sm font-light">{desc}</p>
-    </motion.div>
-  )
-}
-
-function OperationalProofSection() {
-  const features = [
-    {
-      icon: <Layers className="w-6 h-6 text-primary" />,
-      title: "Contexto Único",
-      desc: "A operação inteira consome a mesma matriz. O que o Radar descobre, o agente de copy utiliza imediatamente no e-mail."
-    },
-    {
-      icon: <ShieldAlert className="w-6 h-6 text-secondary" />,
-      title: "Execução Governada",
-      desc: "As ações externas respeitam autorizações, limites e controles definidos, garantindo previsibilidade em cada publicação ou disparo."
-    },
-    {
-      icon: <Fingerprint className="w-6 h-6 text-accent" />,
-      title: "Fato vs. Inferência",
-      desc: "O sistema segrega dados empíricos do mercado de deduções de IA, tornando o limite entre evidência e dedução visível para fundamentar suas decisões."
-    }
-  ];
-
-  return (
-    <section className="py-32 relative border-t border-border/30">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="mb-20 text-center max-w-3xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <div className="font-mono text-xs uppercase tracking-[0.3em] text-success mb-6">A Prova Operacional</div>
-            <h2 className="text-4xl sm:text-5xl font-sans font-black leading-tight mb-6">
-              Capacidade Concreta.<br />Sem métricas inventadas.
-            </h2>
-            <p className="text-lg text-muted-foreground font-light">
-              Exibimos a realidade arquitetural de uma máquina desenvolvida estritamente para governança, consistência e escala, projetada para não quebrar com a complexidade do seu crescimento.
-            </p>
-          </motion.div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 justify-center">
-          {features.map((f, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.1 }}
-              transition={{ delay: i * 0.1, duration: 0.6 }}
-              className="border border-border/60 bg-card/30 p-8 rounded-3xl flex flex-col hover:border-primary/40 transition-all backdrop-blur-sm"
-            >
-              <div className="w-12 h-12 rounded-xl bg-background border border-border flex items-center justify-center mb-6 shadow-lg">
-                {f.icon}
-              </div>
-              <h3 className="text-xl font-sans font-bold mb-3 text-foreground">{f.title}</h3>
-              <p className="text-muted-foreground leading-relaxed font-light text-sm">{f.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
+      <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-4">{title}</h3>
+      <p className="text-muted-foreground font-sans text-base leading-relaxed">{desc}</p>
+    </div>
   );
 }
 
-function CommercialSection() {
+function ArchitectureSection() {
   return (
-    <section className="py-32 relative bg-card/20 border-t border-border/30">
-      <div className="max-w-7xl mx-auto px-6">
+    <section className="py-24 sm:py-32 border-b-2 border-border bg-background">
+      <div className="px-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.7 }}
-          >
-            <div className="font-mono text-xs uppercase tracking-[0.3em] text-secondary mb-6">Arquitetura de Valor</div>
-            <h2 className="text-4xl sm:text-5xl font-sans font-black leading-tight mb-8">
-              A orquestração total é a <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
-                Escolha de Maior Retorno.
-              </span>
-            </h2>
-            <p className="text-lg text-muted-foreground leading-relaxed mb-6 font-light">
-              O mercado tradicional vende "soluções pontuais". Nós oferecemos coerência estrutural. No momento da abertura, a licença integral entregará a conexão de todas as fases da sua máquina de aquisição.
+          <div>
+            <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-4 font-bold">A Quebra de Silos</h2>
+            <p className="text-4xl sm:text-5xl font-display font-black uppercase tracking-tighter leading-tight mb-8">
+              Você é o gargalo que traduz a mesma estratégia para cinco áreas diferentes.
             </p>
-            <p className="text-lg text-muted-foreground leading-relaxed mb-10 font-light">
-              Após a abertura oficial, capacidades avulsas poderão ser contratadas separadamente, porém carregarão um custo 30% a 50% superior ao seu peso na licença completa — refletindo a perda de tração natural da fragmentação. O Radar Pro de Inteligência Ativa será incluído na licença completa nos 90 dias inaugurais.
-            </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="rounded-3xl border border-border bg-background/50 p-8 sm:p-12 shadow-2xl relative overflow-hidden backdrop-blur-xl"
-          >
-            <div className="absolute -bottom-20 -right-20 opacity-10">
-              <Database className="w-72 h-72" />
+            <div className="space-y-6 text-lg text-muted-foreground font-sans">
+              <p>O custo real da sua operação não está nas mensalidades de software. Está na perda de tração diária.</p>
+              <p>É o e-mail que sai fora de sincronia com o anúncio. É a agência de design que erra o tom da marca. É o gestor de tráfego otimizando campanhas às cegas sem feedback do CRM.</p>
+              <p className="font-bold text-foreground">Com a NexOS, o cérebro é unificado.</p>
+              <p>A pesquisa consolidada pela IA orienta o texto. O estrategista instrui o copywriter, que entrega o material ao gestor de anúncios e atualiza o conhecimento do SDR. Toda a operação consome a mesma matriz de inteligência de ponta a ponta.</p>
             </div>
-            <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-secondary/30 bg-secondary/10 mb-8">
-                <span className="font-mono text-xs uppercase tracking-[0.2em] text-secondary font-semibold">
-                  Mapeamento Futuro
-                </span>
-              </div>
-              <h3 className="text-3xl font-sans font-bold mb-10 tracking-tight">O Custo de Não Integrar</h3>
+          </div>
 
-              <div className="space-y-8">
-                <div className="flex justify-between items-end border-b border-border/50 pb-4">
-                  <div>
-                    <span className="block text-foreground font-semibold mb-1">Módulos Avulsos</span>
-                    <span className="block text-xs font-mono text-muted-foreground uppercase">Retenção de Silos</span>
-                  </div>
-                  <span className="font-mono text-destructive font-bold">+30% a 50%</span>
-                </div>
-                <div className="flex justify-between items-end pt-2">
-                  <div>
-                    <span className="block text-xl text-primary font-bold mb-1">Licença Completa NexOS</span>
-                    <span className="block text-xs font-mono text-primary/70 uppercase tracking-widest">Execução Alinhada</span>
-                  </div>
-                  <span className="font-sans text-xl font-bold text-foreground">Melhor Proposta</span>
-                </div>
-              </div>
+          <div className="relative border-2 border-border p-8 bg-card">
+            <div className="absolute top-0 right-0 p-4 font-mono text-[10px] font-bold tracking-widest text-muted-foreground uppercase border-b-2 border-l-2 border-border bg-background">
+              Arquitetura Operacional
             </div>
-          </motion.div>
+
+            <div className="mt-8 space-y-4">
+              <ArchNode title="Pesquisa de Nicho e Análise de Concorrentes" status="Concluído" />
+              <ArchNode title="Definição de Oferta e Ganchos (War Room)" status="Concluído" />
+              <ArchNode title="Criação de Copy, Design e Vídeos (HeyGen/ElevenLabs)" status="Ativo" highlight />
+              <ArchNode title="Distribuição de Conteúdo e Grupos" status="Ativo" />
+              <ArchNode title="Operação Meta Ads (Publicação e Otimização)" status="Ativo" />
+              <ArchNode title="Acompanhamento CRM (Vendas e Onboarding)" status="Ativo" />
+            </div>
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-function ObjectionSection() {
+function ArchNode({ title, status, highlight = false }: any) {
   return (
-    <section className="py-32 relative border-t border-border/30">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="mb-20 text-center max-w-3xl mx-auto">
-          <div className="font-mono text-xs uppercase tracking-[0.3em] text-accent mb-6">Transparência Tática</div>
-          <h2 className="text-4xl sm:text-5xl font-sans font-black leading-tight mb-6">
-            Lidando com a Realidade.
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          <ObjectionCard
-            title="A Inteligência Artificial soará robótica?"
-            desc="Apenas se não possuir direcionamento. Nossos agentes escrevem baseados num dossiê denso da sua estratégia comercial, objeções reais da audiência e o tom específico aprovado pela sua marca."
-          />
-          <ObjectionCard
-            title="Perderei o controle de orçamentos e aprovações?"
-            desc="O sistema é fundamentado na governança rígida. As ações externas respeitam autorizações, limites e controles definidos por você, garantindo que a operação escale com segurança."
-          />
-          <ObjectionCard
-            title="Terei acesso à interface se eu não assinar o pacote completo?"
-            desc="Sim. Módulos que você não assinar no futuro estarão visíveis como somente-leitura. O valor total reside na arquitetura destravada e operando unida."
-          />
-          <ObjectionCard
-            title="Isso é apropriado para Agências de Lançamento?"
-            desc="Sim. Construímos workspaces logicamente isolados. Assim, a inteligência consolidada de um cliente nunca influencia ou cruza dados confidenciais com as demais operações de sua agência."
-          />
-        </div>
+    <div className={`border-2 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${highlight ? 'border-primary bg-primary/5' : 'border-border bg-background'}`}>
+      <span className={`font-display font-bold uppercase tracking-tight text-foreground`}>{title}</span>
+      <div className="flex items-center gap-2">
+        <span className={`w-2 h-2 ${highlight ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
+        <span className={`font-mono text-[10px] uppercase font-bold tracking-widest ${highlight ? 'text-primary' : 'text-muted-foreground'}`}>{status}</span>
       </div>
-    </section>
+    </div>
   );
 }
 
-function ObjectionCard({ title, desc }: { title: string, desc: string }) {
+function OperationalScopeSection() {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      className="p-6 rounded-2xl border border-border/60 bg-background/50 hover:bg-card/80 transition-colors"
-    >
-      <div className="flex items-start gap-4">
-        <HelpCircle className="w-6 h-6 text-accent shrink-0 mt-1" />
-        <div>
-          <h4 className="font-sans font-bold text-foreground text-lg mb-2">{title}</h4>
-          <p className="text-sm text-muted-foreground font-light leading-relaxed">{desc}</p>
-        </div>
-      </div>
-    </motion.div>
-  )
-}
+    <section className="py-24 sm:py-32 border-b-2 border-border bg-card">
+      <div className="px-6">
+        <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-12 font-bold text-center">Governança Integrada</h2>
 
-function AnticipationSection() {
-  return (
-    <section className="py-32 relative bg-card/20 border-t border-border/30">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="rounded-3xl border border-primary/20 bg-primary/5 p-8 sm:p-12 relative overflow-hidden backdrop-blur-md">
-          <div className="relative z-10 text-center max-w-3xl mx-auto">
-            <Lock className="w-12 h-12 text-primary mx-auto mb-6" />
-            <h2 className="text-3xl sm:text-4xl font-sans font-black leading-tight mb-6 text-foreground">
-              O Lançamento Exige Responsabilidade.
-            </h2>
-            <p className="text-lg text-muted-foreground font-light mb-8">
-              A NexOS está pronta para centralizar sua operação comercial com automação, governança e controle. A abertura inicial foi desenhada para receber os primeiros operadores com a atenção que uma nova operação exige.
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="border-2 border-border bg-background p-8">
+            <ShieldCheck className="w-10 h-10 text-primary mb-6" />
+            <h3 className="font-display font-bold text-xl uppercase tracking-tight mb-4">Autorização Estrita</h3>
+            <p className="text-muted-foreground font-sans">
+              As ações externas (publicar posts, subir campanhas no Meta, enviar e-mails) só acontecem após sua aprovação ou dentro de limites pré-estabelecidos por você.
             </p>
-            <p className="text-base text-foreground/80 font-mono tracking-wide uppercase">
-              A abertura inicial terá somente 100 vagas de pré-lançamento.
+          </div>
+
+          <div className="border-2 border-border bg-background p-8">
+            <Workflow className="w-10 h-10 text-primary mb-6" />
+            <h3 className="font-display font-bold text-xl uppercase tracking-tight mb-4">Workspaces Isolados</h3>
+            <p className="text-muted-foreground font-sans">
+              Perfeito para agências de lançamento. Os dados, a inteligência e as estratégias de um cliente jamais se misturam com as demais operações do seu portfólio.
+            </p>
+          </div>
+
+          <div className="border-2 border-border bg-background p-8">
+            <Activity className="w-10 h-10 text-primary mb-6" />
+            <h3 className="font-display font-bold text-xl uppercase tracking-tight mb-4">Métricas Reais. Fim.</h3>
+            <p className="text-muted-foreground font-sans">
+              O sistema baseia-se em dados empíricos puxados diretamente do Meta Ads e do seu CRM. Nenhuma IA inventando números de conversão para o painel parecer completo. O que está lá é o que o dinheiro comprou.
             </p>
           </div>
         </div>
@@ -579,24 +288,79 @@ function AnticipationSection() {
   );
 }
 
-function CtaSection({ openCapture, closed }: { openCapture: () => void; closed: boolean }) {
+function ProofOfLogicSection() {
   return (
-    <section className="py-32 relative overflow-hidden border-t border-border/50">
-      <div className="absolute inset-0 bg-primary/5" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] bg-primary/10 blur-[150px] rounded-full mix-blend-screen pointer-events-none" />
+    <section className="py-24 sm:py-32 border-b-2 border-border bg-background">
+      <div className="px-6">
+        <div className="max-w-4xl mb-16">
+          <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-4 font-bold">Lógica de Execução</h2>
+          <p className="text-4xl sm:text-5xl font-display font-black uppercase tracking-tighter leading-tight">
+            Como garantimos que a estratégia não vire um frankenstein de IA.
+          </p>
+        </div>
 
-      <div className="max-w-4xl mx-auto px-6 relative z-10 text-center">
-        <h2 className="text-4xl sm:text-6xl font-sans font-black leading-tight mb-8">
-          Pronto para unificar<br />sua execução comercial?
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20">
+          <div className="space-y-12">
+            <div className="border-l-4 border-primary pl-6">
+              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">1. O Cérebro Único (Dossiê)</h3>
+              <p className="text-muted-foreground font-sans leading-relaxed text-lg">
+                Sua marca não tem "várias vozes". A NexOS cria um Dossiê mestre da campanha. Se o seu público odeia agressividade, essa regra bloqueia o roteirista de vídeo, modera o copywriter de e-mail e dita o tom dos seus anúncios no Meta.
+              </p>
+            </div>
+
+            <div className="border-l-4 border-primary pl-6">
+              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">2. Revisão Humana Opcional</h3>
+              <p className="text-muted-foreground font-sans leading-relaxed text-lg">
+                Você pode automatizar 100% da publicação ou ligar a trava de segurança. No modo seguro, a NexOS escreve os 30 posts, edita os 10 reels e agenda as campanhas no Meta, mas elas só sobem após o seu "Aprovado" na interface.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-12">
+            <div className="border-l-4 border-primary pl-6">
+              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">3. Dados, Não Alucinações</h3>
+              <p className="text-muted-foreground font-sans leading-relaxed text-lg">
+                Quando a agência autônoma relata que um criativo saturou, ela não está "adivinhando". Ela cruzou o CTR do Meta Ads com a conversão do seu CRM e com as aberturas do seu e-mail. Se ela sugere pausar, é porque o CPA subiu.
+              </p>
+            </div>
+
+            <div className="border-l-4 border-primary pl-6">
+              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">4. Memória Institucional</h3>
+              <p className="text-muted-foreground font-sans leading-relaxed text-lg">
+                Ferramentas genéricas esquecem quem você é a cada nova sessão. A NexOS armazena os vencedores e perdedores. O que não funcionou no mês passado já está marcado como "Não Fazer" para a campanha atual.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ScarcitySection({ openCapture, closed }: { openCapture: () => void; closed: boolean }) {
+  return (
+    <section className="py-32 bg-primary text-primary-foreground relative overflow-hidden">
+      <div className="absolute inset-0 bg-grid-pattern opacity-10" />
+
+      <div className="px-6 relative z-10 max-w-4xl mx-auto text-center">
+        <Lock className="w-16 h-16 mx-auto mb-8" />
+        <h2 className="text-4xl sm:text-6xl font-display font-black uppercase tracking-tighter leading-none mb-8">
+          Apenas 100 Operações no Lançamento.
         </h2>
-        <Button onClick={openCapture} className="h-16 px-10 text-base sm:text-lg font-bold rounded-xl bg-foreground text-background hover:bg-foreground/90 transition-all font-sans tracking-wide shadow-2xl">
-          {closed ? "Turma inicial encerrada" : "Reservar vaga inicial"} <ArrowRight className="ml-2 h-6 w-6" />
-        </Button>
-        <p className="mt-5 text-sm text-muted-foreground">
-          {closed
-            ? "As 100 vagas iniciais foram encerradas. Fale com a equipe no WhatsApp; não há data para reabertura e as condições atuais podem não permanecer."
-            : "A abertura inicial terá apenas 100 vagas de pré-lançamento."}
+        <p className="text-xl font-sans font-medium mb-12 opacity-90 max-w-2xl mx-auto">
+          Uma agência autônoma exige governança robusta e suporte dedicado nos primeiros dias. Para garantir a estabilidade do ecossistema, o acesso inicial é severamente restrito. Não há exceções.
         </p>
+
+        <Button
+          onClick={openCapture}
+          className="h-20 px-12 text-lg font-display font-black rounded-none bg-background text-foreground hover:bg-muted-foreground hover:text-background transition-colors uppercase tracking-widest border-2 border-background"
+        >
+          {closed ? "Turma Encerrada" : "Reservar Minha Vaga Agora"}
+        </Button>
+
+        <div className="mt-8 font-mono text-sm font-bold uppercase tracking-widest opacity-80">
+          {closed ? "As vagas foram preenchidas." : "A ordem de reserva define a prioridade de ativação."}
+        </div>
       </div>
     </section>
   );
@@ -604,19 +368,22 @@ function CtaSection({ openCapture, closed }: { openCapture: () => void; closed: 
 
 function Footer() {
   return (
-    <footer className="border-t border-border/40 py-12 bg-background relative z-10">
-      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-        <div className="flex items-center gap-2">
-          <img src={nexosLogo} alt="NexOS Logo" className="h-6 w-6 object-contain grayscale opacity-50" />
-          <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">© 2025 NexOS</span>
+    <footer className="border-t-2 border-border bg-background py-12 px-6 text-center sm:text-left">
+      <div className="max-w-[1400px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-6">
+        <div className="flex items-center gap-3">
+          <img src={nexosLogo} alt="NexOS" className="h-8 w-8 object-contain grayscale" />
+          <span className="font-display font-black text-xl uppercase tracking-tighter text-muted-foreground">NexOS</span>
         </div>
-        <div className="flex flex-wrap justify-center gap-6">
-          <Link href="/terms" className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">Termos de Serviço</Link>
-          <Link href="/privacy" className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">Política de Privacidade</Link>
-          <Link href="/data-deletion" className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">Exclusão de Dados</Link>
+
+        <div className="flex gap-6 font-mono text-xs uppercase tracking-widest font-bold text-muted-foreground">
+          <Link href="/termos" className="hover:text-primary transition-colors">Termos de Uso</Link>
+          <Link href="/privacidade" className="hover:text-primary transition-colors">Privacidade</Link>
+        </div>
+
+        <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+          © {new Date().getFullYear()} NexOS. Operação Centralizada.
         </div>
       </div>
     </footer>
   );
 }
-// End of landing page.

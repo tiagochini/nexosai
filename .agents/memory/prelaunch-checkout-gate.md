@@ -9,11 +9,23 @@ The NexOS landing is only promoted after the product is operationally complete a
 
 **How to apply:** Before publication, verify the product and required integrations internally. On the landing, sell the complete operation and the initial opening; never mention unfinished work, homologation, pending Meta readiness or an internal checkout gate.
 
+For launch communication, HeyGen, ElevenLabs and Meta Ads are approved operational capabilities. Do not reintroduce provider-plan caveats, authorization doubts or readiness disclaimers unless the owner explicitly asks for a new internal audit.
+
+**Why:** The owner confirmed these providers and authorizations are already in place and rejected speculative caveats that made the release discussion drift away from the requested work.
+
+**How to apply:** Present avatar video, cloned voice and Meta Ads execution as available NexOS features. Keep internal validation separate from public copy and from release summaries.
+
 The landing must lead with the buyer's expensive coordination problem and the operational transformation, not with agent counts, architecture or governance. Its memorable commercial thesis is that companies should stop hiring disconnected parts to execute one strategy; NexOS carries one market decision through the full commercial lifecycle without losing context.
 
 **Why:** A visually strong but architecture-led version was rejected as weak in hooks, content and sales logic. Competitor research showed that effective category leaders sell a concrete replacement for the buyer's current reality before explaining the technology.
 
 **How to apply:** Treat “64 agents” as supporting proof. Use concrete before/after scenes, verbs and outputs; establish the mechanism before the module catalog or future pricing; keep technical controls late as trust and risk reduction.
+
+The approved landing direction is human, direct and operational: strong editorial hierarchy, concrete descriptions of work performed, restrained motion and no generic AI-SaaS visual language.
+
+**Why:** The owner explicitly approved the humanized version after rejecting the previous ceremonial copy, neon gradients, repetitive cards and overly symmetrical presentation.
+
+**How to apply:** Preserve the current visual and writing direction in future landing edits. Avoid abstract labels, empty superlatives, invented social proof and redesigns that return to glossy AI-template patterns.
 
 The initial pre-launch cohort is strictly limited to 100 real reservations. Once filled, registration closes with no promised reopening date; pricing and conditions offered in a future reopening may change.
 
