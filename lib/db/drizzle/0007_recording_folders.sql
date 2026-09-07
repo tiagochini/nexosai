@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS "recording_folders" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-  "workspace_id" uuid NOT NULL REFERENCES "workspaces"("id") ON DELETE CASCADE,
+  "workspace_id" uuid NOT NULL,
   "name" text NOT NULL,
   "slug" text NOT NULL,
   "system_type" text,
@@ -87,3 +87,11 @@ SET
   "finalized_at" = COALESCE("finalized_at", "video_uploaded_at", "stopped_at", "created_at"),
   "video_mime_type" = COALESCE("video_mime_type", 'video/webm')
 WHERE "video_path" IS NOT NULL;
+--> statement-breakpoint
+ALTER TABLE "recording_folders" VALIDATE CONSTRAINT "recording_folders_system_type_check";
+--> statement-breakpoint
+ALTER TABLE "recording_folders" VALIDATE CONSTRAINT "recording_folders_system_consistency_check";
+--> statement-breakpoint
+ALTER TABLE "launch_recordings" VALIDATE CONSTRAINT "launch_recordings_recording_mode_check";
+--> statement-breakpoint
+ALTER TABLE "launch_recordings" VALIDATE CONSTRAINT "launch_recordings_finalization_status_check";
