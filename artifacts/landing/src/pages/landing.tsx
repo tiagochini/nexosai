@@ -110,7 +110,11 @@ function HeroSection({ openCapture, closed }: { openCapture: () => void; closed:
           </h1>
 
           <p className="text-lg sm:text-2xl text-muted-foreground max-w-3xl leading-relaxed mb-12 font-sans font-medium">
-            Você já entendeu o modelo. Talvez até tenha comprado cursos de lançamento, tráfego ou conteúdo. O que ainda não conseguiu foi transformar tudo isso em uma operação funcionando. A NexOS assume a execução cara, técnica e fragmentada para finalmente colocar sua ideia em produção — de ponta a ponta.
+            Sua ideia sai do papel, vira um plano de ação orientado por inteligência de mercado e acompanhamento contínuo da concorrência — e começa a ganhar presença digital real em poucas horas. A NexOS assume a execução cara, técnica e fragmentada para colocar sua operação em movimento, de ponta a ponta.
+          </p>
+
+          <p className="font-mono text-xs sm:text-sm uppercase tracking-widest text-foreground/70 max-w-3xl mb-10 border-l-2 border-primary pl-4">
+            Da ideia ao plano. Do plano aos ativos. Dos ativos à operação no ar.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4">
