@@ -17,12 +17,13 @@ export function deterministicHash(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(canonicalize(value))).digest("hex");
 }
 export function calculateMasterplanReadiness(strategyData: unknown, pendingClarifications: { id: string; question: string }[]) {
+  const missingStrategy = Object.keys(object(strategyData)).length === 0;
   const blockers = [
     ...pendingClarifications.map((item) => ({ type: "clarification", id: item.id, message: item.question })),
-    ...(Object.keys(object(strategyData)).length === 0 ? [{ type: "strategy", message: "Estratégia ainda não foi materializada." }] : []),
+    ...(missingStrategy ? [{ type: "strategy", message: "Estratégia ainda não foi materializada." }] : []),
   ];
   const score = Math.max(0, 100 - blockers.length * 25);
-  return { blockers, score, status: blockers.length ? (score < 50 ? "blocked" : "needs_attention") : "ready" };
+  return { blockers, score, status: missingStrategy || score < 50 ? "blocked" : blockers.length ? "needs_attention" : "ready" };
 }
 
 export async function listMasterplanVersions(workspaceId: string, campaignId: string) {

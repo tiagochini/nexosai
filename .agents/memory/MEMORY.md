@@ -86,3 +86,4 @@
 - [Recording Library Finalization](recording-library-finalization.md) — raw uploads bypass JSON parsing; media becomes ready only after storage confirmation and remains in workspace-scoped system folders.
 - [Canonical Masterplan Versioning](canonical-masterplan-versioning.md) — approved campaign plans are immutable authorities bound to context, authorization, evidence and readiness.
 - [Community Lifecycle Orchestration](community-lifecycle-orchestration.md) — communities span provisioning, nurturing, conversion, post-sale and referrals across authorized channels.
+- [Resume From Last Checkpoint](resume-from-last-checkpoint.md) — continue roadmap work at the exact unfinished action; never restart completed waves just because time passed.

@@ -8,7 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useCampaignSocket, type CampaignEvent } from "@/lib/socket";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -16,11 +16,10 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, CheckCheck, Loader2, Brain, Zap,
-  BookOpen, Clock, Archive, ChevronRight, Activity,
+  BookOpen, Clock, Archive, ChevronRight, Activity, RotateCw, List
 } from "lucide-react";
 import { StrategyMasterplan, parseStrategyInsights } from "./strategy-masterplan";
 import { MarketValidationReview } from "@/components/MarketValidationReview";
-import { useQuery } from "@tanstack/react-query";
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
@@ -180,6 +179,181 @@ const STATUS_LABELS: Record<string, string> = {
   completed: "Concluído",
 };
 
+// ─── Masterplan Types & Panel ──────────────────────────────────────────────────
+
+interface MasterplanVersion {
+  id: string;
+  version: number;
+  status: "draft" | "pending_approval" | "approved" | "superseded";
+  snapshot: any;
+  contentHash: string;
+  contextFingerprint: string;
+  readinessScore: number;
+  readinessStatus: string;
+  readinessBlockers: string[];
+  allowedActions: string[];
+  requiredApprovals: string[];
+  createdAt: string;
+  approvedAt: string | null;
+}
+
+function MasterplanPanel({
+  currentMp,
+  versions,
+  onMaterialize,
+  isMaterializing,
+  readOnly
+}: {
+  currentMp?: MasterplanVersion;
+  versions: MasterplanVersion[];
+  onMaterialize: (req: { requestApproval: boolean }) => void;
+  isMaterializing: boolean;
+  readOnly?: boolean;
+}) {
+  if (!currentMp) return null;
+
+  const score = currentMp.readinessScore ?? 0;
+  const scoreColor = score >= 80 ? "text-emerald-400" : score >= 50 ? "text-amber-400" : "text-red-400";
+  const statusLabels: Record<string, string> = {
+    draft: "Rascunho",
+    pending_approval: "Aguardando Aprovação",
+    approved: "Aprovado",
+    superseded: "Substituído"
+  };
+
+  return (
+    <div className="mb-6 space-y-4">
+      {/* Current Version */}
+      <div className="border border-border/30 bg-muted/5 p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Activity className="h-4 w-4 text-primary/60" />
+            <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-foreground">
+              Status do Masterplan
+            </h3>
+          </div>
+          <Badge variant="outline" className="font-mono text-[9px] uppercase border-primary/20 text-primary/80">
+            v{currentMp.version} · {statusLabels[currentMp.status] || currentMp.status}
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div className="border border-border/20 bg-background/50 p-3">
+            <div className="font-mono text-[9px] text-muted-foreground/60 uppercase mb-1">Prontidão</div>
+            <div className={`font-mono text-xl font-black ${scoreColor}`}>
+              {score}%
+            </div>
+          </div>
+          <div className="border border-border/20 bg-background/50 p-3">
+            <div className="font-mono text-[9px] text-muted-foreground/60 uppercase mb-1">Status</div>
+            <div className="font-mono text-xs font-bold text-foreground/80 mt-1 truncate">
+              {currentMp.readinessStatus === "ready" ? "Pronto" :
+               currentMp.readinessStatus === "blocked" ? "Bloqueado" :
+               currentMp.readinessStatus === "review_required" ? "Requer Revisão" : (currentMp.readinessStatus || "Processando")}
+            </div>
+          </div>
+          <div className="border border-border/20 bg-background/50 p-3 md:col-span-2">
+            <div className="font-mono text-[9px] text-muted-foreground/60 uppercase mb-1">Ações Permitidas</div>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {currentMp.allowedActions?.length > 0 ? currentMp.allowedActions.map(a => (
+                <span key={a} className="font-mono text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 border border-primary/20">
+                  {a}
+                </span>
+              )) : (
+                <span className="font-mono text-[9px] text-muted-foreground/50">Nenhuma</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {(currentMp.readinessBlockers?.length > 0 || currentMp.requiredApprovals?.length > 0) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            {currentMp.readinessBlockers?.length > 0 && (
+              <div className="border border-red-500/20 bg-red-500/5 p-3">
+                <div className="font-mono text-[9px] text-red-400/80 uppercase mb-2">Bloqueios:</div>
+                <ul className="space-y-1">
+                  {currentMp.readinessBlockers.map((b, i) => (
+                    <li key={i} className="flex items-start gap-2 text-[10px] font-mono text-red-400/70">
+                      <span className="shrink-0 mt-0.5">◆</span> <span>{b}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {currentMp.requiredApprovals?.length > 0 && (
+              <div className="border border-amber-500/20 bg-amber-500/5 p-3">
+                <div className="font-mono text-[9px] text-amber-400/80 uppercase mb-2">Aprovações:</div>
+                <ul className="space-y-1">
+                  {currentMp.requiredApprovals.map((a, i) => (
+                    <li key={i} className="flex items-start gap-2 text-[10px] font-mono text-amber-400/70">
+                      <span className="shrink-0 mt-0.5">◆</span> <span>{a}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!readOnly && (
+          <div className="flex items-center gap-3 pt-2 border-t border-border/10">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onMaterialize({ requestApproval: false })}
+              disabled={isMaterializing}
+              className="font-mono text-[10px] uppercase tracking-widest gap-2 h-8"
+            >
+              {isMaterializing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCw className="h-3 w-3" />}
+              Atualizar Materialização
+            </Button>
+            {currentMp.status === "draft" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onMaterialize({ requestApproval: true })}
+                disabled={isMaterializing}
+                className="font-mono text-[10px] uppercase tracking-widest gap-2 h-8 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-300"
+              >
+                {isMaterializing ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCheck className="h-3 w-3" />}
+                Solicitar Aprovação
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* History */}
+      {versions.length > 0 && (
+        <div className="border border-border/20 bg-background/30 p-3">
+          <div className="flex items-center gap-2 mb-3">
+            <List className="h-3.5 w-3.5 text-muted-foreground/50" />
+            <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+              Histórico de Versões
+            </span>
+          </div>
+          <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+            {versions.map(v => (
+              <div key={v.id} className={`flex items-center gap-3 p-2 border ${v.id === currentMp.id ? 'border-primary/30 bg-primary/5' : 'border-border/10 bg-muted/5'}`}>
+                <Badge variant="outline" className={`font-mono text-[8px] uppercase ${v.id === currentMp.id ? 'border-primary/40 text-primary' : 'border-border/40 text-muted-foreground'}`}>
+                  v{v.version}
+                </Badge>
+                <span className="font-mono text-[9px] text-muted-foreground/70">
+                  {new Date(v.createdAt).toLocaleString()}
+                </span>
+                <div className="flex-1" />
+                <span className="font-mono text-[9px] text-muted-foreground/50 uppercase">
+                  {statusLabels[v.status] || v.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function CampaignStrategyPage() {
@@ -243,6 +417,57 @@ export default function CampaignStrategyPage() {
     campaign?.status === "analyzing",
   );
 
+  // ── Masterplan Versions ───────────────────────────────────────────────────
+  const isAnalyzingStatus = campaign?.status === "analyzing";
+  const { data: currentMpRes, isLoading: isMpLoading } = useQuery<{ masterplan: MasterplanVersion }>({
+    queryKey: ["/api/campaigns", campaignId, "masterplan", "current"],
+    queryFn: () => customFetch(`/api/campaigns/${campaignId}/masterplan/current`),
+    enabled: !!campaignId && !isAnalyzingStatus && campaign?.status !== "draft" && campaign?.status !== "intake",
+    retry: false,
+  });
+  const currentMp = currentMpRes?.masterplan;
+
+  const { data: mpVersionsRes } = useQuery<{ versions: MasterplanVersion[] }>({
+    queryKey: ["/api/campaigns", campaignId, "masterplan", "versions"],
+    queryFn: () => customFetch(`/api/campaigns/${campaignId}/masterplan/versions`),
+    enabled: !!campaignId && !isAnalyzingStatus && campaign?.status !== "draft" && campaign?.status !== "intake",
+    retry: false,
+  });
+  const mpVersions = mpVersionsRes?.versions ?? [];
+
+  const materializeMutation = useMutation({
+    mutationFn: (req: { requestApproval: boolean }) =>
+      customFetch(`/api/campaigns/${campaignId}/masterplan/materialize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan"] });
+      queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
+      toast.success("Masterplan atualizado.");
+    },
+    onError: (err: any) => {
+      toast.error(err?.data?.error || "Falha ao atualizar masterplan.");
+    }
+  });
+
+  const approveMpMutation = useMutation({
+    mutationFn: (req: { version: number }) =>
+      customFetch(`/api/campaigns/${campaignId}/masterplan/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan"] });
+      executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } });
+    },
+    onError: (err: any) => {
+      toast.error(err?.data?.error || "Falha ao aprovar masterplan.");
+    }
+  });
+
   // ── Execute mutation (approve → generate content) ──────────────────────────
   const executeMutation = useExecuteCampaign({
     mutation: {
@@ -258,6 +483,15 @@ export default function CampaignStrategyPage() {
       },
     },
   });
+
+  const handleApprove = () => {
+    if (currentMp && currentMp.status !== "approved") {
+      approveMpMutation.mutate({ version: currentMp.version });
+    } else {
+      executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } });
+    }
+  };
+  const isApproving = approveMpMutation.isPending || executeMutation.isPending;
 
   // ── Derived data ───────────────────────────────────────────────────────────
   if (isLoading) {
@@ -282,7 +516,9 @@ export default function CampaignStrategyPage() {
   const status = campaign.status ?? "";
   const campaignRaw = campaign as Record<string, unknown>;
   const intakeD = ((campaignRaw["intakeData"] ?? {}) as Record<string, unknown>);
-  const strategyD = ((campaignRaw["strategyData"] ?? {}) as Record<string, unknown>);
+  const strategyD = (currentMp?.snapshot && typeof currentMp.snapshot === 'object')
+    ? (currentMp.snapshot as Record<string, unknown>)
+    : ((campaignRaw["strategyData"] ?? {}) as Record<string, unknown>);
   const campaignTitle = String(intakeD["product.name"] ?? campaign.title ?? "Campanha");
   const track = String(intakeD["launch.track"] ?? "");
   const hasStrategy = Object.keys(strategyD).length > 0;
@@ -389,15 +625,22 @@ export default function CampaignStrategyPage() {
                 </div>
               </div>
               <Button
-                onClick={() => executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } })}
-                disabled={executeMutation.isPending}
+                onClick={handleApprove}
+                disabled={isApproving}
                 className="shrink-0 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-10 text-xs px-6"
               >
-                {executeMutation.isPending
+                {isApproving
                   ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Gerando...</>
                   : <><CheckCheck className="h-3.5 w-3.5" /> Aprovar e Gerar Conteúdo</>}
               </Button>
             </div>
+
+            <MasterplanPanel
+              currentMp={currentMp}
+              versions={mpVersions}
+              onMaterialize={(req) => materializeMutation.mutate(req)}
+              isMaterializing={materializeMutation.isPending}
+            />
 
             {/* Full masterplan */}
             {hasStrategy ? (
@@ -427,11 +670,11 @@ export default function CampaignStrategyPage() {
                   </span>
                 </div>
                 <Button
-                  onClick={() => executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } })}
-                  disabled={executeMutation.isPending}
+                  onClick={handleApprove}
+                  disabled={isApproving}
                   className="shrink-0 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-10 text-xs px-6"
                 >
-                  {executeMutation.isPending
+                  {isApproving
                     ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Gerando...</>
                     : <><CheckCheck className="h-3.5 w-3.5" /> Aprovar e Gerar Conteúdo</>}
                 </Button>
@@ -463,6 +706,14 @@ export default function CampaignStrategyPage() {
                 Ver campanha <ChevronRight className="h-3 w-3" />
               </Button>
             </div>
+
+            <MasterplanPanel
+              currentMp={currentMp}
+              versions={mpVersions}
+              onMaterialize={(req) => materializeMutation.mutate(req)}
+              isMaterializing={materializeMutation.isPending}
+              readOnly={true}
+            />
 
             {/* Masterplan (read-only) */}
             {hasStrategy ? (
