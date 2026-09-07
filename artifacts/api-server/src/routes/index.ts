@@ -58,6 +58,7 @@ import integrationWizardRouter from "../modules/integration-wizard/integration-w
 import fingerprintRouter from "../modules/fingerprint/fingerprint.routes.js";
 import dailyVideoRouter from "../modules/daily-video/daily-video.routes.js";
 import marketIntelRouter from "../modules/market-intel/market-intel.routes.js";
+import regionalIntelligenceRouter from "../modules/market-intel/regional-intelligence.routes.js";
 import autonomyRouter from "../modules/autonomy/autonomy.routes.js";
 import socialPresenceRouter from "../modules/social-presence/social-presence.routes.js";
 import paidMediaRouter from "../modules/paid-media/paid-media.routes.js";
@@ -135,6 +136,7 @@ router.use("/integration-wizard", integrationWizardRouter);
 router.use("/fingerprints", fingerprintRouter);
 router.use("/daily-video", dailyVideoRouter);
 router.use("/market-intel", marketIntelRouter);
+router.use("/market-intel/regional", regionalIntelligenceRouter);
 router.use("/autonomy", autonomyRouter);
 router.use("/debug", debugRouter);
 // Never expose harness inspection controls outside explicitly gated E2E runs.

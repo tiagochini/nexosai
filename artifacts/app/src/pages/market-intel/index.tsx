@@ -2,11 +2,14 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Radar, Plus, RefreshCw, Trash2, ArrowLeft, Send, Sparkles,
   Target, TrendingUp, AlertTriangle, CheckCircle2, Sword, Shield,
-  DollarSign, Share2, Zap, MessageSquare, X, Loader2, HelpCircle,
+  DollarSign, Share2, Zap, MessageSquare, X, Loader2, HelpCircle, MapPin
 } from "lucide-react";
+import { RegionalIntelDashboard } from "./regional-intel-dashboard";
+import { useGetCampaigns } from "@/hooks/use-regional-intel";
 
 const API = "/api/market-intel";
 
@@ -124,6 +127,10 @@ export default function MarketIntelPage() {
   const [chatSending, setChatSending] = useState(false);
   const [chatLoadingHistory, setChatLoadingHistory] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  const [activeMainTab, setActiveMainTab] = useState("reports");
+  const [selectedRegionalCampaignId, setSelectedRegionalCampaignId] = useState<string | null>(null);
+  const { data: campaignsData } = useGetCampaigns();
 
   const loadReports = useCallback(async () => {
     try {
@@ -638,35 +645,42 @@ export default function MarketIntelPage() {
   // ── List view ──────────────────────────────────────────────────────────────
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="font-mono text-xl font-bold uppercase tracking-wider flex items-center gap-2">
-            <Radar className="h-5 w-5 text-primary" /> Inteligência de Mercado
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Análise mercadológica completa: concorrentes, gaps de posicionamento e arbitragens — antes de investir 1 real.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => loadReports()} aria-label="Atualizar">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Button size="sm" onClick={() => setShowNew(true)}>
-            <Plus className="h-4 w-4 mr-1.5" /> Nova Análise
-          </Button>
-        </div>
-      </div>
+      <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full">
+        <TabsList className="mb-6 bg-background border border-border/50">
+          <TabsTrigger value="reports" className="data-[state=active]:bg-card/50">Análises de Mercado</TabsTrigger>
+          <TabsTrigger value="regional" className="data-[state=active]:bg-card/50">Radar Regional</TabsTrigger>
+        </TabsList>
 
-      {showNew && (
-        <div className="border border-primary/30 rounded-sm bg-card/60 p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-mono text-sm uppercase tracking-wider flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" /> Nova Análise de Mercado
-            </h2>
-            <Button variant="ghost" size="sm" onClick={() => setShowNew(false)} aria-label="Fechar formulário">
-              <X className="h-4 w-4" />
-            </Button>
+        <TabsContent value="reports" className="space-y-6 mt-0">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="font-mono text-xl font-bold uppercase tracking-wider flex items-center gap-2">
+                <Radar className="h-5 w-5 text-primary" /> Inteligência de Mercado
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Análise mercadológica completa: concorrentes, gaps de posicionamento e arbitragens — antes de investir 1 real.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => loadReports()} aria-label="Atualizar">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+              <Button size="sm" onClick={() => setShowNew(true)}>
+                <Plus className="h-4 w-4 mr-1.5" /> Nova Análise
+              </Button>
+            </div>
           </div>
+
+          {showNew && (
+            <div className="border border-primary/30 rounded-sm bg-card/60 p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="font-mono text-sm uppercase tracking-wider flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" /> Nova Análise de Mercado
+                </h2>
+                <Button variant="ghost" size="sm" onClick={() => setShowNew(false)} aria-label="Fechar formulário">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Produto *</label>
@@ -770,6 +784,54 @@ export default function MarketIntelPage() {
           })}
         </div>
       )}
+        </TabsContent>
+
+        <TabsContent value="regional" className="space-y-6 mt-0">
+          {!selectedRegionalCampaignId ? (
+            <div className="border border-border/50 rounded-sm p-12 text-center space-y-4 bg-card/30">
+              <MapPin className="h-10 w-10 mx-auto text-primary/50" />
+              <h2 className="font-mono text-lg uppercase tracking-wider">Radar de Audiência</h2>
+              <p className="text-sm text-muted-foreground max-w-lg mx-auto">
+                Selecione uma campanha para monitorar dados regionais, extrair evidências, rastrear sinais sociais e encontrar oportunidades prontas para ativação.
+              </p>
+
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-4">
+                {campaignsData?.campaigns === undefined ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Carregando campanhas...
+                  </div>
+                ) : campaignsData.campaigns.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Nenhuma campanha encontrada.</p>
+                ) : (
+                  campaignsData.campaigns.map(c => (
+                    <Button
+                      key={c.id}
+                      variant="outline"
+                      onClick={() => setSelectedRegionalCampaignId(c.id)}
+                    >
+                      {c.title}
+                    </Button>
+                  ))
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 border-b border-border/50 pb-4">
+                <Button variant="ghost" size="sm" onClick={() => setSelectedRegionalCampaignId(null)}>
+                  <ArrowLeft className="h-4 w-4 mr-1.5" /> Voltar
+                </Button>
+                <div>
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Campanha Selecionada</p>
+                  <p className="text-sm font-medium">{campaignsData?.campaigns.find(c => c.id === selectedRegionalCampaignId)?.title || "Campanha"}</p>
+                </div>
+              </div>
+
+              <RegionalIntelDashboard campaignId={selectedRegionalCampaignId} />
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

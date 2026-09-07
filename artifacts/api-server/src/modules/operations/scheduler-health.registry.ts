@@ -12,6 +12,7 @@ export type SchedulerHealth = {
   lastSuccessAt: string | null;
   lastErrorAt: string | null;
   lastDurationMs: number | null;
+  lastOutcome: "completed" | "failed" | "skipped" | null;
   inFlight: boolean;
   stale: boolean;
 };
@@ -27,6 +28,7 @@ export function registerScheduler(name: string, staleAfterMs: number): void {
       lastSuccessAt: null,
       lastErrorAt: null,
       lastDurationMs: null,
+      lastOutcome: null,
       inFlight: false,
       staleAfterMs,
     });
@@ -40,7 +42,7 @@ export function registerScheduler(name: string, staleAfterMs: number): void {
 export async function runSchedulerTick(name: string, callback: () => Promise<void>): Promise<boolean> {
   const record = schedulers.get(name);
   if (!record) throw new Error(`Scheduler "${name}" must be registered before ticking`);
-  if (record.inFlight) return false;
+  if (record.inFlight) { record.lastOutcome = "skipped"; return false; }
 
   record.inFlight = true;
   record.lastTickAt = new Date().toISOString();
@@ -48,10 +50,12 @@ export async function runSchedulerTick(name: string, callback: () => Promise<voi
   try {
     await callback();
     record.lastSuccessAt = new Date().toISOString();
+    record.lastOutcome = "completed";
     return true;
   } catch {
     // Do not retain error text: provider errors can contain credentials or payloads.
     record.lastErrorAt = new Date().toISOString();
+    record.lastOutcome = "failed";
     throw new Error(`Scheduler "${name}" tick failed`);
   } finally {
     record.lastDurationMs = Date.now() - started;
@@ -68,6 +72,7 @@ export function getSchedulerHealth(now = Date.now()): Record<string, SchedulerHe
       lastSuccessAt: record.lastSuccessAt,
       lastErrorAt: record.lastErrorAt,
       lastDurationMs: record.lastDurationMs,
+      lastOutcome: record.lastOutcome,
       inFlight: record.inFlight,
       stale: now - new Date(reference).getTime() > record.staleAfterMs,
     }];

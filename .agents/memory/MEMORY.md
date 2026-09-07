@@ -87,3 +87,4 @@
 - [Canonical Masterplan Versioning](canonical-masterplan-versioning.md) — approved campaign plans are immutable authorities bound to context, authorization, evidence and readiness.
 - [Community Lifecycle Orchestration](community-lifecycle-orchestration.md) — communities span provisioning, nurturing, conversion, post-sale and referrals across authorized channels.
 - [Resume From Last Checkpoint](resume-from-last-checkpoint.md) — continue roadmap work at the exact unfinished action; never restart completed waves just because time passed.
+- [Competitive Audience Radar](competitive-audience-radar.md) — public positive competitor interactions become evidence-backed audience opportunities, never automatically contactable leads.

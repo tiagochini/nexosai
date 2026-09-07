@@ -25,6 +25,7 @@ import { startSocialScheduler, startMetricsSyncScheduler, stopSocialScheduler, s
 import { startPaidMediaScheduler, stopPaidMediaScheduler } from "./modules/paid-media/paid-media.worker.js";
 import { initSequenceScheduler, closeSequenceScheduler } from "./modules/launch-sequence/sequence-scheduler.worker.js";
 import { startFunnelScheduler } from "./modules/academy/academy-funnel.service.js";
+import { startRegionalAcquisitionScheduler, stopRegionalAcquisitionScheduler } from "./modules/market-intel/regional-acquisition.service.js";
 import { cleanupDisconnectedIntegrationDuplicates } from "./modules/integrations/integration-cleanup.service.js";
 import { recoverStudioRenders } from "./modules/video-editor/audiovisual-studio.service.js";
 import { organizeAllWorkspaceRecordings } from "./modules/recording/recording.service.js";
@@ -311,6 +312,7 @@ Promise.all([
     }
     logger.info({ port }, "NexOS AI API Server listening");
     scheduleRecordingOrganizationSweep();
+    startRegionalAcquisitionScheduler();
   });
 }).catch(async (err) => {
   logger.error({ err }, "Boot cleanup failed — starting server anyway to avoid complete outage");
@@ -320,6 +322,7 @@ Promise.all([
   httpServer.listen(port, () => {
     logger.info({ port }, "NexOS AI API Server listening (cleanup failed)");
     scheduleRecordingOrganizationSweep();
+    startRegionalAcquisitionScheduler();
   });
 });
 
@@ -327,6 +330,7 @@ async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, "Shutdown signal received");
   stopSocialScheduler();
   stopMetricsSyncScheduler();
+  stopRegionalAcquisitionScheduler();
   await closeSequenceScheduler();
   await closeOrchestrationWorker();
   await closeAllQueues();

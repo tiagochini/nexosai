@@ -10,6 +10,7 @@ import { and, eq } from "drizzle-orm";
 import { db, campaignsTable, agentClarificationRequestsTable } from "@workspace/db";
 import type { AgentRole } from "../ai-gateway/ai-gateway.service.js";
 import { getApprovedMasterplan } from "../masterplan/masterplan.service.js";
+import { latestRegionalIntelligenceSummary } from "../market-intel/regional-intelligence.service.js";
 
 export interface CampaignActionContext {
   block: string;
@@ -109,6 +110,8 @@ export async function buildCampaignActionContext(
   }
 
   const approvedMasterplan = await getApprovedMasterplan(workspaceId, campaignId);
+  // Explicit null is retained below: regional monitoring is optional, never inferred.
+  const regionalIntelligence = await latestRegionalIntelligenceSummary(workspaceId, campaignId);
   const memory = asObject(campaign.memoryData);
   const sourceVersion = `${campaign.updatedAt.toISOString()}:${String(memory.version ?? "")}:${approvedMasterplan?.contextFingerprint ?? "legacy"}`;
   const key = `${workspaceId}:${campaignId}:${agentRole}:${sourceVersion}`;
@@ -141,7 +144,7 @@ export async function buildCampaignActionContext(
     } : undefined,
     objective: { campaign: { title: campaign.title, type: campaign.type, status: campaign.status, locale: campaign.locale }, intake },
     strategy: campaign.strategyData,
-    market: { targeting: campaign.targetingData, audience: campaign.audienceData, profile: brain["profileData"] },
+    market: { targeting: campaign.targetingData, audience: campaign.audienceData, profile: brain["profileData"], regionalIntelligence: regionalIntelligence ?? { available: false } },
     offer_psychology: { offer: campaign.offerData, psychology: brain["offerPsychologyLayer"] },
     sales: { salesContext: brain["salesContext"], channel: intake["campaign.salesChannel"] },
     launch: { currentPhase: campaign.currentPhase, durationDays: campaign.durationDays, budgetTotal: campaign.budgetTotal, revenueTarget: campaign.revenueTarget, timezone: campaign.timezone, launchPlan: brain["launchPlan"] ?? campaign.timelineData },

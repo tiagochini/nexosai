@@ -3,6 +3,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { db, campaignsTable, masterplanVersionsTable, agentClarificationRequestsTable, auditLogsTable } from "@workspace/db";
 import { NotFoundError, AppError } from "../../lib/errors.js";
 import { PRODUCT_AUTONOMY_CONTRACT } from "../autonomy/autonomy.service.js";
+import { latestRegionalIntelligenceSummary } from "../market-intel/regional-intelligence.service.js";
 
 type Json = Record<string, unknown>;
 const object = (value: unknown): Json => value && typeof value === "object" && !Array.isArray(value) ? value as Json : {};
@@ -56,11 +57,13 @@ export async function materializeMasterplan(workspaceId: string, campaignId: str
       eq(agentClarificationRequestsTable.status, "pending"),
     ));
   const memory = object(campaign.memoryData);
+  const regionalIntelligence = await latestRegionalIntelligenceSummary(workspaceId, campaignId);
   const snapshot = canonicalize({
     schema: "nexos-masterplan/v1",
     campaign: { id: campaign.id, title: campaign.title, type: campaign.type, track: campaign.track, locale: campaign.locale, timezone: campaign.timezone, durationDays: campaign.durationDays, budgetTotal: campaign.budgetTotal, revenueTarget: campaign.revenueTarget, currentPhase: campaign.currentPhase },
     intake: campaign.intakeData, strategy: campaign.strategyData, offer: campaign.offerData, targeting: campaign.targetingData,
     audience: campaign.audienceData, timeline: campaign.timelineData,
+    regionalIntelligence: regionalIntelligence ?? { available: false },
     operatingMemory: { permittedPromises: memory["permittedPromises"], prohibitedClaims: memory["prohibitedClaims"], ethicalBoundaries: memory["ethicalBoundaries"], legalBoundaries: memory["legalBoundaries"], approvedDecisions: memory["approvedDecisions"] },
   });
   const readiness = calculateMasterplanReadiness(campaign.strategyData, pending);
