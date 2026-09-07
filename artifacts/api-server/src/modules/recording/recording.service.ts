@@ -1,4 +1,4 @@
-import { eq, and, desc, isNotNull } from "drizzle-orm";
+import { eq, and, desc, isNotNull, isNull } from "drizzle-orm";
 import { db, launchRecordingsTable, recordingFoldersTable } from "@workspace/db";
 import type { RecordingEvent } from "@workspace/db";
 import { ZipArchive } from "archiver";
@@ -62,6 +62,33 @@ export async function ensureSystemRecordingFolder(workspaceId: string, systemTyp
   return folder;
 }
 
+/**
+ * Publish applies schema diffs but does not execute data backfills from local SQL files.
+ * Repair legacy rows lazily, within the authenticated workspace, before serving the library.
+ */
+async function ensureWorkspaceRecordingOrganization(workspaceId: string) {
+  const [automaticFolder, manualFolder] = await Promise.all([
+    ensureSystemRecordingFolder(workspaceId, "automatic"),
+    ensureSystemRecordingFolder(workspaceId, "manual"),
+  ]);
+  await Promise.all([
+    db.update(launchRecordingsTable)
+      .set({ folderId: automaticFolder.id })
+      .where(and(
+        eq(launchRecordingsTable.workspaceId, workspaceId),
+        isNull(launchRecordingsTable.folderId),
+        eq(launchRecordingsTable.recordingMode, "automatic"),
+      )),
+    db.update(launchRecordingsTable)
+      .set({ folderId: manualFolder.id })
+      .where(and(
+        eq(launchRecordingsTable.workspaceId, workspaceId),
+        isNull(launchRecordingsTable.folderId),
+        eq(launchRecordingsTable.recordingMode, "manual"),
+      )),
+  ]);
+}
+
 async function workspaceFolder(folderId: string, workspaceId: string) {
   const [folder] = await db.select().from(recordingFoldersTable).where(and(
     eq(recordingFoldersTable.id, folderId), eq(recordingFoldersTable.workspaceId, workspaceId),
@@ -98,10 +125,7 @@ export class ProtectedRecordingFolderError extends Error {}
 export class RecordingFolderModeMismatchError extends Error {}
 
 export async function listFolders(workspaceId: string) {
-  await Promise.all([
-    ensureSystemRecordingFolder(workspaceId, "automatic"),
-    ensureSystemRecordingFolder(workspaceId, "manual"),
-  ]);
+  await ensureWorkspaceRecordingOrganization(workspaceId);
   return db.select().from(recordingFoldersTable)
     .where(eq(recordingFoldersTable.workspaceId, workspaceId))
     .orderBy(desc(recordingFoldersTable.isSystem), recordingFoldersTable.name);
@@ -448,6 +472,7 @@ export async function deleteRecording(recordingId: string, workspaceId: string) 
 // ─── List ─────────────────────────────────────────────────────────────────────
 
 export async function listRecordings(workspaceId: string, folderId?: string) {
+  await ensureWorkspaceRecordingOrganization(workspaceId);
   if (folderId && !await workspaceFolder(folderId, workspaceId)) throw new RecordingFolderNotFoundError();
   return db
     .select({

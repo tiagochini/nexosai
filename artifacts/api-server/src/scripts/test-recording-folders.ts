@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { and, eq, isNull } from "drizzle-orm";
+import { db, launchRecordingsTable } from "@workspace/db";
 import { cleanupE2eFixtures, markerFromSuffix, seedE2eFixtures } from "./e2e-fixtures.js";
 import {
   ProtectedRecordingFolderError,
@@ -41,6 +43,26 @@ try {
   assert.equal(withVideo.hasVideo, true);
   assert.equal(withVideo.videoUrl, `/api/recordings/${recording.id}/video`);
   assert.equal(JSON.stringify(withVideo).includes("private-key.webm"), false);
+
+  // Publish applies schema only. First library access must organize legacy rows
+  // that received the default mode but still have no folder.
+  await db.update(launchRecordingsTable)
+    .set({ folderId: null })
+    .where(and(
+      eq(launchRecordingsTable.id, recording.id),
+      eq(launchRecordingsTable.workspaceId, workspaceId),
+    ));
+  const legacyRowsBefore = await db.select({ id: launchRecordingsTable.id })
+    .from(launchRecordingsTable)
+    .where(and(
+      eq(launchRecordingsTable.workspaceId, workspaceId),
+      isNull(launchRecordingsTable.folderId),
+    ));
+  assert.equal(legacyRowsBefore.some((row) => row.id === recording.id), true);
+  const organizedRows = await listRecordings(workspaceId);
+  const organizedLegacy = organizedRows.find((row) => row.id === recording.id);
+  assert.equal(organizedLegacy?.recordingMode, "manual");
+  assert.equal(organizedLegacy?.folderSlug, "uploads-manuais");
 
   const custom = await createFolder(workspaceId, `${marker} custom`);
   const renamed = await renameFolder(custom.id, workspaceId, `${marker} renamed`);

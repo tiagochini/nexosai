@@ -8,3 +8,5 @@ Automatic captures and manual uploads must remain distinguishable and default to
 **Why:** A global JSON parser once consumed a raw WebM body before the upload route, and earlier asynchronous storage migration could report success before durable storage existed. Both failure modes leave users believing a recording was saved when it was not.
 
 **How to apply:** JSON parsing must honor request content types so raw video streams reach media handlers untouched. Preserve the real media MIME type, persist failed/processing/ready states, retry against the same recording ID, hide editor actions until ready, and delete storage before deleting metadata.
+
+Replit Publish applies the development-to-production schema diff, not data-backfill statements from local migration SQL. Legacy recording organization must therefore be an idempotent, tenant-scoped application operation (for example, before listing a workspace library), never direct production DML or deployment-time DDL.
