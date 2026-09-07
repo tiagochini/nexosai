@@ -43,6 +43,11 @@ export interface WorkspacesResponse {
   workspaces: WorkspaceDetail[];
   activeWorkspaceId: string;
   entitlements: WorkspaceEntitlements;
+  workspaceCreation: {
+    available: boolean;
+    internalAccess: boolean;
+    status: "internal_access" | "coming_soon";
+  };
   usage: WorkspaceUsage;
 }
 

@@ -4,14 +4,19 @@ import {
   db,
   type CanonicalSocialNetwork,
   plansTable,
+  usersTable,
   workspacesTable,
   workspaceIntegrationsTable,
 } from "@workspace/db";
 import { AppError, NotFoundError } from "../../lib/errors.js";
-import { assertOwnedActiveWorkspace, canonicalNetworkForProvider, entitlementLimits, entitlementNetworks, SOCIAL_ENTITLEMENT_CODES } from "./workspace-entitlements.service.js";
+import { canCreateInternalWorkspace } from "../admin/admin-access.js";
+import { assertOwnedActiveWorkspace, canonicalNetworkForProvider, entitlementLimits, entitlementNetworks } from "./workspace-entitlements.service.js";
 
 export async function getWorkspaceOverview(userId: string, activeWorkspaceId: string) {
   await assertOwnedActiveWorkspace(userId, activeWorkspaceId);
+  const [owner] = await db.select({ email: usersTable.email }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!owner) throw new NotFoundError("User");
+  const internalWorkspaceAccess = canCreateInternalWorkspace(owner.email);
   const workspaces = await db.select({
     id: workspacesTable.id, name: workspacesTable.name, slug: workspacesTable.slug,
     status: workspacesTable.status, createdAt: workspacesTable.createdAt, planId: workspacesTable.planId,
@@ -35,6 +40,11 @@ export async function getWorkspaceOverview(userId: string, activeWorkspaceId: st
       allowedSocialNetworks: entitlementNetworks(plan.allowedSocialNetworks),
       maxAccountsPerNetwork: entitlementLimits(plan.maxAccountsPerNetwork),
     },
+    workspaceCreation: {
+      available: internalWorkspaceAccess,
+      internalAccess: internalWorkspaceAccess,
+      status: internalWorkspaceAccess ? "internal_access" : "coming_soon",
+    },
     usage: { workspacesUsed: workspaces.length, connectedAccountsByNetwork: connectedCounts },
   };
 }
@@ -48,13 +58,12 @@ export async function createOwnedWorkspace(userId: string, currentWorkspaceId: s
     if (!current || current.ownerId !== userId || current.status !== "active") {
       throw new AppError(403, "Workspace is not owned by this user or is inactive", "FORBIDDEN");
     }
+    const [owner] = await tx.select({ email: usersTable.email }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    if (!owner || !canCreateInternalWorkspace(owner.email)) {
+      throw new AppError(403, "Criação de novos workspaces ainda não está disponível para esta conta", "WORKSPACE_CREATION_NOT_AVAILABLE");
+    }
     const [plan] = await tx.select().from(plansTable).where(eq(plansTable.id, current.planId)).limit(1);
     if (!plan) throw new NotFoundError("Plan");
-    const owned = await tx.select({ id: workspacesTable.id }).from(workspacesTable)
-      .where(eq(workspacesTable.ownerId, userId));
-    if (owned.length >= plan.maxWorkspaces) {
-      throw new AppError(403, "Limite de workspaces atingido", SOCIAL_ENTITLEMENT_CODES.workspaceLimit);
-    }
     const [workspace] = await tx.insert(workspacesTable).values({
       ownerId: userId,
       planId: current.planId,

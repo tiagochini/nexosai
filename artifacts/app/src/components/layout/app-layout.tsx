@@ -100,9 +100,20 @@ function WorkspaceSwitcher({ onNav, isMobileHeader }: { onNav?: () => void; isMo
             ))}
           </div>
           <DropdownMenuSeparator className="bg-border/30" />
-          <DropdownMenuItem asChild className="cursor-pointer rounded-none focus:bg-primary/10 text-primary py-2.5">
+          <DropdownMenuItem asChild className="cursor-pointer rounded-none focus:bg-primary/10 text-primary py-3">
+            <Link href="/settings?tab=workspace&workspaceAction=add" onClick={onNav}>
+              <Plus className="h-3.5 w-3.5 mr-2" />
+              <span className="flex flex-col">
+                <span className="text-xs font-semibold uppercase tracking-widest">Adicionar workspace</span>
+                <span className="mt-0.5 text-[9px] normal-case tracking-normal text-muted-foreground">
+                  Nova marca, cliente ou operação
+                </span>
+              </span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className="cursor-pointer rounded-none focus:bg-primary/10 py-2">
             <Link href="/settings?tab=workspace" onClick={onNav}>
-              <Plus className="h-3.5 w-3.5 mr-2" /> <span className="text-xs uppercase tracking-widest">Gerenciar Workspaces</span>
+              <Settings className="h-3.5 w-3.5 mr-2" /> <span className="text-[10px] uppercase tracking-widest">Gerenciar operações</span>
             </Link>
           </DropdownMenuItem>
         </DropdownMenuContent>

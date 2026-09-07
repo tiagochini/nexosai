@@ -267,6 +267,7 @@ function WorkspaceTab() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newWsName, setNewWsName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [isWorkspaceInfoOpen, setIsWorkspaceInfoOpen] = useState(false);
 
   useEffect(() => { setWsName(workspace?.name ?? ""); }, [workspace?.name]);
 
@@ -326,7 +327,19 @@ function WorkspaceTab() {
   const usage = workspacesData?.usage;
   const entitlements = workspacesData?.entitlements;
   const workspaces = workspacesData?.workspaces || [];
-  const limitsReached = usage && entitlements ? usage.workspacesUsed >= entitlements.maxWorkspaces : false;
+  const canCreateWorkspace = workspacesData?.workspaceCreation.available === true;
+  const planLimitReached = usage && entitlements ? usage.workspacesUsed >= entitlements.maxWorkspaces : false;
+
+  useEffect(() => {
+    if (!workspacesData) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("workspaceAction") !== "add") return;
+    if (canCreateWorkspace) setIsCreateOpen(true);
+    else setIsWorkspaceInfoOpen(true);
+    params.delete("workspaceAction");
+    const query = params.toString();
+    window.history.replaceState({}, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+  }, [workspacesData, canCreateWorkspace]);
 
   return (
     <div className="space-y-6">
@@ -377,7 +390,7 @@ function WorkspaceTab() {
                   className="h-full rounded-full transition-all duration-700"
                   style={{
                     width: `${Math.min(100, (usage.workspacesUsed / entitlements.maxWorkspaces) * 100)}%`,
-                    background: limitsReached ? "hsl(var(--destructive))" : "hsl(var(--primary))",
+                    background: planLimitReached ? "hsl(var(--destructive))" : "hsl(var(--primary))",
                   }}
                 />
               </div>
@@ -468,25 +481,25 @@ function WorkspaceTab() {
             </div>
 
             <div className="pt-4 border-t border-border/30 mt-6 flex flex-col items-start gap-4">
-               {limitsReached ? (
+               {planLimitReached && !canCreateWorkspace ? (
                  <div className="w-full p-4 border border-destructive/30 bg-destructive/10">
                    <div className="flex items-start gap-3">
                      <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
                      <div>
                        <div className="font-mono text-xs font-bold text-destructive uppercase tracking-widest">Limite Atingido</div>
-                       <div className="font-mono text-xs text-destructive/80 mt-1">Você atingiu o limite de {entitlements?.maxWorkspaces} operações para a capacidade deste ambiente.</div>
+                       <div className="font-mono text-xs text-destructive/80 mt-1">Você atingiu a capacidade atual de {entitlements?.maxWorkspaces} operação(ões). A ampliação ainda não está disponível para contratação.</div>
                      </div>
                    </div>
                  </div>
                ) : null}
 
                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                 <DialogTrigger asChild>
-                   <Button disabled={limitsReached} className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary">
+                 {canCreateWorkspace ? <DialogTrigger asChild>
+                    <Button className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary">
                      <Plus className="h-3.5 w-3.5 mr-2" />
-                     Nova Operação
+                      Adicionar Workspace
                    </Button>
-                 </DialogTrigger>
+                 </DialogTrigger> : null}
                  <DialogContent className="rounded-none border border-primary/30 bg-card/95 backdrop-blur-xl sm:max-w-[425px]">
                    <DialogHeader>
                      <DialogTitle className="font-mono uppercase tracking-widest text-primary text-sm">Criar Operação</DialogTitle>
@@ -519,6 +532,49 @@ function WorkspaceTab() {
                      <Button onClick={() => void handleCreate()} disabled={creating || newWsName.trim().length < 2} className="rounded-none font-mono text-xs uppercase tracking-widest btn-weapon-primary">
                        {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : null}
                        Criar e Acessar
+                     </Button>
+                   </DialogFooter>
+                 </DialogContent>
+               </Dialog>
+
+               {!canCreateWorkspace && (
+                 <Button
+                   onClick={() => setIsWorkspaceInfoOpen(true)}
+                   className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary"
+                 >
+                   <Plus className="h-3.5 w-3.5 mr-2" />
+                   Adicionar Workspace
+                 </Button>
+               )}
+
+               <Dialog open={isWorkspaceInfoOpen} onOpenChange={setIsWorkspaceInfoOpen}>
+                 <DialogContent className="rounded-none border border-primary/30 bg-card/95 backdrop-blur-xl sm:max-w-[520px]">
+                   <DialogHeader>
+                     <DialogTitle className="font-mono uppercase tracking-widest text-primary text-sm">O que é um Workspace NexOS?</DialogTitle>
+                     <DialogDescription className="font-mono text-xs text-muted-foreground leading-relaxed mt-2">
+                       Cada workspace é um ambiente isolado para uma marca, cliente ou operação. Ele mantém estratégia, campanhas, inteligência de mercado, leads, integrações e histórico separados para evitar que os agentes misturem contextos.
+                     </DialogDescription>
+                   </DialogHeader>
+                   <div className="space-y-3 border-y border-border/40 py-4">
+                     <div className="flex items-start gap-3">
+                       <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                       <p className="font-mono text-xs text-foreground/80">Use um workspace diferente para cada empresa, marca ou cliente atendido.</p>
+                     </div>
+                     <div className="flex items-start gap-3">
+                       <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                       <p className="font-mono text-xs text-foreground/80">Dados, agentes e autorizações sociais permanecem isolados entre as operações.</p>
+                     </div>
+                     <div className="flex items-start gap-3">
+                       <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                       <p className="font-mono text-xs text-foreground/80">Além de novos workspaces, a capacidade de contas conectadas poderá ser ampliada separadamente por plataforma.</p>
+                     </div>
+                   </div>
+                   <div className="border border-primary/20 bg-primary/5 p-3 font-mono text-xs text-muted-foreground">
+                     A ampliação de capacidade será disponibilizada em breve. Nenhuma contratação ou cobrança será realizada nesta tela.
+                   </div>
+                   <DialogFooter>
+                     <Button onClick={() => setIsWorkspaceInfoOpen(false)} className="rounded-none font-mono text-xs uppercase tracking-widest btn-weapon-primary">
+                       Entendi
                      </Button>
                    </DialogFooter>
                  </DialogContent>

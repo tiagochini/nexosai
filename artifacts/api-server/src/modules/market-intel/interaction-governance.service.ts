@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, desc, eq, gte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ne, sql } from "drizzle-orm";
 import {
   db, interactionApprovalsTable, interactionDecisionsTable, interactionDraftsTable, interactionExecutionsTable,
   interactionGovernancePoliciesTable, interactionOpportunitiesTable, interactionPlatformCapabilitiesTable,
@@ -17,8 +17,18 @@ const bounded = boundInteractionPayload;
 const privateAction = (action: Action) => action === "private_message" || action === "follow_up";
 const councilInflight = new Map<string, Promise<{ assessment: Json; draft: typeof interactionDraftsTable.$inferSelect | null; gate: GateResult }>>();
 export function validateInteractionDraft(content: string, ctaLevel: number, history: string[]) {
-  if (ctaLevel < 0 || ctaLevel > 5 || !content.trim()) throw new Error("Rascunho ou CTA inválido.");
-  const normalized = content.trim().toLowerCase().replace(/\s+/g, " ");
+  const trimmed = content.trim();
+  if (!Number.isInteger(ctaLevel) || ctaLevel < 0 || ctaLevel > 5 || !trimmed || trimmed.length > 800) throw new Error("Rascunho ou CTA inválido.");
+  if (/(?:https?:\/\/|www\.)\S+/iu.test(trimmed)) throw new Error("Rascunho bloqueado: links externos não são permitidos no primeiro contato.");
+  if (/(?:^|\s)@[a-z0-9_.-]{2,}/iu.test(trimmed)) throw new Error("Rascunho bloqueado: menções e handles não são permitidos.");
+  if (/(?:senha|password|cpf|cart[aã]o|dados banc[aá]rios|c[oó]digo de verifica[cç][aã]o)/iu.test(trimmed)) throw new Error("Rascunho bloqueado: solicitação de dado sensível.");
+  if (/(?:resultado garantido|100%\s*garantid|sem risco|ganho garantido|lucro garantido)/iu.test(trimmed)) throw new Error("Rascunho bloqueado: promessa ou garantia indevida.");
+  if (/(?:me chama no (?:direct|whatsapp)|mande (?:uma )?(?:dm|mensagem privada)|clique no link|acesse o link)/iu.test(trimmed)) throw new Error("Rascunho bloqueado: migração de canal ou pressão comercial indevida.");
+  if (/[!?]{3,}/u.test(trimmed)) throw new Error("Rascunho bloqueado: pontuação com padrão de spam.");
+  const letters = [...trimmed].filter((char) => /\p{L}/u.test(char));
+  const uppercase = letters.filter((char) => char === char.toLocaleUpperCase() && char !== char.toLocaleLowerCase());
+  if (letters.length >= 20 && uppercase.length / letters.length > 0.65) throw new Error("Rascunho bloqueado: excesso de letras maiúsculas.");
+  const normalized = trimmed.toLowerCase().replace(/\s+/g, " ");
   const tokens = new Set(normalized.split(/[^\p{L}\p{N}]+/u).filter((x) => x.length > 2));
   const similar = history.some((item) => {
     const candidate = item.trim().toLowerCase().replace(/\s+/g, " ");
@@ -127,17 +137,30 @@ export async function governOpportunity(workspaceId: string, opportunityId: stri
 
 export type InteractionCouncilProvider = (input: { workspaceId: string; opportunity: Json }) => Promise<string>;
 const defaultCouncilProvider: InteractionCouncilProvider = async ({ workspaceId, opportunity }) => {
-  const result = await completeWithAgentSafe("social_media", "You are an interaction council. Return ONLY strict JSON with observerSummary,intentScore,affinityScore,contactability,riskAssessment,recommendedAction,ctaLevel,draft,reasoning,confidence. Scores integers 0-100; CTA integer 0-5; draft max 800 chars. Do not request or use private PII. Recommendation never grants permission.", [{ role: "user", content: JSON.stringify(opportunity) }], workspaceId, logger, undefined, "pt-BR", undefined, 700);
+  const result = await completeWithAgentSafe("social_media", `You are the NexOS Interaction Council. Produce an unusually articulate, intelligent and creative interaction grounded only in the supplied public evidence and business context.
+
+The draft must sound like a perceptive human who genuinely understood the specific post or topic. Use one concrete contextual insight. Avoid generic praise, templates, fake familiarity, surveillance language, mentioning that the person came from a competitor, impersonation, unsupported claims, guarantees, urgency, pressure, sensitive inference, URLs, handles, off-platform solicitation or requests for private data. A first interaction is a relevant contribution, never a disguised sales pitch. Match the language and tone visible in the context while remaining concise and respectful. Vary phrasing and rhetorical approach so repeated interactions do not look coordinated or automated.
+
+Return ONLY strict JSON with observerSummary,intentScore,affinityScore,contactability,riskAssessment,recommendedAction,ctaLevel,draft,reasoning,confidence. Scores and confidence are integers 0-100. contactability is public, permitted, unknown or not_contactable. riskAssessment is low, medium or high. recommendedAction is public_comment, private_message, reply, follow_up, observe_only or do_not_interact. CTA is an integer 0-5. Draft is 1-800 characters. Do not request or use private PII. Recommendation never grants permission and must not escalate beyond the supplied action.`, [{ role: "user", content: JSON.stringify(opportunity) }], workspaceId, logger, undefined, "pt-BR", undefined, 900);
   if (!result.success) throw new Error(`Conselho indisponível: ${result.message}`);
   return result.content;
 };
-function parseCouncil(content: string): Json {
+export function parseInteractionCouncil(content: string): Json {
   if (content.length > 12_000) throw new Error("Resposta do conselho excede o limite.");
   let raw: unknown; try { raw = JSON.parse(content); } catch { throw new Error("Conselho retornou JSON inválido."); }
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("Conselho retornou formato inválido.");
   const data = raw as Json;
   const required = ["observerSummary", "intentScore", "affinityScore", "contactability", "riskAssessment", "recommendedAction", "ctaLevel", "draft", "reasoning", "confidence"];
-  if (required.some((key) => data[key] === undefined) || typeof data["draft"] !== "string" || typeof data["ctaLevel"] !== "number") throw new Error("Conselho retornou campos inválidos.");
+  if (required.some((key) => data[key] === undefined)) throw new Error("Conselho retornou campos inválidos.");
+  for (const key of ["intentScore", "affinityScore", "confidence"]) {
+    if (!Number.isInteger(data[key]) || Number(data[key]) < 0 || Number(data[key]) > 100) throw new Error("Conselho retornou score inválido.");
+  }
+  if (!Number.isInteger(data["ctaLevel"]) || Number(data["ctaLevel"]) < 0 || Number(data["ctaLevel"]) > 5) throw new Error("Conselho retornou CTA inválido.");
+  if (typeof data["draft"] !== "string" || !data["draft"].trim() || data["draft"].trim().length > 800) throw new Error("Conselho retornou rascunho inválido.");
+  if (typeof data["observerSummary"] !== "string" || typeof data["reasoning"] !== "string") throw new Error("Conselho retornou análise inválida.");
+  if (!["public", "permitted", "unknown", "not_contactable"].includes(String(data["contactability"]))) throw new Error("Conselho retornou contactabilidade inválida.");
+  if (!["low", "medium", "high"].includes(String(data["riskAssessment"]))) throw new Error("Conselho retornou risco inválido.");
+  if (!["public_comment", "private_message", "reply", "follow_up", "observe_only", "do_not_interact"].includes(String(data["recommendedAction"]))) throw new Error("Conselho retornou ação inválida.");
   return boundInteractionPayload(data);
 }
 export async function runInteractionCouncil(workspaceId: string, opportunityId: string, provider: InteractionCouncilProvider = defaultCouncilProvider) {
@@ -149,7 +172,14 @@ export async function runInteractionCouncil(workspaceId: string, opportunityId: 
     const detail = await getInteractionOpportunity(workspaceId, opportunityId);
     if (!detail) throw new Error("Oportunidade não encontrada.");
     const opportunity = detail.opportunity;
-    const assessment = parseCouncil(await provider({ workspaceId, opportunity: { action: opportunity.action, platform: opportunity.platform, evidence: bounded(opportunity.evidence as Json), context: bounded(opportunity.context as Json), riskScore: opportunity.riskScore, contactable: opportunity.contactable, assetOwned: opportunity.assetOwned, conversationOwned: opportunity.conversationOwned } }));
+    const assessment = parseInteractionCouncil(await provider({ workspaceId, opportunity: { action: opportunity.action, platform: opportunity.platform, evidence: bounded(opportunity.evidence as Json), context: bounded(opportunity.context as Json), riskScore: opportunity.riskScore, contactable: opportunity.contactable, assetOwned: opportunity.assetOwned, conversationOwned: opportunity.conversationOwned } }));
+    const recommendedAction = String(assessment["recommendedAction"]);
+    if (recommendedAction !== opportunity.action && recommendedAction !== "observe_only" && recommendedAction !== "do_not_interact") {
+      throw new Error("Conselho tentou escalar a ação além da oportunidade governada.");
+    }
+    if (recommendedAction === "observe_only" || recommendedAction === "do_not_interact") {
+      return { assessment, draft: null, gate };
+    }
     const proposedCta = Number(assessment["ctaLevel"]);
     const cap = (!opportunity.assetOwned && !opportunity.conversationOwned) ? 2 : opportunity.riskScore > 25 ? 2 : 5;
     const ctaLevel = Math.min(Math.max(0, Math.floor(proposedCta)), cap);
@@ -171,8 +201,17 @@ export async function proposeInteractionDraft(workspaceId: string, opportunityId
 export async function decideInteractionDraft(workspaceId: string, draftId: string, approved: boolean, userId?: string, modifiedContent?: string, reason?: string) {
   const [draft] = await db.select().from(interactionDraftsTable).where(and(eq(interactionDraftsTable.id, draftId), eq(interactionDraftsTable.workspaceId, workspaceId))).limit(1);
   if (!draft) throw new Error("Rascunho não encontrado.");
+  const finalContent = modifiedContent?.trim() || draft.content;
+  if (approved) {
+    const gate = await governOpportunity(workspaceId, draft.opportunityId, false);
+    if (gate.decision === "blocked") throw new Error("A oportunidade deixou de atender às regras de segurança.");
+    const history = await db.select({ content: interactionDraftsTable.content }).from(interactionDraftsTable)
+      .where(and(eq(interactionDraftsTable.workspaceId, workspaceId), ne(interactionDraftsTable.id, draftId)))
+      .orderBy(desc(interactionDraftsTable.createdAt)).limit(100);
+    validateInteractionDraft(finalContent, draft.ctaLevel, history.map((item) => item.content));
+  }
   await db.insert(interactionApprovalsTable).values({ workspaceId, draftId, decision: approved ? "approved" : "rejected", decidedByUserId: userId ?? null, modifiedContent: modifiedContent ?? null, reason: reason ?? null });
-  await db.update(interactionDraftsTable).set({ state: approved ? "approved" : "cancelled", content: modifiedContent?.trim().slice(0, 4000) || draft.content }).where(eq(interactionDraftsTable.id, draftId));
+  await db.update(interactionDraftsTable).set({ state: approved ? "approved" : "cancelled", content: finalContent, contentFingerprint: hash(finalContent) }).where(eq(interactionDraftsTable.id, draftId));
   await db.update(interactionOpportunitiesTable).set({ state: approved ? "approved" : "cancelled", updatedAt: new Date() }).where(and(eq(interactionOpportunitiesTable.id, draft.opportunityId), eq(interactionOpportunitiesTable.workspaceId, workspaceId)));
 }
 

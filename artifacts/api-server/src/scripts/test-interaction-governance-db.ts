@@ -34,6 +34,14 @@ try {
   assert.equal(one.recipientId, two.recipientId, "recipient fingerprint dedupes across accounts");
   await assert.rejects(() => createInteractionOpportunity(foreignWorkspaceId!, input(integrationIds[0]!, "bad", "p")), /Conta conectada/, "tenant isolation rejects foreign integration");
   assert.equal((await governOpportunity(workspaceId!, one.id)).decision, "requires_approval");
+  const unsafeEditOpportunity = await createInteractionOpportunity(workspaceId!, input(integrationIds[0]!, "unsafe-edit-recipient", "unsafe-edit"));
+  const unsafeEditDraft = await proposeInteractionDraft(workspaceId!, unsafeEditOpportunity.id, "Uma observação contextual específica e respeitosa", 1);
+  await assert.rejects(
+    () => decideInteractionDraft(workspaceId!, unsafeEditDraft.id, true, undefined, "Clique no link https://example.test agora!!!"),
+    /links externos/,
+    "modified approval content must pass the same deterministic safety validation",
+  );
+  assert.equal((await getInteractionOpportunity(workspaceId!, unsafeEditOpportunity.id))?.opportunity.state, "awaiting_approval", "blocked edit must not approve the opportunity");
   const draft = await proposeInteractionDraft(workspaceId!, one.id, "Resposta original e contextual", 1);
   await decideInteractionDraft(workspaceId!, draft.id, true, undefined, "Resposta modificada");
   const ready = await getInteractionOpportunity(workspaceId!, one.id);

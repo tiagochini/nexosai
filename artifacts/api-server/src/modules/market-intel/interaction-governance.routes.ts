@@ -87,7 +87,7 @@ router.post("/opportunities/:id/proposals", async (req, res) => {
 router.post("/drafts/:id/decision", async (req, res) => {
   const parsed = z.object({ approved: z.boolean(), modifiedContent: z.string().min(1).max(4000).optional(), reason: z.string().max(1000).optional() }).safeParse(req.body);
   if (!parsed.success) return void res.status(400).json({ error: "Decisão inválida." });
-  try { await decideInteractionDraft(req.auth.workspaceId, req.params.id, parsed.data.approved, req.auth.userId, parsed.data.modifiedContent, parsed.data.reason); res.status(204).end(); } catch (e) { res.status(404).json({ error: e instanceof Error ? e.message : "Rascunho não encontrado." }); }
+  try { await decideInteractionDraft(req.auth.workspaceId, req.params.id, parsed.data.approved, req.auth.userId, parsed.data.modifiedContent, parsed.data.reason); res.status(204).end(); } catch (e) { res.status(409).json({ error: e instanceof Error ? e.message : "Decisão bloqueada." }); }
 });
 router.post("/opportunities/:id/operator-executed", async (req, res) => {
   const parsed = z.object({ draftId: z.string().uuid().optional(), evidence: json }).safeParse(req.body);
