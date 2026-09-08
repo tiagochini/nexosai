@@ -2,9 +2,9 @@
 
 **Natureza:** anexo somente de inventário; não aprova arquitetura, não implementa
 código e não congela a Etapa 1.  
-**Status:** auditoria baseada em código concluída — aguardando revisão e gate da
-Etapa 1.  
-**Data:** 07/09/2026. **Subordinação:** Etapa 0 — Congelamento Conceitual.
+**Status:** auditoria técnica concluída — aguardando aprovação formal da Etapa 1.
+**Data:** 07/09/2026. **Reconciliação:** 08/09/2026.
+**Subordinação:** Etapa 0 — Congelamento Conceitual.
 
 ## 1. Limite, evidências e método
 
@@ -43,8 +43,8 @@ consumidor, conexão, atividade e prontidão das 79 roles do snapshot original e
 |---|---:|---|
 | `AgentRole` | 86 | `ai-gateway.service.ts` |
 | provider map | 86 | `AGENT_PROVIDER_MAP` no mesmo path |
-| arquivos `*.agent.ts` | 72 | diretório `modules/agents/` |
-| arquivos sem role homônima | 8 | lista na seção 4 |
+| arquivos `*.agent.ts` | 73 | diretório `modules/agents/` |
+| arquivos auxiliares ou compartilhados sem role única homônima | 9 | lista na seção 4 |
 
 ## 3. Censo-base de roles (79)
 
@@ -155,16 +155,19 @@ orquestração; nenhuma é denominada aqui “executor externo”.
 | ab_test_designer | `agents/ab-test-designer.agent.ts` | gerador/analista | direto/experimental | E2; A2 |
 | compliance | `agents/compliance.agent.ts` | decisor/verificador | `command.agent.ts` | E3; A2 |
 
-## 4. Oito arquivos auxiliares sem role homônima
+## 4. Nove arquivos auxiliares ou compartilhados sem role única homônima
 
-`avatar-voice-file.agent.ts`, `context-refinement.agent.ts`,
+`avatar-voice-file.agent.ts`, `audiovisual-ensemble.agent.ts`,
+`context-refinement.agent.ts`,
 `cpl-scripts.agent.ts`, `ethics-autocorrect.agent.ts`,
 `filming-brief.agent.ts`, `item-copy.agent.ts`, `output-judge.agent.ts` e
 `social-profile-analyzer.agent.ts` existem sob
 `artifacts/api-server/src/modules/agents/`. Não são automaticamente agentes
 independentes: podem ser helper, alias, implementação compartilhada ou lacuna
 contratual. Em particular, `item_copy` aparece no contrato histórico, mas não é
-uma das 79 `AgentRole` do snapshot original.
+uma das 79 `AgentRole` do snapshot original. O ensemble audiovisual implementa
+uma cadeia compartilhada pelas sete roles adicionadas posteriormente; não é uma
+87ª role.
 
 ## 5. Matriz de classes
 

@@ -1,8 +1,9 @@
 # Etapa 1 — Inventário Canônico do NexOS AI
 
-**Versão:** 0.2
-**Status:** inventário baseado em código concluído — aguardando gate da Etapa 1
+**Versão:** 0.3
+**Status:** auditoria técnica concluída — aguardando aprovação formal do responsável do produto
 **Data da auditoria:** 07 de setembro de 2026
+**Última reconciliação com o código:** 08 de setembro de 2026
 **Fonte soberana:** `docs/ETAPA_0_CONGELAMENTO_CONCEITUAL.md`
 
 ---
@@ -641,13 +642,15 @@ atividade, prontidão e a auditoria da cadeia audiovisual/editor interno, está 
 |---|---:|---|
 | `AgentRole` no AI gateway | 86 | Identidades aceitas pelo roteador de IA |
 | Entradas no provider map | 86 | Roles com provider/modelo configurado |
-| Arquivos `*.agent.ts` | 72 | Implementações nomeadas como arquivos de agente |
+| Arquivos `*.agent.ts` | 73 | Implementações nomeadas como arquivos de agente |
 | Seções/famílias no contrato antigo | 17 | Cobertura documental, não quantidade real |
 
-Há oito arquivos de agente cujo nome não corresponde diretamente a uma role de
+Há nove arquivos de agente cujo nome não corresponde diretamente a uma única
+role de mesmo nome. O nono é o ensemble audiovisual compartilhado:
 mesmo nome:
 
 - `avatar-voice-file.agent.ts`;
+- `audiovisual-ensemble.agent.ts`;
 - `context-refinement.agent.ts`;
 - `cpl-scripts.agent.ts`;
 - `ethics-autocorrect.agent.ts`;
@@ -657,8 +660,10 @@ mesmo nome:
 - `social-profile-analyzer.agent.ts`.
 
 Isso pode representar helpers especializados, alias, role compartilhada ou
-lacuna contratual. A Etapa 1 não presume que cada arquivo corresponda a um
-agente operacional independente.
+lacuna contratual. `audiovisual-ensemble.agent.ts` implementa uma cadeia
+compartilhada pelas sete especialidades audiovisuais e não cria uma 87ª role.
+A Etapa 1 não presume que cada arquivo corresponda a um agente operacional
+independente.
 
 ### 5.1 Benchmark estrutural retirado do stand-by
 
@@ -838,26 +843,52 @@ remoção ampla nem reescrita sem análise de impacto.
 16. O orquestrador existente não equivale ainda a um contrato central único que
     correlacione Master Plan versionado, ação, autoridade, evidência e retomada.
 
+### 9.1 Delta de implementação posterior ao snapshot
+
+Após o snapshot-base, o código avançou sem invalidar as lacunas conservadoras
+deste inventário:
+
+- Master Plan versionado e evidências append-only passaram a governar ações de
+  vídeo, social e mídia paga em escopos implementados;
+- lifecycle/CRM passou a cobrir contato, checkout abandonado, pagamento,
+  onboarding, retenção, upsell, indicação, reembolso e reversões;
+- comunidades passaram a possuir inbox, consentimento, moderação, quotas,
+  tentativas e recibos, incluindo Telegram Bot API;
+- domínio, hospedagem e publicação de landing passaram a possuir operações
+  idempotentes, cobrança direta pelo fornecedor, reconciliação e bloqueio de DNS
+  até provisionamento confirmado;
+- mídia paga passou a persistir pixel/dataset, atribuição, CAPI, ações e recibos,
+  com suporte adicional a Google Ads e readiness explícito para TikTok Ads;
+- o núcleo audiovisual passou a persistir manifesto, assets, timeline, renders,
+  QC e sete especialidades operacionais;
+- checkout Asaas passou a separar sandbox e produção e a exigir reconciliação
+  do provedor antes de confirmar webhook.
+
+Esses avanços elevam partes dos domínios para E4/E5, mas não são promovidos
+automaticamente a E6 sem homologação externa e recovery comprovado.
+
 ---
 
 ## 10. Gate da Etapa 1
 
-A Etapa 1 poderá ser congelada quando o responsável do produto confirmar que:
+A auditoria técnica confirmou que:
 
-- [ ] as 22 capacidades GLP foram inventariadas;
-- [ ] código, interface e documentação foram considerados;
-- [ ] role, arquivo, prompt e agente operacional foram diferenciados;
-- [ ] as 86 roles e os oito arquivos auxiliares foram censados sem duplicação;
-- [ ] o benchmark dos 37 slots e seis departamentos foi comparado sem copiar sua
+- [x] as 22 capacidades GLP foram inventariadas;
+- [x] código, interface e documentação foram considerados;
+- [x] role, arquivo, prompt e agente operacional foram diferenciados;
+- [x] as 86 roles e os nove arquivos auxiliares/compartilhados foram censados sem duplicação;
+- [x] o benchmark dos 37 slots e seis departamentos foi comparado sem copiar sua
       arquitetura;
-- [ ] base de conhecimento, SOP, skill, autonomia, dashboard e orquestrador
+- [x] base de conhecimento, SOP, skill, autonomia, dashboard e orquestrador
       foram diferenciados de simples declarações;
-- [ ] geração, execução, verificação e recovery foram diferenciados;
-- [ ] capacidades existentes foram preservadas;
-- [ ] lacunas foram registradas sem implementação prematura;
-- [ ] contradições documentais foram explicitadas;
-- [ ] o inventário foi comparado ao congelamento canônico;
-- [ ] o inventário pode alimentar o Contrato Arquitetural da Etapa 2.
+- [x] geração, execução, verificação e recovery foram diferenciados;
+- [x] capacidades existentes foram preservadas;
+- [x] lacunas foram registradas sem implementação prematura;
+- [x] contradições documentais foram explicitadas;
+- [x] o inventário foi comparado ao congelamento canônico;
+- [x] o inventário pode alimentar o Contrato Arquitetural da Etapa 2.
+
+**Gate formal:** [ ] inventário aprovado e congelado pelo responsável do produto.
 
 Após aprovação, o status muda para “congelado”. A Etapa 2 deverá usar este
 inventário como entrada, sem reinterpretar uma role registrada como capacidade

@@ -1,5 +1,11 @@
 # Etapa 1 — Revisão explicativa das 79 roles (snapshot-base)
 
+> **Nota de estado corrente — 08/09/2026:** este documento preserva o censo
+> histórico de 79 roles, 72 arquivos e oito auxiliares. O estado atual auditado
+> é de 86 roles, 73 arquivos `*.agent.ts` e nove arquivos
+> auxiliares/compartilhados; `audiovisual-ensemble.agent.ts` implementa a cadeia
+> compartilhada das sete especialidades audiovisuais e não cria uma 87ª role.
+
 ## A) Escopo e escalas
 
 Esta é uma leitura do código atual, não uma promessa de produto. A unidade censada é
