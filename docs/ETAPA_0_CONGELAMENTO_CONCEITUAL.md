@@ -1,7 +1,7 @@
 # Etapa 0 — Congelamento Conceitual do NexOS AI
 
 **Documento canônico de produto**  
-**Versão:** 0.1  
+**Versão:** 0.2
 **Status:** congelado
 **Aprovado pelo responsável do produto em:** 07 de setembro de 2026
 **Escopo:** identidade, missão, fronteiras e resultado final do produto  
@@ -50,28 +50,27 @@ execução integral do lançamento.
 
 ---
 
-## 3. Global Launch Protocol
+## 3. Método GLP22
 
-O **Global Launch Protocol (GLP)** é o protocolo operacional proprietário
-executado pelo NexOS AI.
+### Nota de nome e versão (v0.2)
 
-O NexOS AI é o produto. O GLP é o protocolo que o produto executa.
+**Método GLP22** é o nome proprietário adotado para uso público e interno do
+protocolo operacional executado pelo NexOS AI. “Global Launch Protocol (GLP)”
+permanece neste documento e em registros anteriores como denominação
+histórica/conceitual anterior; referências a “GLP” devem ser interpretadas como
+referências históricas ao Método GLP22, salvo indicação expressa em contrário.
 
-O GLP organiza, conecta e governa todas as capacidades necessárias para levar
-um lançamento da intenção ao resultado operacional, incluindo sua preparação,
-execução, verificação, aprendizado e continuidade.
+O NexOS AI é o produto. O Método GLP22 é o protocolo que o produto executa e
+organiza, conecta e governa **22 capacidades operacionais interdependentes**
+para levar um lançamento da intenção ao resultado operacional, incluindo sua
+preparação, execução, verificação, aprendizado e continuidade. O “22” não
+designa 22 agentes nem 22 etapas do roadmap de construção.
 
 ### 3.1 Status do nome
 
-“Global Launch Protocol” e a sigla “GLP” são denominações conceituais
-provisórias. A adoção pública depende de validação comercial, jurídica,
-marcária, de domínio e de risco de confusão.
-
-Até essa validação:
-
-- o nome pode ser usado como referência interna;
-- não deve ser apresentado como marca definitivamente aprovada;
-- não deve gerar alegação de associação, licença ou endosso por terceiros.
+Método GLP22 é a denominação adotada, sem alegação de registro de marca,
+titularidade marcária, clearance jurídico ou ausência de risco de confusão.
+Ele não deve gerar alegação de associação, licença ou endosso por terceiros.
 
 ### 3.2 Base metodológica
 
