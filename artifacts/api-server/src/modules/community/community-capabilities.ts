@@ -14,10 +14,12 @@ export function providerCapability(channel: CommunityChannel, action: CommunityA
       reason: "WhatsApp Business Cloud API does not support general group moderation or group creation mutations.",
     };
   }
-  if (channel === "telegram" && action !== "respond") {
+  if (channel === "telegram") {
     return {
-      supported: false,
-      reason: "Telegram moderation requires a bot administrator and is not executed until an authorized provider adapter is configured.",
+      supported: true,
+      reason: action === "respond"
+        ? "Requires a configured Telegram bot."
+        : "Requires the configured Telegram bot to be administrator with the matching chat permission.",
     };
   }
   return { supported: false, reason: `No ${channel} community mutation adapter is configured.` };

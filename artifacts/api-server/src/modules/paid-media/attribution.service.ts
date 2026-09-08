@@ -13,7 +13,7 @@ function finiteNumber(value: unknown, name: string): number {
 }
 
 export async function recordDatasetEvent(
-  dataset: { id: string; workspaceId: string; accountId: string; provider: "meta_ads" | "tiktok_ads"; providerDatasetId: string },
+  dataset: { id: string; workspaceId: string; accountId: string; provider: "meta_ads" | "tiktok_ads" | "google_ads"; providerDatasetId: string },
   input: { source: "browser" | "server"; eventId: string; eventName: string; occurredAt: string; matchKeys?: Record<string, unknown>; payload?: Record<string, unknown> },
 ) {
   const occurredAt = new Date(input.occurredAt);
@@ -88,7 +88,7 @@ export async function datasetDiagnostics(workspaceId: string, datasetId: string)
   return { datasetId: dataset.id, lastEventAt: dataset.lastEventAt, eventCount: events, matchKeyEventCount: stats?.matched ?? 0, matchRate: events ? (stats?.matched ?? 0) / events : 0, providerDelivery: { sent: stats?.sent ?? 0, capabilityBlocked: stats?.blocked ?? 0, failed: stats?.failed ?? 0 }, status: events ? "receiving" : "no_events" };
 }
 
-export async function upsertTouchpoint(workspaceId: string, input: { externalTouchpointId: string; accountId?: string; entityId?: string; provider?: "meta_ads" | "tiktok_ads"; clickId?: string; utmSource?: string; utmCampaign?: string; occurredAt: string; metadata?: Record<string, unknown> }) {
+export async function upsertTouchpoint(workspaceId: string, input: { externalTouchpointId: string; accountId?: string; entityId?: string; provider?: "meta_ads" | "tiktok_ads" | "google_ads"; clickId?: string; utmSource?: string; utmCampaign?: string; occurredAt: string; metadata?: Record<string, unknown> }) {
   const occurredAt = new Date(input.occurredAt);
   if (!input.externalTouchpointId || Number.isNaN(occurredAt.getTime())) throw new Error("externalTouchpointId and valid occurredAt are required.");
   if (input.accountId) {

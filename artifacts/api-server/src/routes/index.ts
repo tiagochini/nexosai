@@ -39,6 +39,7 @@ import integrationChatRouter from "../modules/integrations/integration-chat.rout
 import integrationValidatorRouter from "../modules/integrations/integration-validator.routes.js";
 import socialModerationRouter from "../modules/social-moderation/social-moderation.routes.js";
 import communityRouter from "../modules/community/community.routes.js";
+import telegramCommunityRouter from "../modules/community/telegram.routes.js";
 import creativesRouter from "../modules/creatives/creatives.routes.js";
 import productCheckoutRouter from "../modules/product-checkout/product-checkout.routes.js";
 import lifecycleRouter from "../modules/lifecycle/lifecycle.routes.js";
@@ -118,6 +119,7 @@ router.use("/paid-media", paidMediaRouter);
 router.use("/integration-chat", integrationChatRouter);
 router.use("/social-moderation", socialModerationRouter);
 router.use("/community", communityRouter);
+router.use("/community/telegram", telegramCommunityRouter);
 router.use("/campaigns", creativesRouter);
 router.use("/campaigns", campaignGroupsRouter);
 router.use("/campaigns", creativeIntentRouter);

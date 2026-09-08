@@ -1,21 +1,33 @@
 import assert from "node:assert/strict";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import {
   db, domainOperationsTable, domainsTable, landingDeploymentsTable,
   landingRevisionsTable, launchSequencesTable, pagesTable, plansTable,
   usersTable, workspacesTable,
 } from "@workspace/db";
-import { checkAvailability, renewDomain } from "../modules/domains/domains.service.js";
+import { checkAvailability, renewDomain, supplierLifecycle, upsertDnsRecord } from "../modules/domains/domains.service.js";
+import { domainProviderCatalog, providerById } from "../modules/domains/provider-registry.js";
 import { deployLanding, generateLandingRevision } from "../modules/landing-publication/landing-publication.service.js";
 
 if (process.env["DOMAINS_LANDING_DB_TESTS"] !== "true") {
-  throw new Error("Refusing DB mutation: run only after applying 0019 with DOMAINS_LANDING_DB_TESTS=true.");
+  throw new Error("Refusing DB mutation: run only after applying 0019 and 0021 with DOMAINS_LANDING_DB_TESTS=true.");
 }
 if (process.env["REGISTRAR_API_URL"] || process.env["REGISTRAR_API_KEY"] || process.env["LANDING_DEPLOYMENT_URL"]) {
   throw new Error("This focused test is fail-closed and must not call any provider.");
 }
 
 const marker = `domains-landing-${process.pid}`;
+const domainColumns = await db.execute(sql`select column_name from information_schema.columns where table_name = 'domains' and column_name = 'supplier_payment_reference'`);
+if (domainColumns.rows.length !== 1) throw new Error("Migration 0021_supplier_direct_domain_billing.sql must be applied before this test.");
+const providers = domainProviderCatalog();
+assert.equal(providerById("replit")?.mode, "guided", "Replit purchase is never represented as a public automatic API");
+assert.equal(providerById("replit")?.renewalOwner, "platform");
+assert.equal(providerById("cloudflare")?.capabilities.includes("dns"), true);
+assert.equal(providerById("hostinger")?.mode, process.env["HOSTINGER_API_URL"] && process.env["HOSTINGER_API_KEY"] ? "automatic" : "guided", "Hostinger is guided unless its explicit HTTP adapter is configured");
+assert.equal(providerById("generic")?.mode, "connect_existing", "Generic providers cannot silently become automatic");
+assert.ok(providers.every(provider => provider.setupInstructions.length > 0), "every catalog entry provides actionable setup instructions");
+assert.equal(supplierLifecycle("awaiting_payment"), "awaiting_supplier_payment");
+assert.equal(supplierLifecycle("provisioned"), "dns_configuring", "only a supplier-provisioned receipt resumes DNS configuration");
 const [plan] = await db.select({ id: plansTable.id }).from(plansTable).limit(1);
 if (!plan) throw new Error("A plan is required before running this test.");
 const users = await db.insert(usersTable).values([
@@ -49,6 +61,14 @@ try {
     workspaceId: foreignWorkspaceId, domain: `foreign-${process.pid}.test`, type: "resold", registrarDomainId: "foreign-provider-id",
   }).returning();
   await assert.rejects(() => renewDomain(workspaceId, foreignDomain!.id, 1, "foreign-renew-key"), { code: "NOT_FOUND" });
+  const [unpaidDomain] = await db.insert(domainsTable).values({
+    workspaceId, domain: `unpaid-${process.pid}.test`, type: "resold", registrarProvider: "generic",
+    registrarDomainId: "supplier-domain", lifecycleStatus: "awaiting_supplier_payment",
+  }).returning();
+  await assert.rejects(
+    () => upsertDnsRecord(workspaceId, unpaidDomain!.id, { type: "TXT", name: "_verify", value: "blocked", ttl: 300 }, "unpaid-dns-key"),
+    { code: "SUPPLIER_PAYMENT_NOT_CONFIRMED" },
+  );
 
   const [sequence] = await db.insert(launchSequencesTable).values({
     workspaceId, name: "Capture binding test", leadCaptureEnabled: true,

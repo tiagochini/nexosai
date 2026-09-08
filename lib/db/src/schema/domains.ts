@@ -27,7 +27,9 @@ export const domainSslStatusEnum = pgEnum("domain_ssl_status", [
 ]);
 
 export const domainLifecycleStatusEnum = pgEnum("domain_lifecycle_status", [
-  "pending_payment", "registration_pending", "active", "renewal_due",
+  "quote_ready", "awaiting_supplier_payment", "payment_confirmed",
+  "provisioning", "dns_configuring", "ssl_pending", "active",
+  "payment_expired", "pending_payment", "registration_pending", "renewal_due",
   "renewal_pending", "expired", "failed", "capability_blocked",
 ]);
 
@@ -53,6 +55,11 @@ export const domainsTable = pgTable("domains", {
   lifecycleStatus: domainLifecycleStatusEnum("lifecycle_status").notNull().default("active"),
   registrarProvider: text("registrar_provider"),
   registrarDomainId: text("registrar_domain_id"),
+  /** Supplier-hosted checkout/invoice reference only. Never store payment credentials or amounts. */
+  supplierPaymentReference: text("supplier_payment_reference"),
+  supplierPaymentUrl: text("supplier_payment_url"),
+  supplierPaymentStatus: text("supplier_payment_status"),
+  supplierOrderId: text("supplier_order_id"),
   autoRenew: boolean("auto_renew").notNull().default(true),
   renewalAttempts: integer("renewal_attempts").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })

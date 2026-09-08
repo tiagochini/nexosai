@@ -247,6 +247,12 @@ router.get("/start/:provider", requireAuth, (req, res): void => {
   authUrl.searchParams.set("scope", config.scope);
   authUrl.searchParams.set("state", state);
   authUrl.searchParams.set("response_type", "code");
+  // Google only issues a refresh token during an offline consent grant. The
+  // paid-media adapter refuses expired production credentials without one.
+  if (config.platform === "google") {
+    authUrl.searchParams.set("access_type", "offline");
+    authUrl.searchParams.set("prompt", "consent");
+  }
 
   res.json({ url: authUrl.toString() });
 });
@@ -511,6 +517,8 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
       });
       const tokenData = (await tokenRes.json()) as {
         access_token?: string;
+        refresh_token?: string;
+        expires_in?: number;
         error?: string;
         error_description?: string;
       };
@@ -519,12 +527,28 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
         return;
       }
       accessToken = tokenData.access_token;
-      const meRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      const me = (await meRes.json()) as { sub?: string; name?: string; email?: string };
-      accountId = me.sub ?? "";
-      accountName = me.name ?? me.email ?? config.label;
+      refreshToken = tokenData.refresh_token;
+      if (tokenData.expires_in) tokenExpiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
+      if (config.dbProvider === "google_ads") {
+        // A Google identity is not a Google Ads customer. Account access is
+        // verified by the paid-media discovery endpoint before any customer is
+        // selected, including for MCC users.
+        accountId = "";
+        accountName = config.label;
+        metadataExtra = {
+          paidMedia: true,
+          accountSelectionRequired: true,
+          oauthScopes: PROVIDER_MAP.google_ads.scope.split(" "),
+          refreshTokenReady: !!refreshToken,
+        };
+      } else {
+        const meRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const me = (await meRes.json()) as { sub?: string; name?: string; email?: string };
+        accountId = me.sub ?? "";
+        accountName = me.name ?? me.email ?? config.label;
+      }
 
     } else if (config.platform === "hubspot") {
       const tokenRes = await fetch(platform.tokenUrl, {
@@ -620,7 +644,7 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
     // Provider values are shared by legacy organic and paid integrations.  Match
     // only the same purpose/account; never replace every row for a provider.
     const purpose: IntegrationPurpose =
-      provider === "meta_ads" || provider === "tiktok_ads" ? "paid_media" : "organic_social";
+      provider === "meta_ads" || provider === "tiktok_ads" || provider === "google_ads" ? "paid_media" : "organic_social";
     // OAuth callbacks are another account-creation path. Paid-media accounts
     // remain outside organic social entitlements; the existing account check in
     // the guard keeps OAuth reconnects idempotent.

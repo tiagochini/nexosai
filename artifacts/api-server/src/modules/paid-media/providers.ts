@@ -18,7 +18,7 @@ import {
 } from "./paid-media.domain.js";
 import { isPaidMediaIntegration } from "../integrations/integration-purpose.js";
 
-export type PaidMediaProviderName = "meta_ads" | "tiktok_ads";
+export type PaidMediaProviderName = "meta_ads" | "tiktok_ads" | "google_ads";
 export type PaidMediaEntityKind = "campaign" | "ad_set" | "ad" | "creative";
 
 export type ProviderAccount = {
@@ -26,6 +26,7 @@ export type ProviderAccount = {
   name: string;
   currency: string;
   timezone: string;
+  testAccount?: boolean;
 };
 
 export type ProviderEntity = {
@@ -72,6 +73,7 @@ export type PaidMediaProviderCapabilities = {
   pixelDatasetDiagnostics: "supported" | "unsupported";
   cboAboObservation: "supported" | "unsupported";
   conversionsApi: "supported" | "unsupported";
+  operations?: Partial<Record<"campaign" | "adGroup" | "ad" | "audience" | "conversion", "supported" | "unsupported">>;
   reason?: string;
 };
 export type MetaCapiEvent = {
@@ -82,7 +84,8 @@ export type MetaCapiEvent = {
   customData: Record<string, unknown>;
 };
 export type ProviderConversionResult = { providerRequestId?: string; evidence: Record<string, unknown> };
-export type MetaCapiTransport = (url: string, init: RequestInit) => Promise<Response>;
+export type ProviderHttpTransport = (url: string, init: RequestInit) => Promise<Response>;
+export type MetaCapiTransport = ProviderHttpTransport;
 
 export class PaidMediaProviderError extends Error {
   constructor(
@@ -109,7 +112,7 @@ export interface PaidMediaProviderAdapter {
   sendConversionEvent(workspaceId: string, accountId: string, datasetId: string, event: MetaCapiEvent): Promise<ProviderConversionResult>;
 }
 
-type Credential = { integrationId: string; accessToken: string; refreshToken: string | null; expiresAt: Date | null };
+type Credential = { integrationId: string; accessToken: string; refreshToken: string | null; expiresAt: Date | null; metadata: Record<string, unknown> };
 
 export function selectPaidMediaCredential<Row extends { metadata: unknown }>(rows: Row[]): Row | undefined {
   return rows.find((row) => isPaidMediaIntegration(row.metadata as Record<string, unknown>));
@@ -167,6 +170,9 @@ export async function sendMetaCapiRequest(
     if (response.status === 429) throw new PaidMediaProviderError("Meta Conversions API rate limit exceeded.", "RATE_LIMITED", response.status);
     throw new PaidMediaProviderError(`Meta Conversions API returned HTTP ${response.status}: ${raw}`, "PROVIDER_ERROR", response.status);
   }
+  if (typeof body["events_received"] !== "number" || body["events_received"] < 1) {
+    throw new PaidMediaProviderError("Meta Conversions API did not provide a receipt for the submitted event.", "PROVIDER_ERROR", 502);
+  }
   return { providerRequestId: typeof body["trace_id"] === "string" ? body["trace_id"] : undefined, evidence: body };
 }
 
@@ -194,7 +200,34 @@ async function credential(workspaceId: string, provider: PaidMediaProviderName, 
     accessToken: row.accessToken,
     refreshToken: row.refreshToken,
     expiresAt: row.expiresAt,
+    metadata: (row.metadata ?? {}) as Record<string, unknown>,
   };
+}
+
+/** Narrow transport seam for Google Ads contract tests and live receipts. */
+export async function sendGoogleAdsRequest(
+  path: string, token: string, developerToken: string, init: RequestInit,
+  options: { loginCustomerId?: string; transport?: ProviderHttpTransport } = {},
+): Promise<{ body: Record<string, unknown>; requestId?: string }> {
+  if (!developerToken) throw new PaidMediaProviderError("Google Ads developer token is not configured.", "PRECONDITION_FAILED", 409);
+  const response = await (options.transport ?? fetch)(`https://googleads.googleapis.com/v18/${path.replace(/^\//, "")}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      "developer-token": developerToken,
+      ...(options.loginCustomerId ? { "login-customer-id": options.loginCustomerId.replace(/\D/g, "") } : {}),
+      ...(init.headers ?? {}),
+    },
+  });
+  const body = await response.json().catch(() => ({})) as Record<string, unknown>;
+  if (!response.ok) {
+    const details = redact(JSON.stringify(body));
+    if (response.status === 401 || response.status === 403) throw new PaidMediaProviderError(`Google Ads authorization or developer-token access was rejected: ${details}`, "AUTH", response.status);
+    if (response.status === 429) throw new PaidMediaProviderError("Google Ads rate limit exceeded.", "RATE_LIMITED", response.status);
+    throw new PaidMediaProviderError(`Google Ads returned HTTP ${response.status}: ${details}`, "PROVIDER_ERROR", response.status);
+  }
+  return { body, requestId: response.headers.get("request-id") ?? undefined };
 }
 
 async function request(url: string, init: RequestInit, token?: string): Promise<Record<string, unknown>> {
@@ -332,10 +365,10 @@ class TikTokAdsAdapter implements PaidMediaProviderAdapter {
   capabilities(): PaidMediaProviderCapabilities {
     return {
       creativePause: "unsupported",
-      pixelDatasetDiagnostics: "supported",
+      pixelDatasetDiagnostics: "unsupported",
       cboAboObservation: "supported",
       conversionsApi: "unsupported",
-      reason: "TikTok creative-level status mutation is not available through this executor.",
+      reason: "TikTok creative-level mutation and Events API delivery are not enabled by this adapter; receipt delivery remains fail-closed.",
     };
   }
   async refreshCredential(workspaceId: string): Promise<void> {
@@ -404,9 +437,109 @@ class TikTokAdsAdapter implements PaidMediaProviderAdapter {
   }
 }
 
+class GoogleAdsAdapter implements PaidMediaProviderAdapter {
+  readonly provider = "google_ads" as const;
+  capabilities(): PaidMediaProviderCapabilities {
+    return {
+      creativePause: "unsupported", pixelDatasetDiagnostics: "unsupported",
+      cboAboObservation: "supported", conversionsApi: "unsupported",
+      operations: { campaign: "supported", adGroup: "supported", ad: "supported", audience: "unsupported", conversion: "unsupported" },
+      reason: "Google Ads API access is verified per customer with the configured developer token. Conversion imports and audience creation require separately reviewed Google Ads API features.",
+    };
+  }
+  async refreshCredential(workspaceId: string): Promise<void> {
+    const cred = await credential(workspaceId, this.provider);
+    if (!cred.refreshToken || !env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) throw new PaidMediaProviderError("Google Ads refresh token is unavailable; reconnect with offline access.", "AUTH");
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, refresh_token: cred.refreshToken, grant_type: "refresh_token" }),
+    });
+    const body = await response.json().catch(() => ({})) as Record<string, unknown>;
+    if (!response.ok || typeof body["access_token"] !== "string") throw new PaidMediaProviderError("Google OAuth refresh was rejected; reconnect the integration.", "AUTH", response.status);
+    await db.update(workspaceIntegrationsTable).set({
+      accessToken: body["access_token"], tokenExpiresAt: typeof body["expires_in"] === "number" ? new Date(Date.now() + body["expires_in"] * 1000) : null,
+    }).where(eq(workspaceIntegrationsTable.id, cred.integrationId));
+  }
+  async sendConversionEvent(): Promise<ProviderConversionResult> {
+    throw new PaidMediaProviderError("Google Ads conversion imports are not enabled by this adapter.", "UNSUPPORTED", 409);
+  }
+  private async auth(workspaceId: string) {
+    let cred = await credential(workspaceId, this.provider);
+    if (cred.expiresAt && cred.expiresAt.getTime() < Date.now() + 60_000) { await this.refreshCredential(workspaceId); cred = await credential(workspaceId, this.provider); }
+    return cred;
+  }
+  private async call(workspaceId: string, path: string, body: Record<string, unknown>) {
+    const cred = await this.auth(workspaceId);
+    return sendGoogleAdsRequest(path, cred.accessToken, env.GOOGLE_ADS_DEVELOPER_TOKEN, { method: "POST", body: JSON.stringify(body) }, {
+      loginCustomerId: typeof cred.metadata["loginCustomerId"] === "string" ? cred.metadata["loginCustomerId"] : undefined,
+    });
+  }
+  private async search(workspaceId: string, customerId: string, query: string) {
+    return (await this.call(workspaceId, `customers/${customerId.replace(/\D/g, "")}/googleAds:searchStream`, { query })).body;
+  }
+  async listAccounts(workspaceId: string): Promise<ProviderAccount[]> {
+    const accessible = (await this.call(workspaceId, "customers:listAccessibleCustomers", {})).body;
+    const names = Array.isArray(accessible["resourceNames"]) ? accessible["resourceNames"].filter((value): value is string => typeof value === "string") : [];
+    const accounts: ProviderAccount[] = [];
+    for (const name of names) {
+      const customerId = name.replace(/^customers\//, "").replace(/\D/g, "");
+      if (!customerId) continue;
+      const pages = await this.search(workspaceId, customerId, "SELECT customer.id, customer.descriptive_name, customer.currency_code, customer.time_zone, customer.test_account FROM customer LIMIT 1");
+      const row = (Array.isArray(pages) ? pages : []).flatMap((page) => Array.isArray((page as Record<string, unknown>)["results"]) ? (page as Record<string, unknown>)["results"] as Array<Record<string, unknown>> : [])[0];
+      const customer = row?.["customer"] as Record<string, unknown> | undefined;
+      if (customer?.["id"]) accounts.push({ providerAccountId: String(customer["id"]), name: String(customer["descriptiveName"] ?? customer["id"]), currency: String(customer["currencyCode"] ?? "USD"), timezone: String(customer["timeZone"] ?? "UTC"), testAccount: customer["testAccount"] === true });
+    }
+    return accounts;
+  }
+  async listEntities(workspaceId: string, accountId: string, type: PaidMediaEntityKind): Promise<ProviderEntity[]> {
+    if (type === "creative") throw new PaidMediaProviderError("Google Ads creative assets are not exposed as mutable paid-media creative entities.", "UNSUPPORTED");
+    const resource = type === "ad_set" ? "ad_group" : type === "ad" ? "ad_group_ad" : "campaign";
+    const fields = resource === "ad_group_ad" ? "ad_group_ad.ad.id, ad_group_ad.status, ad_group_ad.ad.name, ad_group_ad.resource_name" : resource === "ad_group" ? "ad_group.id, ad_group.name, ad_group.status, ad_group.cpc_bid_micros, ad_group.resource_name" : `${resource}.id, ${resource}.name, ${resource}.status, ${resource}.resource_name`;
+    const pages = await this.search(workspaceId, accountId, `SELECT ${fields} FROM ${resource} LIMIT 10000`);
+    const rows = (Array.isArray(pages) ? pages : []).flatMap((page) => Array.isArray((page as Record<string, unknown>)["results"]) ? (page as Record<string, unknown>)["results"] as Array<Record<string, unknown>> : []);
+    return rows.map((row) => {
+      const item = row[resource] as Record<string, unknown>;
+      const ad = item?.["ad"] as Record<string, unknown> | undefined;
+      const status = item?.["status"] === "ENABLED" ? "ENABLE" : String(item?.["status"] ?? "");
+      const data = { ...row, bid_price: resource === "ad_group" && typeof item?.["cpcBidMicros"] === "string" ? String(Number(item["cpcBidMicros"]) / 1_000_000) : undefined };
+      return { providerEntityId: String(ad?.["id"] ?? item?.["id"]), entityType: type, name: String(ad?.["name"] ?? item?.["name"] ?? ""), status, version: String(item?.["resourceName"] ?? ""), data };
+    });
+  }
+  async fetchInsights(workspaceId: string, accountId: string, type: PaidMediaEntityKind, since: string, until: string): Promise<ProviderInsight[]> {
+    if (type === "creative") throw new PaidMediaProviderError("Google Ads creative insights are unavailable.", "UNSUPPORTED");
+    const resource = type === "ad_set" ? "ad_group" : type === "ad" ? "ad_group_ad" : "campaign";
+    const id = resource === "ad_group_ad" ? "ad_group_ad.ad.id" : `${resource}.id`;
+    const pages = await this.search(workspaceId, accountId, `SELECT ${id}, segments.date, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions, metrics.conversions_value FROM ${resource} WHERE segments.date BETWEEN '${since}' AND '${until}' LIMIT 100000`);
+    return (Array.isArray(pages) ? pages : []).flatMap((page) => Array.isArray((page as Record<string, unknown>)["results"]) ? (page as Record<string, unknown>)["results"] as Array<Record<string, unknown>> : []).map((row) => {
+      const item = row[resource] as Record<string, unknown>; const ad = item?.["ad"] as Record<string, unknown> | undefined; const metrics = row["metrics"] as Record<string, unknown> ?? {}; const segments = row["segments"] as Record<string, unknown> ?? {};
+      return { providerEntityId: String(ad?.["id"] ?? item?.["id"]), metricDate: String(segments["date"]), currency: "USD", timezone: "UTC", impressions: Number(metrics["impressions"] ?? 0), clicks: Number(metrics["clicks"] ?? 0), spend: String(Number(metrics["costMicros"] ?? 0) / 1_000_000), conversions: String(metrics["conversions"] ?? 0), conversionValue: String(metrics["conversionsValue"] ?? 0), rawMetrics: row };
+    });
+  }
+  async getEntitySnapshot(workspaceId: string, accountId: string, entityId: string, type: PaidMediaEntityKind) {
+    const entity = (await this.listEntities(workspaceId, accountId, type)).find((value) => value.providerEntityId === entityId);
+    if (!entity) throw new PaidMediaProviderError("Google Ads entity was not found.", "PRECONDITION_FAILED", 404);
+    return entity;
+  }
+  async applyAction(workspaceId: string, accountId: string, action: ProviderAction): Promise<ProviderActionResult> {
+    if (!["pause", "resume", "update_daily_budget", "update_bid"].includes(action.type) || action.entityType === "creative" || (action.type === "update_bid" && action.entityType !== "ad_set")) throw new PaidMediaProviderError(`Google Ads does not support ${action.type} for this entity.`, "UNSUPPORTED");
+    const before = await this.getEntitySnapshot(workspaceId, accountId, action.entityId, action.entityType);
+    if (action.expectedVersion && action.expectedVersion !== before.version) throw new PaidMediaProviderError("Entity changed since proposal creation.", "PRECONDITION_FAILED", 409);
+    const resource = action.entityType === "ad_set" ? "adGroups" : action.entityType === "ad" ? "adGroupAds" : "campaigns";
+    const resourceName = `customers/${accountId.replace(/\D/g, "")}/${resource}/${action.entityId}`;
+    const field = action.type === "pause" || action.type === "resume" ? "status" : action.type === "update_bid" ? "cpc_bid_micros" : "campaign_budget";
+    if (field === "campaign_budget") throw new PaidMediaProviderError("Google campaign budgets require an explicit budget resource and are not inferred from a campaign mutation.", "UNSUPPORTED");
+    const value = field === "status" ? (action.type === "pause" ? "PAUSED" : "ENABLED") : Math.round(Number(action.changes["bidAmount"]) * 1_000_000);
+    const { body, requestId } = await this.call(workspaceId, `customers/${accountId.replace(/\D/g, "")}/${resource}:mutate`, { operations: [{ update: { resourceName, [field]: value }, updateMask: field }], partialFailure: false, validateOnly: false });
+    return { providerRequestId: requestId, evidence: body };
+  }
+  async verifyAction(workspaceId: string, accountId: string, action: ProviderAction) { const after = await this.getEntitySnapshot(workspaceId, accountId, action.entityId, action.entityType); return { verified: verifyActionSnapshot(action, after), evidence: after.data }; }
+  async rollbackAction(workspaceId: string, accountId: string, action: ProviderAction, before: ProviderEntity) { return this.applyAction(workspaceId, accountId, rollbackActionFromSnapshot(action, before)); }
+}
+
 const adapters: Record<PaidMediaProviderName, PaidMediaProviderAdapter> = {
   meta_ads: new MetaAdsAdapter(),
   tiktok_ads: new TikTokAdsAdapter(),
+  google_ads: new GoogleAdsAdapter(),
 };
 
 export function paidMediaProvider(provider: PaidMediaProviderName): PaidMediaProviderAdapter {

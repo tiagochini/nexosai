@@ -4,8 +4,10 @@ import {
   communityModerationDecisionsTable, communityModerationRulesTable, communityParticipantsTable,
   communityProviderEventsTable, db,
   communityResponsePoliciesTable,
+  workspaceIntegrationsTable,
 } from "@workspace/db";
 import { providerCapability, type CommunityAction, type CommunityChannel } from "./community-capabilities.js";
+import { TelegramBotAdapter, type TelegramIntegrationConfig } from "./telegram.adapter.js";
 
 export type InboundCommunityEvent = {
   channel: CommunityChannel; providerEventId: string; providerConversationId: string;
@@ -122,7 +124,7 @@ export async function authorizeAutonomousResponse(workspaceId: string, messageId
 }
 
 export async function attemptCommunityAction(workspaceId: string, messageId: string, action: CommunityAction, idempotencyKey: string) {
-  const message = await db.select({ id: communityMessagesTable.id, conversationId: communityMessagesTable.conversationId, channel: communityConversationsTable.channel, integrationId: communityConversationsTable.integrationId })
+  const message = await db.select({ id: communityMessagesTable.id, conversationId: communityMessagesTable.conversationId, channel: communityConversationsTable.channel, integrationId: communityConversationsTable.integrationId, providerMessageId: communityMessagesTable.providerMessageId, senderParticipantId: communityMessagesTable.senderParticipantId, metadata: communityMessagesTable.metadata })
     .from(communityMessagesTable).innerJoin(communityConversationsTable, eq(communityMessagesTable.conversationId, communityConversationsTable.id))
     .where(and(eq(communityMessagesTable.id, messageId), eq(communityMessagesTable.workspaceId, workspaceId))).then((r) => r[0]);
   if (!message) throw new Error("Message not found");
@@ -137,5 +139,43 @@ export async function attemptCommunityAction(workspaceId: string, messageId: str
   if (!capability.supported && attempt) await db.insert(communityModerationDecisionsTable).values({
     workspaceId, messageId, decision: "capability_blocked", reason: capability.reason!,
   });
+  // A prior caller owns the idempotency key. Never send a second provider mutation.
+  if (!attempt || !capability.supported) return result;
+  if (message.channel !== "telegram" || !message.integrationId) return result;
+  if (action === "respond") {
+    const authorization = await authorizeAutonomousResponse(workspaceId, messageId);
+    if (!authorization.allowed) {
+      await db.update(communityActionAttemptsTable).set({ status: "capability_blocked", error: authorization.reason, completedAt: new Date() }).where(eq(communityActionAttemptsTable.id, attempt.id));
+      return { ...attempt, status: "capability_blocked" as const, error: authorization.reason };
+    }
+  }
+  const [integration] = await db.select({
+    id: workspaceIntegrationsTable.id, workspaceId: workspaceIntegrationsTable.workspaceId, status: workspaceIntegrationsTable.status,
+    accountId: workspaceIntegrationsTable.accountId, metadata: workspaceIntegrationsTable.metadata,
+  }).from(workspaceIntegrationsTable).where(and(eq(workspaceIntegrationsTable.id, message.integrationId), eq(workspaceIntegrationsTable.workspaceId, workspaceId), eq(workspaceIntegrationsTable.provider, "telegram")));
+  const metadata = message.metadata as Record<string, unknown>;
+  const chatId = typeof metadata["chatId"] === "string" ? metadata["chatId"] : undefined;
+  const providerMessageId = typeof metadata["messageId"] === "string" ? metadata["messageId"] : undefined;
+  const fromId = typeof metadata["fromId"] === "string" ? metadata["fromId"] : undefined;
+  if (!integration || integration.status !== "connected" || !chatId || (action !== "respond" && (!providerMessageId || !fromId))) {
+    await db.update(communityActionAttemptsTable).set({ status: "failed", error: "Telegram action lacks a connected integration or verified message context", completedAt: new Date() }).where(eq(communityActionAttemptsTable.id, attempt.id));
+    return { ...attempt, status: "failed" as const, error: "Telegram action lacks a connected integration or verified message context" };
+  }
+  try {
+    const adapter = new TelegramBotAdapter(integration as TelegramIntegrationConfig);
+    const group = await adapter.discoverGroup(chatId);
+    if (!group.actions[action]) throw new Error("Telegram bot lacks the required administrator permission");
+    const receipt = action === "delete" ? await adapter.delete(chatId, providerMessageId!)
+      : action === "restrict" ? await adapter.restrict(chatId, fromId!)
+      : action === "ban" ? await adapter.ban(chatId, fromId!)
+      // Responses are deliberately not autonomous without an explicit durable policy;
+      // this action endpoint has no text input and therefore cannot send arbitrary content.
+      : (() => { throw new Error("Telegram response requires the approved response dispatch flow"); })();
+    const [completed] = await db.update(communityActionAttemptsTable).set({ status: "succeeded", providerReceipt: receipt, completedAt: new Date() }).where(eq(communityActionAttemptsTable.id, attempt.id)).returning();
+    return completed!;
+  } catch {
+    const [failed] = await db.update(communityActionAttemptsTable).set({ status: "failed", error: "Telegram provider action failed", completedAt: new Date() }).where(eq(communityActionAttemptsTable.id, attempt.id)).returning();
+    return failed!;
+  }
   return result;
 }

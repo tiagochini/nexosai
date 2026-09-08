@@ -5,6 +5,7 @@ import { requireAuth } from "../auth/auth.middleware.js";
 import { db, workspacesTable, workspaceIntegrationsTable } from "@workspace/db";
 import { AppError } from "../../lib/errors.js";
 import { testIntegrationCredential } from "../integrations/integration-validator.js";
+import { TelegramBotAdapter } from "../community/telegram.adapter.js";
 import {
   integrationPurpose,
   metadataForPurpose,
@@ -117,6 +118,13 @@ router.post("/me/integrations", async (req, res): Promise<void> => {
   // "tiktok" (organic, front-end only) shares the "tiktok_ads" DB enum value —
   // there is no separate organic-tiktok DB provider (see oauth.routes.ts dbProvider mapping).
   const dbProvider = parsed.data.provider === "tiktok" ? "tiktok_ads" : parsed.data.provider;
+  // Telegram community credentials are secret *references*, not raw bot tokens.
+  // Do this before the legacy generic credential flow so a token cannot be
+  // written into workspace_integrations.access_token.
+  if (dbProvider === "telegram" && parsed.data.accessToken) {
+    res.status(400).json({ error: "Telegram bot tokens must be configured as a server secret reference, never submitted or stored.", code: "TELEGRAM_TOKEN_REFERENCE_REQUIRED" });
+    return;
+  }
   const purpose: IntegrationPurpose = parsed.data.provider === "tiktok"
     ? "organic_social"
     : (parsed.data.provider === "meta_ads" || parsed.data.provider === "tiktok_ads")
@@ -134,8 +142,24 @@ router.post("/me/integrations", async (req, res): Promise<void> => {
   let pingAccountId = parsed.data.accountId;
   let validationDetail: string | undefined;
   let status: "connected" | "disconnected" = "disconnected";
+  if (dbProvider === "telegram") {
+    const metadata = parsed.data.metadata ?? {};
+    try {
+      const bot = await new TelegramBotAdapter({
+        id: "unsaved", workspaceId: req.auth.workspaceId, status: "pending_approval", accountId: null, metadata,
+      }).getMe();
+      status = "connected";
+      pingAccountId = String(bot.id);
+      pingAccountName = bot.username ? `@${bot.username}` : bot.first_name;
+      validationDetail = "Telegram bot verified with getMe; bot token is held only by the configured secret reference.";
+      parsed.data.metadata = { ...metadata, _validationSkipped: false, _validatedAt: new Date().toISOString() };
+    } catch {
+      res.status(422).json({ error: "Telegram bot secret reference could not be verified with getMe", code: "INTEGRATION_VALIDATION_FAILED", provider: dbProvider });
+      return;
+    }
+  }
 
-  if (parsed.data.accessToken || parsed.data.accountId) {
+  if (dbProvider !== "telegram" && (parsed.data.accessToken || parsed.data.accountId)) {
     const pingResult = await testIntegrationCredential(dbProvider, {
       accessToken: parsed.data.accessToken,
       accountId: parsed.data.accountId,
@@ -199,7 +223,7 @@ router.post("/me/integrations", async (req, res): Promise<void> => {
     workspaceId: req.auth.workspaceId,
     provider: dbProvider,
     status,
-    accessToken: parsed.data.accessToken,
+    accessToken: dbProvider === "telegram" ? null : parsed.data.accessToken,
     accountId: pingAccountId,
     accountName: pingAccountName,
     webhookUrl: parsed.data.webhookUrl,

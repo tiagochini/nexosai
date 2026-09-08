@@ -24,6 +24,7 @@ import { masterplanVersionsTable } from "./masterplan-versions";
 export const paidMediaProviderEnum = pgEnum("paid_media_provider", [
   "meta_ads",
   "tiktok_ads",
+  "google_ads",
 ]);
 
 export const paidMediaEntityTypeEnum = pgEnum("paid_media_entity_type", [

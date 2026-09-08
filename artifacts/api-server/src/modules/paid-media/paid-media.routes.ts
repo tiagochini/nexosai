@@ -47,7 +47,7 @@ router.post("/events/ingest", async (req, res): Promise<void> => {
 router.use(requireAuth);
 
 function providerFrom(value: unknown): PaidMediaProviderName | undefined {
-  return value === "meta_ads" || value === "tiktok_ads" ? value : undefined;
+  return value === "meta_ads" || value === "tiktok_ads" || value === "google_ads" ? value : undefined;
 }
 
 function sendProviderError(res: Response, error: unknown): void {
@@ -117,7 +117,28 @@ router.get("/accounts/:provider", async (req, res): Promise<void> => {
 });
 
 router.get("/providers/capabilities", (_req, res): void => {
-  res.json({ providers: ["meta_ads", "tiktok_ads"].map((provider) => ({ provider, capabilities: paidMediaProviderCapabilities(provider as PaidMediaProviderName) })) });
+  res.json({ providers: ["meta_ads", "tiktok_ads", "google_ads"].map((provider) => ({ provider, capabilities: paidMediaProviderCapabilities(provider as PaidMediaProviderName) })) });
+});
+// Readiness is deliberately a live, read-only provider call. A connected OAuth
+// row is never reported production-ready merely because it has token fields.
+router.get("/setup/:provider/status", async (req, res): Promise<void> => {
+  const provider = providerFrom(req.params["provider"]);
+  if (!provider) { res.status(400).json({ error: "Unsupported paid-media provider.", code: "UNSUPPORTED_PROVIDER" }); return; }
+  try {
+    const accounts = await paidMediaProvider(provider).listAccounts(req.auth.workspaceId);
+    const selected = await db.select({ providerAccountId: paidMediaAccountsTable.providerAccountId, isSelected: paidMediaAccountsTable.isSelected })
+      .from(paidMediaAccountsTable).where(and(eq(paidMediaAccountsTable.workspaceId, req.auth.workspaceId), eq(paidMediaAccountsTable.provider, provider)));
+    const selectedId = selected.find((account) => account.isSelected)?.providerAccountId;
+    const selectedAccount = accounts.find((account) => account.providerAccountId === selectedId);
+    res.json({
+      provider, verifiedAt: new Date().toISOString(), oauth: "verified", advertiserAuthorization: "verified",
+      accountSelectionRequired: accounts.length !== 1 && !selectedId,
+      accounts: accounts.map(({ providerAccountId, name, currency, timezone, testAccount }) => ({ providerAccountId, name, currency, timezone, environment: testAccount ? "test" : "production" })),
+      selectedAccountId: selectedId ?? null,
+      productionReady: !!selectedAccount && selectedAccount.testAccount !== true,
+      capabilities: paidMediaProviderCapabilities(provider),
+    });
+  } catch (error) { sendProviderError(res, error); }
 });
 router.get("/budget-strategies", async (req, res): Promise<void> => {
   res.json({ strategies: await db.select().from(paidMediaBudgetStrategiesTable).where(eq(paidMediaBudgetStrategiesTable.workspaceId, req.auth.workspaceId)) });

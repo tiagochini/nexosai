@@ -69,6 +69,7 @@ import LauncherDashboard from "@/pages/launcher/index";
 import RecordingsPage from "@/pages/recordings/index";
 import LeadCapturePage from "@/pages/c/index";
 import PaidMediaPage from "@/pages/paid-media/index";
+import InfraestruturaPage from "@/pages/infraestrutura/index";
 import NotFound from "@/pages/not-found";
 import InstitucionalPage from "@/pages/institucional/index";
 import VideoDiarioPage from "@/pages/video-diario/index";
@@ -301,6 +302,10 @@ export default function AppRoutes() {
       {/* Integrações */}
       <Route path="/integracoes">
         {() => <ProtectedRoute><IntegracoesPage /></ProtectedRoute>}
+      </Route>
+
+      <Route path="/infraestrutura">
+        {() => <ProtectedRoute><InfraestruturaPage /></ProtectedRoute>}
       </Route>
 
       {/* Pipeline Regional */}

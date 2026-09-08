@@ -11,7 +11,7 @@ import {
   ChevronDown, User, Users, ShieldCheck, Star, Gauge, Zap,
   Brain, Receipt, Link2, Globe, Clapperboard, Film, ShoppingBag, MessageSquare, Crosshair, Camera,
   GraduationCap, ExternalLink, Fingerprint, RefreshCw, Radar, Megaphone, Target, Activity, FileText, GitCommit, ShieldAlert,
-  ChevronsUpDown, Check, Plus, Loader2
+  ChevronsUpDown, Check, Plus, Loader2, Server
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { useAppI18n } from "@/lib/i18n";
@@ -287,6 +287,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         { name: tr.sidebar.products,       href: "/produtos",      icon: ShoppingBag },
         { name: "Atendimento",             href: "/atendimento",   icon: MessageSquare },
         { name: tr.sidebar.integrations,   href: "/integracoes",   icon: Link2, badge: "!" },
+        { name: "Infraestrutura",          href: "/infraestrutura", icon: Server },
       ],
     },
     {

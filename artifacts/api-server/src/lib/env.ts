@@ -29,6 +29,7 @@ export const env = {
   TIKTOK_CLIENT_SECRET: process.env["TIKTOK_CLIENT_SECRET"] ?? "",
   GOOGLE_CLIENT_ID: process.env["GOOGLE_CLIENT_ID"] ?? "",
   GOOGLE_CLIENT_SECRET: process.env["GOOGLE_CLIENT_SECRET"] ?? "",
+  GOOGLE_ADS_DEVELOPER_TOKEN: process.env["GOOGLE_ADS_DEVELOPER_TOKEN"] ?? "",
   HUBSPOT_CLIENT_ID: process.env["HUBSPOT_CLIENT_ID"] ?? "",
   HUBSPOT_CLIENT_SECRET: process.env["HUBSPOT_CLIENT_SECRET"] ?? "",
   RD_STATION_CLIENT_ID: process.env["RD_STATION_CLIENT_ID"] ?? "",
@@ -74,6 +75,13 @@ export const env = {
   REGISTRAR_API_URL: process.env["REGISTRAR_API_URL"] ?? "",
   REGISTRAR_API_KEY: process.env["REGISTRAR_API_KEY"] ?? "",
   REGISTRAR_PROVIDER: process.env["REGISTRAR_PROVIDER"] ?? "",
+  CLOUDFLARE_API_URL: process.env["CLOUDFLARE_API_URL"] ?? "https://api.cloudflare.com/client/v4",
+  CLOUDFLARE_API_TOKEN: process.env["CLOUDFLARE_API_TOKEN"] ?? "",
+  CLOUDFLARE_ACCOUNT_ID: process.env["CLOUDFLARE_ACCOUNT_ID"] ?? "",
+  HOSTINGER_API_URL: process.env["HOSTINGER_API_URL"] ?? "",
+  HOSTINGER_API_KEY: process.env["HOSTINGER_API_KEY"] ?? "",
+  // Shared verification secret for supplier webhook delivery. Empty disables webhook ingestion.
+  SUPPLIER_WEBHOOK_SECRET: process.env["SUPPLIER_WEBHOOK_SECRET"] ?? "",
   LANDING_DEPLOYMENT_URL: process.env["LANDING_DEPLOYMENT_URL"] ?? "",
   LANDING_DEPLOYMENT_TOKEN: process.env["LANDING_DEPLOYMENT_TOKEN"] ?? "",
   // DISABLE_SCHEDULED_VIDEO_GENERATION — when "true", the social-presence scheduler
