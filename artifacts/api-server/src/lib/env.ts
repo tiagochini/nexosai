@@ -40,7 +40,11 @@ export const env = {
   // ISO date string (e.g. "2025-06-01T20:00:00-03:00") — set to start the launch countdown
   WHATSAPP_WEBHOOK_VERIFY_TOKEN: process.env["WHATSAPP_WEBHOOK_VERIFY_TOKEN"] ?? "nexos-whatsapp-2026",
   ASAAS_API_KEY: process.env["ASAAS_API_KEY"] ?? "",
-  ASAAS_SANDBOX: process.env["ASAAS_SANDBOX"] ?? "true",
+  // Sandbox credentials are deliberately separate from live credentials.
+  ASAAS_SANDBOX: process.env["ASAAS_SANDBOX"] ?? "false",
+  ASAAS_SANDBOX_API_KEY: process.env["ASAAS_SANDBOX_API_KEY"] ?? "",
+  // Value configured in Asaas's webhook configuration (not the API key).
+  ASAAS_WEBHOOK_TOKEN: process.env["ASAAS_WEBHOOK_TOKEN"] ?? "",
   // Gmail SMTP (alternative to Resend — set both GMAIL_USER and GMAIL_APP_PASSWORD to enable)
   GMAIL_USER: process.env["GMAIL_USER"] ?? "",
   GMAIL_APP_PASSWORD: process.env["GMAIL_APP_PASSWORD"] ?? "",

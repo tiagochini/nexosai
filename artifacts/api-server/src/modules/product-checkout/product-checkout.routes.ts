@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { timingSafeEqual } from "node:crypto";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
 import {
@@ -10,11 +11,21 @@ import {
   initiateProductCheckout,
   getProductCardInstallments,
   getSale,
-  confirmProductSaleByExternalId,
-  refundProductSaleByExternalId,
+  reconcileProductSaleFromAsaasWebhook,
 } from "./product-checkout.service.js";
 
 const router = Router();
+
+/** Constant-time webhook authentication seam used by route and unit tests. */
+export function isValidAsaasWebhookToken(
+  provided: string | undefined,
+  configured: string | undefined = process.env["ASAAS_WEBHOOK_TOKEN"],
+): boolean {
+  if (!provided || !configured) return false;
+  const actual = Buffer.from(provided);
+  const expected = Buffer.from(configured);
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
 
 const cardSchema = z.object({
   holderName: z.string().min(1),
@@ -122,8 +133,15 @@ router.get("/sales/:saleId", async (req, res): Promise<void> => {
 router.post("/webhooks/asaas", async (req, res): Promise<void> => {
   const payload = req.body as { event?: string; payment?: { id?: string } };
   const asaasId = payload.payment?.id;
-  if (asaasId && (payload.event === "PAYMENT_RECEIVED" || payload.event === "PAYMENT_CONFIRMED")) await confirmProductSaleByExternalId(asaasId);
-  if (asaasId && (payload.event === "PAYMENT_REFUNDED" || payload.event === "PAYMENT_CHARGEBACK_REQUESTED")) await refundProductSaleByExternalId(asaasId);
+  const header = req.headers["asaas-access-token"];
+  const token = Array.isArray(header) ? header[0] : header;
+  if (!isValidAsaasWebhookToken(token)) {
+    res.status(401).json({ error: "Webhook não autorizado", code: "UNAUTHORIZED_WEBHOOK" });
+    return;
+  }
+  // Event names are only delivery hints. The provider's current payment record
+  // is authoritative for all state transitions.
+  if (asaasId) await reconcileProductSaleFromAsaasWebhook(asaasId);
   res.json({ received: true });
 });
 

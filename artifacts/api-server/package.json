@@ -8,6 +8,8 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:product-asaas-sandbox-e2e": "NODE_ENV=test ASAAS_SANDBOX=true tsx src/scripts/test-product-asaas-sandbox-e2e.ts",
+    "test:product-asaas-sandbox-unit": "NODE_ENV=test tsx src/scripts/test-product-asaas-sandbox-unit.ts",
     "test:psychology": "tsx src/scripts/test-psychology-pipeline.ts",
     "test:credit-concurrency": "tsx src/scripts/test-credit-concurrency.ts",
     "test:workspace-entitlements": "tsx src/scripts/test-workspace-entitlements.ts",

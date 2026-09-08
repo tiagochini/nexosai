@@ -7,10 +7,38 @@ import { recordCheckoutStarted, recordPaidSale, recordRefundedSale } from "../li
 
 // ─── Asaas helpers — workspace key takes priority over platform key ───────────
 
-function asaasBase(env?: string) {
-  return (env === "sandbox")
-    ? "https://sandbox.asaas.com/api/v3"
-    : "https://api.asaas.com/v3";
+const ASAAS_SANDBOX_BASE = "https://sandbox.asaas.com/api/v3";
+const ASAAS_PRODUCTION_BASE = "https://api.asaas.com/v3";
+
+export type AsaasEnvironment = {
+  apiKey: string;
+  base: string;
+  sandbox: boolean;
+};
+
+/** Resolves platform credentials without ever mixing sandbox and live keys. */
+export function resolvePlatformAsaasEnvironment(
+  values: Record<string, string | undefined> = process.env,
+): AsaasEnvironment {
+  const sandbox = values["ASAAS_SANDBOX"] === "true";
+  const apiKey = sandbox ? values["ASAAS_SANDBOX_API_KEY"] : values["ASAAS_API_KEY"];
+  return { apiKey: apiKey ?? "", base: sandbox ? ASAAS_SANDBOX_BASE : ASAAS_PRODUCTION_BASE, sandbox };
+}
+
+/** E2E-only fail-closed guard. It deliberately does not inspect the live key. */
+export function assertAsaasSandboxE2eEnvironment(
+  values: Record<string, string | undefined> = process.env,
+): AsaasEnvironment {
+  const resolved = resolvePlatformAsaasEnvironment(values);
+  const host = new URL(resolved.base).hostname;
+  if (values["ASAAS_SANDBOX"] !== "true" || !values["ASAAS_SANDBOX_API_KEY"] || host !== "sandbox.asaas.com") {
+    throw new Error("Sandbox E2E requires ASAAS_SANDBOX=true and ASAAS_SANDBOX_API_KEY; no production credential will be used");
+  }
+  return resolved;
+}
+
+function asaasBase(environment?: string) {
+  return environment === "sandbox" ? ASAAS_SANDBOX_BASE : ASAAS_PRODUCTION_BASE;
 }
 
 async function asaasRequest<T>(apiKey: string, base: string, path: string, options: RequestInit = {}): Promise<T> {
@@ -55,11 +83,11 @@ async function resolveAsaas(workspaceId: string): Promise<{ apiKey: string; base
   }
 
   // Fall back to platform key (NexOS sells its own products)
-  const platformKey = process.env["ASAAS_API_KEY"];
-  if (!platformKey) throw new AppError(503, "Asaas não configurado. Conecte sua conta Asaas em Integrações.", "ASAAS_NOT_CONFIGURED");
+  const platform = resolvePlatformAsaasEnvironment();
+  if (!platform.apiKey) throw new AppError(503, "Asaas não configurado. Conecte sua conta Asaas em Integrações.", "ASAAS_NOT_CONFIGURED");
   return {
-    apiKey: platformKey,
-    base: asaasBase(process.env["ASAAS_ENV"]),
+    apiKey: platform.apiKey,
+    base: platform.base,
   };
 }
 
@@ -360,6 +388,58 @@ export async function refundProductSaleByExternalId(externalId: string): Promise
   const [refunded] = await db.update(productSalesTable).set({ status: "refunded", updatedAt: new Date() })
     .where(and(eq(productSalesTable.id, sale.id), inArray(productSalesTable.status, ["paid", "expired"]))).returning();
   if (refunded) await recordRefundedSale(refunded);
+}
+
+export type AsaasPaymentVerification = {
+  id: string;
+  status: string;
+  value?: number;
+  netValue?: number;
+};
+
+export type AsaasHttpTransport = (input: string | URL, init?: RequestInit) => Promise<Response>;
+
+/** Fetches the canonical payment state from Asaas, rather than trusting webhook JSON. */
+export async function fetchAsaasPayment(
+  apiKey: string,
+  base: string,
+  externalId: string,
+  transport: AsaasHttpTransport = fetch,
+): Promise<AsaasPaymentVerification> {
+  const response = await transport(`${base}/payments/${encodeURIComponent(externalId)}`, {
+    headers: { "Content-Type": "application/json", access_token: apiKey },
+  });
+  const data = await response.json() as AsaasPaymentVerification & { errors?: Array<{ description?: string }> };
+  if (!response.ok || data.id !== externalId || !data.status) {
+    throw new AppError(502, data.errors?.[0]?.description ?? "Não foi possível verificar o pagamento no Asaas", "ASAAS_VERIFICATION_FAILED");
+  }
+  return data;
+}
+
+const SETTLED_ASAAS_STATUSES = new Set(["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"]);
+const REFUNDED_ASAAS_STATUSES = new Set(["REFUNDED", "CHARGEBACK_REQUESTED", "CHARGEBACK_DISPUTE"]);
+
+/** Re-verifies ownership and provider status before any local webhook transition. */
+export async function reconcileProductSaleFromAsaasWebhook(
+  externalId: string,
+  transport: AsaasHttpTransport = fetch,
+): Promise<"paid" | "refunded" | "ignored"> {
+  const [sale] = await db.select().from(productSalesTable)
+    .where(eq(productSalesTable.externalId, externalId)).limit(1);
+  if (!sale) return "ignored";
+
+  // Resolve after locating the sale so an incoming id cannot cross workspace boundaries.
+  const { apiKey, base } = await resolveAsaas(sale.workspaceId);
+  const payment = await fetchAsaasPayment(apiKey, base, externalId, transport);
+  if (SETTLED_ASAAS_STATUSES.has(payment.status)) {
+    await confirmProductSaleByExternalId(externalId);
+    return "paid";
+  }
+  if (REFUNDED_ASAAS_STATUSES.has(payment.status)) {
+    await refundProductSaleByExternalId(externalId);
+    return "refunded";
+  }
+  return "ignored";
 }
 
 export async function getSale(saleId: string): Promise<ProductSale | null> {
