@@ -1,0 +1,19 @@
+Preciso organizar esse texto abaixo pra ter certeza de que a gente consiga manter a estrutura de logocabde UI e UX seja bem estruturada no NexOSAI
+Uma coisa que senti falta foi adcionar um novo intake na área de social media, talvez importar master plan mas se o omudmsuarii nao tiver iniciado via intake de lancamento deve ter um intake pro social media e se tem um lancamento pronto pra rodar o on-line nao consigo criar um outro lançamento... 
+Outra coisa que sinto falta é editar, inserir ou retirar dados.
+Outra coisa é na area de lancamentos a configuracao e a certeza(visual) da conexao com social media e estudos de mercado)
+Porque notem que o lancamento é a acao MACRO dos projetos do cliente...
+Mas checa tudo antes de mecher e torna isso visivel pro usuario...
+
+nao, nao quero intake que rode independente, tudo deve ser integrado e compartilhado entre toda estrutura de intake que sera parte da integridade de logica de operacao adotada pelo time de planejamento do masterplan
+o que preciso ẽ que o INTAKE PROCESS seja possivel ser criado em qualquer parte, seja no time de mercado, seja no seti=or de social media presence ou ao criar um lancamento
+
+todos os times acessao o mesmo intake, mas deve poder existir a viabilidade de caso o cliente queira ele poder fazer um novo intake a partid de outros locais nesse ponto o intake anterior devera aparecer pra ele analisar e confirmar ou editar...
+exemplo
+cliente entra pela primeira vez no backoffice e decide nao fazer nesse momento o intake pra lancamento, mas quer fazer analise de mercado de seu posicionamento ou quer apenas colocar no ar seu socialmedia maneger ele faz intake onde desejar, mas note que INDEPENDENTE de onde acontecer o intake o time de analise de mercado recebe isso e devolve tudo necessario pra desenvoler estrategia e planejamento e isso deve acontecer
+o cliente pode ter multiplos lancamentos em paraleolo isso sera definido por tiers diferentes, entao nao se trata de questao tec e sim comercial, mas deve estar tudo pronto pra coesistir, lembra
+crud nos dados acho que deve existir na aba lateral a edicao ao clicar o usuario abre um menu que mostra o que ele tem pronto (lancamento, Social Media, etc... mas)
+quando o lancamento rodar oficialmente tudo fica locked, nada pode mudar pois quebraria a estrutura do lancamento...
+visibilidade de conexao deve ter checklist visual completo + painel de status e o bloquei (pra lancamento) deve ser hard, nao roda sem tudo configurado
+email, whatsapp, telgram, Instagram, facebook, tiktok, kwai, enfim o que estiver no plano configurado junto com o usuario a partir do bdget dele, e o social media se alinha, e se tem um social media plan diferente, ele fica suspenso ou alinhado com o plano do lancamento!
+quanto a minha frase - checa tudo antes de mexer... isso ainda se trata de prompt para o replit nao mexer do codigo antes de verificar tudo e avaliar o que ta pronto.

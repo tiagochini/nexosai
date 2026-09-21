@@ -32,6 +32,13 @@ export interface WorkspaceEntitlements {
   maxWorkspaces: number;
   allowedSocialNetworks: string[];
   maxAccountsPerNetwork: Record<string, number>;
+  selectedSubscription: {
+    id: string;
+    productId: string;
+    productKey: string;
+    productName: string;
+    masterPlanKey: string;
+  } | null;
 }
 
 export interface WorkspaceUsage {

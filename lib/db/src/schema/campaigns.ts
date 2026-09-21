@@ -12,6 +12,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { workspacesTable } from "./workspaces";
 import { launchPipelinesTable } from "./launch-pipelines";
+import { commercialProductsTable, commercialSubscriptionsTable } from "./commercial-entitlements";
 
 export const campaignTypeEnum = pgEnum("campaign_type", [
   // Closed-cart / event-driven
@@ -108,6 +109,8 @@ export const campaignsTable = pgTable("campaigns", {
     onDelete: "set null",
   }),
   pipelinePosition: integer("pipeline_position"),
+  commercialProductId: uuid("commercial_product_id").references(() => commercialProductsTable.id, { onDelete: "set null" }),
+  commercialSubscriptionId: uuid("commercial_subscription_id").references(() => commercialSubscriptionsTable.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -12,7 +12,7 @@ import {
   type CommentClassification,
   type CommentActionType,
 } from "./social-moderation.service.js";
-import { db, workspaceIntegrationsTable } from "@workspace/db";
+import { db, workspaceIntegrationsTable, socialConversationTurnsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import {
   parseVerifiedMetaWebhook,
@@ -59,7 +59,10 @@ router.get("/actions", requireAuth, async (req, res): Promise<void> => {
 router.get("/review-evidence", requireAuth, async (req, res): Promise<void> => {
   const id = typeof req.query["id"] === "string" ? req.query["id"] : undefined;
   const events = await listMetaEvidence(req.auth.workspaceId, id);
-  res.json({ events });
+  const turns = await db.select().from(socialConversationTurnsTable)
+    .where(eq(socialConversationTurnsTable.workspaceId, req.auth.workspaceId))
+    .orderBy(socialConversationTurnsTable.receivedAt);
+  res.json({ events, conversationTurns: turns });
 });
 
 // ─── Override (manual action from dashboard) ───────────────────────────────

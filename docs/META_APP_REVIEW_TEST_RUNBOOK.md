@@ -14,6 +14,29 @@ O revisor precisa de uma conta de teste Meta, um Business Manager, uma Página F
 4. Com a política privada ativa, mostre também a DM privada criada pela operação Private Replies.
 5. No NexOS, abra a evidência de revisão autenticado: `GET /api/social-moderation/review-evidence`. Mostre `providerEventId`, conta/workspace, endpoint, status, `receivedAt`, `sendStartedAt`, `sentAt`, `latencyMs`, `slaStatus`, resposta do provedor e eventual retry. Confirme visualmente que não há token.
 
+### Conversas contextuais (comentário e DM)
+
+1. Materialize e aprove um Master Plan para a campanha e publique um post
+   alinhado a ela. Confirme que o post salvo contém o `platformPostId`.
+2. A partir da conta de teste, faça um comentário com uma pergunta específica
+   do negócio (por exemplo: “como isso se conecta ao meu CRM e ao restante da
+   operação?”). O NexOS resolve post → campanha → versão aprovada e responde
+   em até três frases usando o contexto canônico; a evidência mostra a
+   impressão digital do contexto e a versão do Master Plan.
+3. Envie uma DM livre com a mesma pergunta. Após os fluxos de palavra-chave
+   terminarem, somente mensagens sem sequência ativa entram no orquestrador.
+   A resposta é enviada pela Messaging API e o ID retornado aparece em
+   `conversationTurns.providerResponseId`.
+4. Demonstre uma pergunta sobre preço, reembolso, saúde/legal ou “quero falar
+   com uma pessoa”. A decisão deve ser `human_handoff`, sem chamada ao
+   provedor. Sem Master Plan aprovado, contexto ambíguo ou confiança baixa o
+   comportamento também é handoff (nunca resposta genérica).
+
+O endpoint de evidência retorna eventos Meta e turnos contextuais sem tokens:
+`GET /api/social-moderation/review-evidence`. Os turnos incluem canal,
+direção, campanha, versão/fingerprint do Master Plan, decisão, confiança,
+handoff, resposta do provedor, status, erro sanitizado e timestamps.
+
 ## Checklist da gravação
 - URL de callback e assinatura de webhook configuradas;
 - login da conta de teste e conexão da Página/IG;

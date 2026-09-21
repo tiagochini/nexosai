@@ -1,4 +1,4 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import {
   db,
@@ -7,6 +7,8 @@ import {
   usersTable,
   workspacesTable,
   workspaceIntegrationsTable,
+  commercialSubscriptionsTable,
+  commercialProductsTable,
 } from "@workspace/db";
 import { AppError, NotFoundError } from "../../lib/errors.js";
 import { canCreateInternalWorkspace } from "../admin/admin-access.js";
@@ -24,12 +26,27 @@ export async function getWorkspaceOverview(userId: string, activeWorkspaceId: st
   const active = workspaces.find((workspace) => workspace.id === activeWorkspaceId)!;
   const [plan] = await db.select().from(plansTable).where(eq(plansTable.id, active.planId)).limit(1);
   if (!plan) throw new NotFoundError("Plan");
+  const [subscription] = await db.select({
+    id: commercialSubscriptionsTable.id,
+    productId: commercialSubscriptionsTable.productId,
+    productKey: commercialProductsTable.key,
+    productName: commercialProductsTable.name,
+    masterPlanKey: commercialProductsTable.masterPlanKey,
+  }).from(commercialSubscriptionsTable)
+    .innerJoin(commercialProductsTable, eq(commercialProductsTable.id, commercialSubscriptionsTable.productId))
+    .where(and(eq(commercialSubscriptionsTable.workspaceId, activeWorkspaceId), eq(commercialSubscriptionsTable.status, "active")))
+    .limit(1);
   const integrations = await db.select({
     provider: workspaceIntegrationsTable.provider, status: workspaceIntegrationsTable.status,
+    metadata: workspaceIntegrationsTable.metadata,
+    canonicalNetwork: workspaceIntegrationsTable.canonicalNetwork,
   }).from(workspaceIntegrationsTable).where(eq(workspaceIntegrationsTable.workspaceId, activeWorkspaceId));
   const connectedCounts = Object.fromEntries(["instagram", "facebook", "tiktok", "linkedin", "youtube"].map((network) => [network, 0])) as Record<CanonicalSocialNetwork, number>;
   for (const integration of integrations) {
-    const network = canonicalNetworkForProvider(integration.provider);
+    const network = canonicalNetworkForProvider(integration.provider, {
+      ...(integration.metadata as Record<string, unknown> ?? {}),
+      canonicalNetwork: integration.canonicalNetwork,
+    });
     if (network && integration.status === "connected") connectedCounts[network]++;
   }
   return {
@@ -39,6 +56,13 @@ export async function getWorkspaceOverview(userId: string, activeWorkspaceId: st
       maxWorkspaces: plan.maxWorkspaces,
       allowedSocialNetworks: entitlementNetworks(plan.allowedSocialNetworks),
       maxAccountsPerNetwork: entitlementLimits(plan.maxAccountsPerNetwork),
+      selectedSubscription: subscription ? {
+        id: subscription.id,
+        productId: subscription.productId,
+        productKey: subscription.productKey,
+        productName: subscription.productName,
+        masterPlanKey: subscription.masterPlanKey,
+      } : null,
     },
     workspaceCreation: {
       available: internalWorkspaceAccess,

@@ -1,4 +1,4 @@
-import { eq, and, lte, inArray } from "drizzle-orm";
+import { eq, and, lte, inArray, isNull } from "drizzle-orm";
 import {
   db,
   socialPostsTable,
@@ -6,6 +6,7 @@ import {
   campaignsTable,
   contentPiecesTable,
   executionEvidenceTable,
+  socialConversationTurnsTable,
   type InsertSocialPost,
   type SocialPost,
   type WorkspaceIntegration,
@@ -13,6 +14,7 @@ import {
 import { env } from "../../lib/env.js";
 import { AppError, NotFoundError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
+import { metaGraphFetch } from "../../lib/meta-graph.transport.js";
 import {
   publishToInstagram,
   publishToFacebook,
@@ -27,6 +29,7 @@ import { isOrganicSocialIntegration, metadataForPurpose } from "../integrations/
 import { claimMetaWebhookEvent } from "./meta-webhook-evidence.service.js";
 import { getApprovedMasterplan, matchesApprovedDossier } from "../masterplan/masterplan.service.js";
 import { ingestInboundCommunityEvent } from "../community/community.service.js";
+import { orchestrateIntelligentConversation } from "./contextual-conversation.service.js";
 import {
   assertSocialAccountEntitlement,
   canonicalNetworkForProvider,
@@ -1071,14 +1074,15 @@ export async function processMetaWebhook(body: unknown): Promise<void> {
     // Mensagens diretas (DM) — dispara fluxos de resposta automatizados
     for (const msg of entry.messaging ?? []) {
       if (!msg.message?.mid) continue;
-      // entry.id é o ID da conta Instagram que recebeu a mensagem
-      const igAccountId = entry.id;
+      // entry.id is the receiving IG account or Facebook Page.
+      const accountId = entry.id;
+      const isInstagram = payload.object === "instagram";
       const senderId = msg.sender.id;
       // Ignorar mensagens do próprio bot (echo)
-      if (senderId === igAccountId) continue;
-      const deliveryKey = `${igAccountId}:${msg.message.mid || `${msg.timestamp}:${senderId}`}`;
+      if (senderId === accountId) continue;
+      const deliveryKey = `${accountId}:${msg.message.mid || `${msg.timestamp}:${senderId}`}`;
       if (!claimMetaDmDelivery(deliveryKey)) {
-        logger.info({ igAccountId, deliveryKey }, "Duplicate Meta DM delivery ignored");
+        logger.info({ accountId, deliveryKey }, "Duplicate Meta DM delivery ignored");
         continue;
       }
       const integrations = await db.select({
@@ -1087,15 +1091,15 @@ export async function processMetaWebhook(body: unknown): Promise<void> {
         accessToken: workspaceIntegrationsTable.accessToken,
         metadata: workspaceIntegrationsTable.metadata,
       }).from(workspaceIntegrationsTable).where(and(
-        eq(workspaceIntegrationsTable.accountId, igAccountId),
-        eq(workspaceIntegrationsTable.provider, "instagram"),
+        eq(workspaceIntegrationsTable.accountId, accountId),
+        eq(workspaceIntegrationsTable.provider, isInstagram ? "instagram" : "meta_ads"),
         eq(workspaceIntegrationsTable.status, "connected"),
       )).limit(2);
       const integration = integrations.find((candidate) =>
         !!candidate.accessToken?.trim() &&
         isOrganicSocialIntegration(candidate.metadata as Record<string, unknown> | null));
       if (!integration) {
-        logger.warn({ igAccountId }, "Ignoring unroutable Meta DM webhook account");
+        logger.warn({ accountId }, "Ignoring unroutable Meta DM webhook account");
         continue;
       }
       const normalized = await ingestInboundCommunityEvent(integration.workspaceId, {
@@ -1115,27 +1119,89 @@ export async function processMetaWebhook(body: unknown): Promise<void> {
       const eventClaim = await claimMetaWebhookEvent({
         workspaceId: integration.workspaceId,
         integrationId: integration.id,
-        accountId: igAccountId,
+          accountId,
         providerEventId: msg.message.mid || `${msg.timestamp}:${senderId}`,
         eventType: "instagram_dm",
         actionKey: "sequence_trigger",
       });
       if (!eventClaim.claimed) {
-        logger.info({ igAccountId, deliveryKey }, "Duplicate Meta DM database claim ignored");
+        logger.info({ accountId, deliveryKey }, "Duplicate Meta DM database claim ignored");
         continue;
       }
 
-      logger.info({ igAccountId, senderId, text: msg.message.text }, "Meta webhook: DM recebida");
+      logger.info({ accountId, senderId, text: msg.message.text }, "Meta webhook: DM recebida");
 
-      const { handleInstagramDmTrigger, handleIncomingDmReply } = await import(
-        "../social-presence/social-presence.service.js"
-      );
-      setImmediate(() =>
-        Promise.all([
-          handleInstagramDmTrigger(igAccountId, senderId, msg.message!.text!),
-          handleIncomingDmReply(igAccountId, senderId, msg.message!.text!),
-        ]).catch((err) => logger.warn({ err }, "Meta webhook: DM processing error (non-fatal)")),
-      );
+      setImmediate(async () => {
+        try {
+          // Sequence handlers run first. Awaiting them prevents a configured
+          // keyword response and contextual AI from racing each other.
+          if (isInstagram) {
+            const { handleInstagramDmTrigger, handleIncomingDmReply } = await import("../social-presence/social-presence.service.js");
+            await handleInstagramDmTrigger(accountId, senderId, msg.message!.text!);
+            await handleIncomingDmReply(accountId, senderId, msg.message!.text!);
+          }
+
+          const turn = await db.insert(socialConversationTurnsTable).values({
+            workspaceId: integration.workspaceId,
+            integrationId: integration.id,
+            accountId,
+            providerUserId: senderId,
+            providerEventId: msg.message!.mid,
+            providerMessageId: msg.message!.mid,
+            channel: isInstagram ? "instagram_dm" : "facebook_dm",
+            direction: "inbound",
+            inputText: msg.message!.text!,
+            decision: "received",
+          }).onConflictDoNothing().returning({ id: socialConversationTurnsTable.id });
+          if (!turn[0]) return;
+
+          // A newly-created or existing active sequence owns this message.
+          // Do not let the free-form orchestrator produce a second reply.
+          const { instagramDmSequencesTable } = await import("@workspace/db");
+          const active = await db.select({ id: instagramDmSequencesTable.id })
+            .from(instagramDmSequencesTable).where(and(
+              eq(instagramDmSequencesTable.workspaceId, integration.workspaceId),
+              eq(instagramDmSequencesTable.igAccountId, accountId),
+              eq(instagramDmSequencesTable.recipientId, senderId),
+              isNull(instagramDmSequencesTable.completedAt),
+            )).limit(1);
+          if (active[0]) {
+            await db.update(socialConversationTurnsTable).set({ decision: "keyword_sequence" }).where(eq(socialConversationTurnsTable.id, turn[0].id));
+            return;
+          }
+
+          const decision = await orchestrateIntelligentConversation({
+            workspaceId: integration.workspaceId, integrationId: integration.id,
+            accountId, provider: isInstagram ? "instagram" : "facebook", providerUserId: senderId,
+            channel: isInstagram ? "instagram_dm" : "facebook_dm", message: msg.message!.text!,
+          });
+          await db.update(socialConversationTurnsTable).set({
+            campaignId: decision.contextProvenance.campaignId,
+            masterplanVersion: decision.contextProvenance.masterplanVersion ? String(decision.contextProvenance.masterplanVersion) : null,
+            contextFingerprint: decision.contextProvenance.contextFingerprint ?? null,
+            intent: decision.intent, salesStage: decision.salesStage, decision: decision.action,
+            confidence: String(decision.confidence), needsHuman: String(decision.needsHuman),
+            safetyReason: decision.safetyReason, replyText: decision.reply || null,
+            provenance: decision.contextProvenance,
+          }).where(eq(socialConversationTurnsTable.id, turn[0].id));
+          if (decision.action !== "reply_dm" && decision.action !== "reply_private") return;
+
+          const endpoint = `/${accountId}/messages`;
+          const response = await metaGraphFetch(`https://graph.facebook.com/v22.0${endpoint}`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ recipient: { id: senderId }, message: { text: decision.reply }, access_token: integration.accessToken }),
+          });
+          const data = await response.json().catch(() => ({})) as { id?: string; message_id?: string; error?: { message?: string } };
+          await db.update(socialConversationTurnsTable).set({
+            providerResponseId: data.message_id ?? data.id ?? null,
+            providerStatus: response.ok ? "sent" : "failed",
+            providerError: response.ok ? null : (data.error?.message ?? `Meta API ${response.status}`),
+            sentAt: response.ok ? new Date() : null,
+          }).where(eq(socialConversationTurnsTable.id, turn[0].id));
+        } catch (err) {
+          logger.warn({ err }, "Meta webhook: contextual DM processing failed closed");
+        }
+      });
     }
   }
 }

@@ -15,6 +15,7 @@ import {
   contentPiecesTable,
   type Campaign,
   type InsertCampaign,
+  commercialSubscriptionsTable,
 } from "@workspace/db";
 import {
   simulateBudget,
@@ -184,6 +185,11 @@ export async function createCampaign(
     }
   }
 
+  const [subscription] = await db
+    .select({ id: commercialSubscriptionsTable.id, productId: commercialSubscriptionsTable.productId })
+    .from(commercialSubscriptionsTable)
+    .where(and(eq(commercialSubscriptionsTable.workspaceId, workspaceId), eq(commercialSubscriptionsTable.status, "active")))
+    .limit(1);
   const [campaign] = await db
     .insert(campaignsTable)
     .values({
@@ -194,6 +200,8 @@ export async function createCampaign(
       status: "intake",
       intakeData: data.intakeData ?? {},
       locale: data.locale ?? "pt-BR",
+      commercialSubscriptionId: subscription?.id,
+      commercialProductId: subscription?.productId,
     })
     .returning();
 

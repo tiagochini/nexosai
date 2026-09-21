@@ -34,11 +34,11 @@ export const defaultAllowedSocialNetworks: CanonicalSocialNetwork[] = [
 ];
 
 export const defaultMaxAccountsPerNetwork: Record<CanonicalSocialNetwork, number> = {
-  instagram: 1,
-  facebook: 1,
-  tiktok: 1,
-  linkedin: 1,
-  youtube: 1,
+  instagram: 5,
+  facebook: 5,
+  tiktok: 5,
+  linkedin: 5,
+  youtube: 5,
 };
 
 export const plansTable = pgTable("plans", {

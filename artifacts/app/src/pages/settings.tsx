@@ -380,6 +380,19 @@ function WorkspaceTab() {
           </div>
         ) : usage && entitlements ? (
           <div className="space-y-6">
+            <FieldRow
+              label="Produto inscrito"
+              sublabel="Entitlements da assinatura selecionada"
+            >
+              <div className="border border-primary/30 bg-primary/5 p-3">
+                <div className="font-mono text-xs uppercase tracking-widest text-primary">
+                  {entitlements.selectedSubscription?.productName ?? "Launch"}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Todas as capacidades do produto estão desbloqueadas. Limite de 5 contas por rede social.
+                </div>
+              </div>
+            </FieldRow>
             <FieldRow label="Workspaces" sublabel="Operações independentes">
               <div className="flex justify-between items-center mb-2">
                 <span className="font-mono text-xs text-foreground font-semibold">{usage.workspacesUsed} em uso</span>

@@ -3,10 +3,10 @@ name: Commercial-neutral entitlements
 description: Separates configurable workspace and social-network capacity from future pricing and packaging decisions.
 ---
 
-Workspace capacity, allowed social networks, and account limits per network must remain configurable plan capabilities without implying how they are monetized. One workspace represents one isolated client, brand, or operation.
+The initial public launch uses one entitlement profile with all product capabilities enabled. Each subscribed product/Master Plan lineage may connect up to five distinct organic accounts per canonical social network; reconnecting the same external account does not consume another slot. A distinct product/Master Plan requires a distinct subscription.
 
-Until workspace expansion is commercially launched, additional workspace creation is available only to NexOS internal accounts. Ordinary users may inspect the capability and its explanation, but the interface must not offer checkout or imply that purchase is already available.
+Usage and cost fields remain configurable/reporting-only until pricing is decided; they must not block daily social operation or imply a published price, quota, checkout, or upgrade path.
 
-**Why:** The commercial model is intentionally undecided. NexOS may later monetize tiers, usage packages, tokens, or a hybrid. Product and security enforcement must be ready without hard-coding pricing claims into the interface or domain rules.
+**Why:** The launch offer must stay simple while preserving product isolation and preventing one subscription from operating unrelated products. Usage-based economics will be decided only after actual capacity costs are measured.
 
-**How to apply:** Enforce capabilities centrally at workspace creation and social-account connection boundaries. Keep the visible workspace action discoverable for every user; internal accounts receive creation while ordinary users receive an informational explanation that workspace and per-platform account capacity can expand later. Display current capacity and usage neutrally. Do not infer prices, upgrades, or token grants from creating a workspace; new workspaces start without copied credits.
+**How to apply:** Resolve entitlements by subscription and commercial product, keep provider/payment references as adapter metadata, canonicalize social networks independently of adapters, enforce five accounts atomically at connection boundaries, and display capacity neutrally. Never infer prices or token grants.

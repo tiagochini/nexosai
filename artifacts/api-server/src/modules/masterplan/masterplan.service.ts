@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
-import { db, campaignsTable, masterplanVersionsTable, agentClarificationRequestsTable, auditLogsTable } from "@workspace/db";
+import { db, campaignsTable, masterplanVersionsTable, agentClarificationRequestsTable, auditLogsTable, commercialSubscriptionsTable } from "@workspace/db";
 import { NotFoundError, AppError } from "../../lib/errors.js";
 import { PRODUCT_AUTONOMY_CONTRACT } from "../autonomy/autonomy.service.js";
 import { latestRegionalIntelligenceSummary } from "../market-intel/regional-intelligence.service.js";
@@ -65,6 +65,23 @@ export async function materializeMasterplan(workspaceId: string, campaignId: str
     eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId),
   )).limit(1);
   if (!campaign) throw new NotFoundError("Campaign");
+  // Existing unbound campaigns use the active subscription as a safe staged
+  // fallback; once bound, a masterplan can never silently switch lineage.
+  const [subscription] = await db.select({
+    id: commercialSubscriptionsTable.id,
+    productId: commercialSubscriptionsTable.productId,
+  }).from(commercialSubscriptionsTable).where(and(
+    eq(commercialSubscriptionsTable.workspaceId, workspaceId),
+    eq(commercialSubscriptionsTable.status, "active"),
+  )).limit(1);
+  if (!campaign.commercialSubscriptionId && subscription) {
+    await db.update(campaignsTable).set({
+      commercialSubscriptionId: subscription.id,
+      commercialProductId: subscription.productId,
+    }).where(eq(campaignsTable.id, campaign.id));
+  }
+  const boundSubscriptionId = campaign.commercialSubscriptionId ?? subscription?.id ?? null;
+  const boundProductId = campaign.commercialProductId ?? subscription?.productId ?? null;
   const pending = await db.select({ id: agentClarificationRequestsTable.id, question: agentClarificationRequestsTable.question })
     .from(agentClarificationRequestsTable).where(and(
       eq(agentClarificationRequestsTable.workspaceId, workspaceId), eq(agentClarificationRequestsTable.campaignId, campaignId),
@@ -94,6 +111,8 @@ export async function materializeMasterplan(workspaceId: string, campaignId: str
     snapshot, contentHash, contextFingerprint, readinessScore: score, readinessStatus, readinessBlockers: blockers,
     autonomyContract: PRODUCT_AUTONOMY_CONTRACT, allowedActions: ["generate_content", "launch"],
     requiredApprovals: ["masterplan_approval"], createdByUserId: actorId,
+    commercialSubscriptionId: boundSubscriptionId,
+    commercialProductId: boundProductId,
   }).returning();
   await db.insert(auditLogsTable).values({ workspaceId, campaignId, action: "masterplan.materialized", actor: actorId ?? "system", data: { masterplanId: created!.id, version: created!.version, contentHash, readinessStatus } });
   return created;

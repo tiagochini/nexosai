@@ -70,6 +70,8 @@ export const workspaceIntegrationsTable = pgTable("workspace_integrations", {
   tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
   accountId: text("account_id"),
   accountName: text("account_name"),
+  /** Stable product identity, independent of adapter/provider storage. */
+  canonicalNetwork: text("canonical_network"),
   metadata: jsonb("metadata").notNull().default({}),
   isPaymentGateway: boolean("is_payment_gateway").notNull().default(false),
   blocksExecution: boolean("blocks_execution").notNull().default(false),

@@ -2,6 +2,7 @@ import { eq, and, desc } from "drizzle-orm";
 import {
   db,
   socialCommentActionsTable,
+  socialConversationTurnsTable,
   workspaceIntegrationsTable,
   workspacesTable,
   type SocialCommentAction,
@@ -14,6 +15,7 @@ import { logger } from "../../lib/logger.js";
 import { isOrganicSocialIntegration } from "../integrations/integration-purpose.js";
 import { claimMetaWebhookEvent, recordMetaSendResult, recordMetaSendStarted } from "../social/meta-webhook-evidence.service.js";
 import { metaGraphFetch } from "../../lib/meta-graph.transport.js";
+import { orchestrateIntelligentConversation } from "../social/contextual-conversation.service.js";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -505,6 +507,15 @@ export async function processIncomingComment(opts: {
   let platformReplyId: string | null = null;
   let privateReply: { attempted: boolean; id: string | null; error: string | null } | null = null;
   let error: string | null = null;
+  const contextualDecision = (finalClassification === "question" || finalClassification === "objection")
+    ? await orchestrateIntelligentConversation({
+      workspaceId, integrationId: integrationId ?? "", accountId: igAccountId ?? "",
+      provider: platform === "instagram" ? "instagram" : "facebook",
+      platformPostId: postId, campaignId, providerUserId: authorId,
+      channel: platform === "instagram" ? "instagram_comment" : "facebook_comment",
+      message: commentText,
+    })
+    : null;
 
   try {
     if (finalClassification === "hostile") {
@@ -523,12 +534,8 @@ export async function processIncomingComment(opts: {
       finalClassification === "question" &&
       config.autoReplyQuestions
     ) {
-      aiReply = await generateCommentReply(
-        commentText,
-        finalClassification,
-        config,
-        workspaceId
-      );
+      aiReply = contextualDecision?.action === "reply_public" ? contextualDecision.reply : null;
+      if (contextualDecision?.needsHuman) error = contextualDecision.safetyReason;
       if (aiReply) {
         platformReplyId = await replyToComment(commentId, aiReply, accessToken, eventClaim.id);
         if (platform === "instagram" && config.enableInstagramPrivateReplies) {
@@ -570,12 +577,8 @@ export async function processIncomingComment(opts: {
       finalClassification === "objection" &&
       config.autoReplyObjections
     ) {
-      aiReply = await generateCommentReply(
-        commentText,
-        finalClassification,
-        config,
-        workspaceId
-      );
+      aiReply = contextualDecision?.action === "reply_public" ? contextualDecision.reply : null;
+      if (contextualDecision?.needsHuman) error = contextualDecision.safetyReason;
       if (aiReply) {
         platformReplyId = await replyToComment(commentId, aiReply, accessToken, eventClaim.id);
         if (platform === "instagram" && config.enableInstagramPrivateReplies) {
@@ -633,6 +636,26 @@ export async function processIncomingComment(opts: {
       .where(eq(socialCommentActionsTable.id, existing.id));
   } else {
     await db.insert(socialCommentActionsTable).values(recordData);
+  }
+  if (integrationId) {
+    await db.insert(socialConversationTurnsTable).values({
+      workspaceId, integrationId, accountId: igAccountId ?? postId,
+      providerUserId: authorId, providerEventId: commentId,
+      channel: platform === "instagram" ? "instagram_comment" : "facebook_comment",
+      direction: "inbound", inputText: commentText, replyText: aiReply,
+      campaignId: campaignId ?? null, intent: contextualDecision?.intent,
+      salesStage: contextualDecision?.salesStage,
+      decision: contextualDecision?.action ?? action,
+      confidence: String(contextualDecision?.confidence ?? confidence),
+      needsHuman: String(contextualDecision?.needsHuman ?? false),
+      safetyReason: contextualDecision?.safetyReason,
+      contextFingerprint: contextualDecision?.contextProvenance.contextFingerprint,
+      masterplanVersion: contextualDecision?.contextProvenance.masterplanVersion ? String(contextualDecision.contextProvenance.masterplanVersion) : null,
+      provenance: contextualDecision?.contextProvenance ?? {},
+      providerResponseId: platformReplyId,
+      providerStatus: platformReplyId ? "sent" : "not_sent",
+      sentAt: platformReplyId ? new Date() : null,
+    }).onConflictDoNothing();
   }
 
   // ── DM keyword trigger ────────────────────────────────────────────────────

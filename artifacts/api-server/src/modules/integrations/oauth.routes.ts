@@ -16,7 +16,7 @@ const router = Router();
 
 // ── Platform configs ─────────────────────────────────────────────────────────
 type OAuthPlatform = "meta" | "tiktok" | "google" | "hubspot" | "rdstation" | "linkedin";
-type DbProvider = "instagram" | "meta_ads" | "tiktok_ads" | "google_ads" | "hubspot" | "rd_station" | "linkedin_ads";
+type DbProvider = "instagram" | "facebook" | "meta_ads" | "tiktok_ads" | "google_ads" | "hubspot" | "rd_station" | "linkedin_ads";
 
 interface PlatformConfig {
   name: string;
@@ -89,7 +89,7 @@ const PROVIDER_MAP: Record<string, ProviderConfig> = {
     platform: "meta",
     scope: "public_profile,instagram_basic,instagram_content_publish,instagram_manage_insights,instagram_business_manage_messages,instagram_manage_comments,pages_show_list,pages_read_engagement,pages_manage_engagement,pages_manage_posts,pages_manage_metadata,business_management",
     label: "Facebook Páginas",
-    dbProvider: "instagram",
+    dbProvider: "facebook",
   },
   meta_ads: {
     platform: "meta",
@@ -649,12 +649,15 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
     // remain outside organic social entitlements; the existing account check in
     // the guard keeps OAuth reconnects idempotent.
     if (purpose === "organic_social" &&
-      (provider === "instagram" || provider === "facebook" || provider === "tiktok")) {
+      (provider === "instagram" || provider === "facebook" || provider === "tiktok" || provider === "linkedin")) {
       await assertSocialAccountEntitlement(stateData.workspaceId, provider, accountId);
     }
     const newMetadata = {
       oauthConnected: true,
       connectedAt: new Date().toISOString(),
+      canonicalNetwork: purpose === "organic_social" && ["instagram", "facebook", "tiktok", "linkedin"].includes(provider)
+        ? provider
+        : undefined,
       ...metadataExtra,
     };
     const metadata = metadataForPurpose(purpose, newMetadata);
@@ -673,6 +676,9 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
       provider: config.dbProvider,
       status: "connected" as const,
       accessToken, refreshToken, tokenExpiresAt, accountId, accountName,
+      canonicalNetwork: purpose === "organic_social" && ["instagram", "facebook", "tiktok", "linkedin"].includes(provider)
+        ? provider
+        : null,
       isPaymentGateway: false, blocksExecution: false, metadata,
     };
     const [integration] = existing

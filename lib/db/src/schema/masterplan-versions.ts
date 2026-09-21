@@ -2,6 +2,7 @@ import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, u
 import { campaignsTable } from "./campaigns";
 import { usersTable } from "./users";
 import { workspacesTable } from "./workspaces";
+import { commercialProductsTable, commercialSubscriptionsTable } from "./commercial-entitlements";
 
 export const masterplanVersionStatusEnum = pgEnum("masterplan_version_status", [
   "draft", "pending_approval", "approved", "superseded",
@@ -23,6 +24,8 @@ export const masterplanVersionsTable = pgTable("masterplan_versions", {
   autonomyContract: jsonb("autonomy_contract").notNull().default({}),
   allowedActions: jsonb("allowed_actions").notNull().default([]),
   requiredApprovals: jsonb("required_approvals").notNull().default([]),
+  commercialProductId: uuid("commercial_product_id").references(() => commercialProductsTable.id, { onDelete: "set null" }),
+  commercialSubscriptionId: uuid("commercial_subscription_id").references(() => commercialSubscriptionsTable.id, { onDelete: "set null" }),
   createdByUserId: uuid("created_by_user_id").references(() => usersTable.id, { onDelete: "set null" }),
   approvedByUserId: uuid("approved_by_user_id").references(() => usersTable.id, { onDelete: "set null" }),
   approvedAt: timestamp("approved_at", { withTimezone: true }),
