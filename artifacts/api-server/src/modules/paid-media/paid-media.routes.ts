@@ -1,5 +1,5 @@
 import { Router, type Response } from "express";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, isNotNull, ne, or } from "drizzle-orm";
 import {
   db,
   paidMediaAccountsTable,
@@ -10,6 +10,10 @@ import {
   paidMediaActionAttemptsTable,
   paidMediaSyncCursorsTable,
   workspaceIntegrationsTable,
+  paidMediaLaunchPlansTable,
+  executionEvidenceTable,
+  paidMediaLaunchStepsTable,
+  paidMediaLaunchAttemptsTable,
 } from "@workspace/db";
 import { randomUUID } from "node:crypto";
 import { requireAuth } from "../auth/auth.middleware.js";
@@ -22,6 +26,8 @@ import {
 import { syncPaidMediaAccount } from "./sync.service.js";
 import { decideProposal, executeProposal, rollbackAttempt } from "./actions.service.js";
 import { generateProposal } from "./proposals.service.js";
+import { approveLaunchPlan, activateLaunchPlan, compileLaunchPlan } from "./launch-plans.service.js";
+import { isPaidMediaIntegration } from "../integrations/integration-purpose.js";
 import { datasetDiagnostics, recordDatasetEvent, reconciliationSummary, upsertConversion, upsertTouchpoint } from "./attribution.service.js";
 
 const router = Router();
@@ -46,6 +52,80 @@ router.post("/events/ingest", async (req, res): Promise<void> => {
 });
 router.use(requireAuth);
 
+// Approved-Masterplan paid-media launch contract. Organic social has no access
+// to these endpoints or tables.
+router.post("/launch-plans/compile", async (req, res): Promise<void> => {
+  const body = req.body ?? {};
+  if (!["meta_ads", "google_ads", "tiktok_ads"].includes(body.provider) || typeof body.campaignId !== "string" || typeof body.accountId !== "string" || typeof body.masterplanVersionId !== "string" || typeof body.contextFingerprint !== "string" || typeof body.productIntakeVersionId !== "string") {
+    res.status(400).json({ error: "campaignId, accountId, provider, masterplanVersionId, contextFingerprint and productIntakeVersionId are required.", code: "VALIDATION_ERROR" }); return;
+  }
+  try { res.status(201).json({ launchPlan: await compileLaunchPlan(req.auth.workspaceId, req.auth.userId, body) }); }
+  catch (error) { sendProviderError(res, error); }
+});
+router.get("/launch-plans", async (req, res): Promise<void> => {
+  res.json({ launchPlans: await db.select().from(paidMediaLaunchPlansTable).where(eq(paidMediaLaunchPlansTable.workspaceId, req.auth.workspaceId)) });
+});
+router.get("/launch-plans/:planId", async (req, res): Promise<void> => {
+  const [launchPlan] = await db.select().from(paidMediaLaunchPlansTable).where(and(eq(paidMediaLaunchPlansTable.id, req.params["planId"]), eq(paidMediaLaunchPlansTable.workspaceId, req.auth.workspaceId))).limit(1);
+  if (!launchPlan) { res.status(404).json({ error: "Launch plan not found.", code: "LAUNCH_PLAN_NOT_FOUND" }); return; }
+  res.json({ launchPlan });
+});
+router.get("/launch-plans/:planId/readiness", async (req, res): Promise<void> => {
+  const [launchPlan] = await db.select({ readiness: paidMediaLaunchPlansTable.readiness }).from(paidMediaLaunchPlansTable).where(and(eq(paidMediaLaunchPlansTable.id, req.params["planId"]), eq(paidMediaLaunchPlansTable.workspaceId, req.auth.workspaceId))).limit(1);
+  if (!launchPlan) { res.status(404).json({ error: "Launch plan not found.", code: "LAUNCH_PLAN_NOT_FOUND" }); return; }
+  res.json({ readiness: launchPlan.readiness });
+});
+router.get("/launch-plans/:planId/evidence", async (req, res): Promise<void> => {
+  const [launchPlan] = await db.select({ id: paidMediaLaunchPlansTable.id }).from(paidMediaLaunchPlansTable).where(and(eq(paidMediaLaunchPlansTable.id, req.params["planId"]), eq(paidMediaLaunchPlansTable.workspaceId, req.auth.workspaceId))).limit(1);
+  if (!launchPlan) { res.status(404).json({ error: "Launch plan not found.", code: "LAUNCH_PLAN_NOT_FOUND" }); return; }
+  const evidence = await db.select().from(executionEvidenceTable).where(and(eq(executionEvidenceTable.workspaceId, req.auth.workspaceId), eq(executionEvidenceTable.subjectType, "paid_media_launch_plan"), eq(executionEvidenceTable.subjectId, launchPlan.id)));
+  res.json({ evidence: evidence.map((item) => ({ ...item, details: { ...(item.details as Record<string, unknown>), accessToken: undefined, refreshToken: undefined } })) });
+});
+router.post("/launch-plans/:planId/simulate", async (req, res): Promise<void> => {
+  const [launchPlan] = await db.select().from(paidMediaLaunchPlansTable).where(and(eq(paidMediaLaunchPlansTable.id, req.params["planId"]), eq(paidMediaLaunchPlansTable.workspaceId, req.auth.workspaceId))).limit(1);
+  if (!launchPlan) { res.status(404).json({ error: "Launch plan not found.", code: "LAUNCH_PLAN_NOT_FOUND" }); return; }
+  // Simulation is intentionally read-only: no provider request and no state mutation.
+  res.json({ simulation: { mode: "dry_run", planHash: launchPlan.planHash, tree: launchPlan.tree, providerPayload: launchPlan.providerPayload, readiness: launchPlan.readiness, mutations: [] } });
+});
+router.post("/launch-plans/:planId/approve", async (req, res): Promise<void> => {
+  try { res.json({ launchPlan: await approveLaunchPlan(req.auth.workspaceId, req.params["planId"], req.auth.userId) }); } catch (error) { sendProviderError(res, error); }
+});
+router.post("/launch-plans/:planId/activate", async (req, res): Promise<void> => {
+  try { res.json({ launchPlan: await activateLaunchPlan(req.auth.workspaceId, req.params["planId"]) }); } catch (error) { sendProviderError(res, error); }
+});
+router.post("/launch-plans/:planId/rollback", async (req, res): Promise<void> => {
+  const [launchPlan] = await db.select().from(paidMediaLaunchPlansTable).where(and(eq(paidMediaLaunchPlansTable.id, req.params["planId"]), eq(paidMediaLaunchPlansTable.workspaceId, req.auth.workspaceId))).limit(1);
+  if (!launchPlan || !["failed", "active", "compensation_failed"].includes(launchPlan.launchStage)) { res.status(409).json({ error: "Only failed or active launch plans can be compensated.", code: "ROLLBACK_NOT_AVAILABLE" }); return; }
+  const [account] = await db.select().from(paidMediaAccountsTable).where(and(eq(paidMediaAccountsTable.id, launchPlan.accountId), eq(paidMediaAccountsTable.workspaceId, req.auth.workspaceId))).limit(1);
+  const [latestAttempt] = await db.select({ id: paidMediaLaunchAttemptsTable.id }).from(paidMediaLaunchAttemptsTable).where(and(eq(paidMediaLaunchAttemptsTable.launchPlanId, launchPlan.id), or(eq(paidMediaLaunchAttemptsTable.status, "succeeded"), eq(paidMediaLaunchAttemptsTable.status, "compensation_failed")))).orderBy(desc(paidMediaLaunchAttemptsTable.updatedAt), desc(paidMediaLaunchAttemptsTable.id)).limit(1);
+  const steps = latestAttempt ? await db.select().from(paidMediaLaunchStepsTable).where(and(eq(paidMediaLaunchStepsTable.workspaceId, req.auth.workspaceId), eq(paidMediaLaunchStepsTable.attemptId, latestAttempt.id), isNotNull(paidMediaLaunchStepsTable.providerEntityId), ne(paidMediaLaunchStepsTable.status, "compensated"))).orderBy(desc(paidMediaLaunchStepsTable.sequence)) : [];
+  const adapter = paidMediaProvider(launchPlan.provider);
+  const outcomes = [];
+  if (!latestAttempt || !steps.length) { res.status(409).json({ error: "No created launch steps are available for rollback.", code: "ROLLBACK_NOT_AVAILABLE" }); return; }
+  for (const step of steps) {
+    try {
+      if (!adapter.deleteEntity || !account) throw new Error("Provider deletion capability unavailable.");
+       const absenceBefore = await adapter.verifyLaunchEntityAbsence?.(req.auth.workspaceId, account.id, step.entityType, step.providerEntityId!);
+       if (absenceBefore?.absent) {
+         await db.update(paidMediaLaunchStepsTable).set({ status: "compensated", compensation: { absence: absenceBefore.evidence, alreadyAbsent: true } }).where(eq(paidMediaLaunchStepsTable.id, step.id));
+         outcomes.push({ stepId: step.id, compensated: true });
+         continue;
+       }
+       const result = await adapter.deleteEntity(req.auth.workspaceId, account.id, step.providerEntityId!, `rollback:${launchPlan.id}:${step.id}`);
+        const absence = await adapter.verifyLaunchEntityAbsence?.(req.auth.workspaceId, account.id, step.entityType, step.providerEntityId!);
+       if (!absence?.absent) throw new Error("Provider deletion was not verified.");
+       await db.update(paidMediaLaunchStepsTable).set({ status: "compensated", compensation: { delete: result.evidence, absence: absence.evidence } }).where(eq(paidMediaLaunchStepsTable.id, step.id));
+      outcomes.push({ stepId: step.id, compensated: true });
+    } catch (error) {
+      await db.update(paidMediaLaunchStepsTable).set({ status: "compensation_failed", compensation: { error: error instanceof Error ? error.message : "delete failed" } }).where(eq(paidMediaLaunchStepsTable.id, step.id));
+      outcomes.push({ stepId: step.id, compensated: false });
+    }
+  }
+  const success = outcomes.length > 0 && outcomes.every((item) => item.compensated);
+  const [updated] = await db.update(paidMediaLaunchPlansTable).set({ launchStage: success ? "rolled_back" : "compensation_failed" }).where(eq(paidMediaLaunchPlansTable.id, launchPlan.id)).returning();
+  res.status(success ? 200 : 502).json({ launchPlan: updated, compensation: outcomes, code: success ? undefined : "COMPENSATION_FAILED" });
+});
+
 function providerFrom(value: unknown): PaidMediaProviderName | undefined {
   return value === "meta_ads" || value === "tiktok_ads" || value === "google_ads" ? value : undefined;
 }
@@ -68,22 +148,26 @@ router.get("/accounts/:provider/discover", async (req, res): Promise<void> => {
     return;
   }
   try {
-    const accounts = await paidMediaProvider(provider).listAccounts(req.auth.workspaceId);
-    const [integration] = await db.select({ id: workspaceIntegrationsTable.id })
+     const integrations = await db.select({ id: workspaceIntegrationsTable.id, metadata: workspaceIntegrationsTable.metadata })
       .from(workspaceIntegrationsTable)
-      .where(and(eq(workspaceIntegrationsTable.workspaceId, req.auth.workspaceId), eq(workspaceIntegrationsTable.provider, provider)))
-      .limit(1);
-    if (!integration) {
+       .where(and(eq(workspaceIntegrationsTable.workspaceId, req.auth.workspaceId), eq(workspaceIntegrationsTable.provider, provider), eq(workspaceIntegrationsTable.status, "connected")))
+       .limit(20);
+      const integration = integrations.find((row) => isPaidMediaIntegration(row.metadata as Record<string, unknown>));
+     if (!integration) {
       res.status(409).json({ error: "Provider integration is not connected.", code: "INTEGRATION_NOT_CONNECTED" });
       return;
     }
+     const adapter = paidMediaProvider(provider);
+     const accounts = adapter.listAccountsForIntegration
+       ? await adapter.listAccountsForIntegration(req.auth.workspaceId, integration.id)
+       : await adapter.listAccounts(req.auth.workspaceId);
     for (const account of accounts) {
       const [existing] = await db.select({ id: paidMediaAccountsTable.id })
         .from(paidMediaAccountsTable)
         .where(and(eq(paidMediaAccountsTable.workspaceId, req.auth.workspaceId), eq(paidMediaAccountsTable.provider, provider), eq(paidMediaAccountsTable.providerAccountId, account.providerAccountId)))
         .limit(1);
       if (existing) {
-        await db.update(paidMediaAccountsTable).set({ accountName: account.name, currency: account.currency, timezone: account.timezone })
+         await db.update(paidMediaAccountsTable).set({ integrationId: integration.id, accountName: account.name, currency: account.currency, timezone: account.timezone })
           .where(eq(paidMediaAccountsTable.id, existing.id));
       } else {
         await db.insert(paidMediaAccountsTable).values({

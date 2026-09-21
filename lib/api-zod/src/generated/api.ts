@@ -992,7 +992,7 @@ export const GetCreditsBalanceResponse = zod.object({
 });
 
 export const DiscoverPaidMediaAccountsParams = zod.object({
-  provider: zod.enum(["meta_ads", "tiktok_ads"]),
+  provider: zod.enum(["meta_ads", "tiktok_ads", "google_ads"]),
 });
 
 export const DiscoverPaidMediaAccountsResponse = zod.object({
@@ -1008,7 +1008,7 @@ export const DiscoverPaidMediaAccountsResponse = zod.object({
 });
 
 export const ListPaidMediaAccountsParams = zod.object({
-  provider: zod.enum(["meta_ads", "tiktok_ads"]),
+  provider: zod.enum(["meta_ads", "tiktok_ads", "google_ads"]),
 });
 
 export const ListPaidMediaAccountsResponse = zod.object({
@@ -1025,7 +1025,7 @@ export const ListPaidMediaAccountsResponse = zod.object({
 });
 
 export const SelectPaidMediaAccountParams = zod.object({
-  provider: zod.enum(["meta_ads", "tiktok_ads"]),
+  provider: zod.enum(["meta_ads", "tiktok_ads", "google_ads"]),
   accountId: zod.coerce.string().uuid(),
 });
 
@@ -1083,6 +1083,7 @@ export const ListPaidMediaPoliciesResponse = zod.object({
         .union([
           zod.literal("meta_ads"),
           zod.literal("tiktok_ads"),
+          zod.literal("google_ads"),
           zod.literal(null),
         ])
         .nullish(),
@@ -1156,6 +1157,7 @@ export const UpdatePaidMediaPolicyResponse = zod.object({
       .union([
         zod.literal("meta_ads"),
         zod.literal("tiktok_ads"),
+        zod.literal("google_ads"),
         zod.literal(null),
       ])
       .nullish(),
@@ -1198,7 +1200,7 @@ export const ListPaidMediaProposalsResponse = zod.object({
       workspaceId: zod.string().uuid(),
       accountId: zod.string().uuid().nullish(),
       entityId: zod.string().uuid().nullish(),
-      provider: zod.enum(["meta_ads", "tiktok_ads"]),
+      provider: zod.enum(["meta_ads", "tiktok_ads", "google_ads"]),
       actionType: zod.enum([
         "pause",
         "resume",
@@ -1241,7 +1243,7 @@ export const GetPaidMediaProposalResponse = zod.object({
     workspaceId: zod.string().uuid(),
     accountId: zod.string().uuid().nullish(),
     entityId: zod.string().uuid().nullish(),
-    provider: zod.enum(["meta_ads", "tiktok_ads"]),
+    provider: zod.enum(["meta_ads", "tiktok_ads", "google_ads"]),
     actionType: zod.enum([
       "pause",
       "resume",
@@ -1287,7 +1289,7 @@ export const ApprovePaidMediaProposalResponse = zod.object({
   workspaceId: zod.string().uuid(),
   accountId: zod.string().uuid().nullish(),
   entityId: zod.string().uuid().nullish(),
-  provider: zod.enum(["meta_ads", "tiktok_ads"]),
+  provider: zod.enum(["meta_ads", "tiktok_ads", "google_ads"]),
   actionType: zod.enum([
     "pause",
     "resume",
@@ -1332,7 +1334,7 @@ export const RejectPaidMediaProposalResponse = zod.object({
   workspaceId: zod.string().uuid(),
   accountId: zod.string().uuid().nullish(),
   entityId: zod.string().uuid().nullish(),
-  provider: zod.enum(["meta_ads", "tiktok_ads"]),
+  provider: zod.enum(["meta_ads", "tiktok_ads", "google_ads"]),
   actionType: zod.enum([
     "pause",
     "resume",

@@ -52,7 +52,7 @@ export async function syncPaidMediaAccount(workspaceId: string, accountId: strin
         entitiesUpserted++;
       }
       const entityRows = await db.select({ id: paidMediaEntitiesTable.id, providerEntityId: paidMediaEntitiesTable.providerEntityId })
-        .from(paidMediaEntitiesTable).where(and(eq(paidMediaEntitiesTable.accountId, account.id), eq(paidMediaEntitiesTable.entityType, entityType)));
+        .from(paidMediaEntitiesTable).where(and(eq(paidMediaEntitiesTable.workspaceId, workspaceId), eq(paidMediaEntitiesTable.accountId, account.id), eq(paidMediaEntitiesTable.entityType, entityType)));
       const ids = new Map(entityRows.map((value) => [value.providerEntityId, value.id]));
       const insights = await provider.fetchInsights(workspaceId, account.providerAccountId, entityType, since, until);
       for (const insight of insights) {

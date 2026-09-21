@@ -2879,13 +2879,13 @@ export function useGetCreditsBalance<
 }
 
 export const getDiscoverPaidMediaAccountsUrl = (
-  provider: "meta_ads" | "tiktok_ads",
+  provider: "meta_ads" | "tiktok_ads" | "google_ads",
 ) => {
   return `/api/paid-media/accounts/${provider}/discover`;
 };
 
 export const discoverPaidMediaAccounts = async (
-  provider: "meta_ads" | "tiktok_ads",
+  provider: "meta_ads" | "tiktok_ads" | "google_ads",
   options?: RequestInit,
 ): Promise<PaidMediaAccountDiscoveryResponse> => {
   return customFetch<PaidMediaAccountDiscoveryResponse>(
@@ -2898,7 +2898,7 @@ export const discoverPaidMediaAccounts = async (
 };
 
 export const getDiscoverPaidMediaAccountsQueryKey = (
-  provider: "meta_ads" | "tiktok_ads",
+  provider: "meta_ads" | "tiktok_ads" | "google_ads",
 ) => {
   return [`/api/paid-media/accounts/${provider}/discover`] as const;
 };
@@ -2912,7 +2912,7 @@ export const getDiscoverPaidMediaAccountsQueryOptions = <
     | PaidMediaProviderErrorResponse
   >,
 >(
-  provider: "meta_ads" | "tiktok_ads",
+  provider: "meta_ads" | "tiktok_ads" | "google_ads",
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof discoverPaidMediaAccounts>>,
@@ -2963,7 +2963,7 @@ export function useDiscoverPaidMediaAccounts<
     | PaidMediaProviderErrorResponse
   >,
 >(
-  provider: "meta_ads" | "tiktok_ads",
+  provider: "meta_ads" | "tiktok_ads" | "google_ads",
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof discoverPaidMediaAccounts>>,
@@ -2986,13 +2986,13 @@ export function useDiscoverPaidMediaAccounts<
 }
 
 export const getListPaidMediaAccountsUrl = (
-  provider: "meta_ads" | "tiktok_ads",
+  provider: "meta_ads" | "tiktok_ads" | "google_ads",
 ) => {
   return `/api/paid-media/accounts/${provider}`;
 };
 
 export const listPaidMediaAccounts = async (
-  provider: "meta_ads" | "tiktok_ads",
+  provider: "meta_ads" | "tiktok_ads" | "google_ads",
   options?: RequestInit,
 ): Promise<PaidMediaAccountsResponse> => {
   return customFetch<PaidMediaAccountsResponse>(
@@ -3005,7 +3005,7 @@ export const listPaidMediaAccounts = async (
 };
 
 export const getListPaidMediaAccountsQueryKey = (
-  provider: "meta_ads" | "tiktok_ads",
+  provider: "meta_ads" | "tiktok_ads" | "google_ads",
 ) => {
   return [`/api/paid-media/accounts/${provider}`] as const;
 };
@@ -3016,7 +3016,7 @@ export const getListPaidMediaAccountsQueryOptions = <
     PaidMediaValidationErrorResponse | UnauthorizedErrorResponse
   >,
 >(
-  provider: "meta_ads" | "tiktok_ads",
+  provider: "meta_ads" | "tiktok_ads" | "google_ads",
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof listPaidMediaAccounts>>,
@@ -3061,7 +3061,7 @@ export function useListPaidMediaAccounts<
     PaidMediaValidationErrorResponse | UnauthorizedErrorResponse
   >,
 >(
-  provider: "meta_ads" | "tiktok_ads",
+  provider: "meta_ads" | "tiktok_ads" | "google_ads",
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof listPaidMediaAccounts>>,
@@ -3081,14 +3081,14 @@ export function useListPaidMediaAccounts<
 }
 
 export const getSelectPaidMediaAccountUrl = (
-  provider: "meta_ads" | "tiktok_ads",
+  provider: "meta_ads" | "tiktok_ads" | "google_ads",
   accountId: string,
 ) => {
   return `/api/paid-media/accounts/${provider}/${accountId}/select`;
 };
 
 export const selectPaidMediaAccount = async (
-  provider: "meta_ads" | "tiktok_ads",
+  provider: "meta_ads" | "tiktok_ads" | "google_ads",
   accountId: string,
   options?: RequestInit,
 ): Promise<PaidMediaAccountSelectionResponse> => {
@@ -3112,14 +3112,14 @@ export const getSelectPaidMediaAccountMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof selectPaidMediaAccount>>,
     TError,
-    { provider: "meta_ads" | "tiktok_ads"; accountId: string },
+    { provider: "meta_ads" | "tiktok_ads" | "google_ads"; accountId: string },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof selectPaidMediaAccount>>,
   TError,
-  { provider: "meta_ads" | "tiktok_ads"; accountId: string },
+  { provider: "meta_ads" | "tiktok_ads" | "google_ads"; accountId: string },
   TContext
 > => {
   const mutationKey = ["selectPaidMediaAccount"];
@@ -3133,7 +3133,7 @@ export const getSelectPaidMediaAccountMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof selectPaidMediaAccount>>,
-    { provider: "meta_ads" | "tiktok_ads"; accountId: string }
+    { provider: "meta_ads" | "tiktok_ads" | "google_ads"; accountId: string }
   > = (props) => {
     const { provider, accountId } = props ?? {};
 
@@ -3164,14 +3164,14 @@ export const useSelectPaidMediaAccount = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof selectPaidMediaAccount>>,
     TError,
-    { provider: "meta_ads" | "tiktok_ads"; accountId: string },
+    { provider: "meta_ads" | "tiktok_ads" | "google_ads"; accountId: string },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof selectPaidMediaAccount>>,
   TError,
-  { provider: "meta_ads" | "tiktok_ads"; accountId: string },
+  { provider: "meta_ads" | "tiktok_ads" | "google_ads"; accountId: string },
   TContext
 > => {
   return useMutation(getSelectPaidMediaAccountMutationOptions(options));

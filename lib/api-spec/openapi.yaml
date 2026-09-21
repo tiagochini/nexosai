@@ -877,7 +877,7 @@ components:
       name: provider
       in: path
       required: true
-      schema: { type: string, enum: [meta_ads, tiktok_ads] }
+      schema: { type: string, enum: [meta_ads, tiktok_ads, google_ads] }
     PaidMediaAccountId:
       name: accountId
       in: path
@@ -1685,7 +1685,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         workspaceId: { type: string, format: uuid }
-        provider: { type: [string, "null"], enum: [meta_ads, tiktok_ads, null] }
+        provider: { type: [string, "null"], enum: [meta_ads, tiktok_ads, google_ads, null] }
         accountId: { type: [string, "null"], format: uuid }
         enabled: { type: boolean }
         autoExecute: { type: boolean }
@@ -1738,7 +1738,7 @@ components:
         workspaceId: { type: string, format: uuid }
         accountId: { type: [string, "null"], format: uuid }
         entityId: { type: [string, "null"], format: uuid }
-        provider: { type: string, enum: [meta_ads, tiktok_ads] }
+        provider: { type: string, enum: [meta_ads, tiktok_ads, google_ads] }
         actionType: { type: string, enum: [pause, resume, update_daily_budget, update_bid, update_creative_status, update_creative_rotation, cross_platform_budget_move] }
         status: { type: string, enum: [pending_approval, approved, rejected, expired, executing, verified, failed, rolled_back] }
         idempotencyKey: { type: string }

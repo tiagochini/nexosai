@@ -62,3 +62,4 @@ export * from "./radar-entitlements";
 export * from "./commercial-entitlements";
 export * from "./community";
 export * from "./lifecycle";
+export * from "./product-intakes";

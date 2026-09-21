@@ -17,6 +17,7 @@ import {
   type CampaignTrack,
 } from "./intake.service.js";
 import { recommendTrackFromRevenue } from "./intake.scoring.js";
+import { approveProductIntake, getProductIntake } from "../product-intake/product-intake.service.js";
 import {
   triggerMarketIntelFromIntake,
   buildIntakeMarketIntelContext,
@@ -1155,6 +1156,17 @@ export async function finalizeIntake(
     .set(updates)
     .where(eq(campaignsTable.id, campaignId))
     .returning();
+
+  // Finalizing the legacy campaign endpoint approves the same canonical product
+  // snapshot; no second questionnaire or lineage is created.
+  if (campaign.commercialProductId) {
+    const canonical = await getProductIntake(workspaceId, campaign.commercialProductId);
+    if (canonical.draft) {
+      const approved = await approveProductIntake(workspaceId, canonical.draft.id, "system");
+      await db.update(campaignsTable).set({ productIntakeVersionId: approved.id }).where(eq(campaignsTable.id, campaignId));
+      (updated as any).productIntakeVersionId = approved.id;
+    }
+  }
 
   await db.insert(auditLogsTable).values({
     workspaceId,

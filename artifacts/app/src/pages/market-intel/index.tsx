@@ -6,11 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Radar, Plus, RefreshCw, Trash2, ArrowLeft, Send, Sparkles,
   Target, TrendingUp, AlertTriangle, CheckCircle2, Sword, Shield,
-  DollarSign, Share2, Zap, MessageSquare, X, Loader2, HelpCircle, MapPin
+  DollarSign, Share2, Zap, MessageSquare, X, Loader2, HelpCircle, MapPin, Database
 } from "lucide-react";
 import { RegionalIntelDashboard } from "./regional-intel-dashboard";
-import { CapacityTab } from "./capacity-tab";
 import { useGetCampaigns } from "@/hooks/use-regional-intel";
+import { Link } from "wouter";
+import { CapacityTab } from "./capacity-tab";
 
 const API = "/api/market-intel";
 
@@ -103,6 +104,7 @@ export default function MarketIntelPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   // new analysis form
+  const [selectedProductId, setSelectedProductId] = useState("");
   const [productName, setProductName] = useState("");
   const [market, setMarket] = useState("");
   const [category, setCategory] = useState("");
@@ -667,8 +669,13 @@ export default function MarketIntelPage() {
               <Button variant="outline" size="sm" onClick={() => loadReports()} aria-label="Atualizar">
                 <RefreshCw className="h-4 w-4" />
               </Button>
+              <Button asChild variant="outline" size="sm" className="border-primary/30 text-primary hover:bg-primary/10">
+                <Link href="/intake?entryPoint=market_intel">
+                  <Database className="h-4 w-4 mr-1.5" /> Briefing Central
+                </Link>
+              </Button>
               <Button size="sm" onClick={() => setShowNew(true)}>
-                <Plus className="h-4 w-4 mr-1.5" /> Nova Análise
+                <Plus className="h-4 w-4 mr-1.5" /> Nova Análise Avulsa
               </Button>
             </div>
           </div>

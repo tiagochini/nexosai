@@ -19,6 +19,7 @@ import { workspaceIntegrationsTable } from "./workspace-integrations";
 import { workspacesTable } from "./workspaces";
 import { campaignsTable } from "./campaigns";
 import { masterplanVersionsTable } from "./masterplan-versions";
+import { commercialProductsTable, commercialSubscriptionsTable } from "./commercial-entitlements";
 
 /** Providers that have an executable paid-media adapter. */
 export const paidMediaProviderEnum = pgEnum("paid_media_provider", [
@@ -94,6 +95,74 @@ export const paidMediaEventDeliveryStatusEnum = pgEnum("paid_media_event_deliver
   "capability_blocked",
   "consent_withheld",
 ]);
+
+/** A launch plan is an immutable, provider-neutral execution contract. */
+export const paidMediaLaunchStageEnum = pgEnum("paid_media_launch_stage", [
+  "compiled", "simulated", "approved", "activating", "active", "failed", "compensation_failed", "rolled_back",
+]);
+export const paidMediaLaunchAttemptStatusEnum = pgEnum("paid_media_launch_attempt_status", [
+  "executing", "succeeded", "failed", "compensation_failed",
+]);
+export const paidMediaLaunchStepStatusEnum = pgEnum("paid_media_launch_step_status", [
+  "pending", "created", "verified", "compensated", "compensation_failed",
+]);
+export const paidMediaLaunchPlansTable = pgTable(
+  "paid_media_launch_plans",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspacesTable.id, { onDelete: "cascade" }),
+    commercialProductId: uuid("commercial_product_id").notNull().references(() => commercialProductsTable.id, { onDelete: "restrict" }),
+    commercialSubscriptionId: uuid("commercial_subscription_id").notNull().references(() => commercialSubscriptionsTable.id, { onDelete: "restrict" }),
+    campaignId: uuid("campaign_id").notNull().references(() => campaignsTable.id, { onDelete: "restrict" }),
+    masterplanVersionId: uuid("masterplan_version_id").notNull().references(() => masterplanVersionsTable.id, { onDelete: "restrict" }),
+    contextFingerprint: text("context_fingerprint").notNull(),
+    accountId: uuid("account_id").notNull().references(() => paidMediaAccountsTable.id, { onDelete: "restrict" }),
+    productIntakeVersionId: uuid("product_intake_version_id").notNull(),
+    provider: paidMediaProviderEnum("provider").notNull(),
+    launchStage: paidMediaLaunchStageEnum("launch_stage").notNull().default("compiled"),
+    planHash: text("plan_hash").notNull(),
+    tree: jsonb("tree").notNull(),
+    providerPayload: jsonb("provider_payload").notNull().default({}),
+    readiness: jsonb("readiness").notNull().default({}),
+    approvalSnapshot: jsonb("approval_snapshot"),
+    approvedByUserId: uuid("approved_by_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    createdByUserId: uuid("created_by_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("paid_media_launch_plans_workspace_hash_uidx").on(table.workspaceId, table.planHash),
+    index("paid_media_launch_plans_workspace_campaign_idx").on(table.workspaceId, table.campaignId),
+  ],
+);
+export const paidMediaLaunchAttemptsTable = pgTable("paid_media_launch_attempts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspacesTable.id, { onDelete: "cascade" }),
+  launchPlanId: uuid("launch_plan_id").notNull().references(() => paidMediaLaunchPlansTable.id, { onDelete: "cascade" }),
+  attemptKey: text("attempt_key").notNull(),
+  status: paidMediaLaunchAttemptStatusEnum("status").notNull().default("executing"),
+  leaseOwner: text("lease_owner"),
+  leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
+  heartbeatAt: timestamp("heartbeat_at", { withTimezone: true }),
+  error: text("error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => [uniqueIndex("paid_media_launch_attempts_plan_key_uidx").on(table.launchPlanId, table.attemptKey)]);
+export const paidMediaLaunchStepsTable = pgTable("paid_media_launch_steps", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspacesTable.id, { onDelete: "cascade" }),
+  attemptId: uuid("attempt_id").notNull().references(() => paidMediaLaunchAttemptsTable.id, { onDelete: "cascade" }),
+  stepKey: text("step_key").notNull(),
+  sequence: integer("sequence").notNull().default(0),
+  entityType: paidMediaEntityTypeEnum("entity_type").notNull(),
+  providerEntityId: text("provider_entity_id"),
+  status: paidMediaLaunchStepStatusEnum("status").notNull().default("pending"),
+  providerResponse: jsonb("provider_response").notNull().default({}),
+  readback: jsonb("readback").notNull().default({}),
+  compensation: jsonb("compensation").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => [uniqueIndex("paid_media_launch_steps_attempt_key_uidx").on(table.attemptId, table.stepKey)]);
 
 // A selected advertiser account. OAuth credentials remain solely in
 // workspace_integrations; this table deliberately contains no credentials.
@@ -497,6 +566,7 @@ export type PaidMediaDataset = typeof paidMediaDatasetsTable.$inferSelect;
 export type PaidMediaEventReceipt = typeof paidMediaEventReceiptsTable.$inferSelect;
 export type PaidMediaAttributionTouchpoint = typeof paidMediaAttributionTouchpointsTable.$inferSelect;
 export type PaidMediaConversion = typeof paidMediaConversionsTable.$inferSelect;
+export type PaidMediaLaunchPlan = typeof paidMediaLaunchPlansTable.$inferSelect;
 export type InsertPaidMediaAccount = z.infer<typeof insertPaidMediaAccountSchema>;
 export type InsertPaidMediaEntity = z.infer<typeof insertPaidMediaEntitySchema>;
 export type InsertPaidMediaProposal = z.infer<typeof insertPaidMediaProposalSchema>;

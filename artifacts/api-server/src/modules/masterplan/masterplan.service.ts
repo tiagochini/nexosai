@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
-import { db, campaignsTable, masterplanVersionsTable, agentClarificationRequestsTable, auditLogsTable, commercialSubscriptionsTable } from "@workspace/db";
+import { db, campaignsTable, masterplanVersionsTable, agentClarificationRequestsTable, auditLogsTable, commercialSubscriptionsTable, productIntakesTable } from "@workspace/db";
 import { NotFoundError, AppError } from "../../lib/errors.js";
 import { PRODUCT_AUTONOMY_CONTRACT } from "../autonomy/autonomy.service.js";
 import { latestRegionalIntelligenceSummary } from "../market-intel/regional-intelligence.service.js";
@@ -65,23 +65,30 @@ export async function materializeMasterplan(workspaceId: string, campaignId: str
     eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId),
   )).limit(1);
   if (!campaign) throw new NotFoundError("Campaign");
-  // Existing unbound campaigns use the active subscription as a safe staged
-  // fallback; once bound, a masterplan can never silently switch lineage.
+  if (!campaign.commercialProductId || !campaign.commercialSubscriptionId || !campaign.productIntakeVersionId) {
+    throw new AppError(409, "Campaign requires explicit product adoption and an approved intake before materialization", "PRODUCT_INTAKE_BINDING_REQUIRED");
+  }
   const [subscription] = await db.select({
     id: commercialSubscriptionsTable.id,
     productId: commercialSubscriptionsTable.productId,
   }).from(commercialSubscriptionsTable).where(and(
+    eq(commercialSubscriptionsTable.id, campaign.commercialSubscriptionId),
     eq(commercialSubscriptionsTable.workspaceId, workspaceId),
+    eq(commercialSubscriptionsTable.productId, campaign.commercialProductId),
     eq(commercialSubscriptionsTable.status, "active"),
   )).limit(1);
-  if (!campaign.commercialSubscriptionId && subscription) {
-    await db.update(campaignsTable).set({
-      commercialSubscriptionId: subscription.id,
-      commercialProductId: subscription.productId,
-    }).where(eq(campaignsTable.id, campaign.id));
+  if (!subscription) throw new AppError(409, "Campaign subscription does not belong to its workspace/product", "PRODUCT_SUBSCRIPTION_MISMATCH");
+  const [intake] = await db.select()
+    .from(productIntakesTable).where(and(
+      eq(productIntakesTable.id, campaign.productIntakeVersionId),
+      eq(productIntakesTable.workspaceId, workspaceId),
+      eq(productIntakesTable.commercialProductId, campaign.commercialProductId),
+    )).limit(1);
+  if (!intake || (intake.status !== "approved" && intake.status !== "locked")) {
+    throw new AppError(409, "Campaign must bind an approved product intake version", "PRODUCT_INTAKE_NOT_APPROVED");
   }
-  const boundSubscriptionId = campaign.commercialSubscriptionId ?? subscription?.id ?? null;
-  const boundProductId = campaign.commercialProductId ?? subscription?.productId ?? null;
+  const boundSubscriptionId = campaign.commercialSubscriptionId;
+  const boundProductId = campaign.commercialProductId;
   const pending = await db.select({ id: agentClarificationRequestsTable.id, question: agentClarificationRequestsTable.question })
     .from(agentClarificationRequestsTable).where(and(
       eq(agentClarificationRequestsTable.workspaceId, workspaceId), eq(agentClarificationRequestsTable.campaignId, campaignId),
@@ -92,7 +99,7 @@ export async function materializeMasterplan(workspaceId: string, campaignId: str
   const snapshot = canonicalize({
     schema: "nexos-masterplan/v1",
     campaign: { id: campaign.id, title: campaign.title, type: campaign.type, track: campaign.track, locale: campaign.locale, timezone: campaign.timezone, durationDays: campaign.durationDays, budgetTotal: campaign.budgetTotal, revenueTarget: campaign.revenueTarget, currentPhase: campaign.currentPhase },
-    intake: campaign.intakeData, strategy: campaign.strategyData, offer: campaign.offerData, targeting: campaign.targetingData,
+     intake: intake.snapshot, intakeVersionId: intake.id, strategy: campaign.strategyData, offer: campaign.offerData, targeting: campaign.targetingData,
     audience: campaign.audienceData, timeline: campaign.timelineData,
     regionalIntelligence: regionalIntelligence ?? { available: false },
     operatingMemory: { permittedPromises: memory["permittedPromises"], prohibitedClaims: memory["prohibitedClaims"], ethicalBoundaries: memory["ethicalBoundaries"], legalBoundaries: memory["legalBoundaries"], approvedDecisions: memory["approvedDecisions"] },
@@ -113,6 +120,7 @@ export async function materializeMasterplan(workspaceId: string, campaignId: str
     requiredApprovals: ["masterplan_approval"], createdByUserId: actorId,
     commercialSubscriptionId: boundSubscriptionId,
     commercialProductId: boundProductId,
+     productIntakeVersionId: campaign.productIntakeVersionId,
   }).returning();
   await db.insert(auditLogsTable).values({ workspaceId, campaignId, action: "masterplan.materialized", actor: actorId ?? "system", data: { masterplanId: created!.id, version: created!.version, contentHash, readinessStatus } });
   return created;

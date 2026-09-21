@@ -163,10 +163,10 @@ function AdminTopupButton({ onSuccess, compact }: { onSuccess: () => void; compa
 
 type LocaleCode = "pt-BR" | "en-US" | "en-AU" | "es-LA";
 const LOCALE_OPTIONS: { value: LocaleCode; flag: string; label: string }[] = [
-  { value: "pt-BR", flag: "🇧🇷", label: "Português (BR)" },
-  { value: "en-US", flag: "🇺🇸", label: "English (US)" },
-  { value: "en-AU", flag: "🇦🇺", label: "English (AU)" },
-  { value: "es-LA", flag: "🇲🇽", label: "Español (LA)" },
+  { value: "pt-BR", flag: "PT", label: "Português (BR)" },
+  { value: "en-US", flag: "EN", label: "English (US)" },
+  { value: "en-AU", flag: "EN", label: "English (AU)" },
+  { value: "es-LA", flag: "ES", label: "Español (LA)" },
 ];
 
 function SidebarContent({ onNav }: { onNav?: () => void }) {
@@ -233,6 +233,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       items: [
         { name: tr.sidebar.dashboard,  href: "/",          icon: LayoutDashboard },
         { name: "Cockpit do Lançamento", href: "/launcher", icon: Crosshair },
+        { name: "Briefing Central", href: "/intake", icon: FileText, badge: "Hub" },
         { name: tr.sidebar.campaigns,  href: "/campaigns", icon: Rocket },
         { name: "Inteligência de Mercado", href: "/market-intel", icon: Radar, badge: "IA" },
         { name: "Presença Social", href: "/presence", icon: Megaphone, badge: "IA" },

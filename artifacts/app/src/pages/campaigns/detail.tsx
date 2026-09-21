@@ -21,7 +21,7 @@ import {
   Clock, AlertCircle, Loader2, ChevronRight, Bot, BarChart3,
   ShieldCheck, Layers, Zap, XCircle, Eye, TrendingUp,
   AlertTriangle, Activity, Target, DollarSign, Users, BookOpen, Link2, X,
-  RefreshCw, Rocket, Brain, Video, CheckCheck, Wifi, Image,
+  RefreshCw, Rocket, Brain, Video, CheckCheck, Wifi, Image, Database,
 } from "lucide-react";
 import { LaunchSequenceOverlay, LaunchRocketButton } from "@/components/launch-sequence";
 import { StrategyMasterplan, parseStrategyInsights } from "./strategy-masterplan";
@@ -3397,6 +3397,47 @@ export default function CampaignDetail() {
                   ? `${previewSnippets.length} de ${previewContentData?.pieces?.length ?? 0} peças. Revise e aprove antes de lançar.`
                   : "Pré-visualização do estilo dos criativos. Clique em Aprovar Conteúdo para revisar todas as peças geradas."}
               </p>
+            </div>
+          )}
+
+          {/* Shared Product / Launch Readiness */}
+          {campaignRaw["commercialProductId"] ? (
+            <div className="border border-primary/30 bg-primary/5 p-5 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+              <div className="flex items-start gap-3">
+                <Database className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-mono text-xs font-bold uppercase tracking-widest text-foreground">
+                    Vinculado ao Briefing Central
+                  </div>
+                  <div className="font-mono text-[10px] text-muted-foreground mt-1">
+                    Esta campanha consome dados canônicos do produto. Inteligência alinhada.
+                  </div>
+                </div>
+              </div>
+              <Button asChild variant="outline" size="sm" className="font-mono text-[10px] uppercase tracking-widest border-primary/30 text-primary hover:bg-primary/10">
+                <Link href={`/intake/${campaignRaw["commercialProductId"]}?entryPoint=launch`}>
+                  Ver Master Intake
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="border border-border/40 bg-card/40 p-5 flex flex-col md:flex-row gap-4 items-start justify-between">
+              <div className="flex items-start gap-3">
+                <FileText className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-mono text-xs font-bold uppercase tracking-widest text-foreground">
+                    Briefing Isolado (Legado)
+                  </div>
+                  <div className="font-mono text-[10px] text-muted-foreground mt-1 max-w-lg">
+                    Esta campanha usa um briefing próprio. Para que Social Media, Mídia Paga e Market Intel usem os mesmos dados, migre para o Briefing Central.
+                  </div>
+                </div>
+              </div>
+              <Button asChild variant="outline" size="sm" className="font-mono text-[10px] uppercase tracking-widest">
+                <Link href="/intake?entryPoint=launch">
+                  Vincular ao Produto
+                </Link>
+              </Button>
             </div>
           )}
 

@@ -185,11 +185,25 @@ export async function createCampaign(
     }
   }
 
-  const [subscription] = await db
+  const subscriptions = await db
     .select({ id: commercialSubscriptionsTable.id, productId: commercialSubscriptionsTable.productId })
     .from(commercialSubscriptionsTable)
     .where(and(eq(commercialSubscriptionsTable.workspaceId, workspaceId), eq(commercialSubscriptionsTable.status, "active")))
-    .limit(1);
+    ;
+  const requestedSubscriptionId = data.commercialSubscriptionId;
+  const requestedProductId = data.commercialProductId;
+  if (!requestedSubscriptionId || !requestedProductId) {
+    throw new ValidationError("New campaigns require an explicit commercialProductId and commercialSubscriptionId");
+  }
+  const matchingSubscriptions = subscriptions.filter((item) =>
+    (!requestedSubscriptionId || item.id === requestedSubscriptionId) &&
+    (!requestedProductId || item.productId === requestedProductId),
+  );
+  if (matchingSubscriptions.length > 1) {
+    throw new ValidationError("Multiple active subscriptions require explicit commercialProductId and commercialSubscriptionId");
+  }
+  const subscription = matchingSubscriptions[0];
+  if (requestedSubscriptionId && !subscription) throw new ValidationError("Subscription is not active in this workspace/product");
   const [campaign] = await db
     .insert(campaignsTable)
     .values({
@@ -200,8 +214,8 @@ export async function createCampaign(
       status: "intake",
       intakeData: data.intakeData ?? {},
       locale: data.locale ?? "pt-BR",
-      commercialSubscriptionId: subscription?.id,
-      commercialProductId: subscription?.productId,
+    commercialSubscriptionId: requestedSubscriptionId ?? subscription?.id,
+    commercialProductId: requestedProductId ?? subscription?.productId,
     })
     .returning();
 

@@ -26,7 +26,7 @@ import {
   BarChart3, Calendar, Loader2, Star, Mail, ChevronDown, ChevronUp,
   FileText, Layers, Eye, BarChart2, Link2, Wifi, WifiOff,
   MessageSquare, Instagram, Facebook, Phone, Music2,
-  Share2, Copy, Gift,
+  Share2, Copy, Gift, Database
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -441,6 +441,65 @@ function SalesTeamPanel() {
           className="rounded-none font-mono text-[10px] uppercase tracking-widest h-6 px-2 border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/10 gap-1">
           <ChevronRight className="h-3 w-3" />
           {hasActivity ? "Ver Atendimentos" : "Iniciar Atendimento"}
+        </Button>
+      </Link>
+    </div>
+  );
+}
+
+function IntakeHubStatus() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["/api/products"],
+    queryFn: async () => {
+      const prods = await customFetch<{ products: any[] }>("/api/products").catch(() => ({ products: [] }));
+      if (prods.products.length === 0) return null;
+      // Fetch intake for the first product just for quick readiness peek
+      const first = prods.products[0];
+      const intake = await customFetch<any>(`/api/product-intake/${first.id}`).catch(() => null);
+      return { product: first, intake };
+    },
+    staleTime: 60_000,
+  });
+
+  if (isLoading || !data?.product) return null;
+
+  const currentStatus = data.intake?.current?.status;
+  const draftStatus = data.intake?.draft?.status;
+
+  const isApproved = currentStatus === "approved";
+  const isLocked = currentStatus === "locked";
+  const hasDraft = draftStatus === "draft";
+
+  const renderBadge = () => {
+    if (isApproved) return <Badge variant="outline" className="border-success/40 text-success text-[9px] px-1 py-0 h-4">Aprovado</Badge>;
+    if (isLocked) return <Badge variant="outline" className="border-primary/40 text-primary text-[9px] px-1 py-0 h-4">Bloqueado</Badge>;
+    if (hasDraft) return <Badge variant="outline" className="border-amber-400/40 text-amber-400 text-[9px] px-1 py-0 h-4">Rascunho</Badge>;
+    return <span className="font-mono text-[9px] text-muted-foreground">Pendente</span>;
+  };
+
+  const statusColor = isApproved ? "text-success" : isLocked ? "text-primary" : hasDraft ? "text-amber-400" : "text-muted-foreground";
+  const bgColor = isApproved ? "border-success/30 bg-success/5" : isLocked ? "border-primary/30 bg-primary/5" : hasDraft ? "border-amber-400/20 bg-amber-400/5" : "border-border/40 bg-card/30";
+
+  return (
+    <div className={`border flex items-center gap-3 px-4 py-3 transition-colors ${bgColor}`}>
+      <div className={`flex items-center gap-1.5 shrink-0 ${statusColor}`}>
+        <Database className="h-3.5 w-3.5" />
+        <span className="font-mono text-[11px] uppercase tracking-widest font-bold">
+          Briefing Central
+        </span>
+      </div>
+
+      <div className="w-px h-4 bg-border/40 shrink-0" />
+
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <span className="font-mono text-[10px] truncate text-foreground">{data.product.name}</span>
+        {renderBadge()}
+      </div>
+
+      <Link href="/intake" className="shrink-0">
+        <Button size="sm" variant="outline"
+          className="rounded-none font-mono text-[10px] uppercase tracking-widest h-6 px-2 border-primary/30 text-primary hover:bg-primary/10 gap-1">
+          <ChevronRight className="h-2.5 w-2.5" /> Acessar
         </Button>
       </Link>
     </div>
@@ -1118,6 +1177,9 @@ export default function Dashboard() {
           onToggle={() => setExpandedKpi(expandedKpi === "campaigns" ? null : "campaigns")}
         />
       </div>
+
+      {/* ── Briefing Central Status ── */}
+      <IntakeHubStatus />
 
       {/* ── Integration Health / Full Auto Status ── */}
       <IntegrationHealthPanel />

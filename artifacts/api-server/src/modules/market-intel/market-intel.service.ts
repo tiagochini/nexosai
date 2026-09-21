@@ -254,7 +254,25 @@ async function executeAnalysis(
  * the campaign. Returns the report id (existing or new), or null when there
  * isn't enough data yet.
  */
-export async function triggerMarketIntelFromIntake(
+const intakeAnalysisInFlight = new Map<string, Promise<string | null>>();
+
+/** Idempotent per workspace/campaign gate: duplicate intake turns share one analysis. */
+export function triggerMarketIntelFromIntake(
+  campaignId: string,
+  workspaceId: string,
+  intakeData: Record<string, unknown>,
+  log: Logger,
+): Promise<string | null> {
+  const key = `${workspaceId}:${campaignId}`;
+  const pending = intakeAnalysisInFlight.get(key);
+  if (pending) return pending;
+  const run = runMarketIntelFromIntake(campaignId, workspaceId, intakeData, log)
+    .finally(() => intakeAnalysisInFlight.delete(key));
+  intakeAnalysisInFlight.set(key, run);
+  return run;
+}
+
+async function runMarketIntelFromIntake(
   campaignId: string,
   workspaceId: string,
   intakeData: Record<string, unknown>,

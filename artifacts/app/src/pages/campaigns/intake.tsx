@@ -13,7 +13,7 @@ import {
 } from "@workspace/api-client-react";
 import { customFetch, ApiError } from "@workspace/api-client-react/custom-fetch";
 import { globalSilentRefresh } from "@/lib/auth";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
@@ -533,9 +533,23 @@ export default function CampaignIntake() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
 
-  const { data, isLoading } = useGetIntake(campaignId, {
-    query: { enabled: !!campaignId, queryKey: getGetIntakeQueryKey(campaignId) },
+  const { data: campaignData, isLoading: loadingCampaign } = useQuery({
+    queryKey: getGetCampaignQueryKey(campaignId),
+    queryFn: () => customFetch<{ campaign: any }>(`/api/campaigns/${campaignId}`),
+    enabled: !!campaignId
   });
+
+  useEffect(() => {
+    if (campaignData?.campaign?.commercialProductId) {
+      setLocation(`/intake/${campaignData.campaign.commercialProductId}`);
+    }
+  }, [campaignData, setLocation]);
+
+  const { data, isLoading: loadingIntake } = useGetIntake(campaignId, {
+    query: { enabled: !!campaignId && !campaignData?.campaign?.commercialProductId, queryKey: getGetIntakeQueryKey(campaignId) },
+  });
+
+  const isLoading = loadingCampaign || loadingIntake;
 
   const { data: scoreData } = useGetIntakeScore(campaignId, {
     query: { enabled: !!campaignId, queryKey: getGetIntakeScoreQueryKey(campaignId) },

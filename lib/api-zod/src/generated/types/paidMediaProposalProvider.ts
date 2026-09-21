@@ -12,4 +12,5 @@ export type PaidMediaProposalProvider =
 export const PaidMediaProposalProvider = {
   meta_ads: "meta_ads",
   tiktok_ads: "tiktok_ads",
+  google_ads: "google_ads",
 } as const;

@@ -111,6 +111,7 @@ export const campaignsTable = pgTable("campaigns", {
   pipelinePosition: integer("pipeline_position"),
   commercialProductId: uuid("commercial_product_id").references(() => commercialProductsTable.id, { onDelete: "set null" }),
   commercialSubscriptionId: uuid("commercial_subscription_id").references(() => commercialSubscriptionsTable.id, { onDelete: "set null" }),
+  productIntakeVersionId: uuid("product_intake_version_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

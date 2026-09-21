@@ -60,6 +60,7 @@ import SiteBuilderPage from "@/pages/site-builder/index";
 import AtendimentoPage from "@/pages/atendimento/index";
 import MarketIntelPage from "@/pages/market-intel/index";
 import PresencePage from "@/pages/presence/index";
+import IntakeHub from "@/pages/intake/index";
 import CloneDigitalPage from "@/pages/clone-digital/index";
 import VideoProductionPage from "@/pages/video-production/index";
 import FilmingGuide from "@/pages/video-production/filming-guide";
@@ -335,6 +336,10 @@ export default function AppRoutes() {
       {/* Presença Social Always-On */}
       <Route path="/presence">
         {() => <ProtectedRoute><PresencePage /></ProtectedRoute>}
+      </Route>
+
+      <Route path="/intake/:productId?">
+        {() => <ProtectedRoute><IntakeHub /></ProtectedRoute>}
       </Route>
 
       {/* Produção de Vídeo agente */}

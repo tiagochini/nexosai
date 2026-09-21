@@ -27,8 +27,8 @@ export default function Login() {
         toast.success(t.success);
         setLocation("/");
       },
-      onError: () => {
-        toast.error(t.error);
+      onError: (error: Error) => {
+        toast.error(error.message || t.error);
       },
     },
   });

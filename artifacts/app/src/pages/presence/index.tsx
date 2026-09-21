@@ -10,7 +10,7 @@ import {
   Clock, AlertTriangle, X, Instagram, Facebook, Music2, Linkedin,
   CalendarDays, ListChecks, BarChart3, Lightbulb, Copy, Check,
   Rocket, PenLine, ThumbsUp, Zap, Send, Link2Off, Film, ImageIcon, Upload,
-  Search, TrendingUp, Target, ChevronDown, ChevronUp,
+  Search, TrendingUp, Target, ChevronDown, ChevronUp, Database
 } from "lucide-react";
 import { MediaProductionDrawer } from "./MediaProductionDrawer";
 import type { MediaPresencePost } from "./MediaProductionDrawer";
@@ -278,7 +278,7 @@ export default function PresencePage() {
       loadPosts().catch(() => {});
       if ("Notification" in window && Notification.permission === "granted") {
         try {
-          const n = new Notification("NexOS · Post publicado! 🚀", {
+          const n = new Notification("NexOS · Post publicado!", {
             body: alert.message,
             icon: "/icon-192.png",
             tag: `presence-published-${alert.data?.postId ?? Date.now()}`,
@@ -333,8 +333,8 @@ export default function PresencePage() {
         : null;
       toast.success(
         scheduledAt
-          ? `✅ Aprovado — será publicado às ${scheduledAt}. Aparecerá na agenda.`
-          : "✅ Post aprovado e adicionado à agenda de publicação.",
+          ? `Aprovado — será publicado às ${scheduledAt}. Aparecerá na agenda.`
+          : "Post aprovado e adicionado à agenda de publicação.",
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro ao aprovar post.";
@@ -357,10 +357,10 @@ export default function PresencePage() {
       await loadPosts();
       const n = result.approved ?? postIds.length;
       toast.success(
-        `✅ ${n} post${n !== 1 ? "s" : ""} aprovado${n !== 1 ? "s" : ""} — aparecerão na agenda quando publicados.`,
+        `${n} post${n !== 1 ? "s" : ""} aprovado${n !== 1 ? "s" : ""} — aparecerão na agenda quando publicados.`,
       );
       if ((result.videoTriggered ?? 0) > 0) {
-        toast.info(`🎬 ${result.videoTriggered} vídeo${result.videoTriggered !== 1 ? "s" : ""} em geração — acompanhe na seção de reels.`);
+        toast.info(`${result.videoTriggered} vídeo${result.videoTriggered !== 1 ? "s" : ""} em geração — acompanhe na seção de reels.`);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : `Erro ao aprovar ${label}.`;
@@ -654,7 +654,7 @@ export default function PresencePage() {
       )}
 
       {/* Campaign alignment badge — shown only if user chose one (or auto-detected active launch) */}
-      {activeLaunch && (
+      {activeLaunch ? (
         <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/25 bg-primary/5 px-4 py-2.5 text-sm">
           <div className="flex items-center gap-2">
             <Rocket className="h-4 w-4 shrink-0 text-primary" />
@@ -670,7 +670,22 @@ export default function PresencePage() {
             Alterar
           </button>
         </div>
-      )}
+      ) : config ? (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-lg border border-border/40 bg-card/30 px-4 py-3 text-sm">
+          <div className="flex items-center gap-2">
+            <Database className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="text-muted-foreground">
+              Para conteúdos mais alinhados, configure o <strong className="text-foreground font-medium">Briefing Central</strong> do seu produto.
+            </span>
+          </div>
+          <a
+            href="/intake?entryPoint=social_media"
+            className="text-xs font-mono uppercase tracking-widest text-primary hover:text-primary/80 border border-primary/30 px-3 py-1.5 rounded-sm hover:bg-primary/10 transition-colors"
+          >
+            Acessar Briefing Central
+          </a>
+        </div>
+      ) : null}
       {!activeLaunch && config && (
         <div className="flex items-center gap-2 rounded-lg border border-border/40 bg-muted/10 px-4 py-2.5 text-sm text-muted-foreground/60">
           <Link2Off className="h-4 w-4 shrink-0" />

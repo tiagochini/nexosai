@@ -10,24 +10,25 @@ import {
   useSyncPaidMediaAccount, 
   useGetPaidMediaSyncStatus,
   getListPaidMediaAccountsQueryKey,
-  getGetPaidMediaSyncStatusQueryKey,
-  useGeneratePaidMediaProposal,
-  getListPaidMediaProposalsQueryKey
+  getGetPaidMediaSyncStatusQueryKey
 } from "@workspace/api-client-react";
 import { RefreshCw, Link2, CheckCircle, Database, Search } from "lucide-react";
 
-type ProviderType = "meta_ads" | "tiktok_ads";
+type ProviderType = "meta_ads" | "tiktok_ads" | "google_ads";
 
 export function AccountsTab() {
   const queryClient = useQueryClient();
   const [discoveringProvider, setDiscoveringProvider] = useState<ProviderType | null>(null);
   
-  // Query both providers
+  // Query providers
   const metaAdsQuery = useListPaidMediaAccounts("meta_ads", {
     query: { queryKey: getListPaidMediaAccountsQueryKey("meta_ads"), refetchInterval: 15000, refetchOnWindowFocus: true }
   });
   const tiktokAdsQuery = useListPaidMediaAccounts("tiktok_ads", {
     query: { queryKey: getListPaidMediaAccountsQueryKey("tiktok_ads"), refetchInterval: 15000, refetchOnWindowFocus: true }
+  });
+  const googleAdsQuery = useListPaidMediaAccounts("google_ads", {
+    query: { queryKey: getListPaidMediaAccountsQueryKey("google_ads"), refetchInterval: 15000, refetchOnWindowFocus: true }
   });
   
   const { data: syncStatusData } = useGetPaidMediaSyncStatus({
@@ -36,11 +37,11 @@ export function AccountsTab() {
   
   const selectAccount = useSelectPaidMediaAccount();
   const syncAccount = useSyncPaidMediaAccount();
-  const generateMutation = useGeneratePaidMediaProposal();
   
   // Discover queries
   const discoverMeta = useDiscoverPaidMediaAccounts("meta_ads", { query: { enabled: false, queryKey: ["discover-accounts", "meta_ads"] } });
   const discoverTiktok = useDiscoverPaidMediaAccounts("tiktok_ads", { query: { enabled: false, queryKey: ["discover-accounts", "tiktok_ads"] } });
+  const discoverGoogle = useDiscoverPaidMediaAccounts("google_ads", { query: { enabled: false, queryKey: ["discover-accounts", "google_ads"] } });
 
   const handleSelect = (accountId: string, provider: ProviderType) => {
     selectAccount.mutate({ provider, accountId }, {
@@ -48,6 +49,7 @@ export function AccountsTab() {
         toast.success("Conta selecionada com sucesso.");
         queryClient.invalidateQueries({ queryKey: getListPaidMediaAccountsQueryKey("meta_ads") });
         queryClient.invalidateQueries({ queryKey: getListPaidMediaAccountsQueryKey("tiktok_ads") });
+        queryClient.invalidateQueries({ queryKey: getListPaidMediaAccountsQueryKey("google_ads") });
       },
       onError: (err: any) => toast.error(err?.message || "Erro ao selecionar conta.")
     });
@@ -63,31 +65,18 @@ export function AccountsTab() {
     });
   };
 
-  const handleOptimize = (accountId: string) => {
-    generateMutation.mutate({ data: {
-      accountId,
-      entityId: "all",
-      actionType: "update_daily_budget",
-      proposedChange: {}
-    }}, {
-      onSuccess: () => {
-        toast.success("Ciclo de otimização disparado para esta conta.");
-        queryClient.invalidateQueries({ queryKey: getListPaidMediaProposalsQueryKey() });
-      },
-      onError: (err: any) => toast.error(err?.message || "Erro ao solicitar otimização.")
-    });
-  };
 
   const handleDiscover = async (provider: ProviderType) => {
     setDiscoveringProvider(provider);
-    toast.info(`Iniciando descoberta em ${provider === 'meta_ads' ? 'Meta Ads' : 'TikTok Ads'}...`);
-    
+    toast.info(`Iniciando descoberta em ${provider}...`);
+
     try {
-      const res = provider === "meta_ads" ? await discoverMeta.refetch() : await discoverTiktok.refetch();
-      if (res.data) {
-        toast.success(`Descoberta concluída em ${provider === 'meta_ads' ? 'Meta Ads' : 'TikTok Ads'}.`);
-        queryClient.invalidateQueries({ queryKey: getListPaidMediaAccountsQueryKey(provider) });
-      }
+      if (provider === "meta_ads") await discoverMeta.refetch();
+      else if (provider === "tiktok_ads") await discoverTiktok.refetch();
+      else await discoverGoogle.refetch();
+
+      toast.success(`Descoberta concluída em ${provider}.`);
+      queryClient.invalidateQueries({ queryKey: getListPaidMediaAccountsQueryKey(provider) });
     } catch (err: any) {
       toast.error(err?.message || `Erro ao descobrir contas em ${provider}.`);
     } finally {
@@ -95,12 +84,13 @@ export function AccountsTab() {
     }
   };
 
-  // Merge accounts from both providers
+  // Merge accounts from all providers
   const metaAccounts = metaAdsQuery.data?.accounts?.map(acc => ({ ...acc, provider: "meta_ads" as ProviderType })) || [];
   const tiktokAccounts = tiktokAdsQuery.data?.accounts?.map(acc => ({ ...acc, provider: "tiktok_ads" as ProviderType })) || [];
-  const accounts = [...metaAccounts, ...tiktokAccounts];
+  const googleAccounts = googleAdsQuery.data?.accounts?.map(acc => ({ ...acc, provider: "google_ads" as ProviderType })) || [];
+  const accounts = [...metaAccounts, ...tiktokAccounts, ...googleAccounts];
   
-  const isLoading = metaAdsQuery.isLoading || tiktokAdsQuery.isLoading;
+  const isLoading = metaAdsQuery.isLoading || tiktokAdsQuery.isLoading || googleAdsQuery.isLoading;
 
   if (isLoading) return <div className="text-muted-foreground animate-pulse font-mono text-xs">Carregando contas conectadas...</div>;
 
@@ -111,7 +101,7 @@ export function AccountsTab() {
         <div>
           <h3 className="text-lg font-mono uppercase tracking-widest font-semibold mb-1">Nenhuma Conta Conectada</h3>
           <p className="text-sm font-mono text-muted-foreground max-w-sm mx-auto">
-            Conecte seu provedor de mídia paga (Meta Ads ou TikTok Ads) para permitir a gestão autônoma de campanhas e inteligência.
+            Conecte seu provedor de mídia paga (Meta, TikTok ou Google) para permitir a gestão autônoma de campanhas e inteligência.
           </p>
         </div>
         <div className="flex gap-4 mt-2">
@@ -122,6 +112,10 @@ export function AccountsTab() {
           <Button variant="outline" onClick={() => handleDiscover("tiktok_ads")} disabled={!!discoveringProvider} className="font-mono text-[10px] uppercase">
             {discoveringProvider === "tiktok_ads" ? <RefreshCw className="h-3 w-3 mr-2 animate-spin" /> : <Search className="h-3 w-3 mr-2" />}
             Descobrir TikTok Ads
+          </Button>
+          <Button variant="outline" onClick={() => handleDiscover("google_ads")} disabled={!!discoveringProvider} className="font-mono text-[10px] uppercase">
+            {discoveringProvider === "google_ads" ? <RefreshCw className="h-3 w-3 mr-2 animate-spin" /> : <Search className="h-3 w-3 mr-2" />}
+            Descobrir Google Ads
           </Button>
         </div>
       </div>
@@ -135,25 +129,29 @@ export function AccountsTab() {
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => handleDiscover("meta_ads")} disabled={!!discoveringProvider} className="h-8 text-[10px] font-mono uppercase">
             {discoveringProvider === "meta_ads" ? <RefreshCw className="h-3 w-3 mr-2 animate-spin" /> : <Search className="h-3 w-3 mr-2" />}
-            Meta Ads
+            Meta
           </Button>
           <Button variant="outline" size="sm" onClick={() => handleDiscover("tiktok_ads")} disabled={!!discoveringProvider} className="h-8 text-[10px] font-mono uppercase">
             {discoveringProvider === "tiktok_ads" ? <RefreshCw className="h-3 w-3 mr-2 animate-spin" /> : <Search className="h-3 w-3 mr-2" />}
-            TikTok Ads
+            TikTok
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => handleDiscover("google_ads")} disabled={!!discoveringProvider} className="h-8 text-[10px] font-mono uppercase">
+            {discoveringProvider === "google_ads" ? <RefreshCw className="h-3 w-3 mr-2 animate-spin" /> : <Search className="h-3 w-3 mr-2" />}
+            Google
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {accounts.map((acc: any) => (
-          <div key={acc.id} className={`card-weapon p-4 flex flex-col gap-3 ${acc.isSelected ? 'border-primary shadow-[inset_0_0_12px_hsl(var(--primary)/0.1)]' : 'border-border/30'}`}>
+          <div key={`${acc.provider}:${acc.id}:${acc.providerAccountId}`} className={`card-weapon p-4 flex flex-col gap-3 ${acc.isSelected ? 'border-primary shadow-[inset_0_0_12px_hsl(var(--primary)/0.1)]' : 'border-border/30'}`}>
             <div className="flex justify-between items-start">
               <div className="min-w-0 pr-2">
                 <div className="font-mono text-sm uppercase tracking-widest font-bold text-foreground truncate" title={acc.accountName || acc.providerAccountId}>
                   {acc.accountName || acc.providerAccountId}
                 </div>
                 <div className="font-mono text-[10px] uppercase text-muted-foreground mt-0.5 truncate">
-                  {acc.provider === "meta_ads" ? "Meta Ads" : "TikTok Ads"} • ID: {acc.providerAccountId}
+                  {acc.provider === "meta_ads" ? "Meta Ads" : acc.provider === "google_ads" ? "Google Ads" : "TikTok Ads"} • ID: {acc.providerAccountId}
                 </div>
               </div>
               {acc.isSelected && <CheckCircle className="h-5 w-5 text-primary shrink-0" />}
@@ -177,8 +175,8 @@ export function AccountsTab() {
                 </Button>
               )}
               {acc.isSelected && (
-                <Button variant="outline" className="flex-1 font-mono text-[10px] uppercase h-8 border-primary/30 text-primary hover:bg-primary/10" onClick={() => handleOptimize(acc.id)} disabled={generateMutation.isPending}>
-                  Otimizar IA
+                <Button variant="outline" className="flex-1 font-mono text-[10px] uppercase h-8 border-primary/30 text-primary hover:bg-primary/10" onClick={() => toast.info("Use a aba Lançamentos para operações em lote ou dossiês individuais.")} >
+                  Otimizar
                 </Button>
               )}
               <Button className="flex-1 font-mono text-[10px] uppercase h-8 btn-weapon-primary" onClick={() => handleSync(acc.id)} disabled={syncAccount.isPending}>
@@ -207,7 +205,7 @@ export function AccountsTab() {
               </thead>
               <tbody className="divide-y divide-border/20">
                 {syncStatusData.cursors.map((cursor: any) => (
-                  <tr key={cursor.id} className="hover:bg-muted/10 transition-colors">
+                  <tr key={`${cursor.id}:${cursor.accountId}:${cursor.entityType}`} className="hover:bg-muted/10 transition-colors">
                     <td className="p-3 font-bold">{cursor.entityType}</td>
                     <td className="p-3 text-muted-foreground truncate max-w-[120px]" title={cursor.accountId}>{cursor.accountId}</td>
                     <td className="p-3 text-muted-foreground">{cursor.syncedThrough ? new Date(cursor.syncedThrough).toLocaleString() : 'Pendente...'}</td>

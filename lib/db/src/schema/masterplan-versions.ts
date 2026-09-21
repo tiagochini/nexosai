@@ -26,6 +26,7 @@ export const masterplanVersionsTable = pgTable("masterplan_versions", {
   requiredApprovals: jsonb("required_approvals").notNull().default([]),
   commercialProductId: uuid("commercial_product_id").references(() => commercialProductsTable.id, { onDelete: "set null" }),
   commercialSubscriptionId: uuid("commercial_subscription_id").references(() => commercialSubscriptionsTable.id, { onDelete: "set null" }),
+  productIntakeVersionId: uuid("product_intake_version_id"),
   createdByUserId: uuid("created_by_user_id").references(() => usersTable.id, { onDelete: "set null" }),
   approvedByUserId: uuid("approved_by_user_id").references(() => usersTable.id, { onDelete: "set null" }),
   approvedAt: timestamp("approved_at", { withTimezone: true }),

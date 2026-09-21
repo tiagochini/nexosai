@@ -22,7 +22,7 @@ async function tick() {
 }
 export function startPaidMediaScheduler() {
   if (!timer) {
-    registerScheduler("paid-media", 35 * 60_000);
+    registerScheduler("paid-media", 15 * 60_000);
     timer = setInterval(() => {
       void runSchedulerTick("paid-media", tick).catch(() => logger.error("Paid-media scheduler tick failed"));
     }, 15 * 60_000);

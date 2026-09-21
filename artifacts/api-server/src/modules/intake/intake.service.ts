@@ -7,6 +7,7 @@ import {
 } from "@workspace/db";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import type { Logger } from "pino";
+import { startProductIntake, updateProductIntake } from "../product-intake/product-intake.service.js";
 
 export type CampaignType =
   | "launch"
@@ -1080,6 +1081,14 @@ export async function saveIntakeData(
     .set({ intakeData, ...(resetStatus ? { status: resetStatus, updatedAt: new Date() } : {}) })
     .where(eq(campaignsTable.id, campaignId))
     .returning();
+
+  // Campaign intake is a compatibility entry point into the canonical product intake.
+  // Do not create a product lineage for campaigns that have not explicitly been bound.
+  if (campaign.commercialProductId) {
+    const started = await startProductIntake(workspaceId, campaign.commercialProductId, "launch", "system", campaignId, log);
+    const canonical = await updateProductIntake(workspaceId, started.intake.id, intakeData, "system", log);
+    await db.update(campaignsTable).set({ productIntakeVersionId: canonical.id }).where(eq(campaignsTable.id, campaignId));
+  }
 
   await db.insert(auditLogsTable).values({
     workspaceId,
