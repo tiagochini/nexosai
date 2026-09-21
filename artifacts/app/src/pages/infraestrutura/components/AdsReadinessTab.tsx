@@ -176,8 +176,15 @@ function ProviderCard({
             <AlertTriangle className="h-6 w-6 text-muted-foreground/50" />
             <div className="font-mono text-[10px] uppercase text-muted-foreground">App OAuth Não Configurado</div>
             <p className="font-mono text-[10px] text-muted-foreground/60 max-w-[200px]">
-              Configure as credenciais OAuth do servidor para habilitar esta integração.
+              O OAuth exige credenciais do servidor, mas a conexão manual via API já está disponível em Integrações.
             </p>
+            <Button
+              variant="outline"
+              className="rounded-none font-mono uppercase text-[10px]"
+              onClick={() => { window.location.href = "/integracoes"; }}
+            >
+              Conectar via API
+            </Button>
           </div>
         ) : !isConnected ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4 py-6">

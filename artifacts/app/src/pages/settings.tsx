@@ -912,13 +912,25 @@ const INTEGRATION_CATALOG: {
   {
     provider: "google_ads",
     label: "Google Ads",
-    description: "Campanhas de pesquisa e display no Google",
+    description: "Conexão API, sincronização e gestão de contas Google Ads",
     category: "Mídia Paga",
     color: "text-cyan-400",
     fields: [
       { key: "accountId", label: "Customer ID", placeholder: "123-456-7890" },
       { key: "accountName", label: "Nome da Conta", placeholder: "Google Ads" },
       { key: "accessToken", label: "Developer Token", placeholder: "xxxx...", type: "password" },
+    ],
+  },
+  {
+    provider: "tiktok_ads",
+    label: "TikTok Ads",
+    description: "Conexão API, sincronização e gestão de contas TikTok Ads",
+    category: "Mídia Paga",
+    color: "text-pink-400",
+    fields: [
+      { key: "accountId", label: "Advertiser ID", placeholder: "6912345678901234567" },
+      { key: "accountName", label: "Nome da Conta", placeholder: "TikTok Ads" },
+      { key: "accessToken", label: "Access Token", placeholder: "act.xxxx...", type: "password" },
     ],
   },
   {
@@ -996,12 +1008,16 @@ const INTEGRATION_CATALOG: {
 
 const CATEGORIES = ["Mensagens", "E-mail", "Checkout", "Plataformas", "Mídia Paga", "Social Orgânico", "CRM"];
 
-// Social providers that connect via OAuth (not manual token entry)
+// Organic social and paid-media authorization are intentionally separate.
 const SOCIAL_OAUTH_PROVIDERS: Partial<Record<IntegrationProvider, "meta" | "tiktok">> = {
-  meta_ads: "meta",
   instagram: "meta",
-  tiktok_ads: "tiktok",
   tiktok: "tiktok",
+};
+
+const PAID_MEDIA_OAUTH_PROVIDERS: Partial<Record<IntegrationProvider, "meta_ads" | "tiktok_ads" | "google_ads">> = {
+  meta_ads: "meta_ads",
+  tiktok_ads: "tiktok_ads",
+  google_ads: "google_ads",
 };
 
 function ConnectModal({
@@ -1459,7 +1475,7 @@ function IntegracaoTab() {
   const queryClient = useQueryClient();
   const [connectModal, setConnectModal] = useState<ConnectModalState | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("Todos");
-  const [oauthLoading, setOauthLoading] = useState<"meta" | "tiktok" | null>(null);
+  const [oauthLoading, setOauthLoading] = useState<string | null>(null);
 
   // Show toast when redirected back from OAuth
   useEffect(() => {
@@ -1529,6 +1545,17 @@ function IntegracaoTab() {
       window.location.href = url;
     } catch {
       toast.error("Erro ao iniciar conexão OAuth. Verifique a configuração do app Meta/TikTok.");
+      setOauthLoading(null);
+    }
+  };
+
+  const handlePaidMediaOAuthConnect = async (provider: "meta_ads" | "tiktok_ads" | "google_ads") => {
+    setOauthLoading(provider);
+    try {
+      const { url } = await customFetch<{ url: string }>(`/api/integrations/oauth/start/${provider}`);
+      window.location.href = url;
+    } catch {
+      toast.error("Erro ao iniciar a conexão da conta de anúncios. Você ainda pode usar a conexão manual via API.");
       setOauthLoading(null);
     }
   };
@@ -1640,13 +1667,17 @@ function IntegracaoTab() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {filtered.map(intg => {
-            const oauthPlatform = SOCIAL_OAUTH_PROVIDERS[intg.provider];
+            const socialOauthPlatform = SOCIAL_OAUTH_PROVIDERS[intg.provider];
+            const paidMediaOauthProvider = PAID_MEDIA_OAUTH_PROVIDERS[intg.provider];
             const isConnected = connectedProviders.has(intg.provider);
             const existing = integrations.find(i => i.provider === intg.provider);
-            const connectedAccounts = socialAccountsByProvider.get(intg.provider) ?? [];
+            const connectedAccounts = paidMediaOauthProvider
+              ? integrations.filter(integration => integration.provider === intg.provider)
+              : socialAccountsByProvider.get(intg.provider) ?? [];
 
-            // Social OAuth providers — always show "Add Another Account" button
-            if (oauthPlatform) {
+            // OAuth providers — paid-media accounts use their own purpose-scoped route.
+            if (socialOauthPlatform || paidMediaOauthProvider) {
+              const oauthKey = paidMediaOauthProvider ?? socialOauthPlatform!;
               return (
                 <div key={intg.provider}
                   className={`border bg-card/30 p-4 relative transition-all ${isConnected ? "border-success/30 bg-success/5" : "border-border/50 hover:border-primary/30"}`}>
@@ -1669,15 +1700,17 @@ function IntegracaoTab() {
                             <CheckCircle2 className="h-3 w-3 shrink-0" />
                             <span className="truncate">{acc.accountName ?? acc.accountId ?? "—"}</span>
                           </span>
-                          <button
-                            aria-label={`Desconectar ${acc.accountName}`}
-                            onClick={() => disconnectSocialMutation.mutate(acc.id)}
-                            disabled={disconnectSocialMutation.isPending}
-                            className="ml-2 p-1 text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 disabled:opacity-50"
-                            title="Desconectar"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
+                          {!paidMediaOauthProvider && (
+                            <button
+                              aria-label={`Desconectar ${acc.accountName}`}
+                              onClick={() => disconnectSocialMutation.mutate(acc.id)}
+                              disabled={disconnectSocialMutation.isPending}
+                              className="ml-2 p-1 text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 disabled:opacity-50"
+                              title="Desconectar"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1685,11 +1718,13 @@ function IntegracaoTab() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleSocialOAuthConnect(oauthPlatform)}
-                    disabled={oauthLoading === oauthPlatform}
+                    onClick={() => paidMediaOauthProvider
+                      ? handlePaidMediaOAuthConnect(paidMediaOauthProvider)
+                      : handleSocialOAuthConnect(socialOauthPlatform!)}
+                    disabled={oauthLoading === oauthKey}
                     className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 btn-weapon-outline"
                   >
-                    {oauthLoading === oauthPlatform ? (
+                    {oauthLoading === oauthKey ? (
                       <Loader2 className="h-2.5 w-2.5 animate-spin" />
                     ) : (
                       <Plus className="h-2.5 w-2.5" />

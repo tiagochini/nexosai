@@ -65,7 +65,7 @@ export function LaunchPlansTab() {
             Nenhum plano de lançamento ativo
           </p>
           <p className="font-mono text-xs text-muted-foreground/60 max-w-md mx-auto">
-             Acesse uma campanha e aprove seu Master Plan. A criação automática está disponível para Meta Ads; Google e TikTok permanecem em planejamento até seus executores serem homologados.
+              Meta Ads, Google Ads e TikTok Ads podem ser conectados desde o primeiro dia para sincronização e diagnóstico. A criação automática da árvore de campanha está homologada apenas para Meta Ads.
           </p>
         </div>
       ) : (
@@ -189,13 +189,8 @@ function LaunchPlanDetails({ planId, onClose }: { planId: string, onClose: () =>
   const isReadinessLoading = isReadinessQueryLoading;
   const isReadinessError = isReadinessQueryError || readiness?.status === "error";
 
-  // Can activate if:
-  // - Approved
-  // - launchStage is approved
-  // - Readiness is ready
-  // - Provider has launchTreeCreation=supported (implied if not blocked by provider capability, but let's be strict if there's a capability field. Actually, we must check if provider is meta_ads as tiktok/google don't support creation yet, but we'll use readiness blockers if they enforce it. The instructions say: "provider capability launchTreeCreation=supported". In the absence of this explicit capability obj on the client, we check provider directly or readiness.)
-  // Actually, we must disable if Google/TikTok.
-  const isProviderSupported = plan.provider === "meta_ads"; 
+  // Connection/sync support is separate from launch-tree creation support.
+  const isProviderSupported = plan.provider === "meta_ads";
   
   const canActivate = 
     plan.launchStage === "approved" && 
@@ -258,7 +253,7 @@ function LaunchPlanDetails({ planId, onClose }: { planId: string, onClose: () =>
               
               {!isProviderSupported && (
                  <div className="text-xs font-mono text-amber-400 mb-2">
-                   Operação indisponível: Criação de árvore não suportada neste provedor.
+                   Conta conectável para sincronização e diagnóstico. A criação automática da árvore ainda não está homologada neste provedor.
                  </div>
               )}
 
