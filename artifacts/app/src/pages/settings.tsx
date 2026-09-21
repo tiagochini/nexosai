@@ -30,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import nexosLogo from "/nexos-logo.png";
 import { useLocation } from "wouter";
 import { AutonomyTab } from "@/components/AutonomyTab";
+import { MetaReviewReadinessPanel } from "@/components/meta-review-readiness";
 
 type Tab = "perfil" | "workspace" | "seguranca" | "integracoes" | "identidade" | "compliance" | "autonomia";
 
@@ -969,18 +970,6 @@ const INTEGRATION_CATALOG: {
     ],
   },
   {
-    provider: "tiktok_ads",
-    label: "TikTok Ads",
-    description: "Gestão de campanhas pagas no TikTok — anúncios sincronizados ao lançamento",
-    category: "Mídia Paga",
-    color: "text-pink-400",
-    fields: [
-      { key: "accountId", label: "Advertiser ID", placeholder: "6912345678901234567" },
-      { key: "accountName", label: "Nome da Conta", placeholder: "TikTok Ads" },
-      { key: "accessToken", label: "Access Token", placeholder: "act.xxxx...", type: "password" },
-    ],
-  },
-  {
     provider: "instagram",
     label: "Instagram",
     description: "Auto-post de conteúdo orgânico e stories sincronizados ao calendário de lançamento",
@@ -1011,6 +1000,7 @@ const CATEGORIES = ["Mensagens", "E-mail", "Checkout", "Plataformas", "Mídia Pa
 // Organic social and paid-media authorization are intentionally separate.
 const SOCIAL_OAUTH_PROVIDERS: Partial<Record<IntegrationProvider, "meta" | "tiktok">> = {
   instagram: "meta",
+  facebook: "meta",
   tiktok: "tiktok",
 };
 
@@ -1599,6 +1589,8 @@ function IntegracaoTab() {
           onConnect={handleConnect}
         />
       )}
+
+      <MetaReviewReadinessPanel />
 
       {/* Connected integrations */}
       {integrations.length > 0 && (

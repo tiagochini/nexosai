@@ -30,6 +30,7 @@ import { claimMetaWebhookEvent } from "./meta-webhook-evidence.service.js";
 import { getApprovedMasterplan, matchesApprovedDossier } from "../masterplan/masterplan.service.js";
 import { ingestInboundCommunityEvent } from "../community/community.service.js";
 import { orchestrateIntelligentConversation } from "./contextual-conversation.service.js";
+import { META_GRAPH_VERSION, metaGraphUrl } from "../../lib/meta-graph.constants.js";
 import {
   assertSocialAccountEntitlement,
   canonicalNetworkForProvider,
@@ -37,7 +38,6 @@ import {
 
 // ─── OAuth ────────────────────────────────────────────────────────────────────
 
-const META_GRAPH_VERSION = "v19.0";
 const META_SCOPES = [
   "instagram_basic",
   "instagram_content_publish",
@@ -67,7 +67,7 @@ export function getOAuthUrl(platform: SupportedPlatform, workspaceId: string): s
   });
 
   if (platform === "meta") {
-    const appId = process.env["FACEBOOK_APP_ID"];
+    const appId = env.META_APP_ID || process.env["FACEBOOK_APP_ID"];
     const redirectUri = process.env["FACEBOOK_REDIRECT_URI"] ?? `${env.APP_URL}/api/social/callback/meta`;
     if (!appId) throw new AppError(503, "Facebook App ID não configurado", "SOCIAL_NOT_CONFIGURED");
     const url = new URL(`https://www.facebook.com/${META_GRAPH_VERSION}/dialog/oauth`);
@@ -107,8 +107,8 @@ export async function handleMetaCallback(
   code: string,
   workspaceId: string
 ): Promise<WorkspaceIntegration[]> {
-  const appId = process.env["FACEBOOK_APP_ID"];
-  const appSecret = process.env["FACEBOOK_APP_SECRET"];
+  const appId = env.META_APP_ID || process.env["FACEBOOK_APP_ID"];
+  const appSecret = env.META_APP_SECRET || process.env["FACEBOOK_APP_SECRET"];
   const redirectUri = process.env["FACEBOOK_REDIRECT_URI"] ?? `${env.APP_URL}/api/social/callback/meta`;
 
   if (!appId || !appSecret) {
@@ -170,6 +170,8 @@ export async function handleMetaCallback(
   for (const page of pagesData.data) {
     // Upsert Facebook Page integration by accountId
     const fbIntegration = await upsertIntegration(workspaceId, {
+      // Historical adapter key retained for existing publishing compatibility.
+      // metadata.integrationPurpose distinguishes organic Page access from paid media.
       provider: "meta_ads",
       accountId: page.id,
       accountName: page.name,
@@ -387,7 +389,7 @@ async function fetchInstagramAnalytics(
 
   try {
     // 1. Profile
-    const profileUrl = `https://graph.facebook.com/v20.0/${accountId}?fields=username,profile_picture_url,followers_count,follows_count,media_count,biography,website&access_token=${encodeURIComponent(accessToken)}`;
+    const profileUrl = `${metaGraphUrl(accountId)}?fields=username,profile_picture_url,followers_count,follows_count,media_count,biography,website&access_token=${encodeURIComponent(accessToken)}`;
     const profileRes = await fetchWithTimeout(profileUrl);
     if (!profileRes.ok) return { ...base, error: `Graph API ${profileRes.status}` };
     const profile = await profileRes.json() as {
@@ -404,7 +406,7 @@ async function fetchInstagramAnalytics(
     base.website = profile.website;
 
     // 2. Recent media with insights
-    const mediaUrl = `https://graph.facebook.com/v20.0/${accountId}/media?fields=id,media_type,media_url,thumbnail_url,caption,timestamp&limit=12&access_token=${encodeURIComponent(accessToken)}`;
+    const mediaUrl = `${metaGraphUrl(`${accountId}/media`)}?fields=id,media_type,media_url,thumbnail_url,caption,timestamp&limit=12&access_token=${encodeURIComponent(accessToken)}`;
     const mediaRes = await fetchWithTimeout(mediaUrl);
     if (mediaRes.ok) {
       const mediaData = await mediaRes.json() as { data?: Array<{ id: string; media_type?: string; media_url?: string; thumbnail_url?: string; caption?: string; timestamp?: string }> };
@@ -412,7 +414,7 @@ async function fetchInstagramAnalytics(
 
       for (const media of (mediaData.data ?? []).slice(0, 9)) {
         try {
-          const insightUrl = `https://graph.facebook.com/v20.0/${media.id}/insights?metric=impressions,reach,likes,comments,saved&access_token=${encodeURIComponent(accessToken)}`;
+          const insightUrl = `${metaGraphUrl(`${media.id}/insights`)}?metric=impressions,reach,likes,comments,saved&access_token=${encodeURIComponent(accessToken)}`;
           const insightRes = await fetchWithTimeout(insightUrl);
           let likes = 0, comments = 0, reach = 0, impressions = 0, saved = 0;
           if (insightRes.ok) {
@@ -438,7 +440,7 @@ async function fetchInstagramAnalytics(
       try {
         const since = Math.floor((Date.now() - 30 * 86400_000) / 1000);
         const until = Math.floor(Date.now() / 1000);
-        const accInsightUrl = `https://graph.facebook.com/v20.0/${accountId}/insights?metric=reach,impressions,follower_count&period=day&since=${since}&until=${until}&access_token=${encodeURIComponent(accessToken)}`;
+        const accInsightUrl = `${metaGraphUrl(`${accountId}/insights`)}?metric=reach,impressions,follower_count&period=day&since=${since}&until=${until}&access_token=${encodeURIComponent(accessToken)}`;
         const accInsightRes = await fetchWithTimeout(accInsightUrl);
         if (accInsightRes.ok) {
           const accData = await accInsightRes.json() as { data?: Array<{ name: string; values: Array<{ value: number; end_time: string }> }> };
@@ -499,7 +501,7 @@ async function fetchFacebookAnalytics(
 
   try {
     // Page profile + fan count
-    const profileUrl = `https://graph.facebook.com/v20.0/${accountId}?fields=name,picture.type(large),fan_count,followers_count,about,website&access_token=${encodeURIComponent(accessToken)}`;
+    const profileUrl = `${metaGraphUrl(accountId)}?fields=name,picture.type(large),fan_count,followers_count,about,website&access_token=${encodeURIComponent(accessToken)}`;
     const profileRes = await fetchWithTimeout(profileUrl);
     if (!profileRes.ok) return { ...base, error: `Graph API ${profileRes.status}` };
     const profile = await profileRes.json() as {
@@ -514,7 +516,7 @@ async function fetchFacebookAnalytics(
     base.website = profile.website;
 
     // Recent posts
-    const postsUrl = `https://graph.facebook.com/v20.0/${accountId}/posts?fields=id,message,full_picture,created_time,likes.summary(true),comments.summary(true)&limit=9&access_token=${encodeURIComponent(accessToken)}`;
+    const postsUrl = `${metaGraphUrl(`${accountId}/posts`)}?fields=id,message,full_picture,created_time,likes.summary(true),comments.summary(true)&limit=9&access_token=${encodeURIComponent(accessToken)}`;
     const postsRes = await fetchWithTimeout(postsUrl);
     if (postsRes.ok) {
       const postsData = await postsRes.json() as { data?: Array<{ id: string; message?: string; full_picture?: string; created_time?: string; likes?: { summary?: { total_count?: number } }; comments?: { summary?: { total_count?: number } } }> };
@@ -538,7 +540,7 @@ async function fetchFacebookAnalytics(
     try {
       const since = Math.floor((Date.now() - 30 * 86400_000) / 1000);
       const until = Math.floor(Date.now() / 1000);
-      const insightUrl = `https://graph.facebook.com/v20.0/${accountId}/insights?metric=page_fans,page_impressions,page_impressions_unique&period=day&since=${since}&until=${until}&access_token=${encodeURIComponent(accessToken)}`;
+      const insightUrl = `${metaGraphUrl(`${accountId}/insights`)}?metric=page_fans,page_impressions,page_impressions_unique&period=day&since=${since}&until=${until}&access_token=${encodeURIComponent(accessToken)}`;
       const insightRes = await fetchWithTimeout(insightUrl);
       if (insightRes.ok) {
         const insightData = await insightRes.json() as { data?: Array<{ name: string; values: Array<{ value: number; end_time: string }> }> };
@@ -1085,14 +1087,16 @@ export async function processMetaWebhook(body: unknown): Promise<void> {
         logger.info({ accountId, deliveryKey }, "Duplicate Meta DM delivery ignored");
         continue;
       }
-      const integrations = await db.select({
+       const integrations = await db.select({
         id: workspaceIntegrationsTable.id,
         workspaceId: workspaceIntegrationsTable.workspaceId,
         accessToken: workspaceIntegrationsTable.accessToken,
         metadata: workspaceIntegrationsTable.metadata,
       }).from(workspaceIntegrationsTable).where(and(
         eq(workspaceIntegrationsTable.accountId, accountId),
-        eq(workspaceIntegrationsTable.provider, isInstagram ? "instagram" : "meta_ads"),
+        isInstagram
+          ? eq(workspaceIntegrationsTable.provider, "instagram")
+          : inArray(workspaceIntegrationsTable.provider, ["facebook", "meta_ads"]),
         eq(workspaceIntegrationsTable.status, "connected"),
       )).limit(2);
       const integration = integrations.find((candidate) =>
@@ -1103,7 +1107,7 @@ export async function processMetaWebhook(body: unknown): Promise<void> {
         continue;
       }
       const normalized = await ingestInboundCommunityEvent(integration.workspaceId, {
-        channel: "instagram",
+        channel: isInstagram ? "instagram" : "facebook",
         providerEventId: msg.message.mid,
         providerMessageId: msg.message.mid,
         providerConversationId: senderId,
@@ -1121,7 +1125,7 @@ export async function processMetaWebhook(body: unknown): Promise<void> {
         integrationId: integration.id,
           accountId,
         providerEventId: msg.message.mid || `${msg.timestamp}:${senderId}`,
-        eventType: "instagram_dm",
+        eventType: isInstagram ? "instagram_dm" : "facebook_dm",
         actionKey: "sequence_trigger",
       });
       if (!eventClaim.claimed) {
@@ -1187,7 +1191,7 @@ export async function processMetaWebhook(body: unknown): Promise<void> {
           if (decision.action !== "reply_dm" && decision.action !== "reply_private") return;
 
           const endpoint = `/${accountId}/messages`;
-          const response = await metaGraphFetch(`https://graph.facebook.com/v22.0${endpoint}`, {
+          const response = await metaGraphFetch(metaGraphUrl(endpoint), {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ recipient: { id: senderId }, message: { text: decision.reply }, access_token: integration.accessToken }),
           });

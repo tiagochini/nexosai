@@ -28,6 +28,7 @@ import {
   parseVerifiedMetaWebhook,
   verifyMetaWebhookSubscription,
 } from "./meta-webhook.security.js";
+import { getMetaReviewReadiness } from "./meta-review-readiness.service.js";
 
 const router = Router();
 
@@ -124,6 +125,11 @@ router.get("/accounts/analytics", requireAuth, async (req, res): Promise<void> =
 router.get("/accounts", requireAuth, async (req, res): Promise<void> => {
   const accounts = await getConnectedAccounts(req.auth.workspaceId);
   res.json({ accounts });
+});
+
+router.get("/review-readiness", requireAuth, async (req, res): Promise<void> => {
+  const readiness = await getMetaReviewReadiness(req.auth.workspaceId);
+  res.json(readiness);
 });
 
 router.delete("/accounts/:integrationId", requireAuth, async (req, res): Promise<void> => {

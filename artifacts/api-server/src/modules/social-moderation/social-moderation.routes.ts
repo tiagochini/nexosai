@@ -120,7 +120,10 @@ router.post("/sync", requireAuth, async (req, res): Promise<void> => {
   };
 
   const integration = await db
-    .select({ accessToken: workspaceIntegrationsTable.accessToken })
+    .select({
+      accessToken: workspaceIntegrationsTable.accessToken,
+      accountId: workspaceIntegrationsTable.accountId,
+    })
     .from(workspaceIntegrationsTable)
     .where(
       and(
@@ -131,7 +134,7 @@ router.post("/sync", requireAuth, async (req, res): Promise<void> => {
     .limit(1)
     .then((r) => r[0]);
 
-  if (!integration?.accessToken) {
+  if (!integration?.accessToken || !integration.accountId) {
     res.status(422).json({
       error: "Integration not connected or missing access token",
     });
@@ -140,6 +143,8 @@ router.post("/sync", requireAuth, async (req, res): Promise<void> => {
 
   const result = await syncPostComments({
     workspaceId,
+    integrationId,
+    accountId: integration.accountId,
     postId,
     platform,
     accessToken: integration.accessToken,

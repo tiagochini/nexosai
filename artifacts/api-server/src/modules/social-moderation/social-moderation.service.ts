@@ -16,6 +16,7 @@ import { isOrganicSocialIntegration } from "../integrations/integration-purpose.
 import { claimMetaWebhookEvent, recordMetaSendResult, recordMetaSendStarted } from "../social/meta-webhook-evidence.service.js";
 import { metaGraphFetch } from "../../lib/meta-graph.transport.js";
 import { orchestrateIntelligentConversation } from "../social/contextual-conversation.service.js";
+import { metaGraphUrl } from "../../lib/meta-graph.constants.js";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -75,7 +76,7 @@ async function metaGraph<T>(
   options: RequestInit & { params?: Record<string, string> } = {}
 ): Promise<T> {
   const { params, ...fetchOpts } = options;
-  const url = new URL(`https://graph.facebook.com/v19.0${path}`);
+  const url = new URL(metaGraphUrl(path));
   if (params) {
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   }
@@ -429,8 +430,29 @@ export async function processIncomingComment(opts: {
     igAccountId,
   } = opts;
 
+  if (!integrationId) {
+    logger.warn({ workspaceId, platform, commentId }, "Comment has no integration context; failing closed");
+    return;
+  }
+  const [integrationContext] = await db.select({
+    accountId: workspaceIntegrationsTable.accountId,
+    metadata: workspaceIntegrationsTable.metadata,
+  }).from(workspaceIntegrationsTable).where(and(
+    eq(workspaceIntegrationsTable.id, integrationId),
+    eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+  )).limit(1);
+  if (!integrationContext?.accountId || !isOrganicSocialIntegration(integrationContext.metadata as Record<string, unknown> | null)) {
+    logger.warn({ workspaceId, integrationId, platform, commentId }, "Comment integration context mismatch; failing closed");
+    return;
+  }
+  const accountId = integrationContext.accountId;
+  if (igAccountId && igAccountId !== accountId) {
+    logger.warn({ workspaceId, integrationId, platform, commentId }, "Comment account context mismatch; failing closed");
+    return;
+  }
+
   const eventClaim = await claimMetaWebhookEvent({
-    workspaceId, integrationId, accountId: igAccountId ?? postId,
+    workspaceId, integrationId, accountId,
     providerEventId: commentId,
     eventType: platform === "instagram" ? "instagram_comment" : "facebook_comment",
   });
@@ -467,7 +489,7 @@ export async function processIncomingComment(opts: {
     let privateReply: Record<string, unknown> | null = null;
     if (platform === "instagram" && config.enableInstagramPrivateReplies) {
       const privateClaim = await claimMetaWebhookEvent({
-        workspaceId, integrationId, accountId: igAccountId ?? postId, providerEventId: commentId,
+        workspaceId, integrationId, accountId, providerEventId: commentId,
         eventType: "instagram_comment", actionKey: "private_reply",
       });
       privateReply = privateClaim.claimed
@@ -509,7 +531,7 @@ export async function processIncomingComment(opts: {
   let error: string | null = null;
   const contextualDecision = (finalClassification === "question" || finalClassification === "objection")
     ? await orchestrateIntelligentConversation({
-      workspaceId, integrationId: integrationId ?? "", accountId: igAccountId ?? "",
+      workspaceId, integrationId, accountId,
       provider: platform === "instagram" ? "instagram" : "facebook",
       platformPostId: postId, campaignId, providerUserId: authorId,
       channel: platform === "instagram" ? "instagram_comment" : "facebook_comment",
@@ -539,7 +561,7 @@ export async function processIncomingComment(opts: {
       if (aiReply) {
         platformReplyId = await replyToComment(commentId, aiReply, accessToken, eventClaim.id);
         if (platform === "instagram" && config.enableInstagramPrivateReplies) {
-          const privateClaim = await claimMetaWebhookEvent({ workspaceId, integrationId, accountId: igAccountId ?? postId, providerEventId: commentId, eventType: "instagram_comment", actionKey: "private_reply" });
+          const privateClaim = await claimMetaWebhookEvent({ workspaceId, integrationId, accountId, providerEventId: commentId, eventType: "instagram_comment", actionKey: "private_reply" });
           privateReply = privateClaim.claimed
             ? { attempted: true, ...(await replyPrivatelyToInstagramComment(commentId, aiReply, accessToken, privateClaim.id)) }
             : { attempted: false, id: null, error: "already_claimed" };
@@ -561,7 +583,7 @@ export async function processIncomingComment(opts: {
       if (aiReply) {
         platformReplyId = await replyToComment(commentId, aiReply, accessToken, eventClaim.id);
         if (platform === "instagram" && config.enableInstagramPrivateReplies) {
-          const privateClaim = await claimMetaWebhookEvent({ workspaceId, integrationId, accountId: igAccountId ?? postId, providerEventId: commentId, eventType: "instagram_comment", actionKey: "private_reply" });
+          const privateClaim = await claimMetaWebhookEvent({ workspaceId, integrationId, accountId, providerEventId: commentId, eventType: "instagram_comment", actionKey: "private_reply" });
           privateReply = privateClaim.claimed
             ? { attempted: true, ...(await replyPrivatelyToInstagramComment(commentId, aiReply, accessToken, privateClaim.id)) }
             : { attempted: false, id: null, error: "already_claimed" };
@@ -582,7 +604,7 @@ export async function processIncomingComment(opts: {
       if (aiReply) {
         platformReplyId = await replyToComment(commentId, aiReply, accessToken, eventClaim.id);
         if (platform === "instagram" && config.enableInstagramPrivateReplies) {
-          const privateClaim = await claimMetaWebhookEvent({ workspaceId, integrationId, accountId: igAccountId ?? postId, providerEventId: commentId, eventType: "instagram_comment", actionKey: "private_reply" });
+          const privateClaim = await claimMetaWebhookEvent({ workspaceId, integrationId, accountId, providerEventId: commentId, eventType: "instagram_comment", actionKey: "private_reply" });
           privateReply = privateClaim.claimed
             ? { attempted: true, ...(await replyPrivatelyToInstagramComment(commentId, aiReply, accessToken, privateClaim.id)) }
             : { attempted: false, id: null, error: "already_claimed" };
@@ -639,7 +661,7 @@ export async function processIncomingComment(opts: {
   }
   if (integrationId) {
     await db.insert(socialConversationTurnsTable).values({
-      workspaceId, integrationId, accountId: igAccountId ?? postId,
+      workspaceId, integrationId, accountId,
       providerUserId: authorId, providerEventId: commentId,
       channel: platform === "instagram" ? "instagram_comment" : "facebook_comment",
       direction: "inbound", inputText: commentText, replyText: aiReply,
@@ -680,12 +702,14 @@ export async function processIncomingComment(opts: {
 
 export async function syncPostComments(opts: {
   workspaceId: string;
+  integrationId: string;
+  accountId: string;
   postId: string;
   platform: CommentPlatform;
   accessToken: string;
   campaignId?: string;
 }): Promise<{ processed: number; skipped: number }> {
-  const { workspaceId, postId, platform, accessToken, campaignId } = opts;
+  const { workspaceId, integrationId, accountId, postId, platform, accessToken, campaignId } = opts;
   const comments = await fetchPostComments(postId, accessToken);
 
   let processed = 0;
@@ -707,6 +731,8 @@ export async function syncPostComments(opts: {
       authorId: c.from?.id ?? "unknown",
       commentText: c.message,
       accessToken,
+      integrationId,
+      igAccountId: accountId,
     });
     processed++;
   }

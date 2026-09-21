@@ -3,6 +3,7 @@ import { db, metaWebhookEventsTable, workspaceIntegrationsTable } from "@workspa
 import { isOrganicSocialIntegration } from "../integrations/integration-purpose.js";
 import { metaGraphFetch } from "../../lib/meta-graph.transport.js";
 import { logger } from "../../lib/logger.js";
+import { metaGraphUrl } from "../../lib/meta-graph.constants.js";
 
 const MAX_RETRIES = 3;
 const META_RETRY_BASE_DELAY_MS = 10_000;
@@ -29,7 +30,7 @@ export async function claimMetaWebhookEvent(input: {
   integrationId?: string;
   accountId: string;
   providerEventId: string;
-  eventType: "instagram_dm" | "instagram_comment" | "facebook_comment";
+  eventType: "instagram_dm" | "instagram_comment" | "facebook_dm" | "facebook_comment";
   actionKey?: string;
   ruleRef?: string;
 }): Promise<{ claimed: boolean; id?: string }> {
@@ -147,7 +148,7 @@ export async function replayDueMetaWebhookEvents(): Promise<void> {
       }
       const payload = event.outboundRequest as Record<string, unknown>;
       await recordMetaSendStarted(event.id, event.outboundEndpoint, payload);
-      const response = await metaGraphFetch(`https://graph.facebook.com/v22.0${event.outboundEndpoint}`, {
+      const response = await metaGraphFetch(metaGraphUrl(event.outboundEndpoint), {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...payload, access_token: integration.accessToken }),
         signal: AbortSignal.timeout(10_000),

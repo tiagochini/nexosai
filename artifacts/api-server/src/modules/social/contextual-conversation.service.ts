@@ -8,9 +8,9 @@ import { and, desc, eq } from "drizzle-orm";
 import {
   db,
   campaignsTable,
-  socialCommentActionsTable,
   socialPresencePostsTable,
   instagramDmSequencesTable,
+  socialConversationTurnsTable,
   workspaceIntegrationsTable,
 } from "@workspace/db";
 import { runAgent, parseAgentJSON } from "../agents/agent.runner.js";
@@ -39,7 +39,7 @@ export interface ResolvedConversationContext {
   masterplan: { id: string; version: number; contextFingerprint: string } | null;
   canonicalContext: string | null;
   canonicalContextFingerprint: string | null;
-  recentTurns: Array<{ direction: string; input: string; reply: string | null; createdAt: Date }>;
+  recentTurns: Array<{ direction: string; input: string | null; reply: string | null; createdAt: Date }>;
   provenance: { source: "post" | "explicit" | "none"; postId?: string; campaignId?: string; masterplanId?: string };
   failureReason?: string;
 }
@@ -63,9 +63,14 @@ export async function resolveConversationContext(input: ConversationContextInput
   let postId: string | undefined;
   let source: "post" | "explicit" | "none" = campaignId ? "explicit" : "none";
   if (input.platformPostId) {
+    const expectedPlatform = input.provider === "instagram" ? "instagram" : "facebook";
     const [post] = await db.select({ id: socialPresencePostsTable.id, campaignId: socialPresencePostsTable.campaignId })
       .from(socialPresencePostsTable)
-      .where(and(eq(socialPresencePostsTable.workspaceId, input.workspaceId), eq(socialPresencePostsTable.platformPostId, input.platformPostId))).limit(1);
+      .where(and(
+        eq(socialPresencePostsTable.workspaceId, input.workspaceId),
+        eq(socialPresencePostsTable.platform, expectedPlatform),
+        eq(socialPresencePostsTable.platformPostId, input.platformPostId),
+      )).limit(1);
     if (post) {
       postId = post.id;
       if (post.campaignId) {
@@ -102,8 +107,18 @@ export async function resolveConversationContext(input: ConversationContextInput
 
   const context = await buildCampaignActionContext(campaignId, input.workspaceId, "social_media");
   const recentComments = input.providerUserId
-    ? await db.select({ direction: socialCommentActionsTable.action, input: socialCommentActionsTable.commentText, reply: socialCommentActionsTable.aiReply, createdAt: socialCommentActionsTable.createdAt })
-      .from(socialCommentActionsTable).where(and(eq(socialCommentActionsTable.workspaceId, input.workspaceId), eq(socialCommentActionsTable.authorId, input.providerUserId))).orderBy(desc(socialCommentActionsTable.createdAt)).limit(8)
+    ? await db.select({
+        direction: socialConversationTurnsTable.direction,
+        input: socialConversationTurnsTable.inputText,
+        reply: socialConversationTurnsTable.replyText,
+        createdAt: socialConversationTurnsTable.createdAt,
+      })
+      .from(socialConversationTurnsTable).where(and(
+        eq(socialConversationTurnsTable.workspaceId, input.workspaceId),
+        eq(socialConversationTurnsTable.integrationId, input.integrationId),
+        eq(socialConversationTurnsTable.accountId, input.accountId),
+        eq(socialConversationTurnsTable.providerUserId, input.providerUserId),
+      )).orderBy(desc(socialConversationTurnsTable.createdAt)).limit(8)
     : [];
   return {
     ...base, campaignId,

@@ -108,21 +108,25 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-white font-bold text-base mb-3 uppercase tracking-widest border-b border-white/10 pb-2">4. Integração com Meta (Instagram e Facebook)</h2>
             <p>
-              O {companyName} usa a API do Meta para publicar conteúdo no Instagram e Facebook, gerenciar anúncios via Meta Ads, e enviar mensagens via WhatsApp Business API — exclusivamente mediante sua autorização via OAuth.
+              O {companyName} usa as APIs da Meta para conectar contas profissionais do Instagram e Páginas do Facebook, publicar conteúdo aprovado, ler métricas, receber comentários e mensagens por webhook e enviar respostas em nome do titular — exclusivamente mediante autorização via OAuth.
             </p>
             <p className="mt-3 border-l-2 border-blue-500 pl-3">
-              <strong className="text-white">Finalidade estrita de uso da API:</strong> Os dados obtidos por meio das APIs do Meta são utilizados exclusivamente para executar as funcionalidades declaradas neste documento (publicação de conteúdo, gestão de anúncios e envio de mensagens) em nome do usuário que autorizou o acesso. Esses dados não são utilizados para nenhum outro propósito, incluindo re-targeting próprio do NexOS, criação de perfis de usuários finais, ou repasse a terceiros fora do contexto operacional da plataforma.
+              <strong className="text-white">Finalidade estrita de uso da API:</strong> Os dados obtidos por meio das APIs da Meta são utilizados exclusivamente para executar as funcionalidades declaradas neste documento (conexão de ativos, publicação, métricas, moderação de comentários e atendimento de mensagens) em nome do usuário que autorizou o acesso. Esses dados não são usados para retargeting próprio do NexOS, criação de perfis externos ou repasse a terceiros fora do processamento operacional autorizado.
             </p>
             <div className="mt-4 space-y-2">
               <p><strong className="text-white">Permissões usadas:</strong></p>
               <ul className="ml-4 space-y-1 list-disc text-white/50">
                 <li><code className="text-white/70">instagram_content_publish</code> — publicar posts e reels</li>
+                <li><code className="text-white/70">instagram_manage_insights</code> — exibir métricas da conta e do conteúdo</li>
+                <li><code className="text-white/70">instagram_business_manage_messages</code> — receber e responder mensagens da conta profissional</li>
+                <li><code className="text-white/70">instagram_manage_comments</code> — ler, moderar e responder comentários</li>
+                <li><code className="text-white/70">pages_show_list</code> — listar as Páginas autorizadas pelo titular</li>
                 <li><code className="text-white/70">pages_manage_posts</code> — publicar no Facebook</li>
                 <li><code className="text-white/70">instagram_basic</code> — ler informações básicas do perfil</li>
-                <li><code className="text-white/70">pages_read_engagement</code> — ler métricas de engajamento</li>
-                <li><code className="text-white/70">ads_management</code> — criar e gerenciar anúncios</li>
-                <li><code className="text-white/70">business_management</code> — gerenciar ativos do Business Manager</li>
-                <li><code className="text-white/70">whatsapp_business_messaging</code> — enviar mensagens via WhatsApp Business API</li>
+                <li><code className="text-white/70">pages_read_engagement</code> — ler posts, comentários e engajamento da Página</li>
+                <li><code className="text-white/70">pages_manage_engagement</code> — responder e moderar interações da Página</li>
+                <li><code className="text-white/70">pages_manage_metadata</code> — inscrever a Página nos webhooks autorizados</li>
+                <li><code className="text-white/70">business_management</code> — identificar os ativos empresariais autorizados</li>
               </ul>
             </div>
             <p className="mt-4">
@@ -133,7 +137,7 @@ export default function PrivacyPolicy() {
               Após revogação, o {companyName} não poderá mais executar ações nessas plataformas.
             </p>
             <p className="mt-3">
-              Não compartilhamos dados do Meta com terceiros. Não acessamos mensagens privadas de usuários finais.
+              Mensagens e comentários são processados somente quando enviados às contas profissionais conectadas e apenas para responder, moderar, registrar evidência operacional e realizar handoff humano. Tokens nunca são exibidos no painel de evidências. Não vendemos nem compartilhamos esses dados com terceiros para fins próprios.
               Seguimos a{" "}
               <a href="https://developers.facebook.com/policy/" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">
                 Política da Plataforma Meta
