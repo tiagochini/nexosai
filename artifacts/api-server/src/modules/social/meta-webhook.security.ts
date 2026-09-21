@@ -53,12 +53,22 @@ export function parseVerifiedMetaWebhook(req: Request, res: Response): unknown |
 }
 
 export function verifyMetaWebhookSubscription(req: Request, res: Response): void {
-  const verifyToken = process.env["META_WEBHOOK_VERIFY_TOKEN"] ?? "";
-  const mode = String(req.query["hub.mode"] ?? "");
-  const token = String(req.query["hub.verify_token"] ?? "");
-  const challenge = String(req.query["hub.challenge"] ?? "");
+  // Secret forms and password managers can accidentally preserve surrounding
+  // whitespace. Meta sends the semantic token value, so normalize only that
+  // whitespace while keeping the token itself exact and case-sensitive.
+  const verifyToken = (process.env["META_WEBHOOK_VERIFY_TOKEN"] ?? "").trim();
+  const mode = String(req.query["hub.mode"] ?? "").trim();
+  const token = String(req.query["hub.verify_token"] ?? "").trim();
+  const challenge = String(req.query["hub.challenge"] ?? "").trim();
 
-  if (verifyToken && mode === "subscribe" && token === verifyToken) {
+  const supplied = Buffer.from(token);
+  const expected = Buffer.from(verifyToken);
+  const tokenMatches =
+    supplied.length === expected.length &&
+    expected.length > 0 &&
+    crypto.timingSafeEqual(supplied, expected);
+
+  if (mode === "subscribe" && tokenMatches) {
     res.status(200).send(challenge);
     return;
   }
