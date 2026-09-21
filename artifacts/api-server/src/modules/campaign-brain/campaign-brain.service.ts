@@ -12,7 +12,7 @@
  */
 
 import { db, campaignsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { Logger } from "pino";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -245,11 +245,13 @@ export async function buildCampaignBrain(
   }
 }
 
-export async function getCampaignBrain(campaignId: string): Promise<CampaignBrain | null> {
+export async function getCampaignBrain(campaignId: string, workspaceId?: string): Promise<CampaignBrain | null> {
   const [row] = await db
     .select({ brainData: (campaignsTable as any).brainData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(workspaceId
+      ? (and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+      : eq(campaignsTable.id, campaignId))
     .limit(1);
   return (row?.brainData as CampaignBrain | null) ?? null;
 }
@@ -259,14 +261,17 @@ export async function updateBrainSection<K extends keyof CampaignBrain>(
   key: K,
   value: CampaignBrain[K],
   log: Logger,
+  workspaceId?: string,
 ): Promise<void> {
   try {
-    const existing = await getCampaignBrain(campaignId);
+    const existing = await getCampaignBrain(campaignId, workspaceId);
     if (!existing) return;
     const updated = { ...existing, [key]: value };
     await db.update(campaignsTable as any)
       .set({ brainData: updated as any })
-      .where(eq(campaignsTable.id, campaignId));
+      .where(workspaceId
+        ? (and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+        : eq(campaignsTable.id, campaignId));
   } catch (err) {
     log.warn({ err, campaignId, key }, "Brain section update failed");
   }

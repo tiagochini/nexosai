@@ -27,6 +27,17 @@ export interface MarketIntelAnalyzeInput {
 
 const REUSE_WINDOW_DAYS = 90;
 
+/** Deterministic campaign-only selection used by all consumers of market evidence. */
+export function selectExactCampaignReport<T extends { campaignId: string | null; status: string; updatedAt: Date; createdAt: Date }>(
+  reports: T[],
+  campaignId: string | null | undefined,
+): T | null {
+  if (!campaignId) return null;
+  return reports
+    .filter((r) => r.status === "ready" && r.campaignId === campaignId)
+    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime() || b.createdAt.getTime() - a.createdAt.getTime())[0] ?? null;
+}
+
 // ─── CRUD ────────────────────────────────────────────────────────────────────
 
 export async function listReports(workspaceId: string): Promise<MarketIntelReport[]> {
@@ -498,49 +509,24 @@ export async function chatWithMarketIntel(
  * reels de social media. Inclui campos ausentes na versão de intake:
  * contentArbitrage, platformArbitrage, winningStrategyVsField, untappedSegments.
  *
- * Se campaignId for fornecido, busca o relatório vinculado à campanha.
- * Caso contrário, usa o relatório mais recente pronto do workspace (fallback
- * que cobre workspaces com relatório existente antes dessa integração).
+ * Busca exclusivamente o relatório pronto vinculado à campanha. Sem campanha,
+ * não há inteligência de mercado: nunca empresta evidência de outro contexto.
  */
 export async function buildSocialMarketIntelContext(
   workspaceId: string,
   campaignId?: string | null,
 ): Promise<string | null> {
-  // 1) Tenta por vínculo de campanha
-  let report: MarketIntelReport | undefined;
-  if (campaignId) {
-    const [linked] = await db
-      .select()
-      .from(marketIntelReportsTable)
-      .where(
-        and(
-          eq(marketIntelReportsTable.workspaceId, workspaceId),
-          eq(marketIntelReportsTable.campaignId, campaignId),
-          eq(marketIntelReportsTable.status, "ready"),
-        ),
-      )
-      .orderBy(desc(marketIntelReportsTable.createdAt))
-      .limit(1);
-    report = linked;
-  }
-
-  // 2) Fallback: relatório mais recente pronto do workspace (cobre relatórios
-  //    existentes antes da integração ser ativada)
-  if (!report) {
-    const [latest] = await db
-      .select()
-      .from(marketIntelReportsTable)
-      .where(
-        and(
-          eq(marketIntelReportsTable.workspaceId, workspaceId),
-          eq(marketIntelReportsTable.status, "ready"),
-        ),
-      )
-      .orderBy(desc(marketIntelReportsTable.createdAt))
-      .limit(1);
-    report = latest;
-  }
-
+  if (!campaignId) return null;
+  const [report] = await db
+    .select()
+    .from(marketIntelReportsTable)
+    .where(and(
+      eq(marketIntelReportsTable.workspaceId, workspaceId),
+      eq(marketIntelReportsTable.campaignId, campaignId),
+      eq(marketIntelReportsTable.status, "ready"),
+    ))
+    .orderBy(desc(marketIntelReportsTable.updatedAt), desc(marketIntelReportsTable.createdAt))
+    .limit(1);
   if (!report?.output) return null;
   const out = report.output as unknown as MarketIntelOutput;
 

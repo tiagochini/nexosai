@@ -4,6 +4,7 @@ import type { StrategyOutput } from "./strategy.agent.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
 import { COGNITIVE_IDENTITY_SOCIAL_MEDIA } from "./cognitive-identity-system.js";
+import { buildCampaignActionContext } from "./campaign-action-context.js";
 
 export interface SocialPost {
   day: number;
@@ -52,6 +53,11 @@ export interface SocialMediaOutput {
   };
   crossPlatformSynergy?: string;
   socialMediaNotes: string;
+  /** Internal audit metadata; never rendered in captions. */
+  _contextProvenance?: {
+    contextFingerprint: string;
+    marketReport?: { id: string; source: string; updatedAt: string; fingerprint: string };
+  };
 }
 
 const SOCIAL_MEDIA_PROMPT = `Você é o Agente de Social Media da NexOS AI — especialista em estratégia de conteúdo multi-plataforma para lançamentos digitais.
@@ -209,6 +215,7 @@ export async function runSocialMediaAgent(
   launchPlan: Record<string, unknown> | undefined,
   log: Logger,
 ): Promise<SocialMediaOutput> {
+  const actionContext = await buildCampaignActionContext(campaignId, workspaceId, "social_media");
   const avatarPlatforms = profile?.primaryAvatar.whereTheyHangOut ?? [];
   const hasB2BAvatar = profile?.primaryAvatar.occupation?.toLowerCase().includes("gestor") ||
     profile?.primaryAvatar.occupation?.toLowerCase().includes("empresário") ||
@@ -365,6 +372,10 @@ Retorne APENAS JSON no formato completo do SocialMediaOutput (com calendar, cont
 
   log.info({ campaignId, calendarCount: metaOutput.calendar.length, totalDays }, "B1: calendar generated via %d chunks", Math.ceil(totalDays / 7));
 
+  metaOutput._contextProvenance = {
+    contextFingerprint: actionContext.metadata.fingerprint,
+    ...(actionContext.metadata.marketReport ? { marketReport: actionContext.metadata.marketReport } : {}),
+  };
   return metaOutput;
 
 }

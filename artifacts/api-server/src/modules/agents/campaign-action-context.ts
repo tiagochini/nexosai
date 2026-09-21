@@ -6,8 +6,8 @@
  * assembling this context themselves.
  */
 import { createHash } from "node:crypto";
-import { and, eq } from "drizzle-orm";
-import { db, campaignsTable, agentClarificationRequestsTable } from "@workspace/db";
+import { and, eq, desc } from "drizzle-orm";
+import { db, campaignsTable, agentClarificationRequestsTable, marketIntelReportsTable } from "@workspace/db";
 import type { AgentRole } from "../ai-gateway/ai-gateway.service.js";
 import { getApprovedMasterplan } from "../masterplan/masterplan.service.js";
 import { latestRegionalIntelligenceSummary } from "../market-intel/regional-intelligence.service.js";
@@ -20,6 +20,7 @@ export interface CampaignActionContext {
     sections: string[];
     truncated: boolean;
     builtAt: string;
+    marketReport?: { id: string; source: string; updatedAt: string; fingerprint: string };
   };
 }
 
@@ -37,6 +38,27 @@ function canonicalize(value: unknown): unknown {
     return Object.fromEntries(Object.entries(value as Json).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => [k, canonicalize(v)]));
   }
   return value;
+}
+
+export function fingerprintMarketReport(report: {
+  id: string;
+  source: string;
+  updatedAt: Date | string;
+  output: unknown;
+}): string {
+  return createHash("sha256").update(JSON.stringify(canonicalize({
+    id: report.id,
+    source: report.source,
+    updatedAt: report.updatedAt instanceof Date ? report.updatedAt.toISOString() : report.updatedAt,
+    output: report.output,
+  }))).digest("hex");
+}
+
+export function fingerprintCampaignPerformanceFeedback(value: unknown): string | undefined {
+  const feedback = asObject(value);
+  return Object.keys(feedback).length > 0
+    ? createHash("sha256").update(JSON.stringify(canonicalize(feedback))).digest("hex")
+    : undefined;
 }
 
 function compact(value: unknown, max = SECTION_LIMIT): { text: string; truncated: boolean } {
@@ -117,15 +139,23 @@ export async function buildCampaignActionContext(
   }
 
   const approvedMasterplan = await getApprovedMasterplan(workspaceId, campaignId);
+  const [marketReport] = await db.select().from(marketIntelReportsTable).where(and(
+    eq(marketIntelReportsTable.workspaceId, workspaceId),
+    eq(marketIntelReportsTable.campaignId, campaignId),
+    eq(marketIntelReportsTable.status, "ready"),
+  )).orderBy(desc(marketIntelReportsTable.updatedAt), desc(marketIntelReportsTable.createdAt)).limit(1);
+  const marketFingerprint = marketReport ? fingerprintMarketReport(marketReport) : undefined;
   // Explicit null is retained below: regional monitoring is optional, never inferred.
   const regionalIntelligence = await latestRegionalIntelligenceSummary(workspaceId, campaignId);
   const memory = asObject(campaign.memoryData);
-  const sourceVersion = `${campaign.updatedAt.toISOString()}:${String(memory.version ?? "")}:${approvedMasterplan?.contextFingerprint ?? "legacy"}`;
+  const brain = asObject(campaign.brainData);
+  const performanceFeedback = asObject(brain["trafficLearnings"]);
+  const performanceFeedbackFingerprint = fingerprintCampaignPerformanceFeedback(performanceFeedback);
+  const sourceVersion = `${campaign.updatedAt.toISOString()}:${String(memory.version ?? "")}:${approvedMasterplan?.contextFingerprint ?? "legacy"}:${marketReport?.id ?? "none"}:${marketReport?.updatedAt.toISOString() ?? ""}:${marketFingerprint ?? ""}:${performanceFeedbackFingerprint ?? ""}`;
   const key = `${workspaceId}:${campaignId}:${agentRole}:${sourceVersion}`;
   const hit = cache.get(key);
   if (hit && hit.expiresAt > Date.now()) return hit.value;
 
-  const brain = asObject(campaign.brainData);
   const intake = asObject(campaign.intakeData);
   // An approved Masterplan is the immutable operating contract. Legacy campaigns
   // deliberately retain the prior assembled context until a version exists.
@@ -151,7 +181,25 @@ export async function buildCampaignActionContext(
     } : undefined,
     objective: { campaign: { title: campaign.title, type: campaign.type, status: campaign.status, locale: campaign.locale }, intake },
     strategy: campaign.strategyData,
-    market: { targeting: campaign.targetingData, audience: campaign.audienceData, profile: brain["profileData"], regionalIntelligence: regionalIntelligence ?? { available: false } },
+    market: {
+      targeting: campaign.targetingData,
+      audience: campaign.audienceData,
+      profile: brain["profileData"],
+      regionalIntelligence: regionalIntelligence ?? { available: false },
+      marketIntel: marketReport ? {
+        id: marketReport.id,
+        source: marketReport.source,
+        updatedAt: marketReport.updatedAt.toISOString(),
+        fingerprint: marketFingerprint,
+        output: marketReport.output,
+      } : { available: false },
+      performanceFeedback: performanceFeedbackFingerprint ? {
+        fingerprint: performanceFeedbackFingerprint,
+        evidenceType: "observed_campaign_performance",
+        learnings: performanceFeedback,
+        governance: "Evidência para novas análises e decisões; não altera intake, estratégia ou relatório-fonte automaticamente.",
+      } : { available: false },
+    },
     offer_psychology: { offer: campaign.offerData, psychology: brain["offerPsychologyLayer"] },
     sales: { salesContext: brain["salesContext"], channel: intake["campaign.salesChannel"] },
     launch: { currentPhase: campaign.currentPhase, durationDays: campaign.durationDays, budgetTotal: campaign.budgetTotal, revenueTarget: campaign.revenueTarget, timezone: campaign.timezone, launchPlan: brain["launchPlan"] ?? campaign.timelineData },
@@ -183,7 +231,7 @@ export async function buildCampaignActionContext(
   }
   body += "---\n";
   const fingerprint = createHash("sha256").update(JSON.stringify(canonicalize({ sourceVersion, agentRole, sections, body }))).digest("hex");
-  const value = { block: body, metadata: { contextVersion: "campaign-action-context/v1" as const, fingerprint, sections, truncated, builtAt: new Date().toISOString() } };
+  const value = { block: body, metadata: { contextVersion: "campaign-action-context/v1" as const, fingerprint, sections, truncated, builtAt: new Date().toISOString(), ...(marketReport && marketFingerprint ? { marketReport: { id: marketReport.id, source: marketReport.source, updatedAt: marketReport.updatedAt.toISOString(), fingerprint: marketFingerprint } } : {}) } };
   cache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, value });
   return value;
 }

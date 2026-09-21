@@ -118,6 +118,15 @@ async function shouldSuppressVideoGeneration(log?: Logger): Promise<boolean> {
 // and publishDuePresencePosts() so the threshold is always consistent.
 const MANUAL_RETRY_LIMIT = 3;
 
+export function assertAlignedMarketIntel(
+  alignedCampaignId: string | null | undefined,
+  marketContext: string | null,
+): void {
+  if (alignedCampaignId && !marketContext) {
+    throw new Error("Planejamento alinhado à campanha exige um relatório de inteligência de mercado pronto e vinculado à campanha.");
+  }
+}
+
 // Presence platform → DB integration provider
 const PLATFORM_TO_PROVIDER: Record<string, string> = {
   instagram: "instagram",
@@ -499,6 +508,15 @@ export async function startGenerateWeek(
   if (enabled.length === 0) {
     throw new Error("Nenhuma plataforma habilitada na configuração.");
   }
+  // Campaign-aligned planning is fail-closed: market evidence must belong to
+  // that exact campaign before any planner/insight AI work is started.
+  const aligned = config.alignedCampaignId
+    ? await findCampaignContextById(workspaceId, config.alignedCampaignId)
+    : await findActiveLaunchContext(workspaceId);
+  if (aligned) {
+    const alignedIntel = await buildSocialMarketIntelContext(workspaceId, aligned.campaignId);
+    assertAlignedMarketIntel(aligned.campaignId, alignedIntel);
+  }
 
   const weekStart = currentPlanWeekStart();
 
@@ -589,7 +607,12 @@ async function generateWeekNow(
     occupiedRows.map((r) => `${r.platform}|${r.dayIndex}|${r.postingTime}`),
   );
 
-  // 1. Realinhamento semanal — analisa semana anterior (se houve posts publicados)
+  // 1. Alinhamento com lançamento ativo (or explicit user-selected campaign)
+  const launch = config.alignedCampaignId
+    ? await findCampaignContextById(workspaceId, config.alignedCampaignId)
+    : await findActiveLaunchContext(workspaceId);
+
+  // 2. Realinhamento semanal — analisa semana anterior (se houve posts publicados)
   // Idempotency key is stable across restarts: same workspace + same prev-week date.
   const prevWeekISO = new Date(weekStart.getTime() - 7 * 24 * 60 * 60 * 1000)
     .toISOString()
@@ -598,18 +621,14 @@ async function generateWeekNow(
     idempotencyKeyOverride: `presence_insight:${workspaceId}:${prevWeekISO}`,
   });
 
-  // 2. Alinhamento com lançamento ativo
-  const launch = await findActiveLaunchContext(workspaceId);
-
   // 3. Semana 1 de segurança: sem auto-publish nos primeiros 7 dias da config
   const configAgeMs = Date.now() - new Date(config.createdAt).getTime();
   const firstWeekSafety = configAgeMs < 7 * 24 * 60 * 60 * 1000;
 
   const businessContext = await buildBusinessContext(workspaceId, config);
 
-  // 4. Inteligência de mercado — busca relatório vinculado à campanha ativa ou
-  //    o mais recente do workspace (cobre relatórios existentes antes da integração).
-  //    Fallback silencioso: se não houver relatório, segue sem market intel.
+  // 4. Inteligência de mercado — exact campaign link only. Standalone presence
+  //    continues with its own business configuration.
   const marketIntelCtx = await buildSocialMarketIntelContext(
     workspaceId,
     launch?.campaignId ?? null,

@@ -35,6 +35,14 @@ export interface TrafficInsight {
   action:     string;
 }
 
+export function isWorkspaceScopedFeedbackRecord(
+  record: { campaignId: string; workspaceId: string },
+  campaignId: string,
+  workspaceId: string,
+): boolean {
+  return record.campaignId === campaignId && record.workspaceId === workspaceId;
+}
+
 // ─── Main Service ──────────────────────────────────────────────────────────────
 
 export async function processTrafficFeedback(
@@ -58,13 +66,16 @@ export async function processTrafficFeedback(
         healthScore:       campaignMetricsTable.healthScore,
       })
       .from(campaignMetricsTable)
-      .where(eq(campaignMetricsTable.campaignId, campaignId))
+      .where(and(
+        eq(campaignMetricsTable.campaignId, campaignId),
+        eq(campaignMetricsTable.workspaceId, workspaceId),
+      ))
       .orderBy(desc(campaignMetricsTable.dayIndex))
       .limit(14);
 
     if (recentMetrics.length < 2) return;
 
-    const brain = await getCampaignBrain(campaignId);
+    const brain = await getCampaignBrain(campaignId, workspaceId);
     const existing = brain?.trafficLearnings ?? defaultLearnings();
 
     const insights: TrafficInsight[] = [];
@@ -154,7 +165,7 @@ export async function processTrafficFeedback(
     };
 
     if (brain) {
-      await updateBrainSection(campaignId, "trafficLearnings", updated, log);
+      await updateBrainSection(campaignId, "trafficLearnings", updated, log, workspaceId);
     }
 
     log.info({ campaignId, insights: insights.length, fatigueSignals: fatigueSignals.length, avgCTR, avgCPM }, "Traffic Feedback Loop processed");
