@@ -17,8 +17,8 @@ Free-form comment and DM replies run only after deterministic keyword/sequence h
 
 OAuth flows used for the review must request the same canonical messaging, comment, Page metadata, publishing, engagement, and insights scopes. Keep paid-media credentials purpose-separated from organic social credentials.
 
-Requesting OAuth scopes and configuring the callback URL do not subscribe an Instagram professional account to events. NexOS must also call the account-scoped `subscribed_apps` endpoint for `comments`, `messages`, and `messaging_postbacks`, including for accounts connected before those capabilities existed.
+Requesting OAuth scopes and configuring the callback URL do not by themselves prove that Instagram event fields are active. Instagram webhook fields must be subscribed in the Meta App Dashboard; Meta explicitly rejects configuring Instagram `subscribed_fields` through the Page or app subscription APIs.
 
-**Why:** Publishing can remain fully functional while inbound comments and DMs never arrive; permissions, callback verification, and account-level webhook subscription are three separate requirements.
+**Why:** Publishing can remain fully functional while inbound comments and DMs never arrive. A production attempt to call the account-scoped `subscribed_apps` endpoint failed with Meta error `(#3) Application does not have the capability`; official documentation confirms Instagram fields are dashboard-managed.
 
-**How to apply:** Subscribe immediately after a successful organic Instagram OAuth connection and reconcile existing connected accounts idempotently in production. Log provider acceptance or the sanitized provider error, never the access token.
+**How to apply:** Treat OAuth permissions, callback verification, dashboard field subscriptions, access level, and real callback evidence as separate gates. Never claim readiness until a real signed callback arrives.
