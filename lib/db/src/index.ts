@@ -14,3 +14,6 @@ export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";
+// Explicit export keeps newly staged execution tables available to workspace
+// consumers even when incremental TypeScript resolution has a stale barrel.
+export * from "./schema/first-touch-attempts";

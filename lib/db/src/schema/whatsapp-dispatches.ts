@@ -6,7 +6,9 @@ import {
   integer,
   pgEnum,
   jsonb,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { workspacesTable } from "./workspaces";
 import { campaignsTable } from "./campaigns";
 
@@ -20,6 +22,7 @@ export const whatsappDispatchTypeEnum = pgEnum("whatsapp_dispatch_type", [
 export const whatsappDispatchStatusEnum = pgEnum("whatsapp_dispatch_status", [
   "queued",
   "sending",
+  "ambiguous",
   "sent",
   "delivered",
   "read",
@@ -56,6 +59,7 @@ export const whatsappDispatchesTable = pgTable("whatsapp_dispatches", {
   failedCount: integer("failed_count").notNull().default(0),
   errorMessage: text("error_message"),
   metadata: jsonb("metadata").notNull().default({}),
+  idempotencyKey: text("idempotency_key"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -63,6 +67,9 @@ export const whatsappDispatchesTable = pgTable("whatsapp_dispatches", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-});
+}, (table) => [
+  uniqueIndex("whatsapp_dispatches_workspace_idempotency_uidx").on(table.workspaceId, table.idempotencyKey)
+    .where(sql`${table.idempotencyKey} is not null`),
+]);
 
 export type WhatsappDispatch = typeof whatsappDispatchesTable.$inferSelect;

@@ -95,3 +95,4 @@
 - [Supplier-Direct Infrastructure Billing](supplier-direct-infrastructure-billing.md) — domain/hosting suppliers bill clients directly; NexOS configures only after verified provisioning.
 - [Meta Verify Token Digest Fallback](meta-verify-token-digest-fallback.md) — webhook GET accepts the runtime secret or a pinned SHA-256 digest when Replit deployment-secret sync is disabled.
 - [Capability Governance Visibility](capability-governance-visibility.md) — readiness and certification controls are internal-only; never expose them as customer-facing delivery or authorization statuses.
+- [Exactly-Once Lead First Touch](exactly-once-lead-first-touch.md) — first contact is per contact+item, Master-Plan-bound, lease-fenced, provider-aware and isolated from legacy dispatch.

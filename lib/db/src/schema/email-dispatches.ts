@@ -6,7 +6,9 @@ import {
   integer,
   pgEnum,
   jsonb,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { workspacesTable } from "./workspaces";
 import { campaignsTable } from "./campaigns";
 
@@ -60,6 +62,7 @@ export const emailDispatchesTable = pgTable("email_dispatches", {
   openRate: text("open_rate"),
   clickRate: text("click_rate"),
   metadata: jsonb("metadata").notNull().default({}),
+  idempotencyKey: text("idempotency_key"),
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
@@ -68,7 +71,10 @@ export const emailDispatchesTable = pgTable("email_dispatches", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-});
+}, (table) => [
+  uniqueIndex("email_dispatches_workspace_idempotency_uidx").on(table.workspaceId, table.idempotencyKey)
+    .where(sql`${table.idempotencyKey} is not null`),
+]);
 
 export type EmailDispatch = typeof emailDispatchesTable.$inferSelect;
 

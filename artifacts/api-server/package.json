@@ -57,7 +57,9 @@
     ,"test:canonical-completion-chain": "tsx src/scripts/test-canonical-completion-chain.ts"
     ,"test:waitlist-launch-capacity": "tsx src/scripts/test-waitlist-launch-capacity.ts"
     ,"test:domains-landing-foundations": "DOMAINS_LANDING_DB_TESTS=true tsx src/scripts/test-domains-landing-foundations.ts",
-    "test:product-intake-contract": "tsx src/scripts/test-product-intake-contract.ts"
+    "test:product-intake-contract": "tsx src/scripts/test-product-intake-contract.ts",
+    "test:first-touch-boundary": "NODE_ENV=test tsx src/scripts/test-first-touch-boundary.ts"
+    ,"test:first-touch-db": "FIRST_TOUCH_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-first-touch-db.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

@@ -7,7 +7,10 @@ import {
   pgEnum,
   jsonb,
   real,
+  uniqueIndex,
+  index,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { workspacesTable } from "./workspaces";
 import { launchSequencesTable, launchSequenceItemsTable } from "./launch-sequences";
 
@@ -53,7 +56,14 @@ export const sequenceContactsTable = pgTable("sequence_contacts", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-});
+}, (table) => [
+  uniqueIndex("sequence_contacts_workspace_sequence_email_uidx").on(table.workspaceId, table.sequenceId, sql`lower(trim(${table.email}))`)
+    .where(sql`${table.email} is not null`),
+  uniqueIndex("sequence_contacts_workspace_sequence_phone_uidx").on(table.workspaceId, table.sequenceId, sql`regexp_replace(${table.phone}, '[^0-9]', '', 'g')`)
+    .where(sql`${table.phone} is not null`),
+  index("sequence_contacts_workspace_sequence_idx").on(table.workspaceId, table.sequenceId),
+  uniqueIndex("sequence_contacts_workspace_id_uidx").on(table.workspaceId, table.id),
+]);
 
 export const sequenceEngagementTable = pgTable("sequence_engagement", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -74,7 +84,11 @@ export const sequenceEngagementTable = pgTable("sequence_engagement", {
   externalRef: text("external_ref"),
   metadata: jsonb("metadata").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("sequence_engagement_first_touch_uidx").on(
+    table.workspaceId, table.sequenceId, table.contactId, table.itemId, table.channel, table.event,
+  ),
+]);
 
 export type SequenceContact = typeof sequenceContactsTable.$inferSelect;
 export type SequenceEngagement = typeof sequenceEngagementTable.$inferSelect;

@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import {
   db,
   whatsappDispatchesTable,
@@ -17,6 +17,16 @@ import { emitSequenceEvent } from "../launch-sequence/sequence-realtime.js";
 import { runWhatsAppResponseAgent } from "../agents/whatsapp-response.agent.js";
 import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import { authorizeAutonomousResponse, ingestInboundCommunityEvent } from "../community/community.service.js";
+
+export class AmbiguousWhatsAppDispatchError extends Error {
+  readonly code = "WHATSAPP_DISPATCH_AMBIGUOUS";
+}
+
+/** Native transport/parse failures happen after the mutation may have been
+ * accepted by Meta. They are never safe to retry automatically. */
+export function classifyWhatsAppTransportError(error: unknown): AmbiguousWhatsAppDispatchError | null {
+  return error instanceof AppError ? null : new AmbiguousWhatsAppDispatchError("WhatsApp provider outcome is ambiguous");
+}
 
 // ─── Meta WhatsApp Business API ───────────────────────────────────────────────
 
@@ -182,6 +192,7 @@ export async function createWhatsAppDispatch(
     templateName?: string;
     templateParams?: Record<string, string>;
     scheduledAt?: string;
+    idempotencyKey?: string;
   },
 ) {
   if (!input.message && !input.contentPieceId && !input.templateName) {
@@ -189,6 +200,13 @@ export async function createWhatsAppDispatch(
   }
   if (input.recipients.length === 0) {
     throw new ValidationError("Informe ao menos um destinatário");
+  }
+  if (input.idempotencyKey) {
+    const [existing] = await db.select().from(whatsappDispatchesTable).where(and(
+      eq(whatsappDispatchesTable.workspaceId, workspaceId),
+      eq(whatsappDispatchesTable.idempotencyKey, input.idempotencyKey),
+    )).limit(1);
+    if (existing) return existing;
   }
 
   let message = input.message ?? "";
@@ -211,7 +229,7 @@ export async function createWhatsAppDispatch(
 
   const creds = await getWhatsAppCredentials(workspaceId);
 
-  const [dispatch] = await db
+  let [dispatch] = await db
     .insert(whatsappDispatchesTable)
     .values({
       workspaceId,
@@ -229,8 +247,16 @@ export async function createWhatsAppDispatch(
       templateParams: input.templateParams ?? {},
       recipientCount: input.recipients.length,
       scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
+      idempotencyKey: input.idempotencyKey ?? null,
     })
+    .onConflictDoNothing()
     .returning();
+  if (!dispatch && input.idempotencyKey) {
+    [dispatch] = await db.select().from(whatsappDispatchesTable).where(and(
+      eq(whatsappDispatchesTable.workspaceId, workspaceId),
+      eq(whatsappDispatchesTable.idempotencyKey, input.idempotencyKey),
+    )).limit(1);
+  }
 
   return dispatch!;
 }
@@ -246,6 +272,8 @@ export async function sendWhatsAppDispatch(workspaceId: string, dispatchId: stri
       ),
     );
   if (!dispatch) throw new NotFoundError("WhatsApp dispatch not found");
+  if (["sent", "delivered", "read"].includes(dispatch.status)) return dispatch;
+  if (dispatch.status === "sending" || dispatch.status === "ambiguous") return dispatch;
   if (!["queued", "failed"].includes(dispatch.status))
     throw new ValidationError("Dispatch já enviado ou cancelado");
   await enforceNoMandatoryPause(workspaceId, {
@@ -254,10 +282,12 @@ export async function sendWhatsAppDispatch(workspaceId: string, dispatchId: stri
     action: "whatsapp_dispatch",
   });
 
-  await db
+  const [claimed] = await db
     .update(whatsappDispatchesTable)
     .set({ status: "sending" })
-    .where(eq(whatsappDispatchesTable.id, dispatchId));
+    .where(and(eq(whatsappDispatchesTable.id, dispatchId), eq(whatsappDispatchesTable.workspaceId, workspaceId), inArray(whatsappDispatchesTable.status, ["queued", "failed"])))
+    .returning();
+  if (!claimed) return dispatch;
 
   try {
     const creds = await getWhatsAppCredentials(workspaceId);
@@ -294,6 +324,8 @@ export async function sendWhatsAppDispatch(workspaceId: string, dispatchId: stri
         results.push(result);
       } catch (err) {
         if (err instanceof AppError && err.code === "MANDATORY_PAUSE_ACTIVE") throw err;
+        const transportAmbiguity = classifyWhatsAppTransportError(err);
+        if (transportAmbiguity) throw transportAmbiguity;
         failedCount.count++;
         logger.warn({ phone, err }, "WhatsApp send failed for recipient");
       }
@@ -317,7 +349,8 @@ export async function sendWhatsAppDispatch(workspaceId: string, dispatchId: stri
     await db
       .update(whatsappDispatchesTable)
       .set({
-        status: err instanceof AppError && err.code === "MANDATORY_PAUSE_ACTIVE" ? "queued" : "failed",
+        status: err instanceof AppError && err.code === "MANDATORY_PAUSE_ACTIVE" ? "queued"
+          : err instanceof AmbiguousWhatsAppDispatchError ? "ambiguous" : "failed",
         errorMessage: err instanceof Error ? err.message : String(err),
       })
       .where(eq(whatsappDispatchesTable.id, dispatchId));

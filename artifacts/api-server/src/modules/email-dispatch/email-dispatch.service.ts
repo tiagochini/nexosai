@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import {
   db,
   emailDispatchesTable,
@@ -113,6 +113,7 @@ async function sendViaRdStation(
     htmlContent: string;
     listId: string;
     scheduledAt?: string;
+    idempotencyKey?: string;
   },
 ): Promise<DispatchResult> {
   const body: Record<string, unknown> = {
@@ -280,9 +281,17 @@ export async function createEmailDispatch(
     htmlContent?: string;
     textContent?: string;
     scheduledAt?: string;
+    idempotencyKey?: string;
   },
 ) {
   let html = input.htmlContent ?? "";
+  if (input.idempotencyKey) {
+    const [existing] = await db.select().from(emailDispatchesTable).where(and(
+      eq(emailDispatchesTable.workspaceId, workspaceId),
+      eq(emailDispatchesTable.idempotencyKey, input.idempotencyKey),
+    )).limit(1);
+    if (existing) return existing;
+  }
 
   if (!html && input.contentPieceId) {
     const [piece] = await db
@@ -302,7 +311,7 @@ export async function createEmailDispatch(
 
   if (!html) throw new ValidationError("Forneça htmlContent ou contentPieceId com conteúdo HTML");
 
-  const [dispatch] = await db
+  let [dispatch] = await db
     .insert(emailDispatchesTable)
     .values({
       workspaceId,
@@ -318,10 +327,18 @@ export async function createEmailDispatch(
       contentPieceId: input.contentPieceId ?? null,
       htmlContent: html,
       textContent: input.textContent ?? null,
+      idempotencyKey: input.idempotencyKey ?? null,
       status: "draft",
       scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
     })
+    .onConflictDoNothing()
     .returning();
+  if (!dispatch && input.idempotencyKey) {
+    [dispatch] = await db.select().from(emailDispatchesTable).where(and(
+      eq(emailDispatchesTable.workspaceId, workspaceId),
+      eq(emailDispatchesTable.idempotencyKey, input.idempotencyKey),
+    )).limit(1);
+  }
 
   return dispatch!;
 }
@@ -337,6 +354,7 @@ export async function sendEmailDispatch(workspaceId: string, dispatchId: string)
       ),
     );
   if (!dispatch) throw new NotFoundError("Email dispatch not found");
+  if (["sent", "partial"].includes(dispatch.status)) return dispatch;
   if (!["draft", "scheduled"].includes(dispatch.status))
     throw new ValidationError("Dispatch already sent or cancelled");
   if (!dispatch.htmlContent) throw new ValidationError("No HTML content to send");
@@ -346,10 +364,12 @@ export async function sendEmailDispatch(workspaceId: string, dispatchId: string)
     action: "email_dispatch",
   });
 
-  await db
+  const [claimed] = await db
     .update(emailDispatchesTable)
     .set({ status: "sending" })
-    .where(eq(emailDispatchesTable.id, dispatchId));
+    .where(and(eq(emailDispatchesTable.id, dispatchId), eq(emailDispatchesTable.workspaceId, workspaceId), inArray(emailDispatchesTable.status, ["draft", "scheduled"])))
+    .returning();
+  if (!claimed) return dispatch;
 
   try {
     let result: DispatchResult;

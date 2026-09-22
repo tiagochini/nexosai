@@ -22,7 +22,7 @@
  *   (all other types)  → skipped — they are content assets, not dispatch items
  */
 
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import {
   db,
   campaignsTable,
@@ -33,6 +33,7 @@ import {
 } from "@workspace/db";
 import type { Logger } from "pino";
 import { env } from "../../lib/env.js";
+import { getApprovedMasterplan } from "../masterplan/masterplan.service.js";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -322,6 +323,13 @@ export async function bridgeCampaignToSequence(
 ): Promise<BridgeResult> {
   log.info({ campaignId }, "[BRIDGE] Starting sequence bridge for campaign");
 
+  // A sequence is an execution artifact of the immutable approved plan.  Do
+  // this check before looking at (or creating) any dispatch rows.
+  const approvedPlan = await getApprovedMasterplan(workspaceId, campaignId);
+  if (!approvedPlan) {
+    return { sequenceId: "", itemsCreated: 0, skipped: true, reason: "approved_masterplan_required" };
+  }
+
   // 1. Check for an existing sequence linked to this campaign
   const existingSequences = await db
     .select({
@@ -340,6 +348,13 @@ export async function bridgeCampaignToSequence(
   // If already active → nothing to do (idempotent)
   const activeSeq = existingSequences.find((s) => s.status === "active");
   if (activeSeq) {
+    const activeConfig = (activeSeq.config ?? {}) as Record<string, unknown>;
+    if (
+      activeConfig["masterplanVersionId"] !== approvedPlan.id ||
+      activeConfig["contextFingerprint"] !== approvedPlan.contextFingerprint
+    ) {
+      return { sequenceId: activeSeq.id, itemsCreated: 0, skipped: true, reason: "active_sequence_masterplan_stale" };
+    }
     log.info({ campaignId, sequenceId: activeSeq.id }, "[BRIDGE] Sequence already active — skipping");
     return { sequenceId: activeSeq.id, itemsCreated: 0, skipped: true, reason: "already_active" };
   }
@@ -386,6 +401,21 @@ export async function bridgeCampaignToSequence(
     return { sequenceId: "", itemsCreated: 0, skipped: true, reason: "no_dispatch_pieces" };
   }
 
+  // Content generated against a different dossier must never become
+  // dispatchable.  Older content without these fields is accepted only when
+  // the campaign's approved plan is the current binding; newly bridged rows
+  // always carry the binding below.
+  for (const piece of pieces) {
+    const c = (piece.content ?? {}) as Record<string, unknown>;
+    const binding = (c["masterplanBinding"] ?? c["_masterplanBinding"]) as Record<string, unknown> | undefined;
+    if (!binding ||
+      binding["masterplanVersionId"] !== approvedPlan.id ||
+      binding["contextFingerprint"] !== approvedPlan.contextFingerprint ||
+      binding["contentHash"] !== approvedPlan.contentHash) {
+      return { sequenceId: "", itemsCreated: 0, skipped: true, reason: "content_masterplan_binding_stale" };
+    }
+  }
+
   // 4. Create or reuse sequence record
   let sequenceId: string;
   const existingDraft = existingSequences.find((s) => ["draft", "scheduled"].includes(s.status));
@@ -403,9 +433,11 @@ export async function bridgeCampaignToSequence(
     const validModels = ["plf", "formula_de_lancamento", "semente", "afiliado", "perpetual", "custom"];
     const safeModel = validModels.includes(model) ? model : "plf";
 
-    const [newSeq] = await db
-      .insert(launchSequencesTable)
-      .values({
+    let newSeq: { id: string } | undefined;
+    try {
+      [newSeq] = await db
+        .insert(launchSequencesTable)
+        .values({
         workspaceId,
         campaignId,
         name:        `Sequência — ${campaign.title ?? campaignId.slice(0, 8)}`,
@@ -415,10 +447,23 @@ export async function bridgeCampaignToSequence(
         productPrice: String(intake["product.price"] ?? intake["productPrice"] ?? ""),
         revenueTarget: String(intake["campaign.revenueTarget"] ?? strategy["revenueTarget"] ?? ""),
         leadCaptureEnabled: true,
-      })
-      .returning({ id: launchSequencesTable.id });
+        })
+        .returning({ id: launchSequencesTable.id });
+    } catch (err) {
+      // Concurrent bridge invocation may have won the campaign uniqueness
+      // race. Reuse its sequence and let the atomic item activation below
+      // complete the retry.
+      const [winner] = await db.select({ id: launchSequencesTable.id })
+        .from(launchSequencesTable)
+        .where(and(
+          eq(launchSequencesTable.workspaceId, workspaceId),
+          eq(launchSequencesTable.campaignId, campaignId),
+        )).limit(1);
+      if (!winner) throw err;
+      newSeq = winner;
+    }
 
-    sequenceId = newSeq!.id;
+    sequenceId = newSeq.id;
     log.info({ campaignId, sequenceId }, "[BRIDGE] Created new launch sequence");
   }
 
@@ -452,13 +497,34 @@ export async function bridgeCampaignToSequence(
   // Sort by dayIndex before inserting
   allItems.sort((a, b) => a.dayIndex - b.dayIndex);
 
-  // 6. Clear any stale items then insert fresh ones
-  await db.delete(launchSequenceItemsTable)
-    .where(eq(launchSequenceItemsTable.sequenceId, sequenceId));
-
+  // Resolve provider configuration before entering the atomic activation unit.
+  const dispatchConfig = await getDispatchConfig(workspaceId);
   const now = new Date();
+  const activationConfig: Record<string, unknown> = {
+    activatedAt: now.toISOString(),
+    autoActivatedAt: now.toISOString(),
+    autoActivatedBy: "sequence-bridge",
+    masterplanVersionId: approvedPlan.id,
+    contextFingerprint: approvedPlan.contextFingerprint,
+    ...(dispatchConfig.emailProvider && { emailProvider: dispatchConfig.emailProvider }),
+    ...(dispatchConfig.emailListId && { emailListId: dispatchConfig.emailListId }),
+    ...(dispatchConfig.emailFromName && { emailFromName: dispatchConfig.emailFromName }),
+    ...(dispatchConfig.emailFromEmail && { emailFromEmail: dispatchConfig.emailFromEmail }),
+    ...(dispatchConfig.phoneNumbers.length > 0 && { phoneNumbers: dispatchConfig.phoneNumbers }),
+  };
+  // 6. Clear any stale items then insert fresh ones
+  let inserted: { id: string }[] = [];
+  // Item replacement and activation are one unit. A parser/database failure
+  // therefore cannot leave a partially dispatchable sequence behind.
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`${workspaceId}:${campaignId}`}, 0))`);
+    await tx.delete(launchSequenceItemsTable)
+      .where(and(
+        eq(launchSequenceItemsTable.sequenceId, sequenceId),
+        eq(launchSequenceItemsTable.workspaceId, workspaceId),
+      ));
 
-  const inserted = await db.insert(launchSequenceItemsTable).values(
+    inserted = await tx.insert(launchSequenceItemsTable).values(
     allItems.map((item) => {
       const scheduledAt = new Date(now);
       scheduledAt.setDate(scheduledAt.getDate() + item.dayIndex);
@@ -477,6 +543,7 @@ export async function bridgeCampaignToSequence(
         copyHints:        item.copyHints,
         status:           "scheduled" as const,
         scheduledAt,
+          contentPieceId: undefined,
         metadata: {
           generatedCopy: {
             hot:  item.generatedCopy,
@@ -485,32 +552,26 @@ export async function bridgeCampaignToSequence(
           },
           bridgedAt:      now.toISOString(),
           bridgeSource:   "sequence-bridge",
+           masterplanVersionId: approvedPlan.id,
+           contextFingerprint: approvedPlan.contextFingerprint,
+           contentHash: approvedPlan.contentHash,
+           firstTouchExecutable: item.deliveryChannels.every((channel) => channel === "email" || channel === "whatsapp") &&
+             item.deliveryChannels.length === 1,
         },
       };
     }),
-  ).returning({ id: launchSequenceItemsTable.id });
+    ).returning({ id: launchSequenceItemsTable.id });
+
+    await tx.update(launchSequencesTable).set({
+      status: "active",
+      config: activationConfig,
+    }).where(and(
+      eq(launchSequencesTable.id, sequenceId),
+      eq(launchSequencesTable.workspaceId, workspaceId),
+    ));
+  });
 
   log.info({ campaignId, sequenceId, itemsInserted: inserted.length }, "[BRIDGE] Items inserted");
-
-  // 7. Build dispatch config from connected integrations
-  const dispatchConfig = await getDispatchConfig(workspaceId);
-
-  const activationConfig: Record<string, unknown> = {
-    activatedAt:          now.toISOString(),
-    autoActivatedAt:      now.toISOString(),
-    autoActivatedBy:      "sequence-bridge",
-    ...(dispatchConfig.emailProvider   && { emailProvider:  dispatchConfig.emailProvider }),
-    ...(dispatchConfig.emailListId     && { emailListId:     dispatchConfig.emailListId }),
-    ...(dispatchConfig.emailFromName   && { emailFromName:   dispatchConfig.emailFromName }),
-    ...(dispatchConfig.emailFromEmail  && { emailFromEmail:  dispatchConfig.emailFromEmail }),
-    ...(dispatchConfig.phoneNumbers.length > 0 && { phoneNumbers: dispatchConfig.phoneNumbers }),
-  };
-
-  // 8. Activate the sequence
-  await db.update(launchSequencesTable).set({
-    status: "active",
-    config: activationConfig,
-  }).where(eq(launchSequencesTable.id, sequenceId));
 
   log.info(
     { campaignId, sequenceId, items: inserted.length, emailProvider: dispatchConfig.emailProvider },

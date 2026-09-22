@@ -1,5 +1,5 @@
 import { Queue, Worker, type Job } from "bullmq";
-import { lte, eq, and, inArray } from "drizzle-orm";
+import { lte, eq, and, inArray, sql } from "drizzle-orm";
 import {
   db,
   launchSequenceItemsTable,
@@ -21,6 +21,7 @@ import { sendWeeklyReportsToAll } from "../weekly-report/weekly-report.service.j
 import { triggerStrategyPhase, triggerContentPhase } from "../orchestration/orchestration.service.js";
 import { QUEUE_NAMES } from "../queue/queue.service.js";
 import { registerScheduler, runSchedulerTick } from "../operations/scheduler-health.registry.js";
+import { executeFirstTouch, getFirstTouchAdapter, setFirstTouchAdapter, type FirstTouchAdapter } from "./first-touch-executor.service.js";
 
 export const SEQUENCE_SCHEDULER_QUEUE_NAME = QUEUE_NAMES.SEQUENCE_SCHEDULER;
 
@@ -40,6 +41,49 @@ let schedulerQueue: Queue | null = null;
 let fallbackInterval: NodeJS.Timeout | null = null;
 let metaRetryWatchdogInterval: NodeJS.Timeout | null = null;
 let metaRetryWatchdogPromise: Promise<void> | null = null;
+
+// The executor owns bridged first-touch items. This adapter remains behind the
+// existing provider service seams, allowing tests to replace it before ticks.
+const internalFirstTouchAdapter: FirstTouchAdapter = async ({ workspaceId, channel, recipient, body, idempotencyKey }) => {
+  const generated = (body["generatedCopy"] ?? {}) as Record<string, unknown>;
+  const copy = ((generated["hot"] ?? generated) as Record<string, unknown>);
+  if (channel === "email") {
+    const cfg = (body["sequenceConfig"] ?? {}) as Record<string, unknown>;
+    const configuredProvider = String(cfg["emailProvider"] ?? "");
+    if (!configuredProvider || !["custom_smtp", "resend"].includes(configuredProvider)) {
+      return { confirmed: false, error: "first-touch requires explicit direct-recipient email provider" };
+    }
+    if (configuredProvider === "resend" && !env.RESEND_API_KEY) {
+      return { confirmed: false, error: "resend provider is not configured" };
+    }
+    const provider = "custom_smtp" as const;
+    const dispatch = await createEmailDispatch(workspaceId, {
+      sequenceItemId: String(body["sequenceItemId"] ?? ""),
+      campaignId: String(body["campaignId"] ?? ""),
+      provider,
+      listId: recipient,
+      subject: String(copy["subject"] ?? "NexOS"),
+      fromName: String(cfg["emailFromName"] ?? "NexOS"),
+      fromEmail: String(cfg["emailFromEmail"] ?? env.RESEND_FROM_EMAIL),
+      htmlContent: String(copy["body"] ?? copy["html"] ?? ""),
+      textContent: String(copy["body"] ?? copy["text"] ?? ""),
+      idempotencyKey,
+    });
+    const sent = await sendEmailDispatch(workspaceId, dispatch.id);
+    return { confirmed: sent.status === "sent", receipt: { id: sent.id } };
+  }
+  const dispatch = await createWhatsAppDispatch(workspaceId, {
+    type: "individual", recipients: [recipient],
+    message: String(copy["message"] ?? copy["body"] ?? ""),
+    campaignId: String(body["campaignId"] ?? ""),
+    sequenceItemId: String(body["sequenceItemId"] ?? ""),
+    idempotencyKey,
+  });
+  const sent = await sendWhatsAppDispatch(workspaceId, dispatch.id);
+  if (sent.status === "ambiguous") return { confirmed: false, ambiguous: true, error: "WhatsApp outcome ambiguous" };
+  return { confirmed: sent.status === "sent", receipt: { id: sent.id } };
+};
+setFirstTouchAdapter(internalFirstTouchAdapter);
 
 async function safeProcessScheduledItems(): Promise<void> {
   const log = logger.child({ component: "sequence-scheduler" });
@@ -434,6 +478,24 @@ export async function processScheduledItems(): Promise<void> {
     log.warn({ err }, "Clarification watchdog tick failed — non-blocking"),
   );
 
+  // First-touch execution is an opt-in adapter boundary. Production wiring
+  // supplies the provider adapter; tests inject a deterministic adapter and
+  // never call live providers.
+  const firstTouchAdapter = getFirstTouchAdapter();
+  if (firstTouchAdapter) {
+    const firstTouchWorkspaces = await db.selectDistinct({ workspaceId: launchSequencesTable.workspaceId })
+      .from(launchSequencesTable).where(eq(launchSequencesTable.status, "active"));
+    for (const { workspaceId } of firstTouchWorkspaces) {
+      for (let i = 0; i < 25; i++) {
+        const result = await executeFirstTouch(workspaceId, firstTouchAdapter, now).catch((err) => {
+          log.warn({ err, workspaceId }, "First-touch execution failed — item scheduler continues");
+          return "none" as const;
+        });
+        if (result === "none") break;
+      }
+    }
+  }
+
   // Social media scheduled posts (Instagram / TikTok / Facebook)
   const { processScheduledSocialPosts } = await import("../social/social.autopost.service.js");
   await processScheduledSocialPosts().catch((err) =>
@@ -488,6 +550,7 @@ export async function processScheduledItems(): Promise<void> {
         eq(launchSequenceItemsTable.status, "scheduled"),
         lte(launchSequenceItemsTable.scheduledAt, now),
         eq(launchSequencesTable.status, "active"),
+        sql`coalesce((${launchSequenceItemsTable.metadata}->>'firstTouchExecutable')::boolean, false) = false`,
       ),
     );
 

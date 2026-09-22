@@ -185,6 +185,15 @@ router.post("/:sequenceId", async (req, res): Promise<void> => {
   }
 
   const body = parsed.data;
+  // Identity is canonicalized before any lookup or write.  The matching
+  // partial tenant indexes are the final concurrency authority.
+  if (body.email) body.email = body.email.trim().toLowerCase();
+  const rawPhone = body.whatsapp ?? body.phone;
+  if (rawPhone) {
+    const normalizedPhone = `+${rawPhone.replace(/[^\d]/g, "")}`;
+    body.phone = normalizedPhone;
+    if (body.whatsapp) body.whatsapp = normalizedPhone;
+  }
 
   // Auto-read UTMs from query params if not in body (for pixel/redirect flows)
   const utmSource = body.utmSource ?? (req.query["utm_source"] as string | undefined);
@@ -246,15 +255,17 @@ router.post("/:sequenceId", async (req, res): Promise<void> => {
     launchReserved = reservation.launchReserved;
   }
 
-  // Deduplicate by email within sequence
-  if (body.email) {
+  // Fast path only; the tenant-scoped unique indexes also protect concurrent
+  // requests and identities shared by multiple sequences.
+  if (body.email || body.phone) {
     const [existing] = await db
       .select({ id: sequenceContactsTable.id })
       .from(sequenceContactsTable)
       .where(
         and(
+          eq(sequenceContactsTable.workspaceId, sequence.workspaceId),
           eq(sequenceContactsTable.sequenceId, sequenceId),
-          eq(sequenceContactsTable.email, body.email),
+          body.email ? eq(sequenceContactsTable.email, body.email) : eq(sequenceContactsTable.phone, body.phone!),
         ),
       )
       .limit(1);
@@ -310,9 +321,12 @@ router.post("/:sequenceId", async (req, res): Promise<void> => {
 
   const referralCode = generateReferralCode();
 
-  const [contact] = await db
-    .insert(sequenceContactsTable)
-    .values({
+  let contact: { id: string } = { id: "" };
+  try {
+    await db.transaction(async (tx) => {
+    [contact] = await tx
+      .insert(sequenceContactsTable)
+      .values({
       sequenceId,
       workspaceId: sequence.workspaceId,
       name: body.name ?? null,
@@ -327,29 +341,29 @@ router.post("/:sequenceId", async (req, res): Promise<void> => {
         ...(refCode ? { referredBy: refCode } : {}),
         ...(body.metadata ?? {}),
       },
-    })
-    .returning({ id: sequenceContactsTable.id });
-
-  // LGPD audit log (non-blocking)
-  db.insert(auditLogsTable)
-    .values({
-      workspaceId: sequence.workspaceId,
-      action: "lead.captured",
-      actor: body.email ?? body.phone ?? "anonymous",
-      ipAddress: captureIp ?? undefined,
-      data: {
-        sequenceId,
-        contactId: contact.id,
-        utm,
-        referralCode,
-        referredBy: refCode ?? null,
-        consentAt,
-        consentText: lgpd.consentText,
-        userAgent: lgpd.userAgent,
-      },
-    })
-    .then(() => null)
-    .catch((err) => logger.warn({ err }, "LGPD audit log write failed — non-blocking"));
+      })
+      .returning({ id: sequenceContactsTable.id });
+    await tx.insert(auditLogsTable).values({
+      workspaceId: sequence.workspaceId, action: "lead.captured",
+      actor: body.email ?? body.phone ?? "anonymous", ipAddress: captureIp ?? undefined,
+      data: { sequenceId, contactId: contact.id, utm, referralCode, referredBy: refCode ?? null,
+        consentAt, consentText: lgpd.consentText, userAgent: lgpd.userAgent },
+    });
+    });
+  } catch (err) {
+    // A concurrent capture won the unique identity race. Reuse it rather
+    // than emitting a second enrollment/audit/first-touch side effect.
+    const [winner] = await db.select({ id: sequenceContactsTable.id })
+      .from(sequenceContactsTable)
+      .where(and(
+        eq(sequenceContactsTable.workspaceId, sequence.workspaceId),
+        eq(sequenceContactsTable.sequenceId, sequenceId),
+        body.email ? eq(sequenceContactsTable.email, body.email) : eq(sequenceContactsTable.phone, body.phone!),
+      )).limit(1);
+    if (!winner) throw err;
+    res.json({ captured: true, duplicate: true, launchReserved, contactId: winner.id, message: "Lead já registrado" });
+    return;
+  }
 
   // Increment referrer's referred count (non-blocking)
   if (referrerContact) {

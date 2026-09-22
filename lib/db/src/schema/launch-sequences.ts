@@ -8,6 +8,7 @@ import {
   jsonb,
   date,
   boolean,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 import { workspacesTable } from "./workspaces";
@@ -83,7 +84,10 @@ export const launchSequencesTable = pgTable("launch_sequences", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-});
+}, (table) => [
+  uniqueIndex("launch_sequences_workspace_campaign_uidx").on(table.workspaceId, table.campaignId),
+  uniqueIndex("launch_sequences_workspace_id_uidx").on(table.workspaceId, table.id),
+]);
 
 export const launchSequenceItemsTable = pgTable("launch_sequence_items", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -113,7 +117,9 @@ export const launchSequenceItemsTable = pgTable("launch_sequence_items", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-});
+}, (table) => [
+  uniqueIndex("launch_sequence_items_workspace_id_uidx").on(table.workspaceId, table.id),
+]);
 
 export type LaunchSequence = typeof launchSequencesTable.$inferSelect;
 export type LaunchSequenceItem = typeof launchSequenceItemsTable.$inferSelect;
