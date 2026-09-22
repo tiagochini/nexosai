@@ -18,14 +18,18 @@ export function verifyMetaWebhookRequest(req: Request, res: Response): Buffer | 
   const testSeam =
     env.NODE_ENV === "test" &&
     process.env["META_WEBHOOK_ALLOW_UNSIGNED_TESTS"] === "true";
-  const appSecret = env.META_APP_SECRET || process.env["FACEBOOK_APP_SECRET"] || "";
+  const appSecrets = [
+    env.META_APP_SECRET,
+    process.env["FACEBOOK_APP_SECRET"],
+    process.env["INSTAGRAM_APP_SECRET"],
+  ].filter((secret): secret is string => Boolean(secret?.trim()));
   const signature = req.header("x-hub-signature-256");
 
-  if ((!appSecret || !signature) && !testSeam) {
+  if ((appSecrets.length === 0 || !signature) && !testSeam) {
     res.status(401).json({ error: "Meta webhook signature is required" });
     return null;
   }
-  if (testSeam && (!appSecret || !signature)) {
+  if (testSeam && (appSecrets.length === 0 || !signature)) {
     if (Buffer.isBuffer(body)) return body;
     res.status(400).json({ error: "Meta webhook body must be raw bytes" });
     return null;
@@ -35,13 +39,14 @@ export function verifyMetaWebhookRequest(req: Request, res: Response): Buffer | 
     return null;
   }
 
-  const expected = `sha256=${crypto.createHmac("sha256", appSecret).update(body).digest("hex")}`;
   const supplied = Buffer.from(signature!);
-  const expectedBuffer = Buffer.from(expected);
-  if (
-    supplied.length !== expectedBuffer.length ||
-    !crypto.timingSafeEqual(supplied, expectedBuffer)
-  ) {
+  const signatureMatches = appSecrets.some((appSecret) => {
+    const expected = `sha256=${crypto.createHmac("sha256", appSecret).update(body).digest("hex")}`;
+    const expectedBuffer = Buffer.from(expected);
+    return supplied.length === expectedBuffer.length &&
+      crypto.timingSafeEqual(supplied, expectedBuffer);
+  });
+  if (!signatureMatches) {
     res.status(401).json({ error: "Invalid Meta webhook signature" });
     return null;
   }
