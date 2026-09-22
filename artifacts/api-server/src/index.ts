@@ -28,6 +28,7 @@ import { startLifecycleScheduler, stopLifecycleScheduler } from "./modules/lifec
 import { startFunnelScheduler } from "./modules/academy/academy-funnel.service.js";
 import { startRegionalAcquisitionScheduler, stopRegionalAcquisitionScheduler } from "./modules/market-intel/regional-acquisition.service.js";
 import { cleanupDisconnectedIntegrationDuplicates } from "./modules/integrations/integration-cleanup.service.js";
+import { reconcileInstagramWebhookSubscriptions } from "./modules/social/social.service.js";
 import { recoverStudioRenders } from "./modules/video-editor/audiovisual-studio.service.js";
 import { organizeAllWorkspaceRecordings } from "./modules/recording/recording.service.js";
 import { db, campaignAgentsTable, campaignsTable, socialPresencePostsTable, socialPresenceConfigTable, socialPostsTable } from "@workspace/db";
@@ -137,6 +138,15 @@ function scheduleRecordingOrganizationSweep(): void {
     void organizeAllWorkspaceRecordings()
       .then((result) => logger.info(result, "Recording folders organized for all workspaces"))
       .catch((err) => logger.error({ err }, "Recording folder organization sweep failed"));
+  });
+}
+
+function scheduleInstagramWebhookSubscriptionSweep(): void {
+  if (process.env["NODE_ENV"] !== "production") return;
+  setImmediate(() => {
+    void reconcileInstagramWebhookSubscriptions()
+      .then((result) => logger.info(result, "Instagram webhook subscriptions reconciled"))
+      .catch((err) => logger.error({ err }, "Instagram webhook subscription sweep failed"));
   });
 }
 
@@ -314,6 +324,7 @@ Promise.all([
     }
     logger.info({ port }, "NexOS AI API Server listening");
     scheduleRecordingOrganizationSweep();
+    scheduleInstagramWebhookSubscriptionSweep();
     startRegionalAcquisitionScheduler();
   });
 }).catch(async (err) => {
@@ -324,6 +335,7 @@ Promise.all([
   httpServer.listen(port, () => {
     logger.info({ port }, "NexOS AI API Server listening (cleanup failed)");
     scheduleRecordingOrganizationSweep();
+    scheduleInstagramWebhookSubscriptionSweep();
     startRegionalAcquisitionScheduler();
   });
 });

@@ -52,6 +52,85 @@ const META_SCOPES = [
   "business_management",
 ].join(",");
 
+const INSTAGRAM_WEBHOOK_FIELDS = [
+  "comments",
+  "messages",
+  "messaging_postbacks",
+] as const;
+
+export async function ensureInstagramWebhookSubscription(
+  accountId: string,
+  accessToken: string,
+): Promise<void> {
+  const response = await metaGraphFetch(
+    metaGraphUrl(`${accountId}/subscribed_apps`),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        subscribed_fields: INSTAGRAM_WEBHOOK_FIELDS.join(","),
+        access_token: accessToken,
+      }),
+    },
+  );
+  const payload = (await response.json()) as {
+    success?: boolean;
+    error?: { message?: string; code?: number };
+  };
+  if (!response.ok || payload.success !== true) {
+    throw new AppError(
+      502,
+      payload.error?.message ?? "Meta rejected the Instagram webhook subscription",
+      "META_WEBHOOK_SUBSCRIPTION_FAILED",
+    );
+  }
+}
+
+export async function reconcileInstagramWebhookSubscriptions(): Promise<{
+  subscribed: number;
+  failed: number;
+}> {
+  const integrations = await db
+    .select({
+      accountId: workspaceIntegrationsTable.accountId,
+      accessToken: workspaceIntegrationsTable.accessToken,
+    })
+    .from(workspaceIntegrationsTable)
+    .where(
+      and(
+        eq(workspaceIntegrationsTable.provider, "instagram"),
+        eq(workspaceIntegrationsTable.status, "connected"),
+      ),
+    );
+
+  let subscribed = 0;
+  let failed = 0;
+  for (const integration of integrations) {
+    if (!integration.accountId || !integration.accessToken) {
+      failed += 1;
+      continue;
+    }
+    try {
+      await ensureInstagramWebhookSubscription(
+        integration.accountId,
+        integration.accessToken,
+      );
+      subscribed += 1;
+      logger.info(
+        { accountId: integration.accountId, fields: INSTAGRAM_WEBHOOK_FIELDS },
+        "Instagram webhook subscription verified",
+      );
+    } catch (err) {
+      failed += 1;
+      logger.error(
+        { err, accountId: integration.accountId },
+        "Instagram webhook subscription failed",
+      );
+    }
+  }
+  return { subscribed, failed };
+}
+
 const TIKTOK_SCOPES = [
   "user.info.basic",
   "video.publish",
@@ -193,6 +272,14 @@ export async function handleMetaCallback(
         metadata: metadataForPurpose("organic_social", { username: ig.username, pageId: page.id }),
       });
       savedIntegrations.push(igIntegration);
+      try {
+        await ensureInstagramWebhookSubscription(ig.id, page.access_token);
+      } catch (err) {
+        logger.error(
+          { err, accountId: ig.id },
+          "Meta OAuth completed but Instagram webhook subscription failed",
+        );
+      }
     }
   }
 
