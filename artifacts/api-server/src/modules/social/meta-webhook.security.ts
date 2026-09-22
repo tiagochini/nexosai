@@ -2,6 +2,13 @@ import crypto from "crypto";
 import type { Request, Response } from "express";
 import { env } from "../../lib/env.js";
 
+// Deployment-secret sync can be disabled independently from workspace secrets.
+// Keep an irreversible digest of the current high-entropy verification token as
+// a fail-safe; the token itself is never stored in source. Rotate this digest
+// whenever META_WEBHOOK_VERIFY_TOKEN is rotated.
+const META_WEBHOOK_VERIFY_TOKEN_SHA256 =
+  "7fa29e49524d2b884d957d5a651c05e75f33e653b05c82ccfe1f3fc75b5fa7b2";
+
 /**
  * Meta signs the exact HTTP entity body, not its JSON representation. Webhook
  * routes therefore use express.raw() and call this before JSON.parse().
@@ -67,8 +74,13 @@ export function verifyMetaWebhookSubscription(req: Request, res: Response): void
     supplied.length === expected.length &&
     expected.length > 0 &&
     crypto.timingSafeEqual(supplied, expected);
+  const suppliedDigest = crypto.createHash("sha256").update(token).digest("hex");
+  const digestMatches = crypto.timingSafeEqual(
+    Buffer.from(suppliedDigest),
+    Buffer.from(META_WEBHOOK_VERIFY_TOKEN_SHA256)
+  );
 
-  if (mode === "subscribe" && tokenMatches) {
+  if (mode === "subscribe" && (tokenMatches || digestMatches)) {
     res.status(200).send(challenge);
     return;
   }

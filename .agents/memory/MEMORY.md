@@ -93,3 +93,4 @@
 - [Market Intelligence Provider Routing](market-intel-provider-routing.md) — provider map and task-type router must agree on the intended provider.
 - [Pre-launch Checkout Gate](prelaunch-checkout-gate.md) — landing follows a PLF pre-launch funnel; public checkout stays closed until governed Meta Ads integration is fully ready.
 - [Supplier-Direct Infrastructure Billing](supplier-direct-infrastructure-billing.md) — domain/hosting suppliers bill clients directly; NexOS configures only after verified provisioning.
+- [Meta Verify Token Digest Fallback](meta-verify-token-digest-fallback.md) — webhook GET accepts the runtime secret or a pinned SHA-256 digest when Replit deployment-secret sync is disabled.
