@@ -76,9 +76,9 @@ export async function executeMetaLaunchTree(
 ): Promise<LaunchCreateResult[]> {
   const created: LaunchCreateResult[] = [];
   const create = async (path: string, payload: Record<string, unknown>, key: string, entityType: PaidMediaEntityKind, parentProviderEntityId?: string) => {
-    const body = await transport(path, { ...payload, status: "PAUSED" }, key);
+    const body = await transport(path, { ...payload, ...(entityType === "creative" ? {} : { status: "PAUSED" }) }, key);
     const id = String(body["id"] ?? "");
-    if (!id || String(body["status"] ?? "PAUSED") !== "PAUSED") throw new PaidMediaProviderError("Meta create readback verification failed.", "PROVIDER_ERROR", 502);
+    if (!id || (entityType !== "creative" && String(body["status"] ?? "PAUSED") !== "PAUSED")) throw new PaidMediaProviderError("Meta create readback verification failed.", "PROVIDER_ERROR", 502);
     const result = { providerEntityId: id, entityType, parentProviderEntityId, evidence: body };
     created.push(result); return result;
   };
@@ -150,6 +150,8 @@ export interface PaidMediaProviderAdapter {
   /** @deprecated Launch orchestration uses the ordered single-step methods below. */
   createLaunchTree?(workspaceId: string, accountId: string, tree: Record<string, unknown>, idempotencyKey: string): Promise<LaunchCreateResult[]>;
   createLaunchEntity?(workspaceId: string, accountId: string, type: PaidMediaEntityKind, payload: Record<string, unknown>, idempotencyKey: string): Promise<LaunchCreateResult>;
+  /** Reconcile an intent after the local process crashed after provider acceptance. */
+  reconcileLaunchEntity?(workspaceId: string, accountId: string, type: PaidMediaEntityKind, payload: Record<string, unknown>, idempotencyKey: string): Promise<LaunchCreateResult | undefined>;
   readLaunchEntity?(workspaceId: string, accountId: string, type: PaidMediaEntityKind, entityId: string): Promise<ProviderEntity>;
   verifyLaunchEntityAbsence?(workspaceId: string, accountId: string, type: PaidMediaEntityKind, entityId: string): Promise<{ absent: boolean; evidence: Record<string, unknown> }>;
   deleteEntity?(workspaceId: string, accountId: string, entityId: string, idempotencyKey: string): Promise<ProviderActionResult>;
@@ -273,15 +275,16 @@ export async function sendGoogleAdsRequest(
   return { body, requestId: response.headers.get("request-id") ?? undefined };
 }
 
-async function request(url: string, init: RequestInit, token?: string): Promise<Record<string, unknown>> {
+async function request(url: string, init: RequestInit, token?: string, options: { retry?: boolean } = {}): Promise<Record<string, unknown>> {
   let response: Response | undefined;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  const maxAttempts = options.retry === false ? 1 : 3;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
       response = await (url.startsWith("https://graph.facebook.com/")
         ? metaGraphFetch(url, { ...init, signal: AbortSignal.timeout(15_000) })
         : fetch(url, { ...init, signal: AbortSignal.timeout(15_000) }));
       if (response.status !== 429 && response.status < 500) break;
-      if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 250 * (2 ** attempt)));
+      if (attempt < maxAttempts - 1) await new Promise((resolve) => setTimeout(resolve, 250 * (2 ** attempt)));
     } catch (error) {
       if (attempt === 2) throw new PaidMediaProviderError(`Provider request failed: ${redact(error instanceof Error ? error.message : String(error))}`, "PROVIDER_ERROR");
     }
@@ -339,7 +342,7 @@ class MetaAdsAdapter implements PaidMediaProviderAdapter {
     const campaign = (tree["campaign"] ?? {}) as Record<string, unknown>;
     const created: LaunchCreateResult[] = [];
     const post = async (path: string, payload: Record<string, unknown>, key: string, entityType: PaidMediaEntityKind, parentProviderEntityId?: string) => {
-      const body = await request(this.url(path, token), { method: "POST", headers: { "Content-Type": "application/json", "X-NexOS-Idempotency-Key": key }, body: JSON.stringify({ ...payload, status: "PAUSED", access_token: token }) }, token);
+       const body = await request(this.url(path, token), { method: "POST", headers: { "Content-Type": "application/json", "X-NexOS-Idempotency-Key": key }, body: JSON.stringify({ ...payload, status: "PAUSED", access_token: token }) }, token, { retry: false });
       const id = String(body["id"] ?? "");
       if (!id) throw new PaidMediaProviderError("Meta did not return a created entity id.", "PROVIDER_ERROR", 502);
       const readback = await request(this.url(id, token, { fields: "id,status,name,updated_time" }), {}, token);
@@ -369,17 +372,22 @@ class MetaAdsAdapter implements PaidMediaProviderAdapter {
     const [account] = await db.select({ integrationId: paidMediaAccountsTable.integrationId }).from(paidMediaAccountsTable).where(and(eq(paidMediaAccountsTable.id, accountId), eq(paidMediaAccountsTable.workspaceId, workspaceId), eq(paidMediaAccountsTable.provider, this.provider))).limit(1);
     if (!account) throw new PaidMediaProviderError("Selected advertiser account is not owned by this workspace.", "PRECONDITION_FAILED", 409);
     const token = await this.token(workspaceId, account.integrationId);
-    const body = await request(this.url(entityId, token), { method: "DELETE", headers: { "X-NexOS-Idempotency-Key": idempotencyKey } }, token);
+      const body = await request(this.url(entityId, token), { method: "DELETE", headers: { "X-NexOS-Idempotency-Key": idempotencyKey } }, token, { retry: false });
     return { providerRequestId: entityId, evidence: body };
   }
   async createLaunchEntity(workspaceId: string, accountId: string, type: PaidMediaEntityKind, payload: Record<string, unknown>, idempotencyKey: string): Promise<LaunchCreateResult> {
     const [account] = await db.select({ integrationId: paidMediaAccountsTable.integrationId, providerAccountId: paidMediaAccountsTable.providerAccountId }).from(paidMediaAccountsTable).where(and(eq(paidMediaAccountsTable.id, accountId), eq(paidMediaAccountsTable.workspaceId, workspaceId), eq(paidMediaAccountsTable.provider, this.provider))).limit(1);
     if (!account) throw new PaidMediaProviderError("Selected advertiser account is not owned by this workspace.", "PRECONDITION_FAILED", 409);
     const token = await this.token(workspaceId, account.integrationId);
-    const body = await request(this.url(`${account.providerAccountId}/${entityPath(type)}`, token), { method: "POST", headers: { "Content-Type": "application/json", "X-NexOS-Idempotency-Key": idempotencyKey }, body: JSON.stringify({ ...payload, status: "PAUSED", access_token: token }) }, token);
+     const body = await request(this.url(`${account.providerAccountId}/${entityPath(type)}`, token), { method: "POST", headers: { "Content-Type": "application/json", "X-NexOS-Idempotency-Key": idempotencyKey }, body: JSON.stringify({ ...payload, ...(type === "creative" ? {} : { status: "PAUSED" }), access_token: token }) }, token, { retry: false });
     const id = String(body["id"] ?? "");
     if (!id) throw new PaidMediaProviderError("Meta did not return a created entity id.", "PROVIDER_ERROR", 502);
     return { providerEntityId: id, entityType: type, parentProviderEntityId: typeof payload["campaign_id"] === "string" ? payload["campaign_id"] : typeof payload["adset_id"] === "string" ? payload["adset_id"] : undefined, evidence: body };
+  }
+  async reconcileLaunchEntity(_workspaceId: string, _accountId: string, _type: PaidMediaEntityKind, _payload: Record<string, unknown>, _idempotencyKey: string): Promise<LaunchCreateResult | undefined> {
+    // Meta's API does not expose a trustworthy lookup by our idempotency
+    // header. Never guess by name after an ambiguous timeout.
+    return undefined;
   }
   async readLaunchEntity(workspaceId: string, accountId: string, type: PaidMediaEntityKind, entityId: string): Promise<ProviderEntity> {
     const entity = await this.getEntitySnapshot(workspaceId, accountId, entityId, type);

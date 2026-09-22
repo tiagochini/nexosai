@@ -7,6 +7,7 @@ import {
   jsonb,
   integer,
   boolean,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -110,7 +111,9 @@ export const socialPostsTable = pgTable("social_posts", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-});
+}, (table) => [
+  uniqueIndex("social_posts_workspace_id_uidx").on(table.workspaceId, table.id),
+]);
 
 export const insertSocialPostSchema = createInsertSchema(
   socialPostsTable

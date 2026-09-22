@@ -7,7 +7,152 @@ export type PublishResult = {
   platformPostId?: string;
   platformUrl?: string;
   error?: string;
+  /** HTTP status is retained for deterministic retry classification only. */
+  statusCode?: number;
+  ambiguous?: boolean;
+  pending?: boolean;
+  definitiveRejected?: boolean;
 };
+export class ProviderOutcomeError extends Error {
+  constructor(message: string, readonly statusCode?: number, readonly ambiguous = false) { super(message); }
+}
+export function classifyProviderError(error: unknown): Pick<PublishResult, "ambiguous" | "statusCode" | "definitiveRejected"> {
+  if (error instanceof ProviderOutcomeError) {
+    return {
+      ambiguous: error.ambiguous,
+      statusCode: error.statusCode,
+      definitiveRejected: Boolean(error.statusCode && error.statusCode >= 400 && error.statusCode < 500 && !error.ambiguous),
+    };
+  }
+  return { ambiguous: true };
+}
+export async function persistPostMutationStage(
+  callback: PublishOptions["onStage"],
+  stage: { name: string; providerId?: string },
+): Promise<void> {
+  try {
+    await callback?.(stage);
+  } catch {
+    throw new ProviderOutcomeError("Provider mutation stage persistence failed", undefined, true);
+  }
+}
+export function requireProviderId(id: unknown, provider: string): asserts id is string {
+  if (typeof id !== "string" || id.length === 0) {
+    throw new ProviderOutcomeError(`${provider} mutation returned no provider id`, undefined, true);
+  }
+}
+export type PublishOptions = {
+  attemptKey?: string;
+  onStage?: (stage: { name: string; providerId?: string; intent?: boolean }) => Promise<void>;
+};
+
+export type ProviderReadback = {
+  confirmed: boolean;
+  pending?: boolean;
+  platformPostId?: string;
+  platformUrl?: string;
+  accountId?: string;
+};
+
+/** Credential/permission probe. It deliberately returns no provider payload. */
+export async function probeSocialIntegration(
+  platform: SocialPost["platform"],
+  integration: WorkspaceIntegration,
+): Promise<{ ok: boolean; statusCode?: number; error?: string }> {
+  if (!integration.accessToken || !integration.accountId) return { ok: false, error: "integration_credentials_missing" };
+  if (platform === "instagram" || platform === "facebook_page") {
+    const metadata = (integration.metadata ?? {}) as Record<string, unknown>;
+    const pageId = typeof metadata.pageId === "string" ? metadata.pageId : undefined;
+    const probeId = platform === "instagram" && pageId ? pageId : integration.accountId;
+    const fields = platform === "instagram" && pageId ? "id,instagram_business_account" : "id";
+    const response = await metaGraphFetch(
+      `https://graph.facebook.com/v22.0/${encodeURIComponent(probeId)}?fields=${fields}&access_token=${encodeURIComponent(integration.accessToken)}`,
+    );
+    if (!response.ok) return { ok: false, statusCode: response.status, error: "provider_probe_failed" };
+    const body = await response.json() as { instagram_business_account?: { id?: string } };
+    if (platform === "instagram" && pageId) {
+      if (body.instagram_business_account?.id !== integration.accountId) {
+        return { ok: false, error: "integration_account_mismatch" };
+      }
+    }
+    const permissionsResponse = await metaGraphFetch(
+      `https://graph.facebook.com/v22.0/${encodeURIComponent(pageId ?? integration.accountId!)}?fields=tasks&access_token=${encodeURIComponent(integration.accessToken)}`,
+    );
+    if (!permissionsResponse.ok) return { ok: false, statusCode: permissionsResponse.status, error: "provider_permissions_unproven" };
+    const permissionsBody = await permissionsResponse.json() as { tasks?: string[] };
+    const tasks = permissionsBody.tasks;
+    const required = platform === "instagram"
+      ? ["MANAGE"] : ["CREATE_CONTENT"];
+    if (!tasks || required.some((name) => !tasks.some((task) => task.toUpperCase() === name))) {
+      return { ok: false, error: "provider_permissions_unproven" };
+    }
+    return { ok: true };
+  }
+  if (platform === "tiktok") {
+    const response = await fetch("https://open.tiktokapis.com/v2/user/info/?fields=open_id", {
+      headers: { Authorization: `Bearer ${integration.accessToken}` },
+    });
+    if (!response.ok) return { ok: false, statusCode: response.status, error: "provider_probe_failed" };
+    const body = await response.json() as { data?: { user?: { open_id?: string } } };
+    if (body.data?.user?.open_id && body.data.user.open_id !== integration.accountId) {
+      return { ok: false, error: "integration_account_mismatch" };
+    }
+  }
+  return { ok: true };
+}
+
+/** Independent readback; a submit receipt alone never confirms publication. */
+export async function readBackSocialPost(
+  platform: SocialPost["platform"],
+  integration: WorkspaceIntegration,
+  providerPostId: string,
+  postType?: SocialPost["postType"],
+): Promise<ProviderReadback> {
+  if ((platform === "instagram" || platform === "facebook_page") && integration.accessToken) {
+    if (platform === "instagram") {
+      const response = await metaGraphFetch(
+        `https://graph.facebook.com/v22.0/${encodeURIComponent(integration.accountId!)}\/${postType === "story" ? "stories" : "media"}?fields=id,permalink&limit=100&access_token=${encodeURIComponent(integration.accessToken)}`,
+      );
+      if (!response.ok) return { confirmed: false, pending: response.status === 404 || response.status === 408 || response.status === 429 || response.status >= 500 };
+      const body = await response.json() as { data?: Array<{ id?: string; permalink?: string }> };
+      const match = body.data?.find((item) => item.id === providerPostId);
+      return match ? { confirmed: true, platformPostId: match.id, platformUrl: match.permalink } : { confirmed: false, pending: true };
+    }
+    const response = await metaGraphFetch(
+      `https://graph.facebook.com/v22.0/${encodeURIComponent(providerPostId)}?fields=id,from,permalink_url&access_token=${encodeURIComponent(integration.accessToken)}`,
+    );
+    if (!response.ok) return { confirmed: false, pending: response.status === 404 || response.status === 408 || response.status === 429 || response.status >= 500 };
+    const body = await response.json() as { id?: string; from?: { id?: string }; permalink_url?: string };
+    const accountId = body.from?.id;
+    return {
+      confirmed: body.id === providerPostId && accountId === integration.accountId,
+      pending: !body.id,
+      platformPostId: body.id,
+      platformUrl: body.permalink_url,
+      accountId,
+    };
+  }
+  // TikTok's publish status endpoint is the provider-supported readback.
+  if (platform === "tiktok" && integration.accessToken) {
+    for (let i = 0; i < 6; i++) {
+      const response = await fetch("https://open.tiktokapis.com/v2/post/publish/status/fetch/", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${integration.accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ publish_id: providerPostId }),
+      });
+      if (!response.ok) return { confirmed: false, pending: response.status === 408 || response.status === 429 || response.status >= 500 };
+      const body = await response.json() as { data?: { status?: string; publicaly_available_post_id?: string[] } };
+      const status = body.data?.status?.toUpperCase();
+      const videoId = body.data?.publicaly_available_post_id?.[0];
+      if (status === "PUBLISH_COMPLETE" && videoId) {
+        return { confirmed: true, platformPostId: videoId, platformUrl: `https://www.tiktok.com/` };
+      }
+      if (["FAILED", "PUBLISH_FAILED"].includes(status ?? "")) return { confirmed: false };
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+  return platform === "tiktok" ? { confirmed: false, pending: true } : { confirmed: false };
+}
 
 export type MetricsResult = {
   likes: number;
@@ -30,16 +175,27 @@ async function metaGraphRequest<T>(
   if (params) {
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   }
-  const res = await metaGraphFetch(url.toString(), {
-    ...fetchOptions,
-    headers: { "Content-Type": "application/json", ...fetchOptions.headers },
-  });
-  const data = (await res.json()) as T & { error?: { message: string } };
+  let res: Response;
+  try {
+    res = await metaGraphFetch(url.toString(), {
+      ...fetchOptions,
+      headers: { "Content-Type": "application/json", ...fetchOptions.headers },
+    });
+  } catch (error) {
+    throw new ProviderOutcomeError("Meta mutation transport failed", undefined, true);
+  }
+  let data: T & { error?: { message: string } };
+  try {
+    data = await res.json() as T & { error?: { message: string } };
+  } catch {
+    if (fetchOptions.method === "POST") throw new ProviderOutcomeError("Meta mutation response was not parseable", res.status, true);
+    throw new ProviderOutcomeError("Meta response was not parseable", res.status, false);
+  }
   if (!res.ok || (data as { error?: { message: string } }).error) {
     const msg =
       (data as { error?: { message: string } }).error?.message ??
       `Meta API error ${res.status}`;
-    throw new Error(msg);
+    throw new ProviderOutcomeError(msg, res.status, res.status === 408 || res.status === 429 || res.status >= 500);
   }
   return data;
 }
@@ -76,7 +232,8 @@ async function waitForInstagramContainer(
 
 export async function publishToInstagram(
   post: SocialPost,
-  integration: WorkspaceIntegration
+  integration: WorkspaceIntegration,
+  options?: PublishOptions,
 ): Promise<PublishResult> {
   try {
     const token = integration.accessToken;
@@ -95,6 +252,7 @@ export async function publishToInstagram(
       // Create child containers
       const childIds: string[] = [];
       for (const url of mediaUrls) {
+        await options?.onStage?.({ name: "child_container_intent", intent: true });
         const isVideo = /\.(mp4|mov|avi)$/i.test(url);
         const child = await metaGraphRequest<{ id: string }>(
           `/${igAccountId}/media`,
@@ -107,6 +265,7 @@ export async function publishToInstagram(
             }),
           }
         );
+        requireProviderId(child.id, "Instagram child container");
         childIds.push(child.id);
         // A carousel parent can only reference children once each is processed.
         await waitForInstagramContainer(
@@ -116,6 +275,7 @@ export async function publishToInstagram(
         );
       }
       // Create carousel container
+      await options?.onStage?.({ name: "parent_container_intent", intent: true });
       const container = await metaGraphRequest<{ id: string }>(
         `/${igAccountId}/media`,
         {
@@ -128,9 +288,12 @@ export async function publishToInstagram(
           }),
         }
       );
+      requireProviderId(container.id, "Instagram container");
+      await persistPostMutationStage(options?.onStage, { name: "container_created", providerId: container.id });
       // Aguardar container ficar pronto (obrigatório para não receber "Media ID is not available")
       await waitForInstagramContainer(container.id, token);
       // Publish
+      await options?.onStage?.({ name: "media_publish_intent", intent: true });
       const published = await metaGraphRequest<{ id: string }>(
         `/${igAccountId}/media_publish`,
         {
@@ -141,6 +304,8 @@ export async function publishToInstagram(
           }),
         }
       );
+      requireProviderId(published.id, "Instagram media publish");
+      await persistPostMutationStage(options?.onStage, { name: "media_published", providerId: published.id });
       return {
         success: true,
         platformPostId: published.id,
@@ -175,16 +340,20 @@ export async function publishToInstagram(
       body["image_url"] = mediaUrl;
     }
 
+    await options?.onStage?.({ name: "container_created_intent", intent: true });
     const container = await metaGraphRequest<{ id: string }>(
       `/${igAccountId}/media`,
       { method: "POST", body: JSON.stringify(body) }
     );
+    requireProviderId(container.id, "Instagram container");
+    await persistPostMutationStage(options?.onStage, { name: "container_created", providerId: container.id });
 
     // Vídeos (Reels, feed_video, story-video) precisam de até 5 min para processar no Instagram.
     // Imagens ficam prontas em segundos — mantemos 30s como fallback seguro.
     const containerWaitMs = (isVideo || isStoryVideoUrl) ? 300_000 : 30_000;
     await waitForInstagramContainer(container.id, token, containerWaitMs);
 
+    await options?.onStage?.({ name: "media_publish_intent", intent: true });
     const published = await metaGraphRequest<{ id: string }>(
       `/${igAccountId}/media_publish`,
       {
@@ -195,6 +364,8 @@ export async function publishToInstagram(
         }),
       }
     );
+    requireProviderId(published.id, "Instagram media publish");
+    await persistPostMutationStage(options?.onStage, { name: "media_published", providerId: published.id });
 
     // Stories use a different URL scheme; carousel/feed use /p/
     const platformUrl =
@@ -209,6 +380,7 @@ export async function publishToInstagram(
     };
   } catch (err) {
     const raw = err instanceof Error ? err.message : String(err);
+    const outcome = err instanceof ProviderOutcomeError ? err : undefined;
     logger.error({ err, postId: post.id }, "Instagram publish failed");
     // Meta permission/auth errors → mensagem acionável em vez de texto técnico da API
     const isPermissionError =
@@ -216,13 +388,14 @@ export async function publishToInstagram(
     const msg = isPermissionError
       ? `Conta Instagram desconectada ou token expirado. Reconecte em /integracoes para voltar a publicar. (Detalhe técnico: ${raw})`
       : raw;
-    return { success: false, error: msg };
+    return { success: false, error: msg, statusCode: outcome?.statusCode, ambiguous: outcome?.ambiguous || /lease|stage persistence/i.test(msg), definitiveRejected: Boolean(outcome?.statusCode && outcome.statusCode >= 400 && outcome.statusCode < 500 && !outcome.ambiguous) };
   }
 }
 
 export async function publishToFacebook(
   post: SocialPost,
-  integration: WorkspaceIntegration
+  integration: WorkspaceIntegration,
+  options?: PublishOptions,
 ): Promise<PublishResult> {
   try {
     const token = integration.accessToken;
@@ -243,6 +416,7 @@ export async function publishToFacebook(
       // then attaching their media IDs to one feed post. This preserves slide order.
       const photoIds: string[] = [];
       for (const url of mediaUrls) {
+        await options?.onStage?.({ name: "unpublished_photo_intent", intent: true });
         const photo = await metaGraphRequest<{ id: string }>(`/${pageId}/photos`, {
           method: "POST",
           body: JSON.stringify({
@@ -251,8 +425,11 @@ export async function publishToFacebook(
             access_token: token,
           }),
         });
+        requireProviderId(photo.id, "Facebook photo");
+        await persistPostMutationStage(options?.onStage, { name: "unpublished_photo_created", providerId: photo.id });
         photoIds.push(photo.id);
       }
+      await options?.onStage?.({ name: "feed_publish_intent", intent: true });
       const result = await metaGraphRequest<{ id: string }>(`/${pageId}/feed`, {
         method: "POST",
         body: JSON.stringify({
@@ -261,6 +438,8 @@ export async function publishToFacebook(
           access_token: token,
         }),
       });
+      requireProviderId(result.id, "Facebook feed");
+      await persistPostMutationStage(options?.onStage, { name: "published", providerId: result.id });
       return {
         success: true,
         platformPostId: result.id,
@@ -291,10 +470,13 @@ export async function publishToFacebook(
       body["link"] = post.linkUrl;
     }
 
+    await options?.onStage?.({ name: "publish_intent", intent: true });
     const result = await metaGraphRequest<{ id: string }>(endpoint, {
       method: "POST",
       body: JSON.stringify(body),
     });
+    requireProviderId(result.id, "Facebook publish");
+    await persistPostMutationStage(options?.onStage, { name: "published", providerId: result.id });
 
     return {
       success: true,
@@ -303,14 +485,18 @@ export async function publishToFacebook(
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    const outcome = err instanceof ProviderOutcomeError ? err : undefined;
     logger.error({ err, postId: post.id }, "Facebook publish failed");
     const isPermissionError =
       /does not exist|missing permissions|OAuthException|invalid token|token|Invalid OAuth/i.test(msg);
     return {
       success: false,
-      error: isPermissionError
+        error: isPermissionError
         ? `Página Facebook desconectada ou token expirado. Reconecte em /integracoes para voltar a publicar. (Detalhe técnico: ${msg})`
         : msg,
+        statusCode: outcome?.statusCode,
+        ambiguous: outcome?.ambiguous || /lease|stage persistence/i.test(msg),
+        definitiveRejected: Boolean(outcome?.statusCode && outcome.statusCode >= 400 && outcome.statusCode < 500 && !outcome.ambiguous),
     };
   }
 }
@@ -361,7 +547,8 @@ export async function getInstagramMetrics(
 
 export async function publishToTikTok(
   post: SocialPost,
-  integration: WorkspaceIntegration
+  integration: WorkspaceIntegration,
+  options?: PublishOptions,
 ): Promise<PublishResult> {
   try {
     const token = integration.accessToken;
@@ -376,7 +563,10 @@ export async function publishToTikTok(
     const caption = buildCaption(post.caption, post.hashtags as string[]);
 
     // TikTok Content Posting API v2
-    const initRes = await fetch(
+    await options?.onStage?.({ name: "publish_init_intent", intent: true });
+    let initRes: Response;
+    try {
+      initRes = await fetch(
       "https://open.tiktokapis.com/v2/post/publish/video/init/",
       {
         method: "POST",
@@ -398,23 +588,35 @@ export async function publishToTikTok(
             video_url: videoUrl,
           },
         }),
-      }
-    );
+        }
+      );
+    } catch {
+      return { success: false, error: "TikTok mutation transport failed", ambiguous: true };
+    }
 
-    const initData = (await initRes.json()) as {
+    let initData: {
       data?: { publish_id?: string };
       error?: { message: string };
     };
+    try {
+      initData = await initRes.json() as typeof initData;
+    } catch {
+      return { success: false, error: "TikTok mutation response was not parseable", statusCode: initRes.status, ambiguous: true };
+    }
 
     if (!initRes.ok || initData.error) {
       return {
         success: false,
         error: initData.error?.message ?? `TikTok API error ${initRes.status}`,
+        statusCode: initRes.status,
+        ambiguous: initRes.status === 408 || initRes.status === 429 || initRes.status >= 500,
+        definitiveRejected: initRes.status >= 400 && initRes.status < 500 && ![408, 429].includes(initRes.status),
       };
     }
 
     const publishId = initData.data?.publish_id;
-    if (!publishId) return { success: false, error: "TikTok: no publish_id" };
+    requireProviderId(publishId, "TikTok publish init");
+    await persistPostMutationStage(options?.onStage, { name: "publish_initialized", providerId: publishId });
 
     return {
       success: true,
@@ -423,8 +625,9 @@ export async function publishToTikTok(
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    const outcome = err instanceof ProviderOutcomeError ? err : undefined;
     logger.error({ err, postId: post.id }, "TikTok publish failed");
-    return { success: false, error: msg };
+    return { success: false, error: msg, statusCode: outcome?.statusCode, ambiguous: outcome?.ambiguous || /lease|stage persistence/i.test(msg), definitiveRejected: Boolean(outcome?.statusCode && outcome.statusCode >= 400 && outcome.statusCode < 500 && !outcome.ambiguous) };
   }
 }
 

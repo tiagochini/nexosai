@@ -35,6 +35,18 @@ description: Decisions and constraints for the social presence automated publish
 - After ANY schema change to `lib/db/src/schema/`: run `cd lib/db && pnpm exec tsc --build` BEFORE compiling api-server
 - Then run `cd lib/db && pnpm run push` to migrate the DB
 
+## Provider mutation recovery
+- Persist a tenant-scoped attempt and a pre-submit intent before every external mutation, including every child of a carousel.
+- Persist intermediate provider IDs separately from the final published-object ID; intermediate photos/containers can never confirm publication.
+- Network loss, timeout, 408/429/5xx, malformed 2xx receipts, or failure to persist a returned receipt are ambiguous outcomes. Never resubmit them blindly.
+- Recovery first reconciles stored provider IDs or account-scoped provider lookup. If the provider cannot prove the outcome, stop for manual recovery.
+- TikTok pending publishes keep polling the stored `publish_id` across scheduler runs; they never re-run publish initialization.
+- Meta preflight must use token-compatible account tasks/capabilities. Instagram Stories use the Stories edge for ownership readback; Facebook 404 immediately after publish is eventual consistency, not immediate failure.
+
+**Why:** Multiple reviews found that generic retry logic and treating intermediate IDs as final receipts could duplicate posts or falsely mark unpublished carousels as published.
+
+**How to apply:** Every new publisher/format must use the same intent → mutation → persisted receipt → independent account-scoped readback contract. Add focused tests for malformed receipts, ambiguous transport failures, lease loss and provider-specific pending states.
+
 ## Meta App Review video skip
 - User uses app for own company only (not third-party platform) → Standard/Development mode
 - Add own Instagram accounts directly as app users in Meta Developer Console

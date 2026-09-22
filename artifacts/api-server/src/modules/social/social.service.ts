@@ -1,4 +1,5 @@
-import { eq, and, lte, inArray, isNull } from "drizzle-orm";
+import { eq, and, or, lte, inArray, isNull } from "drizzle-orm";
+import { createHash, randomUUID } from "node:crypto";
 import {
   db,
   socialPostsTable,
@@ -6,6 +7,7 @@ import {
   campaignsTable,
   contentPiecesTable,
   executionEvidenceTable,
+  socialPublishAttemptsTable,
   socialConversationTurnsTable,
   type InsertSocialPost,
   type SocialPost,
@@ -22,6 +24,8 @@ import {
   sendWhatsAppMessage,
   getInstagramMetrics,
   getTikTokMetrics,
+  probeSocialIntegration,
+  readBackSocialPost,
 } from "./social.publisher.js";
 import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import jwt from "jsonwebtoken";
@@ -858,7 +862,7 @@ export async function publishPost(workspaceId: string, postId: string): Promise<
   // publish a post belonging to another workspace.
   const post = await getPost(workspaceId, postId);
   if (post.status === "published") return post;
-  if (!["scheduled", "draft"].includes(post.status)) {
+  if (["failed", "cancelled"].includes(post.status)) {
     throw new AppError(400, `Cannot publish post in status: ${post.status}`, "INVALID_STATUS");
   }
   const approvedDossier = post.campaignId ? await getApprovedMasterplan(workspaceId, post.campaignId) : undefined;
@@ -876,32 +880,170 @@ export async function publishPost(workspaceId: string, postId: string): Promise<
     });
   }
 
-  // Mark as publishing
-  await db
-    .update(socialPostsTable)
-    .set({ status: "publishing", updatedAt: new Date() })
-    .where(and(eq(socialPostsTable.id, postId), eq(socialPostsTable.workspaceId, workspaceId)));
-  await db.insert(executionEvidenceTable).values({
-    workspaceId, campaignId: post.campaignId, masterplanVersionId: post.masterplanVersionId, contextFingerprint: post.contextFingerprint,
-    subjectType: "social_post", subjectId: post.id, state: "attempted", details: { platform: post.platform },
-  });
-
   const integration = await getIntegration(workspaceId, post.integrationId);
-  if (!integration || integration.status !== "connected") {
+  const expectedProvider = post.platform === "instagram" ? "instagram"
+    : post.platform === "facebook_page" ? "meta_ads" : post.platform === "tiktok" ? "tiktok_ads" : null;
+  if (!integration || (expectedProvider && integration.provider !== expectedProvider)) {
+    await markFailed(workspaceId, postId, "Integração incompatível com a plataforma do post");
+    throw new AppError(400, "Integração incompatível", "INTEGRATION_ERROR");
+  }
+  if (!integration || integration.status !== "connected" ||
+      (integration.tokenExpiresAt && integration.tokenExpiresAt <= new Date())) {
+    if (integration && integration.status === "connected" && integration.tokenExpiresAt && integration.tokenExpiresAt <= new Date()) {
+      await db.update(workspaceIntegrationsTable).set({ status: "expired", updatedAt: new Date() })
+        .where(and(eq(workspaceIntegrationsTable.id, integration.id), eq(workspaceIntegrationsTable.workspaceId, workspaceId)));
+    }
     await markFailed(workspaceId, postId, "Integração não conectada ou expirada");
     throw new AppError(400, "Integração não conectada", "INTEGRATION_ERROR");
   }
+  const probe = await probeSocialIntegration(post.platform, integration);
+  if (!probe.ok) {
+    if (probe.statusCode && (probe.statusCode === 429 || probe.statusCode >= 500)) {
+      const retryCount = post.retryCount + 1;
+      const nextAttempt = new Date(Date.now() + Math.min(15 * 60_000, 60_000 * (2 ** Math.min(retryCount - 1, 3))));
+      await db.update(socialPostsTable).set({ status: "scheduled", retryCount, scheduledAt: nextAttempt, errorMessage: "Provider temporariamente indisponível", updatedAt: new Date() })
+        .where(and(eq(socialPostsTable.id, postId), eq(socialPostsTable.workspaceId, workspaceId)));
+      throw new AppError(503, "Provider temporariamente indisponível", "PUBLISH_RETRYABLE");
+    }
+    if (probe.statusCode === 401 || probe.statusCode === 403) {
+      await db.update(workspaceIntegrationsTable).set({ status: "expired", updatedAt: new Date() })
+        .where(and(eq(workspaceIntegrationsTable.id, integration.id), eq(workspaceIntegrationsTable.workspaceId, workspaceId)));
+    }
+    await markFailed(workspaceId, postId, "Integração não autorizada para publicação");
+    throw new AppError(400, "Integração não autorizada", "INTEGRATION_ERROR");
+  }
+
+  const fingerprint = createHash("sha256").update(JSON.stringify({
+    platform: post.platform, postType: post.postType, caption: post.caption ?? "",
+    hashtags: post.hashtags ?? [], mediaUrls: post.mediaUrls ?? [], linkUrl: post.linkUrl ?? "",
+  })).digest("hex");
+  // One durable attempt identity spans retries and process restarts. The attempt
+  // row, rather than the post status, is the authoritative external-action lease.
+  const attemptKey = `${workspaceId}:${post.id}:${fingerprint}`;
+  const [attemptBeforeInsert] = await db.select().from(socialPublishAttemptsTable).where(and(
+    eq(socialPublishAttemptsTable.workspaceId, workspaceId), eq(socialPublishAttemptsTable.postId, post.id),
+    eq(socialPublishAttemptsTable.attemptKey, attemptKey),
+  )).limit(1);
+  if (post.status === "publishing" && !attemptBeforeInsert) {
+    throw new AppError(409, "Publicação em andamento sem tentativa recuperável", "PUBLISH_LEASE_HELD");
+  }
+  await db.insert(socialPublishAttemptsTable).values({
+    workspaceId, postId: post.id, attemptKey, contentFingerprint: fingerprint,
+  }).onConflictDoNothing();
+  const [existingAttempt] = await db.select().from(socialPublishAttemptsTable).where(and(
+    eq(socialPublishAttemptsTable.workspaceId, workspaceId), eq(socialPublishAttemptsTable.postId, post.id),
+    eq(socialPublishAttemptsTable.attemptKey, attemptKey),
+  )).limit(1);
+  if (!existingAttempt) throw new AppError(500, "Falha ao criar tentativa de publicação", "DB_ERROR");
+  if (existingAttempt.state === "confirmed") return getPost(workspaceId, postId);
+  if (existingAttempt.state === "ambiguous" || existingAttempt.state === "manual_recovery") {
+    throw new AppError(409, "Resultado do provedor requer reconciliação manual", "PUBLISH_MANUAL_RECOVERY");
+  }
+  const owner = `${process.pid}:${randomUUID()}`;
+  const leaseUntil = new Date(Date.now() + 15 * 60_000);
+  const [attempt] = await db.update(socialPublishAttemptsTable).set({
+    state: "executing", leaseOwner: owner, leaseExpiresAt: leaseUntil,
+    retryCount: existingAttempt.retryCount + 1, updatedAt: new Date(),
+  }).where(and(
+    eq(socialPublishAttemptsTable.id, existingAttempt.id),
+    eq(socialPublishAttemptsTable.workspaceId, workspaceId),
+    or(eq(socialPublishAttemptsTable.state, "retryable"),
+      and(eq(socialPublishAttemptsTable.state, "executing"),
+        or(lte(socialPublishAttemptsTable.leaseExpiresAt, new Date()), isNull(socialPublishAttemptsTable.leaseExpiresAt)))),
+  )).returning();
+  if (!attempt) {
+    const current = await getPost(workspaceId, postId);
+    if (current.status === "published") return current;
+    throw new AppError(409, "Publicação já está em andamento", "PUBLISH_LEASE_HELD");
+  }
+  // A reclaimed lease with any provider identifier is recovery-only. Never
+  // submit again until an independent readback proves it was not published.
+  const recordedProviderId = existingAttempt.providerPublishId ?? existingAttempt.providerContainerId;
+  const finalProviderStage = ["published", "media_published", "publish_initialized"].includes(existingAttempt.providerStage ?? "");
+  if (recordedProviderId && !finalProviderStage) {
+    await db.update(socialPublishAttemptsTable).set({
+      state: "manual_recovery", error: "Intermediate provider artifact has no final publish receipt",
+      leaseOwner: null, leaseExpiresAt: null, updatedAt: new Date(),
+    }).where(and(eq(socialPublishAttemptsTable.id, attempt.id), eq(socialPublishAttemptsTable.workspaceId, workspaceId), eq(socialPublishAttemptsTable.leaseOwner, owner)));
+    throw new AppError(409, "Publicação intermediária requer recuperação manual", "PUBLISH_MANUAL_RECOVERY");
+  }
+  if (recordedProviderId) {
+    const recovered = await readBackSocialPost(post.platform, integration, recordedProviderId, post.postType);
+    if (recovered.pending) {
+      const nextAttempt = new Date(Date.now() + 60_000);
+      await db.update(socialPublishAttemptsTable).set({
+        state: "retryable", nextAttemptAt: nextAttempt, leaseOwner: null, leaseExpiresAt: null, updatedAt: new Date(),
+      }).where(and(eq(socialPublishAttemptsTable.id, attempt.id), eq(socialPublishAttemptsTable.workspaceId, workspaceId), eq(socialPublishAttemptsTable.leaseOwner, owner)));
+      throw new AppError(503, "Readback do provedor ainda pendente", "PUBLISH_PENDING");
+    }
+    if (recovered.confirmed) {
+      await db.update(socialPublishAttemptsTable).set({
+        state: "confirmed", readback: { confirmed: true, providerPostId: recovered.platformPostId, providerUrl: recovered.platformUrl, accountId: recovered.accountId },
+        leaseOwner: null, leaseExpiresAt: null, updatedAt: new Date(),
+      }).where(and(eq(socialPublishAttemptsTable.id, attempt.id), eq(socialPublishAttemptsTable.workspaceId, workspaceId), eq(socialPublishAttemptsTable.leaseOwner, owner)));
+      const [recoveredPost] = await db.update(socialPostsTable).set({
+        status: "published", platformPostId: recovered.platformPostId ?? recordedProviderId,
+        platformUrl: recovered.platformUrl ?? null, publishedAt: new Date(), updatedAt: new Date(),
+      }).where(and(eq(socialPostsTable.id, postId), eq(socialPostsTable.workspaceId, workspaceId))).returning();
+      return recoveredPost!;
+    }
+    await db.update(socialPublishAttemptsTable).set({ state: "manual_recovery", error: "Recorded provider identifier could not be reconciled", updatedAt: new Date() })
+      .where(and(eq(socialPublishAttemptsTable.id, attempt.id), eq(socialPublishAttemptsTable.workspaceId, workspaceId), eq(socialPublishAttemptsTable.leaseOwner, owner)));
+    throw new AppError(409, "Resultado do provedor requer reconciliação manual", "PUBLISH_MANUAL_RECOVERY");
+  }
+  if (existingAttempt.providerStage?.includes("intent")) {
+    await db.update(socialPublishAttemptsTable).set({
+      state: "manual_recovery", error: "Provider mutation intent has no receipt identifier; bounded lookup required",
+      leaseOwner: null, leaseExpiresAt: null, updatedAt: new Date(),
+    }).where(and(eq(socialPublishAttemptsTable.id, attempt.id), eq(socialPublishAttemptsTable.workspaceId, workspaceId), eq(socialPublishAttemptsTable.leaseOwner, owner)));
+    throw new AppError(409, "Intenção do provedor sem recibo requer recuperação manual", "PUBLISH_MANUAL_RECOVERY");
+  }
+
+  // Keep the post status as a compatibility projection; the attempt lease is
+  // what prevents concurrent provider mutation and permits safe recovery.
+  const staleLease = new Date(Date.now() - 15 * 60_000);
+  const [claimed] = await db.update(socialPostsTable)
+    .set({ status: "publishing", updatedAt: new Date() })
+    .where(and(
+      eq(socialPostsTable.id, postId), eq(socialPostsTable.workspaceId, workspaceId),
+      or(eq(socialPostsTable.status, "draft"), eq(socialPostsTable.status, "scheduled"),
+        and(eq(socialPostsTable.status, "publishing"), lte(socialPostsTable.updatedAt, staleLease))),
+    )).returning();
+  if (!claimed) {
+    const current = await getPost(workspaceId, postId);
+    if (current.status === "published") return current;
+    throw new AppError(409, "Publicação já está em andamento", "PUBLISH_LEASE_HELD");
+  }
+
+  await db.insert(executionEvidenceTable).values({
+    workspaceId, campaignId: post.campaignId, masterplanVersionId: post.masterplanVersionId, contextFingerprint: post.contextFingerprint,
+    subjectType: "social_post", subjectId: post.id, state: "attempted",
+    details: { platform: post.platform, attemptKey, mediaCaptionFingerprint: fingerprint },
+  });
 
   let result;
+  const onProviderStage = async (stage: { name: string; providerId?: string; intent?: boolean }): Promise<void> => {
+    const finalReceipt = !stage.intent && ["published", "media_published", "publish_initialized"].includes(stage.name);
+    const [stageRow] = await db.update(socialPublishAttemptsTable).set({
+      providerStage: stage.name,
+      providerContainerId: !stage.intent && !finalReceipt ? stage.providerId : undefined,
+      providerPublishId: finalReceipt ? stage.providerId : undefined,
+      receipt: !stage.intent && stage.providerId ? { providerId: stage.providerId, stage: stage.name } : {},
+      updatedAt: new Date(),
+    }).where(and(eq(socialPublishAttemptsTable.id, attempt.id), eq(socialPublishAttemptsTable.workspaceId, workspaceId), eq(socialPublishAttemptsTable.leaseOwner, owner), eq(socialPublishAttemptsTable.state, "executing"))).returning();
+    if (stageRow?.id !== attempt.id) {
+      throw new AppError(409, "Lease de publicação perdido antes da mutação do provedor", "PUBLISH_LEASE_LOST");
+    }
+  };
   switch (post.platform) {
     case "instagram":
-      result = await publishToInstagram(post, integration);
+       result = await publishToInstagram(post, integration, { attemptKey, onStage: onProviderStage });
       break;
     case "facebook_page":
-      result = await publishToFacebook(post, integration);
+       result = await publishToFacebook(post, integration, { attemptKey, onStage: onProviderStage });
       break;
     case "tiktok":
-      result = await publishToTikTok(post, integration);
+       result = await publishToTikTok(post, integration, { attemptKey, onStage: onProviderStage });
       break;
     default:
       result = { success: false, error: `Platform ${post.platform} not yet supported for direct publishing` };
@@ -909,25 +1051,68 @@ export async function publishPost(workspaceId: string, postId: string): Promise<
 
   if (!result.success) {
     const retryCount = post.retryCount + 1;
+    if (result.ambiguous) {
+      await db.update(socialPublishAttemptsTable).set({
+        state: "ambiguous", error: "Ambiguous provider outcome; reconciliation required", updatedAt: new Date(),
+      }).where(and(eq(socialPublishAttemptsTable.id, attempt.id), eq(socialPublishAttemptsTable.workspaceId, workspaceId), eq(socialPublishAttemptsTable.leaseOwner, owner)));
+      throw new AppError(502, "Resultado do provedor não determinístico; recuperação manual necessária", "PUBLISH_MANUAL_RECOVERY");
+    }
+    const terminal = /401|403|permission|not authorized|invalid token|expired|rejected|content/i.test(result.error ?? "");
+    const nextAttempt = new Date(Date.now() + Math.min(15 * 60_000, 60_000 * (2 ** Math.min(retryCount - 1, 3))));
+    await db.update(socialPublishAttemptsTable).set({
+      state: terminal ? "terminal" : "retryable",
+      nextAttemptAt: terminal ? null : nextAttempt,
+      error: result.error ?? "Provider rejected publication",
+      updatedAt: new Date(),
+    }).where(and(eq(socialPublishAttemptsTable.id, attempt.id), eq(socialPublishAttemptsTable.workspaceId, workspaceId), eq(socialPublishAttemptsTable.leaseOwner, owner)));
     await db
       .update(socialPostsTable)
       .set({
-        status: retryCount >= 3 ? "failed" : "scheduled",
-        errorMessage: result.error,
+        status: terminal || retryCount >= 4 ? "failed" : "scheduled",
+        scheduledAt: terminal ? post.scheduledAt : nextAttempt,
+        errorMessage: result.error ?? "Provider rejected publication",
         retryCount,
         updatedAt: new Date(),
       })
       .where(and(eq(socialPostsTable.id, postId), eq(socialPostsTable.workspaceId, workspaceId)));
+    if (terminal) {
+      await db.update(workspaceIntegrationsTable).set({ status: "expired", updatedAt: new Date() })
+        .where(and(eq(workspaceIntegrationsTable.id, integration.id), eq(workspaceIntegrationsTable.workspaceId, workspaceId)));
+    }
     throw new AppError(500, result.error ?? "Publish failed", "PUBLISH_FAILED");
   }
 
+  if (!result.platformPostId) {
+    await db.update(socialPublishAttemptsTable).set({ state: "manual_recovery", error: "Provider receipt missing object id", updatedAt: new Date() })
+      .where(and(eq(socialPublishAttemptsTable.id, attempt.id), eq(socialPublishAttemptsTable.workspaceId, workspaceId), eq(socialPublishAttemptsTable.leaseOwner, owner)));
+    await markFailed(workspaceId, postId, "Provider não retornou um identificador verificável");
+    throw new AppError(502, "Publicação não verificável", "PUBLISH_UNCONFIRMED");
+  }
+  const readback = await readBackSocialPost(post.platform, integration, result.platformPostId, post.postType);
+  if (readback.pending) {
+    const nextAttempt = new Date(Date.now() + Math.min(15 * 60_000, 60_000 * (2 ** Math.min(post.retryCount, 3))));
+    await db.update(socialPublishAttemptsTable).set({
+      state: "retryable", nextAttemptAt: nextAttempt, leaseOwner: null, leaseExpiresAt: null,
+      providerPublishId: result.platformPostId, updatedAt: new Date(),
+    }).where(and(eq(socialPublishAttemptsTable.id, attempt.id), eq(socialPublishAttemptsTable.workspaceId, workspaceId), eq(socialPublishAttemptsTable.leaseOwner, owner)));
+    throw new AppError(503, "Publicação TikTok ainda pendente", "PUBLISH_PENDING");
+  }
+  if (!readback.confirmed) {
+    await db.update(socialPublishAttemptsTable).set({
+      state: "manual_recovery", providerPublishId: result.platformPostId,
+      receipt: { providerPostId: result.platformPostId }, readback: { confirmed: false },
+      error: "Provider readback did not prove publication", updatedAt: new Date(),
+    }).where(and(eq(socialPublishAttemptsTable.id, attempt.id), eq(socialPublishAttemptsTable.workspaceId, workspaceId), eq(socialPublishAttemptsTable.leaseOwner, owner)));
+    await markFailed(workspaceId, postId, "Publicação submetida, mas não confirmada pelo provedor; recuperação manual necessária");
+    throw new AppError(502, "Publicação não confirmada", "PUBLISH_UNCONFIRMED");
+  }
   const [updated] = await db
     .update(socialPostsTable)
     .set({
       status: "published",
       publishedAt: new Date(),
-      platformPostId: result.platformPostId ?? null,
-      platformUrl: result.platformUrl ?? null,
+      platformPostId: readback.platformPostId ?? result.platformPostId ?? null,
+      platformUrl: readback.platformUrl ?? result.platformUrl ?? null,
       errorMessage: null,
       updatedAt: new Date(),
     })
@@ -936,8 +1121,14 @@ export async function publishPost(workspaceId: string, postId: string): Promise<
   await db.insert(executionEvidenceTable).values({
     workspaceId, campaignId: post.campaignId, masterplanVersionId: post.masterplanVersionId, contextFingerprint: post.contextFingerprint,
     subjectType: "social_post", subjectId: post.id, state: "provider_confirmed",
-    details: { platform: post.platform, providerPostId: result.platformPostId ?? null, providerUrl: result.platformUrl ?? null },
+     details: { platform: post.platform, providerPostId: result.platformPostId, providerUrl: readback.platformUrl ?? result.platformUrl ?? null, mediaCaptionFingerprint: fingerprint, attemptKey },
   });
+  await db.update(socialPublishAttemptsTable).set({
+    state: "confirmed", providerPublishId: result.platformPostId,
+    receipt: { providerPostId: result.platformPostId, providerUrl: result.platformUrl ?? null },
+    readback: { confirmed: true, providerPostId: readback.platformPostId, providerUrl: readback.platformUrl, accountId: readback.accountId },
+    leaseOwner: null, leaseExpiresAt: null, updatedAt: new Date(),
+  }).where(and(eq(socialPublishAttemptsTable.id, attempt.id), eq(socialPublishAttemptsTable.workspaceId, workspaceId), eq(socialPublishAttemptsTable.leaseOwner, owner)));
 
   logger.info({ postId, platform: post.platform, platformPostId: result.platformPostId }, "Post published");
   return updated!;
@@ -972,16 +1163,29 @@ export async function syncPostMetrics(workspaceId: string, postId: string): Prom
 }
 
 export async function getDueScheduledPosts(): Promise<SocialPost[]> {
-  return db
+  const staleLease = new Date(Date.now() - 15 * 60_000);
+  const posts = await db
     .select()
     .from(socialPostsTable)
     .where(
       and(
-        eq(socialPostsTable.status, "scheduled"),
-        lte(socialPostsTable.scheduledAt, new Date())
+        or(
+          and(eq(socialPostsTable.status, "scheduled"), lte(socialPostsTable.scheduledAt, new Date())),
+          and(eq(socialPostsTable.status, "publishing"), lte(socialPostsTable.updatedAt, staleLease)),
+        ),
       )
     )
     .limit(20);
+  const dueAttempts = await db.select({
+    workspaceId: socialPublishAttemptsTable.workspaceId,
+    postId: socialPublishAttemptsTable.postId,
+  }).from(socialPublishAttemptsTable).where(and(
+    eq(socialPublishAttemptsTable.state, "retryable"),
+    lte(socialPublishAttemptsTable.nextAttemptAt, new Date()),
+  )).limit(20);
+  const recovered = await Promise.all(dueAttempts.map((row) => getPost(row.workspaceId, row.postId).catch(() => null)));
+  const seen = new Set(posts.map((post) => post.id));
+  return posts.concat(recovered.filter((post): post is SocialPost => post !== null && !seen.has(post.id)));
 }
 
 // ─── Auto-schedule from campaign ──────────────────────────────────────────────

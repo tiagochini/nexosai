@@ -16,6 +16,7 @@ export * from "./metrics";
 export * from "./workspace-memory";
 export * from "./critique-logs";
 export * from "./social-posts";
+export * from "./social-publish-attempts";
 export * from "./subscription-payments";
 export * from "./revenue-events";
 export * from "./agency-clients";

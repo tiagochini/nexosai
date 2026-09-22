@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { and, desc, eq, gt, isNotNull, or } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull, isNull, or } from "drizzle-orm";
 import {
   auditLogsTable, campaignsTable, db, masterplanVersionsTable, paidMediaAccountsTable,
   paidMediaLaunchPlansTable, paidMediaEntitiesTable, paidMediaLaunchAttemptsTable, paidMediaLaunchStepsTable, executionEvidenceTable, productIntakesTable, commercialSubscriptionsTable, workspaceIntegrationsTable,
@@ -7,7 +7,7 @@ import {
 import { AppError, NotFoundError } from "../../lib/errors.js";
 import { canonicalize, deterministicHash } from "../masterplan/masterplan.service.js";
 import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
-import { paidMediaProviderCapabilities, type PaidMediaProviderName } from "./providers.js";
+import { paidMediaProviderCapabilities, PaidMediaProviderError, type PaidMediaProviderName } from "./providers.js";
 import { isPaidMediaIntegration } from "../integrations/integration-purpose.js";
 
 type Json = Record<string, unknown>;
@@ -15,7 +15,9 @@ const obj = (v: unknown): Json => v && typeof v === "object" && !Array.isArray(v
 const arr = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
 function validateLaunchReadback(type: string, id: string, readback: Json, payload: Json): void {
   if (String(readback["id"] ?? "") !== id) throw new AppError(502, "Provider readback id mismatch.", "PROVIDER_READBACK_INVALID");
-  if (readback["status"] !== "PAUSED") throw new AppError(502, "Provider entity was not created paused.", "PROVIDER_READBACK_INVALID");
+  // Meta creatives do not have a delivery state that can be paused.  The
+  // campaign, ad set, and ad remain the safety boundary.
+  if (type !== "creative" && readback["status"] !== "PAUSED") throw new AppError(502, "Provider entity was not created paused.", "PROVIDER_READBACK_INVALID");
   if (typeof payload["name"] !== "string" || readback["name"] !== payload["name"]) throw new AppError(502, "Provider readback name mismatch.", "PROVIDER_READBACK_INVALID");
   for (const key of ["campaign_id", "adset_id"]) if (payload[key] != null && readback[key] !== payload[key]) throw new AppError(502, `Provider readback parent ${key} mismatch.`, "PROVIDER_READBACK_INVALID");
   for (const key of ["daily_budget", "lifetime_budget"]) {
@@ -50,6 +52,53 @@ export function redactLaunchEvidence(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(redactLaunchEvidence);
   if (value && typeof value === "object") return Object.fromEntries(Object.entries(value as Json).map(([key, item]) => /token|secret|password|authorization|cookie/i.test(key) ? [key, "[REDACTED]"] : [key, redactLaunchEvidence(item)]));
   return value;
+}
+
+/**
+ * Re-check the sovereign inputs at the mutation boundary.  Compilation and
+ * approval are not sufficient: a plan can sit in the queue while its
+ * Master Plan is superseded or its account is moved to another workspace.
+ */
+async function assertLaunchBinding(workspaceId: string, plan: {
+  campaignId: string; masterplanVersionId: string; contextFingerprint: string;
+  planHash: string; tree: unknown; providerPayload: unknown; accountId: string; provider: string;
+}) {
+  const approval = obj((plan as { approvalSnapshot?: unknown }).approvalSnapshot);
+  if (!approval["approvedAt"] || approval["planHash"] !== plan.planHash
+    || approval["contextFingerprint"] !== plan.contextFingerprint) {
+    throw new AppError(409, "Launch approval snapshot is missing or stale.", "LAUNCH_APPROVAL_STALE");
+  }
+  const [masterplan] = await db.select().from(masterplanVersionsTable).where(and(
+    eq(masterplanVersionsTable.id, plan.masterplanVersionId),
+    eq(masterplanVersionsTable.workspaceId, workspaceId),
+    eq(masterplanVersionsTable.campaignId, plan.campaignId),
+    eq(masterplanVersionsTable.status, "approved"),
+  )).limit(1);
+  if (!masterplan || masterplan.contextFingerprint !== plan.contextFingerprint
+    || masterplan.contentHash !== deterministicHash(masterplan.snapshot)) {
+    throw new AppError(409, "Approved Master Plan binding is stale or invalid.", "MASTERPLAN_BINDING_STALE");
+  }
+  if (approval["masterPlanContentHash"] !== masterplan.contentHash) {
+    throw new AppError(409, "Approval snapshot Master Plan hash is stale.", "MASTERPLAN_CONTENT_MISMATCH");
+  }
+  const [campaign] = await db.select({ id: campaignsTable.id }).from(campaignsTable).where(and(
+    eq(campaignsTable.id, plan.campaignId),
+    eq(campaignsTable.workspaceId, workspaceId),
+  )).limit(1);
+  if (!campaign) throw new AppError(409, "Launch campaign is not owned by this workspace.", "WORKSPACE_SCOPE_REJECTED");
+  const compiled = compileMasterplanTree(masterplan.snapshot, plan.provider as PaidMediaProviderName, (plan.tree as Json)["accountId"] as string);
+  if (masterplan.contentHash !== deterministicHash(masterplan.snapshot)
+    || compiled.planHash !== plan.planHash
+    || deterministicHash({ tree: plan.tree, providerPayload: plan.providerPayload }) !== plan.planHash) {
+    throw new AppError(409, "Launch plan content no longer matches the approved Master Plan.", "MASTERPLAN_CONTENT_MISMATCH");
+  }
+  const [account] = await db.select({ id: paidMediaAccountsTable.id, provider: paidMediaAccountsTable.provider })
+    .from(paidMediaAccountsTable).where(and(
+      eq(paidMediaAccountsTable.id, plan.accountId),
+      eq(paidMediaAccountsTable.workspaceId, workspaceId),
+      eq(paidMediaAccountsTable.provider, plan.provider as PaidMediaProviderName),
+    )).limit(1);
+  if (!account) throw new AppError(409, "Launch account is not owned by this workspace.", "WORKSPACE_SCOPE_REJECTED");
 }
 
 export function compileMasterplanTree(snapshot: unknown, provider: PaidMediaProviderName, accountId: string) {
@@ -146,7 +195,12 @@ export async function approveLaunchPlan(workspaceId: string, planId: string, use
   const [plan] = await db.select().from(paidMediaLaunchPlansTable).where(and(eq(paidMediaLaunchPlansTable.id, planId), eq(paidMediaLaunchPlansTable.workspaceId, workspaceId))).limit(1);
   if (!plan) throw new NotFoundError("Paid media launch plan");
   if ((plan.readiness as Json)["status"] !== "ready") throw new AppError(428, "Launch readiness is blocked.", "LAUNCH_READINESS_BLOCKED", plan.readiness as object);
-  const snapshot = { planHash: plan.planHash, tree: plan.tree, providerPayload: plan.providerPayload, readiness: plan.readiness, approvedAt: new Date().toISOString() };
+  const [masterplan] = await db.select({ contentHash: masterplanVersionsTable.contentHash, contextFingerprint: masterplanVersionsTable.contextFingerprint, status: masterplanVersionsTable.status })
+    .from(masterplanVersionsTable).where(and(eq(masterplanVersionsTable.id, plan.masterplanVersionId), eq(masterplanVersionsTable.workspaceId, workspaceId))).limit(1);
+  if (!masterplan || masterplan.status !== "approved" || masterplan.contextFingerprint !== plan.contextFingerprint) {
+    throw new AppError(409, "Approved Master Plan binding is stale or invalid.", "MASTERPLAN_BINDING_STALE");
+  }
+  const snapshot = { planHash: plan.planHash, masterPlanContentHash: masterplan.contentHash, contextFingerprint: masterplan.contextFingerprint, tree: plan.tree, providerPayload: plan.providerPayload, readiness: plan.readiness, approvedAt: new Date().toISOString() };
   const [updated] = await db.update(paidMediaLaunchPlansTable).set({ launchStage: "approved", approvalSnapshot: snapshot, approvedByUserId: userId, approvedAt: new Date() }).where(and(eq(paidMediaLaunchPlansTable.id, planId), eq(paidMediaLaunchPlansTable.workspaceId, workspaceId), eq(paidMediaLaunchPlansTable.launchStage, "compiled"))).returning();
   return updated ?? plan;
 }
@@ -155,7 +209,8 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
   const [plan] = await db.select().from(paidMediaLaunchPlansTable).where(and(eq(paidMediaLaunchPlansTable.id, planId), eq(paidMediaLaunchPlansTable.workspaceId, workspaceId))).limit(1);
   if (!plan) throw new NotFoundError("Paid media launch plan");
   await enforceNoMandatoryPause(workspaceId, { campaignId: plan.campaignId, channel: "paid_media", action: "paid_media_execute" });
-  if (!["approved", "failed", "activating"].includes(plan.launchStage)) throw new AppError(409, "Launch plan must be approved before activation.", "LAUNCH_APPROVAL_REQUIRED");
+  if (!["approved", "failed", "activating", "compensation_failed"].includes(plan.launchStage)) throw new AppError(409, "Launch plan must be approved before activation.", "LAUNCH_APPROVAL_REQUIRED");
+  await assertLaunchBinding(workspaceId, plan);
   const attemptKey = `launch:${plan.id}`;
   const owner = randomUUID();
   const [existingAttempt] = await db.select().from(paidMediaLaunchAttemptsTable).where(and(eq(paidMediaLaunchAttemptsTable.launchPlanId, plan.id), eq(paidMediaLaunchAttemptsTable.workspaceId, workspaceId), eq(paidMediaLaunchAttemptsTable.attemptKey, attemptKey))).limit(1);
@@ -165,7 +220,7 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
   const stale = plan.launchStage === "activating" && existingAttempt;
   const [claimed] = await db.update(paidMediaLaunchPlansTable).set({ launchStage: "activating" }).where(and(
     eq(paidMediaLaunchPlansTable.id, plan.id), eq(paidMediaLaunchPlansTable.workspaceId, workspaceId),
-    stale ? and(eq(paidMediaLaunchPlansTable.launchStage, "activating"), eq(paidMediaLaunchPlansTable.id, plan.id)) : or(eq(paidMediaLaunchPlansTable.launchStage, "approved"), eq(paidMediaLaunchPlansTable.launchStage, "failed")),
+     stale ? and(eq(paidMediaLaunchPlansTable.launchStage, "activating"), eq(paidMediaLaunchPlansTable.id, plan.id)) : or(eq(paidMediaLaunchPlansTable.launchStage, "approved"), eq(paidMediaLaunchPlansTable.launchStage, "failed"), eq(paidMediaLaunchPlansTable.launchStage, "compensation_failed")),
   )).returning();
   if (!claimed) throw new AppError(409, "Launch was claimed by another request.", "LAUNCH_EXECUTION_CONFLICT");
   const leaseUntil = new Date(Date.now() + 60_000);
@@ -174,7 +229,33 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
     : await db.insert(paidMediaLaunchAttemptsTable).values({ workspaceId, launchPlanId: plan.id, attemptKey, leaseOwner: owner, leaseExpiresAt: leaseUntil, heartbeatAt: new Date() }).returning();
   if (!attempt) throw new AppError(409, "Launch lease was reclaimed by another worker.", "LAUNCH_EXECUTION_CONFLICT");
   const adapter = (await import("./providers.js")).paidMediaProvider(plan.provider);
-   if (!adapter.createLaunchEntity || !adapter.readLaunchEntity || !adapter.deleteEntity || !adapter.verifyLaunchEntityAbsence) throw new AppError(409, "Single-step launch execution is not enabled by the current provider adapter.", "PROVIDER_CAPABILITY_BLOCKED", { provider: plan.provider });
+   if (!adapter.createLaunchEntity || !adapter.readLaunchEntity || !adapter.deleteEntity || !adapter.verifyLaunchEntityAbsence) {
+     await db.update(paidMediaLaunchAttemptsTable).set({ status: "failed", error: "Provider adapter cannot execute a verified launch tree." }).where(and(eq(paidMediaLaunchAttemptsTable.id, attempt!.id), eq(paidMediaLaunchAttemptsTable.leaseOwner, owner)));
+     await db.update(paidMediaLaunchPlansTable).set({ launchStage: "failed" }).where(and(eq(paidMediaLaunchPlansTable.id, plan.id), eq(paidMediaLaunchPlansTable.launchStage, "activating")));
+     throw new AppError(409, "Single-step launch execution is not enabled by the current provider adapter.", "PROVIDER_CAPABILITY_BLOCKED", { provider: plan.provider });
+   }
+   // A fully compensated attempt may be safely replayed.  In contrast,
+   // compensation_failed steps retain their IDs so the next worker can
+   // reconcile them instead of creating another provider entity.
+   if (existingAttempt?.status === "failed") {
+     await db.update(paidMediaLaunchStepsTable).set({ providerEntityId: null, status: "pending", providerResponse: {}, readback: {}, compensation: {} })
+       .where(and(eq(paidMediaLaunchStepsTable.attemptId, attempt!.id), eq(paidMediaLaunchStepsTable.status, "compensated")));
+   }
+   // A compensation failure may have left a provider entity alive.  Resolve
+   // that ambiguity before allowing any pending step to create anything.
+   if (existingAttempt?.status === "compensation_failed") {
+     const recoverySteps = await db.select().from(paidMediaLaunchStepsTable).where(eq(paidMediaLaunchStepsTable.attemptId, attempt!.id));
+     for (const recovery of recoverySteps.filter((step) => step.status === "compensation_failed")) {
+       if (!recovery.providerEntityId) {
+         await db.update(paidMediaLaunchStepsTable).set({ status: "pending", compensation: {} }).where(eq(paidMediaLaunchStepsTable.id, recovery.id));
+         continue;
+       }
+       const absence = await adapter.verifyLaunchEntityAbsence!(workspaceId, plan.accountId, recovery.entityType, recovery.providerEntityId);
+       if (absence.absent) await db.update(paidMediaLaunchStepsTable).set({ providerEntityId: null, status: "pending", providerResponse: {}, readback: {}, compensation: { recovery: absence.evidence } }).where(eq(paidMediaLaunchStepsTable.id, recovery.id));
+       // If it is still present, retain the ID; the normal readback path
+       // reconciles it and never issues a second create.
+     }
+   }
   try {
     const groups = Array.isArray((plan.tree as Json)["adGroups"]) ? (plan.tree as Json)["adGroups"] as Json[] : [];
     const pendingSteps = [{ key: "campaign", type: "campaign" as const }, ...groups.flatMap((group) => [
@@ -198,7 +279,12 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
     if (!Number.isInteger(plannedAdSetBudgetMinorUnits) || plannedAdSetBudgetMinorUnits !== Number(campaign["authorizedMinorUnits"])) {
       throw new AppError(500, "Emitted ad-set budgets do not equal the authorized budget.", "BUDGET_ALLOCATION_INVALID");
     }
-    const account = (await db.select().from(paidMediaAccountsTable).where(eq(paidMediaAccountsTable.id, plan.accountId)).limit(1))[0]!;
+    const account = (await db.select().from(paidMediaAccountsTable).where(and(
+      eq(paidMediaAccountsTable.id, plan.accountId),
+      eq(paidMediaAccountsTable.workspaceId, workspaceId),
+      eq(paidMediaAccountsTable.provider, plan.provider),
+    )).limit(1))[0]!;
+    if (!account) throw new AppError(409, "Launch account is not owned by this workspace.", "WORKSPACE_SCOPE_REJECTED");
     const orderedSteps = await db.select().from(paidMediaLaunchStepsTable).where(eq(paidMediaLaunchStepsTable.attemptId, attempt!.id)).orderBy(paidMediaLaunchStepsTable.sequence);
     const stepsByKey = new Map(orderedSteps.map((step) => [step.stepKey, step]));
     for (const step of orderedSteps) {
@@ -231,7 +317,16 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
         : step.entityType === "ad_set" ? { name: step.stepKey, billing_event: "IMPRESSIONS", optimization_goal: "LINK_CLICKS", campaign_id: campaignStep?.providerEntityId, targeting: obj(group)?.["targeting"], ...(campaign["budgetKind"] === "daily" ? { daily_budget: Number(group?.["budgetMinorUnits"]) } : { lifetime_budget: Number(group?.["budgetMinorUnits"]), start_time: campaign["startTime"], end_time: campaign["endTime"] }) }
         : step.entityType === "creative" ? { name: ad?.ad?.["key"], object_story_spec: obj(ad?.ad?.["creative"])["object_story_spec"] }
         : { name: ad?.ad?.["key"], adset_id: adSetStep?.providerEntityId, creative: { creative_id: creativeStep?.providerEntityId } };
-      if (step.providerEntityId) {
+       const intent = obj(step.providerResponse)["preCreateIntent"];
+       if (!step.providerEntityId && intent) {
+         if (!adapter.reconcileLaunchEntity) throw new AppError(409, "Provider mutation may have been accepted but cannot be reconciled safely.", "LAUNCH_MANUAL_RECOVERY_REQUIRED");
+         const reconciled = await adapter.reconcileLaunchEntity(workspaceId, plan.accountId, step.entityType, payload, String(obj(intent)["idempotencyKey"]));
+         if (!reconciled) throw new AppError(409, "Provider mutation could not be reconciled safely.", "LAUNCH_MANUAL_RECOVERY_REQUIRED");
+         step.providerEntityId = reconciled.providerEntityId;
+         step.providerResponse = reconciled.evidence;
+         await db.update(paidMediaLaunchStepsTable).set({ providerEntityId: reconciled.providerEntityId, providerResponse: reconciled.evidence }).where(eq(paidMediaLaunchStepsTable.id, step.id));
+       }
+       if (step.providerEntityId) {
         const readback = await adapter.readLaunchEntity(workspaceId, plan.accountId, step.entityType, step.providerEntityId);
         validateLaunchReadback(step.entityType, step.providerEntityId, readback.data, payload);
         if (step.entityType === "ad_set") actualAdSetBudgetMinorUnits += Number(readback.data[campaign["budgetKind"] === "daily" ? "daily_budget" : "lifetime_budget"]);
@@ -240,7 +335,23 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
         step.readback = readback.data;
         continue;
       }
-      const result = await adapter.createLaunchEntity(workspaceId, plan.accountId, step.entityType, payload, `launch:${plan.id}:${step.sequence}`);
+       const idempotencyKey = `launch:${plan.id}:${step.sequence}`;
+       const intentRecord = { preCreateIntent: { idempotencyKey, payloadHash: deterministicHash(payload) } };
+       const [intentClaim] = await db.update(paidMediaLaunchStepsTable).set({ providerResponse: intentRecord })
+         .where(and(eq(paidMediaLaunchStepsTable.id, step.id), isNull(paidMediaLaunchStepsTable.providerEntityId), eq(paidMediaLaunchStepsTable.status, "pending"))).returning({ id: paidMediaLaunchStepsTable.id });
+       if (!intentClaim) throw new AppError(409, "Launch mutation intent could not be durably claimed; no provider mutation was sent.", "LAUNCH_EXECUTION_CONFLICT");
+       step.providerResponse = intentRecord;
+       let result: Awaited<ReturnType<NonNullable<typeof adapter.createLaunchEntity>>>;
+       try {
+         result = await adapter.createLaunchEntity(workspaceId, plan.accountId, step.entityType, payload, idempotencyKey);
+       } catch (createError) {
+         // 4xx rejection is definitive and can be deliberately retried. A
+         // timeout, 429, 5xx, or network error remains an ambiguous intent.
+         if (createError instanceof PaidMediaProviderError && createError.status !== undefined && createError.status >= 400 && createError.status < 500 && createError.status !== 408 && createError.status !== 429) {
+           await db.update(paidMediaLaunchStepsTable).set({ providerResponse: {} }).where(eq(paidMediaLaunchStepsTable.id, step.id));
+         }
+         throw createError;
+       }
       await db.update(paidMediaLaunchStepsTable).set({ providerEntityId: result.providerEntityId, status: "created", providerResponse: result.evidence }).where(eq(paidMediaLaunchStepsTable.id, step.id));
       const readback = await adapter.readLaunchEntity(workspaceId, plan.accountId, step.entityType, result.providerEntityId);
       validateLaunchReadback(step.entityType, result.providerEntityId, readback.data, payload);
@@ -250,8 +361,10 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
       step.status = "verified";
       step.providerResponse = result.evidence;
       step.readback = readback.data;
-      await db.insert(paidMediaEntitiesTable).values({ workspaceId, accountId: plan.accountId, provider: plan.provider, providerEntityId: result.providerEntityId, entityType: result.entityType, parentProviderEntityId: result.parentProviderEntityId, currency: account.currency, timezone: account.timezone, providerData: result.evidence });
-      await db.insert(executionEvidenceTable).values({ workspaceId, campaignId: plan.campaignId, masterplanVersionId: plan.masterplanVersionId, contextFingerprint: plan.contextFingerprint, subjectType: "paid_media_launch_plan", subjectId: plan.id, state: "provider_confirmed", details: { providerEntityId: result.providerEntityId, evidence: result.evidence } });
+       await db.insert(paidMediaEntitiesTable).values({ workspaceId, accountId: plan.accountId, provider: plan.provider, providerEntityId: result.providerEntityId, entityType: result.entityType, parentProviderEntityId: result.parentProviderEntityId, currency: account.currency, timezone: account.timezone, providerData: { response: result.evidence, readback: readback.data } }).onConflictDoNothing();
+       // Ordinary success proves material execution and provider evidence only.
+       // Certification envelopes are intentionally not self-issued here.
+       await db.insert(executionEvidenceTable).values({ workspaceId, campaignId: plan.campaignId, masterplanVersionId: plan.masterplanVersionId, contextFingerprint: plan.contextFingerprint, subjectType: "paid_media_launch_plan", subjectId: plan.id, state: "provider_confirmed", details: { providerEntityId: result.providerEntityId, receipt: result.evidence, readback: readback.data } });
     }
     if (!Number.isFinite(actualAdSetBudgetMinorUnits) || actualAdSetBudgetMinorUnits !== Number(campaign["authorizedMinorUnits"])) throw new AppError(502, "Provider ad-set budgets do not equal the authorized budget.", "PROVIDER_BUDGET_MISMATCH");
     const active = await db.transaction(async (tx) => {
@@ -295,9 +408,11 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
         const absence = await adapter.verifyLaunchEntityAbsence!(workspaceId, plan.accountId, step.entityType, step.providerEntityId);
         if (!absence.absent) throw new Error("Provider deletion was not verified.");
         await db.update(paidMediaLaunchStepsTable).set({ status: "compensated", compensation: { delete: deleted.evidence, absence: absence.evidence } }).where(eq(paidMediaLaunchStepsTable.id, step.id));
+        await db.insert(executionEvidenceTable).values({ workspaceId, campaignId: plan.campaignId, masterplanVersionId: plan.masterplanVersionId, contextFingerprint: plan.contextFingerprint, subjectType: "paid_media_launch_plan", subjectId: plan.id, state: "attempted", details: { recovery: "rollback", providerEntityId: step.providerEntityId, delete: deleted.evidence, absence: absence.evidence, verified: true } });
       } catch (compensationError) {
         compensationFailed = true;
         await db.update(paidMediaLaunchStepsTable).set({ status: "compensation_failed", compensation: { error: compensationError instanceof Error ? compensationError.message : "delete/readback failed" } }).where(eq(paidMediaLaunchStepsTable.id, step.id));
+        await db.insert(executionEvidenceTable).values({ workspaceId, campaignId: plan.campaignId, masterplanVersionId: plan.masterplanVersionId, contextFingerprint: plan.contextFingerprint, subjectType: "paid_media_launch_plan", subjectId: plan.id, state: "attempted", details: { recovery: "rollback", providerEntityId: step.providerEntityId, verified: false, error: compensationError instanceof Error ? compensationError.message : "delete/readback failed" } });
       }
     }
     await db.transaction(async (tx) => {
