@@ -420,7 +420,8 @@ Estados devem ser append-only quando representam fatos. Nenhuma camada pode decl
 
 ### Próxima entrega
 
-- **NEXT** — Control Room UI: contadores clicáveis, drilldowns exatos, timeline de evidências, status de credenciais e previews reais. Sem cartões vazios e sem áreas aspiracionais.
+- **DONE** — Control Room UI com contadores clicáveis, composição persistida, status de credenciais e estados canônicos de evidência.
+- **NEXT** — drilldown de evidência: timeline paginada, filtros exatos, links de origem, sanitização e ownership por workspace/campanha.
 
 ### Depois do Control Room
 
@@ -499,6 +500,7 @@ Este fluxo é adotado como contrato de implementação. Cada alteração futura 
 ## 13. Capability Index canônico
 
 O plano completo de indexação está em [`NEXOS_CAPABILITY_INDEX.md`](./NEXOS_CAPABILITY_INDEX.md).
+O checkpoint atualizado de construção está em [`NEXOS_BUILD_CHECKLIST.md`](./NEXOS_BUILD_CHECKLIST.md).
 
 Ele unifica:
 

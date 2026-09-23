@@ -5,6 +5,8 @@
 > Este documento unifica o fluxo operacional dos screenshots, o Realization Engine, o Control Room e a fila de 12 passos de implementação.
 >
 > O `NEXOS_WORKFLOW_MAP.md` continua sendo o contrato de arquitetura, governança e Definition of Done. Este arquivo é o índice operacional: ele registra **o que o NexOS faz**, **em qual estágio**, **com qual nível de maturidade**, **quais dependências existem** e **qual evidência prova a capacidade**.
+>
+> O progresso comprovado e o próximo checkpoint são mantidos em [`NEXOS_BUILD_CHECKLIST.md`](./NEXOS_BUILD_CHECKLIST.md).
 
 ---
 
@@ -662,7 +664,8 @@ flowchart TB
 ### Posição atual
 
 - **M01 concluído:** Control Room UI consome API real e possui estados vazios honestos.
-- **M02 em início:** contadores persistidos e clicáveis ainda precisam ser fechados para todas as categorias.
+- **M02 concluído:** contadores acionáveis abrem a composição persistida de entregáveis, integrações, checkpoints e estados canônicos de evidência.
+- **M03 é o próximo checkpoint:** timeline completa, paginada e filtrável com registros exatos e links de origem.
 - Os fundamentos já implementados são registrados como capabilities individuais, mas não promovem automaticamente todo um estágio para produção.
 - O status histórico apresentado nos screenshots deve ser importado como alegação a auditar, não como prova canônica. Cada conclusão precisa ser recalculada a partir do código, banco, testes, receipts e homologações atuais.
 
