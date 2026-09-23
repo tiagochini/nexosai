@@ -15,6 +15,7 @@ import {
   socialPresencePostsTable,
   instagramDmSequencesTable,
   campaignsTable,
+  marketIntelReportsTable,
   workspaceIntegrationsTable,
   workspacesTable,
 } from "@workspace/db";
@@ -359,6 +360,176 @@ export async function findCampaignContextById(
   };
 }
 
+export interface PresenceIntelligenceContext {
+  campaign: { id: string; title: string; status: string } | null;
+  marketGap: { gap: string; opportunity: string } | null;
+  triggers: string[];
+  strategicPillars: string[];
+  phase: string;
+  source: "real_data" | "generic_fallback";
+  sources: {
+    marketIntel: boolean;
+    psychologyLayer: boolean;
+    campaignStrategy: boolean;
+  };
+}
+
+function asObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function nonEmptyString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function stringList(value: unknown, limit = 6): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => nonEmptyString(item))
+    .filter((item): item is string => Boolean(item))
+    .slice(0, limit);
+}
+
+function extractPsychologyTriggers(brainData: unknown): string[] {
+  const psychology = asObject(asObject(brainData)["offerPsychologyLayer"]);
+  const hooksLayer = asObject(psychology["hooks"]);
+  const hookCandidates = Array.isArray(hooksLayer["hooks"]) ? hooksLayer["hooks"] : [];
+  const hooks = hookCandidates
+    .map((candidate) => {
+      const hook = asObject(candidate);
+      return nonEmptyString(hook["hook"]) ?? nonEmptyString(hook["type"]);
+    })
+    .filter((item): item is string => Boolean(item))
+    .slice(0, 4);
+
+  if (hooks.length > 0) return hooks;
+
+  const scarcity = asObject(asObject(psychology["scarcity"])["primaryScarcity"]);
+  const objections = asObject(psychology["objections"]);
+  const objectionCandidates = Array.isArray(objections["topObjections"])
+    ? objections["topObjections"]
+    : [];
+  return [
+    nonEmptyString(scarcity["mechanism"]),
+    ...objectionCandidates.map((candidate) => {
+      const objection = asObject(candidate);
+      return nonEmptyString(objection["killer"]) ?? nonEmptyString(objection["objection"]);
+    }),
+  ].filter((item): item is string => Boolean(item)).slice(0, 4);
+}
+
+/**
+ * Returns the exact campaign intelligence that can be injected into Presence
+ * planning. Every lookup is tenant- and campaign-scoped.
+ */
+export async function getPresenceIntelligenceContext(
+  workspaceId: string,
+  campaignId?: string | null,
+): Promise<PresenceIntelligenceContext> {
+  const config = await getConfig(workspaceId);
+  const resolvedCampaignId = campaignId ?? config?.alignedCampaignId ?? null;
+  const aligned = resolvedCampaignId
+    ? await findCampaignContextById(workspaceId, resolvedCampaignId)
+    : await findActiveLaunchContext(workspaceId);
+
+  if (!aligned) {
+    return {
+      campaign: null,
+      marketGap: null,
+      triggers: [],
+      strategicPillars: config?.contentPillars ?? [],
+      phase: "Semana de autoridade",
+      source: "generic_fallback",
+      sources: { marketIntel: false, psychologyLayer: false, campaignStrategy: false },
+    };
+  }
+
+  const [campaign] = await db
+    .select({
+      id: campaignsTable.id,
+      title: campaignsTable.title,
+      status: campaignsTable.status,
+      brainData: campaignsTable.brainData,
+      strategyData: campaignsTable.strategyData,
+    })
+    .from(campaignsTable)
+    .where(and(
+      eq(campaignsTable.id, aligned.campaignId),
+      eq(campaignsTable.workspaceId, workspaceId),
+    ))
+    .limit(1);
+
+  if (!campaign) {
+    return {
+      campaign: null,
+      marketGap: null,
+      triggers: [],
+      strategicPillars: config?.contentPillars ?? [],
+      phase: "Semana de autoridade",
+      source: "generic_fallback",
+      sources: { marketIntel: false, psychologyLayer: false, campaignStrategy: false },
+    };
+  }
+
+  const [report] = await db
+    .select({ output: marketIntelReportsTable.output })
+    .from(marketIntelReportsTable)
+    .where(and(
+      eq(marketIntelReportsTable.workspaceId, workspaceId),
+      eq(marketIntelReportsTable.campaignId, campaign.id),
+      eq(marketIntelReportsTable.status, "ready"),
+    ))
+    .orderBy(desc(marketIntelReportsTable.updatedAt), desc(marketIntelReportsTable.createdAt))
+    .limit(1);
+
+  const marketOutput = asObject(report?.output);
+  const firstGap = Array.isArray(marketOutput["positioningGaps"])
+    ? asObject(marketOutput["positioningGaps"][0])
+    : {};
+  const gap = nonEmptyString(firstGap["gap"]);
+  const opportunity = nonEmptyString(firstGap["opportunity"]);
+  const marketGap = gap ? { gap, opportunity: opportunity ?? "" } : null;
+
+  const triggers = extractPsychologyTriggers(campaign.brainData);
+  const strategy = asObject(campaign.strategyData);
+  const strategicPillars = stringList(asObject(strategy["campaignArchitecture"])["contentPillars"]);
+  const hasStrategy = strategicPillars.length > 0;
+  const sources = {
+    marketIntel: Boolean(marketGap),
+    psychologyLayer: triggers.length > 0,
+    campaignStrategy: hasStrategy,
+  };
+  const hasRealData = Object.values(sources).some(Boolean);
+
+  return {
+    campaign: { id: campaign.id, title: campaign.title, status: campaign.status },
+    marketGap,
+    triggers,
+    strategicPillars: hasStrategy ? strategicPillars : (config?.contentPillars ?? []),
+    phase: aligned.context.launchPhaseHint ?? "Campanha em elaboração",
+    source: hasRealData ? "real_data" : "generic_fallback",
+    sources,
+  };
+}
+
+function formatPresenceIntelligenceContext(context: PresenceIntelligenceContext): string | null {
+  if (context.source !== "real_data") return null;
+  const parts = ["=== INTELIGÊNCIA DA CAMPANHA ATIVA ==="];
+  if (context.marketGap) {
+    parts.push(`Gap de mercado explorado: ${context.marketGap.gap}${context.marketGap.opportunity ? ` — ${context.marketGap.opportunity}` : ""}`);
+  }
+  if (context.triggers.length > 0) {
+    parts.push(`Gatilhos psicológicos prioritários: ${context.triggers.join(" | ")}`);
+  }
+  if (context.strategicPillars.length > 0) {
+    parts.push(`Sequência de pilares desta fase: ${context.strategicPillars.join(" → ")}`);
+  }
+  parts.push(`Fase atual: ${context.phase}`);
+  return parts.join("\n");
+}
+
 // ─── Listar campanhas do workspace (para seletor no modal) ───────────────────
 
 export async function listWorkspaceCampaigns(
@@ -673,9 +844,16 @@ async function generateWeekNow(
     workspaceId,
     launch?.campaignId ?? null,
   ).catch(() => null);
-  const enrichedBusinessContext = marketIntelCtx
-    ? `${businessContext}\n\n${marketIntelCtx}`
-    : businessContext;
+  const campaignIntelligence = await getPresenceIntelligenceContext(
+    workspaceId,
+    launch?.campaignId ?? null,
+  ).catch(() => null);
+  const campaignIntelligenceBlock = campaignIntelligence
+    ? formatPresenceIntelligenceContext(campaignIntelligence)
+    : null;
+  const enrichedBusinessContext = [businessContext, marketIntelCtx, campaignIntelligenceBlock]
+    .filter((part): part is string => Boolean(part))
+    .join("\n\n");
 
   const enabled = (config.platforms ?? []).filter((p) => p.enabled);
 

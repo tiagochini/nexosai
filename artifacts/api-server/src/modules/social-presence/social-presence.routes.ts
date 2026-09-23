@@ -32,6 +32,7 @@ import {
   createTestReelPost,
   createTestScheduledPost,
   listDmSequences,
+  getPresenceIntelligenceContext,
 } from "./social-presence.service.js";
 
 const router = Router();
@@ -111,6 +112,11 @@ router.get("/config", async (req, res): Promise<void> => {
     // activeLaunch kept for backwards compat — now carries the user-chosen or auto-detected campaign
     activeLaunch: alignedCampaign,
   });
+});
+
+router.get("/intelligence-context", async (req, res): Promise<void> => {
+  const context = await getPresenceIntelligenceContext(req.auth.workspaceId);
+  res.json({ context });
 });
 
 router.put("/config", async (req, res): Promise<void> => {

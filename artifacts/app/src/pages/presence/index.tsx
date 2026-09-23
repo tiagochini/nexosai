@@ -59,6 +59,19 @@ interface ActiveLaunch {
   title: string;
   status: string;
 }
+interface PresenceIntelligenceContext {
+  campaign: { id: string; title: string; status: string } | null;
+  marketGap: { gap: string; opportunity: string } | null;
+  triggers: string[];
+  strategicPillars: string[];
+  phase: string;
+  source: "real_data" | "generic_fallback";
+  sources: {
+    marketIntel: boolean;
+    psychologyLayer: boolean;
+    campaignStrategy: boolean;
+  };
+}
 interface PresencePost {
   id: string;
   platform: string;
@@ -176,6 +189,8 @@ export default function PresencePage() {
   const { workspace } = useAuth();
   const [config, setConfig] = useState<PresenceConfig | null>(null);
   const [activeLaunch, setActiveLaunch] = useState<ActiveLaunch | null>(null);
+  const [intelligenceContext, setIntelligenceContext] = useState<PresenceIntelligenceContext | null>(null);
+  const [intelligenceExpanded, setIntelligenceExpanded] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [posts, setPosts] = useState<PresencePost[]>([]);
   const [metrics, setMetrics] = useState<MetricsOverview | null>(null);
@@ -234,6 +249,11 @@ export default function PresencePage() {
     return data;
   }, []);
 
+  const loadIntelligenceContext = useCallback(async () => {
+    const data = await customFetch<{ context: PresenceIntelligenceContext }>(`${API}/intelligence-context`);
+    setIntelligenceContext(data.context);
+  }, []);
+
 
   const loadMetrics = useCallback(async () => {
     const data = await customFetch<MetricsOverview>(`${API}/metrics`);
@@ -253,11 +273,11 @@ export default function PresencePage() {
   useEffect(() => {
     (async () => {
       try {
-        await Promise.all([loadConfig(), loadPosts(), loadMetrics(), loadSocialHealth()]);
+        await Promise.all([loadConfig(), loadPosts(), loadMetrics(), loadSocialHealth(), loadIntelligenceContext()]);
       } catch { /* sem config ainda */ }
       setLoading(false);
     })();
-  }, [loadConfig, loadPosts, loadMetrics]);
+  }, [loadConfig, loadPosts, loadMetrics, loadIntelligenceContext]);
 
   // Relógio de 1s para countdown ao vivo
   useEffect(() => {
@@ -696,6 +716,103 @@ export default function PresencePage() {
           >
             Alinhar
           </button>
+        </div>
+      )}
+
+      {config && intelligenceContext && (
+        <div className="overflow-hidden rounded-xl border border-primary/20 bg-card/40">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-primary/5 transition-colors"
+            onClick={() => setIntelligenceExpanded((value) => !value)}
+            aria-expanded={intelligenceExpanded}
+            data-testid="button-campaign-intelligence"
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="rounded-lg bg-primary/10 p-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium">Inteligência da Campanha Ativa</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {intelligenceContext.campaign?.title ?? "Sem campanha alinhada"} · {intelligenceContext.phase}
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Badge
+                variant="outline"
+                className={intelligenceContext.source === "real_data"
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                  : "border-amber-500/30 bg-amber-500/10 text-amber-400"}
+              >
+                {intelligenceContext.source === "real_data" ? "Dados reais" : "Fallback genérico"}
+              </Badge>
+              {intelligenceExpanded
+                ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+            </div>
+          </button>
+
+          {intelligenceExpanded && (
+            <div className="grid gap-3 border-t border-border/60 p-4 md:grid-cols-3">
+              <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <Target className="h-3.5 w-3.5 text-primary" /> Gap de mercado
+                </p>
+                {intelligenceContext.marketGap ? (
+                  <>
+                    <p className="text-sm font-medium">{intelligenceContext.marketGap.gap}</p>
+                    {intelligenceContext.marketGap.opportunity && (
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{intelligenceContext.marketGap.opportunity}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhum relatório de mercado vinculado a esta campanha.</p>
+                )}
+              </div>
+
+              <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <Zap className="h-3.5 w-3.5 text-primary" /> Gatilhos principais
+                </p>
+                {intelligenceContext.triggers.length > 0 ? (
+                  <ul className="space-y-1.5 text-xs">
+                    {intelligenceContext.triggers.map((trigger, index) => (
+                      <li key={`${trigger}-${index}`} className="flex gap-2">
+                        <span className="text-primary">•</span><span>{trigger}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-muted-foreground">A camada de psicologia ainda não gerou gatilhos.</p>
+                )}
+              </div>
+
+              <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <ListChecks className="h-3.5 w-3.5 text-primary" /> Sequência de pilares
+                </p>
+                {intelligenceContext.strategicPillars.length > 0 ? (
+                  <ol className="space-y-1.5 text-xs">
+                    {intelligenceContext.strategicPillars.map((pillar, index) => (
+                      <li key={`${pillar}-${index}`} className="flex gap-2">
+                        <span className="font-mono text-primary">{index + 1}.</span><span>{pillar}</span>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhum pilar estratégico definido para esta fase.</p>
+                )}
+              </div>
+
+              <p className="md:col-span-3 text-[11px] text-muted-foreground">
+                {intelligenceContext.source === "real_data"
+                  ? "Este contexto é injetado na geração da semana. As fontes disponíveis estão vinculadas à campanha selecionada."
+                  : "A geração usa o contexto geral do negócio até que uma campanha com inteligência especializada seja alinhada."}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -1200,7 +1317,7 @@ export default function PresencePage() {
           onClose={() => setShowConfig(false)}
           onSaved={async () => {
             setShowConfig(false);
-            await loadConfig();
+            await Promise.all([loadConfig(), loadIntelligenceContext()]);
           }}
         />
       )}
