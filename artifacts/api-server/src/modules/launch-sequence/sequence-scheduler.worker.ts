@@ -44,9 +44,7 @@ let metaRetryWatchdogPromise: Promise<void> | null = null;
 
 // The executor owns bridged first-touch items. This adapter remains behind the
 // existing provider service seams, allowing tests to replace it before ticks.
-const internalFirstTouchAdapter: FirstTouchAdapter = async ({ workspaceId, channel, recipient, body, idempotencyKey }) => {
-  const generated = (body["generatedCopy"] ?? {}) as Record<string, unknown>;
-  const copy = ((generated["hot"] ?? generated) as Record<string, unknown>);
+const internalFirstTouchAdapter: FirstTouchAdapter = async ({ workspaceId, channel, recipient, body, idempotencyKey, selectedCopy: copy }) => {
   if (channel === "email") {
     const cfg = (body["sequenceConfig"] ?? {}) as Record<string, unknown>;
     const configuredProvider = String(cfg["emailProvider"] ?? "");

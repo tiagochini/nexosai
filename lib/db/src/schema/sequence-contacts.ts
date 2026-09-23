@@ -21,6 +21,9 @@ export const contactSegmentEnum = pgEnum("contact_segment", [
   "converted",
   "unsubscribed",
 ]);
+export const journeyStageEnum = pgEnum("journey_stage", [
+  "awareness", "consideration", "qualification", "objection_handling", "closing", "converted",
+]);
 
 export const engagementEventTypeEnum = pgEnum("engagement_event_type", [
   "delivered",
@@ -44,6 +47,7 @@ export const sequenceContactsTable = pgTable("sequence_contacts", {
   email: text("email"),
   phone: text("phone"),
   segment: contactSegmentEnum("segment").notNull().default("cold"),
+  journeyStage: journeyStageEnum("journey_stage").notNull().default("awareness"),
   engagementScore: real("engagement_score").notNull().default(0),
   itemsReceived: integer("items_received").notNull().default(0),
   itemsOpened: integer("items_opened").notNull().default(0),

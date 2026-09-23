@@ -13,6 +13,7 @@
     "test:product-asaas-sandbox-unit": "NODE_ENV=test tsx src/scripts/test-product-asaas-sandbox-unit.ts",
     "test:psychology": "tsx src/scripts/test-psychology-pipeline.ts",
     "test:credit-concurrency": "tsx src/scripts/test-credit-concurrency.ts",
+    "test:lead-capture-http": "LEAD_CAPTURE_HTTP_TESTS=true NODE_ENV=test tsx src/scripts/test-lead-capture-http.ts",
     "test:workspace-entitlements": "tsx src/scripts/test-workspace-entitlements.ts",
     "test:commercial-entitlements": "tsx src/scripts/test-commercial-entitlements.ts",
     "test:orchestration-fallback-race": "tsx src/scripts/test-orchestration-fallback-race.ts",

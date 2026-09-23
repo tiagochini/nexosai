@@ -33,6 +33,7 @@ import {
 } from "@workspace/db";
 import type { Logger } from "pino";
 import { env } from "../../lib/env.js";
+import { segmentsForPhase } from "./first-touch-policy.js";
 import { getApprovedMasterplan } from "../masterplan/masterplan.service.js";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -545,18 +546,15 @@ export async function bridgeCampaignToSequence(
         scheduledAt,
           contentPieceId: undefined,
         metadata: {
-          generatedCopy: {
-            hot:  item.generatedCopy,
-            warm: item.generatedCopy,
-            cold: item.generatedCopy,
-          },
+          generatedCopy: Object.fromEntries(segmentsForPhase(item.phase).map((segment) => [segment, item.generatedCopy])),
+          copyPolicyVersion: "segment-phase-v1",
           bridgedAt:      now.toISOString(),
           bridgeSource:   "sequence-bridge",
            masterplanVersionId: approvedPlan.id,
            contextFingerprint: approvedPlan.contextFingerprint,
            contentHash: approvedPlan.contentHash,
            firstTouchExecutable: item.deliveryChannels.every((channel) => channel === "email" || channel === "whatsapp") &&
-             item.deliveryChannels.length === 1,
+             item.deliveryChannels.length === 1 && segmentsForPhase(item.phase).length > 0,
         },
       };
     }),

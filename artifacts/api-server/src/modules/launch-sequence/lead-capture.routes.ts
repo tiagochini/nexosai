@@ -6,6 +6,7 @@ import { logger } from "../../lib/logger.js";
 import { completeWithAgent } from "../ai-gateway/ai-gateway.service.js";
 import { env } from "../../lib/env.js";
 import { isLaunchSource, reserveLaunchSeat } from "../waitlist/launch-reservation.service.js";
+import { captureLead, LeadIdentityConflictError, normalizeLeadPhone } from "./lead-capture.service.js";
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({
@@ -234,7 +235,7 @@ router.post("/:sequenceId", async (req, res): Promise<void> => {
   // the direct landing form. The sequence contact remains the attribution
   // record, while waitlist is the authoritative seat ledger.
   const requestedLaunchSeat = isLaunchSource(body.source);
-  const reservationPhone = body.whatsapp ?? body.phone;
+  const reservationPhone = normalizeLeadPhone(body.whatsapp ?? body.phone);
   let launchReserved = false;
   if (requestedLaunchSeat) {
     if (!reservationPhone) {
@@ -253,32 +254,6 @@ router.post("/:sequenceId", async (req, res): Promise<void> => {
       return;
     }
     launchReserved = reservation.launchReserved;
-  }
-
-  // Fast path only; the tenant-scoped unique indexes also protect concurrent
-  // requests and identities shared by multiple sequences.
-  if (body.email || body.phone) {
-    const [existing] = await db
-      .select({ id: sequenceContactsTable.id })
-      .from(sequenceContactsTable)
-      .where(
-        and(
-          eq(sequenceContactsTable.workspaceId, sequence.workspaceId),
-          eq(sequenceContactsTable.sequenceId, sequenceId),
-          body.email ? eq(sequenceContactsTable.email, body.email) : eq(sequenceContactsTable.phone, body.phone!),
-        ),
-      )
-      .limit(1);
-
-    if (existing) {
-      res.json({
-        captured: true,
-        duplicate: true,
-        launchReserved,
-        message: "Lead já registrado nesta sequência",
-      });
-      return;
-    }
   }
 
   // Validate referral code if provided
@@ -323,46 +298,23 @@ router.post("/:sequenceId", async (req, res): Promise<void> => {
 
   let contact: { id: string } = { id: "" };
   try {
-    await db.transaction(async (tx) => {
-    [contact] = await tx
-      .insert(sequenceContactsTable)
-      .values({
-      sequenceId,
-      workspaceId: sequence.workspaceId,
-      name: body.name ?? null,
-      email: body.email ?? null,
-      phone: body.phone ?? null,
-      tags: body.tags ?? [],
-      metadata: {
-        ...utm,
-        utm,
-        lgpd,
-        referralCode,
-        ...(refCode ? { referredBy: refCode } : {}),
-        ...(body.metadata ?? {}),
-      },
-      })
-      .returning({ id: sequenceContactsTable.id });
-    await tx.insert(auditLogsTable).values({
-      workspaceId: sequence.workspaceId, action: "lead.captured",
-      actor: body.email ?? body.phone ?? "anonymous", ipAddress: captureIp ?? undefined,
-      data: { sequenceId, contactId: contact.id, utm, referralCode, referredBy: refCode ?? null,
-        consentAt, consentText: lgpd.consentText, userAgent: lgpd.userAgent },
+    const captureDependency = (req.app.locals as { captureLead?: typeof captureLead }).captureLead ?? captureLead;
+    const captured = await captureDependency({
+      workspaceId: sequence.workspaceId, sequenceId, email: body.email, phone: body.phone, name: body.name,
+      tags: body.tags, metadata: { ...utm, utm, lgpd, referralCode, ...(refCode ? { referredBy: refCode } : {}), ...(body.metadata ?? {}) },
+      audit: { actor: body.email ?? body.phone ?? "anonymous", ipAddress: captureIp, data: { utm, referralCode, referredBy: refCode ?? null, consentAt, consentText: lgpd.consentText, userAgent: lgpd.userAgent } },
     });
-    });
+    contact = { id: captured.contactId };
+    if (captured.duplicate) {
+      res.json({ captured: true, duplicate: true, launchReserved, contactId: contact.id, message: "Lead já registrado" });
+      return;
+    }
   } catch (err) {
-    // A concurrent capture won the unique identity race. Reuse it rather
-    // than emitting a second enrollment/audit/first-touch side effect.
-    const [winner] = await db.select({ id: sequenceContactsTable.id })
-      .from(sequenceContactsTable)
-      .where(and(
-        eq(sequenceContactsTable.workspaceId, sequence.workspaceId),
-        eq(sequenceContactsTable.sequenceId, sequenceId),
-        body.email ? eq(sequenceContactsTable.email, body.email) : eq(sequenceContactsTable.phone, body.phone!),
-      )).limit(1);
-    if (!winner) throw err;
-    res.json({ captured: true, duplicate: true, launchReserved, contactId: winner.id, message: "Lead já registrado" });
-    return;
+    if (err instanceof LeadIdentityConflictError) {
+      res.status(409).json({ error: err.code, code: err.code });
+      return;
+    }
+    throw err;
   }
 
   // Increment referrer's referred count (non-blocking)

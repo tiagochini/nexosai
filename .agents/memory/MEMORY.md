@@ -96,3 +96,6 @@
 - [Meta Verify Token Digest Fallback](meta-verify-token-digest-fallback.md) — webhook GET accepts the runtime secret or a pinned SHA-256 digest when Replit deployment-secret sync is disabled.
 - [Capability Governance Visibility](capability-governance-visibility.md) — readiness and certification controls are internal-only; never expose them as customer-facing delivery or authorization statuses.
 - [Exactly-Once Lead First Touch](exactly-once-lead-first-touch.md) — first contact is per contact+item, Master-Plan-bound, lease-fenced, provider-aware and isolated from legacy dispatch.
+- [Lead Journey Routing](lead-journey-routing.md) — classification and journey stage jointly gate every message; sales agents may advance only one evidenced stage at a time.
+- [Progressive Capability Navigation](progressive-capability-navigation.md) — add sidebar areas only when their agents can execute real work; pages expose outcomes, history and reports, not placeholders.
+- [Workforce Realization Engine](workforce-realization-engine.md) — realization is a core operating layer: agents build, connect, publish, verify and optimize the complete commercial system.

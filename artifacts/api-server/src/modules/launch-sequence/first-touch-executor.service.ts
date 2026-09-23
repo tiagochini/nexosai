@@ -5,9 +5,11 @@ import {
 } from "@workspace/db";
 import { randomUUID } from "node:crypto";
 import { getApprovedMasterplan } from "../masterplan/masterplan.service.js";
+import { phaseEligibilitySql } from "./first-touch-policy.js";
 
 export type FirstTouchAdapter = (input: {
-  workspaceId: string; channel: string; recipient: string; body: Record<string, unknown>; idempotencyKey: string;
+  workspaceId: string; contactId: string; segment: string; journeyStage: string; phase: string;
+  channel: string; recipient: string; selectedCopy: Record<string, unknown>; body: Record<string, unknown>; idempotencyKey: string;
 }) => Promise<{ confirmed: boolean; ambiguous?: boolean; receipt?: Record<string, unknown>; error?: string }>;
 
 export type FirstTouchResult = "confirmed" | "retryable" | "ambiguous" | "suppressed" | "none";
@@ -69,6 +71,7 @@ export async function executeFirstTouch(
       lte(launchSequenceItemsTable.scheduledAt, now),
       sql`${launchSequenceItemsTable.metadata} @> '{"firstTouchExecutable": true}'::jsonb`,
       inArray(sequenceContactsTable.segment, ["cold", "warm", "hot"]),
+      phaseEligibilitySql(sequenceContactsTable.segment, sequenceContactsTable.journeyStage, launchSequenceItemsTable.phase),
       or(
         and(sql`${launchSequenceItemsTable.deliveryChannels} @> '["email"]'::jsonb`, sql`nullif(${sequenceContactsTable.email}, '') is not null`),
         and(sql`${launchSequenceItemsTable.deliveryChannels} @> '["whatsapp"]'::jsonb`, sql`nullif(${sequenceContactsTable.phone}, '') is not null`),
@@ -148,10 +151,21 @@ export async function executeFirstTouch(
   }
   const [claimedRow] = await db.select().from(firstTouchAttemptsTable).where(and(eq(firstTouchAttemptsTable.workspaceId, workspaceId), eq(firstTouchAttemptsTable.attemptKey, attemptKey)));
   if (!claimedRow || claimedRow.leaseOwner !== owner) return "none";
+  const metadata = (item.metadata as Record<string, unknown> ?? {});
+  const generated = metadata.generatedCopy as Record<string, unknown> | undefined;
+  const selectedCopy = generated?.[contact.segment] as Record<string, unknown> | undefined;
+  const valid = metadata.copyPolicyVersion === "segment-phase-v1" && !!selectedCopy &&
+    (channel === "email" ? !!selectedCopy.subject && !!(selectedCopy.body || selectedCopy.html || selectedCopy.text) : !!(selectedCopy.message || selectedCopy.body || selectedCopy.text));
+  if (!valid) {
+    await db.update(firstTouchAttemptsTable).set({ state: "terminal", error: "missing or unsafe segment-phase copy", leaseOwner: null, leaseExpiresAt: null })
+      .where(and(eq(firstTouchAttemptsTable.id, claimedRow.id), eq(firstTouchAttemptsTable.workspaceId, workspaceId), eq(firstTouchAttemptsTable.state, "executing"), eq(firstTouchAttemptsTable.leaseOwner, owner)));
+    return "suppressed";
+  }
 
   let outcome;
   try {
-    outcome = await adapter({ workspaceId, channel, recipient, body: { ...(item.metadata as Record<string, unknown> ?? {}), sequenceConfig: sequence.config, sequenceItemId: item.id, campaignId: sequence.campaignId }, idempotencyKey: attemptKey });
+    outcome = await adapter({ workspaceId, contactId: contact.id, segment: contact.segment, journeyStage: contact.journeyStage, selectedCopy,
+      phase: item.phase, channel, recipient, body: { ...(item.metadata as Record<string, unknown> ?? {}), sequenceConfig: sequence.config, sequenceItemId: item.id, campaignId: sequence.campaignId }, idempotencyKey: attemptKey });
   } catch (error) {
     outcome = { confirmed: false, ambiguous: classifyAdapterFailure(error), error: error instanceof Error ? error.message : "adapter failure" };
   }
