@@ -1,0 +1,12 @@
+import { Router } from "express";
+import { requireAuth } from "../auth/auth.middleware.js";
+import * as service from "./realization.service.js";
+const router = Router();
+router.use(requireAuth);
+router.post("/", async (req, res) => { try { res.status(201).json(await service.createRealizationContract(req.auth.workspaceId, req.auth.userId, req.body)); } catch (e) { res.status((e as any).statusCode ?? 400).json({ error: e instanceof Error ? e.message : "Invalid request", code: (e as any).code }); } });
+router.get("/", async (req, res) => res.json(await service.listRealizationContracts(req.auth.workspaceId, req.query.campaignId as string | undefined)));
+router.get("/:id", async (req, res) => { try { res.json(await service.getRealizationContract(req.auth.workspaceId, req.params.id)); } catch (e) { res.status((e as any).statusCode ?? 404).json({ error: e instanceof Error ? e.message : "Not found", code: (e as any).code }); } });
+const action = (fn: (w: string, id: string, ...a: any[]) => Promise<any>) => async (req: any, res: any) => { try { res.json(await fn(req.auth.workspaceId, req.params.id, ...(req.body?.details ? [req.body.details] : []))); } catch (e) { res.status((e as any).statusCode ?? 409).json({ error: e instanceof Error ? e.message : "Invalid state", code: (e as any).code }); } };
+router.post("/:id/preflight", action(service.preflightRealization)); router.post("/:id/execute", action(service.executeRealization)); router.post("/:id/retry", action(service.retryRealization)); router.post("/:id/monitor", action(service.monitorRealization)); router.post("/:id/compensate", action(service.compensateRealization));
+router.post("/:id/qc", async (req, res) => { try { res.json(await service.qcRealization(req.auth.workspaceId, req.params.id)); } catch (e) { res.status((e as any).statusCode ?? 409).json({ error: e instanceof Error ? e.message : "Invalid state", code: (e as any).code }); } });
+export default router;

@@ -45,7 +45,7 @@
 - [Regenerate Route Fire-and-Forget](regenerate-fire-and-forget.md) — POST /regenerate must be fire-and-forget (setImmediate); sync await causes HTTP timeout before LLM finishes. Frontend polls GET /content every 10s until status==="pending_approval".
 - [Mastery Libraries Injection](mastery-libraries-injection.md) — MASTERY_LIBRARY_FOR[agentRole] injected at position 8.5 in agent.runner.ts (between phaseBlock and systemPrompt). File: mastery-libraries.ts. Not injected for skipAllStaticLayers. Covers 17 roles across 6 domains.
 - [Structured JSON Token Budget](structured-json-token-budget.md) — targeting + media_buyer use structured_json task type; its TASK_MAX_OUTPUT_TOKENS was 8192 (too low for 14 audiences + 21-day plan) causing empty arrays. Fixed to 32768. Auto-retry on empty arrays in content.service.ts. maxTokens? wired through RunAgentOptions → routedComplete → completeWithAgent.
-- [Scheduled Social Posts](scheduled-social-posts.md) — socialPostsTable IS the schedule; createScheduledSocialPosts() on sequence activate; processScheduledSocialPosts() in 60s tick; autoPostApprovedContent() defers if scheduled row exists.
+- [Scheduled Social Authorization](scheduled-social-posts.md) — campaign schedules require an immutable preview and accepted policy; legacy rows lacking proof must stop, not self-authorize.
 - [Temporal Context Precision](temporal-context.md) — buildTemporalContextBlock() exported with TemporalContextOpts; pass temporalContext in RunAgentOptions for launch-aware agents; campaigns.timezone column added.
 - [Premise Conflict Detector](premise-conflict.md) — conflict-detector.service.ts; detectPremiseConflicts() fires via setImmediate after intake merge; persists to brainData.premiseConflicts; Socket.io campaign:event alert; resolvePremiseConflict() for user resolution.
 - [Manual Integration Connect](manual-integration-connect.md) — manual credential-entry endpoints need their own field/status/provider-enum audit against the DB enum + OAuth mapping; a missing field is silently stripped, not an error.
@@ -106,3 +106,9 @@
 - [Orval path/query name collision](orval-path-query-collision.md) — operations combining path and query params can collide in the api-zod barrel; keep codegen postprocessing deterministic.
 - [Preview readiness semantics](preview-readiness-semantics.md) — preview availability must come from substantive source content, not metadata or serialized empty JSON.
 - [Safe version comparison](safe-version-comparison.md) — compare only persisted immutable history; detect differences before redacting previews and declare any bounded comparison incomplete.
+- [Governed Approval SLA](governed-approval-sla.md) — SLA is exact-snapshot operational state; schedule, decision and expiry share locks, and reminders never execute external work.
+- [Conditional Auto-Execution](conditional-auto-execution.md) — approval never executes; policy, durable attempt, cross-process lock and matching readback are mandatory.
+- [Universal Realization Contracts](universal-realization-contracts.md) — pause and paid-media launch share one governed lifecycle without replacing provider executors.
+- [Operational Council outcome](operational-council-outcome.md) — later-cycle minutes must cite the action; observed execution evidence is not approval or business KPI proof.
+- [Browser tester secret isolation](browser-tester-secret-isolation.md) — browser testing runtime lacks process.env; do not assume workspace test-account secrets can be read by a Playwright test.
+- [Lifecycle intent versus delivery](lifecycle-intent-delivery.md) — pending recovery/onboarding/retention/upsell records are intentions, not provider proof; activation requires independent fulfillment evidence.

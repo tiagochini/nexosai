@@ -48,7 +48,7 @@ export async function seedE2eFixtures(marker: string, options: { failAfterInsert
       { workspaceId: primary, provider: "instagram", status: "connected", accountId: `${marker}_ig_two`, accountName: `${marker} IG Two`, accessToken: "E2E_DUMMY_IG_TOKEN_TWO", metadata: { integrationPurpose: "organic_social", pageId: `${marker}_page_two` } },
       // Legacy organic Meta Page row: intentionally no paidMedia marker.
       { workspaceId: primary, provider: "meta_ads", status: "connected", accountId: `${marker}_legacy_page`, accountName: `${marker} Legacy Page`, accessToken: "E2E_DUMMY_LEGACY_PAGE_TOKEN", metadata: { pageId: `${marker}_legacy_page` } },
-      { workspaceId: primary, provider: "meta_ads", status: "connected", accountId: `act_${marker}`, accountName: `${marker} Paid`, accessToken: "E2E_DUMMY_PAID_MEDIA_TOKEN", metadata: { integrationPurpose: "paid_media", paidMedia: true } },
+      { workspaceId: primary, provider: "meta_ads", status: "connected", accountId: `act_${marker}`, accountName: `${marker} Paid`, accessToken: "E2E_DUMMY_PAID_MEDIA_TOKEN", tokenExpiresAt: new Date(Date.now() + 86_400_000), metadata: { integrationPurpose: "paid_media", paidMedia: true } },
     ]).returning({ id: workspaceIntegrationsTable.id });
     const paidIntegrationId = integrations[3]!.id;
     await tx.insert(socialPresencePostsTable).values({
@@ -62,12 +62,12 @@ export async function seedE2eFixtures(marker: string, options: { failAfterInsert
     });
     const [account] = await tx.insert(paidMediaAccountsTable).values({
       workspaceId: primary, integrationId: paidIntegrationId, provider: "meta_ads", providerAccountId: `act_${marker}`,
-      accountName: `${marker} Paid Account`, currency: "USD", timezone: "UTC", isSelected: true, selectedAt: new Date(),
+      accountName: `${marker} Paid Account`, currency: "USD", timezone: "UTC", isSelected: true, operationalHealth: true, healthCheckedAt: new Date(), selectedAt: new Date(),
     }).returning({ id: paidMediaAccountsTable.id });
     const [entity] = await tx.insert(paidMediaEntitiesTable).values({
       workspaceId: primary, accountId: account!.id, provider: "meta_ads", providerEntityId: `${marker}_campaign`,
       entityType: "campaign", name: `${marker} Campaign`, status: "ACTIVE", version: "e2e-v1", currency: "USD", timezone: "UTC",
-      providerData: { e2eMarker: marker, daily_budget: "1000" },
+      providerData: { e2eMarker: marker, daily_budget: "1000", operational: true }, lastSyncedAt: new Date(),
     }).returning({ id: paidMediaEntitiesTable.id });
     await tx.insert(paidMediaInsightsTable).values({
       workspaceId: primary, accountId: account!.id, entityId: entity!.id, provider: "meta_ads", providerInsightId: `${marker}_insight`,

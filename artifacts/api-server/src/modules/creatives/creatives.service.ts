@@ -233,44 +233,9 @@ export async function approvePreviewAndGenerateFinal(
         })
         .where(eq(campaignCreativesTable.id, creativeId));
 
-      // If this creative was generated for a specific content piece (metadata.contentPieceId),
-      // re-trigger autopost now that the final image is ready.  The autopost extractMediaUrls
-      // step 0 will query campaignCreativesTable by contentPieceId and find this creative.
-      const creativeMetadata = (creative.metadata && typeof creative.metadata === "object")
-        ? (creative.metadata as Record<string, unknown>)
-        : {};
-      const linkedPieceId = creativeMetadata["contentPieceId"] as string | undefined;
-      if (linkedPieceId && imageUrl && creative.campaignId) {
-        setImmediate(async () => {
-          try {
-            // 1. Update any pending scheduled social post rows with the final image URL
-            //    so the scheduler can publish without another round-trip to DB.
-            const { eq: deq, and: dand, inArray: dInArray } = await import("drizzle-orm");
-            const { db: ddb, socialPostsTable: dSocial } = await import("@workspace/db");
-            await ddb
-              .update(dSocial)
-              .set({ mediaUrls: [imageUrl] })
-              .where(
-                dand(
-                  deq(dSocial.contentPieceId, linkedPieceId),
-                  dInArray(dSocial.status, ["scheduled", "draft"] as any),
-                ),
-              );
-            log.info({ linkedPieceId, creativeId, imageUrl }, "Updated scheduled social posts with final media URL");
-
-            // 2. Now that the image is ready, trigger autoPostApprovedContent for the
-            //    linked piece. If a scheduled row already exists, autoPost defers to the
-            //    scheduler (which will fire within 60s). If no row exists yet, it creates
-            //    one and publishes immediately. This closes the gap where approving a
-            //    creative after content approval didn't trigger publishing.
-            const { autoPostApprovedContent } = await import("../social/social.autopost.service.js");
-            await autoPostApprovedContent(creative.workspaceId, creative.campaignId!, linkedPieceId);
-            log.info({ linkedPieceId, creativeId }, "autoPostApprovedContent triggered after creative finalUrl ready");
-          } catch (updateErr) {
-            log.warn({ linkedPieceId, updateErr }, "Post-creative publish trigger failed (non-fatal)");
-          }
-        });
-      }
+      // Final URL persistence is intentionally the only consequence here.
+      // Social publication remains behind the explicit preview/confirmation route;
+      // the scheduler can hydrate an already-persisted scheduled row later.
     } catch (err) {
       log.warn({ creativeId, err }, "DALL-E HD generation failed");
       await db

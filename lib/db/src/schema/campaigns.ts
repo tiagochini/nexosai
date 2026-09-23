@@ -7,6 +7,7 @@ import {
   pgEnum,
   jsonb,
   boolean,
+  unique,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -119,7 +120,9 @@ export const campaignsTable = pgTable("campaigns", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-});
+}, (table) => [
+  unique("campaigns_workspace_id_id_uidx").on(table.workspaceId, table.id),
+]);
 
 export const insertCampaignSchema = createInsertSchema(campaignsTable).omit({
   id: true,

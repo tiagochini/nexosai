@@ -81,6 +81,14 @@ export async function syncPaidMediaAccount(workspaceId: string, accountId: strin
         .onConflictDoUpdate({ target: [paidMediaSyncCursorsTable.accountId, paidMediaSyncCursorsTable.entityType], set: { lastError: message, claimedAt: null, claimToken: null, updatedAt: new Date() } });
     }
   }
+  if (errors.length === 0 && entitiesUpserted > 0) {
+    await db.update(paidMediaAccountsTable).set({ operationalHealth: true, healthCheckedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(paidMediaAccountsTable.id, account.id), eq(paidMediaAccountsTable.workspaceId, workspaceId)));
+  }
+  if (errors.length > 0) {
+    await db.update(paidMediaAccountsTable).set({ operationalHealth: false, healthCheckedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(paidMediaAccountsTable.id, account.id), eq(paidMediaAccountsTable.workspaceId, workspaceId)));
+  }
   return { accountId: account.id, entitiesUpserted, insightsUpserted, errors };
 }
 

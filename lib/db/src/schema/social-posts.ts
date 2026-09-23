@@ -9,6 +9,7 @@ import {
   boolean,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { workspacesTable } from "./workspaces";
@@ -113,6 +114,9 @@ export const socialPostsTable = pgTable("social_posts", {
     .$onUpdate(() => new Date()),
 }, (table) => [
   uniqueIndex("social_posts_workspace_id_uidx").on(table.workspaceId, table.id),
+  uniqueIndex("social_posts_workspace_content_piece_integration_uidx")
+    .on(table.workspaceId, table.contentPieceId, table.integrationId)
+    .where(sql`${table.contentPieceId} IS NOT NULL`),
 ]);
 
 export const insertSocialPostSchema = createInsertSchema(

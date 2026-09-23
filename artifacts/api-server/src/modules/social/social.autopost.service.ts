@@ -1,21 +1,16 @@
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import {
   db,
   contentPiecesTable,
   workspaceIntegrationsTable,
   socialPostsTable,
-  mediaBriefsTable,
   campaignCreativesTable,
 } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
-import {
-  publishToInstagram,
-  publishToFacebook,
-  publishToTikTok,
-  checkSocialCredentialReadiness,
-} from "./social.publisher.js";
-import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
-import type { SocialPost, WorkspaceIntegration } from "@workspace/db";
+import { publishPost } from "./social.service.js";
+import { getApprovedMasterplan } from "../masterplan/masterplan.service.js";
+import { AppError } from "../../lib/errors.js";
+import type { SocialPost } from "@workspace/db";
 
 // Maps content piece types → DB provider values to query
 // content_calendar is the main type emitted by the social_media agent.
@@ -85,88 +80,6 @@ function extractCaption(content: unknown): string {
 }
 
 /**
- * Extracts media URLs from a content piece's JSONB content field.
- * Falls back to approved media briefs linked to the piece, then to
- * approved campaign creatives (finalUrl from campaignCreativesTable).
- */
-async function extractMediaUrls(
-  pieceId: string,
-  content: unknown,
-  campaignId?: string,
-): Promise<string[]> {
-  // 0. Check for a creative generated specifically for this piece via generate-visual.
-  //    The creative stores metadata.contentPieceId so we can link them even without
-  //    writing back to the piece (contentPiecesTable has no metadata column).
-  {
-    const { sql: drizzleSql } = await import("drizzle-orm");
-    const linked = await db
-      .select({ finalUrl: campaignCreativesTable.finalUrl })
-      .from(campaignCreativesTable)
-      .where(
-        and(
-          drizzleSql`${campaignCreativesTable.metadata}->>'contentPieceId' = ${pieceId}`,
-          eq(campaignCreativesTable.status, "approved"),
-        ),
-      )
-      .limit(1);
-    const linkedUrl = linked[0]?.finalUrl;
-    if (typeof linkedUrl === "string" && linkedUrl) return [linkedUrl];
-  }
-
-  // 1. Try to extract from content JSONB
-  if (content && typeof content === "object" && content !== null) {
-    const c = content as Record<string, unknown>;
-    const fromContent =
-      c["mediaUrls"] ?? c["media_urls"] ?? c["imageUrls"] ?? c["videoUrls"];
-    if (Array.isArray(fromContent) && fromContent.length > 0) {
-      return fromContent.filter((u): u is string => typeof u === "string");
-    }
-    const single = c["mediaUrl"] ?? c["imageUrl"] ?? c["videoUrl"] ?? c["url"];
-    if (typeof single === "string" && single) return [single];
-  }
-
-  // 2. Fall back to approved media briefs linked to this piece (legacy)
-  const briefs = await db
-    .select({ finalUrl: mediaBriefsTable.finalUrl })
-    .from(mediaBriefsTable)
-    .where(
-      and(
-        eq(mediaBriefsTable.contentPieceId, pieceId),
-        eq(mediaBriefsTable.conceptStatus, "concept_approved"),
-      )
-    )
-    .limit(5);
-
-  const briefUrls = briefs
-    .map((b) => b.finalUrl)
-    .filter((u): u is string => typeof u === "string" && u.length > 0);
-
-  if (briefUrls.length > 0) return briefUrls;
-
-  // 3. Fall back to approved campaign creatives with finalUrl (new system)
-  if (campaignId) {
-    const creatives = await db
-      .select({ finalUrl: campaignCreativesTable.finalUrl })
-      .from(campaignCreativesTable)
-      .where(
-        and(
-          eq(campaignCreativesTable.campaignId, campaignId),
-          eq(campaignCreativesTable.status, "approved"),
-        )
-      )
-      .limit(3);
-
-    const creativeUrls = creatives
-      .map((c) => c.finalUrl)
-      .filter((u): u is string => typeof u === "string" && u.length > 0);
-
-    if (creativeUrls.length > 0) return creativeUrls;
-  }
-
-  return [];
-}
-
-/**
  * Preview which platforms would receive a post for a given content piece.
  * Used by the publish-social gate (Bug #04 fix) to show the user what they are
  * about to publish to BEFORE they confirm. Never publishes anything.
@@ -179,7 +92,12 @@ export async function getPublishPreview(
   const [piece] = await db
     .select()
     .from(contentPiecesTable)
-    .where(eq(contentPiecesTable.id, pieceId))
+      .where(and(
+        eq(contentPiecesTable.id, pieceId),
+        eq(contentPiecesTable.workspaceId, workspaceId),
+        eq(contentPiecesTable.campaignId, campaignId),
+        eq(contentPiecesTable.status, "approved"),
+      ))
     .limit(1);
 
   if (!piece) return { platforms: [], pieceType: "", caption: "" };
@@ -218,230 +136,35 @@ export async function getPublishPreview(
 }
 
 /**
- * Triggered fire-and-forget after content piece approval.
- * Publishes to all connected social integrations that match the content type.
- * Never throws — all errors are logged internally.
+ * Legacy approval callback. Approval is not publication authorization.
+ * The explicit preview/confirmation route is the only publication entrypoint.
  */
 export async function autoPostApprovedContent(
   workspaceId: string,
   campaignId: string,
   pieceId: string,
 ): Promise<void> {
-  try {
-    // If a scheduled social post row exists for this piece, it means the launch
-    // sequence is managing timing — update the media/caption and let the scheduler
-    // fire at the right moment instead of publishing immediately.
-    const existingScheduled = await db
-      .select({ id: socialPostsTable.id })
-      .from(socialPostsTable)
-      .where(
-        and(
-          eq(socialPostsTable.contentPieceId, pieceId),
-          eq(socialPostsTable.status, "scheduled"),
-        ),
-      )
-      .limit(1);
-
-    if (existingScheduled.length > 0) {
-      logger.info({ workspaceId, pieceId }, "social.autopost: scheduled row exists — deferring to scheduler");
-      return;
-    }
-
-    const [piece] = await db
-      .select()
-      .from(contentPiecesTable)
-      .where(eq(contentPiecesTable.id, pieceId))
-      .limit(1);
-
-    if (!piece) return;
-
-    const contentType = piece.type ?? "";
-    const providers = CONTENT_TYPE_PROVIDERS[contentType];
-    if (!providers || providers.length === 0) {
-      logger.info({ workspaceId, pieceId, contentType }, "social.autopost: content type has no platforms, skip");
-      return;
-    }
-
-    const uniqueProviders = [...new Set(providers)];
-    const integrations = await db
-      .select()
-      .from(workspaceIntegrationsTable)
-      .where(
-        and(
-          eq(workspaceIntegrationsTable.workspaceId, workspaceId),
-          inArray(workspaceIntegrationsTable.provider, uniqueProviders as any),
-          eq(workspaceIntegrationsTable.status, "connected"),
-        )
-      );
-
-    if (integrations.length === 0) {
-      logger.info({ workspaceId, pieceId, providers: uniqueProviders }, "social.autopost: no connected integrations, skip");
-      return;
-    }
-
-    const postType = (CONTENT_TYPE_POST_TYPE[contentType] ?? "feed_image") as SocialPost["postType"];
-    const caption = extractCaption(piece.content);
-    const mediaUrls = await extractMediaUrls(pieceId, piece.content, campaignId);
-
-    const providerMap = new Map<string, WorkspaceIntegration>(
-      integrations.map(i => [i.provider as string, i])
-    );
-
-    for (const providerKey of uniqueProviders) {
-      const integration = providerMap.get(providerKey);
-      if (!integration) continue;
-
-      const platform = PROVIDER_TO_PLATFORM[providerKey] ?? "facebook_page";
-
-      // Instagram requires media — if not yet available, create a "scheduled" row
-      // with scheduledAt = now so the 60s tick retries until the image is generated.
-      // This replaces the old silent skip that discarded the post permanently.
-      if (platform === "instagram" && mediaUrls.length === 0) {
-        logger.info({ workspaceId, pieceId }, "social.autopost: Instagram — no media yet, creating scheduled row for retry");
-        await db.insert(socialPostsTable).values({
-          workspaceId,
-          campaignId: campaignId || null,
-          contentPieceId: pieceId,
-          integrationId: integration.id,
-          platform: "instagram" as const,
-          postType,
-          status: "scheduled",
-          caption,
-          hashtags: [],
-          mediaUrls: [],
-          scheduledAt: new Date(), // due immediately — scheduler retries each tick
-          aiGenerated: true,
-        }).onConflictDoNothing();
-        continue;
-      }
-
-      const mockPost: SocialPost = {
-        id: piece.id,
-        workspaceId,
-        campaignId: campaignId || null,
-        masterplanVersionId: null,
-        contextFingerprint: null,
-        contentPieceId: pieceId,
-        integrationId: integration.id,
-        platform,
-        postType,
-        status: "publishing",
-        caption,
-        hashtags: [],
-        mediaUrls,
-        callToAction: null,
-        linkUrl: null,
-        scheduledAt: null,
-        publishedAt: null,
-        platformPostId: null,
-        platformUrl: null,
-        metrics: { likes: 0, comments: 0, shares: 0, views: 0, reach: 0, impressions: 0, clicks: 0 },
-        retryCount: 0,
-        manualRetryCount: 0,
-        reelScript: null,
-        errorMessage: null,
-        aiGenerated: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      let result;
-      const pauseChannel = platform === "instagram" ? "instagram"
-        : platform === "facebook_page" ? "facebook"
-          : platform === "tiktok" ? "tiktok" : null;
-      if (pauseChannel) await enforceNoMandatoryPause(workspaceId, {
-        campaignId: campaignId || undefined, channel: pauseChannel, action: "social_publish",
-      });
-      const readiness = await checkSocialCredentialReadiness(platform, integration);
-      if (!readiness.ok) {
-        if (readiness.integrationStatus) {
-          await db.update(workspaceIntegrationsTable)
-            .set({ status: readiness.integrationStatus, updatedAt: new Date() })
-            .where(and(
-              eq(workspaceIntegrationsTable.id, integration.id),
-              eq(workspaceIntegrationsTable.workspaceId, workspaceId),
-            ));
-        }
-        await db.insert(socialPostsTable).values({
-          workspaceId,
-          campaignId: campaignId || null,
-          contentPieceId: pieceId,
-          integrationId: integration.id,
-          platform,
-          postType,
-          caption,
-          hashtags: [],
-          mediaUrls,
-          status: readiness.kind === "transient" ? "scheduled" : "failed",
-          scheduledAt: readiness.kind === "transient"
-            ? new Date(Date.now() + 60_000)
-            : null,
-          errorMessage: readiness.error,
-          aiGenerated: true,
-        }).onConflictDoNothing();
-        continue;
-      }
-      if (platform === "instagram") {
-        result = await publishToInstagram(mockPost, integration);
-      } else if (platform === "facebook_page") {
-        result = await publishToFacebook(mockPost, integration);
-      } else if (platform === "tiktok") {
-        result = await publishToTikTok(mockPost, integration);
-      } else {
-        continue;
-      }
-
-      if (result.success) {
-        logger.info({ platform, platformPostId: result.platformPostId, pieceId }, "social.autopost: published");
-        await db.insert(socialPostsTable).values({
-          workspaceId,
-          campaignId: campaignId || null,
-          contentPieceId: pieceId,
-          integrationId: integration.id,
-          platform,
-          postType,
-          caption,
-          hashtags: [],
-          mediaUrls,
-          status: "published",
-          platformPostId: result.platformPostId ?? null,
-          platformUrl: result.platformUrl ?? null,
-          publishedAt: new Date(),
-          aiGenerated: true,
-        }).onConflictDoNothing();
-      } else {
-        logger.warn({ platform, error: result.error, pieceId }, "social.autopost: publish failed");
-        await db.insert(socialPostsTable).values({
-          workspaceId,
-          campaignId: campaignId || null,
-          contentPieceId: pieceId,
-          integrationId: integration.id,
-          platform,
-          postType,
-          caption,
-          hashtags: [],
-          mediaUrls,
-          status: "failed",
-          errorMessage: result.error ?? "Unknown error",
-          aiGenerated: true,
-        }).onConflictDoNothing();
-      }
-    }
-  } catch (err) {
-    logger.error({ err, workspaceId, pieceId }, "social.autopost: unexpected error");
-  }
+  // Approval alone is never authorization to publish. Keep this legacy helper
+  // fail-closed until a versioned opt-in policy and immutable approval snapshot
+  // are supplied by a future API. Throw before any read/write/provider access.
+  throw new AppError(
+    412,
+    "Social publication requires explicit preview confirmation and approval snapshot",
+    "SOCIAL_APPROVAL_CONFIRMATION_REQUIRED",
+  );
 }
 
 // ── Scheduled Social Posts ────────────────────────────────────────────────────
 
 const SOCIAL_PIECE_TYPES = ["social_post", "content_calendar", "stories_sequence"] as const;
+const SOCIAL_SCHEDULE_CONFIRMATION_REQUIRED = "SOCIAL_SCHEDULE_CONFIRMATION_REQUIRED";
 
 /**
  * Called when a launch sequence is activated.
  * Creates socialPostsTable rows (status="scheduled") for every social content
  * piece linked to the campaign, timed by dayIndex relative to startAt.
  * One row per piece × connected integration.
- * Safe to call multiple times — uses onConflictDoNothing on (contentPieceId, integrationId).
+ * Safe to call multiple times — the canonical row is reconciled by publishPost.
  */
 export async function createScheduledSocialPosts(
   workspaceId: string,
@@ -474,11 +197,13 @@ export async function createScheduledSocialPosts(
       .where(
         and(
           eq(contentPiecesTable.campaignId, campaignId),
+          eq(contentPiecesTable.workspaceId, workspaceId),
           inArray(contentPiecesTable.type, SOCIAL_PIECE_TYPES as any),
+          eq(contentPiecesTable.status, "approved"),
         ),
       );
 
-    const { sql: drizzleSql } = await import("drizzle-orm");
+    const dossier = await getApprovedMasterplan(workspaceId, campaignId);
     let created = 0;
 
     for (const piece of pieces) {
@@ -498,29 +223,35 @@ export async function createScheduledSocialPosts(
         if (!providers.includes(provider)) continue;
         const platform = PROVIDER_TO_PLATFORM[provider] ?? "instagram";
 
-        try {
-          await db.insert(socialPostsTable).values({
+        const [inserted] = await db.transaction(async (tx) => {
+          await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${workspaceId}:${piece.id}:${integration.id}`}))`);
+          return tx.insert(socialPostsTable).values({
             workspaceId,
             campaignId: campaignId || null,
+            masterplanVersionId: dossier?.id ?? null,
+            contextFingerprint: dossier?.contextFingerprint ?? null,
             contentPieceId: piece.id,
             integrationId: integration.id,
             platform: platform as any,
             postType,
-            status: "scheduled",
+            // Launch activation cannot carry the explicit preview/target
+            // authorization required for a future campaign send. Persist the
+            // durable row for audit/idempotency, but never advertise it as
+            // scheduled work that the worker may publish.
+            status: "failed",
             caption,
             hashtags: [],
             mediaUrls: [],
             scheduledAt,
+            errorMessage: SOCIAL_SCHEDULE_CONFIRMATION_REQUIRED,
             aiGenerated: true,
-          });
-          created++;
-        } catch {
-          // Row may already exist — ignore duplicate key errors
-        }
+          }).onConflictDoNothing().returning({ id: socialPostsTable.id });
+        });
+        if (inserted) created++;
       }
     }
 
-    logger.info({ workspaceId, campaignId, created }, "createScheduledSocialPosts: scheduled posts created");
+    logger.info({ workspaceId, campaignId, created }, "createScheduledSocialPosts: blocked unconfirmed campaign rows created");
   } catch (err) {
     logger.warn({ err, workspaceId, campaignId }, "createScheduledSocialPosts: error (non-fatal)");
   }
@@ -535,7 +266,7 @@ export async function createScheduledSocialPosts(
 export async function processScheduledSocialPosts(): Promise<void> {
   const log = logger.child({ component: "social-post-scheduler" });
   try {
-    const { sql: drizzleSql, lte } = await import("drizzle-orm");
+    const { lte, sql: drizzleSql } = await import("drizzle-orm");
     const now = new Date();
 
     const due = await db
@@ -553,6 +284,15 @@ export async function processScheduledSocialPosts(): Promise<void> {
           eq(socialPostsTable.workspaceId, workspaceIntegrationsTable.workspaceId),
         ),
       )
+      .innerJoin(
+        contentPiecesTable,
+        and(
+          eq(socialPostsTable.contentPieceId, contentPiecesTable.id),
+          eq(socialPostsTable.workspaceId, contentPiecesTable.workspaceId),
+          eq(socialPostsTable.campaignId, contentPiecesTable.campaignId),
+          eq(contentPiecesTable.status, "approved"),
+        ),
+      )
       .where(
         and(
           eq(socialPostsTable.status, "scheduled"),
@@ -564,15 +304,29 @@ export async function processScheduledSocialPosts(): Promise<void> {
     if (due.length === 0) return;
     log.info({ count: due.length }, "processScheduledSocialPosts: processing due posts");
 
-    for (const { post, integration } of due) {
+    for (const { post } of due) {
       try {
-        // Mark as publishing to prevent double-processing
-        await db
-          .update(socialPostsTable)
-          .set({ status: "publishing" })
-          .where(and(eq(socialPostsTable.id, post.id), eq(socialPostsTable.workspaceId, post.workspaceId)));
+        // Launch/legacy scheduled rows predate the explicit publication boundary:
+        // there is no durable preview, target authorization, or immutable payload
+        // marker to prove that this row was explicitly confirmed. Do not infer
+        // authorization from a dossier/fingerprint or retry an ambiguous attempt.
+        // Retain the row and its metadata, but make the block terminal before
+        // media hydration or any provider call.
+        if (post.contentPieceId) {
+          await db.update(socialPostsTable).set({
+            status: "failed",
+            errorMessage: SOCIAL_SCHEDULE_CONFIRMATION_REQUIRED,
+            updatedAt: new Date(),
+          }).where(and(
+            eq(socialPostsTable.id, post.id),
+            eq(socialPostsTable.workspaceId, post.workspaceId),
+            eq(socialPostsTable.status, "scheduled"),
+          ));
+          log.warn({ postId: post.id }, "processScheduledSocialPosts: scheduled publication lacks explicit confirmation");
+          continue;
+        }
 
-        // Resolve media URLs — prefer piece-linked creative, then existing mediaUrls
+        // Hydrate media before handing the durable row to the canonical publisher.
         let mediaUrls: string[] = Array.isArray(post.mediaUrls) ? (post.mediaUrls as string[]) : [];
 
         if (mediaUrls.length === 0 && post.contentPieceId) {
@@ -582,6 +336,8 @@ export async function processScheduledSocialPosts(): Promise<void> {
             .where(
               and(
                 drizzleSql`${campaignCreativesTable.metadata}->>'contentPieceId' = ${post.contentPieceId}`,
+                eq(campaignCreativesTable.workspaceId, post.workspaceId),
+                post.campaignId ? eq(campaignCreativesTable.campaignId, post.campaignId) : undefined,
                 eq(campaignCreativesTable.status, "approved"),
               ),
             )
@@ -589,82 +345,38 @@ export async function processScheduledSocialPosts(): Promise<void> {
           if (linked[0]?.finalUrl) mediaUrls = [linked[0].finalUrl];
         }
 
-        // Instagram requires media — reschedule for next tick if not yet ready
+        if (mediaUrls.length > 0 && JSON.stringify(mediaUrls) !== JSON.stringify(post.mediaUrls ?? [])) {
+          await db.update(socialPostsTable).set({ mediaUrls, updatedAt: new Date() }).where(and(
+            eq(socialPostsTable.id, post.id), eq(socialPostsTable.workspaceId, post.workspaceId),
+            eq(socialPostsTable.status, "scheduled"),
+          ));
+        }
+        // Do not hand an unhydrated Instagram row to the provider adapter.
+        // Leave it due for the next poll after creative generation completes.
         if (post.platform === "instagram" && mediaUrls.length === 0) {
-          log.info({ postId: post.id }, "processScheduledSocialPosts: Instagram post waiting for media — reset to scheduled");
-          await db
-            .update(socialPostsTable)
-            .set({ status: "scheduled" })
-            .where(and(eq(socialPostsTable.id, post.id), eq(socialPostsTable.workspaceId, post.workspaceId)));
+          log.info({ postId: post.id }, "processScheduledSocialPosts: waiting for approved media");
           continue;
         }
-
-        const mockPost = { ...post, mediaUrls, status: "publishing" as const };
-
-        let result;
-        const readiness = await checkSocialCredentialReadiness(post.platform, integration);
-        if (!readiness.ok) {
-          if (readiness.integrationStatus) {
-            await db.update(workspaceIntegrationsTable)
-              .set({ status: readiness.integrationStatus, updatedAt: new Date() })
-              .where(and(
-                eq(workspaceIntegrationsTable.id, integration.id),
-                eq(workspaceIntegrationsTable.workspaceId, post.workspaceId),
-              ));
-          }
-          const retryCount = (post.retryCount ?? 0) + 1;
+        await publishPost(post.workspaceId, post.id);
+        log.info({ postId: post.id, platform: post.platform }, "processScheduledSocialPosts: canonical publish complete");
+      } catch (itemErr) {
+        const code = itemErr && typeof itemErr === "object" && "code" in itemErr
+          ? (itemErr as { code?: string }).code
+          : undefined;
+        if (code === "MASTERPLAN_CONTEXT_MISMATCH") {
           await db.update(socialPostsTable).set({
-            status: readiness.kind === "transient" && retryCount < 3 ? "scheduled" : "failed",
-            retryCount,
-            scheduledAt: readiness.kind === "transient" && retryCount < 3
-              ? new Date(Date.now() + 60_000)
-              : null,
-            errorMessage: readiness.error,
+            status: "failed",
+            scheduledAt: null,
+            errorMessage: "Cannot publish: social post has no current approved dossier binding",
+            updatedAt: new Date(),
           }).where(and(
             eq(socialPostsTable.id, post.id),
             eq(socialPostsTable.workspaceId, post.workspaceId),
+            eq(socialPostsTable.status, "scheduled"),
           ));
-          continue;
         }
-        const pauseChannel = post.platform === "instagram" ? "instagram"
-          : post.platform === "facebook_page" ? "facebook"
-            : post.platform === "tiktok" ? "tiktok" : null;
-        if (pauseChannel) await enforceNoMandatoryPause(post.workspaceId, {
-          campaignId: post.campaignId ?? undefined, channel: pauseChannel, action: "social_publish",
-        });
-        if (post.platform === "instagram") {
-          result = await publishToInstagram(mockPost as any, integration);
-        } else if (post.platform === "facebook_page") {
-          result = await publishToFacebook(mockPost as any, integration);
-        } else if (post.platform === "tiktok") {
-          result = await publishToTikTok(mockPost as any, integration);
-        } else {
-          await db.update(socialPostsTable).set({ status: "failed", errorMessage: `Unsupported platform: ${post.platform}` }).where(and(eq(socialPostsTable.id, post.id), eq(socialPostsTable.workspaceId, post.workspaceId)));
-          continue;
-        }
-
-        if (result.success) {
-          await db.update(socialPostsTable).set({
-            status: "published",
-            mediaUrls,
-            publishedAt: new Date(),
-            platformPostId: result.platformPostId ?? null,
-            platformUrl: result.platformUrl ?? null,
-          }).where(and(eq(socialPostsTable.id, post.id), eq(socialPostsTable.workspaceId, post.workspaceId)));
-          log.info({ postId: post.id, platform: post.platform }, "processScheduledSocialPosts: published");
-        } else {
-          const retryCount = (post.retryCount ?? 0) + 1;
-          const nextStatus = retryCount >= 3 ? "failed" : "scheduled";
-          await db.update(socialPostsTable).set({
-            status: nextStatus as any,
-            retryCount,
-            errorMessage: result.error ?? "Unknown error",
-          }).where(and(eq(socialPostsTable.id, post.id), eq(socialPostsTable.workspaceId, post.workspaceId)));
-          log.warn({ postId: post.id, platform: post.platform, error: result.error, retryCount }, "processScheduledSocialPosts: publish failed");
-        }
-      } catch (itemErr) {
-        await db.update(socialPostsTable).set({ status: "scheduled" }).where(and(eq(socialPostsTable.id, post.id), eq(socialPostsTable.workspaceId, post.workspaceId))).catch(() => {});
-        log.warn({ itemErr, postId: post.id }, "processScheduledSocialPosts: item error (reset to scheduled)");
+        // Never reset an in-flight/ambiguous attempt: publishPost owns recovery.
+        log.warn({ itemErr, postId: post.id }, "processScheduledSocialPosts: canonical publish failed");
       }
     }
   } catch (err) {

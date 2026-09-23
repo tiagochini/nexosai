@@ -6,6 +6,7 @@ import {
   integer,
   pgEnum,
   jsonb,
+  unique,
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 import { campaignsTable } from "./campaigns";
@@ -48,6 +49,7 @@ export const contentStatusEnum = pgEnum("content_status", [
   "budget_proposed",
   "approved",
   "rejected",
+  "revision_requested",
   "archived",
 ]);
 
@@ -104,7 +106,9 @@ export const contentPiecesTable = pgTable("content_pieces", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-});
+}, (table) => [
+  unique("content_pieces_workspace_campaign_id_uidx").on(table.workspaceId, table.campaignId, table.id),
+]);
 
 export const mediaBriefsTable = pgTable("media_briefs", {
   id: uuid("id").primaryKey().defaultRandom(),

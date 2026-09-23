@@ -6,6 +6,7 @@ import {
   integer,
   pgEnum,
   jsonb,
+  unique,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -45,7 +46,9 @@ export const workspacesTable = pgTable("workspaces", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-});
+}, (table) => [
+  unique("workspaces_id_owner_id_uidx").on(table.id, table.ownerId),
+]);
 
 export const insertWorkspaceSchema = createInsertSchema(workspacesTable).omit({
   id: true,

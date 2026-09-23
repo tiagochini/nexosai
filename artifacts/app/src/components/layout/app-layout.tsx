@@ -265,6 +265,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         { name: tr.sidebar.moderation,   href: "/social/moderation", icon: Shield     },
         { name: tr.sidebar.sequences,    href: "/sequences",         icon: Workflow   },
         { name: "Pipeline Regional",    href: "/pipeline",          icon: Network    },
+        { name: "Lifecycle",             href: "/lifecycle",         icon: Activity   },
         { name: tr.sidebar.revenue,      href: "/revenue",           icon: DollarSign },
         { name: tr.sidebar.compliance,   href: "/compliance",        icon: Shield     },
         { name: tr.sidebar.site_builder, href: "/site-builder",      icon: Globe      },

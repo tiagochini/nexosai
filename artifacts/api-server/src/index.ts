@@ -30,6 +30,7 @@ import { startRegionalAcquisitionScheduler, stopRegionalAcquisitionScheduler } f
 import { cleanupDisconnectedIntegrationDuplicates } from "./modules/integrations/integration-cleanup.service.js";
 import { recoverStudioRenders } from "./modules/video-editor/audiovisual-studio.service.js";
 import { organizeAllWorkspaceRecordings } from "./modules/recording/recording.service.js";
+import { startApprovalSlaScheduler, stopApprovalSlaScheduler } from "./modules/approval-center/approval-sla.service.js";
 import { db, campaignAgentsTable, campaignsTable, socialPresencePostsTable, socialPresenceConfigTable, socialPostsTable } from "@workspace/db";
 import { eq, and, lt, sql as sqlRaw, like, inArray } from "drizzle-orm";
 
@@ -130,6 +131,7 @@ async function startBackgroundServices(): Promise<void> {
   await initSequenceScheduler();
   startLifecycleScheduler();
   startFunnelScheduler();
+  startApprovalSlaScheduler();
 }
 
 function scheduleRecordingOrganizationSweep(): void {
@@ -335,6 +337,7 @@ async function shutdown(signal: string): Promise<void> {
   stopRegionalAcquisitionScheduler();
   await closeSequenceScheduler();
   stopLifecycleScheduler();
+  stopApprovalSlaScheduler();
   await closeOrchestrationWorker();
   await closeAllQueues();
   httpServer.close(() => {

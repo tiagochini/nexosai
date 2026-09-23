@@ -1,0 +1,9 @@
+CREATE UNIQUE INDEX IF NOT EXISTS conditional_execution_policies_workspace_id_uidx ON conditional_execution_policies(workspace_id,id);
+CREATE UNIQUE INDEX IF NOT EXISTS conditional_policy_actions_workspace_id_uidx ON conditional_execution_policy_actions(workspace_id,id);
+CREATE UNIQUE INDEX IF NOT EXISTS conditional_execution_intents_workspace_id_uidx ON conditional_execution_intents(workspace_id,id);
+CREATE UNIQUE INDEX IF NOT EXISTS conditional_execution_attempts_workspace_id_uidx ON conditional_execution_attempts(workspace_id,id);
+DO $$ BEGIN ALTER TABLE conditional_execution_policy_actions ADD CONSTRAINT conditional_actions_policy_scope_fk FOREIGN KEY(workspace_id,policy_id) REFERENCES conditional_execution_policies(workspace_id,id) ON DELETE RESTRICT; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE conditional_execution_intents ADD CONSTRAINT conditional_intents_policy_scope_fk FOREIGN KEY(workspace_id,policy_id) REFERENCES conditional_execution_policies(workspace_id,id) ON DELETE RESTRICT; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE conditional_execution_intents ADD CONSTRAINT conditional_intents_action_scope_fk FOREIGN KEY(workspace_id,policy_action_id) REFERENCES conditional_execution_policy_actions(workspace_id,id) ON DELETE RESTRICT; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE conditional_execution_attempts ADD CONSTRAINT conditional_attempts_intent_scope_fk FOREIGN KEY(workspace_id,intent_id) REFERENCES conditional_execution_intents(workspace_id,id) ON DELETE RESTRICT; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE conditional_execution_events ADD CONSTRAINT conditional_events_intent_scope_fk FOREIGN KEY(workspace_id,intent_id) REFERENCES conditional_execution_intents(workspace_id,id) ON DELETE RESTRICT; EXCEPTION WHEN duplicate_object THEN NULL; END $$;

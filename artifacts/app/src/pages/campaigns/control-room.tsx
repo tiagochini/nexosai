@@ -24,7 +24,21 @@ import {
 } from "@/components/ui/drawer";
 import { UniversalPreviewDrawer } from "./components/universal-preview-drawer";
 import { VersionDiffDrawer } from "./components/version-diff-drawer";
+import { ApprovalCenterDrawer } from "./components/approval-center-drawer";
+import { ConditionalExecutionPanel } from "./components/conditional-execution-panel";
+import { RealizationContractPanel } from "./components/realization-contract-panel";
+import { OperationalCouncilPanel } from "./components/operational-council-panel";
 import { GitCompare } from "lucide-react";
+import {
+  useGetCampaignControlRoomApprovals,
+  getGetCampaignControlRoomApprovalsQueryKey,
+  useGetConditionalExecutionPolicy,
+  getGetConditionalExecutionPolicyQueryKey,
+  useCreateConditionalExecutionPolicy,
+  useRevokeConditionalExecutionPolicy,
+  useListPaidMediaAccounts,
+  useListPaidMediaProposals,
+} from "@workspace/api-client-react";
 
 interface ControlRoomResponse {
   campaign: {
@@ -481,6 +495,78 @@ function CredentialsPanel({ data }: { data: ControlRoomResponse["credentials"] }
           )}
         </div>
       </DetailDrawer>
+    </>
+  );
+}
+
+function ApprovalCenterPanel({ campaignId }: { campaignId: string }) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { data } = useGetCampaignControlRoomApprovals(campaignId, undefined, {
+    query: {
+      queryKey: getGetCampaignControlRoomApprovalsQueryKey(campaignId),
+      refetchInterval: 5000
+    }
+  });
+
+  const pendingCount = data?.counts.pending ?? data?.total ?? 0;
+  const slaScheduled = data?.counts.slaScheduled ?? 0;
+  const slaDueSoon = data?.counts.slaDueSoon ?? 0;
+  const slaOverdue = data?.counts.slaOverdue ?? 0;
+  const slaExpired = data?.counts.slaExpired ?? 0;
+
+  return (
+    <>
+      <section className="border border-primary/30 bg-black/60 backdrop-blur-md overflow-hidden relative group flex flex-col">
+        <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+        <div className="p-3 border-b border-primary/20 flex justify-between items-center bg-primary/5 shrink-0">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            <h2 className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">Centro de Aprovações</h2>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+             {pendingCount > 0 ? (
+               <>
+                 <ActionCounter
+                   label="Pendentes"
+                   value={pendingCount}
+                   tone="primary"
+                   onClick={() => setDrawerOpen(true)}
+                   title="Ver aprovações pendentes"
+                 />
+                 {slaScheduled > 0 && <ActionCounter label="Agendado" value={slaScheduled} tone="neutral" onClick={() => setDrawerOpen(true)} title="Prazos agendados" />}
+                 {slaDueSoon > 0 && <ActionCounter label="Vence Breve" value={slaDueSoon} tone="warning" onClick={() => setDrawerOpen(true)} title="Prazos vencendo em breve" />}
+                 {slaOverdue > 0 && <ActionCounter label="Atrasado" value={slaOverdue} tone="danger" onClick={() => setDrawerOpen(true)} title="Prazos atrasados" />}
+                 {slaExpired > 0 && <ActionCounter label="Expirado" value={slaExpired} tone="danger" onClick={() => setDrawerOpen(true)} title="Prazos expirados" />}
+               </>
+             ) : (
+               <div className="px-2 py-0.5 border border-success/40 bg-success/10 text-success font-mono text-[9px] uppercase tracking-wider">
+                 Tudo Certo
+               </div>
+             )}
+          </div>
+        </div>
+
+        <div className="p-4 space-y-4">
+          <div className="font-sans text-xs text-muted-foreground leading-relaxed">
+             Revise e autorize master plans, peças de conteúdo e checkpoints estratégicos antes da execução do orquestrador.
+          </div>
+
+          <Button
+            type="button"
+            data-testid="btn-open-approval-center"
+            onClick={() => setDrawerOpen(true)}
+            className="w-full font-mono text-[10px] uppercase tracking-widest border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 hover:border-primary/70 hover:text-primary rounded-none h-10 transition-colors"
+          >
+            Abrir Centro de Aprovações
+          </Button>
+        </div>
+      </section>
+
+      <ApprovalCenterDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        campaignId={campaignId}
+      />
     </>
   );
 }
@@ -1204,6 +1290,10 @@ export default function ControlRoom() {
 
           {/* RIGHT COLUMN */}
           <div className="lg:col-span-7 xl:col-span-8 space-y-4 sm:space-y-6 flex flex-col">
+            <ConditionalExecutionPanel campaignId={id} masterplan={data.masterplan} />
+            <RealizationContractPanel campaignId={id} />
+            <OperationalCouncilPanel campaignId={id} masterplan={data.masterplan} />
+            <ApprovalCenterPanel campaignId={id} />
             <CheckpointsPanel data={data.pendingCheckpoints} campaignId={id} />
             <div className="flex-1 min-h-0">
               <ExecutionEvidencePanel data={data.executionEvidence} campaignId={id} />

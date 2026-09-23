@@ -384,7 +384,11 @@ export async function initiateProductCheckout(opts: {
 
 export async function refundProductSaleByExternalId(externalId: string): Promise<void> {
   const [sale] = await db.select().from(productSalesTable).where(eq(productSalesTable.externalId, externalId)).limit(1);
-  if (!sale || sale.status === "refunded") return;
+  if (!sale) return;
+  if (sale.status === "refunded") {
+    await recordRefundedSale(sale);
+    return;
+  }
   const [refunded] = await db.update(productSalesTable).set({ status: "refunded", updatedAt: new Date() })
     .where(and(eq(productSalesTable.id, sale.id), inArray(productSalesTable.status, ["paid", "expired"]))).returning();
   if (refunded) await recordRefundedSale(refunded);
@@ -457,7 +461,13 @@ export async function confirmProductSaleByExternalId(externalId: string): Promis
     .limit(1);
 
   if (!sale) return;
-  if (sale.status === "paid") return;
+  if (sale.status === "paid") {
+    // A duplicate webhook can arrive after a crash between the authoritative
+    // status commit and projection. Repair only local state; never reconvert
+    // the lead or perform an external mutation on this path.
+    await recordPaidSale(sale);
+    return;
+  }
 
   const [paidSale] = await db.update(productSalesTable)
     .set({ status: "paid", paidAt: new Date(), updatedAt: new Date() })

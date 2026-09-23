@@ -5,6 +5,594 @@
  * NexOS AI — Campaign execution and launch automation API
  * OpenAPI spec version: 0.1.0
  */
+export type LifecycleOverviewContactStages = { [key: string]: number };
+
+export type LifecycleOverviewActions = {
+  [key: string]: { [key: string]: number };
+};
+
+export type LifecycleOverviewReferrals = { [key: string]: unknown };
+
+export type LifecycleOverviewLtv = {
+  /** @minimum 0 */
+  contacts: number;
+  recordedLifetimeValueCents: number;
+  attribution: "recorded_local_ledger_not_externally_attributed_kpi";
+};
+
+export interface LifecycleOverview {
+  contactStages: LifecycleOverviewContactStages;
+  actions: LifecycleOverviewActions;
+  referrals: LifecycleOverviewReferrals;
+  ltv: LifecycleOverviewLtv;
+}
+
+export type LifecycleActionsResponseActionsItemType =
+  (typeof LifecycleActionsResponseActionsItemType)[keyof typeof LifecycleActionsResponseActionsItemType];
+
+export const LifecycleActionsResponseActionsItemType = {
+  recovery: "recovery",
+  onboarding: "onboarding",
+  retention: "retention",
+  upsell: "upsell",
+} as const;
+
+export type LifecycleActionsResponseActionsItemStatus =
+  (typeof LifecycleActionsResponseActionsItemStatus)[keyof typeof LifecycleActionsResponseActionsItemStatus];
+
+export const LifecycleActionsResponseActionsItemStatus = {
+  pending: "pending",
+  claimed: "claimed",
+  completed: "completed",
+  failed: "failed",
+  suppressed: "suppressed",
+} as const;
+
+export type LifecycleActionsResponseActionsItem = {
+  id: string;
+  type: LifecycleActionsResponseActionsItemType;
+  status: LifecycleActionsResponseActionsItemStatus;
+  channel?: string;
+  reason?: string | null;
+  riskScore?: number | null;
+  createdAt: string;
+  completedAt?: string | null;
+};
+
+export type LifecycleActionsResponsePagination = {
+  limit: number;
+  offset: number;
+  total: number;
+};
+
+export interface LifecycleActionsResponse {
+  actions: LifecycleActionsResponseActionsItem[];
+  pagination: LifecycleActionsResponsePagination;
+}
+
+export interface LifecycleContact {
+  id: string;
+  displayLabel: string;
+  email: string | null;
+  stage: string;
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  churnRisk: number;
+  lastActivityAt: string | null;
+}
+
+export type LifecycleContactsResponsePagination = {
+  limit: number;
+  offset: number;
+};
+
+export interface LifecycleContactsResponse {
+  contacts: LifecycleContact[];
+  pagination: LifecycleContactsResponsePagination;
+}
+
+export type LifecycleTimelineResponseEventsItem = {
+  id: string;
+  type: string;
+  status: string;
+  occurredAt: string;
+  processedAt: string | null;
+};
+
+export type LifecycleTimelineResponseOnboardingItem = {
+  id: string;
+  status: string;
+  activatedAt: string | null;
+  createdAt: string;
+};
+
+export type LifecycleTimelineResponseRecoveryItem = {
+  id: string;
+  status: string;
+  channel: string;
+  createdAt: string;
+  completedAt: string | null;
+};
+
+export type LifecycleTimelineResponsePagination = {
+  limit: number;
+  offset: number;
+};
+
+export interface LifecycleTimelineResponse {
+  contact: LifecycleContact;
+  events: LifecycleTimelineResponseEventsItem[];
+  onboarding: LifecycleTimelineResponseOnboardingItem[];
+  recovery: LifecycleTimelineResponseRecoveryItem[];
+  pagination: LifecycleTimelineResponsePagination;
+}
+
+export interface SocialPublicationRequest {
+  confirmed?: boolean;
+  /** @pattern ^[a-f0-9]{64}$ */
+  fingerprint?: string;
+}
+
+export type PublishSocialResponsePreviewPlatformsItem = {
+  [key: string]: unknown;
+};
+
+export type PublishSocialResponsePreview = {
+  fingerprint?: string;
+  caption?: string;
+  mediaUrls?: string[];
+  masterplanVersionId?: string;
+  platforms?: PublishSocialResponsePreviewPlatformsItem[];
+};
+
+export type PublishSocialResponsePostsItem = {
+  postId?: string;
+  integrationId: string;
+  platform: string;
+  status: string;
+  confirmed: boolean;
+  providerPostId?: string | null;
+  errorCode?: string;
+};
+
+export interface PublishSocialResponse {
+  confirmed?: boolean;
+  preview: PublishSocialResponsePreview;
+  posts?: PublishSocialResponsePostsItem[];
+  publishedCount?: number;
+  unresolvedCount?: number;
+}
+
+export type SocialInboxPageItemsItem = { [key: string]: unknown };
+
+export type SocialInboxPagePeriod = { [key: string]: unknown };
+
+export type SocialInboxPageFilters = { [key: string]: unknown };
+
+export interface SocialInboxPage {
+  items: SocialInboxPageItemsItem[];
+  /** @nullable */
+  nextCursor: string | null;
+  period: SocialInboxPagePeriod;
+  filters: SocialInboxPageFilters;
+}
+
+export type SocialReportFilters = { [key: string]: unknown };
+
+export type SocialReportAggregates = { [key: string]: unknown };
+
+export type SocialReportProvenance = { [key: string]: unknown };
+
+export interface SocialReport {
+  id: string;
+  workspaceId: string;
+  periodFrom: string;
+  periodTo: string;
+  filters: SocialReportFilters;
+  aggregates: SocialReportAggregates;
+  provenance: SocialReportProvenance;
+  createdAt: string;
+}
+
+export interface SocialReportInput {
+  from?: string;
+  to?: string;
+  campaignId?: string;
+}
+
+export interface CouncilCycleInput {
+  campaignId: string;
+  masterplanVersionId: string;
+  contextFingerprint: string;
+  snapshotHash: string;
+  /** @maxLength 200 */
+  idempotencyKey: string;
+}
+
+export interface CouncilCycle {
+  [key: string]: unknown;
+}
+
+export interface CouncilRecord {
+  [key: string]: unknown;
+}
+
+export interface CouncilDetail {
+  cycle: CouncilCycle;
+  minutes: CouncilRecord[];
+  decisions: CouncilRecord[];
+  actions: CouncilRecord[];
+  outcomes: CouncilRecord[];
+}
+
+export type CouncilMinutesInputEvidenceRefsItem = { [key: string]: unknown };
+
+export interface CouncilMinutesInput {
+  /** @maxLength 4000 */
+  summary: string;
+  /** @maxItems 50 */
+  evidenceRefs?: CouncilMinutesInputEvidenceRefsItem[];
+}
+
+export type CouncilDecisionInputTarget = { [key: string]: unknown };
+
+export type CouncilDecisionInputBaseline = { [key: string]: unknown };
+
+export type CouncilDecisionInputThreshold = { [key: string]: unknown };
+
+export type CouncilDecisionInputWindow = { [key: string]: unknown };
+
+export type CouncilDecisionInputEvidenceRefsItem = { [key: string]: unknown };
+
+export interface CouncilDecisionInput {
+  /** @maxLength 4000 */
+  rationaleSummary: string;
+  target: CouncilDecisionInputTarget;
+  baseline: CouncilDecisionInputBaseline;
+  threshold: CouncilDecisionInputThreshold;
+  window: CouncilDecisionInputWindow;
+  dueAt: string;
+  actionRequired?: boolean;
+  /** @maxItems 50 */
+  evidenceRefs?: CouncilDecisionInputEvidenceRefsItem[];
+}
+
+export type CouncilActionInputFamily =
+  (typeof CouncilActionInputFamily)[keyof typeof CouncilActionInputFamily];
+
+export const CouncilActionInputFamily = {
+  paid_media_pause: "paid_media_pause",
+  paid_media_launch: "paid_media_launch",
+} as const;
+
+export interface CouncilActionInput {
+  family: CouncilActionInputFamily;
+  realizationContractId: string;
+  /** @maxLength 200 */
+  idempotencyKey: string;
+}
+
+export interface CouncilOutcome {
+  [key: string]: unknown;
+}
+
+export interface CouncilVerificationInput {
+  nextCycleId: string;
+}
+
+export type ControlRoomApprovalsResponseUnavailableSourcesItem = {
+  sourceType?: string;
+  reason?: string;
+};
+
+export type ControlRoomApprovalsResponseCounts = {
+  pending?: number;
+  slaScheduled?: number;
+  slaDueSoon?: number;
+  slaOverdue?: number;
+  slaExpired?: number;
+};
+
+export type ApprovalSlaSummaryDeliveredEventsItem = { [key: string]: unknown };
+
+export interface ApprovalSlaSummary {
+  status?: string;
+  dueAt?: string;
+  warningAt?: string;
+  escalationAt?: string;
+  expiresAt?: string;
+  nextEvent?: string | null;
+  deliveredEvents?: ApprovalSlaSummaryDeliveredEventsItem[];
+}
+
+export type ApprovalItemPreview = { [key: string]: unknown } | null;
+
+export interface ApprovalItem {
+  subjectType: string;
+  subjectId: string;
+  subjectVersion?: number | null;
+  status?: string;
+  snapshotHash: string;
+  contextFingerprint?: string | null;
+  title?: string;
+  preview?: ApprovalItemPreview;
+  previewTruncated?: boolean | null;
+  previewWarnings?: string[] | null;
+  sla?: ApprovalSlaSummary;
+}
+
+export type ApprovalDecision =
+  (typeof ApprovalDecision)[keyof typeof ApprovalDecision];
+
+export const ApprovalDecision = {
+  approved: "approved",
+  rejected: "rejected",
+  revision_requested: "revision_requested",
+} as const;
+
+export interface ApprovalDecisionRecord {
+  id?: string;
+  subjectType?: string;
+  subjectId?: string;
+  decision?: ApprovalDecision;
+  reason?: string | null;
+  decidedAt: string;
+  actorUserId: string;
+  resolvedSnapshotHash: string;
+  subjectVersion?: number | null;
+  contextFingerprint?: string | null;
+}
+
+export interface ControlRoomApprovalsResponse {
+  pendingItems?: ApprovalItem[];
+  recentDecisions?: ApprovalDecisionRecord[];
+  unavailableSources?: ControlRoomApprovalsResponseUnavailableSourcesItem[];
+  total?: number;
+  catalogTruncated?: boolean;
+  catalogWarnings?: string[];
+  counts: ControlRoomApprovalsResponseCounts;
+}
+
+export interface ApprovalDecisionInput {
+  decision: ApprovalDecision;
+  /** @minLength 1 */
+  expectedSnapshotHash: string;
+  /** @minimum 1 */
+  expectedVersion?: number;
+  reason?: string;
+  idempotencyKey: string;
+}
+
+export interface ApprovalDecisionResponse {
+  record?: ApprovalDecisionRecord;
+}
+
+export type ApprovalSlaInputChannel =
+  (typeof ApprovalSlaInputChannel)[keyof typeof ApprovalSlaInputChannel];
+
+export const ApprovalSlaInputChannel = {
+  in_app: "in_app",
+} as const;
+
+export interface ApprovalSlaInput {
+  /**
+   * @minLength 1
+   * @maxLength 128
+   */
+  subjectSnapshotHash: string;
+  dueAt: string;
+  warningAt?: string;
+  escalationAt: string;
+  expiresAt: string;
+  channel?: ApprovalSlaInputChannel;
+  /**
+   * @minLength 1
+   * @maxLength 255
+   */
+  idempotencyKey: string;
+}
+
+export type ApprovalSlaResponseObligation = { [key: string]: unknown };
+
+export interface ApprovalSlaResponse {
+  obligation?: ApprovalSlaResponseObligation;
+}
+
+export type ConditionalExecutionPolicyInputActionProvider =
+  (typeof ConditionalExecutionPolicyInputActionProvider)[keyof typeof ConditionalExecutionPolicyInputActionProvider];
+
+export const ConditionalExecutionPolicyInputActionProvider = {
+  meta_ads: "meta_ads",
+  google_ads: "google_ads",
+  tiktok_ads: "tiktok_ads",
+} as const;
+
+export interface ConditionalExecutionPolicyInput {
+  [key: string]: unknown;
+}
+
+export interface ConditionalExecutionPolicy {
+  version: number;
+  enabled: boolean;
+  revokedAt?: string | null;
+  expiresAt: string;
+  masterplanVersionId?: string;
+  snapshotHash?: string;
+  contextFingerprint?: string;
+}
+
+export interface ConditionalExecutionAction {
+  actionType?: string;
+  provider?: string;
+  accountId?: string;
+  entityId?: string;
+  maxActionsPerDay?: number;
+}
+
+export type ConditionalExecutionResponseApprovedBinding = {
+  masterplanVersionId?: string;
+  snapshotHash?: string;
+  contextFingerprint?: string;
+};
+
+export type ConditionalExecutionResponseEventsItem = { [key: string]: unknown };
+
+export type ConditionalExecutionResponseCounts = {
+  intents?: number;
+  attempts?: number;
+};
+
+export interface ConditionalExecutionIntent {
+  id?: string;
+  status?: string;
+  createdAt: string;
+  blockCode?: string | null;
+}
+
+export type ConditionalExecutionAttemptProviderReceipt = {
+  [key: string]: unknown;
+} | null;
+
+export interface ConditionalExecutionAttempt {
+  id?: string;
+  status?: string;
+  createdAt: string;
+  providerReceipt?: ConditionalExecutionAttemptProviderReceipt;
+}
+
+export interface ConditionalExecutionResponse {
+  policy?: ConditionalExecutionPolicy;
+  action?: ConditionalExecutionAction;
+  approvedBinding?: ConditionalExecutionResponseApprovedBinding;
+  eligibility?: boolean;
+  blockers?: string[];
+  intents?: ConditionalExecutionIntent[];
+  attempts?: ConditionalExecutionAttempt[];
+  events?: ConditionalExecutionResponseEventsItem[];
+  counts?: ConditionalExecutionResponseCounts;
+}
+
+export interface ConditionalExecutionPolicyResponse {
+  policy?: ConditionalExecutionPolicy;
+}
+
+export type RealizationContractInputAction =
+  (typeof RealizationContractInputAction)[keyof typeof RealizationContractInputAction];
+
+export const RealizationContractInputAction = {
+  paid_media_pause: "paid_media_pause",
+  paid_media_launch: "paid_media_launch",
+} as const;
+
+export type RealizationContractInputTarget = { [key: string]: unknown };
+
+export interface RealizationContractInput {
+  campaignId: string;
+  masterplanVersionId: string;
+  subjectId: string;
+  /** @minLength 1 */
+  contextFingerprint: string;
+  /** @minLength 1 */
+  snapshotHash: string;
+  action: RealizationContractInputAction;
+  /** @minLength 1 */
+  idempotencyKey: string;
+  /**
+   * @minimum 1
+   * @maximum 10
+   */
+  maxAttempts?: number;
+  target?: RealizationContractInputTarget;
+}
+
+export type RealizationContractAction =
+  (typeof RealizationContractAction)[keyof typeof RealizationContractAction];
+
+export const RealizationContractAction = {
+  paid_media_pause: "paid_media_pause",
+  paid_media_launch: "paid_media_launch",
+} as const;
+
+export type RealizationContractBinding = { [key: string]: unknown };
+
+export interface RealizationContract {
+  id: string;
+  campaignId: string;
+  masterplanVersionId: string;
+  subjectId: string;
+  subjectType?: string;
+  action: RealizationContractAction;
+  state: string;
+  idempotencyKey: string;
+  bindingHash?: string;
+  requestFingerprint?: string;
+  contextFingerprint?: string;
+  snapshotHash?: string;
+  binding?: RealizationContractBinding;
+  maxAttempts: number;
+  attemptsUsed: number;
+  createdByUserId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type RealizationAttemptReceipt = { [key: string]: unknown } | null;
+
+export type RealizationAttemptReadback = { [key: string]: unknown } | null;
+
+export type RealizationAttemptError = { [key: string]: unknown } | null;
+
+export type RealizationAttemptQc = { [key: string]: unknown } | null;
+
+export type RealizationAttemptRetry = { [key: string]: unknown } | null;
+
+export type RealizationAttemptRecovery = { [key: string]: unknown } | null;
+
+export type RealizationAttemptCompensation = { [key: string]: unknown } | null;
+
+export interface RealizationAttempt {
+  id: string;
+  contractId: string;
+  number: number;
+  state: string;
+  receipt?: RealizationAttemptReceipt;
+  readback?: RealizationAttemptReadback;
+  error?: RealizationAttemptError;
+  qc?: RealizationAttemptQc;
+  retry?: RealizationAttemptRetry;
+  recovery?: RealizationAttemptRecovery;
+  compensation?: RealizationAttemptCompensation;
+  claimedAt: string;
+  completedAt?: string | null;
+  leaseOwner?: string | null;
+  leaseExpiresAt?: string | null;
+}
+
+export type RealizationEventDetails = { [key: string]: unknown };
+
+export interface RealizationEvent {
+  id: string;
+  contractId: string;
+  attemptId?: string | null;
+  type: string;
+  details: RealizationEventDetails;
+  createdAt: string;
+}
+
+export interface RealizationContractDetail {
+  contract: RealizationContract;
+  attempts: RealizationAttempt[];
+  events: RealizationEvent[];
+}
+
+export interface RealizationActionResult {
+  success: boolean;
+  contract: RealizationContract;
+  attempt?: RealizationAttempt;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -1407,6 +1995,22 @@ export type GetCampaign200 = {
   campaign: Campaign;
 };
 
+export type GetCampaignControlRoomApprovalsParams = {
+  /**
+   * @minimum 1
+   * @maximum 25
+   */
+  limit?: number;
+};
+
+export type CreateConditionalExecutionPolicy201 = { [key: string]: unknown };
+
+export type RevokeConditionalExecutionPolicy200 = { [key: string]: unknown };
+
+export type ListRealizationContractsParams = {
+  campaignId?: string;
+};
+
 export type GetCampaignControlRoomEvidenceParams = {
   /**
    * @minimum 1
@@ -1511,4 +2115,79 @@ export type GenerateItemCopy200 = {
 
 export type ListPaidMediaProposals200 = {
   proposals: PaidMediaProposal[];
+};
+
+export type ListSocialIntelligenceInboxParams = {
+  from?: string;
+  to?: string;
+  campaignId?: string;
+  cursor?: string;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+};
+
+export type ListSocialIntelligenceReports200 = {
+  reports?: SocialReport[];
+};
+
+export type ListLifecycleActionsParams = {
+  status?: ListLifecycleActionsStatus;
+  type?: ListLifecycleActionsType;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  /**
+   * @minimum 0
+   */
+  offset?: number;
+};
+
+export type ListLifecycleActionsStatus =
+  (typeof ListLifecycleActionsStatus)[keyof typeof ListLifecycleActionsStatus];
+
+export const ListLifecycleActionsStatus = {
+  pending: "pending",
+  claimed: "claimed",
+  completed: "completed",
+  failed: "failed",
+  suppressed: "suppressed",
+} as const;
+
+export type ListLifecycleActionsType =
+  (typeof ListLifecycleActionsType)[keyof typeof ListLifecycleActionsType];
+
+export const ListLifecycleActionsType = {
+  recovery: "recovery",
+  onboarding: "onboarding",
+  retention: "retention",
+  upsell: "upsell",
+} as const;
+
+export type ListLifecycleContactsParams = {
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  /**
+   * @minimum 0
+   */
+  offset?: number;
+};
+
+export type GetLifecycleTimelineParams = {
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  /**
+   * @minimum 0
+   */
+  offset?: number;
 };

@@ -10,6 +10,7 @@ import {
   GetCampaignControlRoomVersionDiffResponse,
 } from "@workspace/api-zod";
 import { requireAuth } from "../auth/auth.middleware.js";
+import { createExecutionPolicy, getConditionalExecutions, revokeExecutionPolicy } from "../paid-media/conditional-execution.service.js";
 import {
   createCampaign,
   getCampaign,
@@ -211,6 +212,19 @@ router.get("/:id/control-room", async (req, res): Promise<void> => {
     }
     throw err;
   }
+});
+
+router.get("/:id/control-room/execution-policy", async (req, res, next): Promise<void> => {
+  try { res.json(await getConditionalExecutions(req.auth.workspaceId, req.params["id"])); } catch (e) { next(e); }
+});
+router.post("/:id/control-room/execution-policy", async (req, res, next): Promise<void> => {
+  try { res.status(201).json(await createExecutionPolicy(req.auth.workspaceId, req.auth.userId, req.params["id"], req.body)); } catch (e) { next(e); }
+});
+router.post("/:id/control-room/execution-policy/:version/revoke", async (req, res, next): Promise<void> => {
+  try { res.json({ policy: await revokeExecutionPolicy(req.auth.workspaceId, req.auth.userId, req.params["id"], Number(req.params["version"])) }); } catch (e) { next(e); }
+});
+router.get("/:id/control-room/conditional-executions", async (req, res, next): Promise<void> => {
+  try { res.json(await getConditionalExecutions(req.auth.workspaceId, req.params["id"])); } catch (e) { next(e); }
 });
 
 router.get("/:id/control-room/evidence", async (req, res): Promise<void> => {

@@ -4,15 +4,15 @@
 >
 > Este arquivo responde três perguntas: **onde estamos**, **o que foi comprovado** e **qual é o próximo checkpoint**.
 
-Última atualização: **23 de setembro de 2026**
+Última atualização: **24 de setembro de 2026**
 
 ## Estado executivo
 
 - **Estágio operacional em foco:** transversal — Control Room e governança de capacidades;
-- **Nível de maturidade em foco:** M06 — Approval Center;
-- **Último nível concluído:** M05 — Version diff;
-- **Checkpoint atual:** M05 concluído e comprovado com fixtures reais de banco e E2E autenticado isolado;
-- **Próximo checkpoint:** vincular aprovação e rejeição motivada à versão exata do Master Plan ou entregável.
+- **Nível de maturidade em foco:** M11 — fechamento das autorizações Content/Social; fundamentos M12 continuam locais;
+- **Último nível concluído:** M10 — Council operacional;
+- **Checkpoint atual:** auditoria dos quatro briefs registrada em `research/audit-fullstack-realization-vs-briefs.md`; publicação social implícita e agendamentos sem prévia/autorização agora falham fechados; preview-confirm explícito permanece disponível e passou em Graph simulado. M11 e M12 seguem incompletos; M10 é o último nível concluído;
+- **Próximo checkpoint:** vincular aprovação da peça ao payload/plano/contas, criar autorização versionada para agendamento/autopublicação e reconciliar filas bloqueadas sem inventar consentimento; então homologar Meta real e completar o lifecycle com entrega e readback.
 
 ## Checklist dos 12 níveis de maturidade
 
@@ -23,13 +23,13 @@
 | M03 | Drilldown de evidência | ✅ Concluído | Contrato OpenAPI, paginação determinística, filtros exatos, sanitização, ownership, links verificados e E2E desktop/mobile | Manter sem regressão |
 | M04 | Preview universal | ✅ Concluído | Endpoint paginado, sete fontes persistidas, renderizadores seguros, filtros, ownership e E2E desktop/mobile | Manter sem regressão |
 | M05 | Version diff | ✅ Concluído | Catálogo honesto, Master Plan e revisões de página, diff determinístico/sanitizado/limitado, ownership e E2E desktop/mobile | Manter sem regressão |
-| M06 | Approval Center | ▶️ Próximo | — | Aprovação/rejeição motivada e versionada |
-| M07 | SLA e lembretes | ⬜ Pendente | — | `dueAt`, aviso, entrega e decisão |
-| M08 | Autoexecução condicionada | ⬜ Pendente | — | Gates, política, idempotência e pausa |
-| M09 | Contratos de realização | ⬜ Pendente | — | Preflight, attempt, receipt, QC e compensation |
-| M10 | Council operacional | ⬜ Pendente | — | Decisão → ação → resultado comprovado |
-| M11 | Verticais full-stack | ⬜ Pendente | — | Primeira vertical completa: Content/Social |
-| M12 | Lifecycle autônomo | ⬜ Pendente | — | Homologação real do ciclo completo |
+| M06 | Approval Center | ✅ Concluído | Decisões imutáveis por snapshot, ownership composto, stale/race/idempotência, motivos, UI responsiva e E2E autenticado | Manter sem regressão |
+| M07 | SLA e lembretes | ✅ Concluído | Obrigação exata por snapshot, aviso 1h antes, due/escalation/expiration, recibos append-only, auditoria, concorrência e E2E desktop/mobile | Manter sem regressão |
+| M08 | Autoexecução condicionada | ✅ Concluído | `paid_media_pause` governado, locks PostgreSQL cross-process, receipt+readback, recovery fail-closed e E2E desktop/mobile sem rede | Manter sem regressão |
+| M09 | Contratos de realização | ✅ Concluído | Ledger universal e dois adapters reais (`paid_media_pause`, `paid_media_launch`), UI, receipt+readback, QC, recovery e testes adversariais | Manter sem regressão |
+| M10 | Council operacional | ✅ Concluído | Ciclos, atas, decisões e resultados append-only; binding exato, UI, idempotência concorrente e teste DB adversarial | Manter sem regressão |
+| M11 | Verticais full-stack | ▶️ Em andamento | Inbox/relatórios por workspace; preview→confirmação por fingerprint; deduplicação no banco; publicação Facebook com receipt/readback e evidência em simulação local | Vínculo imutável da aprovação, política de autopublicação, recuperação/métricas e homologação real |
+| M12 | Lifecycle autônomo | ▶️ Em andamento (fundamentos locais) | API e painel de observação; reconciliação de carrinhos sem envio; projeções de venda/refund atômicas e reparo; testes DB de escopo, paginação e concorrência | Prova de entrega/ativação, política de execução, otimização, recuperação e homologação real do ciclo completo; M11 ainda não concluído |
 
 ## Checklist dos 12 estágios operacionais
 
@@ -260,15 +260,163 @@ O estado abaixo será calculado capability por capability. Nenhum estágio é co
 - M05 é somente leitura; aprovação, rejeição e binding de decisão pertencem ao M06;
 - o bundle principal continua emitindo o aviso pré-existente de tamanho, sem falha de build.
 
-## Unidade atual — M06 Approval Center
+## Última unidade concluída — M06 Approval Center
 
-### Escopo inicial
+### Entregue no código
 
-- [ ] inventariar aprovações existentes e suas autoridades canônicas;
-- [ ] vincular toda decisão à versão exata, workspace, campanha, usuário e contexto;
-- [ ] exigir motivo persistido para rejeição;
-- [ ] impedir aprovação de versão obsoleta ou diferente da exibida;
-- [ ] manter M01–M05 sem regressão.
+- [x] inventário e adaptação das autoridades canônicas de Master Plan, conteúdo e checkpoints;
+- [x] registro append-only de cada decisão com workspace, campanha, ator, subject, versão, snapshot completo e contexto;
+- [x] aprovação, rejeição e solicitação de mudanças com motivo obrigatório nos dois últimos casos;
+- [x] hash canônico calculado antes da sanitização, mantendo alterações ocultas detectáveis;
+- [x] proteção contra versão obsoleta, corrida concorrente e replay idempotente conflitante;
+- [x] invariantes de banco para ownership composto de campanha, subject e ator;
+- [x] FKs tipados para Master Plan, conteúdo e checkpoint, checks de coerência e trigger contra update/delete;
+- [x] status real `revision_requested` para conteúdo;
+- [x] conclusão transacional de checkpoints pela máquina de estados canônica, com um único audit;
+- [x] previews públicos redigidos e limitados, catálogo limitado a 25 itens e resposta total limitada a 192 KB;
+- [x] adapters ainda não governados declarados honestamente como indisponíveis;
+- [x] UI responsiva com pendências, histórico imutável, hashes, contexto, motivos, stale state e avisos de truncamento/redação;
+- [x] nenhuma aprovação inicia publicação, execução, geração, provider ou cobrança.
+
+### Validação concluída
+
+- [x] migrations rastreadas `0040` a `0044` aplicadas e idempotentes;
+- [x] OpenAPI, clientes React e schemas Zod regenerados;
+- [x] typecheck das bibliotecas, banco, API e frontend;
+- [x] builds de produção da API e frontend;
+- [x] testes focados M01–M05 preservados;
+- [x] teste M06 com dois workspaces, ownership/IDOR, stale, corrida, idempotência e versão exata;
+- [x] teste de update/delete bloqueado pelo banco, FKs compostos, ator estrangeiro e bindings de checkpoint;
+- [x] teste adversarial acionando os limites de previews e decisões recentes;
+- [x] fixture legado do Master Plan atualizado sem enfraquecer o gate de produto/intake;
+- [x] revisão arquitetural independente sem bloqueadores críticos, altos ou médios;
+- [x] app e API reiniciados e saudáveis;
+- [x] E2E autenticado em 1440×1000 e 390×844;
+- [x] stale conflict distinto, motivos obrigatórios, `revision_requested` e transição após o último checkpoint verificados pela UI;
+- [x] ausência de overflow horizontal e controle de fechar alcançável no mobile;
+- [x] cleanup confirmado do usuário, workspace, campanha e decisões do fixture.
+
+### Provas do checkpoint
+
+- catálogo inicial exibiu 6 pendências reais: 1 Master Plan, 3 conteúdos e 2 checkpoints;
+- aprovação, rejeição e solicitação de mudanças geraram exatamente uma decisão imutável por snapshot;
+- tentativa de aprovar o Master Plan alterado após a abertura retornou conflito 409 e não criou decisão;
+- a versão atualizada pôde ser revisada e aprovada após reload;
+- a campanha permaneceu `awaiting_approval` até o segundo checkpoint e depois passou uma única vez para `approved`;
+- seis decisões finais continham workspace, campanha, ator, subject, hashes e bindings de versão/contexto aplicáveis;
+- motivos de rejeição e revisão foram persistidos;
+- nenhum crédito, provider log, execução de agente, evidência externa ou publicação social foi criado;
+- o sucesso informou explicitamente que nenhuma publicação ou execução foi iniciada.
+
+### Riscos e limitações remanescentes
+
+- M06 governa somente Master Plan, conteúdo e checkpoints; page, social, creative e video permanecem `adapter_not_governed`;
+- o catálogo mostra no máximo 25 pendências por resposta e avisa quando está truncado;
+- decisões recentes também podem ser reduzidas para respeitar o orçamento total de 192 KB;
+- o E2E confirmou ausência de efeitos externos nas tabelas com escopo por campanha; tabelas legadas sem `campaign_id` continuam dependentes das garantias de código e testes focados;
+- M06 não executa efeitos; a autoexecução condicionada existe somente no contrato restrito do M08;
+- o bundle principal continua emitindo o aviso pré-existente de tamanho, sem falha de build.
+
+## Última unidade concluída — M07 SLA e lembretes
+
+### Entregue no código
+
+- [x] obrigação operacional separada da decisão imutável e vinculada a workspace, campanha, ator, subject e hash exato;
+- [x] janela imutável `warningAt < dueAt < escalationAt <= expiresAt`, com aviso fixo uma hora antes do vencimento;
+- [x] canal `in_app` governado; canais externos rejeitados até possuírem autorização e recibo;
+- [x] eventos append-only de aviso, vencimento, escalonamento e expiração, cada um com receipt e audit;
+- [x] scheduler de 60 segundos com seleção determinística de eventos devidos ainda ausentes, sem starvation após 250 itens;
+- [x] locks compartilhados entre agendamento, decisão e scheduler, com revalidação transacional contra expiração;
+- [x] decisão resolve somente a obrigação do snapshot exato; expiração nunca aprova;
+- [x] contadores exatos por estado e detalhes/histórico limitados aos itens do catálogo;
+- [x] UI responsiva para agendar, acompanhar prazo, próximo evento e histórico imutável;
+- [x] estado expirado sem controles de decisão e com explicação explícita de segurança;
+- [x] nenhuma operação M07 publica, executa, gera, chama provider externo ou cobra créditos.
+
+### Validação concluída
+
+- [x] migration rastreada `0045_approval_sla.sql` aplicada e em paridade com o schema Drizzle;
+- [x] OpenAPI, cliente React e schemas Zod regenerados;
+- [x] typecheck do banco, bibliotecas, API e frontend;
+- [x] builds de produção da API e frontend;
+- [x] testes focados M07 e regressão M01–M06;
+- [x] replay idempotente, conflito de janela, ownership, stale snapshot, expiração e triggers append-only verificados;
+- [x] ticks concorrentes produzem um único evento/audit por tipo;
+- [x] revisão arquitetural independente concluída com PASS e sem bloqueadores;
+- [x] app e API reiniciados e saudáveis;
+- [x] E2E autenticado em 1440×1000 e 390×844;
+- [x] persistência após reload, aviso in-app via polling e expiração sem ações de decisão verificados;
+- [x] ausência de overflow horizontal e erros de console/API no fluxo autenticado.
+
+### Provas do checkpoint
+
+- resumo exibiu duas pendências, uma expirada e, após agendamento, uma vencendo em breve;
+- o aviso foi persistido com diferença exata de 3.600.000 ms para o vencimento;
+- reload preservou status, deadline, próximo evento e histórico in-app;
+- item expirado exibiu quatro eventos e zero controles de aprovar, rejeitar ou solicitar revisão;
+- nenhuma ação externa foi iniciada durante o E2E;
+- testes M01–M06 continuaram aprovados após a integração do M07.
+
+### Riscos e limitações remanescentes
+
+- apenas o canal in-app está autorizado; e-mail e WhatsApp exigem autorização, adapter e receipt próprios;
+- a expiração encerra a obrigação, mas não recria nem descarta automaticamente o subject;
+- o M07 continua restrito aos subjects governados pelo M06: Master Plan, conteúdo e checkpoints;
+- aprovação M07 continua sem executar; somente uma política M08 separada e vigente pode autorizar a pausa governada;
+- o bundle principal continua emitindo o aviso pré-existente de tamanho, sem falha de build.
+
+## Última unidade concluída — M08 Autoexecução condicionada
+
+### Entregue no código
+
+- [x] política versionada, desativada por padrão, autorizada somente pelo owner, revogável e com expiração obrigatória;
+- [x] binding imutável ao Master Plan aprovado, hash do snapshot e fingerprint de contexto exatos;
+- [x] única ação suportada: `paid_media_pause`; resume, budget, bid, launch, social e cross-platform continuam não suportados;
+- [x] aprovação permanece sem efeitos externos e nunca cria intento de execução;
+- [x] preflight determinístico e fail-closed para policy atual, campanha, binding, proposta, ownership, credencial, saúde/freshness e teto diário;
+- [x] intent e attempt duráveis/idempotentes antes da chamada externa;
+- [x] locks advisory PostgreSQL de sessão em ordem campanha → intent, compartilhados com criação/revogação e mantidos durante apply/readback;
+- [x] recuperação após restart somente por readback, sem repetir `apply`;
+- [x] sucesso somente com receipt do provider e readback independente correspondente; mismatch/erro exige recuperação;
+- [x] finalização transacional na mesma conexão física do lock, com fencing por owner;
+- [x] recibos/evidências sanitizados recursivamente e limitados por profundidade, nós e bytes;
+- [x] painel responsivo com estado, binding, alvo, limites, bloqueadores, histórico e revogação, sem botão manual de executar.
+
+### Validação concluída
+
+- [x] migrations rastreadas `0046`–`0052` aplicadas e schema Drizzle em paridade;
+- [x] OpenAPI, clientes React e schemas Zod regenerados;
+- [x] typecheck do banco, API e frontend;
+- [x] builds de produção da API e frontend;
+- [x] teste adversarial M08 e regressões M01–M07 aprovados;
+- [x] concorrência com provider atrasado comprovou uma chamada, revogação bloqueada durante a chamada e zero apply duplicado;
+- [x] supersession, daily ceiling, restart, stale binding, CAS, mismatch, append-only, tenant scope e FKs compostas verificados;
+- [x] revisão arquitetural independente concluída com PASS e sem bloqueadores críticos, altos ou médios;
+- [x] app e API reiniciados e saudáveis;
+- [x] E2E autenticado em 1440×1000 e 390×844 com integração bloqueada e sem rede externa;
+- [x] política ativa, expiração válida, bloqueio `CREDENTIAL_UNHEALTHY`, revogação e histórico vazio verificados;
+- [x] ausência de overflow horizontal, controle de fechar e ausência de botão de execução confirmados;
+- [x] cleanup confirmado com zero resíduos do fixture e preservação do usuário/workspace existentes.
+
+### Provas do checkpoint
+
+- a política criada pela UI ficou ativa em v1 e foi depois revogada, mantendo o binding exato;
+- integração com `blocksExecution=true` permaneceu inelegível e produziu zero intents, zero attempts, zero receipts e zero evidências de confirmação;
+- a proposta permaneceu `approved`, sem transição para `executing` ou `verified`;
+- duas execuções concorrentes sobre o mesmo intent produziram exatamente um apply e uma verificação;
+- revogação concorrente só concluiu após a chamada já autorizada terminar;
+- intent elegível de policy superseded foi bloqueado sem chamada ao provider;
+- intents com action de outra policy ou policy de outra campanha foram rejeitados pelo banco;
+- nenhum provider real, publicação, mensagem, IA ou cobrança foi acionado no E2E.
+
+### Riscos e limitações remanescentes
+
+- M08 cobre somente pausa de mídia paga; nenhuma outra mutação está autorizada;
+- revogação impede novas chamadas, mas não pode cancelar retroativamente uma chamada externa que já cruzou a fronteira autorizada;
+- perda catastrófica da sessão de lock deixa a tentativa durável para readback-only; um teste com `pg_terminate_backend` permanece uma cobertura adicional, não um bloqueador estrutural;
+- credenciais e saúde operacional devem permanecer frescas; falha ou dúvida bloqueia execução;
+- recibo sem readback correspondente nunca é apresentado como sucesso;
+- o bundle principal continua emitindo o aviso pré-existente de tamanho, sem falha de build.
 
 ## Protocolo obrigatório após cada desenvolvimento
 
@@ -287,3 +435,61 @@ O estado abaixo será calculado capability por capability. Nenhum estágio é co
 
 - [`NEXOS_CAPABILITY_INDEX.md`](./NEXOS_CAPABILITY_INDEX.md)
 - [`NEXOS_WORKFLOW_MAP.md`](./NEXOS_WORKFLOW_MAP.md)
+## Última unidade concluída — M09 Contratos de realização
+
+### Entregue no código
+
+- [x] Contrato de realização unificado atuando como ledger para execuções externas;
+- [x] Suporte restrito a `paid_media_pause` e `paid_media_launch`, explicitly labeling any other verticals as unsupported/not governed;
+- [x] State machine determinística para cada contrato (proposal, preflight, provider_confirmed, artifact_qc, recovery, etc.);
+- [x] Tracking de idempotency key, context fingerprint, bind hash e masterplan association;
+- [x] Orquestração transacional de retry, compensação durável e readback;
+- [x] UI nativa responsiva M09 conectada ao Control Room (sumários e logs visuais dos attempts);
+- [x] Actions rigorosas no Frontend: Retry, QC, Monitor, Compensate (execute só se valid).
+- [x] Componentes `RealizationContractPanel` e Drawer implementados com a estética correta.
+
+### Validação concluída
+
+- [x] Migrations Drizzle aplicadas, OpenAPI definitions integradas e sem quebras (`codegen` OK);
+- [x] Hooks gerados pelo Orval consumidos adequadamente pelo Frontend App;
+- [x] Typechecks concluídos sem erro (0 errors in UI);
+- [x] `npm run build` aprovado para produção (`BASE_PATH=/` `PORT=3000`).
+- [x] Nenhuma criação inventada sem approval subject autorizado; estado de "zero contratos" lida apropriadamente com empty-states no UI.
+
+## Última unidade concluída — M10 Council operacional
+
+### Entregue no código
+
+- [x] Ciclos vinculados à campanha, ao Master Plan aprovado e ao fingerprint/hash exatos; atas, decisões, ações e outcomes são append-only.
+- [x] Decisões registram responsável, justificativa, evidências, meta, baseline, limiar, janela e prazo; a interface coleta os valores reais e mostra o histórico.
+- [x] Ações apenas referenciam contratos M09 já existentes de `paid_media_pause` e `paid_media_launch`; o Council não aprova, não cria attempts e não chama providers.
+- [x] Verificação read-only exige ciclo posterior da mesma vinculação com ata que cite o contrato, contrato monitorado, último attempt confirmado, receipt, readback, QC aprovado e monitor vinculados ao attempt; evidência nova permite reverificação de resultado inconclusivo.
+- [x] Constraints, FKs, trigger de binding exato, sanitização e locks transacionais bloqueiam referências fora do escopo, famílias não governadas e duplicações concorrentes.
+
+### Provas e limites
+
+- [x] Migrações rastreadas aplicadas; OpenAPI e hooks gerados; testes adversariais M08–M10, typechecks e builds da API e do app aprovados.
+- [x] Teste M10 cobre escopo tenant, plano diferente na mesma campanha, concorrência, ciclo posterior e ata vinculada, mutação direta indevida, append-only, ambas as famílias M09 e reverificação sem execução externa.
+- [ ] Homologação de resultado comercial real em provider/produção não foi feita nesta unidade; verificação M10 comprova evidência persistida de M09, não sucesso de negócio fora dela.
+
+### M11 — Content/Social em andamento
+
+- [x] Inbox histórico de comentários/conversas com escopo por workspace, paginação e relatório persistido imutável; agregados contam todas as linhas do período (o preview permanece limitado).
+- [x] Preview de publicação com fingerprint de conteúdo, Master Plan e contas-alvo; confirmação rejeita preview desatualizado e retorna o estado de cada destino em vez de prometer sucesso geral.
+- [x] Posts duráveis deduplicados por workspace/peça/integração; publicação Facebook simulada localmente comprova tentativa, receipt, readback e evidência `provider_confirmed`. Falhas e permissões não são mascaradas como publicação.
+- [ ] A aprovação da peça ainda não guarda o hash/payload e a versão do Master Plan aprovados no instante da decisão. Mudanças posteriores e edições de posts de campanha precisam invalidar ou bloquear o envio.
+- [x] O hook legado de aprovação e a finalização de mídia não criam mais novos posts automaticamente; chamadas diretas ao helper falham sem confirmação. A publicação explícita exige fingerprint de preview até no serviço. Novos agendamentos de campanha sem autorização ficam bloqueados desde a criação; os antigos são preservados, mas passam para falha explícita antes de qualquer envio quando vencerem. A rota legada de publicar um post de campanha sem prévia também foi fechada.
+- [ ] Política versionada de autopublicação por ausência de resposta e vínculo imutável da aprovação ao payload/plano/contas ainda não existem. Falta uma reconciliação segura para os registros bloqueados: confirmar nova prévia não garante reutilização de uma linha antiga falhada se seu payload divergiu. Não considerar a vertical governada ou reativar o bypass até implementar e provar todos os gates.
+- [ ] Validar UI autenticada, recuperação, métricas de provedor atribuíveis e um percurso vertical único. O teste de Graph usa transporte simulado: permissões e publicação/readback reais do Meta **não foram homologados**.
+- [ ] Antes de aplicar a migração de chave natural em produção, verificar duplicados históricos e reconciliá-los manualmente se existirem; a migração falha de forma segura e não apaga posts.
+
+**Próximo checkpoint único:** concluir e comprovar M11 Content/Social full-stack, sem promover outras famílias do Council a executáveis antes de contratos governados e prova independente.
+
+### M12 — Lifecycle em andamento, somente fundamentos locais
+
+- [x] Contatos e eventos de compra, expiração e reembolso existentes agora aparecem em um painel read-only com dados de contato mascarados, listas paginadas e estados de ação explícitos. O LTV apresentado é o valor do ledger local, não uma métrica comercial atribuída por provedor.
+- [x] O scheduler reconcilia ações de recuperação inválidas com venda e consentimento atuais: suprime com registro idempotente; não envia e não marca ação pendente como concluída. Projeções locais de pagamento/reembolso e evento são atômicas; a recuperação de vendas terminais sem evento é limitada e repetível.
+- [x] Testes DB em workspace descartável cobrem deduplicação, concorrência, reparo, reembolso, isolamento e paginação. Nenhuma mutação externa integra estes testes.
+- [x] Sem prova de entrega, ativação manual e elegibilidade consequente para upsell ficam bloqueadas; estágio de comprador não pode ser declarado manualmente.
+- [ ] Transações históricas com evento antigo possivelmente parcial exigem auditoria antes de reparo manual; receita externa fora de product_sales ainda não compartilha a transação atômica. Não inferir fulfillment de status local.
+- [ ] Não há política de consentimento/execução versionada, executor de mensagens autorizado, comprovante independente de onboarding, readback, atribuição de resultados, otimização governada ou homologação real. M11 permanece incompleto; M12 não é `production_proven`.

@@ -167,18 +167,20 @@ router.get("/accounts/:provider/discover", async (req, res): Promise<void> => {
         .where(and(eq(paidMediaAccountsTable.workspaceId, req.auth.workspaceId), eq(paidMediaAccountsTable.provider, provider), eq(paidMediaAccountsTable.providerAccountId, account.providerAccountId)))
         .limit(1);
       if (existing) {
-         await db.update(paidMediaAccountsTable).set({ integrationId: integration.id, accountName: account.name, currency: account.currency, timezone: account.timezone })
+        await db.update(paidMediaAccountsTable).set({ integrationId: integration.id, accountName: account.name, currency: account.currency, timezone: account.timezone, operationalHealth: true, healthCheckedAt: new Date() })
           .where(eq(paidMediaAccountsTable.id, existing.id));
       } else {
         await db.insert(paidMediaAccountsTable).values({
           workspaceId: req.auth.workspaceId, integrationId: integration.id, provider,
           providerAccountId: account.providerAccountId, accountName: account.name,
-          currency: account.currency, timezone: account.timezone,
+          currency: account.currency, timezone: account.timezone, operationalHealth: true, healthCheckedAt: new Date(),
         });
       }
     }
     res.json({ accounts, selectionRequired: accounts.length !== 1 });
   } catch (error) {
+    await db.update(paidMediaAccountsTable).set({ operationalHealth: false, healthCheckedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(paidMediaAccountsTable.workspaceId, req.auth.workspaceId), eq(paidMediaAccountsTable.provider, provider)));
     sendProviderError(res, error);
   }
 });

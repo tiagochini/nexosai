@@ -17,6 +17,7 @@ export type SanitizedMetaGraphCall = {
 type MetaE2eLedger = {
   calls: SanitizedMetaGraphCall[];
   failOnceConsumed: boolean;
+  publicationOwners: Record<string, string>;
 };
 
 // tsx can load the same TypeScript source through distinct resolved specifiers
@@ -28,7 +29,7 @@ const ledger = (() => {
   const globals = globalThis as typeof globalThis & {
     __nexosMetaE2eGraphLedger?: MetaE2eLedger;
   };
-  return globals.__nexosMetaE2eGraphLedger ??= { calls: [], failOnceConsumed: false };
+  return globals.__nexosMetaE2eGraphLedger ??= { calls: [], failOnceConsumed: false, publicationOwners: {} };
 })();
 
 export function isMetaE2eTestMode(): boolean {
@@ -42,6 +43,7 @@ export function getMetaE2eGraphCalls(): readonly SanitizedMetaGraphCall[] {
 export function resetMetaE2eGraphCalls(): void {
   ledger.calls.length = 0;
   ledger.failOnceConsumed = false;
+  ledger.publicationOwners = {};
 }
 
 function redact(value: unknown): unknown {
@@ -96,6 +98,20 @@ function fakeBody(call: SanitizedMetaGraphCall): Record<string, unknown> {
   // These shapes cover publishing, comment replies, DMs, and the paid-media
   // adapter while remaining deterministic and intentionally non-production.
   if (call.path.endsWith("/insights")) return { data: [] };
+  if (process.env["META_E2E_READBACK_SIMULATION"] === "true") {
+    const accountFeed = call.path.match(/^\/v\d+(?:\.\d+)?\/([^/]+)\/feed$/);
+    if (call.method === "POST" && accountFeed) {
+      const id = fakeId(call);
+      ledger.publicationOwners[id] = accountFeed[1]!;
+      return { id };
+    }
+    const objectId = call.path.match(/^\/v\d+(?:\.\d+)?\/([^/]+)$/);
+    if (call.method === "GET" && objectId && call.query.fields === "tasks") return { id: objectId[1], tasks: ["CREATE_CONTENT", "MANAGE"] };
+    if (call.method === "GET" && objectId && ledger.publicationOwners[objectId[1]!]) {
+      return { id: objectId[1], from: { id: ledger.publicationOwners[objectId[1]!] }, permalink_url: `https://example.invalid/${objectId[1]}` };
+    }
+    if (call.method === "GET" && objectId) return { id: objectId[1] };
+  }
   if (call.path.endsWith("/comments")) return { data: [] };
   if (call.path.endsWith("/messages")) {
     const id = fakeId(call);

@@ -423,7 +423,10 @@ Estados devem ser append-only quando representam fatos. Nenhuma camada pode decl
 - **DONE** — Control Room UI com contadores clicáveis, composição persistida, status de credenciais e estados canônicos de evidência.
 - **DONE** — drilldown de evidência: timeline paginada, filtros exatos, links de origem, sanitização e ownership por workspace/campanha.
 - **DONE** — preview universal read-only: sete fontes persistidas, paginação determinística, filtros, estados honestos e renderização segura desktop/mobile.
-- **NEXT** — version diff para conteúdo, Master Plan, CTA, mídia e revisões persistidas.
+- **DONE** — version diff para Master Plan e revisões persistidas, sem inventar histórico para fontes mutáveis.
+- **DONE** — Approval Center com decisões append-only, binding exato e motivos governados.
+- **DONE** — SLA e lembretes in-app com aviso de uma hora, receipts, auditoria, escalonamento e expiração fail-closed.
+- **NEXT** — autoexecução condicionada por política versionada, autorização vigente e gates finais.
 
 ### Depois do Control Room
 
@@ -491,7 +494,7 @@ Esta fila não é um segundo fluxo comercial. Ela é o eixo de maturidade aplica
 5. **Version diff**: comparação de conteúdo, Master Plan, fase, CTA, mídia e revisões.
 6. **Approval Center**: orçamento, Master Plan e entregáveis com rejeição motivada.
 7. **SLA e lembrete**: dueAt, aviso de uma hora, canais, entrega e decisão.
-8. **Auto-publish condicionado**: política versionada, final gates e idempotência.
+8. **Autoexecução condicionada**: política versionada, final gates, idempotência e pausa segura.
 9. **Realization contracts**: workstreams, preflight, receipts, QC e compensation.
 10. **Council operacional**: reunião baseada em evidências, decisão, ação e verificação.
 11. **Primeira vertical full-stack**: Content/Social com calendário, previews, métricas, inbox e relatórios.
@@ -501,11 +504,20 @@ Este fluxo é adotado como contrato de implementação. Cada alteração futura 
 
 ### Checkpoint comprovado
 
-- **M01–M05 concluídos:** Control Room, contadores, drilldown de evidência, preview universal e version diff permanecem cumulativos.
+- **M01–M08 concluídos:** Control Room, contadores, drilldown de evidência, preview universal, version diff, Approval Center, SLA/lembretes e autoexecução condicionada permanecem cumulativos.
 - **M05 Version diff:** compara somente snapshots imutáveis do Master Plan e revisões persistidas de páginas; base e alvo são explícitos, o resultado é read-only, tenant-scoped, determinístico, sanitizado e limitado.
 - Fontes mutáveis sem histórico persistido continuam visíveis como `history_not_persisted`; timestamps nunca são promovidos a versões.
 - Comparações incompletas por limite de profundidade, nós, itens, mudanças ou bytes nunca são apresentadas como idênticas e carregam aviso explícito.
-- **Próximo checkpoint único:** M06 Approval Center, com decisão motivada e vinculada à versão exata exibida ao usuário.
+- **M06 Approval Center:** decisões de Master Plan, conteúdo e checkpoints são append-only, tenant-scoped, vinculadas ao snapshot/contexto exatos e protegidas contra stale, corrida e replay conflitante; rejeição e revisão exigem motivo.
+- Aprovar registra somente a decisão: não publica, executa, gera, chama provider nem cobra créditos.
+- Page, social, creative e video permanecem visíveis como adapters ainda não governados, sem inventar autorização.
+- **M07 SLA e lembretes:** obrigações exatas por snapshot possuem aviso in-app uma hora antes, due, escalonamento e expiração; eventos e audits são append-only e exatamente uma vez por tipo; decisão e scheduler compartilham locks e expiração nunca aprova.
+- Canais externos permanecem não suportados até possuírem autorização e receipts; M07 não publica, executa, gera, chama provider nem cobra.
+- **M08 Autoexecução condicionada:** somente `paid_media_pause`, sob policy versionada/owner-authorized/temporária e binding exato; approval não executa, preflight falha fechado, apply é idempotente e o resultado só confirma após receipt+readback correspondente.
+- Execução, criação e revogação compartilham locks PostgreSQL cross-process; restart reconcilia por readback sem repetir a mutação e qualquer ambiguidade exige recuperação.
+- **M09 concluído:** contratos reutilizáveis governam `paid_media_pause` e `paid_media_launch` com binding, preflight, attempt, receipt+readback, QC, monitoramento, retry, recovery e compensation honesta.
+- **M10 concluído:** ciclos, atas, decisões e outcomes persistidos e append-only; a decisão congela meta, baseline, limiar, janela, responsável e prazo. A ação referencia exclusivamente um contrato M09 da mesma campanha e versão/contexto/snapshot exatos, sem autorizar nem chamar provider. A verificação pertence a um ciclo posterior da mesma vinculação cuja ata cita o contrato, e exige attempt confirmado com receipt, readback, QC aprovado e monitor; resultado inconclusivo permanece histórico e pode ser reverificado com evidência nova.
+- **Próximo checkpoint único:** M11 Content/Social full-stack, com execução real e evidência própria antes de ampliar as famílias governadas.
 
 ## 13. Capability Index canônico
 

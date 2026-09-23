@@ -147,6 +147,7 @@ const BEARER_VALUE = /\bBearer\s+[A-Za-z0-9\-._~+/]+=*/gi;
 const JWT_VALUE = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g;
 const PEM_PRIVATE_KEY = /-----BEGIN[^\n-]*(?:PRIVATE|ENCRYPTED)[^\n-]*-----[\s\S]*?-----END[^\n-]*(?:PRIVATE|ENCRYPTED)[^\n-]*-----/gi;
 const HTTP_URL_VALUE = /\bhttps?:\/\/[^\s"'<>]+/gi;
+const OPAQUE_SECRET_VALUE = /\b(?:sk|pk|rk|api|key|token|ghp|gho|github_pat|xoxb|xoxp|whsec|AKIA)[-_]?[A-Za-z0-9_-]{12,}\b/gi;
 
 function stripPublicUrlCredentials(value: string): string {
   try {
@@ -241,6 +242,116 @@ function redactPaginatedEvidence(value: unknown): unknown {
     return redacted;
   }
   return { __redacted_truncation: "[REDACTED_EVIDENCE_BYTE_LIMIT]" };
+}
+
+export type PublicPreviewSanitization = {
+  value: unknown;
+  truncated: boolean;
+  warnings: string[];
+};
+
+/**
+ * Shared public-response sanitizer. Redaction always happens before any
+ * truncation, and callers receive explicit warnings whenever the visible value
+ * is incomplete or protected.
+ */
+export function sanitizePublicPreview(
+  value: unknown,
+  options: { maxBytes?: number; maxDepth?: number; maxNodes?: number; maxItems?: number; maxString?: number } = {},
+): PublicPreviewSanitization {
+  const maxBytes = Math.min(options.maxBytes ?? 24_000, MAX_PAGINATED_EVIDENCE_BYTES);
+  const maxDepth = Math.min(options.maxDepth ?? 10, MAX_PUBLIC_EVIDENCE_DEPTH);
+  const maxNodes = Math.min(options.maxNodes ?? 1_000, MAX_PUBLIC_EVIDENCE_NODES);
+  const maxItems = Math.min(options.maxItems ?? 500, MAX_PUBLIC_EVIDENCE_ITEMS);
+  const maxString = Math.min(options.maxString ?? 4_096, MAX_PUBLIC_EVIDENCE_STRING);
+  const warnings = new Set<string>();
+  const seen = new WeakSet<object>();
+  let nodes = 0;
+  let items = 0;
+  let truncated = false;
+
+  const sanitizeString = (input: string): string => {
+    let safe = input;
+    const replace = (pattern: RegExp, replacement: string) => {
+      pattern.lastIndex = 0;
+      const next = safe.replace(pattern, replacement);
+      if (next !== safe) warnings.add("sensitive_value_redacted");
+      safe = next;
+    };
+    replace(PEM_PRIVATE_KEY, "[REDACTED_PRIVATE_KEY]");
+    replace(BEARER_VALUE, "Bearer [REDACTED]");
+    replace(JWT_VALUE, "[REDACTED_JWT]");
+    replace(OPAQUE_SECRET_VALUE, "[REDACTED_OPAQUE_SECRET]");
+    HTTP_URL_VALUE.lastIndex = 0;
+    const withoutPrivateUrls = safe.replace(HTTP_URL_VALUE, (url) => stripPublicUrlCredentials(url));
+    if (withoutPrivateUrls !== safe) warnings.add("url_private_components_redacted");
+    safe = withoutPrivateUrls;
+    if (safe.length > maxString) {
+      truncated = true;
+      warnings.add("string_limit");
+      return `${safe.slice(0, maxString)}…`;
+    }
+    return safe;
+  };
+
+  const walk = (input: unknown, depth: number): unknown => {
+    if (nodes++ >= maxNodes) {
+      truncated = true;
+      warnings.add("node_limit");
+      return "[REDACTED_PREVIEW_LIMIT]";
+    }
+    if (depth > maxDepth) {
+      truncated = true;
+      warnings.add("depth_limit");
+      return "[REDACTED_PREVIEW_DEPTH]";
+    }
+    if (typeof input === "string") return sanitizeString(input);
+    if (!input || typeof input !== "object") return input;
+    if (seen.has(input)) {
+      warnings.add("cycle_redacted");
+      return "[REDACTED_PREVIEW_CYCLE]";
+    }
+    seen.add(input);
+    if (Array.isArray(input)) {
+      const result: unknown[] = [];
+      for (const entry of input) {
+        if (items++ >= maxItems) {
+          truncated = true;
+          warnings.add("item_limit");
+          result.push("[REDACTED_PREVIEW_LIMIT]");
+          break;
+        }
+        result.push(walk(entry, depth + 1));
+      }
+      seen.delete(input);
+      return result;
+    }
+    const result: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(input as Record<string, unknown>)) {
+      if (items++ >= maxItems) {
+        truncated = true;
+        warnings.add("item_limit");
+        result.__redacted_truncation = "[REDACTED_PREVIEW_LIMIT]";
+        break;
+      }
+      if (SENSITIVE_EVIDENCE_KEY.test(key)) {
+        warnings.add("sensitive_key_redacted");
+        result[key] = "[REDACTED_SECRET_VALUE]";
+      } else {
+        result[key] = walk(entry, depth + 1);
+      }
+    }
+    seen.delete(input);
+    return result;
+  };
+
+  let sanitized = walk(value, 0);
+  if (Buffer.byteLength(JSON.stringify(sanitized), "utf8") > maxBytes) {
+    sanitized = { __redacted_truncation: "[REDACTED_PREVIEW_BYTE_LIMIT]" };
+    truncated = true;
+    warnings.add("byte_limit");
+  }
+  return { value: sanitized, truncated, warnings: [...warnings].sort() };
 }
 
 function integrationHealth(

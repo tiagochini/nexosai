@@ -494,11 +494,9 @@ export async function processScheduledItems(): Promise<void> {
     }
   }
 
-  // Social media scheduled posts (Instagram / TikTok / Facebook)
-  const { processScheduledSocialPosts } = await import("../social/social.autopost.service.js");
-  await processScheduledSocialPosts().catch((err) =>
-    log.warn({ err }, "Social post scheduler tick failed — non-blocking"),
-  );
+  // Social publishing is polled by social.worker, which delegates every due row
+  // to publishPost and owns the durable attempt lease. Do not run a second poller
+  // here: duplicate callbacks must never compete for provider mutations.
 
   // Presença Social Always-On: plano semanal (segunda 08h) + posts agendados
   await maybeFirePresenceWeekly(now).catch((err) =>

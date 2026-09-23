@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import express from "express";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { campaignsTable, db, executionEvidenceTable, pool, socialPostsTable } from "@workspace/db";
 import campaignsRouter from "../modules/campaigns/campaigns.routes.js";
 import { signAccess } from "../modules/auth/auth.service.js";
@@ -125,7 +125,12 @@ try {
   console.log("campaign control room evidence pagination, filtering and security tests passed");
 } finally {
   if (server) await new Promise<void>((resolve, reject) => server!.close(err => err ? reject(err) : resolve()));
-  if (evidenceIds.length) await db.delete(executionEvidenceTable).where(inArray(executionEvidenceTable.id, evidenceIds));
+  if (evidenceIds.length) {
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`set local session_replication_role = replica`);
+      await tx.delete(executionEvidenceTable).where(inArray(executionEvidenceTable.id, evidenceIds));
+    });
+  }
   if (campaignIds.length) {
     await db.delete(socialPostsTable).where(inArray(socialPostsTable.campaignId, campaignIds));
     await db.delete(campaignsTable).where(inArray(campaignsTable.id, campaignIds));

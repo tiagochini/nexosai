@@ -72,6 +72,7 @@ import RecordingsPage from "@/pages/recordings/index";
 import LeadCapturePage from "@/pages/c/index";
 import PaidMediaPage from "@/pages/paid-media/index";
 import InfraestruturaPage from "@/pages/infraestrutura/index";
+import LifecyclePage from "@/pages/lifecycle/index";
 import NotFound from "@/pages/not-found";
 import InstitucionalPage from "@/pages/institucional/index";
 import VideoDiarioPage from "@/pages/video-diario/index";
@@ -297,6 +298,9 @@ export default function AppRoutes() {
       </Route>
       <Route path="/revenue">
         {() => <ProtectedRoute><RevenuePage /></ProtectedRoute>}
+      </Route>
+      <Route path="/lifecycle">
+        {() => <ProtectedRoute><LifecyclePage /></ProtectedRoute>}
       </Route>
       <Route path="/affiliate">
         {() => <ProtectedRoute><AffiliatePage /></ProtectedRoute>}

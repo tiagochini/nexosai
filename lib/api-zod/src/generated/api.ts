@@ -181,6 +181,621 @@ export const GetCampaignResponse = zod.object({
 });
 
 /**
+ * @summary approvals
+ */
+export const GetCampaignControlRoomApprovalsParams = zod.object({
+  campaignId: zod.coerce.string(),
+});
+
+export const getCampaignControlRoomApprovalsQueryLimitDefault = 25;
+export const getCampaignControlRoomApprovalsQueryLimitMax = 25;
+
+export const GetCampaignControlRoomApprovalsQueryParams = zod.object({
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(getCampaignControlRoomApprovalsQueryLimitMax)
+    .default(getCampaignControlRoomApprovalsQueryLimitDefault),
+});
+
+export const GetCampaignControlRoomApprovalsResponse = zod.object({
+  pendingItems: zod
+    .array(
+      zod.object({
+        subjectType: zod.string(),
+        subjectId: zod.string(),
+        subjectVersion: zod.number().nullish(),
+        status: zod.string().optional(),
+        snapshotHash: zod.string(),
+        contextFingerprint: zod.string().nullish(),
+        title: zod.string().optional(),
+        preview: zod.record(zod.string(), zod.unknown()).nullish(),
+        previewTruncated: zod.boolean().nullish(),
+        previewWarnings: zod.array(zod.string()).nullish(),
+        sla: zod
+          .object({
+            status: zod.string().optional(),
+            dueAt: zod.coerce.date().optional(),
+            warningAt: zod.coerce.date().optional(),
+            escalationAt: zod.coerce.date().optional(),
+            expiresAt: zod.coerce.date().optional(),
+            nextEvent: zod.string().nullish(),
+            deliveredEvents: zod
+              .array(zod.record(zod.string(), zod.unknown()))
+              .optional(),
+          })
+          .optional(),
+      }),
+    )
+    .optional(),
+  recentDecisions: zod
+    .array(
+      zod.object({
+        id: zod.string().optional(),
+        subjectType: zod.string().optional(),
+        subjectId: zod.string().optional(),
+        decision: zod
+          .enum(["approved", "rejected", "revision_requested"])
+          .optional(),
+        reason: zod.string().nullish(),
+        decidedAt: zod.string(),
+        actorUserId: zod.string(),
+        resolvedSnapshotHash: zod.string(),
+        subjectVersion: zod.number().nullish(),
+        contextFingerprint: zod.string().nullish(),
+      }),
+    )
+    .optional(),
+  unavailableSources: zod
+    .array(
+      zod.object({
+        sourceType: zod.string().optional(),
+        reason: zod.string().optional(),
+      }),
+    )
+    .optional(),
+  total: zod.number().optional(),
+  catalogTruncated: zod.boolean().optional(),
+  catalogWarnings: zod.array(zod.string()).optional(),
+  counts: zod.object({
+    pending: zod.number().optional(),
+    slaScheduled: zod.number().optional(),
+    slaDueSoon: zod.number().optional(),
+    slaOverdue: zod.number().optional(),
+    slaExpired: zod.number().optional(),
+  }),
+});
+
+/**
+ * @summary decide
+ */
+export const DecideCampaignControlRoomApprovalParams = zod.object({
+  campaignId: zod.coerce.string(),
+  subjectType: zod.coerce.string(),
+  subjectId: zod.coerce.string(),
+});
+
+export const DecideCampaignControlRoomApprovalBody = zod.object({
+  decision: zod.enum(["approved", "rejected", "revision_requested"]),
+  expectedSnapshotHash: zod.string().min(1),
+  expectedVersion: zod.number().min(1).optional(),
+  reason: zod.string().optional(),
+  idempotencyKey: zod.string(),
+});
+
+export const DecideCampaignControlRoomApprovalResponse = zod.object({
+  record: zod
+    .object({
+      id: zod.string().optional(),
+      subjectType: zod.string().optional(),
+      subjectId: zod.string().optional(),
+      decision: zod
+        .enum(["approved", "rejected", "revision_requested"])
+        .optional(),
+      reason: zod.string().nullish(),
+      decidedAt: zod.string(),
+      actorUserId: zod.string(),
+      resolvedSnapshotHash: zod.string(),
+      subjectVersion: zod.number().nullish(),
+      contextFingerprint: zod.string().nullish(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary sla
+ */
+export const ScheduleCampaignApprovalSlaParams = zod.object({
+  campaignId: zod.coerce.string(),
+  subjectType: zod.coerce.string(),
+  subjectId: zod.coerce.string(),
+});
+
+export const scheduleCampaignApprovalSlaBodySubjectSnapshotHashMax = 128;
+
+export const scheduleCampaignApprovalSlaBodyIdempotencyKeyMax = 255;
+
+export const ScheduleCampaignApprovalSlaBody = zod.object({
+  subjectSnapshotHash: zod
+    .string()
+    .min(1)
+    .max(scheduleCampaignApprovalSlaBodySubjectSnapshotHashMax),
+  dueAt: zod.coerce.date(),
+  warningAt: zod.coerce.date().optional(),
+  escalationAt: zod.coerce.date(),
+  expiresAt: zod.coerce.date(),
+  channel: zod.enum(["in_app"]).optional(),
+  idempotencyKey: zod
+    .string()
+    .min(1)
+    .max(scheduleCampaignApprovalSlaBodyIdempotencyKeyMax),
+});
+
+export const ScheduleCampaignApprovalSlaResponse = zod.object({
+  obligation: zod.record(zod.string(), zod.unknown()).optional(),
+});
+
+/**
+ * @summary get policy
+ */
+export const GetConditionalExecutionPolicyParams = zod.object({
+  campaignId: zod.coerce.string(),
+});
+
+export const GetConditionalExecutionPolicyResponse = zod.object({
+  policy: zod
+    .object({
+      version: zod.number(),
+      enabled: zod.boolean(),
+      revokedAt: zod.string().nullish(),
+      expiresAt: zod.string(),
+      masterplanVersionId: zod.string().optional(),
+      snapshotHash: zod.string().optional(),
+      contextFingerprint: zod.string().optional(),
+    })
+    .optional(),
+  action: zod
+    .object({
+      actionType: zod.string().optional(),
+      provider: zod.string().optional(),
+      accountId: zod.string().optional(),
+      entityId: zod.string().optional(),
+      maxActionsPerDay: zod.number().optional(),
+    })
+    .optional(),
+  approvedBinding: zod
+    .object({
+      masterplanVersionId: zod.string().optional(),
+      snapshotHash: zod.string().optional(),
+      contextFingerprint: zod.string().optional(),
+    })
+    .optional(),
+  eligibility: zod.boolean().optional(),
+  blockers: zod.array(zod.string()).optional(),
+  intents: zod
+    .array(
+      zod.object({
+        id: zod.string().optional(),
+        status: zod.string().optional(),
+        createdAt: zod.string(),
+        blockCode: zod.string().nullish(),
+      }),
+    )
+    .optional(),
+  attempts: zod
+    .array(
+      zod.object({
+        id: zod.string().optional(),
+        status: zod.string().optional(),
+        createdAt: zod.string(),
+        providerReceipt: zod.record(zod.string(), zod.unknown()).nullish(),
+      }),
+    )
+    .optional(),
+  events: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  counts: zod
+    .object({
+      intents: zod.number().optional(),
+      attempts: zod.number().optional(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary create policy
+ */
+export const CreateConditionalExecutionPolicyParams = zod.object({
+  campaignId: zod.coerce.string(),
+});
+
+export const CreateConditionalExecutionPolicyBody = zod.record(
+  zod.string(),
+  zod.unknown(),
+);
+
+/**
+ * @summary revoke policy
+ */
+export const RevokeConditionalExecutionPolicyParams = zod.object({
+  campaignId: zod.coerce.string(),
+  version: zod.coerce.number(),
+});
+
+export const RevokeConditionalExecutionPolicyResponse = zod.record(
+  zod.string(),
+  zod.unknown(),
+);
+
+/**
+ * @summary list exec
+ */
+export const ListConditionalExecutionsParams = zod.object({
+  campaignId: zod.coerce.string(),
+});
+
+export const ListConditionalExecutionsResponse = zod.object({
+  policy: zod
+    .object({
+      version: zod.number(),
+      enabled: zod.boolean(),
+      revokedAt: zod.string().nullish(),
+      expiresAt: zod.string(),
+      masterplanVersionId: zod.string().optional(),
+      snapshotHash: zod.string().optional(),
+      contextFingerprint: zod.string().optional(),
+    })
+    .optional(),
+  action: zod
+    .object({
+      actionType: zod.string().optional(),
+      provider: zod.string().optional(),
+      accountId: zod.string().optional(),
+      entityId: zod.string().optional(),
+      maxActionsPerDay: zod.number().optional(),
+    })
+    .optional(),
+  approvedBinding: zod
+    .object({
+      masterplanVersionId: zod.string().optional(),
+      snapshotHash: zod.string().optional(),
+      contextFingerprint: zod.string().optional(),
+    })
+    .optional(),
+  eligibility: zod.boolean().optional(),
+  blockers: zod.array(zod.string()).optional(),
+  intents: zod
+    .array(
+      zod.object({
+        id: zod.string().optional(),
+        status: zod.string().optional(),
+        createdAt: zod.string(),
+        blockCode: zod.string().nullish(),
+      }),
+    )
+    .optional(),
+  attempts: zod
+    .array(
+      zod.object({
+        id: zod.string().optional(),
+        status: zod.string().optional(),
+        createdAt: zod.string(),
+        providerReceipt: zod.record(zod.string(), zod.unknown()).nullish(),
+      }),
+    )
+    .optional(),
+  events: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  counts: zod
+    .object({
+      intents: zod.number().optional(),
+      attempts: zod.number().optional(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Create realization contract
+ */
+
+export const createRealizationContractBodyMaxAttemptsDefault = 3;
+export const createRealizationContractBodyMaxAttemptsMax = 10;
+
+export const CreateRealizationContractBody = zod.object({
+  campaignId: zod.string().uuid(),
+  masterplanVersionId: zod.string().uuid(),
+  subjectId: zod.string().uuid(),
+  contextFingerprint: zod.string().min(1),
+  snapshotHash: zod.string().min(1),
+  action: zod.enum(["paid_media_pause", "paid_media_launch"]),
+  idempotencyKey: zod.string().min(1),
+  maxAttempts: zod
+    .number()
+    .min(1)
+    .max(createRealizationContractBodyMaxAttemptsMax)
+    .default(createRealizationContractBodyMaxAttemptsDefault),
+  target: zod.record(zod.string(), zod.unknown()).optional(),
+});
+
+/**
+ * @summary List realization contracts
+ */
+export const ListRealizationContractsQueryParams = zod.object({
+  campaignId: zod.coerce.string().uuid().optional(),
+});
+
+export const ListRealizationContractsResponseItem = zod.object({
+  id: zod.string().uuid(),
+  campaignId: zod.string().uuid(),
+  masterplanVersionId: zod.string().uuid(),
+  subjectId: zod.string().uuid(),
+  subjectType: zod.string().optional(),
+  action: zod.enum(["paid_media_pause", "paid_media_launch"]),
+  state: zod.string(),
+  idempotencyKey: zod.string(),
+  bindingHash: zod.string().optional(),
+  requestFingerprint: zod.string().optional(),
+  contextFingerprint: zod.string().optional(),
+  snapshotHash: zod.string().optional(),
+  binding: zod.record(zod.string(), zod.unknown()).optional(),
+  maxAttempts: zod.number(),
+  attemptsUsed: zod.number(),
+  createdByUserId: zod.string().uuid().optional(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+export const ListRealizationContractsResponse = zod.array(
+  ListRealizationContractsResponseItem,
+);
+
+/**
+ * @summary Get contract
+ */
+export const GetRealizationContractParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const GetRealizationContractResponse = zod.object({
+  contract: zod.object({
+    id: zod.string().uuid(),
+    campaignId: zod.string().uuid(),
+    masterplanVersionId: zod.string().uuid(),
+    subjectId: zod.string().uuid(),
+    subjectType: zod.string().optional(),
+    action: zod.enum(["paid_media_pause", "paid_media_launch"]),
+    state: zod.string(),
+    idempotencyKey: zod.string(),
+    bindingHash: zod.string().optional(),
+    requestFingerprint: zod.string().optional(),
+    contextFingerprint: zod.string().optional(),
+    snapshotHash: zod.string().optional(),
+    binding: zod.record(zod.string(), zod.unknown()).optional(),
+    maxAttempts: zod.number(),
+    attemptsUsed: zod.number(),
+    createdByUserId: zod.string().uuid().optional(),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+  }),
+  attempts: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      contractId: zod.string().uuid(),
+      number: zod.number(),
+      state: zod.string(),
+      receipt: zod.record(zod.string(), zod.unknown()).nullish(),
+      readback: zod.record(zod.string(), zod.unknown()).nullish(),
+      error: zod.record(zod.string(), zod.unknown()).nullish(),
+      qc: zod.record(zod.string(), zod.unknown()).nullish(),
+      retry: zod.record(zod.string(), zod.unknown()).nullish(),
+      recovery: zod.record(zod.string(), zod.unknown()).nullish(),
+      compensation: zod.record(zod.string(), zod.unknown()).nullish(),
+      claimedAt: zod.coerce.date(),
+      completedAt: zod.coerce.date().nullish(),
+      leaseOwner: zod.string().nullish(),
+      leaseExpiresAt: zod.coerce.date().nullish(),
+    }),
+  ),
+  events: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      contractId: zod.string().uuid(),
+      attemptId: zod.string().uuid().nullish(),
+      type: zod.string(),
+      details: zod.record(zod.string(), zod.unknown()),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Preflight realization
+ */
+export const PreflightRealizationParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const PreflightRealizationResponse = zod.object({
+  id: zod.string().uuid(),
+  campaignId: zod.string().uuid(),
+  masterplanVersionId: zod.string().uuid(),
+  subjectId: zod.string().uuid(),
+  subjectType: zod.string().optional(),
+  action: zod.enum(["paid_media_pause", "paid_media_launch"]),
+  state: zod.string(),
+  idempotencyKey: zod.string(),
+  bindingHash: zod.string().optional(),
+  requestFingerprint: zod.string().optional(),
+  contextFingerprint: zod.string().optional(),
+  snapshotHash: zod.string().optional(),
+  binding: zod.record(zod.string(), zod.unknown()).optional(),
+  maxAttempts: zod.number(),
+  attemptsUsed: zod.number(),
+  createdByUserId: zod.string().uuid().optional(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Execute realization
+ */
+export const ExecuteRealizationParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const ExecuteRealizationResponse = zod.object({
+  success: zod.boolean(),
+  contract: zod.object({
+    id: zod.string().uuid(),
+    campaignId: zod.string().uuid(),
+    masterplanVersionId: zod.string().uuid(),
+    subjectId: zod.string().uuid(),
+    subjectType: zod.string().optional(),
+    action: zod.enum(["paid_media_pause", "paid_media_launch"]),
+    state: zod.string(),
+    idempotencyKey: zod.string(),
+    bindingHash: zod.string().optional(),
+    requestFingerprint: zod.string().optional(),
+    contextFingerprint: zod.string().optional(),
+    snapshotHash: zod.string().optional(),
+    binding: zod.record(zod.string(), zod.unknown()).optional(),
+    maxAttempts: zod.number(),
+    attemptsUsed: zod.number(),
+    createdByUserId: zod.string().uuid().optional(),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+  }),
+  attempt: zod
+    .object({
+      id: zod.string().uuid(),
+      contractId: zod.string().uuid(),
+      number: zod.number(),
+      state: zod.string(),
+      receipt: zod.record(zod.string(), zod.unknown()).nullish(),
+      readback: zod.record(zod.string(), zod.unknown()).nullish(),
+      error: zod.record(zod.string(), zod.unknown()).nullish(),
+      qc: zod.record(zod.string(), zod.unknown()).nullish(),
+      retry: zod.record(zod.string(), zod.unknown()).nullish(),
+      recovery: zod.record(zod.string(), zod.unknown()).nullish(),
+      compensation: zod.record(zod.string(), zod.unknown()).nullish(),
+      claimedAt: zod.coerce.date(),
+      completedAt: zod.coerce.date().nullish(),
+      leaseOwner: zod.string().nullish(),
+      leaseExpiresAt: zod.coerce.date().nullish(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Retry realization
+ */
+export const RetryRealizationParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const RetryRealizationResponse = zod.object({
+  id: zod.string().uuid(),
+  campaignId: zod.string().uuid(),
+  masterplanVersionId: zod.string().uuid(),
+  subjectId: zod.string().uuid(),
+  subjectType: zod.string().optional(),
+  action: zod.enum(["paid_media_pause", "paid_media_launch"]),
+  state: zod.string(),
+  idempotencyKey: zod.string(),
+  bindingHash: zod.string().optional(),
+  requestFingerprint: zod.string().optional(),
+  contextFingerprint: zod.string().optional(),
+  snapshotHash: zod.string().optional(),
+  binding: zod.record(zod.string(), zod.unknown()).optional(),
+  maxAttempts: zod.number(),
+  attemptsUsed: zod.number(),
+  createdByUserId: zod.string().uuid().optional(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary QC realization
+ */
+export const QcRealizationParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const QcRealizationResponse = zod.object({
+  id: zod.string().uuid(),
+  campaignId: zod.string().uuid(),
+  masterplanVersionId: zod.string().uuid(),
+  subjectId: zod.string().uuid(),
+  subjectType: zod.string().optional(),
+  action: zod.enum(["paid_media_pause", "paid_media_launch"]),
+  state: zod.string(),
+  idempotencyKey: zod.string(),
+  bindingHash: zod.string().optional(),
+  requestFingerprint: zod.string().optional(),
+  contextFingerprint: zod.string().optional(),
+  snapshotHash: zod.string().optional(),
+  binding: zod.record(zod.string(), zod.unknown()).optional(),
+  maxAttempts: zod.number(),
+  attemptsUsed: zod.number(),
+  createdByUserId: zod.string().uuid().optional(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Monitor realization
+ */
+export const MonitorRealizationParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const MonitorRealizationResponse = zod.object({
+  id: zod.string().uuid(),
+  campaignId: zod.string().uuid(),
+  masterplanVersionId: zod.string().uuid(),
+  subjectId: zod.string().uuid(),
+  subjectType: zod.string().optional(),
+  action: zod.enum(["paid_media_pause", "paid_media_launch"]),
+  state: zod.string(),
+  idempotencyKey: zod.string(),
+  bindingHash: zod.string().optional(),
+  requestFingerprint: zod.string().optional(),
+  contextFingerprint: zod.string().optional(),
+  snapshotHash: zod.string().optional(),
+  binding: zod.record(zod.string(), zod.unknown()).optional(),
+  maxAttempts: zod.number(),
+  attemptsUsed: zod.number(),
+  createdByUserId: zod.string().uuid().optional(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Compensate realization
+ */
+export const CompensateRealizationParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const CompensateRealizationResponse = zod.object({
+  id: zod.string().uuid(),
+  campaignId: zod.string().uuid(),
+  masterplanVersionId: zod.string().uuid(),
+  subjectId: zod.string().uuid(),
+  subjectType: zod.string().optional(),
+  action: zod.enum(["paid_media_pause", "paid_media_launch"]),
+  state: zod.string(),
+  idempotencyKey: zod.string(),
+  bindingHash: zod.string().optional(),
+  requestFingerprint: zod.string().optional(),
+  contextFingerprint: zod.string().optional(),
+  snapshotHash: zod.string().optional(),
+  binding: zod.record(zod.string(), zod.unknown()).optional(),
+  maxAttempts: zod.number(),
+  attemptsUsed: zod.number(),
+  createdByUserId: zod.string().uuid().optional(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
  * @summary List sanitized campaign execution evidence
  */
 export const GetCampaignControlRoomEvidenceParams = zod.object({
@@ -1832,4 +2447,417 @@ export const RollbackPaidMediaActionAttemptParams = zod.object({
 export const RollbackPaidMediaActionAttemptResponse = zod.object({
   providerRequestId: zod.string().optional(),
   evidence: zod.record(zod.string(), zod.unknown()),
+});
+
+/**
+ * @summary Create an evidence-bound council cycle
+ */
+export const createOperationalCouncilCycleBodyIdempotencyKeyMax = 200;
+
+export const CreateOperationalCouncilCycleBody = zod.object({
+  campaignId: zod.string().uuid(),
+  masterplanVersionId: zod.string().uuid(),
+  contextFingerprint: zod.string(),
+  snapshotHash: zod.string(),
+  idempotencyKey: zod
+    .string()
+    .max(createOperationalCouncilCycleBodyIdempotencyKeyMax),
+});
+
+export const ListOperationalCouncilCyclesParams = zod.object({
+  campaignId: zod.coerce.string().uuid(),
+});
+
+export const ListOperationalCouncilCyclesResponseItem = zod.record(
+  zod.string(),
+  zod.unknown(),
+);
+export const ListOperationalCouncilCyclesResponse = zod.array(
+  ListOperationalCouncilCyclesResponseItem,
+);
+
+export const GetOperationalCouncilCycleParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const GetOperationalCouncilCycleResponse = zod.object({
+  cycle: zod.record(zod.string(), zod.unknown()),
+  minutes: zod.array(zod.record(zod.string(), zod.unknown())),
+  decisions: zod.array(zod.record(zod.string(), zod.unknown())),
+  actions: zod.array(zod.record(zod.string(), zod.unknown())),
+  outcomes: zod.array(zod.record(zod.string(), zod.unknown())),
+});
+
+export const AppendOperationalCouncilMinutesParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const appendOperationalCouncilMinutesBodySummaryMax = 4000;
+
+export const appendOperationalCouncilMinutesBodyEvidenceRefsMax = 50;
+
+export const AppendOperationalCouncilMinutesBody = zod.object({
+  summary: zod.string().max(appendOperationalCouncilMinutesBodySummaryMax),
+  evidenceRefs: zod
+    .array(zod.object({}).passthrough())
+    .max(appendOperationalCouncilMinutesBodyEvidenceRefsMax)
+    .optional(),
+});
+
+export const AppendOperationalCouncilMinutesResponse = zod.record(
+  zod.string(),
+  zod.unknown(),
+);
+
+export const CreateOperationalCouncilDecisionParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const createOperationalCouncilDecisionBodyRationaleSummaryMax = 4000;
+
+export const createOperationalCouncilDecisionBodyEvidenceRefsMax = 50;
+
+export const CreateOperationalCouncilDecisionBody = zod.object({
+  rationaleSummary: zod
+    .string()
+    .max(createOperationalCouncilDecisionBodyRationaleSummaryMax),
+  target: zod.object({}).passthrough(),
+  baseline: zod.object({}).passthrough(),
+  threshold: zod.object({}).passthrough(),
+  window: zod.object({}).passthrough(),
+  dueAt: zod.coerce.date(),
+  actionRequired: zod.boolean().optional(),
+  evidenceRefs: zod
+    .array(zod.object({}).passthrough())
+    .max(createOperationalCouncilDecisionBodyEvidenceRefsMax)
+    .optional(),
+});
+
+export const CreateOperationalCouncilDecisionResponse = zod.record(
+  zod.string(),
+  zod.unknown(),
+);
+
+export const LinkOperationalCouncilActionParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const linkOperationalCouncilActionBodyIdempotencyKeyMax = 200;
+
+export const LinkOperationalCouncilActionBody = zod.object({
+  family: zod.enum(["paid_media_pause", "paid_media_launch"]),
+  realizationContractId: zod.string().uuid(),
+  idempotencyKey: zod
+    .string()
+    .max(linkOperationalCouncilActionBodyIdempotencyKeyMax),
+});
+
+export const LinkOperationalCouncilActionResponse = zod.record(
+  zod.string(),
+  zod.unknown(),
+);
+
+export const VerifyOperationalCouncilOutcomeParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const VerifyOperationalCouncilOutcomeBody = zod.object({
+  nextCycleId: zod.string().uuid(),
+});
+
+export const VerifyOperationalCouncilOutcomeResponse = zod.record(
+  zod.string(),
+  zod.unknown(),
+);
+
+export const listSocialIntelligenceInboxQueryLimitMax = 100;
+
+export const ListSocialIntelligenceInboxQueryParams = zod.object({
+  from: zod.date().optional(),
+  to: zod.date().optional(),
+  campaignId: zod.coerce.string().uuid().optional(),
+  cursor: zod.coerce.string().optional(),
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(listSocialIntelligenceInboxQueryLimitMax)
+    .optional(),
+});
+
+export const ListSocialIntelligenceInboxResponse = zod.object({
+  items: zod.array(zod.record(zod.string(), zod.unknown())),
+  nextCursor: zod.string().nullable(),
+  period: zod.record(zod.string(), zod.unknown()),
+  filters: zod.record(zod.string(), zod.unknown()),
+});
+
+export const ListSocialIntelligenceReportsResponse = zod.object({
+  reports: zod
+    .array(
+      zod.object({
+        id: zod.string().uuid(),
+        workspaceId: zod.string().uuid(),
+        periodFrom: zod.coerce.date(),
+        periodTo: zod.coerce.date(),
+        filters: zod.record(zod.string(), zod.unknown()),
+        aggregates: zod.record(zod.string(), zod.unknown()),
+        provenance: zod.record(zod.string(), zod.unknown()),
+        createdAt: zod.coerce.date(),
+      }),
+    )
+    .optional(),
+});
+
+export const SaveSocialIntelligenceReportBody = zod.object({
+  from: zod.coerce.date().optional(),
+  to: zod.coerce.date().optional(),
+  campaignId: zod.string().uuid().optional(),
+});
+
+export const GetSocialIntelligenceReportParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const GetSocialIntelligenceReportResponse = zod.object({
+  id: zod.string().uuid(),
+  workspaceId: zod.string().uuid(),
+  periodFrom: zod.coerce.date(),
+  periodTo: zod.coerce.date(),
+  filters: zod.record(zod.string(), zod.unknown()),
+  aggregates: zod.record(zod.string(), zod.unknown()),
+  provenance: zod.record(zod.string(), zod.unknown()),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Preview or confirm governed social publication
+ */
+export const PublishSocialContentParams = zod.object({
+  campaignId: zod.coerce.string().uuid(),
+  pieceId: zod.coerce.string().uuid(),
+});
+
+export const publishSocialContentBodyConfirmedDefault = false;
+export const publishSocialContentBodyFingerprintRegExp = new RegExp(
+  "^[a-f0-9]{64}$",
+);
+
+export const PublishSocialContentBody = zod.object({
+  confirmed: zod.boolean().default(publishSocialContentBodyConfirmedDefault),
+  fingerprint: zod
+    .string()
+    .regex(publishSocialContentBodyFingerprintRegExp)
+    .optional(),
+});
+
+export const PublishSocialContentResponse = zod.object({
+  confirmed: zod.boolean().optional(),
+  preview: zod.object({
+    fingerprint: zod.string().optional(),
+    caption: zod.string().optional(),
+    mediaUrls: zod.array(zod.string()).optional(),
+    masterplanVersionId: zod.string().uuid().optional(),
+    platforms: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  }),
+  posts: zod
+    .array(
+      zod.object({
+        postId: zod.string().uuid().optional(),
+        integrationId: zod.string().uuid(),
+        platform: zod.string(),
+        status: zod.string(),
+        confirmed: zod.boolean(),
+        providerPostId: zod.string().nullish(),
+        errorCode: zod.string().optional(),
+      }),
+    )
+    .optional(),
+  publishedCount: zod.number().optional(),
+  unresolvedCount: zod.number().optional(),
+});
+
+export const getLifecycleOverviewResponseContactStagesMinOne = 0;
+
+export const getLifecycleOverviewResponseActionsMinTwo = 0;
+
+export const getLifecycleOverviewResponseLtvContactsMin = 0;
+
+export const GetLifecycleOverviewResponse = zod.object({
+  contactStages: zod.record(
+    zod.string(),
+    zod.number().min(getLifecycleOverviewResponseContactStagesMinOne),
+  ),
+  actions: zod.record(
+    zod.string(),
+    zod.record(
+      zod.string(),
+      zod.number().min(getLifecycleOverviewResponseActionsMinTwo),
+    ),
+  ),
+  referrals: zod.record(zod.string(), zod.unknown()),
+  ltv: zod.object({
+    contacts: zod.number().min(getLifecycleOverviewResponseLtvContactsMin),
+    recordedLifetimeValueCents: zod.number(),
+    attribution: zod.literal(
+      "recorded_local_ledger_not_externally_attributed_kpi",
+    ),
+  }),
+});
+
+export const listLifecycleActionsQueryLimitDefault = 25;
+export const listLifecycleActionsQueryLimitMax = 100;
+
+export const listLifecycleActionsQueryOffsetDefault = 0;
+export const listLifecycleActionsQueryOffsetMin = 0;
+
+export const ListLifecycleActionsQueryParams = zod.object({
+  status: zod
+    .enum(["pending", "claimed", "completed", "failed", "suppressed"])
+    .optional(),
+  type: zod.enum(["recovery", "onboarding", "retention", "upsell"]).optional(),
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(listLifecycleActionsQueryLimitMax)
+    .default(listLifecycleActionsQueryLimitDefault),
+  offset: zod.coerce
+    .number()
+    .min(listLifecycleActionsQueryOffsetMin)
+    .default(listLifecycleActionsQueryOffsetDefault),
+});
+
+export const ListLifecycleActionsResponse = zod.object({
+  actions: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      type: zod.enum(["recovery", "onboarding", "retention", "upsell"]),
+      status: zod.enum([
+        "pending",
+        "claimed",
+        "completed",
+        "failed",
+        "suppressed",
+      ]),
+      channel: zod.string().optional(),
+      reason: zod.string().nullish(),
+      riskScore: zod.number().nullish(),
+      createdAt: zod.coerce.date(),
+      completedAt: zod.coerce.date().nullish(),
+    }),
+  ),
+  pagination: zod.object({
+    limit: zod.number(),
+    offset: zod.number(),
+    total: zod.number(),
+  }),
+});
+
+export const listLifecycleContactsQueryLimitDefault = 25;
+export const listLifecycleContactsQueryLimitMax = 100;
+
+export const listLifecycleContactsQueryOffsetDefault = 0;
+export const listLifecycleContactsQueryOffsetMin = 0;
+
+export const ListLifecycleContactsQueryParams = zod.object({
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(listLifecycleContactsQueryLimitMax)
+    .default(listLifecycleContactsQueryLimitDefault),
+  offset: zod.coerce
+    .number()
+    .min(listLifecycleContactsQueryOffsetMin)
+    .default(listLifecycleContactsQueryOffsetDefault),
+});
+
+export const listLifecycleContactsResponseContactsItemChurnRiskMin = 0;
+export const listLifecycleContactsResponseContactsItemChurnRiskMax = 100;
+
+export const ListLifecycleContactsResponse = zod.object({
+  contacts: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      displayLabel: zod.string(),
+      email: zod.string().nullable(),
+      stage: zod.string(),
+      churnRisk: zod
+        .number()
+        .min(listLifecycleContactsResponseContactsItemChurnRiskMin)
+        .max(listLifecycleContactsResponseContactsItemChurnRiskMax),
+      lastActivityAt: zod.coerce.date().nullable(),
+    }),
+  ),
+  pagination: zod.object({
+    limit: zod.number(),
+    offset: zod.number(),
+  }),
+});
+
+export const GetLifecycleTimelineParams = zod.object({
+  contactId: zod.coerce.string().uuid(),
+});
+
+export const getLifecycleTimelineQueryLimitDefault = 25;
+export const getLifecycleTimelineQueryLimitMax = 100;
+
+export const getLifecycleTimelineQueryOffsetDefault = 0;
+export const getLifecycleTimelineQueryOffsetMin = 0;
+
+export const GetLifecycleTimelineQueryParams = zod.object({
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(getLifecycleTimelineQueryLimitMax)
+    .default(getLifecycleTimelineQueryLimitDefault),
+  offset: zod.coerce
+    .number()
+    .min(getLifecycleTimelineQueryOffsetMin)
+    .default(getLifecycleTimelineQueryOffsetDefault),
+});
+
+export const getLifecycleTimelineResponseContactChurnRiskMin = 0;
+export const getLifecycleTimelineResponseContactChurnRiskMax = 100;
+
+export const GetLifecycleTimelineResponse = zod.object({
+  contact: zod.object({
+    id: zod.string().uuid(),
+    displayLabel: zod.string(),
+    email: zod.string().nullable(),
+    stage: zod.string(),
+    churnRisk: zod
+      .number()
+      .min(getLifecycleTimelineResponseContactChurnRiskMin)
+      .max(getLifecycleTimelineResponseContactChurnRiskMax),
+    lastActivityAt: zod.coerce.date().nullable(),
+  }),
+  events: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      type: zod.string(),
+      status: zod.string(),
+      occurredAt: zod.coerce.date(),
+      processedAt: zod.coerce.date().nullable(),
+    }),
+  ),
+  onboarding: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      status: zod.string(),
+      activatedAt: zod.coerce.date().nullable(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  recovery: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      status: zod.string(),
+      channel: zod.string(),
+      createdAt: zod.coerce.date(),
+      completedAt: zod.coerce.date().nullable(),
+    }),
+  ),
+  pagination: zod.object({
+    limit: zod.number(),
+    offset: zod.number(),
+  }),
 });

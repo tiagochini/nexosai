@@ -9,6 +9,7 @@ import {
   auditLogsTable,
   agentExecutionLogsTable,
   agentClarificationRequestsTable,
+  masterplanVersionsTable,
   type CampaignAgent,
 } from "@workspace/db";
 import { completeWithAgent, type AgentRole, type AIMessage } from "../ai-gateway/ai-gateway.service.js";
@@ -1160,13 +1161,34 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         | "execution_approval"
         | "budget_approval";
 
+      const [boundMasterplan] = await db
+        .select({
+          id: masterplanVersionsTable.id,
+          version: masterplanVersionsTable.version,
+          contextFingerprint: masterplanVersionsTable.contextFingerprint,
+        })
+        .from(masterplanVersionsTable)
+        .where(and(
+          eq(masterplanVersionsTable.workspaceId, workspaceId),
+          eq(masterplanVersionsTable.campaignId, campaignId as string),
+        ))
+        .orderBy(desc(masterplanVersionsTable.version))
+        .limit(1);
+
       const [checkpoint] = await db
         .insert(approvalCheckpointsTable)
         .values({
           campaignId: campaignId as string,
           checkpointType: mappedType,
           status: "pending",
-          data: { content: content.slice(0, 4000), agentRole, agentId: agentRecord.id },
+          data: {
+            content: content.slice(0, 4000),
+            agentRole,
+            agentId: agentRecord.id,
+            masterplanVersionId: boundMasterplan?.id ?? null,
+            masterplanVersion: boundMasterplan?.version ?? null,
+            contextFingerprint: boundMasterplan?.contextFingerprint ?? null,
+          },
         })
         .returning();
 

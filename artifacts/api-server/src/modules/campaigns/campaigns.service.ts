@@ -147,6 +147,46 @@ export async function transitionCampaign(
     .catch((err) => log.warn({ err, campaignId }, "PIPELINE_KERNEL: failed to write audit log"));
 }
 
+export async function transitionCampaignInTransaction(
+  tx: any,
+  campaignId: string,
+  workspaceId: string,
+  toStatus: string,
+  reason: string,
+  log: Logger,
+): Promise<boolean> {
+  const [campaign] = await tx
+    .select({ status: campaignsTable.status })
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!campaign || campaign.status === toStatus) return false;
+  if (!isValidTransition(campaign.status, toStatus)) {
+    throw new ValidationError(
+      `PIPELINE_KERNEL: undeclared transition ${campaign.status} → ${toStatus} (reason: ${reason}).`,
+    );
+  }
+  const [updated] = await tx
+    .update(campaignsTable)
+    .set({ status: toStatus as any, updatedAt: new Date() })
+    .where(and(
+      eq(campaignsTable.id, campaignId),
+      eq(campaignsTable.workspaceId, workspaceId),
+      eq(campaignsTable.status, campaign.status),
+    ))
+    .returning({ id: campaignsTable.id });
+  if (!updated) return false;
+  await tx.insert(auditLogsTable).values({
+    workspaceId,
+    campaignId,
+    action: "campaign.status.transition",
+    actor: "system",
+    data: { from: campaign.status, to: toStatus, reason, ts: new Date().toISOString() },
+  });
+  log.info({ campaignId, from: campaign.status, to: toStatus, reason }, "PIPELINE_KERNEL: transactional transition");
+  return true;
+}
+
 // Founder/admin accounts have unlimited campaigns — no plan cap applied.
 const FOUNDER_EMAILS = new Set([
   "founder@nexos.ai",

@@ -1,4 +1,4 @@
-import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { campaignsTable } from "./campaigns";
 import { usersTable } from "./users";
 import { workspacesTable } from "./workspaces";
@@ -35,6 +35,7 @@ export const masterplanVersionsTable = pgTable("masterplan_versions", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
   uniqueIndex("masterplan_versions_workspace_campaign_version_uidx").on(table.workspaceId, table.campaignId, table.version),
+  unique("masterplan_versions_workspace_campaign_id_uidx").on(table.workspaceId, table.campaignId, table.id),
   index("masterplan_versions_workspace_campaign_status_idx").on(table.workspaceId, table.campaignId, table.status),
   index("masterplan_versions_workspace_campaign_created_idx").on(table.workspaceId, table.campaignId, table.createdAt),
 ]);

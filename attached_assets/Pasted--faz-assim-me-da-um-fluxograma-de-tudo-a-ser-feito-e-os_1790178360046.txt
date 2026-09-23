@@ -1,0 +1,307 @@
+
+faz assim, me da um fluxograma de tudo a ser feito e os comandos que posso dar aqui apos cada etapa pra iniciar a proxima
+
+12 hours ago
+Abaixo está o fluxo completo, dividido em etapas executáveis. Os “comandos” são mensagens em linguagem natural para você enviar aqui no chat — não são comandos de terminal.
+
+Visão geral
+
+
+Etapas e comandos
+1. Fundamentos de execução
+Objetivo: garantir que toda ação esteja vinculada ao workspace correto, ao Master Plan aprovado e a uma autorização válida.
+
+Estado: concluído nos principais fluxos já trabalhados.
+
+Inclui:
+
+Master Plan imutável e versionado.
+Isolamento por workspace.
+Idempotência.
+Leases e fencing.
+Registro de intenção, recibo e verificação.
+Falha fechada quando o resultado externo é ambíguo.
+Nenhum status interno de prontidão exposto ao cliente.
+Comando para revisar esta etapa
+Audite novamente os fundamentos de execução autônoma do NexOS. Verifique isolamento por workspace, vínculo ao Master Plan, idempotência, leases, fencing e resultados ambíguos. Não altere interfaces. Corrija apenas problemas críticos ou altos e me entregue as provas.
+
+Comando para seguir
+A etapa 1 está aprovada. Inicie a etapa 2 do fluxograma sem alterar interfaces.
+
+2. Captura e primeiro contato
+Objetivo: transformar um lead capturado em um primeiro contato real, individual e enviado uma única vez.
+
+Estado: concluído e aprovado tecnicamente.
+
+Inclui:
+
+Deduplicação por e-mail e telefone.
+Captura e evidência em transação única.
+Primeiro contato por e-mail ou WhatsApp.
+Uma entrega por contato e item.
+Separação do dispatcher legado.
+Proteção contra mensagens duplicadas.
+Tratamento seguro de timeout e resposta ambígua.
+Testes reais de concorrência no PostgreSQL.
+Comando para revalidar
+Revalide a etapa 2 com testes reais de banco: captura concorrente, dois contatos no mesmo item, primeiro contato único, timeout ambíguo, isolamento de workspace e ausência de duplicação. Não use provedores reais.
+
+Comando para iniciar a próxima
+A etapa 2 está aprovada. Inicie a etapa 3: respostas dos leads, qualificação e conversação comercial. Não altere interfaces.
+
+3. Conversação comercial
+Objetivo: continuar a conversa depois que o lead responde.
+
+Será necessário:
+
+Receber respostas de WhatsApp e e-mail.
+Associar cada resposta ao contato, campanha e Master Plan.
+Identificar intenção e temperatura do lead.
+Responder perguntas sobre produto, preço e condições.
+Tratar objeções.
+Detectar pedido de descadastro.
+Saber quando responder, aguardar ou escalar.
+Impedir respostas repetidas ou fora de contexto.
+Manter histórico resumido e tenant-scoped.
+Registrar cada decisão e mensagem.
+Nunca inventar preço, garantia, bônus ou condição comercial.
+Comando para iniciar
+Inicie a etapa 3 do fluxograma. Implemente a conversação comercial após o primeiro contato: respostas de WhatsApp e e-mail, qualificação, objeções, descadastro, histórico e próxima ação. Tudo deve usar o Master Plan aprovado, isolamento por workspace, idempotência e falha fechada. Não altere interfaces. Use testes reais de banco e provedores simulados.
+
+Comando para validar
+Valide a etapa 3 com conversas simuladas completas: interessado, dúvida, objeção, lead sem perfil, descadastro, mensagem duplicada, timeout e contexto de outro workspace. Corrija problemas críticos e altos.
+
+Comando para seguir
+A etapa 3 está aprovada. Inicie a etapa 4: oferta, checkout e confirmação de pagamento.
+
+4. Oferta, checkout e pagamento
+Objetivo: conduzir o lead qualificado até uma compra real e confirmada.
+
+Será necessário:
+
+Selecionar a oferta aprovada correta.
+Confirmar preço, moeda, parcelamento e bônus.
+Gerar checkout com chave idempotente.
+Vincular checkout a contato, campanha e versão da oferta.
+Validar capacidade, estoque ou limite de vagas.
+Processar webhooks de pagamento.
+Diferenciar criado, pendente, pago, recusado, expirado e estornado.
+Nunca considerar venda concluída apenas porque o checkout foi criado.
+Confirmar pagamento diretamente com o provedor.
+Impedir dois checkouts ou cobranças incompatíveis.
+Tratar pagamento parcelado no Asaas.
+Comando para iniciar
+Inicie a etapa 4. Conecte a conversa comercial à oferta aprovada e ao checkout. Implemente criação idempotente, parcelamento, confirmação por webhook e verificação direta no provedor. Uma venda só pode ser considerada concluída após prova do pagamento. Não altere interfaces.
+
+Comando para homologar Asaas
+Homologue a etapa 4 no sandbox do Asaas com uma compra parcelada completa. Prove criação, pagamento, webhook, consulta independente, deduplicação e ausência de cobrança dupla.
+
+Comando para seguir
+A etapa 4 está aprovada. Inicie a etapa 5: recuperação de vendas e follow-ups.
+
+5. Recuperação de vendas
+Objetivo: recuperar leads e checkouts parados sem spam ou mensagens duplicadas.
+
+Será necessário:
+
+Follow-up após ausência de resposta.
+Recuperação de checkout abandonado.
+Cadências por temperatura e comportamento.
+Limites por canal e período.
+Horário e timezone do contato.
+Pausa após resposta.
+Encerramento após compra, descadastro ou limite.
+Reavaliação da próxima ação.
+Mensagens baseadas no Master Plan e na objeção real.
+Tratamento ambíguo sem reenvio cego.
+Comando para iniciar
+Inicie a etapa 5. Implemente recuperação de conversas e checkouts abandonados com cadências, limites, timezone, pausa após resposta e encerramento após compra ou descadastro. Não altere interfaces. Prove que nenhuma mensagem é duplicada.
+
+Comando para validar
+Simule follow-ups de lead sem resposta, checkout abandonado, resposta atrasada, compra durante a cadência, descadastro e timeout do provedor. Confirme que cada cadência para no momento correto.
+
+Comando para seguir
+A etapa 5 está aprovada. Inicie a etapa 6: pós-venda, entrega e onboarding.
+
+6. Pós-venda e entrega
+Objetivo: transformar pagamento confirmado em entrega real.
+
+Será necessário:
+
+Criar pedido ou matrícula somente após pagamento.
+Liberar produto, curso, serviço ou acesso correto.
+Onboarding do cliente.
+Notificações de confirmação.
+Organização dos arquivos e gravações.
+Acompanhamento de implantação.
+Suporte e tratamento de falhas.
+Estorno e revogação de acesso.
+Evidência de que a entrega ocorreu.
+Garantir que MP4 ou arquivo final não seja confundido com projeto editável.
+Comando para iniciar
+Inicie a etapa 6. Conecte pagamento confirmado à entrega, onboarding e suporte. A entrega precisa ser idempotente, tenant-scoped, verificável e reversível em caso de estorno. Não altere interfaces.
+
+Comando para validar
+Simule pagamento confirmado, webhook duplicado, falha de entrega, retry, estorno e revogação. Prove que o cliente recebe uma única entrega e que falhas não são ocultadas.
+
+Comando para seguir
+A etapa 6 está aprovada. Inicie a etapa 7: retenção, comunidade, indicação e recompra.
+
+7. Retenção, comunidade e indicação
+Objetivo: continuar o relacionamento depois da compra.
+
+Será necessário:
+
+Segmentação por produto, etapa e temperatura.
+Comunidades autorizadas por canal.
+Conteúdo de onboarding e ativação.
+Nurturing pós-venda.
+Solicitação de avaliação.
+Indicações e referral.
+Upsell, cross-sell e recompra.
+Controle de consentimento.
+Saída de comunidade e descadastro.
+Limites de contato.
+Proibição de adicionar pessoas automaticamente em grupos sem autorização.
+Comando para iniciar
+Inicie a etapa 7. Implemente retenção, comunidades autorizadas, indicação, upsell e recompra. Toda inclusão em canal ou comunidade deve exigir autorização verificável. Não altere interfaces.
+
+Comando para validar
+Simule cliente novo, cliente ativo, cliente inativo, pedido de saída, indicação, upsell recusado e recompra. Verifique consentimento, limites e isolamento.
+
+Comando para seguir
+A etapa 7 está aprovada. Inicie a etapa 8: presença digital e relacionamento social.
+
+8. Conteúdo e presença digital
+Objetivo: operar a presença orgânica do cliente de forma contínua.
+
+Será necessário:
+
+Planejamento semanal.
+Posts, carrosséis, reels e stories.
+Conteúdo baseado em mercado, estratégia e psicologia da campanha.
+Aprovação quando exigida.
+Publicação programada.
+Métricas.
+Comentários e DMs.
+Palavras-chave e automações.
+Pré-geração de mídia.
+Tratamento de conta desconectada.
+Reutilização de contexto sem vazamento entre workspaces.
+Recuperação de posts travados.
+Comando para iniciar ou continuar
+Inicie a etapa 8. Audite e complete toda a presença digital: planejamento, geração, aprovação, agendamento, publicação, comentários, DMs, métricas e recuperação. Use dados reais da campanha e impeça vazamento entre workspaces. Não altere interfaces.
+
+Comando para homologar publicação
+Homologue em ambiente real uma imagem, um carrossel, um reel e um story no Instagram e Facebook. Verifique container, publicação, recibo, métricas e organização dos arquivos.
+
+Comando para homologar relacionamento
+Homologue comentários, DMs, palavras-chave e grupos no ecossistema Meta usando apenas capacidades oficialmente autorizadas.
+
+Comando para seguir
+A etapa 8 está aprovada. Inicie a etapa 9: aquisição paga e otimização de mídia.
+
+9. Aquisição paga
+Objetivo: criar, lançar e otimizar campanhas pagas reais.
+
+Será necessário:
+
+Plano de mídia aprovado.
+Seleção de conta, pixel e página.
+Públicos, criativos, orçamento e calendário.
+Intenção persistida antes da mutação.
+Criação ordenada no provedor.
+Readback independente.
+Compensação em ordem reversa.
+Limites de orçamento.
+Aprovação para movimentação entre plataformas.
+Pausas obrigatórias.
+Otimização intraplataforma autônoma.
+Nenhuma chamada direta de API baseada apenas em saída de LLM.
+Comando para iniciar
+Inicie a etapa 9. Complete aquisição paga com lançamento determinístico, readback, compensação, limites de orçamento e otimização autônoma intraplataforma. Movimentações entre plataformas exigem aprovação. Não altere interfaces.
+
+Comando para validar sem gastar
+Valide a etapa 9 com harnesses determinísticos e contas de sandbox. Prove criação ordenada, readback, compensação, timeout ambíguo, ausência de duplicação e bloqueio de orçamento.
+
+Comando para homologar com verba real
+Prepare a homologação controlada de uma campanha real com orçamento mínimo. Antes de qualquer gasto, apresente os valores, limites, conta, público e critério de parada para minha aprovação.
+
+Comando para seguir
+A etapa 9 está aprovada. Inicie a etapa 10: inteligência autônoma e otimização contínua.
+
+10. Inteligência e otimização autônoma
+Objetivo: fazer o NexOS aprender com resultados reais.
+
+Será necessário:
+
+Coletar métricas de conteúdo, leads, vendas e mídia.
+Conectar resultados ao Master Plan.
+Avaliar qualidade das decisões.
+Detectar queda de performance.
+Recomendar ou executar ajustes permitidos.
+Memória entre campanhas sem misturar clientes.
+Testes controlados de criativo, oferta e público.
+Critérios de parada.
+Evidência antes de declarar melhoria.
+Versionamento de mudanças.
+Comando para iniciar
+Inicie a etapa 10. Implemente o ciclo medir, diagnosticar, decidir, executar e verificar. Use resultados reais, memória isolada por workspace e critérios determinísticos. Não altere interfaces.
+
+Comando para validar
+Simule métricas boas, ruins, incompletas e contraditórias. Verifique que o NexOS não inventa conclusões, não mistura clientes e não executa ações fora da autorização.
+
+Comando para seguir
+A etapa 10 está aprovada. Inicie a etapa 11: operação, observabilidade e recuperação.
+
+11. Operação e recuperação
+Objetivo: impedir que falhas silenciosas deixem o sistema parado ou executando ações duplicadas.
+
+Será necessário:
+
+Monitoramento de filas e schedulers.
+Diagnóstico de posts, pagamentos e mensagens travadas.
+Recuperação stale-only.
+Dead-letter e retry controlado.
+Alertas internos.
+Auditoria completa.
+Redação de dados sensíveis nos logs.
+Controle de créditos.
+Backpressure e limites.
+Checkpoints.
+Recuperação sem repetir mutações externas.
+Ferramentas operacionais internas, sem status técnicos para clientes.
+Comando para iniciar
+Inicie a etapa 11. Complete operação e recuperação para filas, schedulers, mensagens, publicações, pagamentos e geração de mídia. A recuperação deve ser stale-only e nunca repetir uma mutação externa ambígua. Não altere interfaces de clientes.
+
+Comando para simular falhas
+Execute uma bateria de caos controlado: Redis indisponível, worker reiniciado, timeout do provedor, resposta perdida, webhook duplicado, banco lento e scheduler concorrente. Corrija todos os problemas críticos e altos.
+
+Comando para seguir
+A etapa 11 está aprovada. Inicie a etapa 12: homologação completa em produção.
+
+12. Homologação de produção
+Objetivo: provar que os fluxos funcionam com serviços reais.
+
+A homologação deve incluir:
+
+Criar uma campanha real de teste.
+Aprovar seu Master Plan.
+Capturar um lead controlado.
+Enviar primeiro contato.
+Receber e processar resposta.
+Gerar oferta e checkout.
+Confirmar pagamento sandbox ou controlado.
+Executar entrega.
+Publicar conteúdo.
+Capturar métricas.
+Simular uma falha e provar recuperação.
+Confirmar ausência de vazamento entre workspaces.
+Comando para preparar
+Prepare a etapa 12 sem executar ações externas ainda. Liste contas, provedores, valores, números de telefone, e-mails e permissões necessários. Separe claramente testes sandbox de ações que podem publicar ou cobrar de verdade.
+
+Comando para executar
+Execute a homologação completa em produção usando apenas os recursos e limites previamente aprovados. Registre evidência de cada etapa e pare imediatamente diante de resultado ambíguo.
+
+Comando para auditoria final
+Faça a auditoria final ponta a ponta. Não considere nenhuma capacidade pronta sem prova real. Liste o que foi comprovado, o que depende de autorização externa e o que ainda está bloqueado.

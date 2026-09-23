@@ -308,6 +308,7 @@ function MasterPlanTab({
   apiPieces: ApiContentPiece[];
   onSwitchToPhase: () => void;
 }) {
+  const queryClient = useQueryClient();
   function fmtNum(n: number) {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
     if (n >= 1_000) return `${(n / 1_000).toFixed(0)}k`;
@@ -686,6 +687,7 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
   rewriting?: string | null;
   prescanResult?: PieceScanResult | null;
 }) {
+  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [generatingVisual, setGeneratingVisual] = useState(false);
@@ -693,9 +695,11 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [publishLoading, setPublishLoading] = useState(false);
   const [publishPreview, setPublishPreview] = useState<{
-    platforms: { provider: string; platform: string; label: string }[];
+    platforms: { provider: string; platform: string; label: string; integrationId: string; accountId: string | null }[];
     pieceType: string;
     caption: string;
+    mediaUrls: string[];
+    fingerprint: string;
   } | null>(null);
   const [publishConfirming, setPublishConfirming] = useState(false);
 
@@ -708,7 +712,7 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
     setPublishLoading(true);
     try {
       const preview = await customFetch<{
-        preview: { platforms: { provider: string; platform: string; label: string }[]; pieceType: string; caption: string };
+        preview: { platforms: { provider: string; platform: string; label: string; integrationId: string; accountId: string | null }[]; pieceType: string; caption: string; mediaUrls: string[]; fingerprint: string };
       }>(`/api/campaigns/${campaignId}/content/${rootPieceId}/publish-social`, { method: "POST", body: JSON.stringify({ confirmed: false }) });
       setPublishPreview(preview.preview);
       setPublishModalOpen(true);
@@ -724,11 +728,18 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
     const rootPieceId = piece.id.includes("::") ? piece.id.split("::")[0] : piece.id;
     setPublishConfirming(true);
     try {
-      await customFetch<{ message: string; platforms: string[] }>(
+      const result = await customFetch<{ publishedCount?: number; unresolvedCount?: number; posts?: { platform: string; status: string; confirmed: boolean; errorCode?: string }[] }>(
         `/api/campaigns/${campaignId}/content/${rootPieceId}/publish-social`,
-        { method: "POST", body: JSON.stringify({ confirmed: true }) },
+        { method: "POST", body: JSON.stringify({ confirmed: true, fingerprint: publishPreview.fingerprint }) },
       );
-      toast.success(`Publicado em ${publishPreview.platforms.map(p => p.label).join(", ")}!`);
+      if ((result.unresolvedCount ?? 0) > 0) {
+        const details = (result.posts ?? []).map((item) => `${item.platform}: ${item.confirmed ? "confirmado" : item.errorCode ?? item.status}`).join(" · ");
+        toast.warning(`Confirmados: ${result.publishedCount ?? 0}; pendentes/falhos: ${result.unresolvedCount}. ${details}`);
+      } else {
+        toast.success(`Confirmado em ${(result.posts ?? []).filter((item) => item.confirmed).map((item) => item.platform).join(", ")}!`);
+      }
+      await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/social/posts"] });
       setPublishModalOpen(false);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Erro ao publicar");

@@ -59,7 +59,7 @@ export function redactLaunchEvidence(value: unknown): unknown {
  * approval are not sufficient: a plan can sit in the queue while its
  * Master Plan is superseded or its account is moved to another workspace.
  */
-async function assertLaunchBinding(workspaceId: string, plan: {
+export async function assertLaunchBinding(workspaceId: string, plan: {
   campaignId: string; masterplanVersionId: string; contextFingerprint: string;
   planHash: string; tree: unknown; providerPayload: unknown; accountId: string; provider: string;
 }) {
@@ -423,4 +423,48 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
     await db.insert(executionEvidenceTable).values({ workspaceId, campaignId: plan.campaignId, masterplanVersionId: plan.masterplanVersionId, contextFingerprint: plan.contextFingerprint, subjectType: "paid_media_launch_plan", subjectId: plan.id, state: "attempted", details: { error: error instanceof Error ? error.message : "provider failure" } });
     throw error;
   }
+}
+
+/** Read-only readiness check used by realization.  It intentionally performs
+ * no claim or provider mutation. */
+export async function assertApprovedLaunchPlan(workspaceId: string, planId: string) {
+  const [plan] = await db.select().from(paidMediaLaunchPlansTable).where(and(
+    eq(paidMediaLaunchPlansTable.id, planId), eq(paidMediaLaunchPlansTable.workspaceId, workspaceId),
+  )).limit(1);
+  if (!plan) throw new NotFoundError("Paid media launch plan");
+  if (plan.launchStage !== "approved") throw new AppError(409, "Launch plan is not approved.", "LAUNCH_APPROVAL_REQUIRED");
+  await assertLaunchBinding(workspaceId, plan);
+  const readiness = obj(plan.readiness);
+  if (readiness.status !== "ready") throw new AppError(409, "Launch readiness is blocked.", "LAUNCH_READINESS_BLOCKED", readiness);
+  return plan;
+}
+
+/** Verified reverse deletion/absence for an already failed launch. */
+export async function compensateLaunchPlan(workspaceId: string, planId: string) {
+  const [plan] = await db.select().from(paidMediaLaunchPlansTable).where(and(
+    eq(paidMediaLaunchPlansTable.id, planId), eq(paidMediaLaunchPlansTable.workspaceId, workspaceId),
+  )).limit(1);
+  if (!plan) throw new NotFoundError("Paid media launch plan");
+  const [attempt] = await db.select().from(paidMediaLaunchAttemptsTable).where(and(
+    eq(paidMediaLaunchAttemptsTable.workspaceId, workspaceId), eq(paidMediaLaunchAttemptsTable.launchPlanId, planId),
+  )).orderBy(desc(paidMediaLaunchAttemptsTable.createdAt)).limit(1);
+  if (!attempt) return { compensated: true, evidence: { steps: [] } };
+  const adapter = (await import("./providers.js")).paidMediaProvider(plan.provider);
+  if (!adapter.deleteEntity || !adapter.verifyLaunchEntityAbsence) return { compensated: false, evidence: { reason: "PROVIDER_COMPENSATION_UNSUPPORTED" } };
+  const steps = await db.select().from(paidMediaLaunchStepsTable).where(eq(paidMediaLaunchStepsTable.attemptId, attempt.id)).orderBy(desc(paidMediaLaunchStepsTable.sequence));
+  const evidence: unknown[] = [];
+  let compensated = true;
+  for (const step of steps) {
+    if (!step.providerEntityId) continue;
+    try {
+      const deleted = await adapter.deleteEntity(workspaceId, plan.accountId, step.providerEntityId, `compensate:${plan.id}:${step.id}`);
+      const absence = await adapter.verifyLaunchEntityAbsence(workspaceId, plan.accountId, step.entityType, step.providerEntityId);
+      evidence.push(redactLaunchEvidence({ stepId: step.id, delete: deleted.evidence, absence: absence.evidence }));
+      if (!absence.absent) compensated = false;
+    } catch (error) {
+      compensated = false;
+      evidence.push(redactLaunchEvidence({ stepId: step.id, error: error instanceof Error ? error.message : String(error) }));
+    }
+  }
+  return { compensated, evidence };
 }

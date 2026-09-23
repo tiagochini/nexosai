@@ -458,31 +458,35 @@ Concluído em modo read-only para snapshots imutáveis do Master Plan e revisõe
 
 ### M06 — Approval Center
 
-Orçamento, Master Plan e entregáveis possuem aprovação ou rejeição motivada, vinculada a versão e contexto.
+Concluído para Master Plan, conteúdo e checkpoints. Cada decisão é append-only e vinculada ao workspace, campanha, ator, subject, versão/snapshot e contexto exatos, com motivo obrigatório para rejeição ou revisão, proteção stale/race/idempotente, invariantes compostos no banco e conclusão transacional dos checkpoints. Page, social, creative e video permanecem declarados como `adapter_not_governed`.
 
 ### M07 — SLA e lembretes
 
-`dueAt`, aviso antecipado, escalonamento, canal, entrega do lembrete, decisão e expiração.
+Concluído para os subjects governados pelo M06. Cada obrigação é vinculada ao snapshot exato e possui `dueAt`, aviso in-app uma hora antes, escalonamento, expiração fail-closed, eventos/receipts append-only, auditoria, processamento concorrente idempotente e histórico responsivo. Expiração nunca aprova e nenhuma entrega M07 executa efeitos externos.
 
 ### M08 — Autoexecução condicionada
 
-Política versionada, autorização válida, gates finais, idempotência, limites e pausa segura.
+Concluído para `paid_media_pause`. A política é versionada, desativada por padrão, owner-authorized, temporária e vinculada ao Master Plan aprovado exato. Preflight e teto são fail-closed; intent/attempt são duráveis e idempotentes; locks PostgreSQL serializam policy, revogação e execução; sucesso exige receipt e readback independente correspondente. Aprovação isolada nunca executa.
 
 ### M09 — Contratos de realização
 
-Proposal, binding, preflight, attempt, receipt, readback, QC, monitoramento, retry e compensation.
+Concluído para `paid_media_pause` e `paid_media_launch`: proposal, binding imutável, preflight fail-closed, attempt durável, receipt+readback independente, QC, monitoramento, retry limitado, recovery e compensation verificável. Outras famílias permanecem explicitamente não governadas.
 
 ### M10 — Council operacional
 
-Reunião baseada em evidências, ata, decisão, responsável, ação, prazo e verificação do ciclo seguinte.
+Concluído no escopo de contratos M09 governados: ciclos e atas com evidências persistidas, decisões com responsável, meta/baseline/limiar/janela/prazo, ligação de ações à versão aprovada exata do Master Plan e outcomes append-only. A verificação exige ciclo posterior da mesma vinculação com ata citando o contrato, além de receipt, readback, QC aprovado e monitoramento do último attempt confirmado; inconclusões podem ser reverificadas quando a evidência muda. Council não aprova, não executa e não transforma famílias não suportadas em executáveis. Não há homologação de resultado comercial externo nesta etapa.
 
 ### M11 — Vertical full-stack
 
 UI, API, banco, agente, worker, fila, provider, preview, aprovação, evidência, métricas, recuperação, testes e relatórios funcionam juntos.
 
+**Estado: em andamento, não concluído.** A primeira vertical Content/Social já integra inbox e relatórios históricos, preview/confirm com fingerprint, posts duráveis deduplicados e teste local de publicação Facebook com receipt, readback e evidência usando Graph simulado. O gatilho legado de autopublicação após aprovação/finalização de mídia e a rota legada de campanha sem prévia foram bloqueados; novos agendamentos não autorizados recebem falha explícita, e os antigos são preservados porém bloqueados antes de envio ao vencerem. Ainda faltam binding imutável da peça no instante da aprovação, política versionada para autopublicação por ausência de resposta, reconciliação segura dos bloqueados, validação do fluxo autenticado/recuperação/métricas e homologação de permissões e readback com Meta real. A simulação não constitui prova de envio externo.
+
 ### M12 — Lifecycle autônomo e produção comprovada
 
 A capability atua no ciclo completo, respeita governança, reage a eventos, otimiza e possui homologação real.
+
+**Estado: em andamento apenas nos fundamentos locais; não concluído.** Contatos/eventos e intenções de recuperação, onboarding, retenção, upsell e indicação já têm registros locais; painel read-only, reconciliação negativa sem envio e reparo atômico de efeitos de venda/reembolso tornam o estado observável e recuperável. Uma intenção pendente não é entrega, ativação ou conversão. Ativação manual sem evidência foi bloqueada. Faltam governança completa de M11, autorização versionada de lifecycle, entrega e readback reais, métricas atribuídas, decisão de otimização com resultado posterior e homologação controlada em produção. M10 continua o último nível concluído.
 
 ---
 
@@ -668,7 +672,10 @@ flowchart TB
 - **M03 concluído:** timeline paginada e filtrável com ownership, ordenação determinística, registros exatos, sanitização e links de origem verificados.
 - **M04 concluído:** previews paginados e filtráveis para sete fontes persistidas, com renderização segura, fallback estruturado e homologação desktop/mobile.
 - **M05 concluído:** comparação read-only de versões do Master Plan e revisões de página, com catálogo de comparabilidade, ownership, sanitização, limites determinísticos e homologação desktop/mobile.
-- **M06 é o próximo checkpoint:** Approval Center com aprovação/rejeição motivada vinculada à versão e ao contexto exatos.
+- **M06 concluído:** Approval Center com decisão imutável e motivada, binding exato de snapshot/contexto, ownership composto, stale/race/idempotência, limites de resposta e homologação desktop/mobile sem efeitos externos.
+- **M07 concluído:** SLA governado por snapshot com aviso in-app de uma hora, due/escalation/expiration, receipts e auditoria append-only, locks concorrentes, contadores exatos e homologação desktop/mobile sem efeitos externos.
+- **M08 concluído:** pausa de mídia paga condicionada por política versionada e vigente, binding exato, gates fail-closed, intent/attempt idempotentes, serialização cross-process e confirmação somente após receipt+readback; UI homologada em desktop/mobile sem rede externa.
+- **M09 e M10 concluídos; M11 e fundamentos M12 em andamento:** primeira vertical Content/Social ainda sem prova externa completa; o lifecycle M12 é observável e reconciliável localmente, não uma operação autônoma homologada.
 - Os fundamentos já implementados são registrados como capabilities individuais, mas não promovem automaticamente todo um estágio para produção.
 - O status histórico apresentado nos screenshots deve ser importado como alegação a auditar, não como prova canônica. Cada conclusão precisa ser recalculada a partir do código, banco, testes, receipts e homologações atuais.
 

@@ -1,0 +1,14 @@
+import { Router } from "express";
+import { z } from "zod";
+import { requireAuth } from "../auth/auth.middleware.js";
+import * as service from "./council.service.js";
+const router=Router();router.use(requireAuth);
+const run=(fn:any)=>(req:any,res:any)=>Promise.resolve(fn(req)).then(x=>res.json(x)).catch((e:any)=>res.status(e.statusCode??400).json({error:e.message,code:e.code}));
+router.post("/cycles",async (r,res)=>{try{res.status(201).json(await service.createCycle(r.auth.workspaceId,r.auth.userId,z.object({campaignId:z.string().uuid(),masterplanVersionId:z.string().uuid(),contextFingerprint:z.string(),snapshotHash:z.string(),idempotencyKey:z.string().min(1).max(200)}).parse(r.body)));}catch(e:any){res.status(e.statusCode??400).json({error:e.message,code:e.code});}});
+router.get("/campaigns/:campaignId/cycles",run((r:any)=>service.listCycles(r.auth.workspaceId,r.params.campaignId)));
+router.get("/cycles/:id",run((r:any)=>service.detail(r.auth.workspaceId,r.params.id)));
+router.post("/cycles/:id/minutes",run((r:any)=>service.appendMinute(r.auth.workspaceId,r.auth.userId,r.params.id,r.body)));
+router.post("/cycles/:id/decisions",run((r:any)=>service.createDecision(r.auth.workspaceId,r.auth.userId,r.params.id,r.body)));
+router.post("/decisions/:id/actions",run((r:any)=>service.linkAction(r.auth.workspaceId,r.params.id,r.body)));
+router.post("/actions/:id/verify",run((r:any)=>service.verify(r.auth.workspaceId,r.params.id,r.body)));
+export default router;

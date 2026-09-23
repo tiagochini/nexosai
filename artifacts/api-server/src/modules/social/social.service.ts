@@ -1,4 +1,4 @@
-import { eq, and, or, lte, inArray, isNull } from "drizzle-orm";
+import { eq, and, or, lte, inArray, isNull, sql } from "drizzle-orm";
 import { createHash, randomUUID } from "node:crypto";
 import {
   db,
@@ -834,6 +834,245 @@ export async function createPost(
   return post;
 }
 
+const CAMPAIGN_SOCIAL_PROVIDERS: Record<string, { platform: SocialPost["platform"]; postType: SocialPost["postType"] }> = {
+  instagram: { platform: "instagram", postType: "feed_image" },
+  meta_ads: { platform: "facebook_page", postType: "feed_image" },
+  tiktok_ads: { platform: "tiktok", postType: "feed_video" },
+};
+const CAMPAIGN_TYPE_PROVIDERS: Record<string, string[]> = {
+  instagram_post: ["instagram"], instagram_story: ["instagram"], instagram_reel: ["instagram"],
+  facebook_post: ["meta_ads"], facebook_video: ["meta_ads"],
+  feed_image: ["instagram", "meta_ads"], feed_video: ["instagram", "meta_ads", "tiktok_ads"],
+  story: ["instagram"], reel: ["instagram", "tiktok_ads"], carousel: ["instagram"],
+  tiktok_video: ["tiktok_ads"], tiktok_reel: ["tiktok_ads"], short_video: ["tiktok_ads"],
+};
+
+function campaignProvidersForPiece(type: string, content: unknown): string[] {
+  const explicit = CAMPAIGN_TYPE_PROVIDERS[type];
+  if (explicit) return explicit;
+  if (type !== "social_post" && type !== "content_calendar") return [];
+  const value = content && typeof content === "object" ? content as Record<string, unknown> : {};
+  const requested = typeof value.platform === "string" ? value.platform.toLowerCase() : "";
+  if (requested === "tiktok" || requested === "tiktok_ads") return campaignPieceMedia(content).length > 0 ? ["tiktok_ads"] : [];
+  if (requested === "instagram") return campaignPieceMedia(content).length > 0 ? ["instagram"] : [];
+  if (requested === "facebook" || requested === "facebook_page" || requested === "meta_ads") return ["meta_ads"];
+  // Generic text content must not be sent to TikTok (or Instagram, which
+  // requires media). Facebook is the only compatible text target.
+  return campaignPieceMedia(content).length > 0 ? ["instagram", "meta_ads"] : ["meta_ads"];
+}
+
+function campaignPieceCaption(content: unknown): string {
+  if (typeof content === "string") return content.slice(0, 2200);
+  if (content && typeof content === "object") {
+    const value = content as Record<string, unknown>;
+    for (const key of ["caption", "body", "text", "copy", "message", "content"]) {
+      if (typeof value[key] === "string") return (value[key] as string).slice(0, 2200);
+    }
+  }
+  return "";
+}
+
+function campaignPieceMedia(content: unknown): string[] {
+  if (!content || typeof content !== "object") return [];
+  const value = content as Record<string, unknown>;
+  for (const key of ["mediaUrls", "media_urls", "imageUrls", "videoUrls"]) {
+    if (Array.isArray(value[key])) return value[key].filter((item): item is string => typeof item === "string");
+  }
+  for (const key of ["mediaUrl", "imageUrl", "videoUrl", "url"]) {
+    if (typeof value[key] === "string") return [value[key] as string];
+  }
+  return [];
+}
+
+type CampaignPublishPreview = {
+  platforms: { provider: string; platform: string; label: string; integrationId: string; accountId: string | null }[];
+  pieceType: string;
+  caption: string;
+  mediaUrls: string[];
+  masterplanVersionId: string;
+  fingerprint: string;
+};
+
+function stableValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => [k, stableValue(v)]));
+  return value;
+}
+
+function publicationFingerprint(input: unknown): string {
+  return createHash("sha256").update(JSON.stringify(stableValue(input))).digest("hex");
+}
+
+/**
+ * Workspace/campaign-scoped preview and confirmation boundary.  This is
+ * intentionally separate from the legacy autopost adapter: explicit
+ * confirmation creates durable posts and routes every mutation through
+ * publishPost's lease/readback governance.
+ */
+export async function getCampaignPublishPreview(
+  workspaceId: string,
+  campaignId: string,
+  pieceId: string,
+): Promise<CampaignPublishPreview> {
+  const [piece] = await db.select().from(contentPiecesTable).where(and(
+    eq(contentPiecesTable.id, pieceId),
+    eq(contentPiecesTable.campaignId, campaignId),
+    eq(contentPiecesTable.workspaceId, workspaceId),
+  )).limit(1);
+  if (!piece) throw new NotFoundError("Content piece not found");
+  const approved = await getApprovedMasterplan(workspaceId, campaignId);
+  if (!matchesApprovedDossier(approved, {
+    campaignId, masterplanVersionId: approved?.id, contextFingerprint: approved?.contextFingerprint,
+  })) {
+    throw new AppError(409, "Campanha não possui um Master Plan aprovado", "MASTERPLAN_CONTEXT_MISMATCH");
+  }
+  if (piece.status !== "approved") {
+    throw new AppError(409, "A peça de conteúdo precisa estar aprovada antes da publicação", "CONTENT_NOT_APPROVED");
+  }
+  const providers = campaignProvidersForPiece(piece.type, piece.content);
+  const integrations = await db.select({ id: workspaceIntegrationsTable.id, provider: workspaceIntegrationsTable.provider, accountId: workspaceIntegrationsTable.accountId, metadata: workspaceIntegrationsTable.metadata }).from(workspaceIntegrationsTable).where(and(
+    eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+    inArray(workspaceIntegrationsTable.provider, providers as any),
+    eq(workspaceIntegrationsTable.status, "connected"),
+  ));
+  const labels: Record<string, string> = { instagram: "Instagram", meta_ads: "Facebook", tiktok_ads: "TikTok" };
+  const eligibleIntegrations = integrations.filter((item) => isOrganicSocialIntegration(item.metadata as Record<string, unknown>));
+  const platforms = eligibleIntegrations.map((item) => ({
+      provider: item.provider,
+      platform: CAMPAIGN_SOCIAL_PROVIDERS[item.provider]?.platform ?? item.provider,
+      label: labels[item.provider] ?? item.provider,
+      integrationId: item.id,
+      accountId: item.accountId,
+    }));
+  return {
+    platforms,
+    pieceType: piece.type,
+    caption: campaignPieceCaption(piece.content).slice(0, 280),
+    mediaUrls: campaignPieceMedia(piece.content),
+    masterplanVersionId: approved.id,
+    fingerprint: publicationFingerprint({
+      workspaceId, campaignId, pieceId, content: piece.content,
+      masterplan: { id: approved.id, contentHash: approved.contentHash, contextFingerprint: approved.contextFingerprint },
+      targets: platforms.map(({ provider, platform, integrationId, accountId }) => ({ provider, platform, integrationId, accountId })),
+      caption: campaignPieceCaption(piece.content), mediaUrls: campaignPieceMedia(piece.content),
+    }),
+  };
+}
+
+export async function publishCampaignContentPiece(
+  workspaceId: string,
+  campaignId: string,
+  pieceId: string,
+  expectedFingerprint: string,
+): Promise<Array<{ postId?: string; integrationId: string; platform: string; status: string; confirmed: boolean; providerPostId?: string | null; errorCode?: string }>> {
+  if (!/^[a-f0-9]{64}$/.test(expectedFingerprint)) {
+    throw new AppError(409, "Gere e confirme uma prévia antes de publicar", "PUBLISH_PREVIEW_REQUIRED");
+  }
+  const initialPreview = await getCampaignPublishPreview(workspaceId, campaignId, pieceId);
+  if (expectedFingerprint !== initialPreview.fingerprint) {
+    throw new AppError(409, "Preview desatualizado; gere uma nova prévia antes de confirmar", "PUBLISH_PREVIEW_STALE");
+  }
+  const [piece] = await db.select().from(contentPiecesTable).where(and(
+    eq(contentPiecesTable.id, pieceId),
+    eq(contentPiecesTable.campaignId, campaignId),
+    eq(contentPiecesTable.workspaceId, workspaceId),
+  )).limit(1);
+  if (!piece) throw new NotFoundError("Content piece not found");
+  if (piece.status !== "approved") throw new AppError(409, "A peça de conteúdo precisa estar aprovada antes da publicação", "CONTENT_NOT_APPROVED");
+  const approved = await getApprovedMasterplan(workspaceId, campaignId);
+  if (!approved) throw new AppError(409, "Campanha não possui um Master Plan aprovado", "MASTERPLAN_CONTEXT_MISMATCH");
+  const providers = campaignProvidersForPiece(piece.type, piece.content);
+  const integrations = (await db.select().from(workspaceIntegrationsTable).where(and(
+    eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+    inArray(workspaceIntegrationsTable.provider, providers as any),
+    eq(workspaceIntegrationsTable.status, "connected"),
+  ))).filter((item) => isOrganicSocialIntegration(item.metadata as Record<string, unknown>));
+  const created: Array<{ postId?: string; integrationId: string; platform: string; status: string; confirmed: boolean; providerPostId?: string | null; errorCode?: string }> = [];
+  for (const integration of integrations) {
+    const mapping = CAMPAIGN_SOCIAL_PROVIDERS[integration.provider];
+    if (!mapping) continue;
+    // Re-read the source and target set before each durable write. This
+    // prevents confirmation from silently reusing a post after source,
+    // approved dossier, account, or connected target changed.
+    let currentPreview: CampaignPublishPreview;
+    try {
+      currentPreview = await getCampaignPublishPreview(workspaceId, campaignId, pieceId);
+    } catch (error) {
+      const code = error instanceof AppError ? error.code : "PUBLISH_PREVIEW_STALE";
+      created.push(...initialPreview.platforms
+        .filter((target) => !created.some((item) => item.integrationId === target.integrationId))
+        .map((target) => ({ integrationId: target.integrationId, platform: target.platform, status: "stale", confirmed: false, errorCode: code })));
+      break;
+    }
+    if (currentPreview.fingerprint !== expectedFingerprint) {
+      const staleTargets = [...initialPreview.platforms, ...currentPreview.platforms]
+        .filter((target, index, all) => all.findIndex((item) => item.integrationId === target.integrationId) === index)
+        .filter((target) => !created.some((item) => item.integrationId === target.integrationId));
+      created.push(...staleTargets.map((target) => ({
+        integrationId: target.integrationId, platform: target.platform, status: "stale",
+        confirmed: false, errorCode: "PUBLISH_PREVIEW_STALE",
+      })));
+      break;
+    }
+    const post = await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${workspaceId}:${pieceId}:${integration.id}`}))`);
+      let [existing] = await tx.select().from(socialPostsTable).where(and(
+        eq(socialPostsTable.workspaceId, workspaceId),
+        eq(socialPostsTable.campaignId, campaignId),
+        eq(socialPostsTable.contentPieceId, pieceId),
+        eq(socialPostsTable.integrationId, integration.id),
+      )).limit(1);
+      if (existing) {
+        const expectedCaption = campaignPieceCaption(piece.content);
+        const expectedMedia = campaignPieceMedia(piece.content);
+        const samePayload = existing.masterplanVersionId === approved.id
+          && existing.contextFingerprint === approved.contextFingerprint
+          && existing.platform === mapping.platform
+          && existing.postType === mapping.postType
+          && existing.caption === expectedCaption
+          && JSON.stringify(existing.mediaUrls ?? []) === JSON.stringify(expectedMedia);
+        if (!samePayload) return { stale: true as const, existing };
+      }
+      if (!existing) {
+        [existing] = await tx.insert(socialPostsTable).values({
+          workspaceId, campaignId, contentPieceId: pieceId, integrationId: integration.id,
+          platform: mapping.platform, postType: mapping.postType, status: "draft",
+          caption: campaignPieceCaption(piece.content), hashtags: [],
+          mediaUrls: campaignPieceMedia(piece.content), aiGenerated: true,
+          masterplanVersionId: approved.id, contextFingerprint: approved.contextFingerprint,
+        }).returning();
+      }
+      return existing ? { stale: false as const, post: existing } : { stale: false as const, post: undefined };
+    });
+    if (post.stale) {
+      created.push({
+        postId: post.existing.id, integrationId: integration.id, platform: mapping.platform,
+        status: "stale", confirmed: false, providerPostId: post.existing.platformPostId,
+        errorCode: "PUBLISH_BINDING_STALE",
+      });
+      continue;
+    }
+    if (!post.post) continue;
+    try {
+      const published = await publishPost(workspaceId, post.post.id);
+      created.push({
+        postId: published.id, integrationId: published.integrationId, platform: published.platform,
+        status: published.status, confirmed: published.status === "published",
+        providerPostId: published.platformPostId,
+      });
+    } catch (error) {
+      const code = error instanceof AppError ? error.code : "PUBLISH_FAILED";
+      const current = await getPost(workspaceId, post.post.id);
+      created.push({
+        postId: current.id, integrationId: current.integrationId, platform: current.platform,
+        status: current.status, confirmed: false, providerPostId: current.platformPostId,
+        errorCode: code,
+      });
+    }
+  }
+  return created;
+}
+
 export async function listPosts(
   workspaceId: string,
   filters: {
@@ -914,13 +1153,37 @@ export async function publishPost(workspaceId: string, postId: string): Promise<
   // is deliberately workspace-scoped: post IDs must never authorize a caller to
   // publish a post belonging to another workspace.
   const post = await getPost(workspaceId, postId);
-  if (post.status === "published") return post;
-  if (["failed", "cancelled"].includes(post.status)) {
-    throw new AppError(400, `Cannot publish post in status: ${post.status}`, "INVALID_STATUS");
-  }
   const approvedDossier = post.campaignId ? await getApprovedMasterplan(workspaceId, post.campaignId) : undefined;
   if (!matchesApprovedDossier(approvedDossier, post)) {
     throw new AppError(409, "Social post dossier is stale or no longer approved; regenerate it from the current dossier", "MASTERPLAN_CONTEXT_MISMATCH");
+  }
+  // Campaign publications are only valid when they still point at the
+  // approved source piece.  Keep this check immediately before any pause,
+  // credential, lease, or provider work so a stale/draft piece cannot mutate
+  // an external account.
+  if (post.campaignId) {
+    if (!post.contentPieceId) {
+      throw new AppError(409, "Publicação de campanha requer uma peça de conteúdo aprovada", "CONTENT_BINDING_REQUIRED");
+    }
+    const [piece] = await db.select({
+      id: contentPiecesTable.id,
+      campaignId: contentPiecesTable.campaignId,
+      workspaceId: contentPiecesTable.workspaceId,
+      status: contentPiecesTable.status,
+    }).from(contentPiecesTable).where(and(
+      eq(contentPiecesTable.id, post.contentPieceId),
+      eq(contentPiecesTable.campaignId, post.campaignId),
+      eq(contentPiecesTable.workspaceId, workspaceId),
+    )).limit(1);
+    if (!piece || piece.status !== "approved") {
+      throw new AppError(409, "A peça de conteúdo da campanha não está aprovada ou não pertence à campanha", "CONTENT_BINDING_MISMATCH");
+    }
+  }
+  // Re-reads above are intentional even for an already published row: a
+  // caller must never turn an old receipt into confirmation of a new request.
+  if (post.status === "published") return post;
+  if (["failed", "cancelled"].includes(post.status)) {
+    throw new AppError(400, `Cannot publish post in status: ${post.status}`, "INVALID_STATUS");
   }
   const pauseChannel = post.platform === "instagram" ? "instagram"
     : post.platform === "facebook_page" ? "facebook"
@@ -1282,49 +1545,17 @@ export async function getDueScheduledPosts(): Promise<SocialPost[]> {
 // ─── Auto-schedule from campaign ──────────────────────────────────────────────
 
 export async function schedulePostsForCampaign(
-  workspaceId: string,
-  campaignId: string,
-  contentPieceIds: string[],
-  integrationIds: string[],
-  startDate: Date
+  _workspaceId: string,
+  _campaignId: string,
+  _contentPieceIds: string[],
+  _integrationIds: string[],
+  _startDate: Date
 ): Promise<SocialPost[]> {
-  const created: SocialPost[] = [];
-  let offset = 0;
-
-  for (const contentPieceId of contentPieceIds) {
-    const [piece] = await db
-      .select()
-      .from(contentPiecesTable)
-      .where(eq(contentPiecesTable.id, contentPieceId))
-      .limit(1);
-
-    if (!piece) continue;
-
-    for (const integrationId of integrationIds) {
-      const integration = await getIntegration(workspaceId, integrationId);
-      if (!integration) continue;
-
-      const scheduledAt = new Date(startDate.getTime() + offset * 6 * 60 * 60 * 1000);
-
-      const post = await createPost(workspaceId, {
-        campaignId,
-        contentPieceId,
-        integrationId,
-        platform: providerToPlatform(integration.provider),
-        postType: "feed_image",
-        status: "scheduled",
-        caption: typeof piece.content === "string" ? piece.content.slice(0, 2200) : null,
-        hashtags: [],
-        mediaUrls: [],
-        scheduledAt,
-        aiGenerated: true,
-      });
-      created.push(post);
-      offset++;
-    }
-  }
-
-  return created;
+  throw new AppError(
+    409,
+    "Agendamento de campanha requer uma política versionada e confirmação por prévia",
+    "CAMPAIGN_SCHEDULE_CONFIRMATION_REQUIRED",
+  );
 }
 
 // ─── Webhook processing ───────────────────────────────────────────────────────

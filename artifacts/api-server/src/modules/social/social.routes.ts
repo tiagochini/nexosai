@@ -227,6 +227,14 @@ router.delete("/posts/:postId", requireAuth, async (req, res): Promise<void> => 
 });
 
 router.post("/posts/:postId/publish", requireAuth, async (req, res): Promise<void> => {
+  const existing = await getPost(req.auth.workspaceId, req.params["postId"] as string);
+  if (existing.campaignId || existing.contentPieceId) {
+    throw new AppError(
+      409,
+      "Use a prévia e confirmação de publicação da campanha para posts vinculados a conteúdo",
+      "USE_CAMPAIGN_PREVIEW_CONFIRMATION",
+    );
+  }
   const post = await publishPost(req.auth.workspaceId, req.params["postId"] as string);
   res.json({ post });
 });

@@ -7,8 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
-import {
-  Share2, ExternalLink, CheckCircle2, XCircle, Loader2,
+import { Share2, ExternalLink, CheckCircle2, XCircle, Loader2,
   Calendar, Eye, RefreshCw, Play, Instagram, Facebook,
   MessageSquare, Users, Plus, Copy, ChevronRight, Bot,
   Zap, Send, Phone, ArrowRight, Clock, Sparkles, Lock,
@@ -16,6 +15,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { SocialAnalyticsTab } from "./analytics";
+import { SocialIntelligenceTab } from "./intelligence";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -85,7 +85,7 @@ const PLATFORMS = [
 const GROUP_PHASES = [
   {
     label: "Pré-Lançamento",
-    emoji: "🔥",
+    emoji: "",
     color: "text-orange-400 border-orange-400/40 bg-orange-400/10",
     days: "D-7 a D-3",
     description: "Aquecimento inicial — construção de autoridade, antecipação e engajamento",
@@ -99,7 +99,7 @@ const GROUP_PHASES = [
   },
   {
     label: "Aquecimento Intenso",
-    emoji: "⚡",
+    emoji: "",
     color: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10",
     days: "D-2 a D-1",
     description: "Antecipação máxima — build-up emocional e preparação para abertura",
@@ -112,7 +112,7 @@ const GROUP_PHASES = [
   },
   {
     label: "Abertura do Carrinho",
-    emoji: "🚀",
+    emoji: "",
     color: "text-green-400 border-green-400/40 bg-green-400/10",
     days: "D-0",
     description: "Abertura oficial — anúncio com link, condições e urgência inicial",
@@ -125,7 +125,7 @@ const GROUP_PHASES = [
   },
   {
     label: "Urgência & Conversão",
-    emoji: "⏰",
+    emoji: "",
     color: "text-red-400 border-red-400/40 bg-red-400/10",
     days: "D+1 a D+6",
     description: "Fase de conversão intensa — objeções, provas sociais e escassez crescente",
@@ -140,7 +140,7 @@ const GROUP_PHASES = [
   },
   {
     label: "Encerramento do Grupo",
-    emoji: "🎯",
+    emoji: "",
     color: "text-purple-400 border-purple-400/40 bg-purple-400/10",
     days: "D+7",
     description: "Encerramento honrado — agradecimento, entrega do link e fechamento do grupo",
@@ -160,7 +160,7 @@ const DM_SCENARIOS = [
     color: "text-red-400",
     label: "Pagamento Recusado",
     description: "Cartão não aprovado ou erro no checkout",
-    template: `Oi [NOME]! Vi que houve um problema com seu pagamento. Não se preocupe — isso é mais comum do que parece e tem solução fácil! 🙏
+    template: `Oi [NOME]! Vi que houve um problema com seu pagamento. Não se preocupe — isso é mais comum do que parece e tem solução fácil!
 
 Algumas opções para você:
 • Tente outro cartão de crédito
@@ -169,7 +169,7 @@ Algumas opções para você:
 
 O link da oferta ainda está ativo: [LINK]
 
-Qualquer dúvida é só me chamar aqui mesmo! 💪`,
+Qualquer dúvida é só me chamar aqui mesmo!`,
   },
   {
     id: "link_not_working",
@@ -177,7 +177,7 @@ Qualquer dúvida é só me chamar aqui mesmo! 💪`,
     color: "text-orange-400",
     label: "Link Não Abre",
     description: "Erro no link ou na página de checkout",
-    template: `Oi [NOME]! Vamos resolver isso agora mesmo! 🔧
+    template: `Oi [NOME]! Vamos resolver isso agora mesmo!
 
 Tenta isso:
 1. Copie e cole o link diretamente no seu navegador (não clique)
@@ -187,7 +187,7 @@ Tenta isso:
 
 Link direto: [LINK]
 
-Se nenhuma dessas funcionar me manda um print do erro e eu te ajudo! 📱`,
+Se nenhuma dessas funcionar me manda um print do erro e eu te ajudo!`,
   },
   {
     id: "product_question",
@@ -195,13 +195,13 @@ Se nenhuma dessas funcionar me manda um print do erro e eu te ajudo! 📱`,
     color: "text-blue-400",
     label: "Dúvida sobre o Produto",
     description: "Perguntas sobre o conteúdo, metodologia ou garantia",
-    template: `Oi [NOME]! Que ótima pergunta — fico feliz que tenha me chamado antes de decidir! 😊
+    template: `Oi [NOME]! Que ótima pergunta — fico feliz que tenha me chamado antes de decidir!
 
 [RESPOSTA_PERSONALIZADA]
 
 E sim, você tem 7 dias de garantia incondicional. Se por qualquer motivo não ficar satisfeito(a), devolvemos 100% do seu investimento, sem perguntas.
 
-Ficou alguma dúvida? Pode perguntar à vontade! Estou aqui para te ajudar a tomar a melhor decisão pra você. 🙏`,
+Ficou alguma dúvida? Pode perguntar à vontade! Estou aqui para te ajudar a tomar a melhor decisão pra você.`,
   },
   {
     id: "no_access",
@@ -211,15 +211,15 @@ Ficou alguma dúvida? Pode perguntar à vontade! Estou aqui para te ajudar a tom
     description: "Comprou mas não recebeu o acesso",
     template: `Oi [NOME]! Vamos resolver isso imediatamente! Isso acontece às vezes quando o e-mail cai no spam ou há um pequeno delay na plataforma.
 
-✅ Verifique sua caixa de spam e a pasta "Promoções" (se for Gmail)
-✅ Procure por um e-mail de [NOME_PLATAFORMA] ou [EMAIL_SUPORTE]
-✅ Aguarde até 10 minutos — o sistema pode ter um pequeno delay
+- Verifique sua caixa de spam e a pasta "Promoções" (se for Gmail)
+- Procure por um e-mail de [NOME_PLATAFORMA] ou [EMAIL_SUPORTE]
+- Aguarde até 10 minutos — o sistema pode ter um pequeno delay
 
 Se não encontrar em 15 minutos, me manda:
 • O e-mail que você usou na compra
 • A confirmação de pagamento (print)
 
-Vou resolver na hora! 🚀`,
+Vou resolver na hora!`,
   },
   {
     id: "discount_request",
@@ -235,7 +235,7 @@ O que eu posso fazer por você:
 • Parcelamento em até [X]x no cartão
 • PIX com [X]% de desconto
 
-A transformação que você vai ter vale muito mais do que qualquer desconto que eu pudesse oferecer. Mas quero que entre porque acredita no resultado, não pelo preço. 🙏
+A transformação que você vai ter vale muito mais do que qualquer desconto que eu pudesse oferecer. Mas quero que entre porque acredita no resultado, não pelo preço.
 
 Me fala o que está travando sua decisão — vou ser honesto(a) contigo!`,
   },
@@ -253,7 +253,7 @@ Posso verificar se ainda há alguma vaga disponível para te colocar em uma list
 
 Se quiser, te coloco nessa lista?
 
-E quando abrirmos de novo, você será a primeira pessoa avisada. 🙏`,
+E quando abrirmos de novo, você será a primeira pessoa avisada.`,
   },
 ];
 
@@ -420,7 +420,7 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
 
 export default function SocialPage() {
   const { workspace } = useAuth();
-  const [activeTab, setActiveTab] = useState<"platforms" | "groups" | "dm" | "analytics">("platforms");
+  const [activeTab, setActiveTab] = useState<"platforms" | "groups" | "dm" | "analytics" | "intelligence">("platforms");
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [generatingPlatform, setGeneratingPlatform] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -480,6 +480,7 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
   const TABS = [
     { id: "platforms" as const, label: "Plataformas" },
     { id: "analytics" as const, label: "Analytics" },
+    { id: "intelligence" as const, label: "Inteligência" },
     { id: "groups" as const, label: `Grupos (${groups.length})` },
     { id: "dm" as const, label: "DM Assist" },
   ];
@@ -524,6 +525,9 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
 
       {/* ══════════════ TAB: ANALYTICS ══════════════ */}
       {activeTab === "analytics" && <SocialAnalyticsTab />}
+
+      {/* ══════════════ TAB: INTELLIGENCE ══════════════ */}
+      {activeTab === "intelligence" && <SocialIntelligenceTab />}
 
       {/* ══════════════ TAB: PLATAFORMAS ══════════════ */}
       {activeTab === "platforms" && (

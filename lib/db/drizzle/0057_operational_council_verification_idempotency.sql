@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX council_outcomes_action_once_uidx ON council_outcomes(workspace_id, action_id) WHERE action_id IS NOT NULL;

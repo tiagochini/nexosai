@@ -182,6 +182,8 @@ export const paidMediaAccountsTable = pgTable(
     currency: text("currency").notNull(),
     timezone: text("timezone").notNull(),
     isSelected: boolean("is_selected").notNull().default(false),
+    operationalHealth: boolean("operational_health").notNull().default(false),
+    healthCheckedAt: timestamp("health_checked_at", { withTimezone: true }),
     discoveredAt: timestamp("discovered_at", { withTimezone: true }).notNull().defaultNow(),
     selectedAt: timestamp("selected_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

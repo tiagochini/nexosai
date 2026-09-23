@@ -5,6 +5,7 @@ import {
   timestamp,
   pgEnum,
   jsonb,
+  unique,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -45,7 +46,9 @@ export const approvalCheckpointsTable = pgTable("approval_checkpoints", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (table) => [
+  unique("approval_checkpoints_campaign_id_uidx").on(table.campaignId, table.id),
+]);
 
 export const insertApprovalCheckpointSchema = createInsertSchema(
   approvalCheckpointsTable,

@@ -46,8 +46,8 @@ export async function listMasterplanVersions(workspaceId: string, campaignId: st
     eq(masterplanVersionsTable.workspaceId, workspaceId), eq(masterplanVersionsTable.campaignId, campaignId),
   )).orderBy(desc(masterplanVersionsTable.version));
 }
-export async function getApprovedMasterplan(workspaceId: string, campaignId: string) {
-  const [row] = await db.select().from(masterplanVersionsTable).where(and(
+export async function getApprovedMasterplan(workspaceId: string, campaignId: string, query: any = db) {
+  const [row] = await query.select().from(masterplanVersionsTable).where(and(
     eq(masterplanVersionsTable.workspaceId, workspaceId), eq(masterplanVersionsTable.campaignId, campaignId),
     eq(masterplanVersionsTable.status, "approved"),
   )).orderBy(desc(masterplanVersionsTable.version)).limit(1);

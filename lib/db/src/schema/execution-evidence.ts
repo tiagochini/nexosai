@@ -5,7 +5,8 @@ import { workspacesTable } from "./workspaces";
 
 /** Append-only facts at a real provider mutation boundary. */
 export const executionEvidenceStateEnum = pgEnum("execution_evidence_state", [
-  "planned", "attempted", "provider_confirmed", "artifact_qc",
+  "planned", "attempted", "provider_confirmed", "artifact_qc", "monitored",
+  "retryable", "failed", "recovery", "compensated", "exception",
 ]);
 
 export const executionEvidenceTable = pgTable("execution_evidence", {

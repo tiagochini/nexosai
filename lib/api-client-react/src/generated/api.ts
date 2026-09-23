@@ -20,6 +20,10 @@ import type {
   ActivateSequence200,
   AddSequenceContacts201,
   AnalyticsResponse,
+  ApprovalDecisionInput,
+  ApprovalDecisionResponse,
+  ApprovalSlaInput,
+  ApprovalSlaResponse,
   AuthResponse,
   AutonomyAcceptanceInput,
   AutonomyAcceptanceResponse,
@@ -29,22 +33,37 @@ import type {
   CalendarResponse,
   CampaignExecuteInput,
   CampaignInput,
+  ConditionalExecutionPolicyInput,
+  ConditionalExecutionResponse,
   ContactsAddInput,
   ContractAcceptanceRequiredError,
+  ControlRoomApprovalsResponse,
   ControlRoomEvidenceResponse,
   ControlRoomPreviewsResponse,
   ControlRoomVersionDiffResponse,
   ControlRoomVersionSourcesResponse,
+  CouncilActionInput,
+  CouncilCycle,
+  CouncilCycleInput,
+  CouncilDecisionInput,
+  CouncilDetail,
+  CouncilMinutesInput,
+  CouncilOutcome,
+  CouncilRecord,
+  CouncilVerificationInput,
   CreateCampaign201,
+  CreateConditionalExecutionPolicy201,
   CreditsBalance,
   ExecuteCampaign202,
   GenerateItemCopy200,
   GenerateSequencePlan200,
   GetAutonomyStatusParams,
   GetCampaign200,
+  GetCampaignControlRoomApprovalsParams,
   GetCampaignControlRoomEvidenceParams,
   GetCampaignControlRoomPreviewsParams,
   GetCampaignControlRoomVersionDiffParams,
+  GetLifecycleTimelineParams,
   GetSequence200,
   HealthStatus,
   IntakeResponse,
@@ -52,12 +71,21 @@ import type {
   IntakeScore,
   ItemCopyInput,
   LaunchSequence,
+  LifecycleActionsResponse,
+  LifecycleContactsResponse,
+  LifecycleOverview,
+  LifecycleTimelineResponse,
   ListAutonomyEvidenceParams,
   ListCampaigns200,
+  ListLifecycleActionsParams,
+  ListLifecycleContactsParams,
   ListMandatoryPausesParams,
   ListPaidMediaProposals200,
+  ListRealizationContractsParams,
   ListSequenceContacts200,
   ListSequences200,
+  ListSocialIntelligenceInboxParams,
+  ListSocialIntelligenceReports200,
   LoginInput,
   MandatoryPauseActiveError,
   MandatoryPauseInput,
@@ -88,11 +116,21 @@ import type {
   PaidMediaSyncResult,
   PaidMediaSyncStatusResponse,
   PaidMediaValidationErrorResponse,
+  PublishSocialResponse,
+  RealizationActionResult,
+  RealizationContract,
+  RealizationContractDetail,
+  RealizationContractInput,
   RefreshToken200,
   RefreshTokenInput,
   RegisterInput,
+  RevokeConditionalExecutionPolicy200,
   SequenceActivationInput,
   SequenceInput,
+  SocialInboxPage,
+  SocialPublicationRequest,
+  SocialReport,
+  SocialReportInput,
   TodayResponse,
   UnauthorizedErrorResponse,
 } from "./api.schemas";
@@ -830,6 +868,1560 @@ export function useGetCampaign<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary approvals
+ */
+export const getGetCampaignControlRoomApprovalsUrl = (
+  campaignId: string,
+  params?: GetCampaignControlRoomApprovalsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/campaigns/${campaignId}/control-room/approvals?${stringifiedParams}`
+    : `/api/campaigns/${campaignId}/control-room/approvals`;
+};
+
+export const getCampaignControlRoomApprovals = async (
+  campaignId: string,
+  params?: GetCampaignControlRoomApprovalsParams,
+  options?: RequestInit,
+): Promise<ControlRoomApprovalsResponse> => {
+  return customFetch<ControlRoomApprovalsResponse>(
+    getGetCampaignControlRoomApprovalsUrl(campaignId, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetCampaignControlRoomApprovalsQueryKey = (
+  campaignId: string,
+  params?: GetCampaignControlRoomApprovalsParams,
+) => {
+  return [
+    `/api/campaigns/${campaignId}/control-room/approvals`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetCampaignControlRoomApprovalsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCampaignControlRoomApprovals>>,
+  TError = ErrorType<unknown>,
+>(
+  campaignId: string,
+  params?: GetCampaignControlRoomApprovalsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaignControlRoomApprovals>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetCampaignControlRoomApprovalsQueryKey(campaignId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCampaignControlRoomApprovals>>
+  > = ({ signal }) =>
+    getCampaignControlRoomApprovals(campaignId, params, {
+      signal,
+      ...requestOptions,
+    });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!campaignId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCampaignControlRoomApprovals>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCampaignControlRoomApprovalsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCampaignControlRoomApprovals>>
+>;
+export type GetCampaignControlRoomApprovalsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary approvals
+ */
+
+export function useGetCampaignControlRoomApprovals<
+  TData = Awaited<ReturnType<typeof getCampaignControlRoomApprovals>>,
+  TError = ErrorType<unknown>,
+>(
+  campaignId: string,
+  params?: GetCampaignControlRoomApprovalsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaignControlRoomApprovals>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCampaignControlRoomApprovalsQueryOptions(
+    campaignId,
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary decide
+ */
+export const getDecideCampaignControlRoomApprovalUrl = (
+  campaignId: string,
+  subjectType: string,
+  subjectId: string,
+) => {
+  return `/api/campaigns/${campaignId}/control-room/approvals/${subjectType}/${subjectId}/decision`;
+};
+
+export const decideCampaignControlRoomApproval = async (
+  campaignId: string,
+  subjectType: string,
+  subjectId: string,
+  approvalDecisionInput: ApprovalDecisionInput,
+  options?: RequestInit,
+): Promise<ApprovalDecisionResponse> => {
+  return customFetch<ApprovalDecisionResponse>(
+    getDecideCampaignControlRoomApprovalUrl(campaignId, subjectType, subjectId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(approvalDecisionInput),
+    },
+  );
+};
+
+export const getDecideCampaignControlRoomApprovalMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof decideCampaignControlRoomApproval>>,
+    TError,
+    {
+      campaignId: string;
+      subjectType: string;
+      subjectId: string;
+      data: BodyType<ApprovalDecisionInput>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof decideCampaignControlRoomApproval>>,
+  TError,
+  {
+    campaignId: string;
+    subjectType: string;
+    subjectId: string;
+    data: BodyType<ApprovalDecisionInput>;
+  },
+  TContext
+> => {
+  const mutationKey = ["decideCampaignControlRoomApproval"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof decideCampaignControlRoomApproval>>,
+    {
+      campaignId: string;
+      subjectType: string;
+      subjectId: string;
+      data: BodyType<ApprovalDecisionInput>;
+    }
+  > = (props) => {
+    const { campaignId, subjectType, subjectId, data } = props ?? {};
+
+    return decideCampaignControlRoomApproval(
+      campaignId,
+      subjectType,
+      subjectId,
+      data,
+      requestOptions,
+    );
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DecideCampaignControlRoomApprovalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof decideCampaignControlRoomApproval>>
+>;
+export type DecideCampaignControlRoomApprovalMutationBody =
+  BodyType<ApprovalDecisionInput>;
+export type DecideCampaignControlRoomApprovalMutationError = ErrorType<unknown>;
+
+/**
+ * @summary decide
+ */
+export const useDecideCampaignControlRoomApproval = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof decideCampaignControlRoomApproval>>,
+    TError,
+    {
+      campaignId: string;
+      subjectType: string;
+      subjectId: string;
+      data: BodyType<ApprovalDecisionInput>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof decideCampaignControlRoomApproval>>,
+  TError,
+  {
+    campaignId: string;
+    subjectType: string;
+    subjectId: string;
+    data: BodyType<ApprovalDecisionInput>;
+  },
+  TContext
+> => {
+  return useMutation(
+    getDecideCampaignControlRoomApprovalMutationOptions(options),
+  );
+};
+
+/**
+ * @summary sla
+ */
+export const getScheduleCampaignApprovalSlaUrl = (
+  campaignId: string,
+  subjectType: string,
+  subjectId: string,
+) => {
+  return `/api/campaigns/${campaignId}/control-room/approvals/${subjectType}/${subjectId}/sla`;
+};
+
+export const scheduleCampaignApprovalSla = async (
+  campaignId: string,
+  subjectType: string,
+  subjectId: string,
+  approvalSlaInput: ApprovalSlaInput,
+  options?: RequestInit,
+): Promise<ApprovalSlaResponse> => {
+  return customFetch<ApprovalSlaResponse>(
+    getScheduleCampaignApprovalSlaUrl(campaignId, subjectType, subjectId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(approvalSlaInput),
+    },
+  );
+};
+
+export const getScheduleCampaignApprovalSlaMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scheduleCampaignApprovalSla>>,
+    TError,
+    {
+      campaignId: string;
+      subjectType: string;
+      subjectId: string;
+      data: BodyType<ApprovalSlaInput>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof scheduleCampaignApprovalSla>>,
+  TError,
+  {
+    campaignId: string;
+    subjectType: string;
+    subjectId: string;
+    data: BodyType<ApprovalSlaInput>;
+  },
+  TContext
+> => {
+  const mutationKey = ["scheduleCampaignApprovalSla"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof scheduleCampaignApprovalSla>>,
+    {
+      campaignId: string;
+      subjectType: string;
+      subjectId: string;
+      data: BodyType<ApprovalSlaInput>;
+    }
+  > = (props) => {
+    const { campaignId, subjectType, subjectId, data } = props ?? {};
+
+    return scheduleCampaignApprovalSla(
+      campaignId,
+      subjectType,
+      subjectId,
+      data,
+      requestOptions,
+    );
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ScheduleCampaignApprovalSlaMutationResult = NonNullable<
+  Awaited<ReturnType<typeof scheduleCampaignApprovalSla>>
+>;
+export type ScheduleCampaignApprovalSlaMutationBody =
+  BodyType<ApprovalSlaInput>;
+export type ScheduleCampaignApprovalSlaMutationError = ErrorType<unknown>;
+
+/**
+ * @summary sla
+ */
+export const useScheduleCampaignApprovalSla = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scheduleCampaignApprovalSla>>,
+    TError,
+    {
+      campaignId: string;
+      subjectType: string;
+      subjectId: string;
+      data: BodyType<ApprovalSlaInput>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof scheduleCampaignApprovalSla>>,
+  TError,
+  {
+    campaignId: string;
+    subjectType: string;
+    subjectId: string;
+    data: BodyType<ApprovalSlaInput>;
+  },
+  TContext
+> => {
+  return useMutation(getScheduleCampaignApprovalSlaMutationOptions(options));
+};
+
+/**
+ * @summary get policy
+ */
+export const getGetConditionalExecutionPolicyUrl = (campaignId: string) => {
+  return `/api/campaigns/${campaignId}/control-room/execution-policy`;
+};
+
+export const getConditionalExecutionPolicy = async (
+  campaignId: string,
+  options?: RequestInit,
+): Promise<ConditionalExecutionResponse> => {
+  return customFetch<ConditionalExecutionResponse>(
+    getGetConditionalExecutionPolicyUrl(campaignId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetConditionalExecutionPolicyQueryKey = (
+  campaignId: string,
+) => {
+  return [
+    `/api/campaigns/${campaignId}/control-room/execution-policy`,
+  ] as const;
+};
+
+export const getGetConditionalExecutionPolicyQueryOptions = <
+  TData = Awaited<ReturnType<typeof getConditionalExecutionPolicy>>,
+  TError = ErrorType<unknown>,
+>(
+  campaignId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getConditionalExecutionPolicy>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetConditionalExecutionPolicyQueryKey(campaignId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getConditionalExecutionPolicy>>
+  > = ({ signal }) =>
+    getConditionalExecutionPolicy(campaignId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!campaignId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getConditionalExecutionPolicy>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetConditionalExecutionPolicyQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getConditionalExecutionPolicy>>
+>;
+export type GetConditionalExecutionPolicyQueryError = ErrorType<unknown>;
+
+/**
+ * @summary get policy
+ */
+
+export function useGetConditionalExecutionPolicy<
+  TData = Awaited<ReturnType<typeof getConditionalExecutionPolicy>>,
+  TError = ErrorType<unknown>,
+>(
+  campaignId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getConditionalExecutionPolicy>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetConditionalExecutionPolicyQueryOptions(
+    campaignId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary create policy
+ */
+export const getCreateConditionalExecutionPolicyUrl = (campaignId: string) => {
+  return `/api/campaigns/${campaignId}/control-room/execution-policy`;
+};
+
+export const createConditionalExecutionPolicy = async (
+  campaignId: string,
+  conditionalExecutionPolicyInput: ConditionalExecutionPolicyInput,
+  options?: RequestInit,
+): Promise<CreateConditionalExecutionPolicy201> => {
+  return customFetch<CreateConditionalExecutionPolicy201>(
+    getCreateConditionalExecutionPolicyUrl(campaignId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(conditionalExecutionPolicyInput),
+    },
+  );
+};
+
+export const getCreateConditionalExecutionPolicyMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createConditionalExecutionPolicy>>,
+    TError,
+    { campaignId: string; data: BodyType<ConditionalExecutionPolicyInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createConditionalExecutionPolicy>>,
+  TError,
+  { campaignId: string; data: BodyType<ConditionalExecutionPolicyInput> },
+  TContext
+> => {
+  const mutationKey = ["createConditionalExecutionPolicy"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createConditionalExecutionPolicy>>,
+    { campaignId: string; data: BodyType<ConditionalExecutionPolicyInput> }
+  > = (props) => {
+    const { campaignId, data } = props ?? {};
+
+    return createConditionalExecutionPolicy(campaignId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateConditionalExecutionPolicyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createConditionalExecutionPolicy>>
+>;
+export type CreateConditionalExecutionPolicyMutationBody =
+  BodyType<ConditionalExecutionPolicyInput>;
+export type CreateConditionalExecutionPolicyMutationError = ErrorType<unknown>;
+
+/**
+ * @summary create policy
+ */
+export const useCreateConditionalExecutionPolicy = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createConditionalExecutionPolicy>>,
+    TError,
+    { campaignId: string; data: BodyType<ConditionalExecutionPolicyInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createConditionalExecutionPolicy>>,
+  TError,
+  { campaignId: string; data: BodyType<ConditionalExecutionPolicyInput> },
+  TContext
+> => {
+  return useMutation(
+    getCreateConditionalExecutionPolicyMutationOptions(options),
+  );
+};
+
+/**
+ * @summary revoke policy
+ */
+export const getRevokeConditionalExecutionPolicyUrl = (
+  campaignId: string,
+  version: number,
+) => {
+  return `/api/campaigns/${campaignId}/control-room/execution-policy/${version}/revoke`;
+};
+
+export const revokeConditionalExecutionPolicy = async (
+  campaignId: string,
+  version: number,
+  options?: RequestInit,
+): Promise<RevokeConditionalExecutionPolicy200> => {
+  return customFetch<RevokeConditionalExecutionPolicy200>(
+    getRevokeConditionalExecutionPolicyUrl(campaignId, version),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getRevokeConditionalExecutionPolicyMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeConditionalExecutionPolicy>>,
+    TError,
+    { campaignId: string; version: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revokeConditionalExecutionPolicy>>,
+  TError,
+  { campaignId: string; version: number },
+  TContext
+> => {
+  const mutationKey = ["revokeConditionalExecutionPolicy"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revokeConditionalExecutionPolicy>>,
+    { campaignId: string; version: number }
+  > = (props) => {
+    const { campaignId, version } = props ?? {};
+
+    return revokeConditionalExecutionPolicy(
+      campaignId,
+      version,
+      requestOptions,
+    );
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevokeConditionalExecutionPolicyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revokeConditionalExecutionPolicy>>
+>;
+
+export type RevokeConditionalExecutionPolicyMutationError = ErrorType<unknown>;
+
+/**
+ * @summary revoke policy
+ */
+export const useRevokeConditionalExecutionPolicy = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeConditionalExecutionPolicy>>,
+    TError,
+    { campaignId: string; version: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof revokeConditionalExecutionPolicy>>,
+  TError,
+  { campaignId: string; version: number },
+  TContext
+> => {
+  return useMutation(
+    getRevokeConditionalExecutionPolicyMutationOptions(options),
+  );
+};
+
+/**
+ * @summary list exec
+ */
+export const getListConditionalExecutionsUrl = (campaignId: string) => {
+  return `/api/campaigns/${campaignId}/control-room/conditional-executions`;
+};
+
+export const listConditionalExecutions = async (
+  campaignId: string,
+  options?: RequestInit,
+): Promise<ConditionalExecutionResponse> => {
+  return customFetch<ConditionalExecutionResponse>(
+    getListConditionalExecutionsUrl(campaignId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListConditionalExecutionsQueryKey = (campaignId: string) => {
+  return [
+    `/api/campaigns/${campaignId}/control-room/conditional-executions`,
+  ] as const;
+};
+
+export const getListConditionalExecutionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listConditionalExecutions>>,
+  TError = ErrorType<unknown>,
+>(
+  campaignId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listConditionalExecutions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListConditionalExecutionsQueryKey(campaignId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listConditionalExecutions>>
+  > = ({ signal }) =>
+    listConditionalExecutions(campaignId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!campaignId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listConditionalExecutions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListConditionalExecutionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listConditionalExecutions>>
+>;
+export type ListConditionalExecutionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary list exec
+ */
+
+export function useListConditionalExecutions<
+  TData = Awaited<ReturnType<typeof listConditionalExecutions>>,
+  TError = ErrorType<unknown>,
+>(
+  campaignId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listConditionalExecutions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListConditionalExecutionsQueryOptions(
+    campaignId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create realization contract
+ */
+export const getCreateRealizationContractUrl = () => {
+  return `/api/realizations`;
+};
+
+export const createRealizationContract = async (
+  realizationContractInput: RealizationContractInput,
+  options?: RequestInit,
+): Promise<RealizationContract> => {
+  return customFetch<RealizationContract>(getCreateRealizationContractUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(realizationContractInput),
+  });
+};
+
+export const getCreateRealizationContractMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createRealizationContract>>,
+    TError,
+    { data: BodyType<RealizationContractInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createRealizationContract>>,
+  TError,
+  { data: BodyType<RealizationContractInput> },
+  TContext
+> => {
+  const mutationKey = ["createRealizationContract"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createRealizationContract>>,
+    { data: BodyType<RealizationContractInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createRealizationContract(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateRealizationContractMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createRealizationContract>>
+>;
+export type CreateRealizationContractMutationBody =
+  BodyType<RealizationContractInput>;
+export type CreateRealizationContractMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create realization contract
+ */
+export const useCreateRealizationContract = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createRealizationContract>>,
+    TError,
+    { data: BodyType<RealizationContractInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createRealizationContract>>,
+  TError,
+  { data: BodyType<RealizationContractInput> },
+  TContext
+> => {
+  return useMutation(getCreateRealizationContractMutationOptions(options));
+};
+
+/**
+ * @summary List realization contracts
+ */
+export const getListRealizationContractsUrl = (
+  params?: ListRealizationContractsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/realizations?${stringifiedParams}`
+    : `/api/realizations`;
+};
+
+export const listRealizationContracts = async (
+  params?: ListRealizationContractsParams,
+  options?: RequestInit,
+): Promise<RealizationContract[]> => {
+  return customFetch<RealizationContract[]>(
+    getListRealizationContractsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListRealizationContractsQueryKey = (
+  params?: ListRealizationContractsParams,
+) => {
+  return [`/api/realizations`, ...(params ? [params] : [])] as const;
+};
+
+export const getListRealizationContractsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listRealizationContracts>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListRealizationContractsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listRealizationContracts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListRealizationContractsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listRealizationContracts>>
+  > = ({ signal }) =>
+    listRealizationContracts(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listRealizationContracts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListRealizationContractsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listRealizationContracts>>
+>;
+export type ListRealizationContractsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List realization contracts
+ */
+
+export function useListRealizationContracts<
+  TData = Awaited<ReturnType<typeof listRealizationContracts>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListRealizationContractsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listRealizationContracts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListRealizationContractsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get contract
+ */
+export const getGetRealizationContractUrl = (id: string) => {
+  return `/api/realizations/${id}`;
+};
+
+export const getRealizationContract = async (
+  id: string,
+  options?: RequestInit,
+): Promise<RealizationContractDetail> => {
+  return customFetch<RealizationContractDetail>(
+    getGetRealizationContractUrl(id),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetRealizationContractQueryKey = (id: string) => {
+  return [`/api/realizations/${id}`] as const;
+};
+
+export const getGetRealizationContractQueryOptions = <
+  TData = Awaited<ReturnType<typeof getRealizationContract>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getRealizationContract>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetRealizationContractQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getRealizationContract>>
+  > = ({ signal }) => getRealizationContract(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getRealizationContract>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetRealizationContractQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getRealizationContract>>
+>;
+export type GetRealizationContractQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get contract
+ */
+
+export function useGetRealizationContract<
+  TData = Awaited<ReturnType<typeof getRealizationContract>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getRealizationContract>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetRealizationContractQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Preflight realization
+ */
+export const getPreflightRealizationUrl = (id: string) => {
+  return `/api/realizations/${id}/preflight`;
+};
+
+export const preflightRealization = async (
+  id: string,
+  options?: RequestInit,
+): Promise<RealizationContract> => {
+  return customFetch<RealizationContract>(getPreflightRealizationUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getPreflightRealizationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof preflightRealization>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof preflightRealization>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["preflightRealization"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof preflightRealization>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return preflightRealization(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PreflightRealizationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof preflightRealization>>
+>;
+
+export type PreflightRealizationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Preflight realization
+ */
+export const usePreflightRealization = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof preflightRealization>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof preflightRealization>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getPreflightRealizationMutationOptions(options));
+};
+
+/**
+ * @summary Execute realization
+ */
+export const getExecuteRealizationUrl = (id: string) => {
+  return `/api/realizations/${id}/execute`;
+};
+
+export const executeRealization = async (
+  id: string,
+  options?: RequestInit,
+): Promise<RealizationActionResult> => {
+  return customFetch<RealizationActionResult>(getExecuteRealizationUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getExecuteRealizationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof executeRealization>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof executeRealization>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["executeRealization"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof executeRealization>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return executeRealization(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ExecuteRealizationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof executeRealization>>
+>;
+
+export type ExecuteRealizationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Execute realization
+ */
+export const useExecuteRealization = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof executeRealization>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof executeRealization>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getExecuteRealizationMutationOptions(options));
+};
+
+/**
+ * @summary Retry realization
+ */
+export const getRetryRealizationUrl = (id: string) => {
+  return `/api/realizations/${id}/retry`;
+};
+
+export const retryRealization = async (
+  id: string,
+  options?: RequestInit,
+): Promise<RealizationContract> => {
+  return customFetch<RealizationContract>(getRetryRealizationUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRetryRealizationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof retryRealization>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof retryRealization>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["retryRealization"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof retryRealization>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return retryRealization(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RetryRealizationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof retryRealization>>
+>;
+
+export type RetryRealizationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Retry realization
+ */
+export const useRetryRealization = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof retryRealization>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof retryRealization>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getRetryRealizationMutationOptions(options));
+};
+
+/**
+ * @summary QC realization
+ */
+export const getQcRealizationUrl = (id: string) => {
+  return `/api/realizations/${id}/qc`;
+};
+
+export const qcRealization = async (
+  id: string,
+  options?: RequestInit,
+): Promise<RealizationContract> => {
+  return customFetch<RealizationContract>(getQcRealizationUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getQcRealizationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof qcRealization>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof qcRealization>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["qcRealization"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof qcRealization>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return qcRealization(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type QcRealizationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof qcRealization>>
+>;
+
+export type QcRealizationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary QC realization
+ */
+export const useQcRealization = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof qcRealization>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof qcRealization>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getQcRealizationMutationOptions(options));
+};
+
+/**
+ * @summary Monitor realization
+ */
+export const getMonitorRealizationUrl = (id: string) => {
+  return `/api/realizations/${id}/monitor`;
+};
+
+export const monitorRealization = async (
+  id: string,
+  options?: RequestInit,
+): Promise<RealizationContract> => {
+  return customFetch<RealizationContract>(getMonitorRealizationUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getMonitorRealizationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof monitorRealization>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof monitorRealization>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["monitorRealization"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof monitorRealization>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return monitorRealization(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MonitorRealizationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof monitorRealization>>
+>;
+
+export type MonitorRealizationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Monitor realization
+ */
+export const useMonitorRealization = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof monitorRealization>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof monitorRealization>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getMonitorRealizationMutationOptions(options));
+};
+
+/**
+ * @summary Compensate realization
+ */
+export const getCompensateRealizationUrl = (id: string) => {
+  return `/api/realizations/${id}/compensate`;
+};
+
+export const compensateRealization = async (
+  id: string,
+  options?: RequestInit,
+): Promise<RealizationContract> => {
+  return customFetch<RealizationContract>(getCompensateRealizationUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCompensateRealizationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof compensateRealization>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof compensateRealization>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["compensateRealization"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof compensateRealization>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return compensateRealization(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CompensateRealizationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof compensateRealization>>
+>;
+
+export type CompensateRealizationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Compensate realization
+ */
+export const useCompensateRealization = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof compensateRealization>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof compensateRealization>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getCompensateRealizationMutationOptions(options));
+};
 
 /**
  * @summary List sanitized campaign execution evidence
@@ -4813,3 +6405,1428 @@ export const useRollbackPaidMediaActionAttempt = <
 > => {
   return useMutation(getRollbackPaidMediaActionAttemptMutationOptions(options));
 };
+
+/**
+ * @summary Create an evidence-bound council cycle
+ */
+export const getCreateOperationalCouncilCycleUrl = () => {
+  return `/api/operational-council/cycles`;
+};
+
+export const createOperationalCouncilCycle = async (
+  councilCycleInput: CouncilCycleInput,
+  options?: RequestInit,
+): Promise<CouncilCycle> => {
+  return customFetch<CouncilCycle>(getCreateOperationalCouncilCycleUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(councilCycleInput),
+  });
+};
+
+export const getCreateOperationalCouncilCycleMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createOperationalCouncilCycle>>,
+    TError,
+    { data: BodyType<CouncilCycleInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createOperationalCouncilCycle>>,
+  TError,
+  { data: BodyType<CouncilCycleInput> },
+  TContext
+> => {
+  const mutationKey = ["createOperationalCouncilCycle"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createOperationalCouncilCycle>>,
+    { data: BodyType<CouncilCycleInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createOperationalCouncilCycle(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateOperationalCouncilCycleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createOperationalCouncilCycle>>
+>;
+export type CreateOperationalCouncilCycleMutationBody =
+  BodyType<CouncilCycleInput>;
+export type CreateOperationalCouncilCycleMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create an evidence-bound council cycle
+ */
+export const useCreateOperationalCouncilCycle = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createOperationalCouncilCycle>>,
+    TError,
+    { data: BodyType<CouncilCycleInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createOperationalCouncilCycle>>,
+  TError,
+  { data: BodyType<CouncilCycleInput> },
+  TContext
+> => {
+  return useMutation(getCreateOperationalCouncilCycleMutationOptions(options));
+};
+
+export const getListOperationalCouncilCyclesUrl = (campaignId: string) => {
+  return `/api/operational-council/campaigns/${campaignId}/cycles`;
+};
+
+export const listOperationalCouncilCycles = async (
+  campaignId: string,
+  options?: RequestInit,
+): Promise<CouncilCycle[]> => {
+  return customFetch<CouncilCycle[]>(
+    getListOperationalCouncilCyclesUrl(campaignId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListOperationalCouncilCyclesQueryKey = (campaignId: string) => {
+  return [`/api/operational-council/campaigns/${campaignId}/cycles`] as const;
+};
+
+export const getListOperationalCouncilCyclesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listOperationalCouncilCycles>>,
+  TError = ErrorType<unknown>,
+>(
+  campaignId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listOperationalCouncilCycles>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getListOperationalCouncilCyclesQueryKey(campaignId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listOperationalCouncilCycles>>
+  > = ({ signal }) =>
+    listOperationalCouncilCycles(campaignId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!campaignId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listOperationalCouncilCycles>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListOperationalCouncilCyclesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listOperationalCouncilCycles>>
+>;
+export type ListOperationalCouncilCyclesQueryError = ErrorType<unknown>;
+
+export function useListOperationalCouncilCycles<
+  TData = Awaited<ReturnType<typeof listOperationalCouncilCycles>>,
+  TError = ErrorType<unknown>,
+>(
+  campaignId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listOperationalCouncilCycles>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListOperationalCouncilCyclesQueryOptions(
+    campaignId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getGetOperationalCouncilCycleUrl = (id: string) => {
+  return `/api/operational-council/cycles/${id}`;
+};
+
+export const getOperationalCouncilCycle = async (
+  id: string,
+  options?: RequestInit,
+): Promise<CouncilDetail> => {
+  return customFetch<CouncilDetail>(getGetOperationalCouncilCycleUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetOperationalCouncilCycleQueryKey = (id: string) => {
+  return [`/api/operational-council/cycles/${id}`] as const;
+};
+
+export const getGetOperationalCouncilCycleQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOperationalCouncilCycle>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOperationalCouncilCycle>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetOperationalCouncilCycleQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getOperationalCouncilCycle>>
+  > = ({ signal }) =>
+    getOperationalCouncilCycle(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOperationalCouncilCycle>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetOperationalCouncilCycleQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getOperationalCouncilCycle>>
+>;
+export type GetOperationalCouncilCycleQueryError = ErrorType<unknown>;
+
+export function useGetOperationalCouncilCycle<
+  TData = Awaited<ReturnType<typeof getOperationalCouncilCycle>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOperationalCouncilCycle>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetOperationalCouncilCycleQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getAppendOperationalCouncilMinutesUrl = (id: string) => {
+  return `/api/operational-council/cycles/${id}/minutes`;
+};
+
+export const appendOperationalCouncilMinutes = async (
+  id: string,
+  councilMinutesInput: CouncilMinutesInput,
+  options?: RequestInit,
+): Promise<CouncilRecord> => {
+  return customFetch<CouncilRecord>(getAppendOperationalCouncilMinutesUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(councilMinutesInput),
+  });
+};
+
+export const getAppendOperationalCouncilMinutesMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof appendOperationalCouncilMinutes>>,
+    TError,
+    { id: string; data: BodyType<CouncilMinutesInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof appendOperationalCouncilMinutes>>,
+  TError,
+  { id: string; data: BodyType<CouncilMinutesInput> },
+  TContext
+> => {
+  const mutationKey = ["appendOperationalCouncilMinutes"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof appendOperationalCouncilMinutes>>,
+    { id: string; data: BodyType<CouncilMinutesInput> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return appendOperationalCouncilMinutes(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AppendOperationalCouncilMinutesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof appendOperationalCouncilMinutes>>
+>;
+export type AppendOperationalCouncilMinutesMutationBody =
+  BodyType<CouncilMinutesInput>;
+export type AppendOperationalCouncilMinutesMutationError = ErrorType<unknown>;
+
+export const useAppendOperationalCouncilMinutes = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof appendOperationalCouncilMinutes>>,
+    TError,
+    { id: string; data: BodyType<CouncilMinutesInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof appendOperationalCouncilMinutes>>,
+  TError,
+  { id: string; data: BodyType<CouncilMinutesInput> },
+  TContext
+> => {
+  return useMutation(
+    getAppendOperationalCouncilMinutesMutationOptions(options),
+  );
+};
+
+export const getCreateOperationalCouncilDecisionUrl = (id: string) => {
+  return `/api/operational-council/cycles/${id}/decisions`;
+};
+
+export const createOperationalCouncilDecision = async (
+  id: string,
+  councilDecisionInput: CouncilDecisionInput,
+  options?: RequestInit,
+): Promise<CouncilRecord> => {
+  return customFetch<CouncilRecord>(
+    getCreateOperationalCouncilDecisionUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(councilDecisionInput),
+    },
+  );
+};
+
+export const getCreateOperationalCouncilDecisionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createOperationalCouncilDecision>>,
+    TError,
+    { id: string; data: BodyType<CouncilDecisionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createOperationalCouncilDecision>>,
+  TError,
+  { id: string; data: BodyType<CouncilDecisionInput> },
+  TContext
+> => {
+  const mutationKey = ["createOperationalCouncilDecision"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createOperationalCouncilDecision>>,
+    { id: string; data: BodyType<CouncilDecisionInput> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return createOperationalCouncilDecision(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateOperationalCouncilDecisionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createOperationalCouncilDecision>>
+>;
+export type CreateOperationalCouncilDecisionMutationBody =
+  BodyType<CouncilDecisionInput>;
+export type CreateOperationalCouncilDecisionMutationError = ErrorType<unknown>;
+
+export const useCreateOperationalCouncilDecision = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createOperationalCouncilDecision>>,
+    TError,
+    { id: string; data: BodyType<CouncilDecisionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createOperationalCouncilDecision>>,
+  TError,
+  { id: string; data: BodyType<CouncilDecisionInput> },
+  TContext
+> => {
+  return useMutation(
+    getCreateOperationalCouncilDecisionMutationOptions(options),
+  );
+};
+
+export const getLinkOperationalCouncilActionUrl = (id: string) => {
+  return `/api/operational-council/decisions/${id}/actions`;
+};
+
+export const linkOperationalCouncilAction = async (
+  id: string,
+  councilActionInput: CouncilActionInput,
+  options?: RequestInit,
+): Promise<CouncilRecord> => {
+  return customFetch<CouncilRecord>(getLinkOperationalCouncilActionUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(councilActionInput),
+  });
+};
+
+export const getLinkOperationalCouncilActionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof linkOperationalCouncilAction>>,
+    TError,
+    { id: string; data: BodyType<CouncilActionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof linkOperationalCouncilAction>>,
+  TError,
+  { id: string; data: BodyType<CouncilActionInput> },
+  TContext
+> => {
+  const mutationKey = ["linkOperationalCouncilAction"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof linkOperationalCouncilAction>>,
+    { id: string; data: BodyType<CouncilActionInput> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return linkOperationalCouncilAction(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LinkOperationalCouncilActionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof linkOperationalCouncilAction>>
+>;
+export type LinkOperationalCouncilActionMutationBody =
+  BodyType<CouncilActionInput>;
+export type LinkOperationalCouncilActionMutationError = ErrorType<unknown>;
+
+export const useLinkOperationalCouncilAction = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof linkOperationalCouncilAction>>,
+    TError,
+    { id: string; data: BodyType<CouncilActionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof linkOperationalCouncilAction>>,
+  TError,
+  { id: string; data: BodyType<CouncilActionInput> },
+  TContext
+> => {
+  return useMutation(getLinkOperationalCouncilActionMutationOptions(options));
+};
+
+export const getVerifyOperationalCouncilOutcomeUrl = (id: string) => {
+  return `/api/operational-council/actions/${id}/verify`;
+};
+
+export const verifyOperationalCouncilOutcome = async (
+  id: string,
+  councilVerificationInput: CouncilVerificationInput,
+  options?: RequestInit,
+): Promise<CouncilOutcome> => {
+  return customFetch<CouncilOutcome>(
+    getVerifyOperationalCouncilOutcomeUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(councilVerificationInput),
+    },
+  );
+};
+
+export const getVerifyOperationalCouncilOutcomeMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof verifyOperationalCouncilOutcome>>,
+    TError,
+    { id: string; data: BodyType<CouncilVerificationInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof verifyOperationalCouncilOutcome>>,
+  TError,
+  { id: string; data: BodyType<CouncilVerificationInput> },
+  TContext
+> => {
+  const mutationKey = ["verifyOperationalCouncilOutcome"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof verifyOperationalCouncilOutcome>>,
+    { id: string; data: BodyType<CouncilVerificationInput> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return verifyOperationalCouncilOutcome(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type VerifyOperationalCouncilOutcomeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof verifyOperationalCouncilOutcome>>
+>;
+export type VerifyOperationalCouncilOutcomeMutationBody =
+  BodyType<CouncilVerificationInput>;
+export type VerifyOperationalCouncilOutcomeMutationError = ErrorType<unknown>;
+
+export const useVerifyOperationalCouncilOutcome = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof verifyOperationalCouncilOutcome>>,
+    TError,
+    { id: string; data: BodyType<CouncilVerificationInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof verifyOperationalCouncilOutcome>>,
+  TError,
+  { id: string; data: BodyType<CouncilVerificationInput> },
+  TContext
+> => {
+  return useMutation(
+    getVerifyOperationalCouncilOutcomeMutationOptions(options),
+  );
+};
+
+export const getListSocialIntelligenceInboxUrl = (
+  params?: ListSocialIntelligenceInboxParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/social-intelligence/inbox?${stringifiedParams}`
+    : `/api/social-intelligence/inbox`;
+};
+
+export const listSocialIntelligenceInbox = async (
+  params?: ListSocialIntelligenceInboxParams,
+  options?: RequestInit,
+): Promise<SocialInboxPage> => {
+  return customFetch<SocialInboxPage>(
+    getListSocialIntelligenceInboxUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListSocialIntelligenceInboxQueryKey = (
+  params?: ListSocialIntelligenceInboxParams,
+) => {
+  return [
+    `/api/social-intelligence/inbox`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getListSocialIntelligenceInboxQueryOptions = <
+  TData = Awaited<ReturnType<typeof listSocialIntelligenceInbox>>,
+  TError = ErrorType<void>,
+>(
+  params?: ListSocialIntelligenceInboxParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listSocialIntelligenceInbox>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListSocialIntelligenceInboxQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listSocialIntelligenceInbox>>
+  > = ({ signal }) =>
+    listSocialIntelligenceInbox(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listSocialIntelligenceInbox>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListSocialIntelligenceInboxQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listSocialIntelligenceInbox>>
+>;
+export type ListSocialIntelligenceInboxQueryError = ErrorType<void>;
+
+export function useListSocialIntelligenceInbox<
+  TData = Awaited<ReturnType<typeof listSocialIntelligenceInbox>>,
+  TError = ErrorType<void>,
+>(
+  params?: ListSocialIntelligenceInboxParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listSocialIntelligenceInbox>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListSocialIntelligenceInboxQueryOptions(
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getListSocialIntelligenceReportsUrl = () => {
+  return `/api/social-intelligence/reports`;
+};
+
+export const listSocialIntelligenceReports = async (
+  options?: RequestInit,
+): Promise<ListSocialIntelligenceReports200> => {
+  return customFetch<ListSocialIntelligenceReports200>(
+    getListSocialIntelligenceReportsUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListSocialIntelligenceReportsQueryKey = () => {
+  return [`/api/social-intelligence/reports`] as const;
+};
+
+export const getListSocialIntelligenceReportsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listSocialIntelligenceReports>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listSocialIntelligenceReports>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListSocialIntelligenceReportsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listSocialIntelligenceReports>>
+  > = ({ signal }) =>
+    listSocialIntelligenceReports({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listSocialIntelligenceReports>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListSocialIntelligenceReportsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listSocialIntelligenceReports>>
+>;
+export type ListSocialIntelligenceReportsQueryError = ErrorType<unknown>;
+
+export function useListSocialIntelligenceReports<
+  TData = Awaited<ReturnType<typeof listSocialIntelligenceReports>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listSocialIntelligenceReports>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListSocialIntelligenceReportsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getSaveSocialIntelligenceReportUrl = () => {
+  return `/api/social-intelligence/reports`;
+};
+
+export const saveSocialIntelligenceReport = async (
+  socialReportInput?: SocialReportInput,
+  options?: RequestInit,
+): Promise<SocialReport> => {
+  return customFetch<SocialReport>(getSaveSocialIntelligenceReportUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(socialReportInput),
+  });
+};
+
+export const getSaveSocialIntelligenceReportMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveSocialIntelligenceReport>>,
+    TError,
+    { data: BodyType<SocialReportInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveSocialIntelligenceReport>>,
+  TError,
+  { data: BodyType<SocialReportInput> },
+  TContext
+> => {
+  const mutationKey = ["saveSocialIntelligenceReport"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveSocialIntelligenceReport>>,
+    { data: BodyType<SocialReportInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return saveSocialIntelligenceReport(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveSocialIntelligenceReportMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveSocialIntelligenceReport>>
+>;
+export type SaveSocialIntelligenceReportMutationBody =
+  BodyType<SocialReportInput>;
+export type SaveSocialIntelligenceReportMutationError = ErrorType<void>;
+
+export const useSaveSocialIntelligenceReport = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveSocialIntelligenceReport>>,
+    TError,
+    { data: BodyType<SocialReportInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof saveSocialIntelligenceReport>>,
+  TError,
+  { data: BodyType<SocialReportInput> },
+  TContext
+> => {
+  return useMutation(getSaveSocialIntelligenceReportMutationOptions(options));
+};
+
+export const getGetSocialIntelligenceReportUrl = (id: string) => {
+  return `/api/social-intelligence/reports/${id}`;
+};
+
+export const getSocialIntelligenceReport = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SocialReport> => {
+  return customFetch<SocialReport>(getGetSocialIntelligenceReportUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSocialIntelligenceReportQueryKey = (id: string) => {
+  return [`/api/social-intelligence/reports/${id}`] as const;
+};
+
+export const getGetSocialIntelligenceReportQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSocialIntelligenceReport>>,
+  TError = ErrorType<void>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSocialIntelligenceReport>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetSocialIntelligenceReportQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getSocialIntelligenceReport>>
+  > = ({ signal }) =>
+    getSocialIntelligenceReport(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSocialIntelligenceReport>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetSocialIntelligenceReportQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSocialIntelligenceReport>>
+>;
+export type GetSocialIntelligenceReportQueryError = ErrorType<void>;
+
+export function useGetSocialIntelligenceReport<
+  TData = Awaited<ReturnType<typeof getSocialIntelligenceReport>>,
+  TError = ErrorType<void>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSocialIntelligenceReport>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSocialIntelligenceReportQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Preview or confirm governed social publication
+ */
+export const getPublishSocialContentUrl = (
+  campaignId: string,
+  pieceId: string,
+) => {
+  return `/api/campaigns/${campaignId}/content/${pieceId}/publish-social`;
+};
+
+export const publishSocialContent = async (
+  campaignId: string,
+  pieceId: string,
+  socialPublicationRequest: SocialPublicationRequest,
+  options?: RequestInit,
+): Promise<PublishSocialResponse> => {
+  return customFetch<PublishSocialResponse>(
+    getPublishSocialContentUrl(campaignId, pieceId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(socialPublicationRequest),
+    },
+  );
+};
+
+export const getPublishSocialContentMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof publishSocialContent>>,
+    TError,
+    {
+      campaignId: string;
+      pieceId: string;
+      data: BodyType<SocialPublicationRequest>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof publishSocialContent>>,
+  TError,
+  {
+    campaignId: string;
+    pieceId: string;
+    data: BodyType<SocialPublicationRequest>;
+  },
+  TContext
+> => {
+  const mutationKey = ["publishSocialContent"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof publishSocialContent>>,
+    {
+      campaignId: string;
+      pieceId: string;
+      data: BodyType<SocialPublicationRequest>;
+    }
+  > = (props) => {
+    const { campaignId, pieceId, data } = props ?? {};
+
+    return publishSocialContent(campaignId, pieceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PublishSocialContentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof publishSocialContent>>
+>;
+export type PublishSocialContentMutationBody =
+  BodyType<SocialPublicationRequest>;
+export type PublishSocialContentMutationError = ErrorType<void>;
+
+/**
+ * @summary Preview or confirm governed social publication
+ */
+export const usePublishSocialContent = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof publishSocialContent>>,
+    TError,
+    {
+      campaignId: string;
+      pieceId: string;
+      data: BodyType<SocialPublicationRequest>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof publishSocialContent>>,
+  TError,
+  {
+    campaignId: string;
+    pieceId: string;
+    data: BodyType<SocialPublicationRequest>;
+  },
+  TContext
+> => {
+  return useMutation(getPublishSocialContentMutationOptions(options));
+};
+
+export const getGetLifecycleOverviewUrl = () => {
+  return `/api/lifecycle/overview`;
+};
+
+export const getLifecycleOverview = async (
+  options?: RequestInit,
+): Promise<LifecycleOverview> => {
+  return customFetch<LifecycleOverview>(getGetLifecycleOverviewUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetLifecycleOverviewQueryKey = () => {
+  return [`/api/lifecycle/overview`] as const;
+};
+
+export const getGetLifecycleOverviewQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLifecycleOverview>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getLifecycleOverview>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetLifecycleOverviewQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getLifecycleOverview>>
+  > = ({ signal }) => getLifecycleOverview({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getLifecycleOverview>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetLifecycleOverviewQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLifecycleOverview>>
+>;
+export type GetLifecycleOverviewQueryError = ErrorType<unknown>;
+
+export function useGetLifecycleOverview<
+  TData = Awaited<ReturnType<typeof getLifecycleOverview>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getLifecycleOverview>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetLifecycleOverviewQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getListLifecycleActionsUrl = (
+  params?: ListLifecycleActionsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/lifecycle/actions?${stringifiedParams}`
+    : `/api/lifecycle/actions`;
+};
+
+export const listLifecycleActions = async (
+  params?: ListLifecycleActionsParams,
+  options?: RequestInit,
+): Promise<LifecycleActionsResponse> => {
+  return customFetch<LifecycleActionsResponse>(
+    getListLifecycleActionsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListLifecycleActionsQueryKey = (
+  params?: ListLifecycleActionsParams,
+) => {
+  return [`/api/lifecycle/actions`, ...(params ? [params] : [])] as const;
+};
+
+export const getListLifecycleActionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listLifecycleActions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListLifecycleActionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listLifecycleActions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListLifecycleActionsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listLifecycleActions>>
+  > = ({ signal }) =>
+    listLifecycleActions(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listLifecycleActions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListLifecycleActionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listLifecycleActions>>
+>;
+export type ListLifecycleActionsQueryError = ErrorType<unknown>;
+
+export function useListLifecycleActions<
+  TData = Awaited<ReturnType<typeof listLifecycleActions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListLifecycleActionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listLifecycleActions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListLifecycleActionsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getListLifecycleContactsUrl = (
+  params?: ListLifecycleContactsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/lifecycle/contacts?${stringifiedParams}`
+    : `/api/lifecycle/contacts`;
+};
+
+export const listLifecycleContacts = async (
+  params?: ListLifecycleContactsParams,
+  options?: RequestInit,
+): Promise<LifecycleContactsResponse> => {
+  return customFetch<LifecycleContactsResponse>(
+    getListLifecycleContactsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListLifecycleContactsQueryKey = (
+  params?: ListLifecycleContactsParams,
+) => {
+  return [`/api/lifecycle/contacts`, ...(params ? [params] : [])] as const;
+};
+
+export const getListLifecycleContactsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listLifecycleContacts>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListLifecycleContactsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listLifecycleContacts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListLifecycleContactsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listLifecycleContacts>>
+  > = ({ signal }) =>
+    listLifecycleContacts(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listLifecycleContacts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListLifecycleContactsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listLifecycleContacts>>
+>;
+export type ListLifecycleContactsQueryError = ErrorType<unknown>;
+
+export function useListLifecycleContacts<
+  TData = Awaited<ReturnType<typeof listLifecycleContacts>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListLifecycleContactsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listLifecycleContacts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListLifecycleContactsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getGetLifecycleTimelineUrl = (
+  contactId: string,
+  params?: GetLifecycleTimelineParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/lifecycle/contacts/${contactId}/timeline?${stringifiedParams}`
+    : `/api/lifecycle/contacts/${contactId}/timeline`;
+};
+
+export const getLifecycleTimeline = async (
+  contactId: string,
+  params?: GetLifecycleTimelineParams,
+  options?: RequestInit,
+): Promise<LifecycleTimelineResponse> => {
+  return customFetch<LifecycleTimelineResponse>(
+    getGetLifecycleTimelineUrl(contactId, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetLifecycleTimelineQueryKey = (
+  contactId: string,
+  params?: GetLifecycleTimelineParams,
+) => {
+  return [
+    `/api/lifecycle/contacts/${contactId}/timeline`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetLifecycleTimelineQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLifecycleTimeline>>,
+  TError = ErrorType<void>,
+>(
+  contactId: string,
+  params?: GetLifecycleTimelineParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getLifecycleTimeline>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetLifecycleTimelineQueryKey(contactId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getLifecycleTimeline>>
+  > = ({ signal }) =>
+    getLifecycleTimeline(contactId, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!contactId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getLifecycleTimeline>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetLifecycleTimelineQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLifecycleTimeline>>
+>;
+export type GetLifecycleTimelineQueryError = ErrorType<void>;
+
+export function useGetLifecycleTimeline<
+  TData = Awaited<ReturnType<typeof getLifecycleTimeline>>,
+  TError = ErrorType<void>,
+>(
+  contactId: string,
+  params?: GetLifecycleTimelineParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getLifecycleTimeline>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetLifecycleTimelineQueryOptions(
+    contactId,
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

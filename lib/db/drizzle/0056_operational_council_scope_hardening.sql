@@ -1,0 +1,10 @@
+ALTER TABLE council_cycles ADD CONSTRAINT council_cycles_scope_uidx UNIQUE (workspace_id,id);
+ALTER TABLE council_decisions ADD CONSTRAINT council_decisions_scope_uidx UNIQUE (workspace_id,id);
+ALTER TABLE council_actions ADD CONSTRAINT council_actions_scope_uidx UNIQUE (workspace_id,id);
+ALTER TABLE council_minutes ADD CONSTRAINT council_minutes_cycle_scope_fk FOREIGN KEY (workspace_id,cycle_id) REFERENCES council_cycles(workspace_id,id) ON DELETE RESTRICT;
+ALTER TABLE council_decisions ADD CONSTRAINT council_decisions_cycle_scope_fk FOREIGN KEY (workspace_id,cycle_id) REFERENCES council_cycles(workspace_id,id) ON DELETE RESTRICT;
+ALTER TABLE council_actions ADD CONSTRAINT council_actions_decision_scope_fk FOREIGN KEY (workspace_id,decision_id) REFERENCES council_decisions(workspace_id,id) ON DELETE RESTRICT;
+ALTER TABLE council_outcomes ADD CONSTRAINT council_outcomes_decision_scope_fk FOREIGN KEY (workspace_id,decision_id) REFERENCES council_decisions(workspace_id,id) ON DELETE RESTRICT;
+ALTER TABLE council_outcomes ADD CONSTRAINT council_outcomes_action_scope_fk FOREIGN KEY (workspace_id,action_id) REFERENCES council_actions(workspace_id,id) ON DELETE RESTRICT;
+ALTER TABLE council_minutes ADD CONSTRAINT council_minutes_refs_bounded CHECK (jsonb_typeof(evidence_refs) = 'array' AND jsonb_array_length(evidence_refs) <= 50);
+ALTER TABLE council_decisions ADD CONSTRAINT council_decisions_refs_bounded CHECK (jsonb_typeof(evidence_refs) = 'array' AND jsonb_array_length(evidence_refs) <= 50);

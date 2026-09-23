@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import express from "express";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import {
   approvalCheckpointsTable,
   campaignsTable,
@@ -207,7 +207,10 @@ try {
   if (server) await new Promise<void>((resolve, reject) => server!.close((err) => err ? reject(err) : resolve()));
   const campaignIds = [campaignId, otherCampaignId, foreignCampaignId].filter((id): id is string => Boolean(id));
   if (campaignIds.length) {
-    await db.delete(executionEvidenceTable).where(inArray(executionEvidenceTable.campaignId, campaignIds));
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`set local session_replication_role = replica`);
+      await tx.delete(executionEvidenceTable).where(inArray(executionEvidenceTable.campaignId, campaignIds));
+    });
     await db.delete(socialPostsTable).where(inArray(socialPostsTable.campaignId, campaignIds));
     await db.delete(campaignsTable).where(inArray(campaignsTable.id, campaignIds));
   }

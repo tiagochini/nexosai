@@ -22,6 +22,10 @@ import { processContentPieceApproval } from "../memory/memory.service.js";
 import { runPostApprovalHooks } from "./content-post-approval.js";
 import { autoGenerateCreativesFromBrief } from "./creative-auto-gen.service.js";
 import { ContentTypeSchema } from "@workspace/db";
+import {
+  getCampaignPublishPreview,
+  publishCampaignContentPiece,
+} from "../social/social.service.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -697,6 +701,7 @@ router.patch("/:campaignId/content/:pieceId/patch", async (req, res): Promise<vo
 // This is the GATE that replaced the old fire-and-forget autoPostApprovedContent. (Fix: Bug #04)
 const publishSocialSchema = z.object({
   confirmed: z.boolean().optional().default(false),
+  fingerprint: z.string().regex(/^[a-f0-9]{64}$/).optional(),
 });
 
 router.post("/:campaignId/content/:pieceId/publish-social", async (req, res): Promise<void> => {
@@ -710,9 +715,7 @@ router.post("/:campaignId/content/:pieceId/publish-social", async (req, res): Pr
   }
 
   try {
-    const { getPublishPreview, autoPostApprovedContent } = await import("../social/social.autopost.service.js");
-
-    const preview = await getPublishPreview(workspaceId, campaignId, pieceId);
+    const preview = await getCampaignPublishPreview(workspaceId, campaignId, pieceId);
 
     if (!parsed.data.confirmed) {
       res.json({ preview, confirmed: false });
@@ -724,8 +727,13 @@ router.post("/:campaignId/content/:pieceId/publish-social", async (req, res): Pr
       return;
     }
 
-    await autoPostApprovedContent(workspaceId, campaignId, pieceId);
-    res.json({ message: "Conteúdo publicado nas redes sociais", platforms: preview.platforms });
+    if (!parsed.data.fingerprint) {
+      res.status(409).json({ error: "Confirmação requer a fingerprint da prévia", code: "PUBLISH_PREVIEW_REQUIRED" });
+      return;
+    }
+    const posts = await publishCampaignContentPiece(workspaceId, campaignId, pieceId, parsed.data.fingerprint);
+    const results = posts;
+    res.json({ message: "Resultado parcial da publicação", platforms: preview.platforms, posts: results, publishedCount: results.filter((p) => p.confirmed).length, unresolvedCount: results.filter((p) => !p.confirmed).length });
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });
