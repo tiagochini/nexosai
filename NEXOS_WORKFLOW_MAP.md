@@ -477,7 +477,9 @@ O NexOS só cumpre a promessa quando consegue demonstrar, com registros:
 - nenhuma mistura de workspaces, campanhas, fases ou contextos;
 - cliente limitado a briefing, aprovações materiais e exceções relevantes.
 
-## 12. Fila compacta de implementação — próximos 12 passos
+## 12. Fila compacta de implementação — 12 níveis de maturidade
+
+Esta fila não é um segundo fluxo comercial. Ela é o eixo de maturidade aplicado a cada capacidade dos 12 estágios operacionais definidos no `NEXOS_CAPABILITY_INDEX.md`.
 
 1. **Control Room UI**: consumir a API existente com estado vazio honesto.
 2. **Contadores clicáveis**: aprovações, entregáveis, bloqueios, falhas e confirmações.
@@ -493,3 +495,19 @@ O NexOS só cumpre a promessa quando consegue demonstrar, com registros:
 12. **Agentes de vendas e lifecycle**: conversação contextual, onboarding, retenção, comunidade e otimização.
 
 Este fluxo é adotado como contrato de implementação. Cada alteração futura deve indicar qual gate, estado, vertical e evidência ela acrescenta — ou ser rejeitada por duplicar, enfraquecer ou ocultar este fluxo.
+
+## 13. Capability Index canônico
+
+O plano completo de indexação está em [`NEXOS_CAPABILITY_INDEX.md`](./NEXOS_CAPABILITY_INDEX.md).
+
+Ele unifica:
+
+- os 12 estágios operacionais, da fundação à homologação;
+- os 12 níveis de maturidade, do Control Room ao lifecycle autônomo;
+- o Realization Engine;
+- o Control Room;
+- o lifecycle de leads e clientes;
+- conteúdo, social, mídia paga, vendas, pagamento, entrega, retenção e comunidade;
+- governança, recuperação e produção comprovada.
+
+Toda capability deve possuir ID, estágio, estado, nível de maturidade, ownership, dependências, interfaces, executores, adapters, autorização, evidências, métricas, testes, recovery e limitações.

@@ -7,4 +7,4 @@ Realization is a first-class NexOS layer, not a minor content step. It is cumula
 
 **Why:** The user corrected workflows that first underrepresented execution and later treated the new model as a replacement. NexOS creates, publishes, tests, measures and improves the system while preserving every previously defined operational capability.
 
-**How to apply:** Model realization as parallel specialist workstreams coordinated by one approved Master Plan, fed by the existing campaign and execution pipelines, followed by integration preflight, launch, provider readback, scheduled monitoring, daily council decisions, recovery and continuous optimization. Every roadmap change must map both the prior flow it preserves and the new capability it adds.
+**How to apply:** Use the two-axis Capability Index: 12 lifecycle stages describe what NexOS operates, while 12 maturity levels describe how each capability becomes observable, approvable, executable and production-proven. Every roadmap change must name its capability ID, lifecycle stage, maturity transition, preserved prior flow and evidence.
