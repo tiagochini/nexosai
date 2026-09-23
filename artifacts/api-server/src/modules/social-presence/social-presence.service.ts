@@ -141,6 +141,31 @@ const PLATFORM_TO_PROVIDER: Record<string, string> = {
 // Horários são interpretados como America/Sao_Paulo (UTC-3)
 const BR_UTC_OFFSET_HOURS = 3;
 
+/**
+ * SVGs are only used as the no-provider storyboard placeholder.  Keep this
+ * check deliberately narrow: raster media (including URLs with query strings)
+ * and user-supplied non-SVG media must continue through the normal flow.
+ */
+export function isSvgMediaUrl(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  const url = value.trim();
+  if (/^data:image\/svg\+xml(?:[;,]|$)/i.test(url)) return true;
+  try {
+    const decoded = decodeURIComponent(url);
+    const parsed = new URL(decoded, "http://presence-media.invalid");
+    if (/\.svg$/i.test(parsed.pathname)) return true;
+    return Array.from(parsed.searchParams.entries()).some(
+      ([key, queryValue]) => key.toLowerCase() === "key" && /\.svg$/i.test(queryValue),
+    );
+  } catch {
+    return /\.svg(?:$|[?#&])/i.test(url);
+  }
+}
+
+function containsSvgMedia(urls: unknown): boolean {
+  return Array.isArray(urls) && urls.some(isSvgMediaUrl);
+}
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 export async function getConfig(
@@ -1603,10 +1628,27 @@ export async function publishDuePresencePosts(): Promise<void> {
         if (isVideoFormat && hasStoryboard && op.mediaGenStatus === "storyboard_ready") {
           // Reel com storyboard pronto → manter storyboard_ready para que o bloco de vídeo
           // inicie geração com avatar stock (não usar como imagem)
-          patch = { status: "scheduled", errorMessage: null };
+          if (containsSvgMedia(op.storyboardUrls)) {
+            patch = {
+              status: "scheduled",
+              mediaUrls: [],
+              mediaGenStatus: null,
+              errorMessage: "Rascunho SVG não pode iniciar publicação de vídeo — gere uma mídia real antes de publicar.",
+            };
+          } else {
+            patch = { status: "scheduled", errorMessage: null };
+          }
         } else if (!isVideoFormat && hasStoryboard) {
           // Imagem/carrossel com storyboard → usar como mídia definitiva (sem esperar vídeo)
-          patch = { status: "scheduled", mediaUrls: op.storyboardUrls as string[], mediaGenStatus: null, errorMessage: null };
+          if (containsSvgMedia(op.storyboardUrls)) {
+            patch = {
+              status: "scheduled",
+              mediaUrls: [],
+              errorMessage: "Mídia SVG gerada como rascunho — substitua por uma imagem real antes de publicar.",
+            };
+          } else {
+            patch = { status: "scheduled", mediaUrls: op.storyboardUrls as string[], mediaGenStatus: null, errorMessage: null };
+          }
         } else {
           // Sem storyboard ainda → promover e deixar o scheduler gerar
           patch = { status: "scheduled", errorMessage: null };
@@ -1656,6 +1698,17 @@ export async function publishDuePresencePosts(): Promise<void> {
         }
 
         const rawMediaUrls = Array.isArray(post.mediaUrls) ? (post.mediaUrls as string[]) : [];
+        if (containsSvgMedia(rawMediaUrls)) {
+          await db
+            .update(socialPresencePostsTable)
+            .set({
+              mediaUrls: [],
+              errorMessage: "Mídia SVG não pode ser publicada automaticamente — substitua por uma imagem real.",
+            })
+            .where(eq(socialPresencePostsTable.id, post.id));
+          log.warn({ postId: post.id }, "presence: publicação bloqueada — mediaUrls contém SVG");
+          continue;
+        }
         // Resolve internal serve URLs → fresh GCS signed URL so Instagram/TikTok
         // can fetch the file directly without following an internal redirect.
         const mediaUrls = await Promise.all(
@@ -1755,6 +1808,16 @@ export async function publishDuePresencePosts(): Promise<void> {
                     ? (post.storyboardUrls as string[])
                     : null;
                 if (sbUrls) {
+                  if (containsSvgMedia(sbUrls)) {
+                    await db
+                      .update(socialPresencePostsTable)
+                      .set({
+                        mediaUrls: [],
+                        errorMessage: "Rascunho SVG não pode ser publicado como imagem — substitua por uma imagem real.",
+                      })
+                      .where(eq(socialPresencePostsTable.id, post.id));
+                    continue;
+                  }
                   log.info({ postId: post.id }, "presence: sem avatar → storyboard como imagem (publish-no-matter-what)");
                   await db
                     .update(socialPresencePostsTable)
@@ -1844,6 +1907,16 @@ export async function publishDuePresencePosts(): Promise<void> {
                   ? (post.storyboardUrls as string[])
                   : null;
               if (sbUrls) {
+                if (containsSvgMedia(sbUrls)) {
+                  await db
+                    .update(socialPresencePostsTable)
+                    .set({
+                      mediaUrls: [],
+                      errorMessage: "Rascunho SVG não pode ser publicado automaticamente — substitua por uma imagem real.",
+                    })
+                    .where(eq(socialPresencePostsTable.id, post.id));
+                  continue;
+                }
                 log.info({ postId: post.id }, "presence: storyboard pronto → auto-aprovado (publish-no-matter-what)");
                 await db
                   .update(socialPresencePostsTable)
@@ -2840,6 +2913,11 @@ export async function approveStoryboardGenerateVideo(
   if (!approvedStatuses.includes(post.mediaGenStatus ?? "")) {
     throw new Error("Storyboard ainda não aprovado ou não disponível.");
   }
+  if (containsSvgMedia(post.storyboardUrls)) {
+    throw new Error(
+      "Rascunho SVG não pode ser enviado ao provedor de vídeo. Gere uma mídia real ou faça upload de um arquivo próprio.",
+    );
+  }
 
   const [updating] = await db
     .update(socialPresencePostsTable)
@@ -2896,6 +2974,16 @@ export async function approveStoryboardGenerateVideo(
           // HeyGen indisponível ou sem avatares stock — fallback para imagem do storyboard
           const sbUrls = Array.isArray(post.storyboardUrls) ? (post.storyboardUrls as string[]) : [];
           if (sbUrls.length > 0) {
+            if (containsSvgMedia(sbUrls)) {
+              await db
+                .update(socialPresencePostsTable)
+                .set({
+                  mediaUrls: [],
+                  errorMessage: "Rascunho SVG não pode ser publicado como imagem — substitua por uma imagem real.",
+                })
+                .where(eq(socialPresencePostsTable.id, postId));
+              return;
+            }
             log.warn({ postId }, "presence: sem avatar stock disponível → publicando storyboard como imagem");
             await db
               .update(socialPresencePostsTable)
@@ -3130,6 +3218,12 @@ export async function approveStoryboardAsImage(
   const mediaUrls: string[] = [];
   for (let index = 0; index < entriesToApprove.length; index++) {
     const storyboardEntry = entriesToApprove[index]!;
+    if (isSvgMediaUrl(storyboardEntry)) {
+      throw new Error(
+        "Este é um rascunho SVG e não pode ser publicado diretamente. " +
+        "Use 'Tentar gerar imagem novamente' ou faça upload de uma imagem/vídeo próprio.",
+      );
+    }
     if (storyboardEntry.startsWith("data:image/")) {
       const match = storyboardEntry.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
       if (!match) throw new Error("Formato interno do storyboard inválido.");
@@ -3143,7 +3237,7 @@ export async function approveStoryboardAsImage(
     if (!storyboardEntry.includes("/api/presence/media/serve")) {
       throw new Error("Formato do storyboard não reconhecido.");
     }
-    if (storyboardEntry.includes(".svg") || post.mediaGenStatus === "storyboard_draft") {
+    if (post.mediaGenStatus === "storyboard_draft") {
       throw new Error(
         "Este é um rascunho gerado sem IA (SVG) e não pode ser publicado diretamente. " +
         "Use 'Tentar gerar imagem novamente' para obter uma imagem real, ou faça upload de uma imagem/vídeo próprio.",
