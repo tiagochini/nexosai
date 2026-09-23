@@ -1,5 +1,9 @@
 import { Router } from "express";
 import { z } from "zod/v4";
+import {
+  GetCampaignControlRoomEvidenceQueryParams,
+  GetCampaignControlRoomEvidenceResponse,
+} from "@workspace/api-zod";
 import { requireAuth } from "../auth/auth.middleware.js";
 import {
   createCampaign,
@@ -12,7 +16,7 @@ import {
   mergeIntakeDirectives,
   reorientCampaign,
 } from "./campaigns.service.js";
-import { getCampaignControlRoom } from "./control-room.service.js";
+import { getCampaignControlRoom, getCampaignControlRoomEvidence } from "./control-room.service.js";
 import { triggerStrategyPhase } from "../orchestration/orchestration.service.js";
 import { AppError } from "../../lib/errors.js";
 import { db, workspacesTable, CAMPAIGN_CREDIT_BUFFER } from "@workspace/db";
@@ -68,6 +72,32 @@ const statusTransitionSchema = z.object({
   status: z.string(),
   data: z.record(z.string(), z.unknown()).optional(),
 });
+
+function parseControlRoomEvidenceQuery(query: Record<string, unknown>) {
+  const allowed = new Set(["limit", "cursor", "state", "subjectType", "subjectId", "from", "to"]);
+  for (const [key, value] of Object.entries(query)) {
+    if (!allowed.has(key) || Array.isArray(value)) {
+      throw new AppError(400, "Invalid query parameters", "VALIDATION_ERROR");
+    }
+  }
+  const parsed = GetCampaignControlRoomEvidenceQueryParams.safeParse({
+    ...query,
+    from: typeof query["from"] === "string" ? new Date(query["from"]) : query["from"],
+    to: typeof query["to"] === "string" ? new Date(query["to"]) : query["to"],
+  });
+  if (!parsed.success) throw new AppError(400, parsed.error.message, "VALIDATION_ERROR");
+  if (!Number.isInteger(parsed.data.limit)) {
+    throw new AppError(400, "limit must be an integer", "VALIDATION_ERROR");
+  }
+  if (parsed.data.from && parsed.data.to && parsed.data.from >= parsed.data.to) {
+    throw new AppError(400, "from must be before to", "VALIDATION_ERROR");
+  }
+  return {
+    ...parsed.data,
+    from: parsed.data.from?.toISOString(),
+    to: parsed.data.to?.toISOString(),
+  };
+}
 
 router.get("/tracks", (_req, res): void => {
   res.json({ tracks: DIGIT_TRACK_LABELS });
@@ -153,6 +183,21 @@ router.get("/:id/control-room", async (req, res): Promise<void> => {
   const id = Array.isArray(req.params["id"]) ? req.params["id"][0] : req.params["id"];
   try {
     res.json(await getCampaignControlRoom(id!, req.auth.workspaceId));
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+router.get("/:id/control-room/evidence", async (req, res): Promise<void> => {
+  const id = Array.isArray(req.params["id"]) ? req.params["id"][0] : req.params["id"];
+  try {
+    const filters = parseControlRoomEvidenceQuery(req.query as Record<string, unknown>);
+    const result = await getCampaignControlRoomEvidence(id!, req.auth.workspaceId, filters);
+    res.json(GetCampaignControlRoomEvidenceResponse.parse(result));
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });

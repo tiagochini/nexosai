@@ -421,7 +421,8 @@ Estados devem ser append-only quando representam fatos. Nenhuma camada pode decl
 ### Próxima entrega
 
 - **DONE** — Control Room UI com contadores clicáveis, composição persistida, status de credenciais e estados canônicos de evidência.
-- **NEXT** — drilldown de evidência: timeline paginada, filtros exatos, links de origem, sanitização e ownership por workspace/campanha.
+- **DONE** — drilldown de evidência: timeline paginada, filtros exatos, links de origem, sanitização e ownership por workspace/campanha.
+- **NEXT** — preview universal para texto, imagem, vídeo, páginas, formulários, checkout, e-mail, mensagens e anúncios.
 
 ### Depois do Control Room
 

@@ -22,4 +22,5 @@ export const executionEvidenceTable = pgTable("execution_evidence", {
 }, (table) => [
   index("execution_evidence_workspace_subject_idx").on(table.workspaceId, table.subjectType, table.subjectId, table.createdAt),
   index("execution_evidence_workspace_campaign_idx").on(table.workspaceId, table.campaignId, table.createdAt),
+  index("execution_evidence_workspace_campaign_created_id_idx").on(table.workspaceId, table.campaignId, table.createdAt, table.id),
 ]);

@@ -181,6 +181,113 @@ export const GetCampaignResponse = zod.object({
 });
 
 /**
+ * @summary List sanitized campaign execution evidence
+ */
+export const GetCampaignControlRoomEvidenceParams = zod.object({
+  campaignId: zod.coerce.string(),
+});
+
+export const getCampaignControlRoomEvidenceQueryLimitDefault = 25;
+export const getCampaignControlRoomEvidenceQueryLimitMax = 100;
+
+export const GetCampaignControlRoomEvidenceQueryParams = zod.object({
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(getCampaignControlRoomEvidenceQueryLimitMax)
+    .default(getCampaignControlRoomEvidenceQueryLimitDefault),
+  cursor: zod.coerce.string().optional(),
+  state: zod
+    .enum(["planned", "attempted", "provider_confirmed", "artifact_qc"])
+    .optional(),
+  subjectType: zod
+    .enum([
+      "social_post",
+      "paid_media_attempt",
+      "paid_media_launch_plan",
+      "paid_media_proposal",
+      "product_sale",
+      "revenue_event",
+    ])
+    .optional(),
+  subjectId: zod.coerce.string().uuid().optional(),
+  from: zod.date().optional().describe("Inclusive UTC lower bound."),
+  to: zod.date().optional().describe("Exclusive UTC upper bound."),
+});
+
+export const getCampaignControlRoomEvidenceResponseTotalMin = 0;
+
+export const getCampaignControlRoomEvidenceResponseFacetsStatesItemCountMin = 0;
+
+export const getCampaignControlRoomEvidenceResponseFacetsSubjectTypesItemCountMin = 0;
+
+export const GetCampaignControlRoomEvidenceResponse = zod.object({
+  records: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      subjectType: zod.string(),
+      subjectId: zod.string().uuid(),
+      state: zod.enum([
+        "planned",
+        "attempted",
+        "provider_confirmed",
+        "artifact_qc",
+      ]),
+      createdAt: zod.coerce.date(),
+      masterplanVersionId: zod.string().uuid().nullable(),
+      contextFingerprint: zod
+        .string()
+        .nullable()
+        .describe("Sanitized opaque prefix only."),
+      details: zod
+        .unknown()
+        .describe("Recursively sanitized, size-bounded evidence details."),
+      source: zod.union([
+        zod.object({
+          kind: zod.enum(["social_post"]),
+          label: zod.string(),
+          href: zod.string(),
+        }),
+        zod.null(),
+      ]),
+    }),
+  ),
+  pageInfo: zod.object({
+    nextCursor: zod.string().nullable(),
+    hasNextPage: zod.boolean(),
+    limit: zod.number(),
+  }),
+  appliedFilters: zod.object({
+    state: zod.string().nullable(),
+    subjectType: zod.string().nullable(),
+    subjectId: zod.string().nullable(),
+    from: zod.string().nullable(),
+    to: zod.string().nullable(),
+  }),
+  total: zod.number().min(getCampaignControlRoomEvidenceResponseTotalMin),
+  facets: zod.object({
+    states: zod.array(
+      zod.object({
+        value: zod.string(),
+        count: zod
+          .number()
+          .min(getCampaignControlRoomEvidenceResponseFacetsStatesItemCountMin),
+      }),
+    ),
+    subjectTypes: zod.array(
+      zod.object({
+        value: zod.string(),
+        count: zod
+          .number()
+          .min(
+            getCampaignControlRoomEvidenceResponseFacetsSubjectTypesItemCountMin,
+          ),
+      }),
+    ),
+  }),
+});
+
+/**
  * @summary Execute campaign phase
  */
 export const ExecuteCampaignParams = zod.object({

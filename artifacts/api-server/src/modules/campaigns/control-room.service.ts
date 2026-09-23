@@ -1,4 +1,4 @@
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, sql, or, lt, inArray, type SQL } from "drizzle-orm";
 import {
   approvalCheckpointsTable,
   campaignsTable,
@@ -9,9 +9,107 @@ import {
   socialPostsTable,
   workspaceIntegrationsTable,
 } from "@workspace/db";
-import { NotFoundError } from "../../lib/errors.js";
+import { NotFoundError, ValidationError } from "../../lib/errors.js";
+import { env } from "../../lib/env.js";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 type JsonObject = Record<string, unknown>;
+
+export const CONTROL_ROOM_EVIDENCE_SUBJECT_TYPES = [
+  "social_post", "paid_media_attempt", "paid_media_launch_plan",
+  "paid_media_proposal", "product_sale", "revenue_event",
+] as const;
+export const CONTROL_ROOM_EVIDENCE_STATES = ["planned", "attempted", "provider_confirmed", "artifact_qc"] as const;
+export type ControlRoomEvidenceFilters = {
+  limit: number; cursor?: string; state?: typeof CONTROL_ROOM_EVIDENCE_STATES[number];
+  subjectType?: typeof CONTROL_ROOM_EVIDENCE_SUBJECT_TYPES[number]; subjectId?: string;
+  from?: string; to?: string;
+};
+
+function cursorSecret() { return env.SESSION_SECRET; }
+function encodeEvidenceCursor(payload: object) {
+  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const sig = createHmac("sha256", cursorSecret()).update(body).digest("base64url");
+  return `${body}.${sig}`;
+}
+function decodeEvidenceCursor(value: string, campaignId: string, workspaceId: string, filters: ControlRoomEvidenceFilters) {
+  try {
+    const [body, signature] = value.split(".");
+    if (!body || !signature) throw new Error();
+    const expected = createHmac("sha256", cursorSecret()).update(body).digest("base64url");
+    if (signature.length !== expected.length || !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) throw new Error();
+    const parsed = JSON.parse(Buffer.from(body, "base64url").toString()) as JsonObject;
+    const filterBinding = JSON.stringify({ campaignId, workspaceId, limit: filters.limit, state: filters.state ?? null, subjectType: filters.subjectType ?? null, subjectId: filters.subjectId ?? null, from: filters.from ?? null, to: filters.to ?? null });
+    const createdAt = new Date(parsed["createdAt"] as string);
+    const invalidExpiry = parsed["exp"] !== undefined
+      && (!Number.isFinite(Number(parsed["exp"])) || Number(parsed["exp"]) < Date.now());
+    const invalidPayload = parsed["binding"] !== filterBinding
+      || typeof parsed["createdAt"] !== "string"
+      || Number.isNaN(createdAt.getTime())
+      || typeof parsed["id"] !== "string";
+    if (invalidExpiry || invalidPayload) throw new Error();
+    return { createdAt, id: parsed["id"] as string };
+  } catch { throw new ValidationError("Invalid evidence cursor"); }
+}
+
+function evidenceConditions(campaignId: string, workspaceId: string, filters: ControlRoomEvidenceFilters) {
+  const conditions = [
+    eq(executionEvidenceTable.workspaceId, workspaceId), eq(executionEvidenceTable.campaignId, campaignId),
+    filters.state ? eq(executionEvidenceTable.state, filters.state) : undefined,
+    filters.subjectType ? eq(executionEvidenceTable.subjectType, filters.subjectType) : undefined,
+    filters.subjectId ? eq(executionEvidenceTable.subjectId, filters.subjectId) : undefined,
+    filters.from ? sql`${executionEvidenceTable.createdAt} >= ${new Date(filters.from)}` : undefined,
+    filters.to ? sql`${executionEvidenceTable.createdAt} < ${new Date(filters.to)}` : undefined,
+  ].filter((condition): condition is SQL => condition !== undefined);
+  return conditions as SQL[];
+}
+
+export async function getCampaignControlRoomEvidence(campaignId: string, workspaceId: string, filters: ControlRoomEvidenceFilters) {
+  const [campaign] = await db.select({ id: campaignsTable.id }).from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).limit(1);
+  if (!campaign) throw new NotFoundError("Campaign");
+  const base = evidenceConditions(campaignId, workspaceId, filters);
+  let seek: { createdAt: Date; id: string } | undefined;
+  if (filters.cursor) {
+    seek = decodeEvidenceCursor(filters.cursor, campaignId, workspaceId, filters);
+    base.push(or(
+      lt(executionEvidenceTable.createdAt, seek.createdAt),
+      and(eq(executionEvidenceTable.createdAt, seek.createdAt), lt(executionEvidenceTable.id, seek.id)),
+    )!);
+  }
+  const rows = await db.select({
+    id: executionEvidenceTable.id, subjectType: executionEvidenceTable.subjectType, subjectId: executionEvidenceTable.subjectId,
+    state: executionEvidenceTable.state, createdAt: executionEvidenceTable.createdAt, masterplanVersionId: executionEvidenceTable.masterplanVersionId,
+    contextFingerprint: executionEvidenceTable.contextFingerprint, details: executionEvidenceTable.details,
+  }).from(executionEvidenceTable).where(and(...base)).orderBy(desc(executionEvidenceTable.createdAt), desc(executionEvidenceTable.id)).limit(filters.limit + 1);
+  const hasNextPage = rows.length > filters.limit;
+  const pageRows = rows.slice(0, filters.limit);
+  const countRows = await db.select({ total: count() }).from(executionEvidenceTable).where(and(...evidenceConditions(campaignId, workspaceId, filters)));
+  const [stateFacets, typeFacets] = await Promise.all([
+    db.select({ value: executionEvidenceTable.state, count: count() }).from(executionEvidenceTable).where(and(...evidenceConditions(campaignId, workspaceId, filters))).groupBy(executionEvidenceTable.state),
+    db.select({ value: executionEvidenceTable.subjectType, count: count() }).from(executionEvidenceTable).where(and(...evidenceConditions(campaignId, workspaceId, filters))).groupBy(executionEvidenceTable.subjectType),
+  ]);
+  const socialIds = pageRows.filter(r => r.subjectType === "social_post").map(r => r.subjectId);
+  const social = socialIds.length ? await db.select({ id: socialPostsTable.id }).from(socialPostsTable).where(and(
+    eq(socialPostsTable.workspaceId, workspaceId), eq(socialPostsTable.campaignId, campaignId), inArray(socialPostsTable.id, socialIds),
+  )) : [];
+  const ownedSocial = new Set(social.map(r => r.id));
+  const records = pageRows.map(row => ({
+    id: row.id, subjectType: row.subjectType, subjectId: row.subjectId, state: row.state, createdAt: row.createdAt,
+    masterplanVersionId: row.masterplanVersionId, contextFingerprint: row.contextFingerprint ? row.contextFingerprint.slice(0, 12) : null,
+    details: redactPaginatedEvidence(row.details),
+    source: row.subjectType === "social_post" && ownedSocial.has(row.subjectId)
+      ? { kind: "social_post", label: "Post social", href: `/campaigns/${campaignId}/content` } : null,
+  }));
+  const last = pageRows.at(-1);
+  const binding = JSON.stringify({ campaignId, workspaceId, limit: filters.limit, state: filters.state ?? null, subjectType: filters.subjectType ?? null, subjectId: filters.subjectId ?? null, from: filters.from ?? null, to: filters.to ?? null });
+  return {
+    records, pageInfo: { nextCursor: hasNextPage && last ? encodeEvidenceCursor({ createdAt: last.createdAt.toISOString(), id: last.id, exp: Date.now() + 86400000, binding }) : null, hasNextPage, limit: filters.limit },
+    appliedFilters: { state: filters.state ?? null, subjectType: filters.subjectType ?? null, subjectId: filters.subjectId ?? null, from: filters.from ?? null, to: filters.to ?? null },
+    total: Number(countRows[0]?.total ?? 0),
+    facets: { states: stateFacets.map(r => ({ value: r.value, count: Number(r.count) })), subjectTypes: typeFacets.map(r => ({ value: r.value, count: Number(r.count) })) },
+  };
+}
 
 function object(value: unknown): JsonObject {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -36,6 +134,7 @@ const MAX_PUBLIC_EVIDENCE_NODES = 2_000;
 const MAX_PUBLIC_EVIDENCE_ITEMS = 2_000;
 const MAX_PUBLIC_EVIDENCE_KEYS = 2_000;
 const MAX_PUBLIC_EVIDENCE_STRING = 4_096;
+const MAX_PAGINATED_EVIDENCE_BYTES = 32_768;
 const SENSITIVE_EVIDENCE_KEY = /(?:token|secret|password|authorization|cookie|credential|private[\s_-]*key|session|signature|signed[\s_-]*url|(?:api|access|refresh)[\s_-]*key)/i;
 const BEARER_VALUE = /\bBearer\s+[A-Za-z0-9\-._~+/]+=*/gi;
 const JWT_VALUE = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g;
@@ -127,6 +226,14 @@ function redactPublicEvidence(
   }
   seen.delete(value);
   return result;
+}
+
+function redactPaginatedEvidence(value: unknown): unknown {
+  const redacted = redactPublicEvidence(value);
+  if (Buffer.byteLength(JSON.stringify(redacted), "utf8") <= MAX_PAGINATED_EVIDENCE_BYTES) {
+    return redacted;
+  }
+  return { __redacted_truncation: "[REDACTED_EVIDENCE_BYTE_LIMIT]" };
 }
 
 function integrationHealth(

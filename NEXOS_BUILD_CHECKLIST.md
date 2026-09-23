@@ -9,10 +9,10 @@
 ## Estado executivo
 
 - **Estágio operacional em foco:** transversal — Control Room e governança de capacidades;
-- **Nível de maturidade em foco:** M03 — Drilldown de evidência;
-- **Último nível concluído:** M02 — Contadores clicáveis;
-- **Checkpoint atual:** M02 concluído e comprovado com fixture autenticado isolado;
-- **Próximo checkpoint:** especificar e implementar timeline paginada com registros exatos, filtros e links de origem.
+- **Nível de maturidade em foco:** M04 — Preview universal;
+- **Último nível concluído:** M03 — Drilldown de evidência;
+- **Checkpoint atual:** M03 concluído e comprovado com fixtures autenticados isolados;
+- **Próximo checkpoint:** especificar o contrato universal de preview para texto, imagem, vídeo, páginas, mensagens e anúncios.
 
 ## Checklist dos 12 níveis de maturidade
 
@@ -20,8 +20,8 @@
 |---|---|---|---|---|
 | M01 | Control Room UI | ✅ Concluído | API real, ownership, estados vazios, desktop/mobile e acesso Fundador/Arquiteto | Manter sem regressão |
 | M02 | Contadores clicáveis | ✅ Concluído | Build, API real, fixture autenticado, composição exata, desktop/mobile e acessibilidade | Manter sem regressão |
-| M03 | Drilldown de evidência | ▶️ Próximo | API atual retorna somente as 25 evidências mais recentes | Timeline paginada com registros exatos |
-| M04 | Preview universal | ⬜ Pendente | — | Contrato para texto, imagem, vídeo, páginas, mensagens e anúncios |
+| M03 | Drilldown de evidência | ✅ Concluído | Contrato OpenAPI, paginação determinística, filtros exatos, sanitização, ownership, links verificados e E2E desktop/mobile | Manter sem regressão |
+| M04 | Preview universal | ▶️ Próximo | — | Contrato para texto, imagem, vídeo, páginas, mensagens e anúncios |
 | M05 | Version diff | ⬜ Pendente | — | Comparação entre versões e revisões |
 | M06 | Approval Center | ⬜ Pendente | — | Aprovação/rejeição motivada e versionada |
 | M07 | SLA e lembretes | ⬜ Pendente | — | `dueAt`, aviso, entrega e decisão |
@@ -92,20 +92,70 @@ O estado abaixo será calculado capability por capability. Nenhum estágio é co
 - nenhum provider, publicação, mensagem, IA ou cobrança acionado;
 - cleanup confirmado sem usuário, workspace ou campanha residual.
 
-## Unidade atual — M03 Drilldown de evidência
+## Última unidade concluída — M03 Drilldown de evidência
+
+### Entregue no código
+
+- [x] contrato OpenAPI e clientes/Zod regenerados;
+- [x] endpoint paginado separado sem alterar o contrato do resumo M01/M02;
+- [x] cursor HMAC com expiração e vínculo a workspace, campanha, filtros e limite;
+- [x] paginação seek determinística por `createdAt DESC, id DESC`;
+- [x] filtros por estado, subject type, período e entidade;
+- [x] ownership por workspace e campanha;
+- [x] timeline com IDs e timestamps exatos;
+- [x] links somente para entidade persistida e pertencente à campanha;
+- [x] detalhes recursivamente sanitizados e limitados também por bytes;
+- [x] total e facets exatos;
+- [x] estados de carregamento, erro inicial, erro de próxima página, vazio filtrado e fim da lista;
+- [x] Escape, controles nativos, rótulos e foco de teclado;
+- [x] layout responsivo sem overflow horizontal.
+
+### Validação concluída
+
+- [x] migração rastreada `0039_control_room_evidence_pagination.sql` aplicada;
+- [x] typecheck das bibliotecas, API e frontend;
+- [x] build de produção do frontend;
+- [x] testes focados M01/M02 e M03;
+- [x] `git diff --check`;
+- [x] app e API reiniciados e saudáveis;
+- [x] E2E autenticado com 30 registros e três páginas lógicas verificadas;
+- [x] filtros de estado, tipo, UUID, período e combinação verificados;
+- [x] validações de UUID e período inválidos verificadas;
+- [x] link de origem real e ausência de links inventados verificadas;
+- [x] sanitização e ausência de segredos verificadas;
+- [x] desktop 1440×1000 e mobile 390×844 verificados;
+- [x] correção de Escape retestada isoladamente;
+- [x] cleanup confirmado com zero resíduos em todos os fixtures.
+
+### Provas do checkpoint
+
+- primeira página: 25 de 30 registros; segunda carga: 30 de 30, sem lacunas ou duplicatas;
+- quatro estados e seis subject types exercitados com contagens exatas;
+- ordenação determinística comprovada inclusive com timestamps empatados;
+- resumo M02 permaneceu limitado aos 25 registros do contrato anterior;
+- somente o `social_post` real e pertencente à campanha recebeu link de origem;
+- registros órfãos e tipos sem rota permaneceram sem link;
+- erro de página adicional preserva os registros já carregados;
+- nenhum provider, publicação, mensagem, IA, cobrança ou scheduler foi acionado;
+- workflows do app e da API permaneceram saudáveis após a validação.
+
+### Riscos e limitações remanescentes
+
+- M03 é inspeção somente leitura; preview, diff e aprovação pertencem a M04–M06;
+- hoje apenas `social_post` possui uma rota de origem persistida e verificável;
+- facets refletem o conjunto filtrado atual, conforme o contrato;
+- o bundle principal continua emitindo o aviso pré-existente de tamanho, sem falha de build.
+
+## Unidade atual — M04 Preview universal
 
 ### Escopo inicial
 
-- [ ] contrato de paginação;
-- [ ] filtros por estado, subject type, período e entidade;
-- [ ] ownership por workspace e campanha;
-- [ ] ordenação determinística;
-- [ ] timeline com IDs e timestamps exatos;
-- [ ] links para entidade de origem quando houver rota real;
-- [ ] detalhes sanitizados;
-- [ ] estado vazio e erro honestos;
-- [ ] desktop e mobile;
-- [ ] testes de paginação, filtro, sanitização e isolamento.
+- [ ] inventariar todos os formatos persistidos que precisam de preview;
+- [ ] definir contrato único com estados indisponível, carregando, pronto e erro;
+- [ ] garantir ownership e sanitização para texto, imagem, vídeo, páginas, mensagens e anúncios;
+- [ ] reutilizar renderizadores existentes sem duplicar fluxos operacionais;
+- [ ] validar desktop, mobile e acessibilidade;
+- [ ] manter M01–M03 sem regressão.
 
 ## Protocolo obrigatório após cada desenvolvimento
 

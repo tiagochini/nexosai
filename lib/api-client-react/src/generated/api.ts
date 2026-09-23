@@ -31,6 +31,7 @@ import type {
   CampaignInput,
   ContactsAddInput,
   ContractAcceptanceRequiredError,
+  ControlRoomEvidenceResponse,
   CreateCampaign201,
   CreditsBalance,
   ExecuteCampaign202,
@@ -38,6 +39,7 @@ import type {
   GenerateSequencePlan200,
   GetAutonomyStatusParams,
   GetCampaign200,
+  GetCampaignControlRoomEvidenceParams,
   GetSequence200,
   HealthStatus,
   IntakeResponse,
@@ -816,6 +818,130 @@ export function useGetCampaign<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetCampaignQueryOptions(campaignId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List sanitized campaign execution evidence
+ */
+export const getGetCampaignControlRoomEvidenceUrl = (
+  campaignId: string,
+  params?: GetCampaignControlRoomEvidenceParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/campaigns/${campaignId}/control-room/evidence?${stringifiedParams}`
+    : `/api/campaigns/${campaignId}/control-room/evidence`;
+};
+
+export const getCampaignControlRoomEvidence = async (
+  campaignId: string,
+  params?: GetCampaignControlRoomEvidenceParams,
+  options?: RequestInit,
+): Promise<ControlRoomEvidenceResponse> => {
+  return customFetch<ControlRoomEvidenceResponse>(
+    getGetCampaignControlRoomEvidenceUrl(campaignId, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetCampaignControlRoomEvidenceQueryKey = (
+  campaignId: string,
+  params?: GetCampaignControlRoomEvidenceParams,
+) => {
+  return [
+    `/api/campaigns/${campaignId}/control-room/evidence`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetCampaignControlRoomEvidenceQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCampaignControlRoomEvidence>>,
+  TError = ErrorType<void>,
+>(
+  campaignId: string,
+  params?: GetCampaignControlRoomEvidenceParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaignControlRoomEvidence>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetCampaignControlRoomEvidenceQueryKey(campaignId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCampaignControlRoomEvidence>>
+  > = ({ signal }) =>
+    getCampaignControlRoomEvidence(campaignId, params, {
+      signal,
+      ...requestOptions,
+    });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!campaignId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCampaignControlRoomEvidence>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCampaignControlRoomEvidenceQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCampaignControlRoomEvidence>>
+>;
+export type GetCampaignControlRoomEvidenceQueryError = ErrorType<void>;
+
+/**
+ * @summary List sanitized campaign execution evidence
+ */
+
+export function useGetCampaignControlRoomEvidence<
+  TData = Awaited<ReturnType<typeof getCampaignControlRoomEvidence>>,
+  TError = ErrorType<void>,
+>(
+  campaignId: string,
+  params?: GetCampaignControlRoomEvidenceParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaignControlRoomEvidence>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCampaignControlRoomEvidenceQueryOptions(
+    campaignId,
+    params,
+    options,
+  );
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

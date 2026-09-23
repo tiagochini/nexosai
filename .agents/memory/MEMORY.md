@@ -103,3 +103,4 @@
 - [Social Credential Boundary](social-credential-boundary.md) — every social mutation shares one fail-closed credential probe; transient failures preserve accounts and cached metrics.
 - [Public Evidence Sanitization](public-evidence-sanitization.md) — redact complete values before truncation, strip signed URL parameters and stop traversal at hard collection limits.
 - [Development Checkpoint Checklist](development-checkpoint-checklist.md) — update stage, maturity, proof, risks and next checkpoint after every development unit.
+- [Orval path/query name collision](orval-path-query-collision.md) — operations combining path and query params can collide in the api-zod barrel; keep codegen postprocessing deterministic.

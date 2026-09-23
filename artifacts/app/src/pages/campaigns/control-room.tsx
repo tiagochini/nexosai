@@ -1,11 +1,16 @@
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { useRoute, Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
-import { 
-  ArrowLeft, Activity, ShieldCheck, Database, 
-  Layers, Clock, CheckCircle2, AlertTriangle, 
-  Terminal, RefreshCw, XCircle, ChevronRight
+import type {
+  ControlRoomEvidenceRecord,
+  ControlRoomEvidenceResponse,
+} from "@workspace/api-client-react";
+import {
+  ArrowLeft, Activity, ShieldCheck, Database,
+  Layers, Clock, CheckCircle2, AlertTriangle,
+  Terminal, RefreshCw, XCircle, ChevronRight,
+  Filter, Calendar, Type, Hash, Tag, ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -216,26 +221,26 @@ function MasterplanPanel({ data, campaignId }: { data: ControlRoomResponse["mast
           {data.status || "Active"}
         </div>
       </div>
-      
+
       <div className="p-4 space-y-4">
         <div>
           <div className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest mb-1">Title</div>
           <div className="text-sm font-sans font-medium text-white/90">{data.title || "Strategy Draft"}</div>
         </div>
-        
+
         {data.objective && (
           <div>
             <div className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest mb-1">Objective</div>
             <div className="text-[11px] font-mono text-primary/80 leading-relaxed line-clamp-2">{data.objective}</div>
           </div>
         )}
-        
+
         <div className="grid grid-cols-2 gap-3">
           <Metric label="Version" value={`v${data.version || 1}.0`} />
           <Metric label="Content Hash" value={data.contentHash?.substring(0, 8) || "N/A"} />
         </div>
-        
-        <Link 
+
+        <Link
           href={`/campaigns/${campaignId}/strategy`}
           className="mt-2 w-full flex items-center justify-center gap-2 py-2 border border-primary/30 bg-primary/5 hover:bg-primary/20 hover:border-primary/60 transition-all font-mono text-[10px] text-primary uppercase tracking-widest cursor-pointer"
         >
@@ -481,7 +486,7 @@ function CheckpointsPanel({ data, campaignId }: { data: ControlRoomResponse["pen
           <ActionCounter label="Requeridos" value={pendingCount} tone="warning" onClick={() => setDrawerOpen(true)} title="Ver checkpoints pendentes" />
         )}
       </div>
-      
+
       <div className="overflow-y-auto flex-1 p-0 hide-scrollbar">
         {records.length > 0 ? (
           <div className="divide-y divide-border/10">
@@ -550,17 +555,406 @@ function CheckpointsPanel({ data, campaignId }: { data: ControlRoomResponse["pen
   );
 }
 
-function ExecutionEvidencePanel({ data }: { data: ControlRoomResponse["executionEvidence"] }) {
-  if (!data.available) {
-    return <UnavailablePanel title="Execution Telemetry" icon={Terminal} reason={data.reason} />;
-  }
+function EvidenceExplorerDrawer({
+  open,
+  onOpenChange,
+  campaignId,
+  initialState
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  campaignId: string;
+  initialState: "all" | "planned" | "attempted" | "provider_confirmed" | "artifact_qc";
+}) {
+  const [filters, setFilters] = useState({
+    state: "",
+    subjectType: "",
+    subjectId: "",
+    from: "",
+    to: ""
+  });
 
-  const records = data.records || [];
+  useEffect(() => {
+    if (open) {
+      setFilters({
+        state: initialState === "all" ? "" : initialState,
+        subjectType: "",
+        subjectId: "",
+        from: "",
+        to: ""
+      });
+    }
+  }, [open, initialState]);
+
+  const isValidUUID = (str: string) => !str || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+
+  const validationError = useMemo(() => {
+    if (filters.subjectId && !isValidUUID(filters.subjectId)) return "ID deve ser um UUID válido.";
+    if (filters.from && filters.to) {
+      const f = new Date(filters.from).getTime();
+      const t = new Date(filters.to).getTime();
+      if (!isNaN(f) && !isNaN(t) && f >= t) return "Data inicial deve ser menor que a data final.";
+    }
+    return null;
+  }, [filters]);
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isFetchNextPageError,
+    isLoading,
+    isError,
+    error,
+    refetch
+  } = useInfiniteQuery<ControlRoomEvidenceResponse, Error>({
+    queryKey: ["/api/campaigns", campaignId, "control-room", "evidence", filters],
+    queryFn: async ({ pageParam }) => {
+      const q = new URLSearchParams();
+      q.set("limit", "25");
+      if (pageParam) q.set("cursor", String(pageParam));
+      if (filters.state) q.set("state", filters.state);
+      if (filters.subjectType) q.set("subjectType", filters.subjectType);
+      if (filters.subjectId) q.set("subjectId", filters.subjectId);
+      if (filters.from) {
+        const d = new Date(filters.from);
+        if (!isNaN(d.getTime())) q.set("from", d.toISOString());
+      }
+      if (filters.to) {
+        const d = new Date(filters.to);
+        if (!isNaN(d.getTime())) q.set("to", d.toISOString());
+      }
+      return customFetch<ControlRoomEvidenceResponse>(`/api/campaigns/${campaignId}/control-room/evidence?${q.toString()}`);
+    },
+    initialPageParam: null,
+    getNextPageParam: (lastPage) => lastPage.pageInfo.hasNextPage ? lastPage.pageInfo.nextCursor : undefined,
+    enabled: open && !validationError,
+  });
+
+  const allRecords = useMemo(() => {
+    if (!data) return [];
+    const map = new Map<string, ControlRoomEvidenceRecord>();
+    data.pages.forEach(p => {
+      p.records.forEach(r => {
+        map.set(r.id, r);
+      });
+    });
+    return Array.from(map.values());
+  }, [data]);
+
+  const firstPage = data?.pages[0];
+  const total = firstPage?.total ?? 0;
+  const loaded = allRecords.length;
+
+  const appliedFiltersCount = Object.values(filters).filter(Boolean).length;
+
+  const handleReset = () => {
+    setFilters({ state: "", subjectType: "", subjectId: "", from: "", to: "" });
+  };
+  const handleFetchNextPage = () => {
+    void fetchNextPage();
+  };
+
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent
+        className="max-h-[95vh] h-[95vh] border-primary/25 bg-[#030712] text-foreground flex flex-col focus-visible:outline-none"
+        onKeyDownCapture={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            onOpenChange(false);
+          }
+        }}
+      >
+        <div className="mx-auto w-full max-w-6xl overflow-hidden flex flex-col h-full">
+          <DrawerHeader className="border-b border-border/20 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <DrawerTitle className="font-mono text-sm uppercase tracking-widest text-primary flex items-center gap-2">
+                <Terminal className="h-4 w-4" />
+                Explorador de Evidências
+              </DrawerTitle>
+              <DrawerDescription className="font-mono text-[10px] uppercase tracking-wider mt-1 text-muted-foreground">
+                {isLoading ? (
+                  <span className="animate-pulse">Consultando base de dados...</span>
+                ) : (
+                  <span>Exibindo {loaded} de {total} registros persistidos</span>
+                )}
+                {appliedFiltersCount > 0 && ` • ${appliedFiltersCount} filtro(s) ativo(s)`}
+              </DrawerDescription>
+            </div>
+            {validationError && (
+              <div className="px-3 py-1.5 border border-destructive/30 bg-destructive/10 text-destructive font-mono text-[9px] uppercase tracking-wider flex items-center gap-2 shrink-0">
+                <AlertTriangle className="h-3 w-3" />
+                {validationError}
+              </div>
+            )}
+          </DrawerHeader>
+
+          <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
+            {/* Filters Sidebar */}
+            <div className="lg:w-64 border-b lg:border-b-0 lg:border-r border-border/20 p-4 shrink-0 overflow-y-auto hide-scrollbar bg-black/20 flex flex-col gap-4 font-mono">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold flex items-center gap-2">
+                  <Filter className="h-3 w-3" />
+                  Filtros
+                </h3>
+                {appliedFiltersCount > 0 && (
+                  <button
+                    onClick={handleReset}
+                    className="text-[9px] uppercase tracking-widest text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
+                  >
+                    Resetar
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5" htmlFor="filter-state">
+                    <Tag className="h-3 w-3" /> Estado
+                  </label>
+                  <select
+                    id="filter-state"
+                    value={filters.state}
+                    onChange={e => setFilters(f => ({ ...f, state: e.target.value }))}
+                    className="w-full bg-black border border-border/30 text-[10px] p-1.5 text-white focus-visible:outline-none focus-visible:border-primary/60 transition-colors"
+                  >
+                    <option value="">Todos</option>
+                    <option value="planned">Planejado</option>
+                    <option value="attempted">Tentativa</option>
+                    <option value="provider_confirmed">Confirmado</option>
+                    <option value="artifact_qc">Qualidade Verificada</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5" htmlFor="filter-type">
+                    <Type className="h-3 w-3" /> Tipo de Sujeito
+                  </label>
+                  <select
+                    id="filter-type"
+                    value={filters.subjectType}
+                    onChange={e => setFilters(f => ({ ...f, subjectType: e.target.value }))}
+                    className="w-full bg-black border border-border/30 text-[10px] p-1.5 text-white focus-visible:outline-none focus-visible:border-primary/60 transition-colors"
+                  >
+                    <option value="">Todos</option>
+                    <option value="social_post">Social Post</option>
+                    <option value="paid_media_attempt">Paid Media Attempt</option>
+                    <option value="paid_media_launch_plan">Paid Media Launch Plan</option>
+                    <option value="paid_media_proposal">Paid Media Proposal</option>
+                    <option value="product_sale">Product Sale</option>
+                    <option value="revenue_event">Revenue Event</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5" htmlFor="filter-id">
+                    <Hash className="h-3 w-3" /> ID (UUID)
+                  </label>
+                  <input
+                    id="filter-id"
+                    type="text"
+                    value={filters.subjectId}
+                    onChange={e => setFilters(f => ({ ...f, subjectId: e.target.value }))}
+                    placeholder="ex: 123e4567-..."
+                    className="w-full bg-black border border-border/30 text-[10px] p-1.5 text-white focus-visible:outline-none focus-visible:border-primary/60 placeholder:text-muted-foreground/30 transition-colors"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5" htmlFor="filter-from">
+                    <Calendar className="h-3 w-3" /> Data Inicial
+                  </label>
+                  <input
+                    id="filter-from"
+                    type="datetime-local"
+                    value={filters.from}
+                    onChange={e => setFilters(f => ({ ...f, from: e.target.value }))}
+                    className="w-full bg-black border border-border/30 text-[10px] p-1.5 text-white focus-visible:outline-none focus-visible:border-primary/60 [color-scheme:dark] transition-colors"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5" htmlFor="filter-to">
+                    <Calendar className="h-3 w-3" /> Data Final
+                  </label>
+                  <input
+                    id="filter-to"
+                    type="datetime-local"
+                    value={filters.to}
+                    onChange={e => setFilters(f => ({ ...f, to: e.target.value }))}
+                    className="w-full bg-black border border-border/30 text-[10px] p-1.5 text-white focus-visible:outline-none focus-visible:border-primary/60 [color-scheme:dark] transition-colors"
+                  />
+                </div>
+              </div>
+
+              {firstPage && (firstPage.facets.states.length > 0 || firstPage.facets.subjectTypes.length > 0) && (
+                <div className="mt-4 pt-4 border-t border-border/20 space-y-4">
+                  {firstPage.facets.states.length > 0 && (
+                    <div>
+                      <div className="text-[9px] uppercase tracking-widest text-muted-foreground mb-2 font-bold">Estados</div>
+                      <div className="space-y-1">
+                        {firstPage.facets.states.map(f => (
+                          <div key={f.value} className="flex justify-between items-center text-[9px]">
+                            <span className="text-white/70 truncate mr-2">{f.value}</span>
+                            <span className="text-primary shrink-0">{f.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {firstPage.facets.subjectTypes.length > 0 && (
+                    <div>
+                      <div className="text-[9px] uppercase tracking-widest text-muted-foreground mb-2 font-bold mt-4">Tipos</div>
+                      <div className="space-y-1">
+                        {firstPage.facets.subjectTypes.map(f => (
+                          <div key={f.value} className="flex justify-between items-center text-[9px]">
+                            <span className="text-white/70 truncate mr-2">{f.value}</span>
+                            <span className="text-primary shrink-0">{f.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Results Area */}
+            <div className="flex-1 flex flex-col min-h-0 bg-[#010308] relative">
+              {isLoading ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <Activity className="h-6 w-6 text-primary animate-pulse" />
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Carregando telemetria...</span>
+                  </div>
+                </div>
+              ) : isError ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                  <XCircle className="h-8 w-8 text-destructive mb-3" />
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-destructive mb-2 font-bold">Falha na Busca</div>
+                  <p className="font-mono text-[9px] text-muted-foreground max-w-md mb-4">{error?.message || "Ocorreu um erro ao carregar as evidências."}</p>
+                  <Button onClick={() => refetch()} variant="outline" className="font-mono text-[10px] uppercase tracking-widest border-border/30 hover:bg-white/5">
+                    Tentar Novamente
+                  </Button>
+                </div>
+              ) : allRecords.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                  <Database className="h-8 w-8 text-muted-foreground/30 mb-3" />
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-white/50 mb-2 font-bold">
+                    {appliedFiltersCount > 0 ? "Nenhum resultado para os filtros" : "Nenhuma evidência registrada"}
+                  </div>
+                  {appliedFiltersCount > 0 && (
+                    <Button onClick={handleReset} variant="outline" className="mt-4 font-mono text-[10px] uppercase tracking-widest border-primary/30 text-primary hover:bg-primary/10">
+                      Limpar Filtros
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex-1 overflow-y-auto hide-scrollbar p-4 space-y-3 font-mono" aria-live="polite" aria-busy={isFetchingNextPage}>
+                  {allRecords.map((rec) => (
+                    <div key={rec.id} className="border border-border/25 bg-black/40 p-4 hover:border-primary/30 transition-colors focus-within:border-primary/50" tabIndex={0}>
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                            <span className="text-[11px] uppercase tracking-wider text-primary font-bold">{rec.subjectType}</span>
+                            <span className="px-1.5 py-0.5 border border-white/10 bg-white/5 text-[9px] text-white tracking-widest uppercase">
+                              {rec.state}
+                            </span>
+                          </div>
+                          <div className="text-[9px] text-muted-foreground flex flex-col gap-1">
+                            <span className="truncate">ID: <span className="text-white/70">{rec.subjectId}</span></span>
+                            <span>Data: <span className="text-white/70">{new Date(rec.createdAt).toLocaleString("pt-BR")}</span></span>
+                            {rec.masterplanVersionId && <span>Plano v{rec.masterplanVersionId}</span>}
+                            {rec.contextFingerprint && <span>CTX: {rec.contextFingerprint.substring(0, 8)}</span>}
+                          </div>
+                        </div>
+                        {rec.source && (
+                          <Link
+                            href={rec.source.href}
+                            className="shrink-0 flex items-center justify-center gap-1.5 px-3 py-1.5 border border-primary/30 bg-primary/5 text-primary text-[9px] uppercase tracking-widest hover:bg-primary/20 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            {rec.source.label || rec.source.kind}
+                          </Link>
+                        )}
+                      </div>
+
+                      {typeof rec.details === "object" && rec.details !== null && Object.keys(rec.details).length > 0 && (
+                        <div className="mt-4 relative">
+                          <div className="absolute top-0 left-0 px-2 py-0.5 bg-white/10 text-[8px] text-white/50 uppercase tracking-widest z-10 border-b border-r border-white/10">Payload</div>
+                          <pre className="pt-6 pb-2 px-3 border border-white/5 bg-[#050505] text-[10px] text-muted-foreground/80 whitespace-pre-wrap break-words overflow-x-auto max-h-[300px]">
+                            {JSON.stringify(rec.details, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {hasNextPage && (
+                    <div className="pt-4 pb-2 flex justify-center">
+                      <Button
+                        onClick={handleFetchNextPage}
+                        disabled={isFetchingNextPage}
+                        variant="outline"
+                        className="font-mono text-[10px] uppercase tracking-widest border-primary/30 text-primary hover:bg-primary/10 w-full sm:w-auto h-9"
+                      >
+                        {isFetchingNextPage ? (
+                          <><RefreshCw className="mr-2 h-3 w-3 animate-spin" /> Carregando...</>
+                        ) : (
+                          "Carregar Mais Registros"
+                        )}
+                      </Button>
+                    </div>
+                  )}
+
+                  {isFetchNextPageError && (
+                    <div className="border border-destructive/30 bg-destructive/5 p-3 text-center" role="alert">
+                      <p className="font-mono text-[9px] uppercase tracking-widest text-destructive">
+                        Não foi possível carregar a próxima página. Os registros já carregados foram preservados.
+                      </p>
+                      <Button
+                        onClick={handleFetchNextPage}
+                        variant="outline"
+                        className="mt-3 font-mono text-[9px] uppercase tracking-widest border-destructive/30 text-destructive"
+                      >
+                        Tentar novamente
+                      </Button>
+                    </div>
+                  )}
+
+                  {!hasNextPage && allRecords.length > 0 && (
+                    <div className="pt-6 pb-4 text-center text-[9px] uppercase tracking-widest text-muted-foreground/50 flex items-center justify-center gap-3">
+                      <div className="h-px w-8 bg-border/20" />
+                      Fim da telemetria
+                      <div className="h-px w-8 bg-border/20" />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DrawerFooter className="border-t border-border/20 shrink-0 bg-[#030712] flex-row justify-end p-4">
+            <DrawerClose asChild>
+              <Button variant="outline" className="rounded-none font-mono text-[10px] uppercase tracking-widest border-border/40 hover:bg-white/5">
+                Fechar Explorador
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
+function ExecutionEvidencePanel({ data, campaignId }: { data: ControlRoomResponse["executionEvidence"], campaignId: string }) {
+  const records = data?.records || [];
   type EvidenceFilter = "all" | "planned" | "attempted" | "provider_confirmed" | "artifact_qc";
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [filter, setFilter] = useState<EvidenceFilter>("all");
   const countFor = (state: Exclude<EvidenceFilter, "all">) => records.filter((record) => record.state === state).length;
-  const filteredRecords = filter === "all" ? records : records.filter((record) => record.state === filter);
   const openEvidence = (nextFilter: EvidenceFilter) => {
     setFilter(nextFilter);
     setDrawerOpen(true);
@@ -582,9 +976,17 @@ function ExecutionEvidencePanel({ data }: { data: ControlRoomResponse["execution
           <ActionCounter label="QC" value={countFor("artifact_qc")} tone="primary" onClick={() => openEvidence("artifact_qc")} title="Ver verificações de qualidade" />
         </div>
       </div>
-      
+
       <div className="overflow-y-auto flex-1 bg-[#010308] font-mono hide-scrollbar flex flex-col">
-        {records.length > 0 ? (
+        {!data?.available && records.length === 0 ? (
+          <div className="p-10 text-center font-mono text-[10px] text-muted-foreground uppercase tracking-widest flex-1 flex flex-col items-center justify-center">
+            <Terminal className="h-6 w-6 text-muted-foreground/30 mb-3" />
+            <div>{data?.reason || "Awaiting execution data..."}</div>
+            <Button onClick={() => openEvidence("all")} variant="outline" className="mt-4 border-primary/30 text-primary font-mono text-[9px] uppercase tracking-widest hover:bg-primary/10">
+              Explorar Histórico Completo
+            </Button>
+          </div>
+        ) : records.length > 0 ? (
           <div className="p-3 space-y-2">
             {records.map((rec, i) => (
               <div key={i} className="text-xs flex gap-3 p-2 hover:bg-primary/5 rounded border border-transparent hover:border-primary/20 transition-colors">
@@ -613,52 +1015,21 @@ function ExecutionEvidencePanel({ data }: { data: ControlRoomResponse["execution
             ))}
           </div>
         ) : (
-          <div className="p-10 text-center font-mono text-[10px] text-muted-foreground uppercase tracking-widest flex-1 flex items-center justify-center">
+          <div className="p-10 text-center font-mono text-[10px] text-muted-foreground uppercase tracking-widest flex-1 flex flex-col items-center justify-center">
             Awaiting execution data...
+            <Button onClick={() => openEvidence("all")} variant="outline" className="mt-4 border-primary/30 text-primary font-mono text-[9px] uppercase tracking-widest hover:bg-primary/10">
+              Explorar Histórico Completo
+            </Button>
           </div>
         )}
       </div>
     </section>
-    <DetailDrawer
+    <EvidenceExplorerDrawer
       open={drawerOpen}
       onOpenChange={setDrawerOpen}
-      title={
-        filter === "all"
-          ? "Evidências carregadas"
-          : filter === "planned"
-            ? "Ações planejadas"
-            : filter === "attempted"
-              ? "Tentativas de execução"
-              : filter === "provider_confirmed"
-                ? "Confirmações do provedor"
-                : "Verificações de qualidade"
-      }
-      description={`${filteredRecords.length} de ${records.length} registros persistidos retornados pela API`}
-    >
-      <div className="space-y-2">
-        {filteredRecords.length > 0 ? filteredRecords.map((rec) => (
-          <div key={rec.id} className="border border-border/25 bg-black/40 p-3">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="font-mono text-[10px] uppercase tracking-wider text-primary">{rec.subjectType}</div>
-                <div className="font-mono text-[9px] text-muted-foreground mt-1 break-all">ID: {rec.subjectId}</div>
-              </div>
-              <span className="font-mono text-[9px] uppercase tracking-widest text-white">{rec.state}</span>
-            </div>
-            <div className="font-mono text-[9px] text-muted-foreground mt-2">{new Date(rec.createdAt).toLocaleString("pt-BR")}</div>
-            {typeof rec.details === "object" && rec.details !== null && Object.keys(rec.details).length > 0 && (
-              <pre className="mt-2 border border-white/5 bg-black p-2 font-mono text-[9px] text-muted-foreground whitespace-pre-wrap break-words overflow-x-auto">
-                {JSON.stringify(rec.details, null, 2)}
-              </pre>
-            )}
-          </div>
-        )) : (
-          <div className="border border-border/25 bg-black/30 p-6 text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            Nenhuma evidência nesta categoria
-          </div>
-        )}
-      </div>
-    </DetailDrawer>
+      campaignId={campaignId}
+      initialState={filter}
+    />
     </>
   );
 }
@@ -690,7 +1061,7 @@ function ErrorState({ error, onRetry }: { error: Error, onRetry: () => void }) {
         <p className="font-mono text-xs text-muted-foreground mb-6 line-clamp-3">
           {error.message || "Failed to retrieve control room data from server."}
         </p>
-        <Button 
+        <Button
           onClick={onRetry}
           variant="outline"
           className="border-destructive/30 text-destructive hover:bg-destructive/10 font-mono text-[10px] uppercase tracking-widest h-8"
@@ -731,13 +1102,13 @@ export default function ControlRoom() {
       {/* Background effects */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/5 via-[#030712] to-[#030712] pointer-events-none" />
       <div className="absolute inset-0 scanline-overlay opacity-20 pointer-events-none mix-blend-overlay" />
-      
+
       {/* HEADER */}
       <header className="sticky top-0 z-40 bg-[#030712]/90 backdrop-blur-xl border-b border-primary/20 px-4 sm:px-6 py-3">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-            <Link 
-              href={`/campaigns/${id}`} 
+            <Link
+              href={`/campaigns/${id}`}
               className="p-2 border border-border/40 bg-black/40 hover:bg-white/5 hover:border-border/80 transition-colors text-muted-foreground hover:text-white shrink-0"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -767,13 +1138,13 @@ export default function ControlRoom() {
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-             <Button 
-               variant="outline" 
-               size="sm" 
+             <Button
+               variant="outline"
+               size="sm"
                className="border-primary/30 bg-black/40 text-primary hover:bg-primary/10 hover:border-primary/60 hover:text-primary font-mono text-[10px] uppercase tracking-widest h-8"
                onClick={() => refetch()}
              >
-               <RefreshCw className="h-3.5 w-3.5 sm:mr-2" /> 
+               <RefreshCw className="h-3.5 w-3.5 sm:mr-2" />
                <span className="hidden sm:inline">Sync</span>
              </Button>
           </div>
@@ -783,7 +1154,7 @@ export default function ControlRoom() {
       {/* DASHBOARD GRID */}
       <main className="flex-1 p-4 sm:p-6 max-w-[1600px] w-full mx-auto relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
-          
+
           {/* LEFT COLUMN */}
           <div className="lg:col-span-5 xl:col-span-4 space-y-4 sm:space-y-6">
             <MasterplanPanel data={data.masterplan} campaignId={id} />
@@ -795,7 +1166,7 @@ export default function ControlRoom() {
           <div className="lg:col-span-7 xl:col-span-8 space-y-4 sm:space-y-6 flex flex-col">
             <CheckpointsPanel data={data.pendingCheckpoints} campaignId={id} />
             <div className="flex-1 min-h-0">
-              <ExecutionEvidencePanel data={data.executionEvidence} />
+              <ExecutionEvidencePanel data={data.executionEvidence} campaignId={id} />
             </div>
           </div>
 

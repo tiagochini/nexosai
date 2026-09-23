@@ -140,6 +140,99 @@ export interface CampaignExecuteInput {
   phase: CampaignExecuteInputPhase;
 }
 
+export type ExecutionEvidenceState =
+  (typeof ExecutionEvidenceState)[keyof typeof ExecutionEvidenceState];
+
+export const ExecutionEvidenceState = {
+  planned: "planned",
+  attempted: "attempted",
+  provider_confirmed: "provider_confirmed",
+  artifact_qc: "artifact_qc",
+} as const;
+
+export type ExecutionEvidenceSubjectType =
+  (typeof ExecutionEvidenceSubjectType)[keyof typeof ExecutionEvidenceSubjectType];
+
+export const ExecutionEvidenceSubjectType = {
+  social_post: "social_post",
+  paid_media_attempt: "paid_media_attempt",
+  paid_media_launch_plan: "paid_media_launch_plan",
+  paid_media_proposal: "paid_media_proposal",
+  product_sale: "product_sale",
+  revenue_event: "revenue_event",
+} as const;
+
+export type ControlRoomEvidenceSourceKind =
+  (typeof ControlRoomEvidenceSourceKind)[keyof typeof ControlRoomEvidenceSourceKind];
+
+export const ControlRoomEvidenceSourceKind = {
+  social_post: "social_post",
+} as const;
+
+export interface ControlRoomEvidenceSource {
+  kind: ControlRoomEvidenceSourceKind;
+  label: string;
+  href: string;
+}
+
+export interface ControlRoomEvidenceRecord {
+  id: string;
+  subjectType: string;
+  subjectId: string;
+  state: ExecutionEvidenceState;
+  createdAt: string;
+  /** @nullable */
+  masterplanVersionId: string | null;
+  /**
+   * Sanitized opaque prefix only.
+   * @nullable
+   */
+  contextFingerprint: string | null;
+  /** Recursively sanitized, size-bounded evidence details. */
+  details: unknown;
+  source: ControlRoomEvidenceSource | null;
+}
+
+export interface ControlRoomEvidenceFacet {
+  value: string;
+  /** @minimum 0 */
+  count: number;
+}
+
+export interface ControlRoomEvidenceFilters {
+  /** @nullable */
+  state: string | null;
+  /** @nullable */
+  subjectType: string | null;
+  /** @nullable */
+  subjectId: string | null;
+  /** @nullable */
+  from: string | null;
+  /** @nullable */
+  to: string | null;
+}
+
+export type ControlRoomEvidenceResponsePageInfo = {
+  /** @nullable */
+  nextCursor: string | null;
+  hasNextPage: boolean;
+  limit: number;
+};
+
+export type ControlRoomEvidenceResponseFacets = {
+  states: ControlRoomEvidenceFacet[];
+  subjectTypes: ControlRoomEvidenceFacet[];
+};
+
+export interface ControlRoomEvidenceResponse {
+  records: ControlRoomEvidenceRecord[];
+  pageInfo: ControlRoomEvidenceResponsePageInfo;
+  appliedFilters: ControlRoomEvidenceFilters;
+  /** @minimum 0 */
+  total: number;
+  facets: ControlRoomEvidenceResponseFacets;
+}
+
 export type ContractMetadataSnapshot = { [key: string]: unknown };
 
 export interface ContractMetadata {
@@ -1106,6 +1199,26 @@ export type CreateCampaign201 = {
 
 export type GetCampaign200 = {
   campaign: Campaign;
+};
+
+export type GetCampaignControlRoomEvidenceParams = {
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  cursor?: string;
+  state?: ExecutionEvidenceState;
+  subjectType?: ExecutionEvidenceSubjectType;
+  subjectId?: string;
+  /**
+   * Inclusive UTC lower bound.
+   */
+  from?: string;
+  /**
+   * Exclusive UTC upper bound.
+   */
+  to?: string;
 };
 
 export type ExecuteCampaign202 = {

@@ -665,7 +665,8 @@ flowchart TB
 
 - **M01 concluído:** Control Room UI consome API real e possui estados vazios honestos.
 - **M02 concluído:** contadores acionáveis abrem a composição persistida de entregáveis, integrações, checkpoints e estados canônicos de evidência.
-- **M03 é o próximo checkpoint:** timeline completa, paginada e filtrável com registros exatos e links de origem.
+- **M03 concluído:** timeline paginada e filtrável com ownership, ordenação determinística, registros exatos, sanitização e links de origem verificados.
+- **M04 é o próximo checkpoint:** contrato universal de preview para todos os formatos persistidos.
 - Os fundamentos já implementados são registrados como capabilities individuais, mas não promovem automaticamente todo um estágio para produção.
 - O status histórico apresentado nos screenshots deve ser importado como alegação a auditar, não como prova canônica. Cada conclusão precisa ser recalculada a partir do código, banco, testes, receipts e homologações atuais.
 
