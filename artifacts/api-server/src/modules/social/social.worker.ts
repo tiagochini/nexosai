@@ -83,5 +83,6 @@ export function stopMetricsSyncScheduler(): void {
   if (metricsInterval) {
     clearInterval(metricsInterval);
     metricsInterval = null;
+    logger.info("Social metrics sync scheduler stopped");
   }
 }

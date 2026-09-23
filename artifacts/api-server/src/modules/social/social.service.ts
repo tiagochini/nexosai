@@ -12,6 +12,7 @@ import {
   type InsertSocialPost,
   type SocialPost,
   type WorkspaceIntegration,
+  type SocialMetrics,
 } from "@workspace/db";
 import { env } from "../../lib/env.js";
 import { AppError, NotFoundError } from "../../lib/errors.js";
@@ -409,14 +410,65 @@ async function fetchInstagramAnalytics(
     base.biography = profile.biography;
     base.website = profile.website;
 
-    // 2. Recent media with insights
+    // 2. Recent media with cached insights, falling back to the Graph API.
     const mediaUrl = `${metaGraphUrl(`${accountId}/media`)}?fields=id,media_type,media_url,thumbnail_url,caption,timestamp&limit=12&access_token=${encodeURIComponent(accessToken)}`;
     const mediaRes = await fetchWithTimeout(mediaUrl);
     if (mediaRes.ok) {
       const mediaData = await mediaRes.json() as { data?: Array<{ id: string; media_type?: string; media_url?: string; thumbnail_url?: string; caption?: string; timestamp?: string }> };
+      const recentMedia = (mediaData.data ?? []).slice(0, 9);
       const posts: AccountAnalyticsPost[] = [];
 
-      for (const media of (mediaData.data ?? []).slice(0, 9)) {
+      const mediaIds = recentMedia.map((media) => media.id);
+      const cachedMetrics = new Map<string, SocialMetrics>();
+      if (mediaIds.length > 0) {
+        try {
+          const cachedRows = await db
+            .select({
+              platformPostId: socialPostsTable.platformPostId,
+              metrics: socialPostsTable.metrics,
+            })
+            .from(socialPostsTable)
+            .where(inArray(socialPostsTable.platformPostId, mediaIds));
+
+          for (const row of cachedRows) {
+            if (!row.platformPostId) continue;
+            const metrics = row.metrics as SocialMetrics;
+            const hasSyncedMetrics =
+              metrics.likes > 0 ||
+              metrics.comments > 0 ||
+              metrics.shares > 0 ||
+              metrics.views > 0 ||
+              metrics.reach > 0 ||
+              metrics.impressions > 0 ||
+              metrics.clicks > 0;
+            if (hasSyncedMetrics) cachedMetrics.set(row.platformPostId, metrics);
+          }
+        } catch (err) {
+          logger.warn(
+            { err, integrationId },
+            "Instagram metrics cache lookup failed; falling back to Graph API",
+          );
+        }
+      }
+
+      for (const media of recentMedia) {
+        const cached = cachedMetrics.get(media.id);
+        if (cached) {
+          posts.push({
+            id: media.id,
+            mediaUrl: media.media_url,
+            thumbnailUrl: media.thumbnail_url,
+            mediaType: media.media_type,
+            caption: media.caption,
+            timestamp: media.timestamp,
+            likes: cached.likes,
+            comments: cached.comments,
+            reach: cached.reach,
+            impressions: cached.impressions,
+          });
+          continue;
+        }
+
         try {
           const insightUrl = `${metaGraphUrl(`${media.id}/insights`)}?metric=impressions,reach,likes,comments,saved&access_token=${encodeURIComponent(accessToken)}`;
           const insightRes = await fetchWithTimeout(insightUrl);

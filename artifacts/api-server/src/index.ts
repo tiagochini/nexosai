@@ -122,10 +122,10 @@ const bootRecoveryCutoff = new Date(Date.now() - 30 * 60 * 1000);
 async function startBackgroundServices(): Promise<void> {
   initOrchestrationWorker();
   startSocialScheduler();
-startMetricsSyncScheduler(async () => db
-  .select({ id: socialPostsTable.id, workspaceId: socialPostsTable.workspaceId })
-  .from(socialPostsTable)
-  .where(eq(socialPostsTable.status, "published")));
+  startMetricsSyncScheduler(async () => db
+    .select({ id: socialPostsTable.id, workspaceId: socialPostsTable.workspaceId })
+    .from(socialPostsTable)
+    .where(eq(socialPostsTable.status, "published")));
   startPaidMediaScheduler();
   await initSequenceScheduler();
   startLifecycleScheduler();
