@@ -167,3 +167,17 @@ mtime_ms = 1788808177200
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:73b667a4-51ad-4d73-9ccb-20133f1322c1/7dd4e4a4-ef2c-4924-88f5-3a012799232d/db060a74-31ec-413d-8823-3492951eb063"
 storage_version_token = "1788808178201403"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "Q5igViLKM9AMBWvtKnWJF"
+uri = "file://NEXOS_WORKFLOW_MAP.md"
+type = "text"
+title = "Fluxo Operacional Canônico do NexOSAI"
+description = "Fonte única de verdade para transformar o NexOSAI em uma agência autônoma completa: briefing, inteligência, Master Plan, Realization Engine, aprovações, execução, vendas, Conselho e otimização contínua."
+logical_id = "79cbf44c-1118-4025-88cb-aba1a846b3f1"
+content_hash = "sha256:97c38d9ff2bd67d228d1dc51ff88eb12220a3a242a70f69354efc448d8a386cd"
+size = 23822
+mtime_ms = 1790142345474
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:73b667a4-51ad-4d73-9ccb-20133f1322c1/79cbf44c-1118-4025-88cb-aba1a846b3f1/9f70642c-6cb9-401c-af6a-35ddaa7d2278"
+storage_version_token = "1790142371882090"
+content_type = "text/markdown"
