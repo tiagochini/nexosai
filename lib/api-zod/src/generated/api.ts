@@ -383,6 +383,172 @@ export const GetCampaignControlRoomPreviewsResponse = zod.object({
 });
 
 /**
+ * @summary List immutable campaign version sources
+ */
+export const GetCampaignControlRoomVersionSourcesParams = zod.object({
+  campaignId: zod.coerce.string(),
+});
+
+export const getCampaignControlRoomVersionSourcesResponseSourcesItemVersionCountMin = 0;
+
+export const GetCampaignControlRoomVersionSourcesResponse = zod.object({
+  schemaVersion: zod.number(),
+  sources: zod.array(
+    zod.object({
+      id: zod.string(),
+      kind: zod.enum([
+        "masterplan",
+        "page",
+        "content_piece",
+        "media_brief",
+        "creative",
+        "social_post",
+        "campaign_asset",
+        "video_project",
+      ]),
+      label: zod.string(),
+      historyAvailable: zod.boolean(),
+      comparable: zod.boolean(),
+      versionCount: zod
+        .number()
+        .min(
+          getCampaignControlRoomVersionSourcesResponseSourcesItemVersionCountMin,
+        ),
+      catalogTruncated: zod.boolean(),
+      reason: zod.string().optional(),
+      versions: zod
+        .array(
+          zod.object({
+            id: zod.string().uuid(),
+            label: zod.string(),
+            status: zod.string(),
+            createdAt: zod.coerce.date(),
+            contentHash: zod.string(),
+            version: zod.number().optional(),
+            revision: zod.number().optional(),
+          }),
+        )
+        .optional(),
+      current: zod
+        .object({
+          id: zod.string().uuid(),
+          status: zod.string(),
+          updatedAt: zod.coerce.date(),
+        })
+        .optional(),
+    }),
+  ),
+});
+
+/**
+ * @summary Compare two immutable campaign versions
+ */
+export const GetCampaignControlRoomVersionDiffParams = zod.object({
+  campaignId: zod.coerce.string(),
+});
+
+export const getCampaignControlRoomVersionDiffQueryMaxChangesDefault = 500;
+export const getCampaignControlRoomVersionDiffQueryMaxChangesMax = 1000;
+
+export const GetCampaignControlRoomVersionDiffQueryParams = zod.object({
+  resource: zod.enum(["masterplan", "page"]),
+  sourceId: zod.coerce.string().uuid().optional(),
+  baseId: zod.coerce.string().uuid(),
+  targetId: zod.coerce.string().uuid(),
+  maxChanges: zod.coerce
+    .number()
+    .min(1)
+    .max(getCampaignControlRoomVersionDiffQueryMaxChangesMax)
+    .default(getCampaignControlRoomVersionDiffQueryMaxChangesDefault),
+});
+
+export const getCampaignControlRoomVersionDiffResponseSummaryAddedMin = 0;
+
+export const getCampaignControlRoomVersionDiffResponseSummaryRemovedMin = 0;
+
+export const getCampaignControlRoomVersionDiffResponseSummaryChangedMin = 0;
+
+export const getCampaignControlRoomVersionDiffResponseSummaryUnchangedMin = 0;
+
+export const GetCampaignControlRoomVersionDiffResponse = zod.object({
+  schemaVersion: zod.number(),
+  available: zod.boolean(),
+  resource: zod.enum(["masterplan", "page"]),
+  source: zod
+    .object({
+      id: zod.string(),
+    })
+    .optional(),
+  base: zod.object({
+    id: zod.string().uuid(),
+    label: zod.string(),
+    status: zod.string(),
+    createdAt: zod.coerce.date(),
+    contentHash: zod.string(),
+    version: zod.number().optional(),
+    revision: zod.number().optional(),
+  }),
+  target: zod.object({
+    id: zod.string().uuid(),
+    label: zod.string(),
+    status: zod.string(),
+    createdAt: zod.coerce.date(),
+    contentHash: zod.string(),
+    version: zod.number().optional(),
+    revision: zod.number().optional(),
+  }),
+  summary: zod.object({
+    added: zod
+      .number()
+      .min(getCampaignControlRoomVersionDiffResponseSummaryAddedMin),
+    removed: zod
+      .number()
+      .min(getCampaignControlRoomVersionDiffResponseSummaryRemovedMin),
+    changed: zod
+      .number()
+      .min(getCampaignControlRoomVersionDiffResponseSummaryChangedMin),
+    unchanged: zod
+      .number()
+      .min(getCampaignControlRoomVersionDiffResponseSummaryUnchangedMin),
+    truncated: zod.boolean(),
+  }),
+  changes: zod.array(
+    zod.object({
+      kind: zod.enum(["added", "removed", "changed"]),
+      path: zod.string(),
+      category: zod.enum([
+        "cta",
+        "media",
+        "rules",
+        "phase",
+        "text",
+        "structure",
+        "masterplan",
+      ]),
+      before: zod
+        .union([
+          zod.string(),
+          zod.number(),
+          zod.boolean(),
+          zod.array(zod.unknown()),
+          zod.record(zod.string(), zod.unknown()),
+        ])
+        .nullish(),
+      after: zod
+        .union([
+          zod.string(),
+          zod.number(),
+          zod.boolean(),
+          zod.array(zod.unknown()),
+          zod.record(zod.string(), zod.unknown()),
+        ])
+        .nullish(),
+    }),
+  ),
+  warnings: zod.array(zod.string()),
+});
+
+/**
  * @summary Execute campaign phase
  */
 export const ExecuteCampaignParams = zod.object({

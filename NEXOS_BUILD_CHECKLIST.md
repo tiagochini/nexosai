@@ -9,10 +9,10 @@
 ## Estado executivo
 
 - **Estágio operacional em foco:** transversal — Control Room e governança de capacidades;
-- **Nível de maturidade em foco:** M05 — Version diff;
-- **Último nível concluído:** M04 — Preview universal;
-- **Checkpoint atual:** M04 concluído e comprovado com fixtures autenticados isolados;
-- **Próximo checkpoint:** definir comparação persistida e segura entre versões de conteúdo, Master Plan, CTA, mídia e revisões.
+- **Nível de maturidade em foco:** M06 — Approval Center;
+- **Último nível concluído:** M05 — Version diff;
+- **Checkpoint atual:** M05 concluído e comprovado com fixtures reais de banco e E2E autenticado isolado;
+- **Próximo checkpoint:** vincular aprovação e rejeição motivada à versão exata do Master Plan ou entregável.
 
 ## Checklist dos 12 níveis de maturidade
 
@@ -22,8 +22,8 @@
 | M02 | Contadores clicáveis | ✅ Concluído | Build, API real, fixture autenticado, composição exata, desktop/mobile e acessibilidade | Manter sem regressão |
 | M03 | Drilldown de evidência | ✅ Concluído | Contrato OpenAPI, paginação determinística, filtros exatos, sanitização, ownership, links verificados e E2E desktop/mobile | Manter sem regressão |
 | M04 | Preview universal | ✅ Concluído | Endpoint paginado, sete fontes persistidas, renderizadores seguros, filtros, ownership e E2E desktop/mobile | Manter sem regressão |
-| M05 | Version diff | ▶️ Próximo | — | Comparação entre versões e revisões |
-| M06 | Approval Center | ⬜ Pendente | — | Aprovação/rejeição motivada e versionada |
+| M05 | Version diff | ✅ Concluído | Catálogo honesto, Master Plan e revisões de página, diff determinístico/sanitizado/limitado, ownership e E2E desktop/mobile | Manter sem regressão |
+| M06 | Approval Center | ▶️ Próximo | — | Aprovação/rejeição motivada e versionada |
 | M07 | SLA e lembretes | ⬜ Pendente | — | `dueAt`, aviso, entrega e decisão |
 | M08 | Autoexecução condicionada | ⬜ Pendente | — | Gates, política, idempotência e pausa |
 | M09 | Contratos de realização | ⬜ Pendente | — | Preflight, attempt, receipt, QC e compensation |
@@ -203,16 +203,72 @@ O estado abaixo será calculado capability por capability. Nenhum estágio é co
 - formulários e checkout ainda não possuem uma fonte persistida dedicada no contrato M04;
 - o bundle principal continua emitindo o aviso pré-existente de tamanho, sem falha de build.
 
-## Unidade atual — M05 Version diff
+## Última unidade concluída — M05 Version diff
+
+### Entregue no código
+
+- [x] catálogo read-only de fontes versionadas por campanha e workspace;
+- [x] comparação de snapshots imutáveis do Master Plan;
+- [x] comparação de revisões persistidas de páginas;
+- [x] fontes mutáveis declaradas honestamente com `history_not_persisted`;
+- [x] distinção entre histórico existente e histórico comparável;
+- [x] seleção explícita de versão base e alvo, sem “versão atual” inferida;
+- [x] diff determinístico por JSON Pointer, com adições, remoções, alterações, categorias e contagem de campos inalterados;
+- [x] categorias para texto, estrutura, CTA, mídia, regras, fase e Master Plan;
+- [x] sanitização de chaves sensíveis, credenciais, JWT, PEM e URLs sem falso resultado idêntico;
+- [x] limites globais de profundidade, nós, itens, mudanças e bytes, com avisos de comparação incompleta;
+- [x] contrato OpenAPI fortemente tipado e clientes React/Zod regenerados;
+- [x] drawer responsivo com loading, erro, retry, vazio, histórico insuficiente, resultado inalterado e truncamento;
+- [x] troca de fonte ou versão remove imediatamente qualquer resultado anterior;
+- [x] Escape em dois níveis, controles acessíveis e ausência de overflow horizontal;
+- [x] preservação dos contratos e interfaces M01–M04.
+
+### Validação concluída
+
+- [x] codegen e typecheck das bibliotecas, API e frontend;
+- [x] build de produção do frontend;
+- [x] testes focados M01/M02, M03, M04 e M05;
+- [x] fixture M05 real de banco com ownership, IDOR, determinismo, sanitização, limites e imutabilidade;
+- [x] diferenças isoladas após 4.096 caracteres, em valores sensíveis e somente em query/credenciais de URL;
+- [x] payload adversarial de 3.500 itens com resposta limitada e aviso explícito;
+- [x] revisão arquitetural independente sem bloqueadores críticos, altos ou médios;
+- [x] `git diff --check`;
+- [x] app e API reiniciados e saudáveis;
+- [x] E2E autenticado com usuário, workspace, campanha e token temporários isolados;
+- [x] Master Plan com três versões e página com duas revisões comparados pela UI;
+- [x] desktop 1440×1000 e mobile 390×844 sem overflow;
+- [x] reset imediato de resultado, Escape, fechamento, fontes indisponíveis e comparação de página verificados;
+- [x] cleanup confirmado com zero usuário, campanha ou marcador residual.
+
+### Provas do checkpoint
+
+- todos os quatro endpoints protegidos exercitados no E2E retornaram 200;
+- Master Plan: primeira comparação com 1 adição, 3 alterações e 6 campos inalterados; segunda seleção gerou resultado novo após reset explícito;
+- página: 2 alterações reais, incluindo HTML e headline, com antes/depois;
+- fontes sem histórico permaneceram visíveis e não acionáveis;
+- diferenças em texto longo, segredo e URL permaneceram detectáveis sem expor caudas, tokens, credenciais, query ou fragmento;
+- payload acima do orçamento marcou `summary.truncated` e `comparison_incomplete_due_to_limits`;
+- mobile: documento e viewport com 390 px, cards contidos no drawer e botão de fechar alcançável;
+- nenhuma escrita, aprovação, regeneração, publicação, IA, cobrança, scheduler ou provider foi acionado pelo M05.
+
+### Riscos e limitações remanescentes
+
+- M05 compara somente fontes com histórico imutável persistido: versões do Master Plan e revisões de página;
+- conteúdo, media briefs, criativos, posts sociais, assets e projetos de vídeo ainda não possuem histórico persistido e não recebem versões inventadas;
+- catálogos retornam no máximo 100 metadados por fonte e sinalizam truncamento;
+- comparações que excedem os limites globais são parciais e sempre exibem aviso explícito;
+- M05 é somente leitura; aprovação, rejeição e binding de decisão pertencem ao M06;
+- o bundle principal continua emitindo o aviso pré-existente de tamanho, sem falha de build.
+
+## Unidade atual — M06 Approval Center
 
 ### Escopo inicial
 
-- [ ] inventariar fontes persistidas que possuem versões ou revisões comparáveis;
-- [ ] definir contrato read-only para versão base e versão alvo;
-- [ ] comparar texto, estrutura, CTA, mídia, regras e Master Plan sem expor segredos;
-- [ ] apresentar adições, remoções e alterações com contexto de origem;
-- [ ] validar ownership, paginação aplicável, desktop, mobile e acessibilidade;
-- [ ] manter M01–M04 sem regressão.
+- [ ] inventariar aprovações existentes e suas autoridades canônicas;
+- [ ] vincular toda decisão à versão exata, workspace, campanha, usuário e contexto;
+- [ ] exigir motivo persistido para rejeição;
+- [ ] impedir aprovação de versão obsoleta ou diferente da exibida;
+- [ ] manter M01–M05 sem regressão.
 
 ## Protocolo obrigatório após cada desenvolvimento
 

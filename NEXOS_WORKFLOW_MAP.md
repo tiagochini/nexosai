@@ -499,6 +499,14 @@ Esta fila não é um segundo fluxo comercial. Ela é o eixo de maturidade aplica
 
 Este fluxo é adotado como contrato de implementação. Cada alteração futura deve indicar qual gate, estado, vertical e evidência ela acrescenta — ou ser rejeitada por duplicar, enfraquecer ou ocultar este fluxo.
 
+### Checkpoint comprovado
+
+- **M01–M05 concluídos:** Control Room, contadores, drilldown de evidência, preview universal e version diff permanecem cumulativos.
+- **M05 Version diff:** compara somente snapshots imutáveis do Master Plan e revisões persistidas de páginas; base e alvo são explícitos, o resultado é read-only, tenant-scoped, determinístico, sanitizado e limitado.
+- Fontes mutáveis sem histórico persistido continuam visíveis como `history_not_persisted`; timestamps nunca são promovidos a versões.
+- Comparações incompletas por limite de profundidade, nós, itens, mudanças ou bytes nunca são apresentadas como idênticas e carregam aviso explícito.
+- **Próximo checkpoint único:** M06 Approval Center, com decisão motivada e vinculada à versão exata exibida ao usuário.
+
 ## 13. Capability Index canônico
 
 O plano completo de indexação está em [`NEXOS_CAPABILITY_INDEX.md`](./NEXOS_CAPABILITY_INDEX.md).

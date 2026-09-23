@@ -285,6 +285,39 @@ paths:
         "400": { description: Invalid filters or cursor }
         "404": { description: Campaign not found in authenticated workspace }
 
+  /campaigns/{campaignId}/control-room/version-sources:
+    get:
+      operationId: getCampaignControlRoomVersionSources
+      tags: [campaigns]
+      summary: List immutable campaign version sources
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/campaignId" }]
+      responses:
+        "200":
+          description: Version catalog
+          content: { application/json: { schema: { $ref: "#/components/schemas/ControlRoomVersionSourcesResponse" } } }
+        "404": { description: Campaign not found in authenticated workspace }
+
+  /campaigns/{campaignId}/control-room/version-diff:
+    get:
+      operationId: getCampaignControlRoomVersionDiff
+      tags: [campaigns]
+      summary: Compare two immutable campaign versions
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/campaignId" }
+        - { name: resource, in: query, required: true, schema: { type: string, enum: [masterplan, page] } }
+        - { name: sourceId, in: query, schema: { type: string, format: uuid } }
+        - { name: baseId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: targetId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: maxChanges, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 500 } }
+      responses:
+        "200":
+          description: Deterministic sanitized diff
+          content: { application/json: { schema: { $ref: "#/components/schemas/ControlRoomVersionDiffResponse" } } }
+        "400": { description: Invalid parameters }
+        "404": { description: Version not found in authenticated workspace }
+
   /campaigns/{campaignId}/execute:
     post:
       operationId: executeCampaign
@@ -2060,6 +2093,95 @@ components:
         providerRequestId: { type: string }
         evidence: { type: object, additionalProperties: {} }
       required: [evidence]
+    ControlRoomVersionSource:
+      type: object
+      additionalProperties: false
+      required: [id, kind, label, historyAvailable, comparable, versionCount, catalogTruncated]
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [masterplan, page, content_piece, media_brief, creative, social_post, campaign_asset, video_project] }
+        label: { type: string }
+        historyAvailable: { type: boolean }
+        comparable: { type: boolean }
+        versionCount: { type: integer, minimum: 0 }
+        catalogTruncated: { type: boolean }
+        reason: { type: string }
+        versions: { type: array, items: { $ref: "#/components/schemas/ControlRoomVersionMetadata" } }
+        current: { $ref: "#/components/schemas/ControlRoomCurrentVersionMetadata" }
+    ControlRoomVersionMetadata:
+      type: object
+      additionalProperties: false
+      required: [id, label, status, createdAt, contentHash]
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string }
+        status: { type: string }
+        createdAt: { type: string, format: date-time }
+        contentHash: { type: string }
+        version: { type: integer }
+        revision: { type: integer }
+    ControlRoomCurrentVersionMetadata:
+      type: object
+      additionalProperties: false
+      required: [id, status, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string }
+        updatedAt: { type: string, format: date-time }
+    ControlRoomVersionSourcesResponse:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, sources]
+      properties:
+        schemaVersion: { type: integer, const: 1 }
+        sources: { type: array, items: { $ref: "#/components/schemas/ControlRoomVersionSource" } }
+    ControlRoomVersionDiffResponse:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, available, resource, base, target, summary, changes, warnings]
+      properties:
+        schemaVersion: { type: integer, const: 1 }
+        available: { type: boolean }
+        resource: { type: string, enum: [masterplan, page] }
+        source: { $ref: "#/components/schemas/ControlRoomDiffSourceMetadata" }
+        base: { $ref: "#/components/schemas/ControlRoomVersionMetadata" }
+        target: { $ref: "#/components/schemas/ControlRoomVersionMetadata" }
+        summary: { $ref: "#/components/schemas/ControlRoomDiffSummary" }
+        changes: { type: array, items: { $ref: "#/components/schemas/ControlRoomDiffChange" } }
+        warnings: { type: array, items: { type: string } }
+    ControlRoomDiffSourceMetadata:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties: { id: { type: string } }
+    ControlRoomDiffSummary:
+      type: object
+      additionalProperties: false
+      required: [added, removed, changed, unchanged, truncated]
+      properties:
+        added: { type: integer, minimum: 0 }
+        removed: { type: integer, minimum: 0 }
+        changed: { type: integer, minimum: 0 }
+        unchanged: { type: integer, minimum: 0 }
+        truncated: { type: boolean }
+    ControlRoomDiffChange:
+      type: object
+      additionalProperties: false
+      required: [kind, path, category]
+      properties:
+        kind: { type: string, enum: [added, removed, changed] }
+        path: { type: string }
+        category: { type: string, enum: [cta, media, rules, phase, text, structure, masterplan] }
+        before: { $ref: "#/components/schemas/ControlRoomJsonValue" }
+        after: { $ref: "#/components/schemas/ControlRoomJsonValue" }
+    ControlRoomJsonValue:
+      nullable: true
+      oneOf:
+        - { type: string }
+        - { type: number }
+        - { type: boolean }
+        - { type: array, items: { $ref: "#/components/schemas/ControlRoomJsonValue" } }
+        - { type: object, additionalProperties: { $ref: "#/components/schemas/ControlRoomJsonValue" } }
   responses:
     PaidMediaValidationError:
       description: Invalid paid-media request

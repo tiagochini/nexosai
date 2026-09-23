@@ -11,12 +11,14 @@ import {
   campaignAssetsTable,
   campaignCreativesTable,
   pagesTable,
+  landingRevisionsTable,
   videoProjectsTable,
   workspaceIntegrationsTable,
 } from "@workspace/db";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { env } from "../../lib/env.js";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash } from "node:crypto";
 
 type JsonObject = Record<string, unknown>;
 
@@ -572,4 +574,174 @@ export async function getCampaignControlRoomPreviews(campaignId: string, workspa
   const hasNextPage = filtered.length > filters.limit;
   const binding = JSON.stringify({ campaignId, workspaceId, limit: filters.limit, kind: filters.kind ?? null, status: filters.status ?? null, updatedFrom: filters.updatedFrom ?? null, updatedTo: filters.updatedTo ?? null });
   return { records: page.map(previewRecord), pageInfo: { nextCursor: hasNextPage ? previewCursor({ id: page.at(-1)!.id, kind: page.at(-1)!.kind, updatedAt: page.at(-1)!.updatedAt.toISOString(), exp: Date.now() + 86400000, binding }) : null, hasNextPage, limit: filters.limit }, appliedFilters: { kind: filters.kind ?? null, status: filters.status ?? null, updatedFrom: filters.updatedFrom ?? null, updatedTo: filters.updatedTo ?? null }, total: rows.filter(r => (!filters.kind || r.kind === filters.kind) && (!filters.status || r.status === filters.status)).length };
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const DIFF_SENSITIVE = /(?:token|secret|password|authorization|cookie|credential|private[\s_-]*key|session|signature|signed[\s_-]*url|(?:api|access|refresh)[\s_-]*key)/i;
+type DiffValue = null | boolean | number | string | DiffValue[] | { [key: string]: DiffValue };
+
+type DiffBudget = { nodes: number; incomplete: boolean; sentinel: boolean; items: number; keys: number };
+type RedactedDiff = { __redacted: true; fingerprint: string };
+function safeDiffValue(value: unknown, depth = 0, state: DiffBudget = { nodes: 0, incomplete: false, sentinel: false, items: 0, keys: 0 }): DiffValue | RedactedDiff {
+  if (++state.nodes > 3000 || state.items > 2000 || state.keys > 2000) {
+    state.incomplete = true;
+    if (!state.sentinel) { state.sentinel = true; return "[REDACTED_DIFF_LIMIT]"; }
+    return undefined as unknown as DiffValue;
+  }
+  if (depth > 12) { state.incomplete = true; return "[REDACTED_DIFF_DEPTH]"; }
+  if (typeof value === "string") {
+    let safe = value.replace(PEM_PRIVATE_KEY, "[REDACTED_PRIVATE_KEY]").replace(BEARER_VALUE, "Bearer [REDACTED]").replace(JWT_VALUE, "[REDACTED_JWT]").replace(HTTP_URL_VALUE, stripPublicUrlCredentials);
+    if (HTTP_URL_VALUE.test(value)) {
+      HTTP_URL_VALUE.lastIndex = 0;
+      const stripped = safe.replace(HTTP_URL_VALUE, stripPublicUrlCredentials);
+      if (stripped !== value) return { __redacted: true, fingerprint: createHash("sha256").update(value).digest("hex").slice(0, 16) };
+    }
+    if (safe !== value || /\bBearer\s+|\beyJ[A-Za-z0-9_-]{8,}\.|-----BEGIN/i.test(value)) {
+      return { __redacted: true, fingerprint: createHash("sha256").update(value).digest("hex").slice(0, 16) };
+    }
+    return safe;
+  }
+  if (value === null || typeof value === "boolean" || typeof value === "number") return value;
+  if (Array.isArray(value)) {
+    const result: DiffValue[] = [];
+    for (const item of value) {
+      if (++state.items > 2000) { state.incomplete = true; if (!state.sentinel) { state.sentinel = true; result.push("[REDACTED_DIFF_LIMIT]"); } break; }
+      result.push(safeDiffValue(item, depth + 1, state) as DiffValue);
+    }
+    return result;
+  }
+  if (typeof value === "object") {
+    const out: Record<string, DiffValue> = {};
+    for (const key of Object.keys(value as object).sort()) {
+      if (++state.keys > 2000) { state.incomplete = true; if (!state.sentinel) { state.sentinel = true; out.__redacted_truncation = "[REDACTED_DIFF_LIMIT]"; } break; }
+      const raw = (value as Record<string, unknown>)[key];
+      if (DIFF_SENSITIVE.test(key)) {
+        const serialized = JSON.stringify(raw) ?? String(raw);
+        out[key] = { __redacted: true, fingerprint: createHash("sha256").update(serialized).digest("hex").slice(0, 16) } as unknown as DiffValue;
+      } else out[key] = safeDiffValue(raw, depth + 1, state) as DiffValue;
+    }
+    return out;
+  }
+  return String(value).slice(0, 256);
+}
+
+function diffCategory(path: string, resource: "masterplan" | "page") {
+  const segment = path.split("/").find(Boolean)?.toLowerCase() ?? "";
+  if (/cta|call.?to.?action/.test(segment)) return "cta";
+  if (/media|image|video|asset/.test(segment)) return "media";
+  if (/rule|constraint|condition/.test(segment)) return "rules";
+  if (/phase|stage/.test(segment)) return "phase";
+  if (/text|title|copy|description|html|body/.test(segment)) return "text";
+  return resource === "masterplan" ? "masterplan" : "structure";
+}
+
+function pointer(segment: string) { return segment.replace(/~/g, "~0").replace(/\//g, "~1"); }
+function diffPreview(value: DiffValue | undefined): DiffValue | undefined {
+  if (value && typeof value === "object" && !Array.isArray(value) && "__redacted" in value) return "[REDACTED_SECRET_VALUE]";
+  if (typeof value === "string" && value.length > 4096) return `${value.slice(0, 4096)}[REDACTED_DIFF_STRING_LIMIT]`;
+  if (Array.isArray(value)) return value.map(v => diffPreview(v)).filter((v): v is DiffValue => v !== undefined);
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, diffPreview(v)]).filter(([, v]) => v !== undefined)) as DiffValue;
+  return value;
+}
+function containsLongDiffString(value: DiffValue): boolean {
+  if (typeof value === "string") return value.length > 4096;
+  if (Array.isArray(value)) return value.some(containsLongDiffString);
+  if (value && typeof value === "object") return Object.values(value).some(containsLongDiffString);
+  return false;
+}
+function canonicalDiff(base: DiffValue, target: DiffValue, resource: "masterplan" | "page") {
+  const changes: Array<{ kind: "added" | "removed" | "changed"; path: string; category: string; before?: DiffValue; after?: DiffValue }> = [];
+  let unchanged = 0;
+  const walk = (a: DiffValue | undefined, b: DiffValue | undefined, path: string) => {
+    if (a === undefined && b !== undefined) { changes.push({ kind: "added", path, category: diffCategory(path, resource), after: diffPreview(b) }); return; }
+    if (a !== undefined && b === undefined) { changes.push({ kind: "removed", path, category: diffCategory(path, resource), before: diffPreview(a) }); return; }
+    if ((a && typeof a === "object" && !Array.isArray(a) && "__redacted" in a) || (b && typeof b === "object" && !Array.isArray(b) && "__redacted" in b)) {
+      if (JSON.stringify(a) !== JSON.stringify(b)) changes.push({ kind: "changed", path, category: diffCategory(path, resource), before: diffPreview(a), after: diffPreview(b) });
+      else unchanged++;
+      return;
+    }
+    if (Array.isArray(a) && Array.isArray(b)) {
+      const len = Math.max(a.length, b.length);
+      for (let i = 0; i < len; i++) walk(a[i], b[i], `${path}/${i}`);
+      return;
+    }
+    if (a && b && typeof a === "object" && typeof b === "object" && !Array.isArray(a) && !Array.isArray(b)) {
+      const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])].sort();
+      for (const key of keys) walk((a as Record<string, DiffValue>)[key], (b as Record<string, DiffValue>)[key], `${path}/${pointer(key)}`);
+      return;
+    }
+    if (JSON.stringify(a) === JSON.stringify(b)) unchanged++;
+    else changes.push({ kind: "changed", path, category: diffCategory(path, resource), before: diffPreview(a), after: diffPreview(b) });
+  };
+  walk(base, target, "");
+  changes.sort((x, y) => x.path.localeCompare(y.path) || x.kind.localeCompare(y.kind));
+  return { changes, unchanged };
+}
+
+function versionMetadata(row: any, resource: "masterplan" | "page") {
+  return { id: row.id, [resource === "masterplan" ? "version" : "revision"]: resource === "masterplan" ? row.version : row.revision,
+    label: `${resource === "masterplan" ? "v" : "r"}${resource === "masterplan" ? row.version : row.revision}`,
+    status: row.status, createdAt: row.createdAt, contentHash: row.contentHash };
+}
+
+export async function getCampaignControlRoomVersionSources(campaignId: string, workspaceId: string) {
+  const [campaign] = await db.select({ id: campaignsTable.id }).from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).limit(1);
+  if (!campaign) throw new NotFoundError("Campaign");
+  const [masters, masterCountRows, pages] = await Promise.all([
+    db.select({ id: masterplanVersionsTable.id, version: masterplanVersionsTable.version, status: masterplanVersionsTable.status, createdAt: masterplanVersionsTable.createdAt, contentHash: masterplanVersionsTable.contentHash })
+      .from(masterplanVersionsTable).where(and(eq(masterplanVersionsTable.workspaceId, workspaceId), eq(masterplanVersionsTable.campaignId, campaignId))).orderBy(desc(masterplanVersionsTable.version)).limit(100),
+    db.select({ total: count() }).from(masterplanVersionsTable).where(and(eq(masterplanVersionsTable.workspaceId, workspaceId), eq(masterplanVersionsTable.campaignId, campaignId))),
+    db.select({ id: pagesTable.id, title: pagesTable.title, type: pagesTable.type, status: pagesTable.status, updatedAt: pagesTable.updatedAt })
+      .from(pagesTable).where(and(eq(pagesTable.workspaceId, workspaceId), eq(pagesTable.campaignId, campaignId))).orderBy(pagesTable.id).limit(100),
+  ]);
+  const pageSources = await Promise.all(pages.map(async page => {
+    const [revisions, revisionCountRows] = await Promise.all([db.select({ id: landingRevisionsTable.id, revision: landingRevisionsTable.revision, status: landingRevisionsTable.status, createdAt: landingRevisionsTable.createdAt, contentHash: landingRevisionsTable.contentHash })
+      .from(landingRevisionsTable).where(and(eq(landingRevisionsTable.workspaceId, workspaceId), eq(landingRevisionsTable.pageId, page.id))).orderBy(desc(landingRevisionsTable.revision)).limit(100),
+      db.select({ total: count() }).from(landingRevisionsTable).where(and(eq(landingRevisionsTable.workspaceId, workspaceId), eq(landingRevisionsTable.pageId, page.id)))]);
+    const versionCount = Number(revisionCountRows[0]?.total ?? 0);
+    return { id: page.id, kind: "page", label: page.title.slice(0, 512), historyAvailable: versionCount > 0, comparable: versionCount >= 2, versionCount, catalogTruncated: versionCount > revisions.length, ...(revisions.length ? { versions: revisions.map(r => versionMetadata(r, "page")) } : { reason: "history_not_persisted" }), current: { id: page.id, status: page.status, updatedAt: page.updatedAt } };
+  }));
+  const masterVersionCount = Number(masterCountRows[0]?.total ?? 0);
+  return { schemaVersion: 1, sources: [
+    { id: "masterplan", kind: "masterplan", label: "Masterplan", historyAvailable: masterVersionCount > 0, comparable: masterVersionCount >= 2, versionCount: masterVersionCount, catalogTruncated: masterVersionCount > masters.length, ...(masters.length ? { versions: masters.map(r => versionMetadata(r, "masterplan")) } : { reason: "history_not_persisted" }) },
+    ...pageSources,
+    ...(["content_piece", "media_brief", "creative", "social_post", "campaign_asset", "video_project"].map(kind => ({ id: kind, kind, label: kind, historyAvailable: false, comparable: false, versionCount: 0, catalogTruncated: false, reason: "history_not_persisted" }))),
+  ] };
+}
+
+export async function getCampaignControlRoomVersionDiff(campaignId: string, workspaceId: string, input: { resource: "masterplan" | "page"; sourceId?: string; baseId: string; targetId: string; maxChanges: number }) {
+  if (!UUID.test(campaignId) || !UUID.test(input.baseId) || !UUID.test(input.targetId) || (input.sourceId && !UUID.test(input.sourceId))) throw new ValidationError("Invalid version identifiers");
+  if (input.baseId === input.targetId || (input.resource === "page" && !input.sourceId) || (input.resource === "masterplan" && input.sourceId)) throw new ValidationError("Invalid diff combination");
+  const [campaign] = await db.select({ id: campaignsTable.id }).from(campaignsTable).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).limit(1);
+  if (!campaign) throw new NotFoundError("Campaign");
+  if (input.resource === "masterplan") {
+    const rows = await db.select().from(masterplanVersionsTable).where(and(eq(masterplanVersionsTable.workspaceId, workspaceId), eq(masterplanVersionsTable.campaignId, campaignId), inArray(masterplanVersionsTable.id, [input.baseId, input.targetId]))).limit(2);
+    if (rows.length !== 2) throw new NotFoundError("Version");
+    const base = rows.find(r => r.id === input.baseId)!; const target = rows.find(r => r.id === input.targetId)!;
+    return buildDiffResponse("masterplan", undefined, base, target, input.maxChanges);
+  }
+  const [page] = await db.select({ id: pagesTable.id }).from(pagesTable).where(and(eq(pagesTable.id, input.sourceId!), eq(pagesTable.workspaceId, workspaceId), eq(pagesTable.campaignId, campaignId))).limit(1);
+  if (!page) throw new NotFoundError("Page");
+  const rows = await db.select().from(landingRevisionsTable).where(and(eq(landingRevisionsTable.workspaceId, workspaceId), eq(landingRevisionsTable.pageId, page.id), inArray(landingRevisionsTable.id, [input.baseId, input.targetId]))).limit(2);
+  if (rows.length !== 2) throw new NotFoundError("Revision");
+  return buildDiffResponse("page", page.id, rows.find(r => r.id === input.baseId)!, rows.find(r => r.id === input.targetId)!, input.maxChanges);
+}
+
+function buildDiffResponse(resource: "masterplan" | "page", sourceId: string | undefined, base: any, target: any, maxChanges: number) {
+  const state: DiffBudget = { nodes: 0, incomplete: false, sentinel: false, items: 0, keys: 0 };
+  const canonical = (row: any): DiffValue => resource === "masterplan" ? safeDiffValue(row.snapshot, 0, state) as DiffValue : safeDiffValue({ source: row.source, html: row.html }, 0, state) as DiffValue;
+  const baseSafe = canonical(base);
+  const targetSafe = canonical(target);
+  const result = canonicalDiff(baseSafe, targetSafe, resource);
+  const truncated = result.changes.length > maxChanges || state.incomplete;
+  const summary = { added: result.changes.filter(c => c.kind === "added").length, removed: result.changes.filter(c => c.kind === "removed").length, changed: result.changes.filter(c => c.kind === "changed").length, unchanged: result.unchanged, truncated };
+  const warnings = [];
+  if (state.incomplete) warnings.push("comparison_incomplete_due_to_limits");
+  if (containsLongDiffString(baseSafe) || containsLongDiffString(targetSafe)) warnings.push("values_truncated_to_preview_limit");
+  if (result.changes.length > maxChanges) warnings.push("changes_truncated_to_maxChanges");
+  const changes = result.changes.slice(0, maxChanges);
+  while (changes.length && Buffer.byteLength(JSON.stringify(changes), "utf8") > 256_000) changes.pop();
+  if (changes.length < Math.min(result.changes.length, maxChanges) && !warnings.includes("response_output_truncated_to_byte_limit")) warnings.push("response_output_truncated_to_byte_limit");
+  return { schemaVersion: 1, available: true, resource, source: sourceId ? { id: sourceId } : { id: "masterplan" }, base: versionMetadata(base, resource), target: versionMetadata(target, resource), summary: { ...summary, truncated: summary.truncated || changes.length < Math.min(result.changes.length, maxChanges) }, changes, warnings };
 }

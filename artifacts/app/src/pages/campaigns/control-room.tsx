@@ -23,6 +23,8 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { UniversalPreviewDrawer } from "./components/universal-preview-drawer";
+import { VersionDiffDrawer } from "./components/version-diff-drawer";
+import { GitCompare } from "lucide-react";
 
 interface ControlRoomResponse {
   campaign: {
@@ -1098,6 +1100,7 @@ function ErrorState({ error, onRetry }: { error: Error, onRetry: () => void }) {
 export default function ControlRoom() {
   const [, params] = useRoute("/campaigns/:id/control-room");
   const id = params?.id || "";
+  const [versionDiffOpen, setVersionDiffOpen] = useState(false);
 
   const { data, isLoading, error, refetch } = useQuery<ControlRoomResponse>({
     queryKey: ["/api/campaigns", id, "control-room"],
@@ -1179,6 +1182,21 @@ export default function ControlRoom() {
 
           {/* LEFT COLUMN */}
           <div className="lg:col-span-5 xl:col-span-4 space-y-4 sm:space-y-6">
+            <div className="flex items-center justify-between border border-border/20 bg-black/40 p-3">
+              <div className="flex items-center gap-2">
+                <GitCompare className="h-4 w-4 text-muted-foreground" />
+                <span className="font-mono text-[10px] uppercase tracking-widest text-white">Controle de Versão</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/60 font-mono text-[9px] uppercase tracking-widest"
+                data-testid="btn-open-version-diff"
+                onClick={() => setVersionDiffOpen(true)}
+              >
+                Comparar Histórico
+              </Button>
+            </div>
             <MasterplanPanel data={data.masterplan} campaignId={id} />
             <DeliverablesPanel data={data.deliverables} campaignId={id} />
             <CredentialsPanel data={data.credentials} />
@@ -1194,6 +1212,11 @@ export default function ControlRoom() {
 
         </div>
       </main>
+      <VersionDiffDrawer
+        open={versionDiffOpen}
+        onOpenChange={setVersionDiffOpen}
+        campaignId={id}
+      />
     </div>
   );
 }

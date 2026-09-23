@@ -33,6 +33,8 @@ import type {
   ContractAcceptanceRequiredError,
   ControlRoomEvidenceResponse,
   ControlRoomPreviewsResponse,
+  ControlRoomVersionDiffResponse,
+  ControlRoomVersionSourcesResponse,
   CreateCampaign201,
   CreditsBalance,
   ExecuteCampaign202,
@@ -42,6 +44,7 @@ import type {
   GetCampaign200,
   GetCampaignControlRoomEvidenceParams,
   GetCampaignControlRoomPreviewsParams,
+  GetCampaignControlRoomVersionDiffParams,
   GetSequence200,
   HealthStatus,
   IntakeResponse,
@@ -1064,6 +1067,233 @@ export function useGetCampaignControlRoomPreviews<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetCampaignControlRoomPreviewsQueryOptions(
+    campaignId,
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List immutable campaign version sources
+ */
+export const getGetCampaignControlRoomVersionSourcesUrl = (
+  campaignId: string,
+) => {
+  return `/api/campaigns/${campaignId}/control-room/version-sources`;
+};
+
+export const getCampaignControlRoomVersionSources = async (
+  campaignId: string,
+  options?: RequestInit,
+): Promise<ControlRoomVersionSourcesResponse> => {
+  return customFetch<ControlRoomVersionSourcesResponse>(
+    getGetCampaignControlRoomVersionSourcesUrl(campaignId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetCampaignControlRoomVersionSourcesQueryKey = (
+  campaignId: string,
+) => {
+  return [`/api/campaigns/${campaignId}/control-room/version-sources`] as const;
+};
+
+export const getGetCampaignControlRoomVersionSourcesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCampaignControlRoomVersionSources>>,
+  TError = ErrorType<void>,
+>(
+  campaignId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaignControlRoomVersionSources>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetCampaignControlRoomVersionSourcesQueryKey(campaignId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCampaignControlRoomVersionSources>>
+  > = ({ signal }) =>
+    getCampaignControlRoomVersionSources(campaignId, {
+      signal,
+      ...requestOptions,
+    });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!campaignId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCampaignControlRoomVersionSources>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCampaignControlRoomVersionSourcesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCampaignControlRoomVersionSources>>
+>;
+export type GetCampaignControlRoomVersionSourcesQueryError = ErrorType<void>;
+
+/**
+ * @summary List immutable campaign version sources
+ */
+
+export function useGetCampaignControlRoomVersionSources<
+  TData = Awaited<ReturnType<typeof getCampaignControlRoomVersionSources>>,
+  TError = ErrorType<void>,
+>(
+  campaignId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaignControlRoomVersionSources>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCampaignControlRoomVersionSourcesQueryOptions(
+    campaignId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Compare two immutable campaign versions
+ */
+export const getGetCampaignControlRoomVersionDiffUrl = (
+  campaignId: string,
+  params: GetCampaignControlRoomVersionDiffParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/campaigns/${campaignId}/control-room/version-diff?${stringifiedParams}`
+    : `/api/campaigns/${campaignId}/control-room/version-diff`;
+};
+
+export const getCampaignControlRoomVersionDiff = async (
+  campaignId: string,
+  params: GetCampaignControlRoomVersionDiffParams,
+  options?: RequestInit,
+): Promise<ControlRoomVersionDiffResponse> => {
+  return customFetch<ControlRoomVersionDiffResponse>(
+    getGetCampaignControlRoomVersionDiffUrl(campaignId, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetCampaignControlRoomVersionDiffQueryKey = (
+  campaignId: string,
+  params?: GetCampaignControlRoomVersionDiffParams,
+) => {
+  return [
+    `/api/campaigns/${campaignId}/control-room/version-diff`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetCampaignControlRoomVersionDiffQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCampaignControlRoomVersionDiff>>,
+  TError = ErrorType<void>,
+>(
+  campaignId: string,
+  params: GetCampaignControlRoomVersionDiffParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaignControlRoomVersionDiff>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetCampaignControlRoomVersionDiffQueryKey(campaignId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCampaignControlRoomVersionDiff>>
+  > = ({ signal }) =>
+    getCampaignControlRoomVersionDiff(campaignId, params, {
+      signal,
+      ...requestOptions,
+    });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!campaignId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCampaignControlRoomVersionDiff>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCampaignControlRoomVersionDiffQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCampaignControlRoomVersionDiff>>
+>;
+export type GetCampaignControlRoomVersionDiffQueryError = ErrorType<void>;
+
+/**
+ * @summary Compare two immutable campaign versions
+ */
+
+export function useGetCampaignControlRoomVersionDiff<
+  TData = Awaited<ReturnType<typeof getCampaignControlRoomVersionDiff>>,
+  TError = ErrorType<void>,
+>(
+  campaignId: string,
+  params: GetCampaignControlRoomVersionDiffParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaignControlRoomVersionDiff>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCampaignControlRoomVersionDiffQueryOptions(
     campaignId,
     params,
     options,

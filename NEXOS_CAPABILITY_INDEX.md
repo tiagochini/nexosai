@@ -454,7 +454,7 @@ Concluído para sete fontes persistidas com contrato read-only, ownership, pagin
 
 ### M05 — Version diff
 
-Comparação entre versões do conteúdo, Master Plan, fase, CTA, mídia, orçamento, audiência, regras e revisões.
+Concluído em modo read-only para snapshots imutáveis do Master Plan e revisões persistidas de páginas. Possui catálogo honesto, base/alvo explícitos, ownership, diff determinístico por JSON Pointer, sanitização sem falso idêntico, limites globais com avisos e homologação desktop/mobile. Fontes mutáveis sem histórico permanecem declaradas como `history_not_persisted`.
 
 ### M06 — Approval Center
 
@@ -667,7 +667,8 @@ flowchart TB
 - **M02 concluído:** contadores acionáveis abrem a composição persistida de entregáveis, integrações, checkpoints e estados canônicos de evidência.
 - **M03 concluído:** timeline paginada e filtrável com ownership, ordenação determinística, registros exatos, sanitização e links de origem verificados.
 - **M04 concluído:** previews paginados e filtráveis para sete fontes persistidas, com renderização segura, fallback estruturado e homologação desktop/mobile.
-- **M05 é o próximo checkpoint:** comparação read-only entre versões e revisões persistidas.
+- **M05 concluído:** comparação read-only de versões do Master Plan e revisões de página, com catálogo de comparabilidade, ownership, sanitização, limites determinísticos e homologação desktop/mobile.
+- **M06 é o próximo checkpoint:** Approval Center com aprovação/rejeição motivada vinculada à versão e ao contexto exatos.
 - Os fundamentos já implementados são registrados como capabilities individuais, mas não promovem automaticamente todo um estágio para produção.
 - O status histórico apresentado nos screenshots deve ser importado como alegação a auditar, não como prova canônica. Cada conclusão precisa ser recalculada a partir do código, banco, testes, receipts e homologações atuais.
 

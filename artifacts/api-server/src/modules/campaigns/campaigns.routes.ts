@@ -5,6 +5,9 @@ import {
   GetCampaignControlRoomEvidenceResponse,
   GetCampaignControlRoomPreviewsQueryParams,
   GetCampaignControlRoomPreviewsResponse,
+  GetCampaignControlRoomVersionSourcesResponse,
+  GetCampaignControlRoomVersionDiffQueryParams,
+  GetCampaignControlRoomVersionDiffResponse,
 } from "@workspace/api-zod";
 import { requireAuth } from "../auth/auth.middleware.js";
 import {
@@ -18,9 +21,9 @@ import {
   mergeIntakeDirectives,
   reorientCampaign,
 } from "./campaigns.service.js";
-import { getCampaignControlRoom, getCampaignControlRoomEvidence, getCampaignControlRoomPreviews } from "./control-room.service.js";
+import { getCampaignControlRoom, getCampaignControlRoomEvidence, getCampaignControlRoomPreviews, getCampaignControlRoomVersionSources, getCampaignControlRoomVersionDiff } from "./control-room.service.js";
 import { triggerStrategyPhase } from "../orchestration/orchestration.service.js";
-import { AppError } from "../../lib/errors.js";
+import { AppError, ValidationError } from "../../lib/errors.js";
 import { db, workspacesTable, CAMPAIGN_CREDIT_BUFFER } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import {
@@ -238,6 +241,28 @@ router.get("/:id/control-room/previews", async (req, res): Promise<void> => {
     }
     throw err;
   }
+});
+
+router.get("/:id/control-room/version-sources", async (req, res): Promise<void> => {
+  const id = Array.isArray(req.params["id"]) ? req.params["id"][0] : req.params["id"];
+  try { res.json(GetCampaignControlRoomVersionSourcesResponse.parse(await getCampaignControlRoomVersionSources(id!, req.auth.workspaceId))); }
+  catch (err) { if (err instanceof AppError) { res.status(err.statusCode).json({ error: err.message, code: err.code }); return; } throw err; }
+});
+
+router.get("/:id/control-room/version-diff", async (req, res): Promise<void> => {
+  const id = Array.isArray(req.params["id"]) ? req.params["id"][0] : req.params["id"];
+  try {
+    const q = req.query as Record<string, unknown>;
+    const allowed = new Set(["resource", "sourceId", "baseId", "targetId", "maxChanges"]);
+    if (Object.keys(q).some(key => !allowed.has(key)) || Object.values(q).some(value => Array.isArray(value))) throw new ValidationError("Invalid diff parameters");
+    const one = (key: string) => typeof q[key] === "string" ? q[key] as string : undefined;
+    let parsed: ReturnType<typeof GetCampaignControlRoomVersionDiffQueryParams.parse>;
+    try { parsed = GetCampaignControlRoomVersionDiffQueryParams.parse(req.query); } catch { throw new ValidationError("Invalid diff parameters"); }
+    const resource = parsed.resource;
+    const maxChanges = parsed.maxChanges;
+    if ((resource !== "masterplan" && resource !== "page") || !one("baseId") || !one("targetId") || !Number.isInteger(maxChanges) || maxChanges < 1 || maxChanges > 1000) throw new ValidationError("Invalid diff parameters");
+    res.json(GetCampaignControlRoomVersionDiffResponse.parse(await getCampaignControlRoomVersionDiff(id!, req.auth.workspaceId, { resource, sourceId: parsed.sourceId, baseId: parsed.baseId, targetId: parsed.targetId, maxChanges })));
+  } catch (err) { if (err instanceof AppError) { res.status(err.statusCode).json({ error: err.message, code: err.code }); return; } throw err; }
 });
 
 router.post("/:id/reorient", async (req, res): Promise<void> => {

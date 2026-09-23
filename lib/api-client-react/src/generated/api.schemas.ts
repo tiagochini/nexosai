@@ -1234,6 +1234,129 @@ export interface PaidMediaProviderActionResult {
   evidence: PaidMediaProviderActionResultEvidence;
 }
 
+export type ControlRoomVersionSourceKind =
+  (typeof ControlRoomVersionSourceKind)[keyof typeof ControlRoomVersionSourceKind];
+
+export const ControlRoomVersionSourceKind = {
+  masterplan: "masterplan",
+  page: "page",
+  content_piece: "content_piece",
+  media_brief: "media_brief",
+  creative: "creative",
+  social_post: "social_post",
+  campaign_asset: "campaign_asset",
+  video_project: "video_project",
+} as const;
+
+export interface ControlRoomVersionMetadata {
+  id: string;
+  label: string;
+  status: string;
+  createdAt: string;
+  contentHash: string;
+  version?: number;
+  revision?: number;
+}
+
+export interface ControlRoomCurrentVersionMetadata {
+  id: string;
+  status: string;
+  updatedAt: string;
+}
+
+export interface ControlRoomVersionSource {
+  id: string;
+  kind: ControlRoomVersionSourceKind;
+  label: string;
+  historyAvailable: boolean;
+  comparable: boolean;
+  /** @minimum 0 */
+  versionCount: number;
+  catalogTruncated: boolean;
+  reason?: string;
+  versions?: ControlRoomVersionMetadata[];
+  current?: ControlRoomCurrentVersionMetadata;
+}
+
+export interface ControlRoomVersionSourcesResponse {
+  schemaVersion: 1;
+  sources: ControlRoomVersionSource[];
+}
+
+export type ControlRoomVersionDiffResponseResource =
+  (typeof ControlRoomVersionDiffResponseResource)[keyof typeof ControlRoomVersionDiffResponseResource];
+
+export const ControlRoomVersionDiffResponseResource = {
+  masterplan: "masterplan",
+  page: "page",
+} as const;
+
+export interface ControlRoomDiffSourceMetadata {
+  id: string;
+}
+
+export interface ControlRoomDiffSummary {
+  /** @minimum 0 */
+  added: number;
+  /** @minimum 0 */
+  removed: number;
+  /** @minimum 0 */
+  changed: number;
+  /** @minimum 0 */
+  unchanged: number;
+  truncated: boolean;
+}
+
+export type ControlRoomDiffChangeKind =
+  (typeof ControlRoomDiffChangeKind)[keyof typeof ControlRoomDiffChangeKind];
+
+export const ControlRoomDiffChangeKind = {
+  added: "added",
+  removed: "removed",
+  changed: "changed",
+} as const;
+
+export type ControlRoomDiffChangeCategory =
+  (typeof ControlRoomDiffChangeCategory)[keyof typeof ControlRoomDiffChangeCategory];
+
+export const ControlRoomDiffChangeCategory = {
+  cta: "cta",
+  media: "media",
+  rules: "rules",
+  phase: "phase",
+  text: "text",
+  structure: "structure",
+  masterplan: "masterplan",
+} as const;
+
+export type ControlRoomJsonValue =
+  | string
+  | number
+  | boolean
+  | (ControlRoomJsonValue | null)[]
+  | { [key: string]: ControlRoomJsonValue | null }
+  | null;
+
+export interface ControlRoomDiffChange {
+  kind: ControlRoomDiffChangeKind;
+  path: string;
+  category: ControlRoomDiffChangeCategory;
+  before?: ControlRoomJsonValue | null;
+  after?: ControlRoomJsonValue | null;
+}
+
+export interface ControlRoomVersionDiffResponse {
+  schemaVersion: 1;
+  available: boolean;
+  resource: ControlRoomVersionDiffResponseResource;
+  source?: ControlRoomDiffSourceMetadata;
+  base: ControlRoomVersionMetadata;
+  target: ControlRoomVersionMetadata;
+  summary: ControlRoomDiffSummary;
+  changes: ControlRoomDiffChange[];
+  warnings: string[];
+}
+
 /**
  * Invalid paid-media request
  */
@@ -1316,6 +1439,26 @@ export type GetCampaignControlRoomPreviewsParams = {
   updatedFrom?: string;
   updatedTo?: string;
 };
+
+export type GetCampaignControlRoomVersionDiffParams = {
+  resource: GetCampaignControlRoomVersionDiffResource;
+  sourceId?: string;
+  baseId: string;
+  targetId: string;
+  /**
+   * @minimum 1
+   * @maximum 1000
+   */
+  maxChanges?: number;
+};
+
+export type GetCampaignControlRoomVersionDiffResource =
+  (typeof GetCampaignControlRoomVersionDiffResource)[keyof typeof GetCampaignControlRoomVersionDiffResource];
+
+export const GetCampaignControlRoomVersionDiffResource = {
+  masterplan: "masterplan",
+  page: "page",
+} as const;
 
 export type ExecuteCampaign202 = {
   message?: string;

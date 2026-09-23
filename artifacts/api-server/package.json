@@ -64,6 +64,7 @@
     "test:campaign-control-room": "NODE_ENV=test tsx src/scripts/test-campaign-control-room.ts",
     "test:campaign-control-room-evidence": "NODE_ENV=test tsx src/scripts/test-campaign-control-room-evidence.ts",
     "test:campaign-control-room-previews": "NODE_ENV=test tsx src/scripts/test-campaign-control-room-previews.ts"
+    ,"test:campaign-control-room-version-diff": "NODE_ENV=test tsx src/scripts/test-campaign-control-room-version-diff.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

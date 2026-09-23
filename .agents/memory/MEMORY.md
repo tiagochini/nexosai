@@ -105,3 +105,4 @@
 - [Development Checkpoint Checklist](development-checkpoint-checklist.md) — update stage, maturity, proof, risks and next checkpoint after every development unit.
 - [Orval path/query name collision](orval-path-query-collision.md) — operations combining path and query params can collide in the api-zod barrel; keep codegen postprocessing deterministic.
 - [Preview readiness semantics](preview-readiness-semantics.md) — preview availability must come from substantive source content, not metadata or serialized empty JSON.
+- [Safe version comparison](safe-version-comparison.md) — compare only persisted immutable history; detect differences before redacting previews and declare any bounded comparison incomplete.
