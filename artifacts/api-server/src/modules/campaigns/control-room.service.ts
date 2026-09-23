@@ -7,6 +7,11 @@ import {
   executionEvidenceTable,
   masterplanVersionsTable,
   socialPostsTable,
+  mediaBriefsTable,
+  campaignAssetsTable,
+  campaignCreativesTable,
+  pagesTable,
+  videoProjectsTable,
   workspaceIntegrationsTable,
 } from "@workspace/db";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
@@ -459,4 +464,112 @@ export async function getCampaignControlRoom(campaignId: string, workspaceId: st
       executionEvidence: { available: evidenceRecords.length > 0 },
     },
   };
+}
+
+const PREVIEW_KINDS = ["content_piece", "media_brief", "creative", "social_post", "campaign_asset", "page", "video_project"] as const;
+type PreviewKind = typeof PREVIEW_KINDS[number];
+export type ControlRoomPreviewFilters = { limit: number; cursor?: string; kind?: PreviewKind; status?: string; updatedFrom?: string; updatedTo?: string };
+type PreviewRow = { kind: PreviewKind; id: string; type: string; status: string; title: string; updatedAt: Date; data: unknown; available: boolean; href?: string };
+
+function previewCursor(payload: object) {
+  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  return `${body}.${createHmac("sha256", cursorSecret()).update(body).digest("base64url")}`;
+}
+function readPreviewCursor(value: string, campaignId: string, workspaceId: string, filters: ControlRoomPreviewFilters) {
+  try {
+    const [body, sig] = value.split(".");
+    if (!body || !sig) throw new Error();
+    const expected = createHmac("sha256", cursorSecret()).update(body).digest("base64url");
+    if (sig.length !== expected.length || !timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) throw new Error();
+    const p = JSON.parse(Buffer.from(body, "base64url").toString()) as JsonObject;
+    const binding = JSON.stringify({ campaignId, workspaceId, limit: filters.limit, kind: filters.kind ?? null, status: filters.status ?? null, updatedFrom: filters.updatedFrom ?? null, updatedTo: filters.updatedTo ?? null });
+    if (p.binding !== binding || typeof p.exp !== "number" || p.exp < Date.now() || typeof p.id !== "string" || typeof p.kind !== "string" || typeof p.updatedAt !== "string") throw new Error();
+    return { id: p.id, kind: p.kind as PreviewKind, updatedAt: new Date(p.updatedAt) };
+  } catch { throw new ValidationError("Invalid preview cursor"); }
+}
+function previewContent(data: unknown) {
+  return redactPaginatedEvidence(data);
+}
+function hasPreviewContent(value: unknown): boolean {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    const looksJson = trimmed === "null" || trimmed === "true" || trimmed === "false"
+      || /^(?:-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?|"(?:[^"\\]|\\.)*")$/.test(trimmed)
+      || trimmed.startsWith("{") || trimmed.startsWith("[");
+    if (!looksJson) return true;
+    try { return hasPreviewContent(JSON.parse(trimmed)); } catch { return true; }
+  }
+  if (Array.isArray(value)) return value.some(hasPreviewContent);
+  if (value && typeof value === "object") return Object.values(value).some(hasPreviewContent);
+  return typeof value === "number" || typeof value === "boolean";
+}
+function safePreviewUrl(value: unknown): string | undefined {
+  if (typeof value !== "string" || !value.trim()) return undefined;
+  try {
+    if (value.startsWith("/")) return value.split(/[?#]/, 1)[0] || undefined;
+    const parsed = new URL(value);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return undefined;
+    parsed.username = ""; parsed.password = ""; parsed.search = ""; parsed.hash = "";
+    return parsed.toString();
+  } catch { return undefined; }
+}
+function safePreviewUrls(value: unknown): string[] {
+  return Array.isArray(value) ? value.map(safePreviewUrl).filter((v): v is string => Boolean(v)) : [];
+}
+function previewRecord(row: PreviewRow) {
+  const content = previewContent(row.data);
+  const available = row.available && hasPreviewContent(content);
+  const media = safePreviewUrls(content && typeof content === "object" ? (content as JsonObject).mediaUrls : undefined);
+  const representation: "text" | "image" | "video" | "page" | "message" | "ad" | "structured" =
+    row.kind === "page" ? "page" : row.kind === "social_post" && row.type.includes("message") ? "message" :
+      row.kind === "social_post" && (row.type.includes("video") || row.type === "reel") && media.length ? "video" :
+      (row.kind === "creative" || row.kind === "campaign_asset" || row.kind === "media_brief") &&
+        safePreviewUrls(content && typeof content === "object" ? (content as JsonObject).mediaUrls : undefined).length ? "image" :
+      row.type.includes("ad") ? "ad" : row.kind === "content_piece" ? "text" : "structured";
+  return {
+    source: { kind: row.kind, id: row.id, type: row.type, status: row.status, title: row.title.slice(0, 512), updatedAt: row.updatedAt },
+    preview: { state: available ? "ready" as const : "unavailable" as const, representation, reason: available ? null : "no_safe_content", content: available ? content : null },
+    ...(row.href ? { sourceLink: row.href } : {}),
+  };
+}
+
+export async function getCampaignControlRoomPreviews(campaignId: string, workspaceId: string, filters: ControlRoomPreviewFilters) {
+  const [campaign] = await db.select({ id: campaignsTable.id }).from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).limit(1);
+  if (!campaign) throw new NotFoundError("Campaign");
+  const from = filters.updatedFrom ? new Date(filters.updatedFrom) : undefined;
+  const to = filters.updatedTo ? new Date(filters.updatedTo) : undefined;
+  const seek = filters.cursor ? readPreviewCursor(filters.cursor, campaignId, workspaceId, filters) : undefined;
+  const range = (column: any, idColumn: any, kind: PreviewKind) => and(
+    from ? sql`${column} >= ${from}` : undefined, to ? sql`${column} < ${to}` : undefined,
+    seek ? or(
+      lt(column, seek.updatedAt),
+      and(eq(column, seek.updatedAt), kind > seek.kind ? sql`true` : kind === seek.kind ? lt(idColumn, seek.id) : sql`false`),
+    ) : undefined,
+  );
+  const candidateLimit = filters.limit + 1;
+  const statusCondition = (column: any) => filters.status ? sql`${column}::text = ${filters.status}` : undefined;
+  const rows: PreviewRow[] = [];
+  const [content, media, social, creatives, assets, pages, videos] = await Promise.all([
+    db.select().from(contentPiecesTable).where(and(eq(contentPiecesTable.workspaceId, workspaceId), eq(contentPiecesTable.campaignId, campaignId), statusCondition(contentPiecesTable.status), range(contentPiecesTable.updatedAt, contentPiecesTable.id, "content_piece"))).orderBy(desc(contentPiecesTable.updatedAt), desc(contentPiecesTable.id)).limit(candidateLimit),
+    db.select().from(mediaBriefsTable).where(and(eq(mediaBriefsTable.workspaceId, workspaceId), eq(mediaBriefsTable.campaignId, campaignId), statusCondition(mediaBriefsTable.conceptStatus), range(mediaBriefsTable.updatedAt, mediaBriefsTable.id, "media_brief"))).orderBy(desc(mediaBriefsTable.updatedAt), desc(mediaBriefsTable.id)).limit(candidateLimit),
+    db.select().from(socialPostsTable).where(and(eq(socialPostsTable.workspaceId, workspaceId), eq(socialPostsTable.campaignId, campaignId), statusCondition(socialPostsTable.status), range(socialPostsTable.updatedAt, socialPostsTable.id, "social_post"))).orderBy(desc(socialPostsTable.updatedAt), desc(socialPostsTable.id)).limit(candidateLimit),
+    db.select().from(campaignCreativesTable).where(and(eq(campaignCreativesTable.workspaceId, workspaceId), eq(campaignCreativesTable.campaignId, campaignId), statusCondition(campaignCreativesTable.status), range(campaignCreativesTable.updatedAt, campaignCreativesTable.id, "creative"))).orderBy(desc(campaignCreativesTable.updatedAt), desc(campaignCreativesTable.id)).limit(candidateLimit),
+    db.select().from(campaignAssetsTable).innerJoin(campaignsTable, eq(campaignAssetsTable.campaignId, campaignsTable.id)).where(and(eq(campaignAssetsTable.campaignId, campaignId), eq(campaignsTable.workspaceId, workspaceId), statusCondition(campaignAssetsTable.status), range(campaignAssetsTable.updatedAt, campaignAssetsTable.id, "campaign_asset"))).orderBy(desc(campaignAssetsTable.updatedAt), desc(campaignAssetsTable.id)).limit(candidateLimit),
+    db.select().from(pagesTable).where(and(eq(pagesTable.workspaceId, workspaceId), eq(pagesTable.campaignId, campaignId), statusCondition(pagesTable.status), range(pagesTable.updatedAt, pagesTable.id, "page"))).orderBy(desc(pagesTable.updatedAt), desc(pagesTable.id)).limit(candidateLimit),
+    db.select().from(videoProjectsTable).where(and(eq(videoProjectsTable.workspaceId, workspaceId), eq(videoProjectsTable.campaignId, campaignId), statusCondition(videoProjectsTable.status), range(videoProjectsTable.updatedAt, videoProjectsTable.id, "video_project"))).orderBy(desc(videoProjectsTable.updatedAt), desc(videoProjectsTable.id)).limit(candidateLimit),
+  ]);
+  for (const r of content) rows.push({ kind: "content_piece", id: r.id, type: r.type, status: r.status, title: r.title, updatedAt: r.updatedAt, available: hasPreviewContent(r.content), data: { content: r.content } });
+  for (const r of media) { const mediaUrls = safePreviewUrls([r.lowResUrl, r.finalUrl]); rows.push({ kind: "media_brief", id: r.id, type: r.mediaType, status: r.conceptStatus, title: r.mediaType, updatedAt: r.updatedAt, available: hasPreviewContent(r.conceptData) || mediaUrls.length > 0, data: { concept: r.conceptData, mediaUrls } }); }
+  for (const r of social) { const mediaUrls = safePreviewUrls(r.mediaUrls); rows.push({ kind: "social_post", id: r.id, type: r.postType, status: r.status, title: r.caption?.slice(0, 120) ?? r.postType, updatedAt: r.updatedAt, available: Boolean(r.caption || r.hashtags?.length || r.callToAction || r.reelScript || mediaUrls.length), href: `/campaigns/${campaignId}/content`, data: { caption: r.caption, hashtags: r.hashtags, callToAction: r.callToAction, mediaUrls, reelScript: r.reelScript } }); }
+  for (const r of creatives) { const mediaUrls = safePreviewUrls([r.previewUrl, r.finalUrl]); rows.push({ kind: "creative", id: r.id, type: r.format, status: r.status, title: r.requestNote ?? r.format, updatedAt: r.updatedAt, available: Boolean(r.concept) || mediaUrls.length > 0, data: { concept: r.concept, format: r.format, platform: r.platform, mediaUrls } }); }
+  for (const joined of assets) { const r = joined.campaign_assets; const mediaUrls = safePreviewUrls([r.previewUrl, r.finalUrl]); rows.push({ kind: "campaign_asset", id: r.id, type: r.assetType, status: r.status, title: r.title, updatedAt: r.updatedAt, available: Boolean(r.content) || mediaUrls.length > 0, data: { content: r.content, metadata: r.metadata, platform: r.platform, mediaUrls } }); }
+  for (const r of pages) rows.push({ kind: "page", id: r.id, type: r.type, status: r.status, title: r.title, updatedAt: r.updatedAt, available: Boolean(r.html), data: { metadata: r.metadata, slug: r.slug, html: r.html } });
+  for (const r of videos) rows.push({ kind: "video_project", id: r.id, type: r.format, status: r.status, title: r.title, updatedAt: r.updatedAt, available: Boolean(r.script || r.storyboard?.length), data: { script: r.script, storyboard: r.storyboard, config: r.config } });
+  const filtered = rows.filter(r => (!filters.kind || r.kind === filters.kind) && (!filters.status || r.status === filters.status)).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime() || a.kind.localeCompare(b.kind) || b.id.localeCompare(a.id));
+  const page = filtered.slice(0, filters.limit);
+  const hasNextPage = filtered.length > filters.limit;
+  const binding = JSON.stringify({ campaignId, workspaceId, limit: filters.limit, kind: filters.kind ?? null, status: filters.status ?? null, updatedFrom: filters.updatedFrom ?? null, updatedTo: filters.updatedTo ?? null });
+  return { records: page.map(previewRecord), pageInfo: { nextCursor: hasNextPage ? previewCursor({ id: page.at(-1)!.id, kind: page.at(-1)!.kind, updatedAt: page.at(-1)!.updatedAt.toISOString(), exp: Date.now() + 86400000, binding }) : null, hasNextPage, limit: filters.limit }, appliedFilters: { kind: filters.kind ?? null, status: filters.status ?? null, updatedFrom: filters.updatedFrom ?? null, updatedTo: filters.updatedTo ?? null }, total: rows.filter(r => (!filters.kind || r.kind === filters.kind) && (!filters.status || r.status === filters.status)).length };
 }

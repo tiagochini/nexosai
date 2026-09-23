@@ -288,6 +288,101 @@ export const GetCampaignControlRoomEvidenceResponse = zod.object({
 });
 
 /**
+ * @summary List safe read-only universal previews
+ */
+export const GetCampaignControlRoomPreviewsParams = zod.object({
+  campaignId: zod.coerce.string(),
+});
+
+export const getCampaignControlRoomPreviewsQueryLimitDefault = 20;
+export const getCampaignControlRoomPreviewsQueryLimitMax = 50;
+
+export const GetCampaignControlRoomPreviewsQueryParams = zod.object({
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(getCampaignControlRoomPreviewsQueryLimitMax)
+    .default(getCampaignControlRoomPreviewsQueryLimitDefault),
+  cursor: zod.coerce.string().optional(),
+  kind: zod
+    .enum([
+      "content_piece",
+      "media_brief",
+      "creative",
+      "social_post",
+      "campaign_asset",
+      "page",
+      "video_project",
+    ])
+    .optional(),
+  status: zod.coerce.string().optional(),
+  updatedFrom: zod.date().optional(),
+  updatedTo: zod.date().optional(),
+});
+
+export const getCampaignControlRoomPreviewsResponseTotalMin = 0;
+
+export const GetCampaignControlRoomPreviewsResponse = zod.object({
+  records: zod.array(
+    zod.object({
+      source: zod.object({
+        kind: zod.enum([
+          "content_piece",
+          "media_brief",
+          "creative",
+          "social_post",
+          "campaign_asset",
+          "page",
+          "video_project",
+        ]),
+        id: zod.string().uuid(),
+        type: zod.string(),
+        status: zod.string(),
+        title: zod.string(),
+        updatedAt: zod.coerce.date(),
+      }),
+      preview: zod.object({
+        state: zod.enum(["ready", "unavailable"]),
+        representation: zod.enum([
+          "text",
+          "image",
+          "video",
+          "page",
+          "message",
+          "ad",
+          "structured",
+        ]),
+        reason: zod.string().nullable(),
+        content: zod.unknown().nullable(),
+      }),
+      sourceLink: zod.string().nullish(),
+    }),
+  ),
+  pageInfo: zod.object({
+    nextCursor: zod.string().nullable(),
+    hasNextPage: zod.boolean(),
+    limit: zod.number(),
+  }),
+  appliedFilters: zod.object({
+    kind: zod
+      .enum([
+        "content_piece",
+        "media_brief",
+        "creative",
+        "social_post",
+        "campaign_asset",
+        "page",
+        "video_project",
+      ])
+      .nullable(),
+    status: zod.string().nullable(),
+    updatedFrom: zod.string().nullable(),
+    updatedTo: zod.string().nullable(),
+  }),
+  total: zod.number().min(getCampaignControlRoomPreviewsResponseTotalMin),
+});
+
+/**
  * @summary Execute campaign phase
  */
 export const ExecuteCampaignParams = zod.object({

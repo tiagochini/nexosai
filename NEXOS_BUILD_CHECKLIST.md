@@ -9,10 +9,10 @@
 ## Estado executivo
 
 - **Estágio operacional em foco:** transversal — Control Room e governança de capacidades;
-- **Nível de maturidade em foco:** M04 — Preview universal;
-- **Último nível concluído:** M03 — Drilldown de evidência;
-- **Checkpoint atual:** M03 concluído e comprovado com fixtures autenticados isolados;
-- **Próximo checkpoint:** especificar o contrato universal de preview para texto, imagem, vídeo, páginas, mensagens e anúncios.
+- **Nível de maturidade em foco:** M05 — Version diff;
+- **Último nível concluído:** M04 — Preview universal;
+- **Checkpoint atual:** M04 concluído e comprovado com fixtures autenticados isolados;
+- **Próximo checkpoint:** definir comparação persistida e segura entre versões de conteúdo, Master Plan, CTA, mídia e revisões.
 
 ## Checklist dos 12 níveis de maturidade
 
@@ -21,8 +21,8 @@
 | M01 | Control Room UI | ✅ Concluído | API real, ownership, estados vazios, desktop/mobile e acesso Fundador/Arquiteto | Manter sem regressão |
 | M02 | Contadores clicáveis | ✅ Concluído | Build, API real, fixture autenticado, composição exata, desktop/mobile e acessibilidade | Manter sem regressão |
 | M03 | Drilldown de evidência | ✅ Concluído | Contrato OpenAPI, paginação determinística, filtros exatos, sanitização, ownership, links verificados e E2E desktop/mobile | Manter sem regressão |
-| M04 | Preview universal | ▶️ Próximo | — | Contrato para texto, imagem, vídeo, páginas, mensagens e anúncios |
-| M05 | Version diff | ⬜ Pendente | — | Comparação entre versões e revisões |
+| M04 | Preview universal | ✅ Concluído | Endpoint paginado, sete fontes persistidas, renderizadores seguros, filtros, ownership e E2E desktop/mobile | Manter sem regressão |
+| M05 | Version diff | ▶️ Próximo | — | Comparação entre versões e revisões |
 | M06 | Approval Center | ⬜ Pendente | — | Aprovação/rejeição motivada e versionada |
 | M07 | SLA e lembretes | ⬜ Pendente | — | `dueAt`, aviso, entrega e decisão |
 | M08 | Autoexecução condicionada | ⬜ Pendente | — | Gates, política, idempotência e pausa |
@@ -146,16 +146,73 @@ O estado abaixo será calculado capability por capability. Nenhum estágio é co
 - facets refletem o conjunto filtrado atual, conforme o contrato;
 - o bundle principal continua emitindo o aviso pré-existente de tamanho, sem falha de build.
 
-## Unidade atual — M04 Preview universal
+## Última unidade concluída — M04 Preview universal
+
+### Entregue no código
+
+- [x] contrato OpenAPI e clientes/Zod regenerados;
+- [x] endpoint read-only paginado separado sem alterar os contratos M01–M03;
+- [x] ownership por workspace e campanha em todas as fontes;
+- [x] sete fontes persistidas: conteúdo, media brief, creative, post social, asset, página e projeto de vídeo;
+- [x] representações normalizadas para texto, imagem, vídeo, página, mensagem, anúncio e dados estruturados;
+- [x] estados honestos `ready` e `unavailable`, com disponibilidade semântica por fonte;
+- [x] JSON vazio serializado tratado como ausência de conteúdo;
+- [x] cursor HMAC com expiração e vínculo a workspace, campanha, filtros e limite;
+- [x] ordenação determinística por `updatedAt DESC`, `kind ASC`, `id DESC`;
+- [x] filtros por fonte, status e período;
+- [x] URLs restritas a HTTP(S) ou caminhos internos, sem credenciais, query ou fragmento;
+- [x] preview de página sanitizado, sem scripts, atributos, navegação, formulários ou requisições externas;
+- [x] CTA de anúncio somente simulado e vídeo sem autoplay;
+- [x] estados de carregamento, erro inicial, erro de página adicional, vazio filtrado e fim da lista;
+- [x] Escape, controles nativos, rótulos, foco de teclado e layout responsivo;
+- [x] fallback seguro para payload desconhecido.
+
+### Validação concluída
+
+- [x] codegen e typecheck das bibliotecas, API e frontend;
+- [x] build de produção do frontend;
+- [x] testes focados M01/M02, M03 e M04;
+- [x] `git diff --check`;
+- [x] app e API reiniciados e saudáveis;
+- [x] E2E autenticado com 23 registros, sete fontes e duas páginas;
+- [x] filtros de fonte, status, período, combinação, inválido e vazio verificados;
+- [x] todos os renderizadores e o estado indisponível verificados;
+- [x] HTML hostil inertizado sem requisição externa;
+- [x] fallback de payload desconhecido verificado isoladamente;
+- [x] desktop 1440×1000 e mobile 390×844 sem overflow;
+- [x] teclado, Escape, fechamento e links de origem verificados;
+- [x] cleanup confirmado com zero resíduos em todos os fixtures.
+
+### Provas do checkpoint
+
+- primeira página: 20 de 23 previews; segunda carga: 23 de 23, sem lacunas ou duplicatas;
+- contagens exatas por fonte: 6 conteúdo, 3 media briefs, 3 creatives, 4 posts sociais, 3 assets, 2 páginas e 2 projetos de vídeo;
+- registros com apenas metadados permaneceram indisponíveis;
+- roteiro `"{}"` e JSON recursivamente vazio permaneceram indisponíveis;
+- texto social não vazio permaneceu corretamente disponível mesmo sem mídia;
+- página hostil foi reduzida a markup inerte, sem tags perigosas ou atributos;
+- anúncio exibiu CTA desabilitado; vídeo exibiu controles e não iniciou automaticamente;
+- M01–M03 permaneceram visíveis e funcionais;
+- nenhum provider, publicação, mensagem, IA, cobrança ou scheduler foi acionado;
+- workflows do app e da API permaneceram saudáveis após a validação.
+
+### Riscos e limitações remanescentes
+
+- M04 é somente leitura; comparação, aprovação, edição, regeneração e execução pertencem a M05–M09;
+- projetos de vídeo não possuem URL final própria na tabela atual; o preview usa somente roteiro/storyboard persistidos;
+- formulários e checkout ainda não possuem uma fonte persistida dedicada no contrato M04;
+- o bundle principal continua emitindo o aviso pré-existente de tamanho, sem falha de build.
+
+## Unidade atual — M05 Version diff
 
 ### Escopo inicial
 
-- [ ] inventariar todos os formatos persistidos que precisam de preview;
-- [ ] definir contrato único com estados indisponível, carregando, pronto e erro;
-- [ ] garantir ownership e sanitização para texto, imagem, vídeo, páginas, mensagens e anúncios;
-- [ ] reutilizar renderizadores existentes sem duplicar fluxos operacionais;
-- [ ] validar desktop, mobile e acessibilidade;
-- [ ] manter M01–M03 sem regressão.
+- [ ] inventariar fontes persistidas que possuem versões ou revisões comparáveis;
+- [ ] definir contrato read-only para versão base e versão alvo;
+- [ ] comparar texto, estrutura, CTA, mídia, regras e Master Plan sem expor segredos;
+- [ ] apresentar adições, remoções e alterações com contexto de origem;
+- [ ] validar ownership, paginação aplicável, desktop, mobile e acessibilidade;
+- [ ] manter M01–M04 sem regressão.
 
 ## Protocolo obrigatório após cada desenvolvimento
 

@@ -3,6 +3,8 @@ import { z } from "zod/v4";
 import {
   GetCampaignControlRoomEvidenceQueryParams,
   GetCampaignControlRoomEvidenceResponse,
+  GetCampaignControlRoomPreviewsQueryParams,
+  GetCampaignControlRoomPreviewsResponse,
 } from "@workspace/api-zod";
 import { requireAuth } from "../auth/auth.middleware.js";
 import {
@@ -16,7 +18,7 @@ import {
   mergeIntakeDirectives,
   reorientCampaign,
 } from "./campaigns.service.js";
-import { getCampaignControlRoom, getCampaignControlRoomEvidence } from "./control-room.service.js";
+import { getCampaignControlRoom, getCampaignControlRoomEvidence, getCampaignControlRoomPreviews } from "./control-room.service.js";
 import { triggerStrategyPhase } from "../orchestration/orchestration.service.js";
 import { AppError } from "../../lib/errors.js";
 import { db, workspacesTable, CAMPAIGN_CREDIT_BUFFER } from "@workspace/db";
@@ -97,6 +99,22 @@ function parseControlRoomEvidenceQuery(query: Record<string, unknown>) {
     from: parsed.data.from?.toISOString(),
     to: parsed.data.to?.toISOString(),
   };
+}
+
+function parseControlRoomPreviewsQuery(query: Record<string, unknown>) {
+  const allowed = new Set(["limit", "cursor", "kind", "status", "updatedFrom", "updatedTo"]);
+  for (const [key, value] of Object.entries(query)) {
+    if (!allowed.has(key) || Array.isArray(value)) throw new AppError(400, "Invalid query parameters", "VALIDATION_ERROR");
+  }
+  const parsed = GetCampaignControlRoomPreviewsQueryParams.safeParse({
+    ...query,
+    updatedFrom: typeof query["updatedFrom"] === "string" ? new Date(query["updatedFrom"]) : query["updatedFrom"],
+    updatedTo: typeof query["updatedTo"] === "string" ? new Date(query["updatedTo"]) : query["updatedTo"],
+  });
+  if (!parsed.success) throw new AppError(400, parsed.error.message, "VALIDATION_ERROR");
+  if (!Number.isInteger(parsed.data.limit)) throw new AppError(400, "limit must be an integer", "VALIDATION_ERROR");
+  if (parsed.data.updatedFrom && parsed.data.updatedTo && parsed.data.updatedFrom >= parsed.data.updatedTo) throw new AppError(400, "updatedFrom must be before updatedTo", "VALIDATION_ERROR");
+  return { ...parsed.data, updatedFrom: parsed.data.updatedFrom?.toISOString(), updatedTo: parsed.data.updatedTo?.toISOString() };
 }
 
 router.get("/tracks", (_req, res): void => {
@@ -198,6 +216,21 @@ router.get("/:id/control-room/evidence", async (req, res): Promise<void> => {
     const filters = parseControlRoomEvidenceQuery(req.query as Record<string, unknown>);
     const result = await getCampaignControlRoomEvidence(id!, req.auth.workspaceId, filters);
     res.json(GetCampaignControlRoomEvidenceResponse.parse(result));
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+router.get("/:id/control-room/previews", async (req, res): Promise<void> => {
+  const id = Array.isArray(req.params["id"]) ? req.params["id"][0] : req.params["id"];
+  try {
+    const filters = parseControlRoomPreviewsQuery(req.query as Record<string, unknown>);
+    const result = await getCampaignControlRoomPreviews(id!, req.auth.workspaceId, filters);
+    res.json(GetCampaignControlRoomPreviewsResponse.parse(result));
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });

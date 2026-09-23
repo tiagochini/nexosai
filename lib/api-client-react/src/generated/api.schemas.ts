@@ -233,6 +233,89 @@ export interface ControlRoomEvidenceResponse {
   facets: ControlRoomEvidenceResponseFacets;
 }
 
+export type ControlRoomPreviewKind =
+  (typeof ControlRoomPreviewKind)[keyof typeof ControlRoomPreviewKind];
+
+export const ControlRoomPreviewKind = {
+  content_piece: "content_piece",
+  media_brief: "media_brief",
+  creative: "creative",
+  social_post: "social_post",
+  campaign_asset: "campaign_asset",
+  page: "page",
+  video_project: "video_project",
+} as const;
+
+export type ControlRoomPreviewRecordSource = {
+  kind: ControlRoomPreviewKind;
+  id: string;
+  type: string;
+  status: string;
+  title: string;
+  updatedAt: string;
+};
+
+export type ControlRoomPreviewRecordPreviewState =
+  (typeof ControlRoomPreviewRecordPreviewState)[keyof typeof ControlRoomPreviewRecordPreviewState];
+
+export const ControlRoomPreviewRecordPreviewState = {
+  ready: "ready",
+  unavailable: "unavailable",
+} as const;
+
+export type ControlRoomPreviewRecordPreviewRepresentation =
+  (typeof ControlRoomPreviewRecordPreviewRepresentation)[keyof typeof ControlRoomPreviewRecordPreviewRepresentation];
+
+export const ControlRoomPreviewRecordPreviewRepresentation = {
+  text: "text",
+  image: "image",
+  video: "video",
+  page: "page",
+  message: "message",
+  ad: "ad",
+  structured: "structured",
+} as const;
+
+export type ControlRoomPreviewRecordPreview = {
+  state: ControlRoomPreviewRecordPreviewState;
+  representation: ControlRoomPreviewRecordPreviewRepresentation;
+  /** @nullable */
+  reason: string | null;
+  content: unknown | null;
+};
+
+export interface ControlRoomPreviewRecord {
+  source: ControlRoomPreviewRecordSource;
+  preview: ControlRoomPreviewRecordPreview;
+  /** @nullable */
+  sourceLink?: string | null;
+}
+
+export type ControlRoomPreviewsResponsePageInfo = {
+  /** @nullable */
+  nextCursor: string | null;
+  hasNextPage: boolean;
+  limit: number;
+};
+
+export type ControlRoomPreviewsResponseAppliedFilters = {
+  kind: ControlRoomPreviewKind | null;
+  /** @nullable */
+  status: string | null;
+  /** @nullable */
+  updatedFrom: string | null;
+  /** @nullable */
+  updatedTo: string | null;
+};
+
+export interface ControlRoomPreviewsResponse {
+  records: ControlRoomPreviewRecord[];
+  pageInfo: ControlRoomPreviewsResponsePageInfo;
+  appliedFilters: ControlRoomPreviewsResponseAppliedFilters;
+  /** @minimum 0 */
+  total: number;
+}
+
 export type ContractMetadataSnapshot = { [key: string]: unknown };
 
 export interface ContractMetadata {
@@ -1219,6 +1302,19 @@ export type GetCampaignControlRoomEvidenceParams = {
    * Exclusive UTC upper bound.
    */
   to?: string;
+};
+
+export type GetCampaignControlRoomPreviewsParams = {
+  /**
+   * @minimum 1
+   * @maximum 50
+   */
+  limit?: number;
+  cursor?: string;
+  kind?: ControlRoomPreviewKind;
+  status?: string;
+  updatedFrom?: string;
+  updatedTo?: string;
 };
 
 export type ExecuteCampaign202 = {

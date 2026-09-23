@@ -422,7 +422,8 @@ Estados devem ser append-only quando representam fatos. Nenhuma camada pode decl
 
 - **DONE** — Control Room UI com contadores clicáveis, composição persistida, status de credenciais e estados canônicos de evidência.
 - **DONE** — drilldown de evidência: timeline paginada, filtros exatos, links de origem, sanitização e ownership por workspace/campanha.
-- **NEXT** — preview universal para texto, imagem, vídeo, páginas, formulários, checkout, e-mail, mensagens e anúncios.
+- **DONE** — preview universal read-only: sete fontes persistidas, paginação determinística, filtros, estados honestos e renderização segura desktop/mobile.
+- **NEXT** — version diff para conteúdo, Master Plan, CTA, mídia e revisões persistidas.
 
 ### Depois do Control Room
 

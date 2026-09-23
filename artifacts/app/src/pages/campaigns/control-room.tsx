@@ -22,6 +22,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { UniversalPreviewDrawer } from "./components/universal-preview-drawer";
 
 interface ControlRoomResponse {
   campaign: {
@@ -260,6 +261,7 @@ function DeliverablesPanel({ data, campaignId }: { data: ControlRoomResponse["de
   const total = data.total || 0;
   const previewReady = data.previewReady || 0;
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [previewDrawerOpen, setPreviewDrawerOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<(typeof records)[number] | null>(null);
   const drawerRecords = selectedRecord ? [selectedRecord] : records;
 
@@ -276,13 +278,21 @@ function DeliverablesPanel({ data, campaignId }: { data: ControlRoomResponse["de
             <Layers className="h-4 w-4 text-primary" />
             <h2 className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">Deliverables Pipeline</h2>
           </div>
-          <ActionCounter
-            label="Preview"
-            value={`${previewReady}/${total}`}
-            tone={previewReady === total ? "success" : "primary"}
-            onClick={() => openDeliverables(null)}
-            title="Ver composição dos entregáveis"
-          />
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            <ActionCounter
+              label="Composição"
+              value={total}
+              onClick={() => openDeliverables(null)}
+              title="Ver composição dos entregáveis"
+            />
+            <ActionCounter
+              label="Preview"
+              value={`${previewReady}/${total}`}
+              tone={previewReady === total ? "success" : "primary"}
+              onClick={() => setPreviewDrawerOpen(true)}
+              title="Ver Previews Universais"
+            />
+          </div>
         </div>
 
         <div className="p-0 max-h-[250px] overflow-y-auto hide-scrollbar">
@@ -328,10 +338,11 @@ function DeliverablesPanel({ data, campaignId }: { data: ControlRoomResponse["de
         title={selectedRecord ? `${selectedRecord.type} · ${selectedRecord.status}` : "Composição dos entregáveis"}
         description={`${selectedRecord ? selectedRecord.total : total} registros persistidos na campanha`}
         footer={(
-          <Link href={`/campaigns/${campaignId}/content`}>
-            <Button className="rounded-none font-mono text-[10px] uppercase tracking-widest">
-              Abrir fábrica de conteúdo
-            </Button>
+          <Link
+            href={`/campaigns/${campaignId}/content`}
+            className="inline-flex h-9 items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 rounded-none font-mono text-[10px] uppercase tracking-widest px-4 py-2"
+          >
+            Abrir fábrica de conteúdo
           </Link>
         )}
       >
@@ -347,6 +358,11 @@ function DeliverablesPanel({ data, campaignId }: { data: ControlRoomResponse["de
           ))}
         </div>
       </DetailDrawer>
+      <UniversalPreviewDrawer
+        open={previewDrawerOpen}
+        onOpenChange={setPreviewDrawerOpen}
+        campaignId={campaignId}
+      />
     </>
   );
 }
@@ -433,8 +449,11 @@ function CredentialsPanel({ data }: { data: ControlRoomResponse["credentials"] }
         title={healthFilter === "healthy" ? "Integrações saudáveis" : healthFilter === "blocked" ? "Integrações bloqueadas" : "Saúde das integrações"}
         description={`${filteredRecords.length} de ${records.length} integrações persistidas no workspace`}
         footer={(
-          <Link href="/integracoes">
-            <Button className="rounded-none font-mono text-[10px] uppercase tracking-widest">Gerenciar integrações</Button>
+          <Link
+            href="/integracoes"
+            className="inline-flex h-9 items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 rounded-none font-mono text-[10px] uppercase tracking-widest px-4 py-2"
+          >
+            Gerenciar integrações
           </Link>
         )}
       >
@@ -532,8 +551,11 @@ function CheckpointsPanel({ data, campaignId }: { data: ControlRoomResponse["pen
       title="Checkpoints pendentes"
       description={`${pendingCount} aprovações exigem decisão`}
       footer={(
-        <Link href={`/campaigns/${campaignId}`}>
-          <Button className="rounded-none font-mono text-[10px] uppercase tracking-widest">Abrir campanha</Button>
+        <Link
+          href={`/campaigns/${campaignId}`}
+          className="inline-flex h-9 items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 rounded-none font-mono text-[10px] uppercase tracking-widest px-4 py-2"
+        >
+          Abrir campanha
         </Link>
       )}
     >

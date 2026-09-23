@@ -450,7 +450,7 @@ Timeline de agentes, versões, tentativas, receipts, readbacks, resultados, falh
 
 ### M04 — Preview universal
 
-Contrato de preview para texto, imagem, vídeo, páginas, formulários, checkout, e-mail, mensagens e anúncios.
+Concluído para sete fontes persistidas com contrato read-only, ownership, paginação determinística, filtros, sanitização, estados honestos e representações de texto, imagem, vídeo, página, mensagem, anúncio e dados estruturados. Formulários e checkout aguardam fonte persistida dedicada.
 
 ### M05 — Version diff
 
@@ -666,7 +666,8 @@ flowchart TB
 - **M01 concluído:** Control Room UI consome API real e possui estados vazios honestos.
 - **M02 concluído:** contadores acionáveis abrem a composição persistida de entregáveis, integrações, checkpoints e estados canônicos de evidência.
 - **M03 concluído:** timeline paginada e filtrável com ownership, ordenação determinística, registros exatos, sanitização e links de origem verificados.
-- **M04 é o próximo checkpoint:** contrato universal de preview para todos os formatos persistidos.
+- **M04 concluído:** previews paginados e filtráveis para sete fontes persistidas, com renderização segura, fallback estruturado e homologação desktop/mobile.
+- **M05 é o próximo checkpoint:** comparação read-only entre versões e revisões persistidas.
 - Os fundamentos já implementados são registrados como capabilities individuais, mas não promovem automaticamente todo um estágio para produção.
 - O status histórico apresentado nos screenshots deve ser importado como alegação a auditar, não como prova canônica. Cada conclusão precisa ser recalculada a partir do código, banco, testes, receipts e homologações atuais.
 

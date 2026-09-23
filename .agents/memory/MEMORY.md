@@ -104,3 +104,4 @@
 - [Public Evidence Sanitization](public-evidence-sanitization.md) — redact complete values before truncation, strip signed URL parameters and stop traversal at hard collection limits.
 - [Development Checkpoint Checklist](development-checkpoint-checklist.md) — update stage, maturity, proof, risks and next checkpoint after every development unit.
 - [Orval path/query name collision](orval-path-query-collision.md) — operations combining path and query params can collide in the api-zod barrel; keep codegen postprocessing deterministic.
+- [Preview readiness semantics](preview-readiness-semantics.md) — preview availability must come from substantive source content, not metadata or serialized empty JSON.

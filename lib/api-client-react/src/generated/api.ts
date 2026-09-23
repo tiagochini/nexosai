@@ -32,6 +32,7 @@ import type {
   ContactsAddInput,
   ContractAcceptanceRequiredError,
   ControlRoomEvidenceResponse,
+  ControlRoomPreviewsResponse,
   CreateCampaign201,
   CreditsBalance,
   ExecuteCampaign202,
@@ -40,6 +41,7 @@ import type {
   GetAutonomyStatusParams,
   GetCampaign200,
   GetCampaignControlRoomEvidenceParams,
+  GetCampaignControlRoomPreviewsParams,
   GetSequence200,
   HealthStatus,
   IntakeResponse,
@@ -938,6 +940,130 @@ export function useGetCampaignControlRoomEvidence<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetCampaignControlRoomEvidenceQueryOptions(
+    campaignId,
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List safe read-only universal previews
+ */
+export const getGetCampaignControlRoomPreviewsUrl = (
+  campaignId: string,
+  params?: GetCampaignControlRoomPreviewsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/campaigns/${campaignId}/control-room/previews?${stringifiedParams}`
+    : `/api/campaigns/${campaignId}/control-room/previews`;
+};
+
+export const getCampaignControlRoomPreviews = async (
+  campaignId: string,
+  params?: GetCampaignControlRoomPreviewsParams,
+  options?: RequestInit,
+): Promise<ControlRoomPreviewsResponse> => {
+  return customFetch<ControlRoomPreviewsResponse>(
+    getGetCampaignControlRoomPreviewsUrl(campaignId, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetCampaignControlRoomPreviewsQueryKey = (
+  campaignId: string,
+  params?: GetCampaignControlRoomPreviewsParams,
+) => {
+  return [
+    `/api/campaigns/${campaignId}/control-room/previews`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetCampaignControlRoomPreviewsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCampaignControlRoomPreviews>>,
+  TError = ErrorType<void>,
+>(
+  campaignId: string,
+  params?: GetCampaignControlRoomPreviewsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaignControlRoomPreviews>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetCampaignControlRoomPreviewsQueryKey(campaignId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCampaignControlRoomPreviews>>
+  > = ({ signal }) =>
+    getCampaignControlRoomPreviews(campaignId, params, {
+      signal,
+      ...requestOptions,
+    });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!campaignId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCampaignControlRoomPreviews>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCampaignControlRoomPreviewsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCampaignControlRoomPreviews>>
+>;
+export type GetCampaignControlRoomPreviewsQueryError = ErrorType<void>;
+
+/**
+ * @summary List safe read-only universal previews
+ */
+
+export function useGetCampaignControlRoomPreviews<
+  TData = Awaited<ReturnType<typeof getCampaignControlRoomPreviews>>,
+  TError = ErrorType<void>,
+>(
+  campaignId: string,
+  params?: GetCampaignControlRoomPreviewsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaignControlRoomPreviews>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCampaignControlRoomPreviewsQueryOptions(
     campaignId,
     params,
     options,
