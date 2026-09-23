@@ -1,8 +1,9 @@
 # NexOSAI — Fluxo Operacional e de Implementação Canônico
 
-> **Fonte única de verdade.** Este arquivo substitui os mapas e descrições anteriores de workflow.
+> **Fonte única de verdade cumulativa.** Este arquivo incorpora os mapas e descrições anteriores de workflow em um único sistema.
 > Ele define o comportamento operacional desejado do NexOSAI, os limites de responsabilidade humana, os gates de segurança e a ordem de implementação.
 > Nenhuma área deve ser apresentada como autônoma antes de cumprir os gates e a Definition of Done desta especificação.
+> Nenhum fluxo anterior deixa de existir por não aparecer resumido no diagrama mestre: ele deve ser preservado, conectado ao Realization Engine e fortalecido pelos novos gates, salvo quando houver uma descontinuação explícita e aprovada.
 
 ## 1. Doutrina operacional não negociável
 
@@ -50,6 +51,43 @@ O sistema **não pode**:
 | Otimização dentro de uma plataforma e orçamento aprovados | acompanha | decide e executa |
 | Mudança material de estratégia ou orçamento entre plataformas | aprova | recomenda com métricas |
 | Exceção crítica | intervém quando necessário | detecta, pausa, explica e prepara opções |
+
+### 1.1 Fluxos anteriores preservados e incorporados
+
+O Realization Engine e o Control Room não substituem o pipeline anterior. Eles ampliam e conectam suas capacidades:
+
+| Fluxo anterior | Continua existindo | Integração no sistema canônico |
+|---|---:|---|
+| Intake → estratégia → conteúdo → aprovação → lançamento → conclusão | Sim | É a espinha dorsal de campanha e alimenta o Master Plan, a realização e o lifecycle |
+| Aprovação e geração de criativos | Sim | Torna-se o lifecycle de entregáveis com revisão, preview, versão, diff, QC e evidência |
+| Sequências de lançamento e scheduler | Sim | Integram e-mail, WhatsApp, CRM, jornada do lead, agenda e execução idempotente |
+| Publicação social e autopost | Sim | Integram Content/Social com gates finais, credenciais, readback, recibos e métricas |
+| Respostas automáticas de WhatsApp | Sim | Integram CRM/Sales; evoluem para agentes conversacionais vinculados a estágio e Master Plan |
+| Relatórios semanais | Sim | Integram Reports, Control Room, Conselho e ciclos de otimização |
+| Schedulers e timers operacionais | Sim | Permanecem como infraestrutura, com ownership único, idempotência, bounded retry e evidência |
+| Captura, classificação e roteamento de leads | Sim | Alimentam progressão adjacente, vendas, onboarding, retenção, indicação e recuperação |
+
+```mermaid
+flowchart LR
+    P[Pipeline de campanha existente] --> MP[Master Plan e autorização]
+    C[Criativos e conteúdo existentes] --> DE[Lifecycle universal de entregáveis]
+    S[Sequências e schedulers existentes] --> EX[Execução contínua]
+    SO[Social e autopost existentes] --> EX
+    WA[WhatsApp auto-response existente] --> CRM[CRM, vendas e lifecycle]
+    WR[Relatórios existentes] --> MON[Monitoramento e Conselho]
+    LD[Captura e lead routing existentes] --> CRM
+
+    MP --> RE[Workforce Realization Engine]
+    DE --> RE
+    RE --> EX
+    EX --> CRM
+    EX --> MON
+    CRM --> MON
+    MON --> OPT[Correção e otimização]
+    OPT --> RE
+```
+
+Toda implementação nova deve indicar qual fluxo anterior está preservando ou ampliando. Se uma mudança apagar uma capacidade anterior sem substituição funcional comprovada, ela é uma regressão.
 
 ## 2. Fluxo mestre: do briefing à otimização perpétua
 

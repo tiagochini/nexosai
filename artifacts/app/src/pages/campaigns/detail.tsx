@@ -2375,7 +2375,23 @@ export default function CampaignDetail() {
 
         {/* ─── Acesso Rápido a Criativos (Fundador) ─────────────────────────────── */}
         {["awaiting_approval","approved","executing","live","completed"].includes(campaign.status) && (
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <Link href={`/campaigns/${campaignId}/control-room`}>
+              <div className="border border-primary/30 bg-primary/5 hover:border-primary/60 hover:bg-primary/10 transition-all px-4 py-3 flex items-center gap-3 cursor-pointer group h-full">
+                <div className="w-8 h-8 border border-primary/30 flex items-center justify-center shrink-0 group-hover:border-primary/60 transition-colors">
+                  <Activity className="h-3.5 w-3.5 text-primary/70 group-hover:text-primary transition-colors" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-mono text-[11px] font-bold text-primary/80 uppercase tracking-widest group-hover:text-primary transition-colors">
+                    Control Room
+                  </div>
+                  <div className="font-mono text-[10px] text-muted-foreground/45">
+                    Monitorar trabalho, evidências e operação
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-primary/30 group-hover:text-primary/70 group-hover:translate-x-0.5 transition-all shrink-0" />
+              </div>
+            </Link>
             <Link href={`/campaigns/${campaignId}/content`} className="flex-1">
               <div className="border border-border/30 bg-card/20 hover:border-primary/40 hover:bg-primary/5 transition-all px-4 py-3 flex items-center gap-3 cursor-pointer group">
                 <div className="w-8 h-8 border border-border/30 flex items-center justify-center shrink-0 group-hover:border-primary/50 transition-colors">
@@ -2394,7 +2410,7 @@ export default function CampaignDetail() {
                 <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-primary/60 group-hover:translate-x-0.5 transition-all shrink-0" />
               </div>
             </Link>
-            <Link href="/integracoes" className="sm:w-auto">
+            <Link href="/integracoes">
               <div className="border border-border/30 bg-card/20 hover:border-cyan-400/40 hover:bg-cyan-400/5 transition-all px-4 py-3 flex items-center gap-3 cursor-pointer group h-full">
                 <Wifi className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-cyan-400/70 transition-colors shrink-0" />
                 <span className="font-mono text-[11px] text-muted-foreground/50 group-hover:text-cyan-400/80 transition-colors uppercase tracking-widest whitespace-nowrap">
@@ -3145,6 +3161,11 @@ export default function CampaignDetail() {
             <Link href={`/campaigns/${campaign.id}/creatives`}>
               <Button variant="outline" className="font-mono uppercase tracking-widest rounded-none gap-2 border-primary/40 hover:border-primary text-primary hover:bg-primary/10 h-9 px-3 text-xs">
                 <Layers className="h-3.5 w-3.5" />Criativos
+              </Button>
+            </Link>
+            <Link href={`/campaigns/${campaign.id}/control-room`}>
+              <Button variant="outline" className="font-mono uppercase tracking-widest rounded-none gap-2 border-[#00F0FF]/40 hover:border-[#00F0FF] text-[#00F0FF] hover:bg-[#00F0FF]/10 h-9 px-3 text-xs font-bold">
+                <Activity className="h-3.5 w-3.5" />Control Room
               </Button>
             </Link>
             <Button variant="outline" onClick={() => setLocation("/sequences")} className="font-mono uppercase tracking-widest rounded-none gap-2 border-border/50 hover:border-primary/50 h-9 px-3 text-xs">

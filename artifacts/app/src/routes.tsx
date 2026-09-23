@@ -11,6 +11,7 @@ import Dashboard from "@/pages/dashboard";
 import NewCampaign from "@/pages/campaigns/new";
 import CampaignDetail from "@/pages/campaigns/detail";
 import CampaignIntake from "@/pages/campaigns/intake";
+import ControlRoom from "@/pages/campaigns/control-room";
 import SequencesList from "@/pages/sequences/index";
 import NewSequence from "@/pages/sequences/new";
 import SequenceDetail from "@/pages/sequences/detail";
@@ -180,6 +181,13 @@ export default function AppRoutes() {
       </Route>
       <Route path="/campaigns/:id/strategy">
         {() => <ProtectedRoute><CampaignStrategyPage /></ProtectedRoute>}
+      </Route>
+      <Route path="/campaigns/:id/control-room">
+        {() => (
+          <ProtectedRoute>
+            <ControlRoom />
+          </ProtectedRoute>
+        )}
       </Route>
       <Route path="/campaigns/:id">
         {() => (
