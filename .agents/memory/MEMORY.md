@@ -99,3 +99,4 @@
 - [Lead Journey Routing](lead-journey-routing.md) — classification and journey stage jointly gate every message; sales agents may advance only one evidenced stage at a time.
 - [Progressive Capability Navigation](progressive-capability-navigation.md) — add sidebar areas only when their agents can execute real work; pages expose outcomes, history and reports, not placeholders.
 - [Workforce Realization Engine](workforce-realization-engine.md) — realization is a core operating layer: agents build, connect, publish, verify and optimize the complete commercial system.
+- [Post-Merge DB Migrations](post-merge-db-migrations.md) — post-merge setup must apply tracked SQL migrations; never run interactive whole-schema push or automatic truncation.
