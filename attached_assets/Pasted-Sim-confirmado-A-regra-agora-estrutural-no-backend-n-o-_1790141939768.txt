@@ -1,0 +1,92 @@
+Sim, confirmado. A regra agora é estrutural no backend, não apenas uma instrução para a IA.
+
+## Como ficou
+
+Cada lead possui duas dimensões independentes:
+
+1. **Classificação:** `cold`, `warm` ou `hot`
+2. **Estágio:** awareness → consideration → qualification → objection handling → closing → converted
+
+Uma comunicação só é enviada quando **classificação + estágio + fase da mensagem** forem compatíveis.
+
+Exemplos:
+
+- Lead frio recebe descoberta, captura e PLC1.
+- Lead morno recebe nutrição e consideração, como PLC1–PLC3.
+- Lead morno **não recebe** `cart_open`, `cart_middle` ou `cart_close`.
+- Lead quente ainda não recebe fechamento automaticamente.
+- `cart_close` exige lead `hot` no estágio `closing`.
+- Convertidos e descadastrados não recebem primeiro contato.
+- E-mail e WhatsApp seguem a mesma política.
+- Não existe fallback para conteúdo `hot` ou conteúdo genérico quando falta a variante correta.
+
+## Progressão
+
+O lead só pode avançar uma fase por vez:
+
+```text
+awareness
+  ↓
+consideration
+  ↓
+qualification
+  ↓
+objection_handling
+  ↓
+closing
+  ↓
+converted
+```
+
+Cada avanço exige:
+
+- evidência identificável;
+- workspace e contato corretos;
+- atualização transacional;
+- proteção contra concorrência;
+- impossibilidade de regressão ou salto de fase.
+
+## Agentes especializados
+
+A fundação está pronta para isso, mas os agentes conversacionais completos pertencem à etapa 3.
+
+Eles deverão:
+
+- atender individualmente por WhatsApp e e-mail;
+- receber histórico, classificação e estágio daquele lead;
+- esclarecer dúvidas;
+- qualificar;
+- tratar objeções;
+- escolher a próxima ação permitida;
+- avançar somente uma fase com evidência;
+- nunca inventar preço, bônus ou garantia;
+- nunca mandar fechamento para lead não elegível.
+
+Esse próximo bloco já está registrado como: **“Fazer agentes de vendas guiarem cada lead pela próxima fase correta.”**
+
+## Revalidação executada
+
+Sem provedores reais:
+
+- 7 rotas permitidas confirmadas pelo executor real.
+- 10 rotas proibidas bloqueadas.
+- 3 formatos de conteúdo inseguro bloqueados.
+- Lead morno bloqueado em todas as fases de carrinho.
+- E-mail e WhatsApp testados.
+- Candidato bloqueado não impede outro lead elegível.
+- Progressão libera PLC2 e PLC3 somente no momento correto.
+- Captura concorrente converge para um contato e uma auditoria.
+- Primeiro contato permanece único.
+- Timeout ambíguo não provoca reenvio.
+- Isolamento entre workspaces confirmado.
+- Teste HTTP:
+  - nova captura: `201`;
+  - duplicada: `200`;
+  - conflito de identidade: `409`;
+  - falha interna: `500`, sem sucesso falso.
+
+A revisão independente terminou em **PASS**. A API foi reiniciada e está operando com scheduler ativo e boot limpo.
+
+### Próximo comando
+
+> Inicie a etapa 3: faça agentes especializados em vendas atenderem individualmente cada lead por WhatsApp e e-mail, usando classificação, estágio, histórico e Master Plan. Eles devem qualificar, tratar objeções e avançar somente uma fase por vez com evidência. Não altere interfaces e não use provedores reais nos testes.

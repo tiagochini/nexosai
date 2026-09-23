@@ -116,6 +116,19 @@ try {
   assert.equal(getMetaE2eGraphCalls().length, 1, "owner metrics sync reaches Graph exactly once");
   assert.match(getMetaE2eGraphCalls()[0]!.path, new RegExp(`/${metricsTarget.platformPostId}/insights$`));
 
+   // Provider failures must not replace the last confirmed cache with zeros.
+   await db.update(socialPostsTable)
+     .set({ metrics: baselineMetrics })
+     .where(and(
+       eq(socialPostsTable.id, metricsTarget.id),
+       eq(socialPostsTable.workspaceId, workspaceB),
+     ));
+   process.env["META_E2E_FAIL_ONCE"] = "/insights";
+   resetMetaE2eGraphCalls();
+   const preserved = await syncPostMetrics(workspaceB, metricsTarget.id);
+   delete process.env["META_E2E_FAIL_ONCE"];
+   assert.deepEqual(preserved.metrics, baselineMetrics, "metrics provider failure must preserve cache");
+
   resetMetaE2eGraphCalls();
   await assert.rejects(() => publishPost(workspaceB, publishTarget.id), (error: unknown) =>
     error instanceof AppError && error.code === "MASTERPLAN_CONTEXT_MISMATCH",

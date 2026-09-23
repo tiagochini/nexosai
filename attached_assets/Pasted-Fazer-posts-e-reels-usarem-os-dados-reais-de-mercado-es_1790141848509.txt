@@ -1,0 +1,27 @@
+Fazer posts e reels usarem os dados reais de mercado, estratégia e psicologia da campanha
+O problema
+O planejador de posts (presence-planner.agent.ts) recebe hoje: plataforma, horários, pilares genéricos, Big Domino e fase de lançamento. Ele não recebe nada do que os especialistas descobriram.
+
+O que nunca chega no planejador:
+
+Market intel: vulnerabilidades dos concorrentes, gaps de posicionamento, arbitragem de plataforma (onde os concorrentes são fracos), arbitragem de conteúdo (formatos que ninguém faz), segmentos inexplorados
+Psychology layer (7 agentes): gatilhos mentais calibrados, objeções mapeadas, hooks de preço, anti-requisitos, bridge de transformação
+Estratégia completa: sequência de gatilhos, blueprint de prova social, ângulos de anti-requisito, mecanismo diferenciador, proposta única de valor
+O que deve mudar
+Em artifacts/api-server/src/modules/social-presence/social-presence.service.ts (função que chama o presence planner, linhas 175–215), buscar e injetar um bloco compacto contendo:
+
+Top 3 vulnerabilidades de concorrentes + gap de posicionamento principal (de market_intel_reports)
+Principais gatilhos e objeções (de campaigns.brainData.offerPsychologyLayer)
+Ângulos extras de estratégia além do Big Domino (de campaigns.strategyData: triggerStackSequence, antiRequisiteAngles, transformationBridge, socialProofBlueprint)
+O prompt do presence planner em presence-planner.agent.ts (linhas 172–272) precisa de uma seção "Inteligência de Campanha" que instrua o LLM a usar esses dados para guiar pautas, ângulos de copy e formatos de reel.
+
+Arquivos principais
+artifacts/api-server/src/modules/social-presence/social-presence.service.ts — onde buscar os dados e montar o bloco
+artifacts/api-server/src/modules/agents/presence-planner.agent.ts — onde injetar no prompt
+lib/db/src/schema/market-intel-reports.ts — schema do relatório de mercado
+artifacts/api-server/src/modules/agents/market-intel.agent.ts — estrutura do MarketIntelOutput
+
+2 actions
+A mesclagem das métricas entrou, mas o pós-merge travou em uma pergunta interativa do Drizzle sobre uma constraint. Vou corrigir o script para que futuras mesclagens apliquem apenas migrações determinísticas e nunca aguardem confirmação no terminal.
+
+

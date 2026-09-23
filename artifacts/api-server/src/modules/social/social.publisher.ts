@@ -13,6 +13,136 @@ export type PublishResult = {
   pending?: boolean;
   definitiveRejected?: boolean;
 };
+
+export type SocialCredentialFailureKind =
+  | "invalid_credential"
+  | "invalid_account"
+  | "invalid_permission"
+  | "transient";
+
+export type SocialCredentialReadiness =
+  | { ok: true }
+  | {
+      ok: false;
+      kind: SocialCredentialFailureKind;
+      statusCode?: number;
+      error: string;
+      /** The persisted integration status to use for terminal failures. */
+      integrationStatus?: "expired" | "error";
+    };
+
+const expectedProviderForPlatform: Partial<Record<SocialPost["platform"], string>> = {
+  instagram: "instagram",
+  facebook_page: "meta_ads",
+  tiktok: "tiktok_ads",
+};
+
+export function classifyProbeFailure(
+  statusCode: number | undefined,
+  error: string,
+): SocialCredentialReadiness {
+  if (statusCode === 408 || statusCode === 429 || (statusCode !== undefined && statusCode >= 500)) {
+    return {
+      ok: false,
+      kind: "transient",
+      statusCode,
+      error: "credential_probe_temporarily_unavailable",
+    };
+  }
+  const normalized = error.toLowerCase();
+  if (normalized.includes("permission")) {
+    return {
+      ok: false,
+      kind: "invalid_permission",
+      statusCode,
+      error: "credential_probe_missing_permission",
+      integrationStatus: "error",
+    };
+  }
+  if (normalized.includes("account") || normalized.includes("mismatch")) {
+    return {
+      ok: false,
+      kind: "invalid_account",
+      statusCode,
+      error: "credential_probe_account_mismatch",
+      integrationStatus: "error",
+    };
+  }
+  return {
+    ok: false,
+    kind: "invalid_credential",
+    statusCode,
+    error: "credential_probe_rejected",
+    integrationStatus: "expired",
+  };
+}
+
+/**
+ * Canonical fail-closed gate for every social provider mutation.
+ *
+ * Callers still own workspace-scoped integration selection and persistence of
+ * the resulting status. This function never includes token material in its
+ * result or logs and performs the provider probe only after all local checks.
+ */
+export async function checkSocialCredentialReadiness(
+  platform: SocialPost["platform"],
+  integration: WorkspaceIntegration | null | undefined,
+): Promise<SocialCredentialReadiness> {
+  if (!integration) {
+    return {
+      ok: false,
+      kind: "invalid_account",
+      error: "credential_integration_missing",
+      integrationStatus: "error",
+    };
+  }
+  const expectedProvider = expectedProviderForPlatform[platform];
+  if (!expectedProvider || integration.provider !== expectedProvider) {
+    return {
+      ok: false,
+      kind: "invalid_account",
+      error: "credential_integration_provider_mismatch",
+      integrationStatus: "error",
+    };
+  }
+  if (integration.status !== "connected") {
+    return {
+      ok: false,
+      kind: "invalid_credential",
+      error: "credential_integration_not_connected",
+      integrationStatus: integration.status === "expired" ? "expired" : "error",
+    };
+  }
+  if (!integration.accessToken?.trim() || !integration.accountId?.trim()) {
+    return {
+      ok: false,
+      kind: "invalid_credential",
+      error: "credential_integration_credentials_missing",
+      integrationStatus: "error",
+    };
+  }
+  if (integration.tokenExpiresAt && integration.tokenExpiresAt <= new Date()) {
+    return {
+      ok: false,
+      kind: "invalid_credential",
+      error: "credential_integration_expired",
+      integrationStatus: "expired",
+    };
+  }
+
+  try {
+    const probe = await probeSocialIntegration(platform, integration);
+    if (probe.ok) return { ok: true };
+    return classifyProbeFailure(probe.statusCode, probe.error ?? "provider_probe_failed");
+  } catch (error) {
+    const statusCode =
+      error instanceof ProviderOutcomeError ? error.statusCode
+        : typeof error === "object" && error !== null && "statusCode" in error
+          ? Number((error as { statusCode?: unknown }).statusCode) || undefined
+          : undefined;
+    return classifyProbeFailure(statusCode, "provider_probe_failed");
+  }
+}
 export class ProviderOutcomeError extends Error {
   constructor(message: string, readonly statusCode?: number, readonly ambiguous = false) { super(message); }
 }
@@ -94,8 +224,36 @@ export async function probeSocialIntegration(
     });
     if (!response.ok) return { ok: false, statusCode: response.status, error: "provider_probe_failed" };
     const body = await response.json() as { data?: { user?: { open_id?: string } } };
-    if (body.data?.user?.open_id && body.data.user.open_id !== integration.accountId) {
+    if (!body.data?.user?.open_id) {
+      return { ok: false, error: "integration_account_unproven" };
+    }
+    if (body.data.user.open_id !== integration.accountId) {
       return { ok: false, error: "integration_account_mismatch" };
+    }
+
+    // user.info only proves identity. The publish adapter requires the
+    // Content Posting API, so positively prove creator authorization before
+    // allowing any mutation. A successful response without creator metadata
+    // is deliberately treated as missing permission.
+    const creatorResponse = await fetch(
+      "https://open.tiktokapis.com/v2/post/publish/creator_info/query/",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${integration.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      },
+    );
+    if (!creatorResponse.ok) {
+      return { ok: false, statusCode: creatorResponse.status, error: "provider_permissions_unproven" };
+    }
+    const creatorBody = await creatorResponse.json() as {
+      data?: { privacy_level_options?: string[] };
+    };
+    if (!creatorBody.data?.privacy_level_options?.length) {
+      return { ok: false, error: "provider_permissions_unproven" };
     }
   }
   return { ok: true };
@@ -530,16 +688,9 @@ export async function getInstagramMetrics(
       impressions: get("impressions"),
       clicks: get("clicks"),
     };
-  } catch {
-    return {
-      likes: 0,
-      comments: 0,
-      shares: 0,
-      views: 0,
-      reach: 0,
-      impressions: 0,
-      clicks: 0,
-    };
+  } catch (error) {
+    if (error instanceof ProviderOutcomeError) throw error;
+    throw new ProviderOutcomeError("Instagram metrics request failed", undefined, true);
   }
 }
 
@@ -647,6 +798,9 @@ export async function getTikTokMetrics(
         body: JSON.stringify({ publish_id: publishId }),
       }
     );
+    if (!res.ok) {
+      throw new ProviderOutcomeError("TikTok metrics request rejected", res.status, res.status === 408 || res.status === 429 || res.status >= 500);
+    }
     const data = (await res.json()) as {
       data?: {
         status?: string;
@@ -655,7 +809,9 @@ export async function getTikTokMetrics(
     };
 
     const videoId = data.data?.publicaly_available_post_id?.[0];
-    if (!videoId) return zeroMetrics();
+    if (!videoId) {
+      throw new ProviderOutcomeError("TikTok metrics response missing published video id");
+    }
 
     const statsRes = await fetch(
       `https://open.tiktokapis.com/v2/video/query/?fields=like_count,comment_count,share_count,view_count`,
@@ -670,6 +826,9 @@ export async function getTikTokMetrics(
         }),
       }
     );
+    if (!statsRes.ok) {
+      throw new ProviderOutcomeError("TikTok metrics stats request rejected", statsRes.status, statsRes.status === 408 || statsRes.status === 429 || statsRes.status >= 500);
+    }
 
     const statsData = (await statsRes.json()) as {
       data?: {
@@ -683,7 +842,9 @@ export async function getTikTokMetrics(
     };
 
     const v = statsData.data?.videos?.[0];
-    if (!v) return zeroMetrics();
+    if (!v) {
+      throw new ProviderOutcomeError("TikTok metrics response missing video statistics");
+    }
 
     return {
       likes: v.like_count ?? 0,
@@ -694,8 +855,9 @@ export async function getTikTokMetrics(
       impressions: v.view_count ?? 0,
       clicks: 0,
     };
-  } catch {
-    return zeroMetrics();
+    } catch (error) {
+      if (error instanceof ProviderOutcomeError) throw error;
+      throw new ProviderOutcomeError("TikTok metrics request failed", undefined, true);
   }
 }
 
@@ -779,16 +941,4 @@ function buildCaption(caption: string | null, hashtags: string[]): string {
   if (!hashtags.length) return base;
   const tags = hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" ");
   return `${base}\n\n${tags}`;
-}
-
-function zeroMetrics(): MetricsResult {
-  return {
-    likes: 0,
-    comments: 0,
-    shares: 0,
-    views: 0,
-    reach: 0,
-    impressions: 0,
-    clicks: 0,
-  };
 }

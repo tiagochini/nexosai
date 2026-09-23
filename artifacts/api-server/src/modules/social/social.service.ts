@@ -25,7 +25,8 @@ import {
   sendWhatsAppMessage,
   getInstagramMetrics,
   getTikTokMetrics,
-  probeSocialIntegration,
+  checkSocialCredentialReadiness,
+  ProviderOutcomeError,
   readBackSocialPost,
 } from "./social.publisher.js";
 import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
@@ -948,17 +949,17 @@ export async function publishPost(workspaceId: string, postId: string): Promise<
     await markFailed(workspaceId, postId, "Integração não conectada ou expirada");
     throw new AppError(400, "Integração não conectada", "INTEGRATION_ERROR");
   }
-  const probe = await probeSocialIntegration(post.platform, integration);
-  if (!probe.ok) {
-    if (probe.statusCode && (probe.statusCode === 429 || probe.statusCode >= 500)) {
+  const readiness = await checkSocialCredentialReadiness(post.platform, integration);
+  if (!readiness.ok) {
+    if (readiness.kind === "transient") {
       const retryCount = post.retryCount + 1;
       const nextAttempt = new Date(Date.now() + Math.min(15 * 60_000, 60_000 * (2 ** Math.min(retryCount - 1, 3))));
       await db.update(socialPostsTable).set({ status: "scheduled", retryCount, scheduledAt: nextAttempt, errorMessage: "Provider temporariamente indisponível", updatedAt: new Date() })
         .where(and(eq(socialPostsTable.id, postId), eq(socialPostsTable.workspaceId, workspaceId)));
       throw new AppError(503, "Provider temporariamente indisponível", "PUBLISH_RETRYABLE");
     }
-    if (probe.statusCode === 401 || probe.statusCode === 403) {
-      await db.update(workspaceIntegrationsTable).set({ status: "expired", updatedAt: new Date() })
+    if (readiness.integrationStatus) {
+      await db.update(workspaceIntegrationsTable).set({ status: readiness.integrationStatus, updatedAt: new Date() })
         .where(and(eq(workspaceIntegrationsTable.id, integration.id), eq(workspaceIntegrationsTable.workspaceId, workspaceId)));
     }
     await markFailed(workspaceId, postId, "Integração não autorizada para publicação");
@@ -1194,14 +1195,52 @@ export async function syncPostMetrics(workspaceId: string, postId: string): Prom
   if (post.status !== "published" || !post.platformPostId) return post;
 
   const integration = await getIntegration(workspaceId, post.integrationId);
-  if (!integration?.accessToken) return post;
+  const expectedProvider = post.platform === "instagram" ? "instagram"
+    : post.platform === "facebook_page" ? "meta_ads"
+      : post.platform === "tiktok" ? "tiktok_ads" : null;
+  if (
+    !integration ||
+    !expectedProvider ||
+    integration.provider !== expectedProvider ||
+    integration.status !== "connected" ||
+    !integration.accessToken?.trim() ||
+    !integration.accountId?.trim() ||
+    (integration.tokenExpiresAt && integration.tokenExpiresAt <= new Date())
+  ) {
+    if (
+      integration &&
+      integration.status === "connected" &&
+      integration.tokenExpiresAt &&
+      integration.tokenExpiresAt <= new Date()
+    ) {
+      await db.update(workspaceIntegrationsTable)
+        .set({ status: "expired", updatedAt: new Date() })
+        .where(and(
+          eq(workspaceIntegrationsTable.id, integration.id),
+          eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+        ));
+    }
+    return post;
+  }
 
   let metrics;
-  if (post.platform === "instagram") {
-    metrics = await getInstagramMetrics(post.platformPostId, integration.accessToken);
-  } else if (post.platform === "tiktok") {
-    metrics = await getTikTokMetrics(post.platformPostId, integration.accessToken);
-  } else {
+  try {
+    if (post.platform === "instagram") {
+      metrics = await getInstagramMetrics(post.platformPostId, integration.accessToken);
+    } else if (post.platform === "tiktok") {
+      metrics = await getTikTokMetrics(post.platformPostId, integration.accessToken);
+    } else {
+      return post;
+    }
+  } catch (error) {
+    if (error instanceof ProviderOutcomeError && (error.statusCode === 401 || error.statusCode === 403)) {
+      await db.update(workspaceIntegrationsTable)
+        .set({ status: "expired", updatedAt: new Date() })
+        .where(and(
+          eq(workspaceIntegrationsTable.id, integration.id),
+          eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+        ));
+    }
     return post;
   }
 

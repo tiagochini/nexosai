@@ -100,3 +100,5 @@
 - [Progressive Capability Navigation](progressive-capability-navigation.md) — add sidebar areas only when their agents can execute real work; pages expose outcomes, history and reports, not placeholders.
 - [Workforce Realization Engine](workforce-realization-engine.md) — realization is a core operating layer: agents build, connect, publish, verify and optimize the complete commercial system.
 - [Post-Merge DB Migrations](post-merge-db-migrations.md) — post-merge setup must apply tracked SQL migrations; never run interactive whole-schema push or automatic truncation.
+- [Social Credential Boundary](social-credential-boundary.md) — every social mutation shares one fail-closed credential probe; transient failures preserve accounts and cached metrics.
+- [Public Evidence Sanitization](public-evidence-sanitization.md) — redact complete values before truncation, strip signed URL parameters and stop traversal at hard collection limits.

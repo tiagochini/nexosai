@@ -8,7 +8,12 @@ import {
   campaignCreativesTable,
 } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
-import { publishToInstagram, publishToFacebook, publishToTikTok } from "./social.publisher.js";
+import {
+  publishToInstagram,
+  publishToFacebook,
+  publishToTikTok,
+  checkSocialCredentialReadiness,
+} from "./social.publisher.js";
 import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import type { SocialPost, WorkspaceIntegration } from "@workspace/db";
 
@@ -347,6 +352,35 @@ export async function autoPostApprovedContent(
       if (pauseChannel) await enforceNoMandatoryPause(workspaceId, {
         campaignId: campaignId || undefined, channel: pauseChannel, action: "social_publish",
       });
+      const readiness = await checkSocialCredentialReadiness(platform, integration);
+      if (!readiness.ok) {
+        if (readiness.integrationStatus) {
+          await db.update(workspaceIntegrationsTable)
+            .set({ status: readiness.integrationStatus, updatedAt: new Date() })
+            .where(and(
+              eq(workspaceIntegrationsTable.id, integration.id),
+              eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+            ));
+        }
+        await db.insert(socialPostsTable).values({
+          workspaceId,
+          campaignId: campaignId || null,
+          contentPieceId: pieceId,
+          integrationId: integration.id,
+          platform,
+          postType,
+          caption,
+          hashtags: [],
+          mediaUrls,
+          status: readiness.kind === "transient" ? "scheduled" : "failed",
+          scheduledAt: readiness.kind === "transient"
+            ? new Date(Date.now() + 60_000)
+            : null,
+          errorMessage: readiness.error,
+          aiGenerated: true,
+        }).onConflictDoNothing();
+        continue;
+      }
       if (platform === "instagram") {
         result = await publishToInstagram(mockPost, integration);
       } else if (platform === "facebook_page") {
@@ -568,6 +602,30 @@ export async function processScheduledSocialPosts(): Promise<void> {
         const mockPost = { ...post, mediaUrls, status: "publishing" as const };
 
         let result;
+        const readiness = await checkSocialCredentialReadiness(post.platform, integration);
+        if (!readiness.ok) {
+          if (readiness.integrationStatus) {
+            await db.update(workspaceIntegrationsTable)
+              .set({ status: readiness.integrationStatus, updatedAt: new Date() })
+              .where(and(
+                eq(workspaceIntegrationsTable.id, integration.id),
+                eq(workspaceIntegrationsTable.workspaceId, post.workspaceId),
+              ));
+          }
+          const retryCount = (post.retryCount ?? 0) + 1;
+          await db.update(socialPostsTable).set({
+            status: readiness.kind === "transient" && retryCount < 3 ? "scheduled" : "failed",
+            retryCount,
+            scheduledAt: readiness.kind === "transient" && retryCount < 3
+              ? new Date(Date.now() + 60_000)
+              : null,
+            errorMessage: readiness.error,
+          }).where(and(
+            eq(socialPostsTable.id, post.id),
+            eq(socialPostsTable.workspaceId, post.workspaceId),
+          ));
+          continue;
+        }
         const pauseChannel = post.platform === "instagram" ? "instagram"
           : post.platform === "facebook_page" ? "facebook"
             : post.platform === "tiktok" ? "tiktok" : null;

@@ -41,6 +41,7 @@ import type {
   PresencePlatformConfig,
   PresenceWeeklyInsight,
   PresenceBioSuggestion,
+  WorkspaceIntegration,
 } from "@workspace/db";
 import type { Logger } from "pino";
 import { logger } from "../../lib/logger.js";
@@ -60,6 +61,8 @@ import {
   publishToInstagram,
   publishToFacebook,
   publishToTikTok,
+  checkSocialCredentialReadiness,
+  ProviderOutcomeError,
   getInstagramMetrics,
   getTikTokMetrics,
 } from "../social/social.publisher.js";
@@ -423,6 +426,18 @@ export async function publishTestPost(
   };
 
   try {
+    const readiness = await checkSocialCredentialReadiness(mockPost.platform, integration);
+    if (!readiness.ok) {
+      if (readiness.integrationStatus) {
+        await db.update(workspaceIntegrationsTable)
+          .set({ status: readiness.integrationStatus, updatedAt: new Date() })
+          .where(and(
+            eq(workspaceIntegrationsTable.id, integration.id),
+            eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+          ));
+      }
+      return { success: false, error: readiness.error };
+    }
     let result;
     if (platform === "instagram") {
       result = await publishToInstagram(mockPost as never, integration);
@@ -1053,6 +1068,22 @@ export async function publishBio(
     };
   }
 
+  const readiness = await checkSocialCredentialReadiness(
+    platform === "facebook" ? "facebook_page" : "instagram",
+    integration,
+  );
+  if (!readiness.ok) {
+    if (readiness.integrationStatus) {
+      await db.update(workspaceIntegrationsTable)
+        .set({ status: readiness.integrationStatus, updatedAt: new Date() })
+        .where(and(
+          eq(workspaceIntegrationsTable.id, integration.id),
+          eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+        ));
+    }
+    return { success: false, error: `Bio bloqueada: ${readiness.error}` };
+  }
+
   const token = integration.accessToken;
   const accountId = integration.accountId;
   const GV = "v22.0";
@@ -1176,7 +1207,29 @@ async function syncMetricsForPosts(
       const provider = PLATFORM_TO_PROVIDER[post.platform];
       const integration = provider ? byProvider.get(provider) : undefined;
       const token = integration?.accessToken;
-      if (!token || !post.platformPostId) continue;
+      if (
+        !integration ||
+        integration.status !== "connected" ||
+        !token?.trim() ||
+        !integration.accountId?.trim() ||
+        (integration.tokenExpiresAt && integration.tokenExpiresAt <= new Date()) ||
+        !post.platformPostId
+      ) {
+        if (
+          integration &&
+          integration.status === "connected" &&
+          integration.tokenExpiresAt &&
+          integration.tokenExpiresAt <= new Date()
+        ) {
+          await db.update(workspaceIntegrationsTable)
+            .set({ status: "expired", updatedAt: new Date() })
+            .where(and(
+              eq(workspaceIntegrationsTable.id, integration.id),
+              eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+            ));
+        }
+        continue;
+      }
 
       const m =
         post.platform === "tiktok"
@@ -1198,6 +1251,18 @@ async function syncMetricsForPosts(
         })
         .where(eq(socialPresencePostsTable.id, post.id));
     } catch (err) {
+      if (err instanceof ProviderOutcomeError && (err.statusCode === 401 || err.statusCode === 403)) {
+        const provider = PLATFORM_TO_PROVIDER[post.platform];
+        const integration = provider ? byProvider.get(provider) : undefined;
+        if (integration) {
+          await db.update(workspaceIntegrationsTable)
+            .set({ status: "expired", updatedAt: new Date() })
+            .where(and(
+              eq(workspaceIntegrationsTable.id, integration.id),
+              eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+            ));
+        }
+      }
       log.warn({ err, postId: post.id }, "presence.syncMetrics: post failed (non-fatal)");
     }
   }
@@ -1965,6 +2030,27 @@ export async function publishDuePresencePosts(): Promise<void> {
         };
 
         let result;
+        const readiness = await checkSocialCredentialReadiness(mockPost.platform, integration);
+        if (!readiness.ok) {
+          if (readiness.integrationStatus) {
+            await db.update(workspaceIntegrationsTable)
+              .set({ status: readiness.integrationStatus, updatedAt: new Date() })
+              .where(and(
+                eq(workspaceIntegrationsTable.id, integration.id),
+                eq(workspaceIntegrationsTable.workspaceId, post.workspaceId),
+              ));
+          }
+          const retryCount = (post.retryCount ?? 0) + 1;
+          const retryable = readiness.kind === "transient" && retryCount < 3;
+          await db.update(socialPresencePostsTable)
+            .set({
+              status: retryable ? "scheduled" : "failed",
+              retryCount,
+              errorMessage: readiness.error,
+            })
+            .where(eq(socialPresencePostsTable.id, post.id));
+          continue;
+        }
         if (post.platform === "instagram") {
           result = await publishToInstagram(mockPost as never, integration);
         } else if (post.platform === "facebook") {
@@ -2010,13 +2096,13 @@ export async function publishDuePresencePosts(): Promise<void> {
           // adiciona ao Destaque automaticamente (fire-and-forget).
           const postHighlight = (post as { highlightName?: string | null }).highlightName;
           if (post.platform === "instagram" && post.format === "story" && postHighlight && result.platformPostId && integration.accessToken && integration.accountId) {
-            const safeIntegration = { accessToken: integration.accessToken, accountId: integration.accountId };
             setImmediate(() =>
               addStoryToHighlight(
                 post.workspaceId,
+                post.id,
                 result.platformPostId!,
                 postHighlight,
-                safeIntegration,
+                integration,
                 log,
               ).catch((err) => log.warn({ err, postId: post.id }, "presence: auto-highlight failed (non-fatal)"))
             );
@@ -3381,18 +3467,46 @@ async function generateAndAutoApproveTestImage(
 
 async function addStoryToHighlight(
   workspaceId: string,
+  presencePostId: string,
   storyMediaId: string,
   highlightName: string,
-  integration: { accessToken: string; accountId: string },
+  integration: WorkspaceIntegration,
   log: { info(obj: object, msg: string): void; warn(obj: object, msg: string): void },
 ): Promise<void> {
+  const readiness = await checkSocialCredentialReadiness("instagram", integration);
+  if (!readiness.ok) {
+    await db.update(socialPresencePostsTable)
+      .set({ errorMessage: `Destaque bloqueado: ${readiness.error}` })
+      .where(and(
+        eq(socialPresencePostsTable.id, presencePostId),
+        eq(socialPresencePostsTable.workspaceId, workspaceId),
+      ));
+    log.warn(
+      { workspaceId, storyMediaId, highlight: highlightName, reason: readiness.error },
+      "presence: highlight mutation blocked by credential readiness",
+    );
+    return;
+  }
   const token = integration.accessToken;
   const igAccountId = integration.accountId;
 
   // 1. Buscar highlights existentes
-  const listRes = await fetch(
+  const listRes = await metaGraphFetch(
     `https://graph.facebook.com/v22.0/${igAccountId}/highlight_albums?fields=id,title&access_token=${token}`,
   );
+  if (!listRes.ok) {
+    await db.update(socialPresencePostsTable)
+      .set({ errorMessage: `Destaque não consultado: HTTP ${listRes.status}` })
+      .where(and(
+        eq(socialPresencePostsTable.id, presencePostId),
+        eq(socialPresencePostsTable.workspaceId, workspaceId),
+      ));
+    log.warn(
+      { workspaceId, storyMediaId, highlight: highlightName, status: listRes.status },
+      "presence: highlight listing failed; mutation skipped",
+    );
+    return;
+  }
   const listData = (await listRes.json()) as {
     data?: Array<{ id: string; title: string }>;
     error?: { message: string };
@@ -3404,15 +3518,16 @@ async function addStoryToHighlight(
 
   if (existing) {
     // 2a. Adicionar ao destaque existente
-    await metaGraphFetch(`https://graph.facebook.com/v22.0/${existing.id}`, {
+    const addResponse = await metaGraphFetch(`https://graph.facebook.com/v22.0/${existing.id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ media_ids_to_add: storyMediaId, access_token: token }),
     });
+    if (!addResponse.ok) throw new Error(`Highlight add failed: HTTP ${addResponse.status}`);
     log.info({ postId: storyMediaId, highlight: highlightName }, "presence: story adicionada ao destaque existente");
   } else {
     // 2b. Criar novo destaque
-    await metaGraphFetch(`https://graph.facebook.com/v22.0/${igAccountId}/highlight_albums`, {
+    const createResponse = await metaGraphFetch(`https://graph.facebook.com/v22.0/${igAccountId}/highlight_albums`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -3422,6 +3537,7 @@ async function addStoryToHighlight(
         access_token: token,
       }),
     });
+    if (!createResponse.ok) throw new Error(`Highlight create failed: HTTP ${createResponse.status}`);
     log.info({ postId: storyMediaId, highlight: highlightName }, "presence: novo destaque criado");
   }
 }
@@ -3504,6 +3620,31 @@ export async function processDmSequences(): Promise<void> {
           await db
             .update(instagramDmSequencesTable)
             .set({ completedAt: new Date() })
+            .where(eq(instagramDmSequencesTable.id, seq.id));
+          continue;
+        }
+
+        // Gate every outbound DM mutation (reminders and sequence messages)
+        // before claiming evidence or touching the Graph API.
+        const dmReadiness = await checkSocialCredentialReadiness("instagram", integration);
+        if (!dmReadiness.ok) {
+          if (dmReadiness.integrationStatus) {
+            await db.update(workspaceIntegrationsTable)
+              .set({ status: dmReadiness.integrationStatus, updatedAt: new Date() })
+              .where(and(
+                eq(workspaceIntegrationsTable.id, integration.id),
+                eq(workspaceIntegrationsTable.workspaceId, seq.workspaceId),
+              ));
+          }
+          const retryCount = (seq.retryCount ?? 0) + 1;
+          const exhausted = retryCount >= MAX_STEP_RETRIES;
+          await db.update(instagramDmSequencesTable)
+            .set({
+              retryCount,
+              lastError: `DM bloqueado: ${dmReadiness.error}`,
+              nextStepAt: exhausted ? seq.nextStepAt : new Date(now.getTime() + 5 * 60 * 1000),
+              ...(exhausted ? { completedAt: new Date() } : {}),
+            })
             .where(eq(instagramDmSequencesTable.id, seq.id));
           continue;
         }

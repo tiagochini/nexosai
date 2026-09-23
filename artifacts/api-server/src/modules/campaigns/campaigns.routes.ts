@@ -12,6 +12,7 @@ import {
   mergeIntakeDirectives,
   reorientCampaign,
 } from "./campaigns.service.js";
+import { getCampaignControlRoom } from "./control-room.service.js";
 import { triggerStrategyPhase } from "../orchestration/orchestration.service.js";
 import { AppError } from "../../lib/errors.js";
 import { db, workspacesTable, CAMPAIGN_CREDIT_BUFFER } from "@workspace/db";
@@ -139,6 +140,19 @@ router.get("/:id/live-stats", async (req, res): Promise<void> => {
   try {
     const stats = await getCampaignLiveStats(id!, req.auth.workspaceId);
     res.json({ liveStats: stats });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+router.get("/:id/control-room", async (req, res): Promise<void> => {
+  const id = Array.isArray(req.params["id"]) ? req.params["id"][0] : req.params["id"];
+  try {
+    res.json(await getCampaignControlRoom(id!, req.auth.workspaceId));
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });

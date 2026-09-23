@@ -1,0 +1,378 @@
+Concordo. Essa deve ser a experiência central do NexOS.
+
+O workspace não deve parecer uma coleção de ferramentas que o usuário precisa operar. Deve ser uma **central de monitoramento de uma agência autônoma**, onde ele acompanha tudo o que está sendo pesquisado, produzido, revisado, publicado e otimizado.
+
+# 1. Cada área deve ser full-stack
+
+Quando uma área entrar no menu, ela precisa mostrar o ciclo completo daquele segmento.
+
+Por exemplo, **Social Media** não pode mostrar apenas posts. Deve mostrar:
+
+- estratégia usada;
+- calendário;
+- entregáveis;
+- previews;
+- versões;
+- revisões realizadas pelas IAs;
+- motivo de cada correção;
+- aprovação pendente;
+- publicações agendadas;
+- status no provedor;
+- métricas;
+- comentários e mensagens;
+- aprendizados;
+- próximas ações;
+- relatórios e downloads.
+
+O mesmo princípio vale para CRM, SEO, Website, Ads, Schedule, Communities e demais áreas.
+
+## Estrutura padrão de cada área
+
+Cada vertical poderá ter:
+
+1. **Visão geral**
+2. **Trabalho em andamento**
+3. **Entregáveis e previews**
+4. **Atividade dos agentes**
+5. **Revisões e retrabalho**
+6. **Agenda**
+7. **Métricas e dados**
+8. **Decisões**
+9. **Relatórios e downloads**
+10. **Integrações e situação operacional**
+
+O usuário consegue entrar profundamente, mas não precisa operar manualmente.
+
+# 2. Preview obrigatório dos entregáveis visuais
+
+Todo entregável visual deve ter preview antes da publicação.
+
+Isso inclui:
+
+- websites;
+- landing pages;
+- páginas de checkout;
+- criativos;
+- anúncios;
+- posts;
+- carrosséis;
+- stories;
+- reels;
+- vídeos;
+- e-mails visuais;
+- materiais de apresentação;
+- páginas de onboarding.
+
+O preview deve mostrar, quando aplicável:
+
+- desktop;
+- mobile;
+- formato do canal;
+- texto;
+- legenda;
+- CTA;
+- mídia;
+- data e horário;
+- público ou fase;
+- versão do Master Plan;
+- histórico de versões;
+- diferenças entre versões;
+- revisões feitas pelos agentes;
+- resultado da análise final.
+
+Para vídeos:
+
+- player;
+- capa;
+- duração;
+- roteiro;
+- legendas;
+- áudio;
+- CTA;
+- formato final;
+- canal de publicação.
+
+# 3. O usuário deve perceber o trabalho e o retrabalho
+
+Não basta mostrar o resultado final. O NexOS deve tornar visível o trabalho que substituiu.
+
+Exemplo:
+
+```text
+Landing page criada
+→ Copy revisada pelo agente de conversão
+→ 3 promessas removidas por falta de evidência
+→ CTA ajustado para a fase da campanha
+→ Versão mobile corrigida
+→ Formulário conectado
+→ Tracking verificado
+→ Teste de envio aprovado
+→ Pronta para publicação
+```
+
+Isso demonstra valor sem expor raciocínio interno sensível dos modelos.
+
+O usuário verá:
+
+- tarefas executadas;
+- agentes participantes;
+- duração;
+- dependências;
+- erros encontrados;
+- correções;
+- versões rejeitadas internamente;
+- horas de trabalho substituídas;
+- verificações;
+- resultado publicado.
+
+# 4. As únicas aprovações normais do usuário
+
+O usuário deve participar principalmente de três decisões:
+
+## Aprovação de orçamento
+
+- orçamento total;
+- limites por canal;
+- alterações materiais;
+- movimentação entre plataformas;
+- aumento de investimento.
+
+## Aprovação do Master Plan
+
+- objetivo;
+- oferta;
+- público;
+- posicionamento;
+- estratégia;
+- cronograma;
+- limites;
+- decisões fundamentais.
+
+## Aprovação de entregáveis materiais
+
+- páginas;
+- anúncios;
+- criativos;
+- vídeos;
+- sequências;
+- campanhas;
+- mudanças relevantes de oferta ou posicionamento.
+
+O restante deve ser executado autonomamente dentro dessas autorizações.
+
+# 5. Inatividade não pode interromper a operação
+
+Concordo com essa regra.
+
+Se o entregável estiver aguardando aprovação e o prazo chegar, a operação não deve parar apenas porque o usuário não respondeu.
+
+Mas precisamos separar claramente:
+
+### Ausência de resposta
+
+Pode permitir publicação automática, se todas as condições forem cumpridas.
+
+### Rejeição explícita
+
+Nunca permite publicação automática.
+
+Se o usuário rejeitou, o NexOS precisa:
+
+1. registrar o motivo;
+2. produzir uma nova versão;
+3. validar novamente;
+4. apresentar um novo preview;
+5. aguardar a nova decisão ou o novo prazo aplicável.
+
+# 6. Condições para publicação por ausência de resposta
+
+A publicação automática só poderá acontecer quando:
+
+- o usuário aceitou previamente essa política;
+- o Master Plan está aprovado;
+- o orçamento necessário está aprovado;
+- o entregável foi apresentado em preview;
+- não houve rejeição;
+- não houve mudança material depois do preview;
+- a data e o canal estão corretos;
+- o conteúdo corresponde à fase correta;
+- a conta de publicação continua conectada;
+- os direitos das mídias estão confirmados;
+- nenhuma pausa operacional está ativa;
+- nenhuma regra jurídica ou de plataforma está bloqueando;
+- a análise final passou em todos os critérios obrigatórios.
+
+“100% alinhado” não pode significar apenas que uma IA deu uma nota alta.
+
+Significa:
+
+```text
+Todos os gates obrigatórios passaram
++ nenhuma incerteza crítica
++ nenhuma divergência material
++ nenhuma restrição ativa
++ vínculo confirmado com o Master Plan
+```
+
+Se qualquer verificação ficar incerta, a publicação falha de forma segura e abre uma exceção operacional.
+
+# 7. Aviso uma hora antes
+
+Uma hora antes do limite de aprovação, o NexOS deve notificar o usuário.
+
+Canais:
+
+- notificação dentro do workspace;
+- e-mail;
+- WhatsApp, quando autorizado e configurado.
+
+Exemplo:
+
+> Seu carrossel está programado para publicação às 18h. A aprovação pode ser feita até 17h. Se não houver aprovação ou rejeição até esse horário, o NexOS realizará uma análise final e publicará automaticamente caso o material permaneça totalmente alinhado ao Master Plan e à fase atual da campanha.
+
+O sistema precisa registrar:
+
+- horário do aviso;
+- canais utilizados;
+- entrega confirmada ou falha;
+- prazo;
+- versão apresentada;
+- resposta do usuário;
+- decisão final;
+- validações;
+- publicação;
+- recibo do provedor.
+
+# 8. Central de aprovações
+
+Deve existir uma área central de **Aprovações**, além das aprovações dentro de cada vertical.
+
+Ela mostrará:
+
+- orçamento pendente;
+- Master Plan pendente;
+- entregáveis pendentes;
+- prazo restante;
+- consequência da ausência de resposta;
+- preview;
+- histórico;
+- aprovar;
+- rejeitar com motivo;
+- solicitar alteração.
+
+Estados possíveis:
+
+```text
+Em produção
+Em revisão interna
+Aguardando aprovação
+Aprovado
+Rejeitado
+Correção em andamento
+Agendado
+Publicado automaticamente após prazo
+Publicado após aprovação
+Bloqueado por exceção
+```
+
+# 9. Conselho acessível pelo menu
+
+Sim, o Conselho precisa ter uma área própria.
+
+## Menu: Conselho
+
+O usuário poderá acessar:
+
+- reuniões anteriores;
+- reunião atual;
+- próxima reunião;
+- especialistas convocados;
+- dados considerados;
+- comparação entre plano e execução;
+- divergências encontradas;
+- oportunidades;
+- riscos;
+- decisões;
+- ações automáticas autorizadas;
+- decisões enviadas para aprovação;
+- responsáveis;
+- resultados verificados no ciclo seguinte.
+
+## Estrutura de uma reunião
+
+```text
+Contexto
+Métricas
+Evidências
+Problemas
+Hipóteses
+Especialistas consultados
+Decisões
+Ações executadas
+Aprovações necessárias
+Resultado posterior
+```
+
+Não será apenas uma transcrição de conversa entre agentes. Será uma ata operacional vinculada a ações e resultados.
+
+# 10. Menu progressivo do workspace
+
+Uma estrutura possível, adicionada gradualmente:
+
+```text
+Visão Geral
+
+Master Plan
+Aprovações
+Conselho
+
+Website
+Funnels
+Content
+Social Media
+Schedule
+CRM
+Sales
+Ads
+SEO
+Communities
+Lifecycle
+
+Budget
+Reports
+Integrations
+```
+
+Mas continuamos com a regra:
+
+> Uma área só aparece quando os agentes conseguem executar trabalho real naquele domínio e existe informação útil para acompanhar.
+
+# 11. A experiência final
+
+O usuário entra no NexOS e vê algo como:
+
+```text
+Hoje o NexOS:
+
+• analisou 1.284 sinais
+• revisou 7 entregáveis
+• corrigiu 3 inconsistências
+• publicou 4 conteúdos
+• respondeu 18 leads
+• avançou 5 oportunidades
+• detectou 2 riscos
+• otimizou 1 campanha
+• convocou 3 especialistas
+• preparou 2 decisões para sua aprovação
+```
+
+E a ação humana fica reduzida a:
+
+```text
+Aprovar orçamento
+Aprovar Master Plan
+Aprovar ou rejeitar entregáveis
+Intervir em exceções importantes
+```
+
+Essa passa a ser a definição correta do workspace NexOS: **uma central de visibilidade, aprovação e prestação de contas sobre todo o trabalho executado autonomamente pelo sistema.**
