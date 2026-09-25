@@ -1,6 +1,7 @@
 import { foreignKey, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid, uniqueIndex } from "drizzle-orm/pg-core";
 import { workspacesTable } from "./workspaces";
 import { socialPostsTable } from "./social-posts";
+import { PUBLISH_STAGE_ONE } from "./publish-staging";
 
 export const socialPublishAttemptStateEnum = pgEnum("social_publish_attempt_state", [
   "executing", "ambiguous", "retryable", "confirmed", "terminal", "manual_recovery",
@@ -28,11 +29,11 @@ export const socialPublishAttemptsTable = pgTable("social_publish_attempts", {
 }, (table) => [
   uniqueIndex("social_publish_attempts_post_key_uidx").on(table.postId, table.attemptKey),
   index("social_publish_attempts_workspace_state_idx").on(table.workspaceId, table.state, table.nextAttemptAt),
-  foreignKey({
+  ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({
     columns: [table.workspaceId, table.postId],
     foreignColumns: [socialPostsTable.workspaceId, socialPostsTable.id],
     name: "social_publish_attempts_workspace_post_fk",
-  }),
+  })]),
 ]);
 
 export type SocialPublishAttempt = typeof socialPublishAttemptsTable.$inferSelect;

@@ -8,6 +8,7 @@ import {
   integer,
   boolean,
   uniqueIndex,
+  unique,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -114,6 +115,10 @@ export const socialPostsTable = pgTable("social_posts", {
     .$onUpdate(() => new Date()),
 }, (table) => [
   uniqueIndex("social_posts_workspace_id_uidx").on(table.workspaceId, table.id),
+  // The existing index is present in development but absent from production
+  // and omitted by Publish's diff. A constraint with a distinct name makes the
+  // parent key visible to the phase-one schema diff before restoring the FK.
+  unique("social_posts_workspace_id_id_key").on(table.workspaceId, table.id),
   uniqueIndex("social_posts_workspace_content_piece_integration_uidx")
     .on(table.workspaceId, table.contentPieceId, table.integrationId)
     .where(sql`${table.contentPieceId} IS NOT NULL`),

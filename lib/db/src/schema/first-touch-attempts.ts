@@ -2,6 +2,7 @@ import { foreignKey, index, integer, jsonb, pgEnum, pgTable, text, timestamp, un
 import { workspacesTable } from "./workspaces";
 import { launchSequencesTable, launchSequenceItemsTable } from "./launch-sequences";
 import { sequenceContactsTable } from "./sequence-contacts";
+import { PUBLISH_STAGE_ONE } from "./publish-staging";
 
 export const firstTouchAttemptStateEnum = pgEnum("first_touch_attempt_state", [
   "executing", "retryable", "ambiguous", "confirmed", "terminal",
@@ -28,9 +29,11 @@ export const firstTouchAttemptsTable = pgTable("first_touch_attempts", {
 }, (table) => [
   uniqueIndex("first_touch_attempts_key_uidx").on(table.workspaceId, table.attemptKey),
   index("first_touch_attempts_due_idx").on(table.workspaceId, table.state, table.nextAttemptAt),
-  foreignKey({ columns: [table.workspaceId, table.sequenceId], foreignColumns: [launchSequencesTable.workspaceId, launchSequencesTable.id], name: "first_touch_workspace_sequence_fk" }),
-  foreignKey({ columns: [table.workspaceId, table.contactId], foreignColumns: [sequenceContactsTable.workspaceId, sequenceContactsTable.id], name: "first_touch_workspace_contact_fk" }),
-  foreignKey({ columns: [table.workspaceId, table.itemId], foreignColumns: [launchSequenceItemsTable.workspaceId, launchSequenceItemsTable.id], name: "first_touch_workspace_item_fk" }),
+  ...(PUBLISH_STAGE_ONE ? [] : [
+    foreignKey({ columns: [table.workspaceId, table.sequenceId], foreignColumns: [launchSequencesTable.workspaceId, launchSequencesTable.id], name: "first_touch_workspace_sequence_fk" }),
+    foreignKey({ columns: [table.workspaceId, table.contactId], foreignColumns: [sequenceContactsTable.workspaceId, sequenceContactsTable.id], name: "first_touch_workspace_contact_fk" }),
+    foreignKey({ columns: [table.workspaceId, table.itemId], foreignColumns: [launchSequenceItemsTable.workspaceId, launchSequenceItemsTable.id], name: "first_touch_workspace_item_fk" }),
+  ]),
 ]);
 
 export type FirstTouchAttempt = typeof firstTouchAttemptsTable.$inferSelect;

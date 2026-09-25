@@ -5,6 +5,7 @@ import { campaignsTable } from "./campaigns";
 import { usersTable } from "./users";
 import { masterplanVersionsTable } from "./masterplan-versions";
 import { paidMediaAccountsTable, paidMediaEntitiesTable, paidMediaProposalsTable } from "./paid-media";
+import { PUBLISH_STAGE_ONE } from "./publish-staging";
 
 export const conditionalActionEnum = pgEnum("conditional_execution_action", ["paid_media_pause"]);
 export const conditionalIntentStatusEnum = pgEnum("conditional_execution_intent_status", ["planned", "blocked", "eligible", "attempted", "confirmed", "ambiguous", "recovery_required"]);
@@ -31,9 +32,9 @@ export const conditionalExecutionPoliciesTable = pgTable("conditional_execution_
   uniqueIndex("conditional_execution_policies_idempotency_uidx").on(t.workspaceId, t.idempotencyKey),
   uniqueIndex("conditional_execution_policies_campaign_id_uidx").on(t.workspaceId, t.campaignId, t.id),
   index("conditional_execution_policies_current_idx").on(t.workspaceId, t.campaignId, t.enabled),
-  foreignKey({ columns: [t.workspaceId, t.campaignId], foreignColumns: [campaignsTable.workspaceId, campaignsTable.id], name: "conditional_policies_campaign_scope_fk" }),
-  foreignKey({ columns: [t.workspaceId, t.ownerUserId], foreignColumns: [workspacesTable.id, workspacesTable.ownerId], name: "conditional_policies_owner_fk" }),
-  foreignKey({ columns: [t.workspaceId, t.campaignId, t.masterplanVersionId], foreignColumns: [masterplanVersionsTable.workspaceId, masterplanVersionsTable.campaignId, masterplanVersionsTable.id], name: "conditional_policies_masterplan_scope_fk" }),
+  ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.campaignId], foreignColumns: [campaignsTable.workspaceId, campaignsTable.id], name: "conditional_policies_campaign_scope_fk" })]),
+  ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.ownerUserId], foreignColumns: [workspacesTable.id, workspacesTable.ownerId], name: "conditional_policies_owner_fk" })]),
+  ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.campaignId, t.masterplanVersionId], foreignColumns: [masterplanVersionsTable.workspaceId, masterplanVersionsTable.campaignId, masterplanVersionsTable.id], name: "conditional_policies_masterplan_scope_fk" })]),
   check("conditional_execution_policy_version_check", sql`${t.version} >= 1`),
 ]);
 
@@ -49,9 +50,9 @@ export const conditionalExecutionPolicyActionsTable = pgTable("conditional_execu
 }, (t) => [
   uniqueIndex("conditional_policy_actions_policy_target_uidx").on(t.policyId, t.provider, t.accountId, t.entityId, t.actionType),
     uniqueIndex("conditional_actions_workspace_policy_id_uidx").on(t.workspaceId, t.policyId, t.id),
-    foreignKey({ columns: [t.workspaceId, t.policyId], foreignColumns: [conditionalExecutionPoliciesTable.workspaceId, conditionalExecutionPoliciesTable.id], name: "conditional_actions_policy_scope_fk" }),
-    foreignKey({ columns: [t.workspaceId, t.accountId], foreignColumns: [paidMediaAccountsTable.workspaceId, paidMediaAccountsTable.id], name: "conditional_actions_account_scope_fk" }),
-    foreignKey({ columns: [t.workspaceId, t.entityId], foreignColumns: [paidMediaEntitiesTable.workspaceId, paidMediaEntitiesTable.id], name: "conditional_actions_entity_scope_fk" }),
+    ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.policyId], foreignColumns: [conditionalExecutionPoliciesTable.workspaceId, conditionalExecutionPoliciesTable.id], name: "conditional_actions_policy_scope_fk" })]),
+    ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.accountId], foreignColumns: [paidMediaAccountsTable.workspaceId, paidMediaAccountsTable.id], name: "conditional_actions_account_scope_fk" })]),
+    ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.entityId], foreignColumns: [paidMediaEntitiesTable.workspaceId, paidMediaEntitiesTable.id], name: "conditional_actions_entity_scope_fk" })]),
   check("conditional_policy_actions_ceiling_check", sql`${t.maxActionsPerDay} >= 1 AND ${t.maxActionsPerDay} <= 100`),
 ]);
 export const conditionalExecutionPolicyEventsTable = pgTable("conditional_execution_policy_events", {
@@ -64,7 +65,7 @@ export const conditionalExecutionPolicyEventsTable = pgTable("conditional_execut
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   }, (t) => [
     index("conditional_policy_events_policy_idx").on(t.policyId, t.createdAt),
-    foreignKey({ columns: [t.workspaceId, t.policyId], foreignColumns: [conditionalExecutionPoliciesTable.workspaceId, conditionalExecutionPoliciesTable.id], name: "conditional_policy_events_policy_scope_fk" }),
+    ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.policyId], foreignColumns: [conditionalExecutionPoliciesTable.workspaceId, conditionalExecutionPoliciesTable.id], name: "conditional_policy_events_policy_scope_fk" })]),
   ]);
 
 export const conditionalExecutionIntentsTable = pgTable("conditional_execution_intents", {
@@ -81,9 +82,9 @@ export const conditionalExecutionIntentsTable = pgTable("conditional_execution_i
  }, (t) => [
    uniqueIndex("conditional_execution_intents_key_uidx").on(t.workspaceId, t.intentKey),
    index("conditional_execution_intents_campaign_idx").on(t.workspaceId, t.campaignId, t.createdAt),
-   foreignKey({ columns: [t.workspaceId, t.proposalId], foreignColumns: [paidMediaProposalsTable.workspaceId, paidMediaProposalsTable.id], name: "conditional_intents_proposal_scope_fk" }),
-   foreignKey({ columns: [t.workspaceId, t.campaignId, t.policyId], foreignColumns: [conditionalExecutionPoliciesTable.workspaceId, conditionalExecutionPoliciesTable.campaignId, conditionalExecutionPoliciesTable.id], name: "conditional_intents_policy_campaign_fk" }),
-   foreignKey({ columns: [t.workspaceId, t.policyId, t.policyActionId], foreignColumns: [conditionalExecutionPolicyActionsTable.workspaceId, conditionalExecutionPolicyActionsTable.policyId, conditionalExecutionPolicyActionsTable.id], name: "conditional_intents_action_policy_scope_fk" }),
+   ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.proposalId], foreignColumns: [paidMediaProposalsTable.workspaceId, paidMediaProposalsTable.id], name: "conditional_intents_proposal_scope_fk" })]),
+   ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.campaignId, t.policyId], foreignColumns: [conditionalExecutionPoliciesTable.workspaceId, conditionalExecutionPoliciesTable.campaignId, conditionalExecutionPoliciesTable.id], name: "conditional_intents_policy_campaign_fk" })]),
+   ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.policyId, t.policyActionId], foreignColumns: [conditionalExecutionPolicyActionsTable.workspaceId, conditionalExecutionPolicyActionsTable.policyId, conditionalExecutionPolicyActionsTable.id], name: "conditional_intents_action_policy_scope_fk" })]),
  ]);
 
 export const conditionalExecutionAttemptsTable = pgTable("conditional_execution_attempts", {

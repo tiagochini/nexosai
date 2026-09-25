@@ -70,3 +70,6 @@ ASAAS_SANDBOX = "false"
 
 [userenv.development]
 ASAAS_SANDBOX = "true"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-ce70fb49-6095-41d9-ac1c-245046facb48"

@@ -19,6 +19,7 @@ import { approvalCheckpointsTable } from "./approval-checkpoints";
 import { masterplanVersionsTable } from "./masterplan-versions";
 import { usersTable } from "./users";
 import { workspacesTable } from "./workspaces";
+import { PUBLISH_STAGE_ONE } from "./publish-staging";
 
 export const approvalSubjectTypeEnum = pgEnum("approval_subject_type", [
   "masterplan",
@@ -104,31 +105,33 @@ export const approvalDecisionsTable = pgTable(
         OR ("subject_type" = 'checkpoint' AND "checkpoint_id"::text = "subject_id" AND "content_piece_id" IS NULL)
       )`,
     ),
-    foreignKey({
-      columns: [table.workspaceId, table.campaignId],
-      foreignColumns: [campaignsTable.workspaceId, campaignsTable.id],
-      name: "approval_decisions_campaign_workspace_fk",
-    }).onDelete("cascade"),
-    foreignKey({
-      columns: [table.workspaceId, table.actorUserId],
-      foreignColumns: [workspacesTable.id, workspacesTable.ownerId],
-      name: "approval_decisions_workspace_actor_fk",
-    }).onDelete("restrict"),
-    foreignKey({
-      columns: [table.workspaceId, table.campaignId, table.masterplanVersionId],
-      foreignColumns: [masterplanVersionsTable.workspaceId, masterplanVersionsTable.campaignId, masterplanVersionsTable.id],
-      name: "approval_decisions_masterplan_scope_fk",
-    }).onDelete("restrict"),
-    foreignKey({
-      columns: [table.workspaceId, table.campaignId, table.contentPieceId],
-      foreignColumns: [contentPiecesTable.workspaceId, contentPiecesTable.campaignId, contentPiecesTable.id],
-      name: "approval_decisions_content_piece_scope_fk",
-    }).onDelete("restrict"),
-    foreignKey({
-      columns: [table.campaignId, table.checkpointId],
-      foreignColumns: [approvalCheckpointsTable.campaignId, approvalCheckpointsTable.id],
-      name: "approval_decisions_checkpoint_scope_fk",
-    }).onDelete("restrict"),
+    ...(PUBLISH_STAGE_ONE ? [] : [
+      foreignKey({
+        columns: [table.workspaceId, table.campaignId],
+        foreignColumns: [campaignsTable.workspaceId, campaignsTable.id],
+        name: "approval_decisions_campaign_workspace_fk",
+      }).onDelete("cascade"),
+      foreignKey({
+        columns: [table.workspaceId, table.actorUserId],
+        foreignColumns: [workspacesTable.id, workspacesTable.ownerId],
+        name: "approval_decisions_workspace_actor_fk",
+      }).onDelete("restrict"),
+      foreignKey({
+        columns: [table.workspaceId, table.campaignId, table.masterplanVersionId],
+        foreignColumns: [masterplanVersionsTable.workspaceId, masterplanVersionsTable.campaignId, masterplanVersionsTable.id],
+        name: "approval_decisions_masterplan_scope_fk",
+      }).onDelete("restrict"),
+      foreignKey({
+        columns: [table.workspaceId, table.campaignId, table.contentPieceId],
+        foreignColumns: [contentPiecesTable.workspaceId, contentPiecesTable.campaignId, contentPiecesTable.id],
+        name: "approval_decisions_content_piece_scope_fk",
+      }).onDelete("restrict"),
+      foreignKey({
+        columns: [table.campaignId, table.checkpointId],
+        foreignColumns: [approvalCheckpointsTable.campaignId, approvalCheckpointsTable.id],
+        name: "approval_decisions_checkpoint_scope_fk",
+      }).onDelete("restrict"),
+    ]),
   ],
 );
 

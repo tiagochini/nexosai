@@ -7,6 +7,7 @@ import { approvalCheckpointsTable } from "./approval-checkpoints";
 import { workspacesTable } from "./workspaces";
 import { approvalDecisionsTable } from "./approval-decisions";
 import { usersTable } from "./users";
+import { PUBLISH_STAGE_ONE } from "./publish-staging";
 
 export const approvalSlaStatusEnum = pgEnum("approval_sla_status", ["open", "resolved", "expired"]);
 export const approvalSlaEventKindEnum = pgEnum("approval_sla_event_kind", ["warning", "due", "escalation", "expired"]);
@@ -45,10 +46,12 @@ export const approvalSlaObligationsTable = pgTable("approval_sla_obligations", {
     OR ("subject_type" = 'content_piece' AND "content_piece_id"::text = "subject_id" AND "masterplan_version_id" IS NULL AND "checkpoint_id" IS NULL)
     OR ("subject_type" = 'checkpoint' AND "checkpoint_id"::text = "subject_id" AND "masterplan_version_id" IS NULL AND "content_piece_id" IS NULL)
   )`),
-  foreignKey({ columns: [table.workspaceId, table.createdBy], foreignColumns: [workspacesTable.id, workspacesTable.ownerId], name: "approval_sla_workspace_creator_fk" }),
-  foreignKey({ columns: [table.workspaceId, table.campaignId, table.masterplanVersionId], foreignColumns: [masterplanVersionsTable.workspaceId, masterplanVersionsTable.campaignId, masterplanVersionsTable.id], name: "approval_sla_masterplan_scope_fk" }),
-  foreignKey({ columns: [table.workspaceId, table.campaignId, table.contentPieceId], foreignColumns: [contentPiecesTable.workspaceId, contentPiecesTable.campaignId, contentPiecesTable.id], name: "approval_sla_content_scope_fk" }),
-  foreignKey({ columns: [table.campaignId, table.checkpointId], foreignColumns: [approvalCheckpointsTable.campaignId, approvalCheckpointsTable.id], name: "approval_sla_checkpoint_scope_fk" }),
+  ...(PUBLISH_STAGE_ONE ? [] : [
+    foreignKey({ columns: [table.workspaceId, table.createdBy], foreignColumns: [workspacesTable.id, workspacesTable.ownerId], name: "approval_sla_workspace_creator_fk" }),
+    foreignKey({ columns: [table.workspaceId, table.campaignId, table.masterplanVersionId], foreignColumns: [masterplanVersionsTable.workspaceId, masterplanVersionsTable.campaignId, masterplanVersionsTable.id], name: "approval_sla_masterplan_scope_fk" }),
+    foreignKey({ columns: [table.workspaceId, table.campaignId, table.contentPieceId], foreignColumns: [contentPiecesTable.workspaceId, contentPiecesTable.campaignId, contentPiecesTable.id], name: "approval_sla_content_scope_fk" }),
+    foreignKey({ columns: [table.campaignId, table.checkpointId], foreignColumns: [approvalCheckpointsTable.campaignId, approvalCheckpointsTable.id], name: "approval_sla_checkpoint_scope_fk" }),
+  ]),
 ]);
 
 export const approvalSlaEventsTable = pgTable("approval_sla_events", {
@@ -63,5 +66,7 @@ export const approvalSlaEventsTable = pgTable("approval_sla_events", {
 }, (table) => [
   uniqueIndex("approval_sla_events_obligation_kind_channel_uidx").on(table.obligationId, table.eventKind, table.channel),
   index("approval_sla_events_workspace_idx").on(table.workspaceId, table.createdAt),
-  foreignKey({ columns: [table.workspaceId, table.obligationId], foreignColumns: [approvalSlaObligationsTable.workspaceId, approvalSlaObligationsTable.id], name: "approval_sla_events_scope_fk" }),
+  ...(PUBLISH_STAGE_ONE ? [] : [
+    foreignKey({ columns: [table.workspaceId, table.obligationId], foreignColumns: [approvalSlaObligationsTable.workspaceId, approvalSlaObligationsTable.id], name: "approval_sla_events_scope_fk" }),
+  ]),
 ]);

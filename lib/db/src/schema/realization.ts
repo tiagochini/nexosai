@@ -4,6 +4,7 @@ import { campaignsTable } from "./campaigns";
 import { masterplanVersionsTable } from "./masterplan-versions";
 import { workspacesTable } from "./workspaces";
 import { usersTable } from "./users";
+import { PUBLISH_STAGE_ONE } from "./publish-staging";
 
 export const realizationActionEnum = pgEnum("realization_action", ["paid_media_pause", "paid_media_launch"]);
 export const realizationStateEnum = pgEnum("realization_state", ["proposal", "planned", "approval_binding", "preflight", "blocked", "attempted", "provider_confirmed", "artifact_qc", "monitored", "retryable", "failed", "recovery", "compensated", "exception"]);
@@ -35,8 +36,8 @@ export const realizationContractsTable = pgTable("realization_contracts", {
   uniqueIndex("realization_contracts_workspace_idempotency_uidx").on(t.workspaceId, t.idempotencyKey),
   uniqueIndex("realization_contracts_workspace_id_uidx").on(t.workspaceId, t.id),
   index("realization_contracts_workspace_campaign_idx").on(t.workspaceId, t.campaignId, t.createdAt),
-  foreignKey({ columns: [t.workspaceId, t.campaignId], foreignColumns: [campaignsTable.workspaceId, campaignsTable.id], name: "realization_contracts_campaign_scope_fk" }),
-  foreignKey({ columns: [t.workspaceId, t.campaignId, t.masterplanVersionId], foreignColumns: [masterplanVersionsTable.workspaceId, masterplanVersionsTable.campaignId, masterplanVersionsTable.id], name: "realization_contracts_masterplan_scope_fk" }),
+  ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.campaignId], foreignColumns: [campaignsTable.workspaceId, campaignsTable.id], name: "realization_contracts_campaign_scope_fk" })]),
+  ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.campaignId, t.masterplanVersionId], foreignColumns: [masterplanVersionsTable.workspaceId, masterplanVersionsTable.campaignId, masterplanVersionsTable.id], name: "realization_contracts_masterplan_scope_fk" })]),
   check("realization_contracts_max_attempts_check", sql`${t.maxAttempts} between 1 and 10`),
 ]);
 
@@ -61,7 +62,7 @@ export const realizationAttemptsTable = pgTable("realization_attempts", {
   uniqueIndex("realization_attempts_contract_number_uidx").on(t.contractId, t.number),
   uniqueIndex("realization_attempts_workspace_contract_id_uidx").on(t.workspaceId, t.contractId, t.id),
   index("realization_attempts_workspace_idx").on(t.workspaceId, t.claimedAt),
-  foreignKey({ columns: [t.workspaceId, t.contractId], foreignColumns: [realizationContractsTable.workspaceId, realizationContractsTable.id], name: "realization_attempts_contract_scope_fk" }),
+  ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.contractId], foreignColumns: [realizationContractsTable.workspaceId, realizationContractsTable.id], name: "realization_attempts_contract_scope_fk" })]),
   check("realization_attempts_number_check", sql`${t.number} between 1 and 10`),
 ]);
 
@@ -75,6 +76,6 @@ export const realizationEventsTable = pgTable("realization_events", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index("realization_events_contract_created_idx").on(t.contractId, t.createdAt),
-  foreignKey({ columns: [t.workspaceId, t.contractId], foreignColumns: [realizationContractsTable.workspaceId, realizationContractsTable.id], name: "realization_events_contract_scope_fk" }),
-  foreignKey({ columns: [t.workspaceId, t.contractId, t.attemptId], foreignColumns: [realizationAttemptsTable.workspaceId, realizationAttemptsTable.contractId, realizationAttemptsTable.id], name: "realization_events_attempt_scope_fk" }),
+  ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.contractId], foreignColumns: [realizationContractsTable.workspaceId, realizationContractsTable.id], name: "realization_events_contract_scope_fk" })]),
+  ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.contractId, t.attemptId], foreignColumns: [realizationAttemptsTable.workspaceId, realizationAttemptsTable.contractId, realizationAttemptsTable.id], name: "realization_events_attempt_scope_fk" })]),
 ]);
