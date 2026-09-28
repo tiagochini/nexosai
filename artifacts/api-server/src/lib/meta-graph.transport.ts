@@ -98,6 +98,7 @@ function fakeBody(call: SanitizedMetaGraphCall): Record<string, unknown> {
   // These shapes cover publishing, comment replies, DMs, and the paid-media
   // adapter while remaining deterministic and intentionally non-production.
   if (call.path.endsWith("/insights")) return { data: [] };
+  if (call.path.endsWith("/subscribed_apps") && call.method === "POST") return { success: true };
   if (process.env["META_E2E_READBACK_SIMULATION"] === "true") {
     const accountFeed = call.path.match(/^\/v\d+(?:\.\d+)?\/([^/]+)\/feed$/);
     if (call.method === "POST" && accountFeed) {

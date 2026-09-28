@@ -82,7 +82,7 @@ export async function getMetaReviewReadiness(workspaceId: string) {
     (env.META_APP_SECRET || process.env["FACEBOOK_APP_SECRET"]),
   );
   const webhookConfigured = Boolean(process.env["META_WEBHOOK_VERIFY_TOKEN"]);
-  const publicBaseUrl = env.APP_URL.replace(/\/$/, "");
+  const publicBaseUrl = (env.META_WEBHOOK_PUBLIC_BASE_URL || env.APP_URL).replace(/\/$/, "");
 
   const checks = [
     { key: "meta_app", label: "Meta app credentials configured", status: appConfigured ? "pass" : "fail", detail: appConfigured ? "App ID and secret are available to the server." : "Configure the Meta App ID and secret before OAuth." },

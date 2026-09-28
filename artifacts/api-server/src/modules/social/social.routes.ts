@@ -20,10 +20,10 @@ import {
   publishPost,
   syncPostMetrics,
   schedulePostsForCampaign,
-  processMetaWebhook,
   processTikTokWebhook,
   type SupportedPlatform,
 } from "./social.service.js";
+import { processMetaWebhookDelivery } from "./meta-webhook.processor.js";
 import {
   parseVerifiedMetaWebhook,
   verifyMetaWebhookSubscription,
@@ -280,9 +280,9 @@ router.post("/webhooks/meta", express.raw({ type: "application/json", limit: "10
   const body = parseVerifiedMetaWebhook(req, res);
   if (body === null) return;
   res.status(200).json({ status: "ok" });
-  // This compatibility endpoint owns DM events only. Comment events are owned
-  // by social-moderation, preventing the same delivery from being processed twice.
-  setImmediate(() => processMetaWebhook(body).catch((err) =>
+  // Keep the historical URL fully compatible. Downstream event claims make
+  // duplicate deliveries safe if Meta temporarily sends to both callback URLs.
+  setImmediate(() => processMetaWebhookDelivery(body, req.log).catch((err) =>
     req.log?.error({ err }, "Meta social webhook processing error"),
   ));
 });

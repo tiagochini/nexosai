@@ -10,6 +10,7 @@ out-tsc
 
 # dependencies
 node_modules
+.pnpm-store/
 
 # IDEs and editors
 /.idea
@@ -28,10 +29,12 @@ node_modules
 !.vscode/extensions.json
 
 # misc
+/.env.local
 /.sass-cache
 /connect.lock
 /coverage
 /libpeerconnection.log
+/dump.rdb
 npm-debug.log
 yarn-error.log
 testem.log

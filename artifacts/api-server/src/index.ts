@@ -142,6 +142,14 @@ function scheduleRecordingOrganizationSweep(): void {
   });
 }
 
+const localSafeMode = process.env["LOCAL_SAFE_MODE"] === "true" && process.env["NODE_ENV"] !== "production";
+
+if (localSafeMode) {
+  logger.warn("LOCAL_SAFE_MODE enabled — boot recovery and background schedulers are disabled");
+  httpServer.listen(port, () => {
+    logger.info({ port }, "NexOS AI API Server listening in local safe mode");
+  });
+} else {
 Promise.all([
   db.update(campaignAgentsTable)
     .set({
@@ -329,6 +337,7 @@ Promise.all([
     startRegionalAcquisitionScheduler();
   });
 });
+}
 
 async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, "Shutdown signal received");
