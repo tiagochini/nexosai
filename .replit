@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web"]
+modules = ["web", "nodejs-24", "postgresql-16"]
 
 [deployment]
 router = "application"
@@ -9,6 +9,27 @@ args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
 
 [workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Redis (development)"
+
+[[workflows.workflow]]
+name = "Redis (development)"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "redis-server --bind 127.0.0.1 --port 6379 --save \"\" --appendonly no"
 
 [agent]
 stack = "PNPM_WORKSPACE"
@@ -52,6 +73,7 @@ externalPort = 3000
 
 [nix]
 channel = "stable-25_05"
+packages = ["redis"]
 
 [userenv]
 
