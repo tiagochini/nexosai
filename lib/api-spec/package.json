@@ -6,6 +6,6 @@
     "codegen": "cd \"$(dirname \"$npm_package_json\")\" && orval --config ./orval.config.ts && node ./scripts/fix-zod-query-param-collisions.mjs && pnpm -w run typecheck:libs"
   },
   "devDependencies": {
-    "orval": "^8.5.2"
+    "orval": "^8.38.0"
   }
 }

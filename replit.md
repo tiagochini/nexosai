@@ -4,6 +4,9 @@ AI-powered operating system for campaign execution, launch automation and digita
 
 ## Run & Operate
 
+- In this imported Replit workspace, start **Redis (development)** first, then **artifacts/api-server: API Server**, then **artifacts/app: web** using the Workflows pane. The managed app preview is `/`; login is `/login`, and API health is `/api/healthz`. Other artifact services (landing, academy, editor, video) can be started separately as needed.
+- Use Node.js 24 and `pnpm install --frozen-lockfile` for a fresh checkout. Development PostgreSQL is provisioned by Replit; on a new, **empty** development database only, initialize the schema with `pnpm --filter @workspace/db run push`. Do not run schema push against an existing database without reviewing the proposed changes. Local development Redis binds to `127.0.0.1:6379` and is configured without persistence, so queued jobs do not survive its restart.
+- A clean `pnpm run typecheck` currently fails in the legacy `scripts` package; the app and API package typechecks pass. External AI, email, and social-provider features require their own configured credentials and are not validated by the local health check. Do not put credentials in tracked configuration; rotate any credential-like values that were committed in the imported `.replit` file.
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080, proxied at /api)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run typecheck:libs` — build composite libs (run before api-server typecheck when DB schema changes)
