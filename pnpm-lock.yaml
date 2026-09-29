@@ -2516,6 +2516,7 @@ packages:
     cpu: [x64]
     os: [win32]
 
+
   '@scalar/helpers@0.15.0':
     resolution: {integrity: sha512-eUnaVQ1EE2YFIVrPOQxVaUiVYZjM6Yg2Oh0yUI87pyI0ilH6jOLA6wIJVWP/AXLv5WnhsfJW33xlZcztozEZ2A==}
     engines: {node: '>=22'}
@@ -9053,6 +9054,8 @@ snapshots:
     optional: true
 
   regexparam@3.0.0: {}
+
+  remeda@2.33.6: {}
 
   remote-content@4.0.1(debug@4.4.3):
     dependencies:

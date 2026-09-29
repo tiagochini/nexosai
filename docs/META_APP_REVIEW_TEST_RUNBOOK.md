@@ -20,8 +20,14 @@ O painel é deliberadamente token-free. Nunca abra variáveis de ambiente, DevTo
 
 No Meta App Dashboard:
 
-1. Cadastre a URL de OAuth de produção exibida pelo NexOS.
+1. Cadastre as URLs OAuth usadas pelas integrações solicitadas:
+   - `https://SEU_DOMINIO/api/integrations/oauth/callback/instagram`
+   - `https://SEU_DOMINIO/api/integrations/oauth/callback/facebook`
 2. Configure o webhook principal como `https://SEU_DOMINIO/api/social-moderation/webhooks/meta`.
+   A rota histórica `https://SEU_DOMINIO/api/social/webhooks/meta` permanece
+   compatível e usa o mesmo processador. Não é necessário cadastrar ambas para
+   o mesmo objeto; se ambas receberem a mesma entrega, a idempotência evita uma
+   segunda resposta.
 3. Use o mesmo verify token configurado no servidor.
 4. Assine os campos necessários de Instagram/Page: `messages`, `messaging_postbacks`, `comments` e `feed`.
 5. Cadastre:
@@ -31,6 +37,10 @@ No Meta App Dashboard:
 6. Prepare uma Página de teste e uma conta Instagram profissional vinculada à Página.
 7. Prepare duas identidades: a conta profissional conectada e uma conta externa que enviará comentários/DMs.
 8. Crie uma conta de login exclusiva para o revisor. Informe usuário e senha somente no campo seguro da Meta. Não dependa de MFA, convite pendente ou intervenção do proprietário.
+
+Para desenvolvimento local, não substitua essas URLs de produção por
+`localhost`. Use um App Meta de desenvolvimento, um túnel HTTPS e o gateway
+restrito descritos em [META_WEBHOOK_LOCAL_DEV.md](META_WEBHOOK_LOCAL_DEV.md).
 
 ## 3. Matriz de permissões
 
@@ -142,3 +152,8 @@ Inclua abaixo dessas instruções o nome exato do workspace, post de teste e con
 ## 9. Limite da prova local
 
 `test:meta-app-review`, `test:contextual-conversation` e o harness Meta validam assinatura, isolamento, deduplicação, redaction e retry. Eles não substituem OAuth real, subscriptions reais, chamadas reais à Graph API ou as gravações exigidas pela Meta.
+
+O teste local das rotas deve usar `pnpm run dev:local:meta-test`, que mantém as
+chamadas de saída da Graph API em memória. Antes da gravação do App Review,
+reinicie no modo normal e confirme que a conta de teste está explicitamente
+assinada em `subscribed_apps`.
