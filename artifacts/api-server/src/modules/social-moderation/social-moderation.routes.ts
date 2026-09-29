@@ -5,9 +5,7 @@ import {
   saveModerationConfig,
   getCommentActions,
   syncPostComments,
-  processIncomingComment,
   overrideCommentAction,
-  findWorkspaceByPlatformAccount,
   type CommentPlatform,
   type CommentClassification,
   type CommentActionType,
@@ -18,7 +16,7 @@ import {
   parseVerifiedMetaWebhook,
   verifyMetaWebhookSubscription,
 } from "../social/meta-webhook.security.js";
-import { processMetaWebhook } from "../social/social.service.js";
+import { processMetaWebhookDelivery } from "../social/meta-webhook.processor.js";
 import { listMetaEvidence } from "../social/meta-webhook-evidence.service.js";
 
 const router = Router();
@@ -168,75 +166,7 @@ router.post("/webhooks/meta", express.raw({ type: "application/json", limit: "10
 
   setImmediate(async () => {
     try {
-      // Keep the historical moderation callback fully compatible for DMs while
-      // centralizing delivery claiming/sequence processing in social.service.
-      await processMetaWebhook(body);
-      const payload = body as {
-        object?: string;
-        entry?: Array<{
-          id: string;
-          changes?: Array<{
-            field: string;
-            value: {
-              item?: string;
-              comment_id?: string;
-              parent_id?: string;
-              from?: { id: string; name: string };
-              message?: string;
-              post_id?: string;
-              verb?: string;
-            };
-          }>;
-        }>;
-      };
-
-      if (payload.object !== "page" && payload.object !== "instagram") return;
-
-      for (const entry of payload.entry ?? []) {
-        for (const change of entry.changes ?? []) {
-          if (change.field !== "comments" && change.field !== "feed")
-            continue;
-
-          const val = change.value;
-          if (val.item !== "comment" && change.field !== "comments") continue;
-          if (val.verb === "remove") continue;
-
-          const commentId = val.comment_id;
-          const postId = val.post_id ?? entry.id;
-          const authorId = val.from?.id ?? "unknown";
-          const authorName = val.from?.name ?? "unknown";
-          const text = val.message ?? "";
-          const platform: CommentPlatform =
-            payload.object === "instagram" ? "instagram" : "facebook_page";
-
-          if (!commentId || !text) continue;
-
-          const workspace = await findWorkspaceByPlatformAccount(
-            platform,
-            entry.id
-          );
-          if (!workspace) {
-            req.log.warn({ platform, accountId: entry.id, commentId }, "Ignoring unroutable Meta comment webhook");
-            continue;
-          }
-
-          await processIncomingComment({
-            workspaceId: workspace.workspaceId,
-            platform,
-            postId,
-            commentId,
-            parentCommentId: val.parent_id,
-            authorName,
-            authorId,
-            commentText: text,
-            accessToken: workspace.accessToken,
-            integrationId: workspace.integrationId,
-            // Passa o account ID do entry para o trigger de DM por keyword (ex: "MAPA")
-            igAccountId: entry.id,
-          });
-        }
-
-      }
+      await processMetaWebhookDelivery(body, req.log);
     } catch (err) {
       req.log.error({ err }, "Meta webhook processing error");
     }

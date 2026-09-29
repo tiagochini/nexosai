@@ -4,6 +4,7 @@ import ffmpeg from "fluent-ffmpeg";
 import { v4 as uuidv4 } from "uuid";
 import fs from "fs";
 import path from "path";
+import os from "os";
 import OpenAIClient from "openai";
 import { z } from "zod/v4";
 import { logger } from "../../lib/logger.js";
@@ -21,8 +22,11 @@ import { nativeCapabilities } from "../video-production/native-media-engine.serv
 import { persistedTimelineSchema } from "./timeline-render.compiler.js";
 
 const router = Router();
+const VIDEO_EDITOR_TEMP_DIR = path.join(os.tmpdir(), "nexos-video-editor");
+const UPLOAD_DIR = path.join(VIDEO_EDITOR_TEMP_DIR, "uploads");
+const OUTPUT_DIR = path.join(VIDEO_EDITOR_TEMP_DIR, "outputs");
 const packageUpload = multer({
-  storage: multer.diskStorage({ destination: "/tmp/nexos-video-editor/uploads", filename: (_req, file, cb) => cb(null, `${uuidv4()}${path.extname(file.originalname)}`) }),
+  storage: multer.diskStorage({ destination: UPLOAD_DIR, filename: (_req, file, cb) => cb(null, `${uuidv4()}${path.extname(file.originalname)}`) }),
   limits: { fileSize: 2 * 1024 * 1024 * 1024, files: 1 },
 });
 
@@ -319,9 +323,6 @@ router.post("/projects/:projectId/corrections/:correctionId/resolve", requireAut
 // Keeping this as a router-level barrier prevents newly added transient routes
 // from accidentally becoming public.
 router.use(requireAuth);
-
-const UPLOAD_DIR = "/tmp/nexos-video-editor/uploads";
-const OUTPUT_DIR = "/tmp/nexos-video-editor/outputs";
 
 // Whisper caps requests at 25MB; our mp3 extraction (64kbps mono) yields ~1.9MB/min of audio,
 // so 25MB comfortably covers footage up to ~30min (the target take length for pro editing).

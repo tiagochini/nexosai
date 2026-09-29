@@ -5,12 +5,14 @@ import { db, paidMediaAccountsTable, workspaceIntegrationsTable } from "@workspa
 import jwt from "jsonwebtoken";
 import { eq, and } from "drizzle-orm";
 import { logger } from "../../lib/logger.js";
+import { AppError } from "../../lib/errors.js";
 import {
   integrationPurpose,
   metadataForPurpose,
   type IntegrationPurpose,
 } from "./integration-purpose.js";
 import { assertSocialAccountEntitlement } from "../auth/workspace-entitlements.service.js";
+import { ensureInstagramWebhookSubscription } from "../social/meta-webhook-subscription.service.js";
 
 const router = Router();
 
@@ -688,6 +690,21 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
       : await db.insert(workspaceIntegrationsTable).values(values)
         .returning({ id: workspaceIntegrationsTable.id });
 
+    // Registration at Meta is deliberately opt-in. OAuth still succeeds if the
+    // provider rejects the subscription; the operator can correct permissions
+    // without losing the connected account.
+    if (provider === "instagram" && env.META_WEBHOOK_AUTO_SUBSCRIBE && accountId && accessToken) {
+      try {
+        await ensureInstagramWebhookSubscription(accountId, accessToken);
+        logger.info({ workspaceId: stateData.workspaceId, accountId }, "Instagram webhook subscription verified after OAuth");
+      } catch (error) {
+        logger.warn(
+          { workspaceId: stateData.workspaceId, accountId, errorCode: error instanceof Error ? error.name : "UNKNOWN" },
+          "Instagram OAuth completed but webhook subscription failed",
+        );
+      }
+    }
+
     // Persist all Meta advertiser accounts discovered at OAuth time. This is
     // intentionally separate from the organic Page/IG integration record and
     // preserves every candidate when user access includes multiple accounts.
@@ -730,6 +747,47 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
   } catch (err) {
     logger.error({ err, provider }, "OAuth callback error");
     finishOAuth(false, "Erro interno ao processar autorização.");
+  }
+});
+
+// Explicit, account-scoped repair for restored/dev databases. This never runs
+// at boot and cannot subscribe another workspace's account.
+router.post("/meta-webhook-subscriptions/:integrationId", requireAuth, async (req, res): Promise<void> => {
+  const integrationId = req.params["integrationId"] as string;
+  const integration = await db.select().from(workspaceIntegrationsTable).where(and(
+    eq(workspaceIntegrationsTable.id, integrationId),
+    eq(workspaceIntegrationsTable.workspaceId, req.auth.workspaceId),
+    eq(workspaceIntegrationsTable.provider, "instagram"),
+    eq(workspaceIntegrationsTable.status, "connected"),
+  )).limit(1).then((rows) => rows[0]);
+
+  if (!integration?.accountId || !integration.accessToken ||
+      integrationPurpose(integration.metadata as Record<string, unknown>) !== "organic_social") {
+    res.status(404).json({
+      error: "Connected organic Instagram integration not found",
+      code: "INSTAGRAM_INTEGRATION_NOT_FOUND",
+    });
+    return;
+  }
+
+  try {
+    await ensureInstagramWebhookSubscription(integration.accountId, integration.accessToken);
+    res.json({
+      ok: true,
+      integrationId: integration.id,
+      accountId: integration.accountId,
+      fields: ["comments", "messages", "messaging_postbacks"],
+    });
+  } catch (error) {
+    logger.warn(
+      { workspaceId: req.auth.workspaceId, integrationId },
+      "Explicit Instagram webhook subscription failed",
+    );
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ error: error.message, code: error.code });
+      return;
+    }
+    res.status(502).json({ error: "Meta webhook subscription failed", code: "META_WEBHOOK_SUBSCRIPTION_FAILED" });
   }
 });
 

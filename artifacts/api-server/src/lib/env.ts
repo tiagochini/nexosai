@@ -25,6 +25,11 @@ export const env = {
   APP_URL: process.env["APP_URL"] ?? `https://${process.env["REPLIT_DEV_DOMAIN"] ?? "localhost"}`,
   META_APP_ID: process.env["META_APP_ID"] ?? "",
   META_APP_SECRET: process.env["META_APP_SECRET"] ?? "",
+  // Provider-state mutations are opt-in. This prevents a restored production
+  // database from subscribing every real account when a developer boots it.
+  META_WEBHOOK_AUTO_SUBSCRIBE: process.env["META_WEBHOOK_AUTO_SUBSCRIBE"] === "true",
+  // Public HTTPS tunnel/domain used only when displaying the callback URL.
+  META_WEBHOOK_PUBLIC_BASE_URL: process.env["META_WEBHOOK_PUBLIC_BASE_URL"] ?? "",
   TIKTOK_CLIENT_KEY: process.env["TIKTOK_CLIENT_KEY"] ?? "",
   TIKTOK_CLIENT_SECRET: process.env["TIKTOK_CLIENT_SECRET"] ?? "",
   GOOGLE_CLIENT_ID: process.env["GOOGLE_CLIENT_ID"] ?? "",
