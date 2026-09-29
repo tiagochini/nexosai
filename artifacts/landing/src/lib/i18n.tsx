@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 
 export type Lang = "pt-BR" | "en-US" | "es-LA";
 
@@ -960,8 +960,12 @@ const LangContext = createContext<LangContextType>({
 
 export function LangProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => {
-    const stored = localStorage.getItem("nexos_lang") as Lang | null;
-    if (stored && stored in TRANSLATIONS) return stored;
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem("nexos.ui-locale") ?? localStorage.getItem("nexos_lang");
+    } catch { /* storage may be blocked */ }
+    if (stored === "en-AU") return "en-US";
+    if (stored === "pt-BR" || stored === "en-US" || stored === "es-LA") return stored;
     const browser = navigator.language;
     if (browser.startsWith("es")) return "es-LA";
     if (browser.startsWith("en")) return "en-US";
@@ -969,9 +973,16 @@ export function LangProvider({ children }: { children: React.ReactNode }) {
   });
 
   const setLang = (l: Lang) => {
-    localStorage.setItem("nexos_lang", l);
+    try {
+      localStorage.setItem("nexos_lang", l);
+      localStorage.setItem("nexos.ui-locale", l);
+    } catch { /* storage may be blocked */ }
     setLangState(l);
   };
+
+  useEffect(() => {
+    document.documentElement.lang = lang === "es-LA" ? "es-419" : lang;
+  }, [lang]);
 
   const t = TRANSLATIONS[lang] ?? TRANSLATIONS["pt-BR"];
 

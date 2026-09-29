@@ -4,22 +4,28 @@ import LeadCaptureModal from "@/components/LeadCaptureModal";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { LANG_LABELS, useI18n, type Lang } from "@/lib/i18n";
+import { homeText, type HomeTextKey } from "@/lib/home-copy";
 import {
   ArrowRight, Users, Video, Workflow,
   Activity, Target, Layers, Lock, ShieldCheck, Search, Megaphone, ChevronDown, CheckCircle2
 } from "lucide-react";
 
 export default function LandingPage() {
-  const { lang } = useI18n();
   const [isCaptureOpen, setCaptureOpen] = useState(false);
   const [closed, setClosed] = useState(false);
 
   useEffect(() => {
-    document.documentElement.lang = lang;
-    if (!window.location.hash) return;
-    requestAnimationFrame(() => {
-      document.querySelector(window.location.hash)?.scrollIntoView({ block: "start" });
-    });
+    const hash = window.location.hash;
+    if (!hash) return;
+    let target: HTMLElement | null;
+    try {
+      target = document.getElementById(decodeURIComponent(hash.slice(1)));
+    } catch {
+      return;
+    }
+    if (!target) return;
+    const frame = window.requestAnimationFrame(() => target?.scrollIntoView({ block: "start" }));
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   const handleCapacityReached = useCallback(() => {
@@ -66,33 +72,33 @@ export default function LandingPage() {
 function Nav({ openCapture, closed }: { openCapture: () => void; closed: boolean }) {
   const { lang, setLang } = useI18n();
   const navCopy = {
-    "pt-BR": { tagline: "Agência Autônoma", login: "Entrar", open: "Reservar vaga", closed: "Vagas esgotadas" },
-    "en-US": { tagline: "Autonomous Agency", login: "Log in", open: "Reserve a spot", closed: "Spots sold out" },
-    "es-LA": { tagline: "Agencia autónoma", login: "Iniciar sesión", open: "Reservar lugar", closed: "Cupos agotados" },
+    "pt-BR": { tagline: "Agência Autônoma", login: "Entrar", open: "Reservar vaga", closed: "Vagas esgotadas", language: "Idioma", switchTo: "Mudar idioma para" },
+    "en-US": { tagline: "Autonomous Agency", login: "Log in", open: "Reserve a spot", closed: "Spots sold out", language: "Language", switchTo: "Switch language to" },
+    "es-LA": { tagline: "Agencia autónoma", login: "Iniciar sesión", open: "Reservar lugar", closed: "Cupos agotados", language: "Idioma", switchTo: "Cambiar idioma a" },
   }[lang];
   return (
     <nav className="sticky top-0 z-50 border-b-2 border-border bg-background/95 backdrop-blur-sm">
-      <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between border-x-2 border-border bg-background">
-        <div className="flex items-center gap-4">
-          <img src="/nexos_ai_logo_1024x1024.png" alt="NexOS" className="h-10 w-10 object-contain" />
+      <div className="max-w-[1400px] mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between border-x-2 border-border bg-background">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <img src={`${import.meta.env.BASE_URL}nexos_ai_logo_1024x1024.png`} alt="NexOS" className="h-8 w-8 sm:h-10 sm:w-10 object-contain" />
           <div className="hidden sm:block">
             <div className="font-display font-black text-2xl tracking-tighter uppercase leading-none">NEXOS</div>
             <div className="font-mono text-[10px] uppercase tracking-widest text-primary font-bold">{navCopy.tagline}</div>
           </div>
         </div>
-        <div className="flex items-center gap-6">
-          <Link href="/login" aria-label={navCopy.login} data-testid="nav-login-link" className="font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-primary hidden sm:block transition-colors font-bold">
+        <div className="flex items-center gap-2 sm:gap-6 min-w-0">
+          <a href="/login" aria-label={navCopy.login} data-testid="nav-login-link" className="font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-primary hidden sm:block transition-colors font-bold">
             [ {navCopy.login} ]
-          </Link>
-          <div className="flex items-center gap-1 border border-border/60 p-1" role="group" aria-label="Language">
+          </a>
+          <div className="flex items-center gap-0.5 sm:gap-1 border border-border/60 p-0.5 sm:p-1 shrink-0" role="group" aria-label={navCopy.language}>
             {(Object.keys(LANG_LABELS) as Lang[]).map(option => (
               <button
                 key={option}
                 type="button"
                 onClick={() => setLang(option)}
-                aria-label={`Switch language to ${LANG_LABELS[option].label}`}
+                aria-label={`${navCopy.switchTo} ${LANG_LABELS[option].label}`}
                 aria-pressed={lang === option}
-                className={`px-2 py-1 font-mono text-[10px] uppercase tracking-widest transition-colors ${
+                className={`px-1.5 sm:px-2 py-1 font-mono text-[10px] uppercase tracking-widest transition-colors ${
                   lang === option ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -103,7 +109,7 @@ function Nav({ openCapture, closed }: { openCapture: () => void; closed: boolean
           <Button
             onClick={openCapture}
             data-testid="nav-guide-button"
-            className="font-mono text-xs uppercase tracking-widest font-bold h-12 px-6 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors rounded-none"
+            className="font-mono text-[10px] sm:text-xs uppercase tracking-widest font-bold h-9 sm:h-12 px-2 sm:px-6 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors rounded-none shrink-0"
           >
             {closed ? navCopy.closed : navCopy.open}
           </Button>
@@ -122,11 +128,11 @@ function HeroSection({ openCapture, closed }: { openCapture: () => void; closed:
       line: "Da ideia ao plano. Do plano aos ativos. Dos ativos à operação no ar.", primary: "Tirar minha ideia do papel", secondary: "Ver trabalho concreto", closed: "Turma inicial encerrada", access: "REGRAS DE ACESSO: APENAS 100 VAGAS DISPONÍVEIS NO PRÉ-LANÇAMENTO."
     },
     "en-US": {
-      badge: "FROM IDEA TO LIVE OPERATION", h1a: "Stop hiring separate pieces", h1b: "to execute an entire", h1c: "strategy.", body: "Your idea leaves the page and becomes an action plan guided by market intelligence and continuous competitor monitoring — building a real digital presence within hours. NexOS takes on the expensive, technical, fragmented execution to move your operation forward end to end.",
+      badge: "FROM IDEA TO LIVE OPERATION", h1a: "Stop outsourcing in pieces", h1b: "to execute one", h1c: "complete strategy.", body: "Your idea leaves the page and becomes an action plan guided by market intelligence and continuous competitor monitoring — building a real digital presence within hours. NexOS takes on the expensive, technical, fragmented execution to move your operation forward end to end.",
       line: "From idea to plan. From plan to assets. From assets to a live operation.", primary: "Put my idea into motion", secondary: "See the real work", closed: "Initial cohort closed", access: "ACCESS RULES: ONLY 100 SPOTS AVAILABLE AT PRE-LAUNCH."
     },
     "es-LA": {
-      badge: "DE LA IDEA A LA OPERACIÓN EN MARCHA", h1a: "Deja de contratar piezas", h1b: "para ejecutar una", h1c: "estrategia completa.", body: "Tu idea sale del papel y se convierte en un plan de acción guiado por inteligencia de mercado y seguimiento continuo de la competencia — creando una presencia digital real en pocas horas. NexOS asume la ejecución costosa, técnica y fragmentada para poner tu operación en marcha de principio a fin.",
+      badge: "DE LA IDEA A LA OPERACIÓN EN MARCHA", h1a: "Deja de contratar por separado", h1b: "para ejecutar una", h1c: "estrategia completa.", body: "Tu idea sale del papel y se convierte en un plan de acción guiado por inteligencia de mercado y seguimiento continuo de la competencia — creando una presencia digital real en pocas horas. NexOS asume la ejecución costosa, técnica y fragmentada para poner tu operación en marcha de principio a fin.",
       line: "De la idea al plan. Del plan a los activos. De los activos a la operación en marcha.", primary: "Poner mi idea en marcha", secondary: "Ver el trabajo real", closed: "Cohorte inicial cerrada", access: "REGLAS DE ACCESO: SOLO 100 CUPOS DISPONIBLES EN EL PRELANZAMIENTO."
     },
   }[lang];
@@ -189,55 +195,40 @@ function HeroSection({ openCapture, closed }: { openCapture: () => void; closed:
 }
 
 const executionPains = [
-  {
-    marker: "01 / CURSOS",
-    title: "Você aprendeu a estratégia. A campanha nunca saiu do rascunho.",
-    body: "Módulos assistidos, anotações prontas, frameworks salvos. Mas ainda faltam a oferta, a copy, os criativos, a página, os anúncios e alguém capaz de fazer tudo conversar."
-  },
-  {
-    marker: "02 / TRÁFEGO",
-    title: "Você sabe que precisa anunciar. Só não pode pagar para aprender errando.",
-    body: "Configurar conta, pixel, público, criativo, verba e remarketing ao mesmo tempo transforma cada clique em risco. O medo de queimar dinheiro paralisa antes do primeiro teste."
-  },
-  {
-    marker: "03 / AGÊNCIA",
-    title: "Uma agência resolveria. Se coubesse no caixa de quem ainda nem lançou.",
-    body: "Estrategista, copywriter, designer, editor, gestor de tráfego e CRM separados custam antes de gerar a primeira venda — e ainda deixam você responsável por coordenar todos eles."
-  },
-  {
-    marker: "04 / RENDA ONLINE",
-    title: "Você enxerga pessoas monetizando. Não enxerga como replicar a máquina.",
-    body: "Curso, comunidade, canal, consultoria, infoproduto: o modelo parece simples quando está pronto. Por trás dele existe uma operação inteira que ninguém mostra funcionando em conjunto."
-  }
-];
+  { markerKey: "gap.pain.course.marker", titleKey: "gap.pain.course.title", bodyKey: "gap.pain.course.body" },
+  { markerKey: "gap.pain.traffic.marker", titleKey: "gap.pain.traffic.title", bodyKey: "gap.pain.traffic.body" },
+  { markerKey: "gap.pain.agency.marker", titleKey: "gap.pain.agency.title", bodyKey: "gap.pain.agency.body" },
+  { markerKey: "gap.pain.online.marker", titleKey: "gap.pain.online.title", bodyKey: "gap.pain.online.body" },
+] as const;
 
 function ExecutionGapSection({ openCapture, closed }: { openCapture: () => void; closed: boolean }) {
+  const { lang } = useI18n();
   return (
     <section className="border-b-2 border-border bg-background">
       <div className="grid grid-cols-1 lg:grid-cols-[0.85fr_1.15fr]">
         <div className="px-6 py-24 sm:py-32 lg:border-r-2 border-border bg-primary text-primary-foreground flex flex-col justify-between gap-16">
           <div>
-            <div className="font-mono text-xs uppercase tracking-[0.2em] font-bold mb-8">O problema não é falta de informação</div>
+            <div className="font-mono text-xs uppercase tracking-[0.2em] font-bold mb-8">{homeText(lang, "gap.heading")}</div>
             <h2 className="text-5xl sm:text-7xl font-display font-black uppercase tracking-tighter leading-[0.92]">
-              Você não precisa de mais um curso.
+              {homeText(lang, "gap.title")}
             </h2>
             <p className="text-2xl sm:text-3xl font-display font-bold uppercase tracking-tight mt-8 border-t-2 border-primary-foreground/30 pt-8">
-              Precisa de uma operação que faça.
+              {homeText(lang, "gap.subtitle")}
             </p>
           </div>
           <div className="font-mono text-xs uppercase tracking-widest leading-relaxed max-w-md opacity-80">
-            A distância entre “eu sei o que deveria fazer” e “minha campanha está vendendo” é execução.
+            {homeText(lang, "gap.closing")}
           </div>
         </div>
 
         <div className="bg-card">
           {executionPains.map((pain) => (
-            <article key={pain.marker} className="p-7 sm:p-10 border-b-2 last:border-b-0 border-border group hover:bg-background transition-colors">
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary font-bold mb-4">{pain.marker}</div>
+            <article key={pain.markerKey} className="p-7 sm:p-10 border-b-2 last:border-b-0 border-border group hover:bg-background transition-colors">
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary font-bold mb-4">{homeText(lang, pain.markerKey)}</div>
               <h3 className="font-display font-black text-2xl sm:text-3xl uppercase tracking-tight leading-tight max-w-3xl">
-                {pain.title}
+                {homeText(lang, pain.titleKey)}
               </h3>
-              <p className="text-muted-foreground text-base sm:text-lg leading-relaxed mt-4 max-w-3xl">{pain.body}</p>
+              <p className="text-muted-foreground text-base sm:text-lg leading-relaxed mt-4 max-w-3xl">{homeText(lang, pain.bodyKey)}</p>
             </article>
           ))}
         </div>
@@ -245,16 +236,16 @@ function ExecutionGapSection({ openCapture, closed }: { openCapture: () => void;
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 lg:items-center px-6 py-12 sm:px-10 bg-foreground text-background">
         <div>
-          <div className="font-mono text-xs uppercase tracking-widest font-bold mb-3">Condição de abertura</div>
+          <div className="font-mono text-xs uppercase tracking-widest font-bold mb-3">{homeText(lang, "gap.offerLabel")}</div>
           <p className="font-display text-2xl sm:text-4xl font-black uppercase tracking-tight leading-tight max-w-4xl">
-            Coloque a ideia em produção agora e pague parcelado no cartão.
+            {homeText(lang, "gap.offerTitle")}
           </p>
           <p className="font-sans mt-3 text-background/70 max-w-3xl">
-            A NexOS estrutura e executa a operação completa. Pagamento parcelado no cartão. Consulte as condições disponíveis no checkout.
+            {homeText(lang, "gap.offerBody")}
           </p>
         </div>
         <Button onClick={openCapture} className="h-16 px-8 rounded-none bg-primary text-primary-foreground hover:bg-primary/90 font-display font-black uppercase tracking-wide">
-          {closed ? "Turma encerrada" : "Quero colocar no ar"} <ArrowRight className="ml-3 h-5 w-5" />
+          {homeText(lang, closed ? "gap.cta.closed" : "gap.cta.open")} <ArrowRight className="ml-3 h-5 w-5" />
         </Button>
       </div>
     </section>
@@ -262,54 +253,49 @@ function ExecutionGapSection({ openCapture, closed }: { openCapture: () => void;
 }
 
 function RealWorkSection() {
+  const { lang } = useI18n();
   return (
     <section id="trabalho-concreto" className="py-24 sm:py-32 border-b-2 border-border relative bg-card scroll-mt-20">
       <div className="px-6">
         <div className="mb-16">
-          <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-4 font-bold">A solução não é outra aula</h2>
+          <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-4 font-bold">{homeText(lang, "work.heading")}</h2>
           <p className="text-4xl sm:text-5xl font-display font-black uppercase tracking-tighter leading-tight max-w-4xl">
-            Você chega com a ideia. A NexOS constrói e opera o que faltava.
+            {homeText(lang, "work.title")}
           </p>
           <p className="mt-6 text-lg text-muted-foreground max-w-3xl leading-relaxed">
-            Não entregamos um plano para você montar sozinho. Entregamos a pesquisa, a oferta, os ativos, a infraestrutura, a distribuição e o acompanhamento funcionando como uma única operação.
+            {homeText(lang, "work.intro")}
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-[2px] border-2 border-border bg-border">
           <WorkCard
             number="01"
-            title="Inteligência & Oferta"
-            desc="Transforma sua ideia em uma oferta vendável: encontra a dor, estuda o mercado, mapeia concorrentes e estrutura promessa, preço, bônus, objeções e ganchos para a campanha."
+            copyKey="offer"
             icon={<Search className="w-8 h-8 text-primary" />}
           />
           <WorkCard
             number="02"
-            title="Produção de Vídeo"
-            desc="Você não precisa virar editor nem montar um estúdio. A NexOS roteiriza, produz, corta e renderiza vídeos usando gravações reais ou produção autônoma com voz e avatar."
+            copyKey="video"
             icon={<Video className="w-8 h-8 text-primary" />}
           />
           <WorkCard
             number="03"
-            title="Landings & Criativos"
-            desc="Não entrega um wireframe. Registra o domínio, escreve a copy, desenha a página, conecta a captura, produz os criativos e coloca tudo no ar."
+            copyKey="landing"
             icon={<Layers className="w-8 h-8 text-primary" />}
           />
           <WorkCard
             number="04"
-            title="Tráfego Pago Multi-Canal"
-            desc="Tira a campanha do gerenciador e coloca em circulação: cria públicos, sobe anúncios, testa criativos, acompanha verba e pausa o que não responde — dentro das suas regras."
+            copyKey="paid"
             icon={<Target className="w-8 h-8 text-primary" />}
           />
           <WorkCard
             number="05"
-            title="Distribuição Orgânica & Grupos"
-            desc="Converte uma ideia em presença contínua: publica, aquece, responde e modera canais e comunidades sem deixar todo o calendário depender da sua energia."
+            copyKey="organic"
             icon={<Megaphone className="w-8 h-8 text-primary" />}
           />
           <WorkCard
             number="06"
-            title="Vendas & Retenção"
-            desc="A venda não termina no checkout. Acompanha leads no CRM, recupera abandonos, recebe compradores, conduz onboarding, trabalha retenção e ativa indicações."
+            copyKey="sales"
             icon={<Users className="w-8 h-8 text-primary" />}
           />
         </div>
@@ -318,84 +304,31 @@ function RealWorkSection() {
   );
 }
 
-function WorkCard({ number, title, desc, icon }: any) {
+function WorkCard({ number, copyKey, icon }: { number: string; copyKey: "offer" | "video" | "landing" | "paid" | "organic" | "sales"; icon: React.ReactNode }) {
+  const { lang } = useI18n();
   return (
     <div className="bg-background p-8 flex flex-col group hover:bg-card transition-colors">
       <div className="flex justify-between items-start mb-12">
         <span className="font-mono text-4xl font-black text-muted-foreground/30 group-hover:text-primary transition-colors">{number}</span>
         {icon}
       </div>
-      <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-4">{title}</h3>
-      <p className="text-muted-foreground font-sans text-base leading-relaxed">{desc}</p>
+      <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-4">{homeText(lang, `work.${copyKey}.title`)}</h3>
+      <p className="text-muted-foreground font-sans text-base leading-relaxed">{homeText(lang, `work.${copyKey}.body`)}</p>
     </div>
   );
 }
 
 const archSteps = [
-  {
-    id: "niche",
-    title: "Pesquisa de Nicho e Análise de Concorrentes",
-    status: "Concluído",
-    sees: "Avaliações de concorrentes, debates em redes sociais, tendências de busca e buracos em produtos similares.",
-    decides: "A dor exata não resolvida e o perfil do comprador mais propenso à conversão imediata.",
-    creates: "Matrizes de objeções, relatórios de inteligência de mercado e mapas de empatia operacionais.",
-    publishes: "Consolida as diretrizes no Dossiê interno, proibindo que agentes assumam premissas genéricas.",
-    measures: "Densidade da demanda, sofisticação do mercado e viabilidade."
-  },
-  {
-    id: "offer",
-    title: "Definição de Oferta e Ganchos (War Room)",
-    status: "Concluído",
-    sees: "O Dossiê validado cruzado com o seu histórico real de campanhas e custos de aquisição passados.",
-    decides: "A promessa central irrecusável, bônus para elevar ticket, ancoragem de preço e ângulos de vendas (ganchos).",
-    creates: "Estruturas argumentativas completas para VSLs, páginas de vendas e anúncios.",
-    publishes: "Deixa a arquitetura de persuasão pronta para ser materializada nos formatos finais.",
-    measures: "Alinhamento lógico com objeções e coerência com a política da marca."
-  },
-  {
-    id: "creative",
-    title: "Copy, Design e Renderização Audiovisual",
-    status: "Ativo",
-    highlight: true,
-    sees: "Os ganchos definidos, o tom de voz imutável do Dossiê e o pacote visual da sua empresa.",
-    decides: "Quais formatos (estático, reel vertical, página longa) entregam a oferta com mais eficácia.",
-    creates: "Copy impecável, interfaces otimizadas, e vídeos 100% renderizados na nossa GPU (via vozes clonadas ou avatares).",
-    publishes: "Registra os domínios, aponta servidores DNS e coloca a landing page no ar sem fricção humana.",
-    measures: "Velocidade da página (LCP), coesão visual e retenção estimada."
-  },
-  {
-    id: "distribution",
-    title: "Distribuição Orgânica e Grupos",
-    status: "Ativo",
-    sees: "Picos de engajamento do seu nicho, algoritmos de distribuição e interações pendentes das comunidades.",
-    decides: "A ordem de publicação, as respostas certas em direct e como moderar o aquecimento de um grupo.",
-    creates: "Legendas precisas, interações de moderação em WhatsApp/Telegram e alertas automáticos.",
-    publishes: "Executa os posts em todas as redes orgânicas vinculadas nos horários estipulados.",
-    measures: "Crescimento de base, taxa de respostas orgânicas e retenção nos grupos de lançamento."
-  },
-  {
-    id: "ads",
-    title: "Operação de Tráfego Pago",
-    status: "Ativo",
-    sees: "Os criativos recém-produzidos, a landing ativa, os públicos do pixel e as regras de orçamento diário.",
-    decides: "Onde testar a verba primeiro (CBO/ABO), pausas de criativos fadigados e realocações de lances.",
-    creates: "Estruturas completas de campanha nas plataformas de anúncio mais rentáveis para a oferta.",
-    publishes: "Ativa publicações patrocinadas conectadas ao seu cartão de crédito nas redes de pesquisa e social.",
-    measures: "CPA real, ROAS, fadiga de criativos e CTR cruzado (direto nos dashboards oficiais)."
-  },
-  {
-    id: "crm",
-    title: "Vendas, Retenção e Onboarding",
-    status: "Ativo",
-    sees: "Leads quentes, eventos de abandono de carrinho, compras confirmadas e conversas interrompidas.",
-    decides: "A hora exata de invocar recuperação ativa, quebrar a objeção que falta ou dar boas-vindas VIP.",
-    creates: "Fluxos invisíveis de e-mail marketing, disparos via WhatsApp e alertas de alta prioridade.",
-    publishes: "Envia comunicações 1-a-1 diretamente para a base, sustentando o LTV do cliente a longo prazo.",
-    measures: "Taxa de recuperação, churn, engajamento com onboarding e vendas cruzadas (upsell)."
-  }
-];
+  { id: "niche", highlight: false },
+  { id: "offer", highlight: false },
+  { id: "creative", highlight: true },
+  { id: "distribution", highlight: false },
+  { id: "ads", highlight: false },
+  { id: "crm", highlight: false },
+] as const;
 
 function ArchitectureSection() {
+  const { lang } = useI18n();
   const [activeStep, setActiveStep] = useState<string | null>(null);
 
   return (
@@ -403,24 +336,24 @@ function ArchitectureSection() {
       <div className="px-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
           <div className="lg:sticky lg:top-32">
-            <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-4 font-bold">A Quebra de Silos</h2>
+            <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-4 font-bold">{homeText(lang, "architecture.heading")}</h2>
             <p className="text-4xl sm:text-5xl font-display font-black uppercase tracking-tighter leading-tight mb-8">
-              Seu projeto não travou por falta de potencial. Travou porque você virou o operador de cinco profissões.
+              {homeText(lang, "architecture.title")}
             </p>
             <div className="space-y-6 text-lg text-muted-foreground font-sans">
-              <p>Você deveria decidir o que quer construir. Em vez disso, tenta aprender copy, design, edição, tráfego, automação e vendas ao mesmo tempo.</p>
-              <p>O custo real não está só nas ferramentas. Está nos meses sem publicar, no anúncio que nunca foi testado e na oferta que continua dentro de um documento.</p>
-              <p>Com a NexOS, o cérebro é unificado e <strong className="text-foreground">autônomo</strong>.</p>
-              <p>A inteligência orienta o texto. O estrategista instrui a renderização, que sobe as páginas online e entrega os vídeos ao tráfego. Toda a operação consome a mesma matriz — executando a campanha inteira sem você precisar intervir a cada etapa.</p>
+              <p>{homeText(lang, "architecture.p1")}</p>
+              <p>{homeText(lang, "architecture.p2")}</p>
+              <p>{homeText(lang, "architecture.p3.before")}<strong className="text-foreground">{homeText(lang, "architecture.p3.emphasis")}</strong>{homeText(lang, "architecture.p3.after")}</p>
+              <p>{homeText(lang, "architecture.p4")}</p>
               <p className="font-mono text-xs uppercase tracking-widest text-primary pt-4 hidden lg:block animate-pulse">
-                [ Selecione um nó operacional ao lado para inspecionar ]
+                {homeText(lang, "architecture.hint")}
               </p>
             </div>
           </div>
 
           <div className="relative border-2 border-border p-4 sm:p-8 bg-card">
             <div className="absolute top-0 right-0 p-4 font-mono text-[10px] font-bold tracking-widest text-muted-foreground uppercase border-b-2 border-l-2 border-border bg-background hidden sm:block">
-              Arquitetura Operacional
+              {homeText(lang, "architecture.label")}
             </div>
 
             <div className="mt-8 space-y-2">
@@ -440,17 +373,20 @@ function ArchitectureSection() {
   );
 }
 
-function ArchNode({ step, isActive, onClick }: any) {
+type ArchitectureStep = typeof archSteps[number];
+function ArchNode({ step, isActive, onClick }: { step: ArchitectureStep; isActive: boolean; onClick: () => void }) {
+  const { lang } = useI18n();
+  const key = `architecture.step.${step.id}` as const;
   return (
     <button
       onClick={onClick}
       className={`w-full text-left border-2 p-4 flex flex-col gap-2 transition-colors focus:outline-none focus:border-primary ${step.highlight ? 'border-primary bg-primary/5 hover:bg-primary/10' : 'border-border bg-background hover:bg-card'} ${isActive ? 'border-primary' : ''}`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 w-full">
-        <span className="font-display font-bold uppercase tracking-tight text-foreground">{step.title}</span>
+        <span className="font-display font-bold uppercase tracking-tight text-foreground">{homeText(lang, `${key}.title`)}</span>
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 ${step.highlight ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
-          <span className={`font-mono text-[10px] uppercase font-bold tracking-widest ${step.highlight ? 'text-primary' : 'text-muted-foreground'}`}>{step.status}</span>
+          <span className={`font-mono text-[10px] uppercase font-bold tracking-widest ${step.highlight ? 'text-primary' : 'text-muted-foreground'}`}>{homeText(lang, `${key}.status`)}</span>
         </div>
       </div>
 
@@ -464,24 +400,24 @@ function ArchNode({ step, isActive, onClick }: any) {
           >
             <div className="pt-6 pb-2 space-y-4 font-sans text-sm border-t-2 border-border/50 mt-4">
                <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[100px_1fr] gap-4">
-                 <span className="font-mono text-[10px] text-muted-foreground uppercase font-bold tracking-widest pt-1">Observa</span>
-                 <span className="text-foreground/90">{step.sees}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground uppercase font-bold tracking-widest pt-1">{homeText(lang, "architecture.observe")}</span>
+                  <span className="text-foreground/90">{homeText(lang, `${key}.observe`)}</span>
                </div>
                <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[100px_1fr] gap-4">
-                 <span className="font-mono text-[10px] text-muted-foreground uppercase font-bold tracking-widest pt-1">Decide</span>
-                 <span className="text-foreground/90">{step.decides}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground uppercase font-bold tracking-widest pt-1">{homeText(lang, "architecture.decide")}</span>
+                  <span className="text-foreground/90">{homeText(lang, `${key}.decide`)}</span>
                </div>
                <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[100px_1fr] gap-4">
-                 <span className="font-mono text-[10px] text-muted-foreground uppercase font-bold tracking-widest pt-1">Cria</span>
-                 <span className="text-foreground/90">{step.creates}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground uppercase font-bold tracking-widest pt-1">{homeText(lang, "architecture.create")}</span>
+                  <span className="text-foreground/90">{homeText(lang, `${key}.create`)}</span>
                </div>
                <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[100px_1fr] gap-4">
-                 <span className="font-mono text-[10px] text-primary uppercase font-bold tracking-widest pt-1">Executa</span>
-                 <span className="text-foreground/90 font-medium">{step.publishes}</span>
+                  <span className="font-mono text-[10px] text-primary uppercase font-bold tracking-widest pt-1">{homeText(lang, "architecture.execute")}</span>
+                  <span className="text-foreground/90 font-medium">{homeText(lang, `${key}.execute`)}</span>
                </div>
                <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[100px_1fr] gap-4">
-                 <span className="font-mono text-[10px] text-muted-foreground uppercase font-bold tracking-widest pt-1">Mede</span>
-                 <span className="text-foreground/90">{step.measures}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground uppercase font-bold tracking-widest pt-1">{homeText(lang, "architecture.measure")}</span>
+                  <span className="text-foreground/90">{homeText(lang, `${key}.measure`)}</span>
                </div>
             </div>
           </motion.div>
@@ -492,33 +428,34 @@ function ArchNode({ step, isActive, onClick }: any) {
 }
 
 function OperationalScopeSection() {
+  const { lang } = useI18n();
   return (
     <section className="py-24 sm:py-32 border-b-2 border-border bg-card">
       <div className="px-6">
-        <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-12 font-bold text-center">Governança Integrada</h2>
+        <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-12 font-bold text-center">{homeText(lang, "governance.heading")}</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="border-2 border-border bg-background p-8">
             <ShieldCheck className="w-10 h-10 text-primary mb-6" />
-            <h3 className="font-display font-bold text-xl uppercase tracking-tight mb-4">Autorização Estrita</h3>
+            <h3 className="font-display font-bold text-xl uppercase tracking-tight mb-4">{homeText(lang, "governance.authorization.title")}</h3>
             <p className="text-muted-foreground font-sans">
-              As ações externas (publicar posts, subir campanhas de tráfego, enviar e-mails) só acontecem após sua aprovação ou dentro de limites pré-estabelecidos por você.
+              {homeText(lang, "governance.authorization.body")}
             </p>
           </div>
 
           <div className="border-2 border-border bg-background p-8">
             <Workflow className="w-10 h-10 text-primary mb-6" />
-            <h3 className="font-display font-bold text-xl uppercase tracking-tight mb-4">Workspaces Isolados</h3>
+            <h3 className="font-display font-bold text-xl uppercase tracking-tight mb-4">{homeText(lang, "governance.workspaces.title")}</h3>
             <p className="text-muted-foreground font-sans">
-              Perfeito para separar múltiplos produtos e serviços da mesma empresa, ou isolar clientes de agências. Os dados, a inteligência e as estratégias nunca se misturam.
+              {homeText(lang, "governance.workspaces.body")}
             </p>
           </div>
 
           <div className="border-2 border-border bg-background p-8">
             <Activity className="w-10 h-10 text-primary mb-6" />
-            <h3 className="font-display font-bold text-xl uppercase tracking-tight mb-4">Métricas Reais. Fim.</h3>
+            <h3 className="font-display font-bold text-xl uppercase tracking-tight mb-4">{homeText(lang, "governance.metrics.title")}</h3>
             <p className="text-muted-foreground font-sans">
-              O sistema baseia-se em dados empíricos puxados diretamente de canais reais de tráfego e do seu CRM. Nenhuma IA inventando números de conversão para o painel parecer completo.
+              {homeText(lang, "governance.metrics.body")}
             </p>
           </div>
         </div>
@@ -528,45 +465,46 @@ function OperationalScopeSection() {
 }
 
 function ProofOfLogicSection() {
+  const { lang } = useI18n();
   return (
     <section className="py-24 sm:py-32 border-b-2 border-border bg-background">
       <div className="px-6">
         <div className="max-w-4xl mb-16">
-          <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-4 font-bold">Lógica de Execução e Coerência</h2>
+          <h2 className="font-mono text-sm uppercase tracking-widest text-primary mb-4 font-bold">{homeText(lang, "proof.heading")}</h2>
           <p className="text-4xl sm:text-5xl font-display font-black uppercase tracking-tighter leading-tight">
-            Como garantimos que a autonomia não crie um frankenstein de IA genérica.
+            {homeText(lang, "proof.title")}
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20">
           <div className="space-y-12">
             <div className="border-l-4 border-primary pl-6">
-              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">1. O Cérebro Único (Dossiê)</h3>
+              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">{homeText(lang, "proof.brain.title")}</h3>
               <p className="text-muted-foreground font-sans leading-relaxed text-lg">
-                Modelos rasos cometem erros de lógica e causam contradições bizarras. A NexOS resolve isso criando um Dossiê mestre imutável para a campanha. O mesmo arquivo de regras bloqueia o roteirista de vídeo, baliza o copywriter e dita o tom dos anúncios — evitando saídas genéricas.
+                {homeText(lang, "proof.brain.body")}
               </p>
             </div>
 
             <div className="border-l-4 border-primary pl-6">
-              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">2. Autonomia com Trava de Segurança</h3>
+              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">{homeText(lang, "proof.safety.title")}</h3>
               <p className="text-muted-foreground font-sans leading-relaxed text-lg">
-                Você pode automatizar a publicação a 100% ou exigir revisão. A NexOS desenha a página, edita os vídeos, formata os anúncios e prepara as postagens. Eles vão ao ar e o domínio é registrado assim que você dá o seu "Aprovado" — sem exigir o trabalho braçal de montar a peça na ferramenta.
+                {homeText(lang, "proof.safety.body")}
               </p>
             </div>
           </div>
 
           <div className="space-y-12">
             <div className="border-l-4 border-primary pl-6">
-              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">3. Fim das Decisões Ruins</h3>
+              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">{homeText(lang, "proof.decisions.title")}</h3>
               <p className="text-muted-foreground font-sans leading-relaxed text-lg">
-                IAs tradicionais falham por não verem o quadro inteiro. Quando a agência autônoma relata que um criativo saturou e decide pausá-lo nas redes, ela cruzou o CTR de cliques reais com as conversões no seu CRM. Nenhuma decisão superficial é tomada sem cruzamento de dados empíricos.
+                {homeText(lang, "proof.decisions.body")}
               </p>
             </div>
 
             <div className="border-l-4 border-primary pl-6">
-              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">4. Memória Institucional Ativa</h3>
+              <h3 className="font-display font-bold text-2xl uppercase tracking-tight mb-3">{homeText(lang, "proof.memory.title")}</h3>
               <p className="text-muted-foreground font-sans leading-relaxed text-lg">
-                Repetições maçantes acontecem quando a IA perde o contexto. A NexOS armazena vencedores, perdedores e lições aprendidas. O erro e a objeção que não funcionaram no mês passado já estão internalizados como regras de restrição permanente para a campanha atual.
+                {homeText(lang, "proof.memory.body")}
               </p>
             </div>
           </div>
@@ -577,6 +515,7 @@ function ProofOfLogicSection() {
 }
 
 function ScarcitySection({ openCapture, closed }: { openCapture: () => void; closed: boolean }) {
+  const { lang } = useI18n();
   return (
     <section className="py-32 bg-primary text-primary-foreground relative overflow-hidden">
       <div className="absolute inset-0 bg-grid-pattern opacity-10" />
@@ -584,29 +523,29 @@ function ScarcitySection({ openCapture, closed }: { openCapture: () => void; clo
       <div className="px-6 relative z-10 max-w-4xl mx-auto text-center">
         <Lock className="w-16 h-16 mx-auto mb-8" />
         <h2 className="text-4xl sm:text-6xl font-display font-black uppercase tracking-tighter leading-none mb-8">
-          Apenas 100 Operações no Lançamento.
+          {homeText(lang, "scarcity.title")}
         </h2>
         <p className="text-xl font-sans font-medium mb-12 opacity-90 max-w-2xl mx-auto">
-          Se o que impediu você até agora foi o custo e a complexidade de montar uma agência inteira, esta abertura foi desenhada para remover esse bloqueio: execução ponta a ponta e pagamento parcelado no cartão. Você confere as opções e escolhe a melhor condição no checkout. O acesso inicial é restrito. Não há exceções.
+          {homeText(lang, "scarcity.body")}
         </p>
 
         <Button
           onClick={openCapture}
           className="h-20 px-12 text-lg font-display font-black rounded-none bg-background text-foreground hover:bg-muted-foreground hover:text-background transition-colors uppercase tracking-widest border-2 border-background"
         >
-          {closed ? "Turma Encerrada" : "Reservar Minha Vaga Agora"}
+          {homeText(lang, closed ? "scarcity.cta.closed" : "scarcity.cta.open")}
         </Button>
 
         <div className="mt-8 font-mono text-sm font-bold uppercase tracking-widest opacity-80">
-          {closed ? "As vagas foram preenchidas." : "A ordem de reserva define a prioridade de ativação."}
+          {homeText(lang, closed ? "scarcity.status.closed" : "scarcity.status.open")}
         </div>
 
         <div className="mt-16 pt-8 border-t-2 border-primary-foreground/20">
           <p className="font-display font-bold text-2xl uppercase tracking-tight mb-3">
-            Esta landing page foi criada e colocada no ar pelos agentes da NexOS.
+            {homeText(lang, "scarcity.credibility")}
           </p>
           <p className="font-sans font-medium text-lg opacity-90">
-            Entre na lista agora e acesse nosso grupo para ver a operação acontecendo nos bastidores.
+            {homeText(lang, "scarcity.community")}
           </p>
         </div>
       </div>
@@ -615,22 +554,23 @@ function ScarcitySection({ openCapture, closed }: { openCapture: () => void; clo
 }
 
 function Footer() {
+  const { lang } = useI18n();
   return (
     <footer className="border-t-2 border-border bg-background py-12 px-6 text-center sm:text-left">
       <div className="max-w-[1400px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-6">
         <div className="flex items-center gap-3">
-          <img src="/nexos_ai_logo_1024x1024.png" alt="NexOS" className="h-8 w-8 object-contain" />
+          <img src={`${import.meta.env.BASE_URL}nexos_ai_logo_1024x1024.png`} alt="NexOS" className="h-8 w-8 object-contain" />
           <span className="font-display font-black text-xl uppercase tracking-tighter text-muted-foreground">NexOS</span>
         </div>
 
         <div className="flex gap-6 font-mono text-xs uppercase tracking-widest font-bold text-muted-foreground">
-          <Link href="/terms" className="hover:text-primary transition-colors">Termos de Uso</Link>
-          <Link href="/privacy" className="hover:text-primary transition-colors">Privacidade</Link>
-          <Link href="/data-deletion" className="hover:text-primary transition-colors">Exclusão de Dados</Link>
+          <Link href="/terms" className="hover:text-primary transition-colors">{homeText(lang, "footer.terms")}</Link>
+          <Link href="/privacy" className="hover:text-primary transition-colors">{homeText(lang, "footer.privacy")}</Link>
+          <Link href="/data-deletion" className="hover:text-primary transition-colors">{homeText(lang, "footer.deletion")}</Link>
         </div>
 
         <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-          © {new Date().getFullYear()} NexOS. Operação Centralizada.
+          © {new Date().getFullYear()} NexOS. {homeText(lang, "footer.signature")}
         </div>
       </div>
     </footer>
@@ -638,61 +578,15 @@ function Footer() {
 }
 
 const glp22Phases = [
-  {
-    phase: "Fase 01 / Estratégia e Fundações",
-    title: "Onde o achismo termina e a inteligência de mercado começa.",
-    items: [
-      { id: "01", title: "Imersão e intake", desc: "Coleta profunda da sua visão, objetivos e restrições para balizar a operação sem recorrer a premissas genéricas." },
-      { id: "02", title: "Inteligência e análise de mercado", desc: "Mapeamento ativo da concorrência e do ambiente competitivo para encontrar brechas de atenção, demandas ocultas e padrões de mercado." },
-      { id: "03", title: "Avatar, segmentação e jornada", desc: "Definição clara do cliente ideal e desenho do caminho exato que ele percorre do primeiro contato até o momento da decisão." },
-      { id: "04", title: "Posicionamento, mecanismo e narrativa", desc: "Construção de uma tese única e argumentação central que diferenciem sua mensagem da comoditização do nicho." },
-      { id: "05", title: "Engenharia da oferta", desc: "Estruturação de preço, ancoragem, quebra de objeções, garantias e bônus para criar uma proposta comercial robusta." },
-      { id: "06", title: "Arquitetura estratégica do lançamento", desc: "Desenho do formato e do modelo de vendas mais adequados, estipulando cronograma, eventos e pontos de contato da campanha." },
-      { id: "07", title: "Master Plan", desc: "Consolidação de todas as diretrizes em um documento mestre, alinhando a execução autônoma em torno do mesmo objetivo." }
-    ]
-  },
-  {
-    phase: "Fase 02 / Criação e Ativos Visuais",
-    title: "Da arquitetura conceitual para interfaces e roteiros focados em conversão.",
-    items: [
-      { id: "08", title: "Construção do funil", desc: "Desenho prático da estrutura de aquisição e qualificação, conectando os passos da jornada de compra de forma fluida." },
-      { id: "09", title: "Copy", desc: "Redação persuasiva de cartas de vendas, anúncios e scripts visuais, orquestrada para respeitar o tom de voz definido no Master Plan." },
-      { id: "10", title: "Direção criativa e produção visual", desc: "Desenvolvimento da identidade visual da campanha e desdobramento em peças gráficas e banners padronizados para todos os canais." },
-      { id: "11", title: "Direção e produção de vídeos", desc: "Roteirização e renderização dinâmica de VSLs, anúncios e conteúdos audiovisuais voltados a reter a atenção nos segundos cruciais." },
-      { id: "12", title: "Páginas e ativos digitais", desc: "Implementação de landing pages desenhadas para conversão e performance de carregamento, prontas para receber tráfego." }
-    ]
-  },
-  {
-    phase: "Fase 03 / Infraestrutura e Engajamento",
-    title: "Sistemas técnicos, gestão de audiência e comunicação orgânica.",
-    items: [
-      { id: "13", title: "Infraestrutura, tracking e integrações", desc: "Configuração técnica de pixels, tags e fluxos de dados, além de apoio em domínios e hospedagem (serviços faturados diretamente pelos fornecedores escolhidos)." },
-      { id: "14", title: "CRM, gestão de leads, grupos e comunidades", desc: "Estruturação das bases de contatos e organização de ambientes de aquecimento para centralizar a comunicação com os interessados." },
-      { id: "15", title: "Presença Digital e audiência", desc: "Programação e controle de postagens para manter consistência nos perfis sociais, aproveitando os algoritmos de descoberta." },
-      { id: "16", title: "E-mail, mensagens e nutrição", desc: "Desenvolvimento de sequências de comunicação ativa e fluxos automatizados para elevar o nível de consciência dos leads." }
-    ]
-  },
-  {
-    phase: "Fase 04 / Aquisição e Vendas",
-    title: "Geração de tráfego, orquestração e recuperação de receita.",
-    items: [
-      { id: "17", title: "Mídia paga", desc: "Planejamento e gestão de campanhas publicitárias com distribuição de verba em criativos e públicos que apresentam o melhor custo por aquisição." },
-      { id: "18", title: "Execução coordenada do lançamento", desc: "Sincronização de todos os canais, e-mails, grupos e anúncios nos dias-chave da campanha para um fluxo de aberturas de carrinho alinhado." },
-      { id: "19", title: "Atendimento, vendas e conversão", desc: "Atuação voltada para recuperação de boletos/Pix, carrinhos abandonados e quebra de objeções de última hora, maximizando a receita aprovada." }
-    ]
-  },
-  {
-    phase: "Fase 05 / Dados e Continuidade",
-    title: "Leitura de métricas, aprendizado institucional e próximos passos.",
-    items: [
-      { id: "20", title: "Monitoramento e otimização", desc: "Acompanhamento e leitura contínua de métricas reais para possibilitar ajustes finos e proteção de orçamento ao longo da campanha." },
-      { id: "21", title: "Pós-lançamento e aprendizado", desc: "Consolidação de dados de performance em inteligência institucional, registrando o que converteu melhor e mapeando novas objeções." },
-      { id: "22", title: "Continuidade, relançamento e perpétuo", desc: "Transformação da inteligência acumulada em novas esteiras de vendas e adaptação do produto para campanhas sucessivas ou recorrência." }
-    ]
-  }
-];
+  { id: "strategy", labelKey: "glp.phase.strategy.label", nameKey: "glp.phase.strategy.name", titleKey: "glp.phase.strategy.title", itemIds: ["01", "02", "03", "04", "05", "06", "07"] },
+  { id: "creation", labelKey: "glp.phase.creation.label", nameKey: "glp.phase.creation.name", titleKey: "glp.phase.creation.title", itemIds: ["08", "09", "10", "11", "12"] },
+  { id: "infrastructure", labelKey: "glp.phase.infrastructure.label", nameKey: "glp.phase.infrastructure.name", titleKey: "glp.phase.infrastructure.title", itemIds: ["13", "14", "15", "16"] },
+  { id: "sales", labelKey: "glp.phase.sales.label", nameKey: "glp.phase.sales.name", titleKey: "glp.phase.sales.title", itemIds: ["17", "18", "19"] },
+  { id: "continuity", labelKey: "glp.phase.continuity.label", nameKey: "glp.phase.continuity.name", titleKey: "glp.phase.continuity.title", itemIds: ["20", "21", "22"] },
+] as const;
 
 function GLP22Section() {
+  const { lang } = useI18n();
   const [activePhaseIndex, setActivePhaseIndex] = useState<number>(0);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
@@ -711,16 +605,16 @@ function GLP22Section() {
           <div className="xl:sticky xl:top-32">
             <div className="inline-flex items-center gap-3 px-4 py-2 border-2 border-background/20 bg-background/5 mb-8">
               <span className="w-2 h-2 bg-primary animate-pulse" />
-              <span className="font-mono text-xs uppercase tracking-[0.2em] font-bold">O Método GLP22</span>
+              <span className="font-mono text-xs uppercase tracking-[0.2em] font-bold">{homeText(lang, "glp.heading")}</span>
             </div>
 
             <h2 className="text-4xl sm:text-5xl lg:text-6xl font-display font-black uppercase tracking-tighter leading-tight mb-8">
-              A Engenharia de uma <span className="text-primary">Operação Autônoma.</span>
+              {homeText(lang, "glp.title.before")} <span className="text-primary">{homeText(lang, "glp.title.accent")}</span>
             </h2>
 
             <div className="space-y-6 text-lg text-background/70 font-sans mb-12">
-              <p>Não é um pacote de ferramentas. É o fluxo contínuo de 22 capacidades interdependentes — da ideia embrionária à escala de vendas.</p>
-              <p>Cada etapa alimenta a próxima. O estrategista instrui a copy, a copy orienta o design, o design alimenta o tráfego. Tudo orquestrado por uma inteligência central, sem gaps de execução.</p>
+              <p>{homeText(lang, "glp.intro1")}</p>
+              <p>{homeText(lang, "glp.intro2")}</p>
             </div>
 
             <div className="hidden xl:flex flex-col gap-2">
@@ -734,7 +628,7 @@ function GLP22Section() {
                       : 'border-background/20 text-background/60 hover:text-background hover:border-background/40'
                   }`}
                 >
-                  <span>{phase.phase.split(' / ')[0]}</span>
+                  <span>{homeText(lang, phase.labelKey)}</span>
                   <ArrowRight className={`w-4 h-4 transition-transform ${activePhaseIndex === idx ? 'translate-x-0' : '-translate-x-4 opacity-0'}`} />
                 </button>
               ))}
@@ -753,7 +647,7 @@ function GLP22Section() {
                       : 'border-border bg-card text-muted-foreground'
                   }`}
                 >
-                  {phase.phase.split(' / ')[0]}
+                  {homeText(lang, phase.labelKey)}
                 </button>
               ))}
             </div>
@@ -769,31 +663,32 @@ function GLP22Section() {
                 >
                   <div className="mb-10">
                     <span className="font-mono text-xs text-primary uppercase font-bold tracking-widest mb-2 block">
-                      {glp22Phases[activePhaseIndex].phase.split(' / ')[1]}
+                      {homeText(lang, glp22Phases[activePhaseIndex].nameKey)}
                     </span>
                     <h3 className="font-display text-3xl sm:text-4xl font-black uppercase tracking-tight leading-tight">
-                      {glp22Phases[activePhaseIndex].title}
+                      {homeText(lang, glp22Phases[activePhaseIndex].titleKey)}
                     </h3>
                   </div>
 
                   <div className="space-y-4">
-                    {glp22Phases[activePhaseIndex].items.map((item) => {
-                      const isExpanded = expandedItems.includes(item.id);
+                    {glp22Phases[activePhaseIndex].itemIds.map((itemId) => {
+                      const itemKey = `glp.phase.${glp22Phases[activePhaseIndex].id}.item.${itemId}` as HomeTextKey;
+                      const isExpanded = expandedItems.includes(itemId);
                       return (
                         <div
-                          key={item.id}
+                          key={itemId}
                           className={`border-2 transition-colors ${isExpanded ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
                         >
                           <button
-                            onClick={() => toggleItem(item.id)}
+                            onClick={() => toggleItem(itemId)}
                             className="w-full text-left p-5 flex items-center justify-between gap-4 focus:outline-none"
                           >
                             <div className="flex items-center gap-4 sm:gap-6">
                               <span className="font-mono text-sm sm:text-base font-bold text-muted-foreground w-6">
-                                {item.id}
+                                {itemId}
                               </span>
                               <span className="font-display font-bold text-lg sm:text-xl uppercase tracking-tight">
-                                {item.title}
+                                {homeText(lang, `${itemKey}.title` as HomeTextKey)}
                               </span>
                             </div>
                             <ChevronDown
@@ -812,7 +707,7 @@ function GLP22Section() {
                                 <div className="p-5 pt-0 pl-16 sm:pl-[4.5rem]">
                                   <div className="border-l-2 border-primary/30 pl-4 py-1">
                                     <p className="text-muted-foreground font-sans leading-relaxed">
-                                      {item.desc}
+                                      {homeText(lang, `${itemKey}.desc` as HomeTextKey)}
                                     </p>
                                   </div>
                                 </div>
