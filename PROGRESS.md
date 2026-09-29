@@ -1,6 +1,11 @@
 # NexOS AI — Progresso do Plano de Correção
 **Início:** 21 Jul 2026 | **Critério final:** 3 execuções limpas consecutivas, evidência externa
 
+> **Registro histórico do ambiente Replit.** Este arquivo preserva evidências e
+> decisões do plano de correção original; ele não representa o estado operacional
+> do backup local. Para executar o projeto atualmente, consulte `README.md` e
+> `docs/LOCAL_DEVELOPMENT.md`.
+
 ---
 
 ## Placar de execuções limpas: 0 / 3

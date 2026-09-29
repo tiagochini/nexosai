@@ -7,13 +7,20 @@ AI-powered operating system for campaign execution, launch automation and digita
 - In this imported Replit workspace, start **Redis (development)** first, then **artifacts/api-server: API Server**, then **artifacts/app: web** using the Workflows pane. The managed app preview is `/`; login is `/login`, and API health is `/api/healthz`. Other artifact services (landing, academy, editor, video) can be started separately as needed.
 - Use Node.js 24 and `pnpm install --frozen-lockfile` for a fresh checkout. Development PostgreSQL is provisioned by Replit; on a new, **empty** development database only, initialize the schema with `pnpm --filter @workspace/db run push`. Do not run schema push against an existing database without reviewing the proposed changes. Local development Redis binds to `127.0.0.1:6379` and is configured without persistence, so queued jobs do not survive its restart.
 - A clean `pnpm run typecheck` currently fails in the legacy `scripts` package; the app and API package typechecks pass. External AI, email, and social-provider features require their own configured credentials and are not validated by the local health check. Do not put credentials in tracked configuration; rotate any credential-like values that were committed in the imported `.replit` file.
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080, proxied at /api)
+- `pnpm run dev:local` — Windows/local launcher; builds the API on port 8080 and starts Vite on 8081
+- `pnpm run dev:local:meta-test` — same local stack with outbound Meta Graph calls simulated in memory
+- `pnpm run dev:meta-gateway` — exposes only the two Meta webhook paths on local port 8090
+- `pnpm --filter @workspace/api-server run dev` — Replit/Linux API launcher
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run typecheck:libs` — build composite libs (run before api-server typecheck when DB schema changes)
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Seed plans: `cd lib/db && /home/runner/workspace/node_modules/.pnpm/node_modules/.bin/tsx src/seed-plans.ts`
 - Required env: `DATABASE_URL` — Postgres connection string
+
+Local setup and restored-database safety are documented in `README.md` and
+`docs/LOCAL_DEVELOPMENT.md`. Meta callback development is documented in
+`docs/META_WEBHOOK_LOCAL_DEV.md`.
 
 ## Production Environment Variables
 
@@ -117,7 +124,8 @@ Launch tracks by revenue target:
 - **Providers**: WhatsApp Business, Telegram, RD Station, ActiveCampaign, Mailchimp, Resend, Meta Ads, Instagram, Facebook, TikTok (organic — stored under DB enum value `tiktok_ads`, no separate organic value), TikTok Ads, Google Ads, LinkedIn Ads, Stripe, PayPal, Mercado Pago, Pagar.me, Asaas, Hotmart, Eduzz, Kiwify, HubSpot, HeyGen, Runway ML, Kling (fal.ai), ElevenLabs.
 - **Canonical connect page**: `/integracoes` (`artifacts/app/src/pages/integracoes/index.tsx`) — always sends `accessToken` as a top-level field on `POST /api/workspaces/me/integrations`, so manual connects reliably compute `status: "connected"`.
 - **Legacy duplicate**: `settings.tsx` Configurações → Integrações tab has the same connect form but historically only nested `accessToken` inside `metadata` (never top-level) — backend then computed `status: "disconnected"` even with a valid token saved in `metadata`. **Fixed** to send `accessToken` top-level like `/integracoes`. Prefer `/integracoes` for all new integration work; treat `settings.tsx`'s integrations tab as legacy.
-- **OAuth flow**: `oauth.routes.ts` always sets `status: "connected"` on successful callback. Meta OAuth "URL Blocked" errors are an external config issue — the Meta Developer Console must have `https://agencianexos.vip/api/integrations/oauth/callback/facebook` registered under "Valid OAuth Redirect URIs".
+- **OAuth flow**: `oauth.routes.ts` always sets `status: "connected"` on successful callback. Meta OAuth "URL Blocked" errors are an external config issue — register both provider-specific production redirects when both integrations are used: `/api/integrations/oauth/callback/instagram` and `/api/integrations/oauth/callback/facebook`.
+- **Meta webhook callbacks**: `/api/social/webhooks/meta` and `/api/social-moderation/webhooks/meta` are compatibility URLs backed by the same DM/comment processor and persistent idempotency claims. The moderation URL is canonical for new configuration. `META_WEBHOOK_AUTO_SUBSCRIBE` is opt-in; restored databases must keep it disabled and subscribe only a selected test integration.
 - **Guided integration chat**: `integrationChatConversationsTable`/`integrationChatMessagesTable` (`lib/db/src/schema/integration-chat.ts`), routes at `/api/integration-chat`. Floating `IntegrationChatPanel` mounted only on `/integracoes`; detects credentials in AI responses and offers copy buttons. Prompt lives in `integrations-specialist.prompt.ts`.
 - **`SocialLaunchGate`** (`campaigns/content.tsx`): no inline OAuth popups — shows connection status or a CTA to `/integracoes`, where the real connection happens.
 - **Social auto-post**: `social.autopost.service.ts` fires on content approval (fire-and-forget from `content.routes.ts`), publishes to Instagram/Facebook/TikTok only when the integration is truly `connected` with a real token; logs every attempt to `social_posts`. No silent mocking — it skips and logs when not connected.
@@ -128,7 +136,7 @@ Launch tracks by revenue target:
 
 - Always run `pnpm run typecheck:libs` before `pnpm --filter @workspace/api-server run typecheck` when DB schema changes
 - BullMQ queue names cannot contain `:` — use `-` instead
-- Redis is optional in dev — queues and WebSocket degrade gracefully
+- The API can start without Redis, but queue workers, schedulers and cross-process realtime are degraded. Use Redis 6.2+ for a representative local environment.
 - Seed plans before first user registration (Solo plan must exist)
 - `z.record()` in zod/v4 requires two args: `z.record(z.string(), z.unknown())`
 - Redis ECONNREFUSED errors are suppressed in dev (ioredis/BullMQ internal — not a bug)
