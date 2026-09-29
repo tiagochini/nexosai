@@ -3,16 +3,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import LeadCaptureModal from "@/components/LeadCaptureModal";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { LANG_LABELS, useI18n, type Lang } from "@/lib/i18n";
 import {
   ArrowRight, Users, Video, Workflow,
   Activity, Target, Layers, Lock, ShieldCheck, Search, Megaphone, ChevronDown, CheckCircle2
 } from "lucide-react";
 
 export default function LandingPage() {
+  const { lang } = useI18n();
   const [isCaptureOpen, setCaptureOpen] = useState(false);
   const [closed, setClosed] = useState(false);
 
   useEffect(() => {
+    document.documentElement.lang = lang;
     if (!window.location.hash) return;
     requestAnimationFrame(() => {
       document.querySelector(window.location.hash)?.scrollIntoView({ block: "start" });
@@ -61,6 +64,12 @@ export default function LandingPage() {
 }
 
 function Nav({ openCapture, closed }: { openCapture: () => void; closed: boolean }) {
+  const { lang, setLang } = useI18n();
+  const navCopy = {
+    "pt-BR": { tagline: "Agência Autônoma", login: "Entrar", open: "Reservar vaga", closed: "Vagas esgotadas" },
+    "en-US": { tagline: "Autonomous Agency", login: "Log in", open: "Reserve a spot", closed: "Spots sold out" },
+    "es-LA": { tagline: "Agencia autónoma", login: "Iniciar sesión", open: "Reservar lugar", closed: "Cupos agotados" },
+  }[lang];
   return (
     <nav className="sticky top-0 z-50 border-b-2 border-border bg-background/95 backdrop-blur-sm">
       <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between border-x-2 border-border bg-background">
@@ -68,19 +77,35 @@ function Nav({ openCapture, closed }: { openCapture: () => void; closed: boolean
           <img src="/nexos_ai_logo_1024x1024.png" alt="NexOS" className="h-10 w-10 object-contain" />
           <div className="hidden sm:block">
             <div className="font-display font-black text-2xl tracking-tighter uppercase leading-none">NEXOS</div>
-            <div className="font-mono text-[10px] uppercase tracking-widest text-primary font-bold">Agência Autônoma</div>
+            <div className="font-mono text-[10px] uppercase tracking-widest text-primary font-bold">{navCopy.tagline}</div>
           </div>
         </div>
         <div className="flex items-center gap-6">
-          <Link href="/login" aria-label="Entrar no sistema" data-testid="nav-login-link" className="font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-primary hidden sm:block transition-colors font-bold">
-            [ Log in ]
+          <Link href="/login" aria-label={navCopy.login} data-testid="nav-login-link" className="font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-primary hidden sm:block transition-colors font-bold">
+            [ {navCopy.login} ]
           </Link>
+          <div className="flex items-center gap-1 border border-border/60 p-1" role="group" aria-label="Language">
+            {(Object.keys(LANG_LABELS) as Lang[]).map(option => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setLang(option)}
+                aria-label={`Switch language to ${LANG_LABELS[option].label}`}
+                aria-pressed={lang === option}
+                className={`px-2 py-1 font-mono text-[10px] uppercase tracking-widest transition-colors ${
+                  lang === option ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {option === "pt-BR" ? "PT" : option === "en-US" ? "EN" : "ES"}
+              </button>
+            ))}
+          </div>
           <Button
             onClick={openCapture}
             data-testid="nav-guide-button"
             className="font-mono text-xs uppercase tracking-widest font-bold h-12 px-6 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors rounded-none"
           >
-            {closed ? "Vagas Esgotadas" : "Reservar Vaga"}
+            {closed ? navCopy.closed : navCopy.open}
           </Button>
         </div>
       </div>
@@ -89,6 +114,22 @@ function Nav({ openCapture, closed }: { openCapture: () => void; closed: boolean
 }
 
 function HeroSection({ openCapture, closed }: { openCapture: () => void; closed: boolean }) {
+  const { lang } = useI18n();
+  const copy = {
+    "pt-BR": {
+      badge: "DA IDEIA À OPERAÇÃO NO AR", h1a: "Pare de contratar partes", h1b: "para executar uma", h1c: "estratégia inteira.",
+      body: "Sua ideia sai do papel, vira um plano de ação orientado por inteligência de mercado e acompanhamento contínuo da concorrência — e começa a ganhar presença digital real em poucas horas. A NexOS assume a execução cara, técnica e fragmentada para colocar sua operação em movimento, de ponta a ponta.",
+      line: "Da ideia ao plano. Do plano aos ativos. Dos ativos à operação no ar.", primary: "Tirar minha ideia do papel", secondary: "Ver trabalho concreto", closed: "Turma inicial encerrada", access: "REGRAS DE ACESSO: APENAS 100 VAGAS DISPONÍVEIS NO PRÉ-LANÇAMENTO."
+    },
+    "en-US": {
+      badge: "FROM IDEA TO LIVE OPERATION", h1a: "Stop hiring separate pieces", h1b: "to execute an entire", h1c: "strategy.", body: "Your idea leaves the page and becomes an action plan guided by market intelligence and continuous competitor monitoring — building a real digital presence within hours. NexOS takes on the expensive, technical, fragmented execution to move your operation forward end to end.",
+      line: "From idea to plan. From plan to assets. From assets to a live operation.", primary: "Put my idea into motion", secondary: "See the real work", closed: "Initial cohort closed", access: "ACCESS RULES: ONLY 100 SPOTS AVAILABLE AT PRE-LAUNCH."
+    },
+    "es-LA": {
+      badge: "DE LA IDEA A LA OPERACIÓN EN MARCHA", h1a: "Deja de contratar piezas", h1b: "para ejecutar una", h1c: "estrategia completa.", body: "Tu idea sale del papel y se convierte en un plan de acción guiado por inteligencia de mercado y seguimiento continuo de la competencia — creando una presencia digital real en pocas horas. NexOS asume la ejecución costosa, técnica y fragmentada para poner tu operación en marcha de principio a fin.",
+      line: "De la idea al plan. Del plan a los activos. De los activos a la operación en marcha.", primary: "Poner mi idea en marcha", secondary: "Ver el trabajo real", closed: "Cohorte inicial cerrada", access: "REGLAS DE ACCESO: SOLO 100 CUPOS DISPONIBLES EN EL PRELANZAMIENTO."
+    },
+  }[lang];
   const scrollToWork = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     document.getElementById('trabalho-concreto')?.scrollIntoView({ behavior: 'smooth' });
@@ -108,37 +149,37 @@ function HeroSection({ openCapture, closed }: { openCapture: () => void; closed:
           <div className="inline-flex items-center gap-3 px-4 py-2 border-2 border-primary bg-primary/5 mb-10">
             <span className="w-2 h-2 bg-primary animate-pulse" />
             <span className="font-mono text-xs uppercase tracking-[0.2em] text-primary font-bold">
-              DA IDEIA À OPERAÇÃO NO AR
+              {copy.badge}
             </span>
           </div>
 
           <h1 className="text-5xl sm:text-7xl lg:text-[7rem] font-display font-black leading-[0.95] tracking-tighter mb-8 uppercase text-foreground">
-            Pare de contratar partes <br/>
-            <span className="text-primary">para executar uma<br/>estratégia inteira.</span>
+            {copy.h1a} <br/>
+            <span className="text-primary">{copy.h1b}<br/>{copy.h1c}</span>
           </h1>
 
           <p className="text-lg sm:text-2xl text-muted-foreground max-w-3xl leading-relaxed mb-12 font-sans font-medium">
-            Sua ideia sai do papel, vira um plano de ação orientado por inteligência de mercado e acompanhamento contínuo da concorrência — e começa a ganhar presença digital real em poucas horas. A NexOS assume a execução cara, técnica e fragmentada para colocar sua operação em movimento, de ponta a ponta.
+            {copy.body}
           </p>
 
           <p className="font-mono text-xs sm:text-sm uppercase tracking-widest text-foreground/70 max-w-3xl mb-10 border-l-2 border-primary pl-4">
-            Da ideia ao plano. Do plano aos ativos. Dos ativos à operação no ar.
+            {copy.line}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4">
             <Button onClick={openCapture} data-testid="hero-cta-button" className="h-16 px-10 text-base font-display font-bold rounded-none bg-foreground text-background hover:bg-muted-foreground transition-colors uppercase tracking-wide">
-              {closed ? "Turma inicial encerrada" : "Tirar Minha Ideia do Papel"} <ArrowRight className="ml-3 h-5 w-5" />
+              {closed ? copy.closed : copy.primary} <ArrowRight className="ml-3 h-5 w-5" />
             </Button>
             <Button variant="outline" onClick={scrollToWork} className="h-16 px-10 text-base font-display font-bold rounded-none border-2 border-border bg-transparent hover:bg-card transition-colors text-foreground uppercase tracking-wide">
-              Ver Trabalho Concreto
+              {copy.secondary}
             </Button>
           </div>
 
           <div className="mt-8 flex items-center gap-4">
             <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground font-bold border-l-2 border-primary pl-4 py-1">
               {closed
-                ? "LIMITE DE 100 OPERAÇÕES ATINGIDO. SEM PREVISÃO DE REABERTURA."
-                : "REGRAS DE ACESSO: APENAS 100 VAGAS DISPONÍVEIS NO PRÉ-LANÇAMENTO."}
+                ? copy.closed
+                : copy.access}
             </div>
           </div>
         </motion.div>
