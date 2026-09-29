@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { useUiText } from "@/lib/i18n";
+import { useUiLocale, useUiText } from "@/lib/i18n";
 import {
   ArrowRight, Zap, Brain, Target, Users, TrendingUp,
   GraduationCap, Building2, Rocket, Bot, Globe, ChevronDown,
@@ -36,10 +36,11 @@ function FadeIn({ children, className = "", delay = 0 }: { children: React.React
 
 function Nav({ scrolled }: { scrolled: boolean }) {
   const t = useUiText();
+  const { locale, setGuestLocale } = useUiLocale();
   const [mobileOpen, setMobileOpen] = useState(false);
   return (
     <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "border-b border-white/10 bg-[#04060f]/95 backdrop-blur-xl" : "bg-transparent"}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
         <div className="flex items-center gap-3 shrink-0">
           <img src="/nexos-logo.png" alt="NexOS" className="h-9 w-9 object-contain" style={{ filter: "drop-shadow(0 0 10px hsl(250 90% 65% / 0.8))" }} />
           <div>
@@ -48,25 +49,47 @@ function Nav({ scrolled }: { scrolled: boolean }) {
           </div>
         </div>
 
-        <div className="hidden md:flex items-center gap-6 font-mono text-[11px] uppercase tracking-widest text-white/50">
+        <div className="hidden xl:flex items-center gap-6 font-mono text-[11px] uppercase tracking-widest text-white/50">
           <a href="#produtos" className="hover:text-white transition-colors">{t("Produtos", "Products", "Productos")}</a>
           <a href="#servicos" className="hover:text-white transition-colors">{t("Serviços", "Services", "Servicios")}</a>
           <a href="#academy" className="hover:text-white transition-colors">Academy</a>
           <a href="#contato" className="hover:text-white transition-colors">{t("Contato", "Contact", "Contacto")}</a>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          <div role="group" aria-label={t("Idioma", "Language", "Idioma")} className="flex items-center gap-0.5 border border-white/20 bg-[#04060f]/80 p-0.5 sm:p-1">
+            {([
+              ["pt-BR", "PT", "Português"],
+              ["en-US", "EN", "English"],
+              ["es-LA", "ES", "Español"],
+            ] as const).map(([value, short, name]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setGuestLocale(value)}
+                aria-label={`${t("Mudar idioma para", "Switch language to", "Cambiar idioma a")} ${name}`}
+                aria-pressed={locale === value || (value === "en-US" && locale === "en-AU")}
+                className={`font-mono text-[10px] font-bold tracking-widest px-1.5 sm:px-2 py-1.5 transition-colors ${
+                  locale === value || (value === "en-US" && locale === "en-AU")
+                    ? "bg-purple-600 text-white"
+                    : "text-white/60 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                {short}
+              </button>
+            ))}
+          </div>
           <a href="/login" className="hidden sm:block">
             <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest text-white/50 hover:text-white">
               {t("Entrar", "Sign in", "Entrar")}
             </Button>
           </a>
-          <a href="/landing/">
+          <a href="/landing/" className="hidden sm:block">
             <Button size="sm" className="bg-purple-600 hover:bg-purple-500 text-white font-mono uppercase text-[10px] tracking-widest font-bold rounded-none h-9 px-4">
               {t("Começar", "Get started", "Comenzar")}
             </Button>
           </a>
-          <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden text-white/60 hover:text-white p-1">
+          <button type="button" onClick={() => setMobileOpen(!mobileOpen)} aria-label={t("Abrir menu", "Open menu", "Abrir menú")} aria-expanded={mobileOpen} className="xl:hidden text-white/60 hover:text-white p-1">
             <div className={`space-y-1 transition-all ${mobileOpen ? "rotate-45" : ""}`}>
               <div className="w-5 h-0.5 bg-current" />
               <div className={`w-5 h-0.5 bg-current transition-all ${mobileOpen ? "opacity-0" : ""}`} />
@@ -77,12 +100,13 @@ function Nav({ scrolled }: { scrolled: boolean }) {
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden bg-[#04060f]/98 border-b border-white/10 px-6 py-4 flex flex-col gap-4 font-mono text-sm uppercase tracking-widest text-white/60">
+        <div className="xl:hidden bg-[#04060f]/98 border-b border-white/10 px-6 py-4 flex flex-col gap-4 font-mono text-sm uppercase tracking-widest text-white/60">
           <a href="#produtos" onClick={() => setMobileOpen(false)} className="hover:text-white">{t("Produtos", "Products", "Productos")}</a>
           <a href="#servicos" onClick={() => setMobileOpen(false)} className="hover:text-white">{t("Serviços", "Services", "Servicios")}</a>
           <a href="#academy" onClick={() => setMobileOpen(false)} className="hover:text-white">Academy</a>
           <a href="#contato" onClick={() => setMobileOpen(false)} className="hover:text-white">{t("Contato", "Contact", "Contacto")}</a>
           <a href="/login" className="hover:text-white">{t("Entrar", "Sign in", "Entrar")}</a>
+          <a href="/landing/" className="hover:text-white">{t("Começar", "Get started", "Comenzar")}</a>
         </div>
       )}
     </nav>
