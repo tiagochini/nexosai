@@ -31,6 +31,7 @@ import nexosLogo from "/nexos-logo.png";
 import { useLocation } from "wouter";
 import { AutonomyTab } from "@/components/AutonomyTab";
 import { MetaReviewReadinessPanel } from "@/components/meta-review-readiness";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 type Tab = "perfil" | "workspace" | "seguranca" | "integracoes" | "identidade" | "compliance" | "autonomia";
 
@@ -88,6 +89,7 @@ function ProfileTab() {
   const [savingLocale, setSavingLocale] = useState(false);
   const [copied, setCopied] = useState(false);
   const currentLocale = user?.locale ?? "pt-BR";
+  const t = useUiText();
 
   useEffect(() => { setName(user?.name ?? ""); }, [user?.name]);
 
@@ -100,7 +102,7 @@ function ProfileTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim() }),
       });
-      toast.success("Nome atualizado com sucesso.");
+      toast.success(t("Nome atualizado com sucesso.", "Name updated successfully.", "Nombre actualizado correctamente."));
       queryClient.setQueryData(getGetMeQueryKey(), (old: unknown) => {
         if (!old || typeof old !== "object") return old;
         const prev = old as Record<string, unknown>;
@@ -108,7 +110,7 @@ function ProfileTab() {
       });
       await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     } catch {
-      toast.error("Erro ao salvar nome.");
+      toast.error(t("Erro ao salvar nome.", "Couldn't save name.", "No se pudo guardar el nombre."));
     } finally {
       setSavingProfile(false);
     }
@@ -128,7 +130,7 @@ function ProfileTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locale }),
       });
-      toast.success("Idioma atualizado com sucesso.");
+      toast.success(t("Idioma da plataforma atualizado com sucesso.", "Platform language updated successfully.", "Idioma de la plataforma actualizado correctamente."));
       await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     } catch {
       queryClient.setQueryData(getGetMeQueryKey(), (old: unknown) => {
@@ -136,7 +138,7 @@ function ProfileTab() {
         const prev = old as Record<string, unknown>;
         return { ...prev, user: { ...(prev.user as Record<string, unknown>), locale: currentLocale } };
       });
-      toast.error("Erro ao salvar idioma.");
+      toast.error(t("Erro ao salvar idioma.", "Couldn't save language.", "No se pudo guardar el idioma."));
     } finally {
       setSavingLocale(false);
     }
@@ -151,8 +153,8 @@ function ProfileTab() {
 
   return (
     <div className="space-y-6">
-      <SectionCard title="Informações Pessoais" icon={User}>
-        <FieldRow label="Avatar" sublabel="Identificação visual">
+      <SectionCard title={t("Informações pessoais", "Personal information", "Información personal")} icon={User}>
+        <FieldRow label={t("Avatar", "Avatar", "Avatar")} sublabel={t("Identificação visual", "Visual identity", "Identificación visual")}>
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-sm border border-primary/30 bg-primary/10 flex items-center justify-center relative">
               <img src={nexosLogo} alt="" className="w-10 h-10 object-contain opacity-30" />
@@ -167,31 +169,31 @@ function ProfileTab() {
           </div>
         </FieldRow>
 
-        <FieldRow label="Nome Completo" sublabel="Exibido na plataforma">
+        <FieldRow label={t("Nome completo", "Full name", "Nombre completo")} sublabel={t("Exibido na plataforma", "Shown on the platform", "Se muestra en la plataforma")}>
           <div className="flex gap-3">
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="font-mono h-10 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary focus-visible:border-primary flex-1"
-              placeholder="Seu nome"
+              placeholder={t("Seu nome", "Your name", "Tu nombre")}
             />
             <Button
               onClick={() => void handleSaveName()}
               disabled={savingProfile || name.trim() === (user?.name ?? "")}
               className="rounded-none font-mono uppercase text-xs tracking-widest h-10 px-4 btn-weapon-primary shrink-0"
             >
-              {savingProfile ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Salvar"}
+              {savingProfile ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("Salvar", "Save", "Guardar")}
             </Button>
           </div>
         </FieldRow>
 
-        <FieldRow label="E-mail" sublabel="Não editável">
+        <FieldRow label={t("E-mail", "Email", "Correo electrónico")} sublabel={t("Não editável", "Can't be edited", "No se puede editar")}>
           <div className="font-mono text-sm text-muted-foreground h-10 flex items-center px-3 border border-border/30 bg-muted/10">
             {user?.email ?? "—"}
           </div>
         </FieldRow>
 
-        <FieldRow label="Idioma" sublabel="Idioma da plataforma">
+        <FieldRow label={t("Idioma da plataforma", "Platform language", "Idioma de la plataforma")} sublabel={t("Idioma da plataforma", "Platform language", "Idioma de la plataforma")}>
           <div className="flex flex-wrap gap-2">
             {LOCALE_OPTIONS.map(opt => {
               const isActive = currentLocale === opt.value;
@@ -209,7 +211,12 @@ function ProfileTab() {
                   <span className="text-base leading-none">{opt.flag}</span>
                   <div className="text-left">
                     <div className="font-semibold leading-tight">{opt.label}</div>
-                    <div className="text-[10px] uppercase tracking-wider opacity-60">{opt.sublabel}</div>
+                    <div className="text-[10px] uppercase tracking-wider opacity-60">
+                      {opt.value === "pt-BR" ? t("Brasil", "Brazil", "Brasil")
+                        : opt.value === "es-LA" ? t("América Latina", "Latin America", "Latinoamérica")
+                          : opt.value === "en-AU" ? t("Austrália", "Australia", "Australia")
+                            : t("Estados Unidos", "United States", "Estados Unidos")}
+                    </div>
                   </div>
                   {isActive && (
                     savingLocale
@@ -222,13 +229,13 @@ function ProfileTab() {
           </div>
           <p className="font-mono text-[11px] text-muted-foreground/50 mt-2 uppercase tracking-widest">
             <Globe className="inline h-3 w-3 mr-1 opacity-60" />
-            Define o idioma das cópias e relatórios gerados pelo agente
+            {t("Aplica o idioma à interface e às respostas e relatórios do agente.", "Applies to the interface and agent responses and reports.", "Se aplica a la interfaz y a las respuestas e informes del agente.")}
           </p>
         </FieldRow>
       </SectionCard>
 
-      <SectionCard title="Identificadores" icon={CreditCard}>
-        <FieldRow label="Workspace ID" sublabel="Identificador único da sua conta">
+      <SectionCard title={t("Identificadores", "Identifiers", "Identificadores")} icon={CreditCard}>
+        <FieldRow label="Workspace ID" sublabel={t("Identificador único da sua conta", "Your account's unique identifier", "Identificador único de tu cuenta")}>
           <div className="flex gap-3 items-center">
             <code className="font-mono text-xs text-muted-foreground bg-muted/20 border border-border/30 px-3 py-2 flex-1 truncate">
               {workspace?.id ?? "—"}
@@ -244,9 +251,9 @@ function ProfileTab() {
           </div>
         </FieldRow>
 
-        <FieldRow label="Função" sublabel="Perfil de acesso">
+        <FieldRow label={t("Função", "Role", "Función")} sublabel={t("Perfil de acesso", "Access profile", "Perfil de acceso")}>
           <Badge variant="outline" className="rounded-none font-mono text-xs uppercase tracking-widest text-primary border-primary/40 bg-primary/10">
-            Lançador
+            {t("Lançador", "Launch operator", "Operador de lanzamientos")}
           </Badge>
         </FieldRow>
       </SectionCard>
@@ -256,6 +263,7 @@ function ProfileTab() {
 
 // ── Workspace Tab ─────────────────────────────────────────────────────────────
 function WorkspaceTab() {
+  const t = useUiText();
   const { workspace, workspacesData, switchWorkspace, createWorkspace, isWorkspacesLoading } = useAuth();
   const queryClient = useQueryClient();
   const [wsName, setWsName] = useState(workspace?.name ?? "");
@@ -281,10 +289,10 @@ function WorkspaceTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: wsName.trim() }),
       });
-      toast.success("Workspace atualizado.");
+      toast.success(t("Workspace atualizado.", "Workspace updated.", "Espacio de trabajo actualizado."));
       await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     } catch {
-      toast.error("Erro ao atualizar workspace.");
+      toast.error(t("Erro ao atualizar workspace.", "Couldn't update workspace.", "No se pudo actualizar el espacio de trabajo."));
     } finally {
       setSaving(false);
     }
@@ -292,7 +300,7 @@ function WorkspaceTab() {
 
   const handleCreate = async () => {
     if (newWsName.trim().length < 2) {
-      toast.error("O nome deve ter no mínimo 2 caracteres.");
+      toast.error(t("O nome deve ter no mínimo 2 caracteres.", "Name must be at least 2 characters.", "El nombre debe tener al menos 2 caracteres."));
       return;
     }
     setCreating(true);
@@ -300,12 +308,12 @@ function WorkspaceTab() {
       await createWorkspace(newWsName.trim());
       setNewWsName("");
       setIsCreateOpen(false);
-      toast.success("Workspace criado e ativo.");
+      toast.success(t("Workspace criado e ativo.", "Workspace created and activated.", "Espacio de trabajo creado y activado."));
     } catch (err: any) {
       if (err?.message?.includes("WORKSPACE_LIMIT_REACHED")) {
-        toast.error("Limite de workspaces atingido para o seu plano.");
+        toast.error(t("Limite de workspaces atingido para o seu plano.", "You've reached your plan's workspace limit.", "Has alcanzado el límite de espacios de trabajo de tu plan."));
       } else {
-        toast.error(err.message || "Erro ao criar workspace.");
+        toast.error(err.message || t("Erro ao criar workspace.", "Couldn't create workspace.", "No se pudo crear el espacio de trabajo."));
       }
     } finally {
       setCreating(false);
@@ -317,9 +325,9 @@ function WorkspaceTab() {
     setSwitchingTo(id);
     try {
       await switchWorkspace(id);
-      toast.success("Operação trocada com sucesso.");
+      toast.success(t("Operação trocada com sucesso.", "Workspace switched successfully.", "Espacio de trabajo cambiado correctamente."));
     } catch (err: any) {
-      toast.error(err.message || "Erro ao trocar operação.");
+      toast.error(err.message || t("Erro ao trocar operação.", "Couldn't switch workspace.", "No se pudo cambiar de espacio de trabajo."));
     } finally {
       setSwitchingTo(null);
     }
@@ -344,37 +352,36 @@ function WorkspaceTab() {
 
   return (
     <div className="space-y-6">
-      <SectionCard title="Sua Operação Atual" icon={Building2}>
+      <SectionCard title={t("Sua operação atual", "Your current workspace", "Tu espacio de trabajo actual")} icon={Building2}>
         <div className="bg-primary/5 border border-primary/20 p-4 mb-6 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl -mr-10 -mt-10" />
-          <div className="font-mono text-[10px] uppercase tracking-widest text-primary mb-1">Um Workspace por Cliente/Marca</div>
+          <div className="font-mono text-[10px] uppercase tracking-widest text-primary mb-1">{t("Um workspace por cliente/marca", "One workspace per client/brand", "Un espacio de trabajo por cliente/marca")}</div>
           <p className="font-mono text-xs text-muted-foreground leading-relaxed max-w-2xl relative z-10">
-            A arquitetura da NexOS exige que cada cliente, marca ou operação independente possua seu próprio workspace.
-            Isso isola dados de mercado, integrações, faturamento e garante que os agentes não misturem informações entre projetos diferentes.
+            {t("A arquitetura da NexOS exige que cada cliente, marca ou operação independente possua seu próprio workspace. Isso isola dados de mercado, integrações, faturamento e garante que os agentes não misturem informações entre projetos diferentes.", "NexOS requires each client, brand, or independent operation to have its own workspace. This isolates market data, integrations, and billing, and prevents agents from mixing information across projects.", "La arquitectura de NexOS requiere que cada cliente, marca u operación independiente tenga su propio espacio de trabajo. Esto aísla los datos de mercado, las integraciones y la facturación, y evita que los agentes mezclen información entre proyectos.")}
           </p>
         </div>
 
-        <FieldRow label="Nome do Workspace" sublabel="Sua operação ativa no momento">
+        <FieldRow label={t("Nome do workspace", "Workspace name", "Nombre del espacio de trabajo")} sublabel={t("Sua operação ativa no momento", "Your currently active operation", "Tu operación activa actualmente")}>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Input
               value={wsName}
               onChange={(e) => setWsName(e.target.value)}
               title={workspace?.name}
               className="font-mono h-10 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary focus-visible:border-primary flex-1"
-              placeholder="Nome da sua empresa"
+              placeholder={t("Nome da sua empresa", "Your company name", "Nombre de tu empresa")}
             />
             <Button
               onClick={() => void handleSave()}
               disabled={saving || wsName.trim() === (workspace?.name ?? "")}
               className="w-full rounded-none font-mono uppercase text-xs tracking-widest h-10 px-4 btn-weapon-primary shrink-0 sm:w-auto"
             >
-              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Renomear"}
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("Renomear", "Rename", "Cambiar nombre")}
             </Button>
           </div>
         </FieldRow>
       </SectionCard>
 
-      <SectionCard title="Capacidade do Ambiente" icon={SettingsIcon}>
+      <SectionCard title={t("Capacidade do ambiente", "Workspace capacity", "Capacidad del espacio de trabajo")} icon={SettingsIcon}>
         {isWorkspacesLoading ? (
           <div className="flex items-center justify-center p-8">
             <Loader2 className="h-6 w-6 text-primary animate-spin" />
@@ -382,22 +389,22 @@ function WorkspaceTab() {
         ) : usage && entitlements ? (
           <div className="space-y-6">
             <FieldRow
-              label="Produto inscrito"
-              sublabel="Entitlements da assinatura selecionada"
+              label={t("Produto contratado", "Subscribed product", "Producto contratado")}
+              sublabel={t("Recursos incluídos na assinatura selecionada", "Entitlements for the selected subscription", "Prestaciones de la suscripción seleccionada")}
             >
               <div className="border border-primary/30 bg-primary/5 p-3">
                 <div className="font-mono text-xs uppercase tracking-widest text-primary">
                   {entitlements.selectedSubscription?.productName ?? "Launch"}
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
-                  Todas as capacidades do produto estão desbloqueadas. Limite de 5 contas por rede social.
+                  {t("Todas as capacidades do produto estão desbloqueadas. Limite de 5 contas por rede social.", "All product capabilities are unlocked. Limit: 5 accounts per social network.", "Todas las funciones del producto están habilitadas. Límite: 5 cuentas por red social.")}
                 </div>
               </div>
             </FieldRow>
-            <FieldRow label="Workspaces" sublabel="Operações independentes">
+            <FieldRow label="Workspaces" sublabel={t("Operações independentes", "Independent operations", "Operaciones independientes")}>
               <div className="flex justify-between items-center mb-2">
-                <span className="font-mono text-xs text-foreground font-semibold">{usage.workspacesUsed} em uso</span>
-                <span className="font-mono text-xs text-muted-foreground">de {entitlements.maxWorkspaces} permitidos</span>
+                <span className="font-mono text-xs text-foreground font-semibold">{usage.workspacesUsed} {t("em uso", "in use", "en uso")}</span>
+                <span className="font-mono text-xs text-muted-foreground">{t("de", "of", "de")} {entitlements.maxWorkspaces} {t("permitidos", "allowed", "permitidos")}</span>
               </div>
               <div className="h-1.5 w-full bg-muted/40 rounded-full overflow-hidden">
                 <div
@@ -410,7 +417,7 @@ function WorkspaceTab() {
               </div>
             </FieldRow>
 
-            <FieldRow label="Redes Sociais Permitidas" sublabel="Plataformas habilitadas neste ambiente">
+            <FieldRow label={t("Redes sociais permitidas", "Allowed social networks", "Redes sociales permitidas")} sublabel={t("Plataformas habilitadas neste ambiente", "Platforms enabled in this workspace", "Plataformas habilitadas en este espacio de trabajo")}>
               <div className="flex flex-wrap gap-2">
                 {entitlements.allowedSocialNetworks.map(net => (
                   <Badge key={net} variant="outline" className="rounded-none font-mono text-[10px] uppercase tracking-widest text-primary border-primary/40 bg-primary/10">
@@ -420,7 +427,7 @@ function WorkspaceTab() {
               </div>
             </FieldRow>
 
-            <FieldRow label="Contas Conectadas" sublabel="Capacidade configurada separadamente para cada rede social">
+            <FieldRow label={t("Contas conectadas", "Connected accounts", "Cuentas conectadas")} sublabel={t("Capacidade configurada separadamente para cada rede social", "Capacity configured separately for each social network", "Capacidad configurada por separado para cada red social")}>
               <div className="space-y-4">
                 {entitlements.allowedSocialNetworks.map(net => {
                   const connected = usage.connectedAccountsByNetwork[net] || 0;
@@ -444,22 +451,22 @@ function WorkspaceTab() {
             </FieldRow>
           </div>
         ) : (
-          <div className="py-8 text-center font-mono text-sm text-muted-foreground">Dados de capacidade não disponíveis.</div>
+          <div className="py-8 text-center font-mono text-sm text-muted-foreground">{t("Dados de capacidade não disponíveis.", "Capacity data is unavailable.", "Los datos de capacidad no están disponibles.")}</div>
         )}
       </SectionCard>
 
-      <SectionCard title="Minhas Operações" icon={Building2}>
+      <SectionCard title={t("Minhas operações", "My workspaces", "Mis espacios de trabajo")} icon={Building2}>
         {isWorkspacesLoading ? (
           <div className="py-8 flex justify-center">
             <Loader2 className="h-6 w-6 text-primary animate-spin" />
           </div>
         ) : !workspacesData ? (
-          <div className="py-8 text-center font-mono text-sm text-muted-foreground">Erro ao carregar workspaces.</div>
+          <div className="py-8 text-center font-mono text-sm text-muted-foreground">{t("Erro ao carregar workspaces.", "Couldn't load workspaces.", "No se pudieron cargar los espacios de trabajo.")}</div>
         ) : (
           <div className="space-y-4">
             <div className="flex items-center justify-between mb-4">
               <div className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
-                {workspaces.length} Operação(ões) Encontrada(s)
+                {workspaces.length} {t("operação(ões) encontrada(s)", "workspace(s) found", "espacio(s) de trabajo encontrado(s)")}
               </div>
             </div>
 
@@ -471,10 +478,10 @@ function WorkspaceTab() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="truncate font-mono font-semibold text-sm" title={ws.name}>{ws.name}</span>
-                        {isActive && <Badge variant="outline" className="rounded-none font-mono text-[9px] uppercase tracking-widest text-primary border-primary/40 bg-primary/10 py-0 h-4">Atual</Badge>}
+                        {isActive && <Badge variant="outline" className="rounded-none font-mono text-[9px] uppercase tracking-widest text-primary border-primary/40 bg-primary/10 py-0 h-4">{t("Atual", "Current", "Actual")}</Badge>}
                       </div>
                       <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-                        ID: {ws.id.slice(0, 12)}... · Criado em {new Date(ws.createdAt).toLocaleDateString("pt-BR")}
+                        ID: {ws.id.slice(0, 12)}... · {t("Criado em", "Created", "Creado el")} {new Date(ws.createdAt).toLocaleDateString()}
                       </div>
                     </div>
                     {!isActive && (
@@ -486,7 +493,7 @@ function WorkspaceTab() {
                         className="w-full rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-outline sm:w-auto"
                       >
                         {switchingTo === ws.id ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <RefreshCw className="h-3 w-3 mr-1.5" />}
-                        {switchingTo === ws.id ? "Trocando..." : "Trocar para esta"}
+                        {switchingTo === ws.id ? t("Trocando...", "Switching...", "Cambiando...") : t("Trocar para esta", "Switch to this", "Cambiar a este")}
                       </Button>
                     )}
                   </div>
@@ -500,8 +507,8 @@ function WorkspaceTab() {
                    <div className="flex items-start gap-3">
                      <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
                      <div>
-                       <div className="font-mono text-xs font-bold text-destructive uppercase tracking-widest">Limite Atingido</div>
-                       <div className="font-mono text-xs text-destructive/80 mt-1">Você atingiu a capacidade atual de {entitlements?.maxWorkspaces} operação(ões). A ampliação ainda não está disponível para contratação.</div>
+                        <div className="font-mono text-xs font-bold text-destructive uppercase tracking-widest">{t("Limite atingido", "Limit reached", "Límite alcanzado")}</div>
+                        <div className="font-mono text-xs text-destructive/80 mt-1">{t(`Você atingiu a capacidade atual de ${entitlements?.maxWorkspaces} operação(ões). A ampliação ainda não está disponível para contratação.`, `You've reached the current limit of ${entitlements?.maxWorkspaces} workspace(s). Additional capacity is not yet available for purchase.`, `Has alcanzado el límite actual de ${entitlements?.maxWorkspaces} espacio(s) de trabajo. La capacidad adicional aún no está disponible para contratar.`)}</div>
                      </div>
                    </div>
                  </div>
@@ -511,41 +518,41 @@ function WorkspaceTab() {
                  {canCreateWorkspace ? <DialogTrigger asChild>
                     <Button className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary">
                      <Plus className="h-3.5 w-3.5 mr-2" />
-                      Adicionar Workspace
+                      {t("Adicionar workspace", "Add workspace", "Añadir espacio de trabajo")}
                    </Button>
                  </DialogTrigger> : null}
                  <DialogContent className="rounded-none border border-primary/30 bg-card/95 backdrop-blur-xl sm:max-w-[425px]">
                    <DialogHeader>
-                     <DialogTitle className="font-mono uppercase tracking-widest text-primary text-sm">Criar Operação</DialogTitle>
+                      <DialogTitle className="font-mono uppercase tracking-widest text-primary text-sm">{t("Criar operação", "Create workspace", "Crear espacio de trabajo")}</DialogTitle>
                      <DialogDescription className="font-mono text-xs text-muted-foreground leading-relaxed mt-2">
-                       Crie um ambiente isolado para um novo cliente ou marca. Mantenha os dados separados para o agente atuar com contexto preciso.
+                        {t("Crie um ambiente isolado para um novo cliente ou marca. Mantenha os dados separados para o agente atuar com contexto preciso.", "Create an isolated workspace for a new client or brand. Keep data separate so the agent can work with precise context.", "Crea un espacio aislado para un nuevo cliente o marca. Mantén los datos separados para que el agente trabaje con el contexto adecuado.")}
                      </DialogDescription>
                    </DialogHeader>
                    <div className="py-4 space-y-4">
                      <div className="space-y-2">
-                       <Label htmlFor="new-ws-name" className="font-mono text-xs uppercase tracking-widest">Nome da Operação</Label>
+                        <Label htmlFor="new-ws-name" className="font-mono text-xs uppercase tracking-widest">{t("Nome da operação", "Workspace name", "Nombre del espacio de trabajo")}</Label>
                        <Input
                          id="new-ws-name"
                          value={newWsName}
                          onChange={e => setNewWsName(e.target.value)}
                           aria-describedby="new-ws-name-help"
-                         placeholder="Ex: Agência XYZ ou Cliente Alpha"
+                          placeholder={t("Ex.: Agência XYZ ou Cliente Alpha", "e.g. XYZ Agency or Alpha Client", "Ej.: Agencia XYZ o Cliente Alpha")}
                          className="font-mono h-10 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary"
                        />
                         <p id="new-ws-name-help" className="font-mono text-[10px] text-muted-foreground">
                           {newWsName.length > 0 && newWsName.trim().length < 2
-                            ? "Digite pelo menos 2 caracteres."
-                            : "Use o nome do cliente, marca ou operação."}
+                             ? t("Digite pelo menos 2 caracteres.", "Enter at least 2 characters.", "Escribe al menos 2 caracteres.")
+                             : t("Use o nome do cliente, marca ou operação.", "Use the client, brand, or operation name.", "Usa el nombre del cliente, marca u operación.")}
                         </p>
                      </div>
                    </div>
                    <DialogFooter>
                      <Button variant="outline" onClick={() => setIsCreateOpen(false)} className="rounded-none font-mono text-xs uppercase tracking-widest btn-weapon-outline">
-                       Cancelar
+                        {t("Cancelar", "Cancel", "Cancelar")}
                      </Button>
                      <Button onClick={() => void handleCreate()} disabled={creating || newWsName.trim().length < 2} className="rounded-none font-mono text-xs uppercase tracking-widest btn-weapon-primary">
                        {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : null}
-                       Criar e Acessar
+                        {t("Criar e acessar", "Create and open", "Crear y acceder")}
                      </Button>
                    </DialogFooter>
                  </DialogContent>
@@ -557,38 +564,38 @@ function WorkspaceTab() {
                    className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary"
                  >
                    <Plus className="h-3.5 w-3.5 mr-2" />
-                   Adicionar Workspace
+                    {t("Adicionar workspace", "Add workspace", "Añadir espacio de trabajo")}
                  </Button>
                )}
 
                <Dialog open={isWorkspaceInfoOpen} onOpenChange={setIsWorkspaceInfoOpen}>
                  <DialogContent className="rounded-none border border-primary/30 bg-card/95 backdrop-blur-xl sm:max-w-[520px]">
                    <DialogHeader>
-                     <DialogTitle className="font-mono uppercase tracking-widest text-primary text-sm">O que é um Workspace NexOS?</DialogTitle>
+                      <DialogTitle className="font-mono uppercase tracking-widest text-primary text-sm">{t("O que é um workspace NexOS?", "What is a NexOS workspace?", "¿Qué es un espacio de trabajo de NexOS?")}</DialogTitle>
                      <DialogDescription className="font-mono text-xs text-muted-foreground leading-relaxed mt-2">
-                       Cada workspace é um ambiente isolado para uma marca, cliente ou operação. Ele mantém estratégia, campanhas, inteligência de mercado, leads, integrações e histórico separados para evitar que os agentes misturem contextos.
+                        {t("Cada workspace é um ambiente isolado para uma marca, cliente ou operação. Ele mantém estratégia, campanhas, inteligência de mercado, leads, integrações e histórico separados para evitar que os agentes misturem contextos.", "Each workspace is an isolated environment for a brand, client, or operation. It keeps strategy, campaigns, market intelligence, leads, integrations, and history separate so agents don't mix contexts.", "Cada espacio de trabajo es un entorno aislado para una marca, cliente u operación. Mantiene separadas la estrategia, las campañas, la inteligencia de mercado, los leads, las integraciones y el historial para evitar que los agentes mezclen contextos.")}
                      </DialogDescription>
                    </DialogHeader>
                    <div className="space-y-3 border-y border-border/40 py-4">
                      <div className="flex items-start gap-3">
                        <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                       <p className="font-mono text-xs text-foreground/80">Use um workspace diferente para cada empresa, marca ou cliente atendido.</p>
+                        <p className="font-mono text-xs text-foreground/80">{t("Use um workspace diferente para cada empresa, marca ou cliente atendido.", "Use a separate workspace for each company, brand, or client you serve.", "Usa un espacio de trabajo distinto para cada empresa, marca o cliente.")}</p>
                      </div>
                      <div className="flex items-start gap-3">
                        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                       <p className="font-mono text-xs text-foreground/80">Dados, agentes e autorizações sociais permanecem isolados entre as operações.</p>
+                        <p className="font-mono text-xs text-foreground/80">{t("Dados, agentes e autorizações sociais permanecem isolados entre as operações.", "Data, agents, and social permissions remain isolated between workspaces.", "Los datos, agentes y permisos sociales permanecen aislados entre las operaciones.")}</p>
                      </div>
                      <div className="flex items-start gap-3">
                        <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                       <p className="font-mono text-xs text-foreground/80">Além de novos workspaces, a capacidade de contas conectadas poderá ser ampliada separadamente por plataforma.</p>
+                        <p className="font-mono text-xs text-foreground/80">{t("Além de novos workspaces, a capacidade de contas conectadas poderá ser ampliada separadamente por plataforma.", "In addition to new workspaces, connected-account capacity may be expanded separately for each platform.", "Además de nuevos espacios de trabajo, la capacidad de cuentas conectadas podrá ampliarse por separado para cada plataforma.")}</p>
                      </div>
                    </div>
                    <div className="border border-primary/20 bg-primary/5 p-3 font-mono text-xs text-muted-foreground">
-                     A ampliação de capacidade será disponibilizada em breve. Nenhuma contratação ou cobrança será realizada nesta tela.
+                      {t("A ampliação de capacidade será disponibilizada em breve. Nenhuma contratação ou cobrança será realizada nesta tela.", "Additional capacity will be available soon. No purchase or charge will be made on this screen.", "La capacidad adicional estará disponible pronto. No se realizará ninguna contratación ni cobro en esta pantalla.")}
                    </div>
                    <DialogFooter>
                      <Button onClick={() => setIsWorkspaceInfoOpen(false)} className="rounded-none font-mono text-xs uppercase tracking-widest btn-weapon-primary">
-                       Entendi
+                        {t("Entendi", "Got it", "Entendido")}
                      </Button>
                    </DialogFooter>
                  </DialogContent>
@@ -602,6 +609,7 @@ function WorkspaceTab() {
 }
 // ── Security Tab ──────────────────────────────────────────────────────────────
 function SecurityTab() {
+  const t = useUiText();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -610,13 +618,13 @@ function SecurityTab() {
   const [saving, setSaving] = useState(false);
 
   const strength = next.length === 0 ? 0 : next.length < 6 ? 1 : next.length < 10 ? 2 : next.length < 14 ? 3 : 4;
-  const strengthLabel = ["", "Fraca", "Razoável", "Boa", "Forte"][strength];
+  const strengthLabel = ["", t("Fraca", "Weak", "Débil"), t("Razoável", "Fair", "Aceptable"), t("Boa", "Good", "Buena"), t("Forte", "Strong", "Fuerte")][strength];
   const strengthColor = ["", "bg-destructive", "bg-yellow-400", "bg-primary", "bg-success"][strength];
 
   const handleChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (next !== confirm) { toast.error("As senhas não coincidem."); return; }
-    if (next.length < 8) { toast.error("Senha deve ter ao menos 8 caracteres."); return; }
+    if (next !== confirm) { toast.error(t("As senhas não coincidem.", "Passwords do not match.", "Las contraseñas no coinciden.")); return; }
+    if (next.length < 8) { toast.error(t("Senha deve ter ao menos 8 caracteres.", "Password must be at least 8 characters.", "La contraseña debe tener al menos 8 caracteres.")); return; }
     setSaving(true);
     try {
       await customFetch<unknown>("/api/auth/change-password", {
@@ -624,10 +632,10 @@ function SecurityTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword: current, newPassword: next }),
       });
-      toast.success("Senha alterada com sucesso.");
+      toast.success(t("Senha alterada com sucesso.", "Password changed successfully.", "Contraseña cambiada correctamente."));
       setCurrent(""); setNext(""); setConfirm("");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao alterar senha.");
+      toast.error(err instanceof Error ? err.message : t("Erro ao alterar senha.", "Couldn't change password.", "No se pudo cambiar la contraseña."));
     } finally {
       setSaving(false);
     }
@@ -635,15 +643,16 @@ function SecurityTab() {
 
   return (
     <div className="space-y-6">
-      <SectionCard title="Alterar Senha" icon={ShieldCheck}>
+      <SectionCard title={t("Alterar senha", "Change password", "Cambiar contraseña")} icon={ShieldCheck}>
         <form onSubmit={(e) => void handleChange(e)} className="space-y-0">
-          <FieldRow label="Senha Atual" sublabel="Para confirmar identidade">
+          <FieldRow label={t("Senha atual", "Current password", "Contraseña actual")} sublabel={t("Para confirmar identidade", "To verify your identity", "Para confirmar tu identidad")}>
             <div className="relative">
               <Input
                 type={showCurrent ? "text" : "password"}
                 value={current}
                 onChange={(e) => setCurrent(e.target.value)}
                 className="font-mono h-10 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary focus-visible:border-primary pr-10"
+                aria-label={t("Senha atual", "Current password", "Contraseña actual")}
                 placeholder="••••••••"
                 required
               />
@@ -654,7 +663,7 @@ function SecurityTab() {
             </div>
           </FieldRow>
 
-          <FieldRow label="Nova Senha" sublabel="Mínimo 8 caracteres">
+          <FieldRow label={t("Nova senha", "New password", "Nueva contraseña")} sublabel={t("Mínimo 8 caracteres", "At least 8 characters", "Mínimo 8 caracteres")}>
             <div className="space-y-2">
               <div className="relative">
                 <Input
@@ -662,6 +671,7 @@ function SecurityTab() {
                   value={next}
                   onChange={(e) => setNext(e.target.value)}
                   className="font-mono h-10 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary focus-visible:border-primary pr-10"
+                  aria-label={t("Nova senha", "New password", "Nueva contraseña")}
                   placeholder="••••••••"
                   required
                   minLength={8}
@@ -684,7 +694,7 @@ function SecurityTab() {
             </div>
           </FieldRow>
 
-          <FieldRow label="Confirmar Senha" sublabel="Repita a nova senha">
+          <FieldRow label={t("Confirmar senha", "Confirm password", "Confirmar contraseña")} sublabel={t("Repita a nova senha", "Re-enter the new password", "Vuelve a escribir la nueva contraseña")}>
             <Input
               type="password"
               value={confirm}
@@ -692,11 +702,12 @@ function SecurityTab() {
               className={`font-mono h-10 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary focus-visible:border-primary ${
                 confirm && confirm !== next ? "border-destructive/60" : ""
               }`}
+              aria-label={t("Confirmar senha", "Confirm password", "Confirmar contraseña")}
               placeholder="••••••••"
               required
             />
             {confirm && confirm !== next && (
-              <p className="font-mono text-xs text-destructive mt-1">As senhas não coincidem.</p>
+              <p className="font-mono text-xs text-destructive mt-1">{t("As senhas não coincidem.", "Passwords do not match.", "Las contraseñas no coinciden.")}</p>
             )}
           </FieldRow>
 
@@ -706,23 +717,23 @@ function SecurityTab() {
               disabled={saving || !current || !next || !confirm || next !== confirm}
               className="rounded-none font-mono uppercase text-xs tracking-widest h-10 px-6 btn-weapon-primary"
             >
-              {saving ? <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />Alterando...</> : "Alterar Senha"}
+              {saving ? <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />{t("Alterando...", "Changing...", "Cambiando...")}</> : t("Alterar senha", "Change password", "Cambiar contraseña")}
             </Button>
           </div>
         </form>
       </SectionCard>
 
-      <SectionCard title="Sessão Ativa" icon={ShieldCheck}>
-        <FieldRow label="Token JWT" sublabel="Autenticação atual">
+      <SectionCard title={t("Sessão ativa", "Active session", "Sesión activa")} icon={ShieldCheck}>
+        <FieldRow label="JWT" sublabel={t("Autenticação atual", "Current authentication", "Autenticación actual")}>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-success animate-pulse" style={{ boxShadow: "0 0 8px hsl(var(--success))" }} />
-            <span className="font-mono text-xs text-muted-foreground">Sessão autenticada via JWT · Expira em 15 min (auto-renovado)</span>
+            <span className="font-mono text-xs text-muted-foreground">{t("Sessão autenticada via JWT · Expira em 15 min (auto-renovado)", "Authenticated via JWT · Expires in 15 minutes (auto-renewed)", "Sesión autenticada mediante JWT · Vence en 15 min (renovación automática)")}</span>
           </div>
         </FieldRow>
-        <FieldRow label="Refresh Token" sublabel="Renovação automática">
+        <FieldRow label="Refresh token" sublabel={t("Renovação automática", "Automatic renewal", "Renovación automática")}>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            <span className="font-mono text-xs text-muted-foreground">Válido por 30 dias · Armazenado localmente</span>
+            <span className="font-mono text-xs text-muted-foreground">{t("Válido por 30 dias · Armazenado localmente", "Valid for 30 days · Stored locally", "Válido durante 30 días · Almacenado localmente")}</span>
           </div>
         </FieldRow>
       </SectionCard>
@@ -995,6 +1006,61 @@ const INTEGRATION_CATALOG: {
   },
 ];
 
+const INTEGRATION_COPY: Partial<Record<IntegrationProvider, {
+  description: [string, string];
+}>> = {
+  whatsapp_business: { description: ["Automated message delivery and agent-powered auto-replies", "Envío automático de mensajes y respuestas automáticas con el agente"] },
+  rd_station: { description: ["Email marketing and lead automation integrated with your launch", "Marketing por correo y automatización de leads integrados con tu lanzamiento"] },
+  activecampaign: { description: ["CRM and email automation with advanced segmentation", "CRM y automatización de correo con segmentación avanzada"] },
+  stripe: { description: ["International checkout · Card · PIX · Recurring payments · High conversion", "Pago internacional · Tarjeta · PIX · Pagos recurrentes · Alta conversión"] },
+  paypal: { description: ["International checkout · Accepted in 200+ countries", "Pago internacional · Aceptado en más de 200 países"] },
+  mercado_pago: { description: ["PIX · Bank slip · Card · Largest payment gateway in Latin America", "PIX · Boleto · Tarjeta · La pasarela de pago más grande de Latinoamérica"] },
+  pagarme: { description: ["Brazilian gateway (Stone) · PIX · Bank slip · Card · Split payments", "Pasarela brasileña (Stone) · PIX · Boleto · Tarjeta · Pagos divididos"] },
+  asaas: { description: ["First-party checkout · PIX · Bank slip · Card · No platform commission", "Pago propio · PIX · Boleto · Tarjeta · Sin comisión de plataforma"] },
+  hotmart: { description: ["Digital product platform · Automatic sales webhooks", "Plataforma de productos digitales · Webhooks de ventas automáticos"] },
+  kiwify: { description: ["Checkout and digital product management · Automatic lead conversion", "Pago y gestión de productos digitales · Conversión automática de leads"] },
+  eduzz: { description: ["Brazilian digital product platform · Purchases trigger real-time automation", "Plataforma brasileña de productos digitales · Las compras activan automatizaciones en tiempo real"] },
+  meta_ads: { description: ["Facebook and Instagram Ads · Campaign management and optimization", "Anuncios de Facebook e Instagram · Gestión y optimización de campañas"] },
+  google_ads: { description: ["API connection, synchronization, and Google Ads account management", "Conexión API, sincronización y gestión de cuentas de Google Ads"] },
+  tiktok_ads: { description: ["API connection, synchronization, and TikTok Ads account management", "Conexión API, sincronización y gestión de cuentas de TikTok Ads"] },
+  telegram: { description: ["Automation bot and notifications through a Telegram channel", "Bot de automatización y notificaciones mediante un canal de Telegram"] },
+  hubspot: { description: ["CRM and sales pipeline integrated with campaigns", "CRM y pipeline de ventas integrado con campañas"] },
+  tiktok: { description: ["Automatically post organic TikTok videos and reels in sync with your launch calendar", "Publica automáticamente videos y reels orgánicos en TikTok, sincronizados con tu calendario de lanzamiento"] },
+  instagram: { description: ["Automatically post organic content and stories in sync with your launch calendar", "Publica automáticamente contenido orgánico e historias, sincronizados con tu calendario de lanzamiento"] },
+  resend: { description: ["High-deliverability transactional email and broadcasts through Resend", "Correos transaccionales y envíos masivos de alta entregabilidad con Resend"] },
+};
+
+const INTEGRATION_FIELD_COPY: Record<string, [string, string]> = {
+  "Nome da Conta": ["Account name", "Nombre de la cuenta"],
+  "Nome do Bot": ["Bot name", "Nombre del bot"],
+  "Email / Nome da Conta": ["Email / Account name", "Correo / Nombre de la cuenta"],
+  "Stripe Account ID (opcional)": ["Stripe Account ID (optional)", "ID de cuenta de Stripe (opcional)"],
+  "Webhook URL (gerada pelo sistema)": ["Webhook URL (generated by the system)", "URL de webhook (generada por el sistema)"],
+  "API Key do Asaas": ["Asaas API key", "Clave API de Asaas"],
+  "Ambiente (production/sandbox)": ["Environment (production/sandbox)", "Entorno (production/sandbox)"],
+  "Minha Empresa": ["My Company", "Mi empresa"],
+  "Minha Loja": ["My Store", "Mi tienda"],
+  "Minha AC": ["My ActiveCampaign", "Mi ActiveCampaign"],
+  "Minha Kiwify": ["My Kiwify", "Mi Kiwify"],
+  "Minha Conta Eduzz": ["My Eduzz Account", "Mi cuenta de Eduzz"],
+  "Minha Conta Ads": ["My Ads Account", "Mi cuenta de anuncios"],
+  "Meu Workspace Resend": ["My Resend Workspace", "Mi espacio de trabajo de Resend"],
+  "Auto-gerada": ["Auto-generated", "Generada automáticamente"],
+  "seu-client-id": ["your-client-id", "tu-client-id"],
+  "@meubot": ["@mybot", "@mibot"],
+  "@meucanal": ["@mychannel", "@micanal"],
+};
+
+function integrationDescription(t: ReturnType<typeof useUiText>, provider: IntegrationProvider, text: string) {
+  const copy = INTEGRATION_COPY[provider]?.description;
+  return copy ? t(text, copy[0], copy[1]) : text;
+}
+
+function integrationFieldText(t: ReturnType<typeof useUiText>, text: string) {
+  const copy = INTEGRATION_FIELD_COPY[text];
+  return copy ? t(text, copy[0], copy[1]) : text;
+}
+
 const CATEGORIES = ["Mensagens", "E-mail", "Checkout", "Plataformas", "Mídia Paga", "Social Orgânico", "CRM"];
 
 // Organic social and paid-media authorization are intentionally separate.
@@ -1019,6 +1085,7 @@ function ConnectModal({
   onClose: () => void;
   onConnect: (provider: IntegrationProvider, fields: Record<string, string>) => void;
 }) {
+  const t = useUiText();
   const catalog = INTEGRATION_CATALOG.find(c => c.provider === info.provider);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -1036,18 +1103,18 @@ function ConnectModal({
       <div className="border border-border/70 bg-card w-full max-w-md shadow-2xl">
         <div className="border-b border-border/50 px-5 py-4 flex items-center justify-between">
           <div>
-            <h3 className="font-mono font-bold text-sm uppercase tracking-wide">Conectar {catalog.label}</h3>
-            <p className="text-xs font-mono text-muted-foreground/60 mt-0.5">{catalog.description}</p>
+            <h3 className="font-mono font-bold text-sm uppercase tracking-wide">{t("Conectar", "Connect", "Conectar")} {catalog.label}</h3>
+            <p className="text-xs font-mono text-muted-foreground/60 mt-0.5">{integrationDescription(t, catalog.provider, catalog.description)}</p>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground font-mono text-lg leading-none">×</button>
+          <button onClick={onClose} aria-label={t("Fechar", "Close", "Cerrar")} className="text-muted-foreground hover:text-foreground font-mono text-lg leading-none">×</button>
         </div>
         <div className="p-5 space-y-4">
           {catalog.fields.map(f => (
             <div key={f.key} className="space-y-1.5">
-              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{f.label}</label>
+              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{integrationFieldText(t, f.label)}</label>
               <input
                 type={f.type ?? "text"}
-                placeholder={f.placeholder}
+                placeholder={integrationFieldText(t, f.placeholder)}
                 value={fields[f.key] ?? ""}
                 onChange={e => setFields(prev => ({ ...prev, [f.key]: e.target.value }))}
                 className="w-full bg-background border border-border/50 px-3 py-2.5 text-sm font-mono rounded-none focus:outline-none focus:border-primary/60 transition-colors placeholder:text-muted-foreground/30"
@@ -1056,17 +1123,16 @@ function ConnectModal({
           ))}
           <div className="bg-muted/10 border border-border/20 p-3">
             <p className="font-mono text-[11px] text-muted-foreground/50 leading-relaxed">
-              As credenciais são armazenadas de forma segura e criptografadas. Nunca compartilhamos com terceiros.
-              Pagamentos nunca bloqueiam execução de campanhas.
+              {t("As credenciais são armazenadas de forma segura e criptografadas. Nunca compartilhamos com terceiros. Pagamentos nunca bloqueiam execução de campanhas.", "Credentials are stored securely and encrypted. We never share them with third parties. Payments never block campaign execution.", "Las credenciales se almacenan de forma segura y cifrada. Nunca las compartimos con terceros. Los pagos nunca bloquean la ejecución de campañas.")}
             </p>
           </div>
         </div>
         <div className="border-t border-border/50 px-5 py-4 flex gap-2 justify-end">
-          <Button variant="outline" onClick={onClose} className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline">Cancelar</Button>
+          <Button variant="outline" onClick={onClose} className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline">{t("Cancelar", "Cancel", "Cancelar")}</Button>
           <Button onClick={handleConnect} disabled={loading}
             className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2">
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wifi className="h-3.5 w-3.5" />}
-            Conectar
+            {t("Conectar", "Connect", "Conectar")}
           </Button>
         </div>
       </div>
@@ -1111,6 +1177,7 @@ const GENDER_OPTIONS = [
 ];
 
 function ComplianceStatusBadge({ data }: { data: ComplianceData }) {
+  const t = useUiText();
   const filled = [data.cpf, data.phone, data.cidade, data.estado, data.consentDataProcessing ? "t" : ""].filter(Boolean).length;
   const total = 5;
   const pct = Math.round((filled / total) * 100);
@@ -1121,13 +1188,15 @@ function ComplianceStatusBadge({ data }: { data: ComplianceData }) {
     <div className={`border px-3 py-1.5 flex items-center gap-2 ${color}`}>
       <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
       <span className="font-mono text-[10px] uppercase tracking-widest font-bold">
-        {pct === 100 ? "Compliance Completo" : `${pct}% preenchido`}
+        {pct === 100 ? t("Compliance Completo", "Compliance complete", "Compliance completo") : t(`${pct}% preenchido`, `${pct}% complete`, `${pct}% completo`)}
       </span>
     </div>
   );
 }
 
 function ComplianceTab() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const queryClient = useQueryClient();
   const [data, setData] = useState<ComplianceData>({});
   const [loading, setLoading] = useState(true);
@@ -1145,12 +1214,12 @@ function ComplianceTab() {
 
   const lookupCep = async () => {
     const raw = (data.cep ?? "").replace(/\D/g, "");
-    if (raw.length !== 8) { toast.error("CEP inválido — 8 dígitos."); return; }
+    if (raw.length !== 8) { toast.error(t("CEP inválido — 8 dígitos.", "Invalid postal code — 8 digits.", "Código postal no válido — 8 dígitos.")); return; }
     setCepLoading(true);
     try {
       const r = await fetch(`https://viacep.com.br/ws/${raw}/json/`);
       const j = await r.json() as { logradouro?: string; bairro?: string; localidade?: string; uf?: string; erro?: boolean };
-      if (j.erro) { toast.error("CEP não encontrado."); return; }
+      if (j.erro) { toast.error(t("CEP não encontrado.", "Postal code not found.", "No se encontró el código postal.")); return; }
       setData(prev => ({
         ...prev,
         logradouro: j.logradouro ?? prev.logradouro,
@@ -1159,8 +1228,8 @@ function ComplianceTab() {
         estado: j.uf ?? prev.estado,
         pais: "BR",
       }));
-      toast.success("Endereço preenchido automaticamente.");
-    } catch { toast.error("Erro ao consultar CEP."); }
+      toast.success(t("Endereço preenchido automaticamente.", "Address filled in automatically.", "Dirección completada automáticamente."));
+    } catch { toast.error(t("Erro ao consultar CEP.", "Couldn't look up postal code.", "No se pudo consultar el código postal.")); }
     finally { setCepLoading(false); }
   };
 
@@ -1172,9 +1241,9 @@ function ComplianceTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      toast.success("Identificação salva com sucesso.");
+      toast.success(t("Identificação salva com sucesso.", "Identification saved successfully.", "Identificación guardada correctamente."));
       queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/compliance"] });
-    } catch { toast.error("Erro ao salvar identificação."); }
+    } catch { toast.error(t("Erro ao salvar identificação.", "Couldn't save identification.", "No se pudo guardar la identificación.")); }
     finally { setSaving(false); }
   };
 
@@ -1184,21 +1253,21 @@ function ComplianceTab() {
     </div>
   );
 
-  const fmtDate = (iso?: string) => iso ? new Date(iso).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" }) : null;
+  const fmtDate = (iso?: string) => iso ? new Date(iso).toLocaleDateString(intlLocale(locale), { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" }) : null;
 
   return (
     <div className="space-y-6">
       {/* Status header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="font-mono text-sm font-bold uppercase tracking-widest">Identificação Completa</h2>
-          <p className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-0.5">LGPD · KYC · Compliance Total</p>
+          <h2 className="font-mono text-sm font-bold uppercase tracking-widest">{t("Identificação completa", "Complete identification", "Identificación completa")}</h2>
+          <p className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-0.5">LGPD · KYC · {t("Compliance total", "Full compliance", "Compliance total")}</p>
         </div>
         <ComplianceStatusBadge data={data} />
       </div>
 
       {/* ── Dados Pessoais ── */}
-      <SectionCard title="Dados Pessoais" icon={User}>
+      <SectionCard title={t("Dados pessoais", "Personal details", "Datos personales")} icon={User}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">CPF</label>
@@ -1207,7 +1276,7 @@ function ComplianceTab() {
               className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
           </div>
           <div className="space-y-1">
-            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Telefone</label>
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Telefone", "Phone", "Teléfono")}</label>
             <input value={data.phone ?? ""} onChange={e => set("phone", e.target.value)}
               placeholder="+55 11 99999-9999"
               className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
@@ -1219,31 +1288,31 @@ function ComplianceTab() {
               className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
           </div>
           <div className="space-y-1">
-            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Data de Nascimento</label>
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Data de nascimento", "Date of birth", "Fecha de nacimiento")}</label>
             <input type="date" value={data.birthdate ?? ""} onChange={e => set("birthdate", e.target.value)}
               className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none h-9" />
           </div>
           <div className="space-y-1">
-            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Nacionalidade</label>
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Nacionalidade", "Nationality", "Nacionalidad")}</label>
             <input value={data.nationality ?? ""} onChange={e => set("nationality", e.target.value)}
-              placeholder="Brasileiro(a)"
+              placeholder={t("Brasileiro(a)", "Brazilian", "Brasileño/a")}
               className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
           </div>
           <div className="space-y-1">
-            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Estado Civil</label>
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Estado civil", "Marital status", "Estado civil")}</label>
             <select value={data.maritalStatus ?? ""} onChange={e => set("maritalStatus", e.target.value)}
               className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none h-9">
-              <option value="">Selecione</option>
-              {MARITAL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              <option value="">{t("Selecione", "Select", "Selecciona")}</option>
+              {MARITAL_OPTIONS.map(o => <option key={o.value} value={o.value}>{t(o.label, o.value === "single" ? "Single" : o.value === "married" ? "Married" : o.value === "divorced" ? "Divorced" : o.value === "widowed" ? "Widowed" : "Other", o.value === "single" ? "Soltero/a" : o.value === "married" ? "Casado/a" : o.value === "divorced" ? "Divorciado/a" : o.value === "widowed" ? "Viudo/a" : "Otro")}</option>)}
             </select>
           </div>
           <div className="space-y-1 md:col-span-2">
-            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Gênero</label>
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Gênero", "Gender", "Género")}</label>
             <div className="flex flex-wrap gap-2">
               {GENDER_OPTIONS.map(o => (
                 <button key={o.value} onClick={() => set("gender", data.gender === o.value ? "" : o.value)}
                   className={`border px-3 py-1.5 font-mono text-[10px] transition-all ${data.gender === o.value ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground/60 hover:border-primary/40"}`}>
-                  {o.label}
+                  {t(o.label, o.value === "male" ? "Male" : o.value === "female" ? "Female" : o.value === "non_binary" ? "Non-binary" : "Prefer not to say", o.value === "male" ? "Masculino" : o.value === "female" ? "Femenino" : o.value === "non_binary" ? "No binario" : "Prefiero no decirlo")}
                 </button>
               ))}
             </div>
@@ -1252,13 +1321,13 @@ function ComplianceTab() {
       </SectionCard>
 
       {/* ── Dados Empresariais ── */}
-      <SectionCard title="Dados Empresariais" icon={Building2}>
+      <SectionCard title={t("Dados empresariais", "Business details", "Datos de la empresa")} icon={Building2}>
         <div className="space-y-4">
           <div className="flex gap-2">
             {[{ id:"pf", label:"Pessoa Física" }, { id:"pj", label:"Pessoa Jurídica" }].map(o => (
               <button key={o.id} onClick={() => set("personType", o.id)}
                 className={`border px-4 py-2 font-mono text-[10px] uppercase tracking-widest transition-all ${data.personType === o.id ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground/60 hover:border-primary/40"}`}>
-                {o.label}
+                {t(o.label, o.id === "pf" ? "Individual" : "Business", o.id === "pf" ? "Persona física" : "Persona jurídica")}
               </button>
             ))}
           </div>
@@ -1272,21 +1341,21 @@ function ComplianceTab() {
                   className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
               </div>
               <div className="space-y-1">
-                <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Inscrição Estadual</label>
+                <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Inscrição estadual", "State registration", "Registro estatal")}</label>
                 <input value={data.inscEstadual ?? ""} onChange={e => set("inscEstadual", e.target.value)}
-                  placeholder="Isento ou número"
+                  placeholder={t("Isento ou número", "Exempt or number", "Exento o número")}
                   className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
               </div>
               <div className="space-y-1">
-                <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Razão Social</label>
+                <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Razão social", "Legal business name", "Razón social")}</label>
                 <input value={data.razaoSocial ?? ""} onChange={e => set("razaoSocial", e.target.value)}
-                  placeholder="Nome na Receita Federal"
+                  placeholder={t("Nome na Receita Federal", "Name registered with the tax authority", "Nombre registrado ante la autoridad fiscal")}
                   className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
               </div>
               <div className="space-y-1">
-                <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Nome Fantasia</label>
+                <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Nome fantasia", "Trade name", "Nombre comercial")}</label>
                 <input value={data.nomeFantasia ?? ""} onChange={e => set("nomeFantasia", e.target.value)}
-                  placeholder="Nome comercial"
+                  placeholder={t("Nome comercial", "Business name", "Nombre comercial")}
                   className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
               </div>
             </div>
@@ -1295,10 +1364,10 @@ function ComplianceTab() {
       </SectionCard>
 
       {/* ── Endereço ── */}
-      <SectionCard title="Endereço" icon={Globe}>
+      <SectionCard title={t("Endereço", "Address", "Dirección")} icon={Globe}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-1 md:col-span-1">
-            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">CEP</label>
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("CEP", "Postal code (CEP)", "Código postal (CEP)")}</label>
             <div className="flex gap-2">
               <input value={data.cep ?? ""} onChange={e => set("cep", e.target.value)}
                 placeholder="00000-000" maxLength={9}
@@ -1306,50 +1375,50 @@ function ComplianceTab() {
               <button onClick={() => void lookupCep()} disabled={cepLoading}
                 className="border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary font-mono text-[10px] uppercase tracking-widest px-3 h-9 shrink-0 flex items-center gap-1.5 transition-colors disabled:opacity-50">
                 {cepLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                Buscar
+                {t("Buscar", "Look up", "Buscar")}
               </button>
             </div>
           </div>
           <div className="space-y-1 md:col-span-2">
-            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Logradouro</label>
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Logradouro", "Street address", "Calle y dirección")}</label>
             <input value={data.logradouro ?? ""} onChange={e => set("logradouro", e.target.value)}
-              placeholder="Rua, Av., Travessa…"
+              placeholder={t("Rua, Av., Travessa…", "Street, Avenue, etc…", "Calle, avenida, etc.…")}
               className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
           </div>
           <div className="space-y-1">
-            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Número</label>
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Número", "Number", "Número")}</label>
             <input value={data.numero ?? ""} onChange={e => set("numero", e.target.value)}
               placeholder="123"
               className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
           </div>
           <div className="space-y-1 md:col-span-2">
-            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Complemento</label>
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Complemento", "Address line 2", "Complemento")}</label>
             <input value={data.complemento ?? ""} onChange={e => set("complemento", e.target.value)}
-              placeholder="Apto, Sala, Bloco…"
+              placeholder={t("Apto, Sala, Bloco…", "Apartment, suite, building…", "Departamento, oficina, edificio…")}
               className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
           </div>
           <div className="space-y-1">
-            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Bairro</label>
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Bairro", "District / neighborhood", "Barrio")}</label>
             <input value={data.bairro ?? ""} onChange={e => set("bairro", e.target.value)}
-              placeholder="Nome do bairro"
+              placeholder={t("Nome do bairro", "Neighbourhood", "Nombre del barrio")}
               className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
           </div>
           <div className="space-y-1">
-            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Cidade</label>
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Cidade", "City", "Ciudad")}</label>
             <input value={data.cidade ?? ""} onChange={e => set("cidade", e.target.value)}
-              placeholder="São Paulo"
+              placeholder={t("São Paulo", "City", "Ciudad")}
               className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
           </div>
           <div className="space-y-1">
-            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Estado</label>
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Estado", "State / region", "Estado / región")}</label>
             <select value={data.estado ?? ""} onChange={e => set("estado", e.target.value)}
               className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none h-9">
-              <option value="">UF</option>
+              <option value="">{t("UF", "State", "Estado")}</option>
               {STATES_BR.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div className="space-y-1">
-            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">País</label>
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("País", "Country", "País")}</label>
             <input value={data.pais ?? ""} onChange={e => set("pais", e.target.value)}
               placeholder="BR"
               className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
@@ -1358,11 +1427,11 @@ function ComplianceTab() {
       </SectionCard>
 
       {/* ── LGPD / Consentimentos ── */}
-      <SectionCard title="LGPD — Consentimentos" icon={ShieldCheck}>
+      <SectionCard title={t("LGPD — Consentimentos", "LGPD — Consents", "LGPD — Consentimientos")} icon={ShieldCheck}>
         <div className="space-y-4">
           <div className="border border-primary/20 bg-primary/5 px-4 py-3">
             <p className="font-mono text-[10px] text-muted-foreground/70 leading-relaxed">
-              Em conformidade com a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018), registramos seus consentimentos de forma auditável com carimbo de data/hora. Você pode revogar qualquer consentimento a qualquer momento.
+              {t("Em conformidade com a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018), registramos seus consentimentos de forma auditável com carimbo de data/hora. Você pode revogar qualquer consentimento a qualquer momento.", "In accordance with Brazil's General Data Protection Law (LGPD — Law No. 13,709/2018), we record your consent in an auditable way with a timestamp. You may revoke any consent at any time.", "De conformidad con la Ley General de Protección de Datos de Brasil (LGPD — Ley n.º 13.709/2018), registramos tus consentimientos de forma auditable y con fecha y hora. Puedes revocar cualquier consentimiento cuando quieras.")}
             </p>
           </div>
 
@@ -1401,14 +1470,14 @@ function ComplianceTab() {
                 </button>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`font-mono text-[11px] font-bold uppercase tracking-widest ${granted ? "text-success" : "text-foreground/80"}`}>{consent.title}</span>
-                    {consent.required && <span className="font-mono text-[9px] border border-destructive/30 text-destructive px-1.5 py-0.5 uppercase tracking-widest">Obrigatório</span>}
-                    {granted && <span className="font-mono text-[9px] border border-success/30 text-success px-1.5 py-0.5 uppercase tracking-widest">Concedido</span>}
+                    <span className={`font-mono text-[11px] font-bold uppercase tracking-widest ${granted ? "text-success" : "text-foreground/80"}`}>{t(consent.title, consent.key === "consentDataProcessing" ? "Data processing" : consent.key === "consentMarketing" ? "Marketing communications" : "Analytics and product improvement", consent.key === "consentDataProcessing" ? "Tratamiento de datos" : consent.key === "consentMarketing" ? "Comunicaciones de marketing" : "Analítica y mejora del producto")}</span>
+                    {consent.required && <span className="font-mono text-[9px] border border-destructive/30 text-destructive px-1.5 py-0.5 uppercase tracking-widest">{t("Obrigatório", "Required", "Obligatorio")}</span>}
+                    {granted && <span className="font-mono text-[9px] border border-success/30 text-success px-1.5 py-0.5 uppercase tracking-widest">{t("Concedido", "Granted", "Otorgado")}</span>}
                   </div>
-                  <p className="font-mono text-[10px] text-muted-foreground/60 mt-1 leading-relaxed">{consent.desc}</p>
+                   <p className="font-mono text-[10px] text-muted-foreground/60 mt-1 leading-relaxed">{t(consent.desc, consent.key === "consentDataProcessing" ? "I authorise the processing of my personal data to operate the NexOS platform as described in the Privacy Policy." : consent.key === "consentMarketing" ? "I agree to receive communications about NexOS AI news, updates, and offers by email and WhatsApp." : "I agree to the anonymised use of platform usage data to improve products and services.", consent.key === "consentDataProcessing" ? "Autorizo el tratamiento de mis datos personales para operar la plataforma NexOS según se describe en la Política de privacidad." : consent.key === "consentMarketing" ? "Autorizo el envío de comunicaciones sobre novedades, actualizaciones y ofertas de NexOS AI por correo y WhatsApp." : "Autorizo el uso anonimizado de datos de uso de la plataforma para mejorar los productos y servicios.")}</p>
                   {granted && grantedAt && (
                     <p className="font-mono text-[9px] text-muted-foreground/40 mt-1">
-                      Consentido em: {fmtDate(grantedAt)}
+                       {t("Consentido em:", "Consented on:", "Consentido el:")} {fmtDate(grantedAt)}
                     </p>
                   )}
                 </div>
@@ -1419,19 +1488,19 @@ function ComplianceTab() {
       </SectionCard>
 
       {/* ── Direitos do Titular ── */}
-      <SectionCard title="Direitos do Titular (LGPD Art. 18)" icon={ExternalLink}>
+      <SectionCard title={t("Direitos do titular (LGPD Art. 18)", "Data subject rights (LGPD Art. 18)", "Derechos del titular (LGPD Art. 18)")} icon={ExternalLink}>
         <div className="space-y-3">
           <p className="font-mono text-[10px] text-muted-foreground/60 leading-relaxed">
-            Conforme o Art. 18 da LGPD, você tem o direito de solicitar acesso, portabilidade ou exclusão dos seus dados pessoais. Utilize os botões abaixo para formalizar sua solicitação.
+             {t("Conforme o Art. 18 da LGPD, você tem o direito de solicitar acesso, portabilidade ou exclusão dos seus dados pessoais. Utilize os botões abaixo para formalizar sua solicitação.", "Under Article 18 of the LGPD, you may request access to, portability of, or deletion of your personal data. Use the buttons below to submit a request.", "Según el artículo 18 de la LGPD, tienes derecho a solicitar acceso, portabilidad o eliminación de tus datos personales. Usa los botones de abajo para formalizar tu solicitud.")}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {[
-              { label: "Acessar meus dados",     icon: Eye,        subject: "Acesso aos Dados — LGPD Art. 18 II" },
-              { label: "Portabilidade",           icon: Copy,       subject: "Portabilidade dos Dados — LGPD Art. 18 V" },
-              { label: "Solicitar exclusão",      icon: XCircle,    subject: "Exclusão dos Dados — LGPD Art. 18 VI" },
+               { label: t("Acessar meus dados", "Access my data", "Acceder a mis datos"), icon: Eye, subject: t("Acesso aos Dados — LGPD Art. 18 II", "Data access — LGPD Art. 18 II", "Acceso a datos — LGPD Art. 18 II") },
+               { label: t("Portabilidade", "Portability", "Portabilidad"), icon: Copy, subject: t("Portabilidade dos Dados — LGPD Art. 18 V", "Data portability — LGPD Art. 18 V", "Portabilidad de datos — LGPD Art. 18 V") },
+               { label: t("Solicitar exclusão", "Request deletion", "Solicitar eliminación"), icon: XCircle, subject: t("Exclusão dos Dados — LGPD Art. 18 VI", "Data deletion — LGPD Art. 18 VI", "Eliminación de datos — LGPD Art. 18 VI") },
             ].map(item => (
               <a key={item.label}
-                href={`mailto:privacidade@nexos.ai?subject=${encodeURIComponent(item.subject)}&body=${encodeURIComponent(`Olá, solicito o exercício do meu direito de: ${item.subject}\n\nNome: ${""}\nWorkspace ID: `)}`}
+                 href={`mailto:privacidade@nexos.ai?subject=${encodeURIComponent(item.subject)}&body=${encodeURIComponent(`${t("Olá, solicito o exercício do meu direito de:", "Hello, I am requesting to exercise my right to:", "Hola, solicito ejercer mi derecho de:")} ${item.subject}\n\n${t("Nome:", "Name:", "Nombre:")} ${""}\nWorkspace ID: `)}`}
                 className="flex items-center gap-2 border border-border/40 bg-card/20 hover:border-primary/40 hover:bg-primary/5 px-4 py-3 transition-all group"
               >
                 <item.icon className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
@@ -1440,7 +1509,7 @@ function ComplianceTab() {
             ))}
           </div>
           <p className="font-mono text-[9px] text-muted-foreground/30">
-            Prazo de resposta: até 15 dias úteis conforme Art. 23 LGPD · privacidade@nexos.ai
+             {t("Prazo de resposta: até 15 dias úteis conforme Art. 23 LGPD · privacidade@nexos.ai", "Response time: up to 15 business days under LGPD Art. 23 · privacidade@nexos.ai", "Plazo de respuesta: hasta 15 días hábiles según el Art. 23 de la LGPD · privacidade@nexos.ai")}
           </p>
         </div>
       </SectionCard>
@@ -1449,12 +1518,12 @@ function ComplianceTab() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         {data.updatedAt && (
           <p className="font-mono text-[10px] text-muted-foreground/40">
-            Última atualização: {fmtDate(data.updatedAt)}
+             {t("Última atualização:", "Last updated:", "Última actualización:")} {fmtDate(data.updatedAt)}
           </p>
         )}
         <Button onClick={() => void handleSave()} disabled={saving}
           className="rounded-none font-mono uppercase tracking-widest text-xs h-10 px-6 btn-weapon-primary gap-2 ml-auto">
-          {saving ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Salvando…</> : <><CheckCircle2 className="h-3.5 w-3.5" />Salvar Identificação</>}
+          {saving ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t("Salvando…", "Saving…", "Guardando…")}</> : <><CheckCircle2 className="h-3.5 w-3.5" />{t("Salvar identificação", "Save identification", "Guardar identificación")}</>}
         </Button>
       </div>
     </div>
@@ -1462,6 +1531,7 @@ function ComplianceTab() {
 }
 
 function IntegracaoTab() {
+  const t = useUiText();
   const queryClient = useQueryClient();
   const [connectModal, setConnectModal] = useState<ConnectModalState | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("Todos");
@@ -1474,7 +1544,7 @@ function IntegracaoTab() {
     const count = params.get("count");
     const account = params.get("account");
     if (connected === "meta" && count) {
-      toast.success(`${count} conta${Number(count) !== 1 ? "s" : ""} Meta conectada${Number(count) !== 1 ? "s" : ""} com sucesso!`);
+      toast.success(t(`${count} conta${Number(count) !== 1 ? "s" : ""} Meta conectada${Number(count) !== 1 ? "s" : ""} com sucesso!`, `${count} Meta account${Number(count) !== 1 ? "s" : ""} connected successfully!`, `¡${count} cuenta${Number(count) !== 1 ? "s" : ""} de Meta conectada${Number(count) !== 1 ? "s" : ""} correctamente!`));
       queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
       // Clean up query params without full reload
       const url = new URL(window.location.href);
@@ -1482,15 +1552,14 @@ function IntegracaoTab() {
       url.searchParams.delete("count");
       window.history.replaceState({}, "", url.toString());
     } else if (connected === "tiktok" && account) {
-      toast.success(`TikTok conectado: ${decodeURIComponent(account)}`);
+      toast.success(t(`TikTok conectado: ${decodeURIComponent(account)}`, `TikTok connected: ${decodeURIComponent(account)}`, `TikTok conectado: ${decodeURIComponent(account)}`));
       queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
       const url = new URL(window.location.href);
       url.searchParams.delete("connected");
       url.searchParams.delete("account");
       window.history.replaceState({}, "", url.toString());
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [queryClient, t]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["/api/workspaces/me/integrations"],
@@ -1511,7 +1580,7 @@ function IntegracaoTab() {
       });
     },
     onSuccess: () => {
-      toast.success("Integração conectada com sucesso!");
+      toast.success(t("Integração conectada com sucesso!", "Integration connected successfully!", "¡Integración conectada correctamente!"));
       queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
       setConnectModal(null);
     },
@@ -1522,10 +1591,10 @@ function IntegracaoTab() {
     mutationFn: async (integrationId: string) =>
       customFetch(`/api/social/accounts/${integrationId}`, { method: "DELETE" }),
     onSuccess: () => {
-      toast.success("Conta desconectada com sucesso.");
+      toast.success(t("Conta desconectada com sucesso.", "Account disconnected successfully.", "Cuenta desconectada correctamente."));
       queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
     },
-    onError: () => toast.error("Erro ao desconectar conta."),
+    onError: () => toast.error(t("Erro ao desconectar conta.", "Couldn't disconnect account.", "No se pudo desconectar la cuenta.")),
   });
 
   const handleSocialOAuthConnect = async (platform: "meta" | "tiktok") => {
@@ -1534,7 +1603,7 @@ function IntegracaoTab() {
       const { url } = await customFetch<{ url: string }>(`/api/social/connect/${platform}`);
       window.location.href = url;
     } catch {
-      toast.error("Erro ao iniciar conexão OAuth. Verifique a configuração do app Meta/TikTok.");
+      toast.error(t("Erro ao iniciar conexão OAuth. Verifique a configuração do app Meta/TikTok.", "Couldn't start OAuth connection. Check the Meta/TikTok app configuration.", "No se pudo iniciar la conexión OAuth. Revisa la configuración de la aplicación de Meta/TikTok."));
       setOauthLoading(null);
     }
   };
@@ -1545,7 +1614,7 @@ function IntegracaoTab() {
       const { url } = await customFetch<{ url: string }>(`/api/integrations/oauth/start/${provider}`);
       window.location.href = url;
     } catch {
-      toast.error("Erro ao iniciar a conexão da conta de anúncios. Você ainda pode usar a conexão manual via API.");
+      toast.error(t("Erro ao iniciar a conexão da conta de anúncios. Você ainda pode usar a conexão manual via API.", "Couldn't start the ad account connection. You can still connect manually via API.", "No se pudo iniciar la conexión de la cuenta publicitaria. También puedes conectarla manualmente mediante API."));
       setOauthLoading(null);
     }
   };
@@ -1594,7 +1663,7 @@ function IntegracaoTab() {
 
       {/* Connected integrations */}
       {integrations.length > 0 && (
-        <SectionCard title={`${integrations.length} Integração${integrations.length > 1 ? "ões" : ""} Ativa${integrations.length > 1 ? "s" : ""}`} icon={Wifi}>
+       <SectionCard title={`${integrations.length} ${t("Integração", "Integration", "Integración")}${integrations.length > 1 ? t("ões ativas", "s active", "es activas") : t(" ativa", " active", " activa")}`} icon={Wifi}>
           <div className="space-y-2">
             {integrations.map(intg => {
               const catalog = INTEGRATION_CATALOG.find(c => c.provider === intg.provider);
@@ -1610,18 +1679,18 @@ function IntegracaoTab() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {intg.isPaymentGateway && (
-                      <Badge variant="outline" className="rounded-none font-mono text-[11px] border-orange-400/30 text-orange-400">Pagamento</Badge>
+                      <Badge variant="outline" className="rounded-none font-mono text-[11px] border-orange-400/30 text-orange-400">{t("Pagamento", "Payment", "Pago")}</Badge>
                     )}
                     <Badge variant="outline" className={`rounded-none font-mono text-[11px] ${intg.status === "connected" ? "border-success/40 text-success" : intg.status === "error" ? "border-destructive/40 text-destructive" : "border-border/40 text-muted-foreground"}`}>
-                      {intg.status === "connected" ? "Conectado" : intg.status === "error" ? "Erro" : "Desconectado"}
+                      {intg.status === "connected" ? t("Conectado", "Connected", "Conectado") : intg.status === "error" ? t("Erro", "Error", "Error") : t("Desconectado", "Disconnected", "Desconectado")}
                     </Badge>
                     {isSocial && (
                       <button
-                        aria-label={`Desconectar ${intg.accountName ?? intg.provider}`}
+                        aria-label={`${t("Desconectar", "Disconnect", "Desconectar")} ${intg.accountName ?? intg.provider}`}
                         onClick={() => disconnectSocialMutation.mutate(intg.id)}
                         disabled={disconnectSocialMutation.isPending}
                         className="p-1 text-muted-foreground/40 hover:text-destructive transition-colors disabled:opacity-50"
-                        title="Desconectar conta"
+                        title={t("Desconectar conta", "Disconnect account", "Desconectar cuenta")}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -1634,7 +1703,7 @@ function IntegracaoTab() {
           {integrations.some(i => i.isPaymentGateway) && (
             <div className="mt-4 flex items-center gap-2 text-[11px] font-mono text-muted-foreground/50">
               <AlertTriangle className="h-3 w-3" />
-              Gateways de pagamento nunca bloqueiam execução de campanhas
+              {t("Gateways de pagamento nunca bloqueiam execução de campanhas", "Payment gateways never block campaign execution", "Las pasarelas de pago nunca bloquean la ejecución de campañas")}
             </div>
           )}
         </SectionCard>
@@ -1646,7 +1715,7 @@ function IntegracaoTab() {
           <button key={cat} onClick={() => setActiveCategory(cat)}
             className={`px-3 py-2 text-[11px] font-mono uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
               ${activeCategory === cat ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-            {cat}
+             {cat === "Todos" ? t("Todos", "All", "Todas") : t(cat, cat === "Mensagens" ? "Messaging" : cat === "E-mail" ? "Email" : cat === "Checkout" ? "Checkout" : cat === "Plataformas" ? "Platforms" : cat === "Mídia Paga" ? "Paid media" : cat === "Social Orgânico" ? "Organic social" : "CRM", cat === "Mensagens" ? "Mensajería" : cat === "E-mail" ? "Correo" : cat === "Checkout" ? "Pago" : cat === "Plataformas" ? "Plataformas" : cat === "Mídia Paga" ? "Medios pagados" : cat === "Social Orgânico" ? "Redes orgánicas" : "CRM")}
           </button>
         ))}
       </div>
@@ -1680,8 +1749,8 @@ function IntegracaoTab() {
                   )}
                   <div className="mb-3">
                     <div className={`font-mono font-bold text-sm mb-0.5 ${intg.color}`}>{intg.label}</div>
-                    <div className="text-[11px] font-mono text-muted-foreground/50 uppercase tracking-widest mb-1">{intg.category}</div>
-                    <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{intg.description}</p>
+                    <div className="text-[11px] font-mono text-muted-foreground/50 uppercase tracking-widest mb-1">{t(intg.category, intg.category === "Mensagens" ? "Messaging" : intg.category === "E-mail" ? "Email" : intg.category === "Checkout" ? "Checkout" : intg.category === "Plataformas" ? "Platforms" : intg.category === "Mídia Paga" ? "Paid media" : intg.category === "Social Orgânico" ? "Organic social" : "CRM", intg.category === "Mensagens" ? "Mensajería" : intg.category === "E-mail" ? "Correo" : intg.category === "Checkout" ? "Pago" : intg.category === "Plataformas" ? "Plataformas" : intg.category === "Mídia Paga" ? "Medios pagados" : intg.category === "Social Orgânico" ? "Redes orgánicas" : "CRM")}</div>
+                    <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{integrationDescription(t, intg.provider, intg.description)}</p>
                   </div>
                   {/* List connected accounts with disconnect */}
                   {connectedAccounts.length > 0 && (
@@ -1694,11 +1763,11 @@ function IntegracaoTab() {
                           </span>
                           {!paidMediaOauthProvider && (
                             <button
-                              aria-label={`Desconectar ${acc.accountName}`}
+                              aria-label={`${t("Desconectar", "Disconnect", "Desconectar")} ${acc.accountName}`}
                               onClick={() => disconnectSocialMutation.mutate(acc.id)}
                               disabled={disconnectSocialMutation.isPending}
                               className="ml-2 p-1 text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 disabled:opacity-50"
-                              title="Desconectar"
+                              title={t("Desconectar", "Disconnect", "Desconectar")}
                             >
                               <Trash2 className="h-3 w-3" />
                             </button>
@@ -1721,7 +1790,7 @@ function IntegracaoTab() {
                     ) : (
                       <Plus className="h-2.5 w-2.5" />
                     )}
-                    {connectedAccounts.length > 0 ? "Adicionar outra conta" : "Conectar"}
+                    {connectedAccounts.length > 0 ? t("Adicionar outra conta", "Add another account", "Añadir otra cuenta") : t("Conectar", "Connect", "Conectar")}
                   </Button>
                 </div>
               );
@@ -1738,14 +1807,14 @@ function IntegracaoTab() {
                 )}
                 <div className="mb-3">
                   <div className={`font-mono font-bold text-sm mb-0.5 ${intg.color}`}>{intg.label}</div>
-                  <div className="text-[11px] font-mono text-muted-foreground/50 uppercase tracking-widest mb-1">{intg.category}</div>
-                  <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{intg.description}</p>
+                    <div className="text-[11px] font-mono text-muted-foreground/50 uppercase tracking-widest mb-1">{t(intg.category, intg.category === "Mensagens" ? "Messaging" : intg.category === "E-mail" ? "Email" : intg.category === "Checkout" ? "Checkout" : intg.category === "Plataformas" ? "Platforms" : intg.category === "Mídia Paga" ? "Paid media" : intg.category === "Social Orgânico" ? "Organic social" : "CRM", intg.category === "Mensagens" ? "Mensajería" : intg.category === "E-mail" ? "Correo" : intg.category === "Checkout" ? "Pago" : intg.category === "Plataformas" ? "Plataformas" : intg.category === "Mídia Paga" ? "Medios pagados" : intg.category === "Social Orgânico" ? "Redes orgánicas" : "CRM")}</div>
+                   <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{integrationDescription(t, intg.provider, intg.description)}</p>
                 </div>
                 {isConnected ? (
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-3 w-3 text-success" />
                     <span className="font-mono text-xs text-success">
-                      {existing?.accountName ? `Conectado: ${existing.accountName}` : "Conectado"}
+                      {existing?.accountName ? `${t("Conectado:", "Connected:", "Conectado:")} ${existing.accountName}` : t("Conectado", "Connected", "Conectado")}
                     </span>
                   </div>
                 ) : (
@@ -1755,7 +1824,7 @@ function IntegracaoTab() {
                     onClick={() => setConnectModal({ provider: intg.provider, label: intg.label })}
                     className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 btn-weapon-outline"
                   >
-                    <Plus className="h-2.5 w-2.5" />Conectar
+                    <Plus className="h-2.5 w-2.5" />{t("Conectar", "Connect", "Conectar")}
                   </Button>
                 )}
               </div>
@@ -1797,6 +1866,8 @@ type PersonaData = {
 };
 
 function IdentidadeTab() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const { user } = useAuth();
   const [persona, setPersona] = useState<PersonaData>({});
   const [loading, setLoading] = useState(true);
@@ -1897,7 +1968,7 @@ function IdentidadeTab() {
       setVideoProductionStyle(style);
       if (sessionId) setCloneSessionId(sessionId);
     } catch {
-      toast.error("Erro ao salvar preferência de vídeo.");
+      toast.error(t("Erro ao salvar preferência de vídeo.", "Couldn't save video preference.", "No se pudo guardar la preferencia de video."));
     } finally {
       setSavingStyle(false);
     }
@@ -1936,9 +2007,9 @@ function IdentidadeTab() {
       setRecSeconds(0);
       timerRef.current = setInterval(() => setRecSeconds(s => s + 1), 1000);
     } catch {
-      setCloneError("Microfone não disponível — verifique as permissões do navegador.");
+      setCloneError(t("Microfone não disponível — verifique as permissões do navegador.", "Microphone unavailable — check your browser permissions.", "Micrófono no disponible: comprueba los permisos del navegador."));
     }
-  }, []);
+  }, [t]);
 
   const stopRecording = useCallback(() => {
     if (recorderRef.current && recorderRef.current.state !== "inactive") {
@@ -1987,13 +2058,13 @@ function IdentidadeTab() {
       });
       setPersona(prev => ({ ...prev, voiceCloneId: result.voiceCloneId, voiceCloneUpdatedAt: new Date().toISOString() }));
       setRecState("done");
-      toast.success("Voz clonada com sucesso! Voice ID: " + result.voiceCloneId.slice(0, 8) + "…");
+      toast.success(t("Voz clonada com sucesso! Voice ID: ", "Voice cloned successfully! Voice ID: ", "¡Voz clonada correctamente! Voice ID: ") + result.voiceCloneId.slice(0, 8) + "…");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erro ao clonar voz";
+       const msg = err instanceof Error ? err.message : t("Erro ao clonar voz", "Couldn't clone voice", "No se pudo clonar la voz");
       setCloneError(msg);
       setRecState("recorded");
     }
-  }, [audioBase64, audioMime, voiceName]);
+  }, [audioBase64, audioMime, t, voiceName]);
 
   // ── Save persona form ────────────────────────────────────────────────────
   const handleSavePersona = async () => {
@@ -2021,9 +2092,9 @@ function IdentidadeTab() {
         }),
       });
       setPersona(result.persona);
-      toast.success("Identidade salva — agentes usarão seu perfil nos próximos vídeos.");
+      toast.success(t("Identidade salva — agentes usarão seu perfil nos próximos vídeos.", "Identity saved — agents will use your profile in future videos.", "Identidad guardada: los agentes usarán tu perfil en los próximos videos."));
     } catch {
-      toast.error("Erro ao salvar identidade.");
+      toast.error(t("Erro ao salvar identidade.", "Couldn't save identity.", "No se pudo guardar la identidad."));
     } finally {
       setSaving(false);
     }
@@ -2043,7 +2114,7 @@ function IdentidadeTab() {
     <div className="space-y-6">
 
       {/* ── Seção 0: Clone Studio — Estilo de Vídeo ── */}
-      <SectionCard title="Clone Studio — Estilo de Vídeo" icon={Video}>
+      <SectionCard title={t("Clone Studio — Estilo de Vídeo", "Clone Studio — Video style", "Clone Studio — Estilo de video")} icon={Video}>
         <div className="space-y-4">
 
           {/* Style selector */}
@@ -2055,11 +2126,11 @@ function IdentidadeTab() {
             >
               <div className="flex items-center gap-2">
                 <UserX className={`h-4 w-4 ${videoProductionStyle === "no_face" ? "text-primary" : "text-muted-foreground"}`} />
-                <span className={`font-mono text-[11px] font-bold uppercase tracking-widest ${videoProductionStyle === "no_face" ? "text-primary" : "text-foreground"}`}>Sem Face</span>
-                {videoProductionStyle === "no_face" && <Badge className="ml-auto rounded-none font-mono text-[9px] px-1.5 py-0 bg-primary/20 text-primary border-primary/30">Ativo</Badge>}
+                <span className={`font-mono text-[11px] font-bold uppercase tracking-widest ${videoProductionStyle === "no_face" ? "text-primary" : "text-foreground"}`}>{t("Sem Face", "Faceless", "Sin rostro")}</span>
+                {videoProductionStyle === "no_face" && <Badge className="ml-auto rounded-none font-mono text-[9px] px-1.5 py-0 bg-primary/20 text-primary border-primary/30">{t("Ativo", "Active", "Activo")}</Badge>}
               </div>
               <p className="font-mono text-[10px] text-muted-foreground/60 leading-relaxed">
-                Narração com IA + animações + texto na tela. Nenhuma aparição sua.
+                {t("Narração com IA + animações + texto na tela. Nenhuma aparição sua.", "AI voiceover + animations + on-screen text. No appearance required.", "Narración con IA, animaciones y texto en pantalla. No tienes que aparecer.")}
               </p>
             </button>
 
@@ -2076,13 +2147,13 @@ function IdentidadeTab() {
             >
               <div className="flex items-center gap-2">
                 <UserCheck className={`h-4 w-4 ${cloneSessionId ? (videoProductionStyle === "clone" ? "text-primary" : "text-green-400") : "text-muted-foreground/40"}`} />
-                <span className={`font-mono text-[11px] font-bold uppercase tracking-widest ${videoProductionStyle === "clone" ? "text-primary" : "text-foreground"}`}>Com Clone</span>
-                {cloneSessionId && videoProductionStyle === "clone" && <Badge className="ml-auto rounded-none font-mono text-[9px] px-1.5 py-0 bg-primary/20 text-primary border-primary/30">Ativo</Badge>}
-                {cloneSessionId && videoProductionStyle !== "clone" && <Badge className="ml-auto rounded-none font-mono text-[9px] px-1.5 py-0 bg-green-500/10 text-green-400 border-green-500/30">Pronto</Badge>}
-                {!cloneSessionId && <Badge className="ml-auto rounded-none font-mono text-[9px] px-1.5 py-0 bg-muted/20 text-muted-foreground/50 border-border/30">Criar clone</Badge>}
+                <span className={`font-mono text-[11px] font-bold uppercase tracking-widest ${videoProductionStyle === "clone" ? "text-primary" : "text-foreground"}`}>{t("Com Clone", "With clone", "Con clon")}</span>
+                {cloneSessionId && videoProductionStyle === "clone" && <Badge className="ml-auto rounded-none font-mono text-[9px] px-1.5 py-0 bg-primary/20 text-primary border-primary/30">{t("Ativo", "Active", "Activo")}</Badge>}
+                {cloneSessionId && videoProductionStyle !== "clone" && <Badge className="ml-auto rounded-none font-mono text-[9px] px-1.5 py-0 bg-green-500/10 text-green-400 border-green-500/30">{t("Pronto", "Ready", "Listo")}</Badge>}
+                {!cloneSessionId && <Badge className="ml-auto rounded-none font-mono text-[9px] px-1.5 py-0 bg-muted/20 text-muted-foreground/50 border-border/30">{t("Criar clone", "Create clone", "Crear clon")}</Badge>}
               </div>
               <p className="font-mono text-[10px] text-muted-foreground/60 leading-relaxed">
-                Vídeos com seu rosto e voz clonada. Requer captura de 5 min.
+                {t("Vídeos com seu rosto e voz clonada. Requer captura de 5 min.", "Videos with your face and cloned voice. Requires a 5-minute capture.", "Videos con tu rostro y voz clonada. Requiere una captura de 5 minutos.")}
               </p>
             </button>
           </div>
@@ -2092,14 +2163,14 @@ function IdentidadeTab() {
             <div className="flex items-center gap-3 px-4 py-3 border border-green-500/20 bg-green-500/5">
               <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
               <div className="flex-1">
-                <div className="font-mono text-[11px] font-bold text-green-300">Clone de vídeo capturado</div>
-                <div className="font-mono text-[10px] text-muted-foreground/60">Sessão: {cloneSessionId.slice(0, 12)}… · Disponível para CPL e VSL</div>
+                 <div className="font-mono text-[11px] font-bold text-green-300">{t("Clone de vídeo capturado", "Video clone captured", "Clon de video capturado")}</div>
+                 <div className="font-mono text-[10px] text-muted-foreground/60">{t("Sessão:", "Session:", "Sesión:")} {cloneSessionId.slice(0, 12)}… · {t("Disponível para CPL e VSL", "Available for CPL and VSL", "Disponible para CPL y VSL")}</div>
               </div>
             </div>
           )}
 
           <div className="font-mono text-[9px] text-muted-foreground/30 leading-relaxed">
-            Esta preferência se aplica a todos os CPLs e VSLs gerados pelos agentes. Você pode mudar a qualquer momento — as próximas gerações usarão o novo estilo.
+             {t("Esta preferência se aplica a todos os CPLs e VSLs gerados pelos agentes. Você pode mudar a qualquer momento — as próximas gerações usarão o novo estilo.", "This preference applies to all CPLs and VSLs generated by agents. You can change it anytime — future generations will use the new style.", "Esta preferencia se aplica a todos los CPL y VSL generados por los agentes. Puedes cambiarla cuando quieras; las próximas generaciones usarán el nuevo estilo.")}
           </div>
         </div>
       </SectionCard>
@@ -2108,48 +2179,48 @@ function IdentidadeTab() {
       <div className="border border-border/40 bg-card/30 px-5 py-4 flex items-center gap-4">
         <Fingerprint className="h-6 w-6 text-primary shrink-0" />
         <div className="flex-1 min-w-0">
-          <div className="font-mono text-xs font-bold text-foreground uppercase tracking-widest">Identidade Digital do Lançador</div>
+           <div className="font-mono text-xs font-bold text-foreground uppercase tracking-widest">{t("Identidade digital do lançador", "Launch operator digital identity", "Identidad digital del operador de lanzamientos")}</div>
           <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
-            Sua voz, presença e trejeitos são injetados nos roteiros e vídeos gerados pelos agentes NexOS
+             {t("Sua voz, presença e trejeitos são injetados nos roteiros e vídeos gerados pelos agentes NexOS", "Your voice, presence, and mannerisms are incorporated into scripts and videos generated by NexOS agents", "Tu voz, presencia y gestos se incorporan a los guiones y videos generados por los agentes de NexOS")}
           </div>
         </div>
         <div className="flex gap-2 shrink-0">
           <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-2 py-0.5 ${persona.voiceCloneId ? "text-green-400 border-green-400/40 bg-green-400/10" : "text-muted-foreground/50"}`}>
-            {persona.voiceCloneId ? "✓ Voz Clonada" : "Voz: Pendente"}
+             {persona.voiceCloneId ? t("✓ Voz clonada", "✓ Voice cloned", "✓ Voz clonada") : t("Voz: Pendente", "Voice: Pending", "Voz: Pendiente")}
           </Badge>
           <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-2 py-0.5 ${persona.heygenAvatarId ? "text-blue-400 border-blue-400/40 bg-blue-400/10" : "text-muted-foreground/50"}`}>
-            {persona.heygenAvatarId ? "✓ Avatar Ativo" : "Avatar: Pendente"}
+             {persona.heygenAvatarId ? t("✓ Avatar ativo", "✓ Avatar active", "✓ Avatar activo") : t("Avatar: Pendente", "Avatar: Pending", "Avatar: Pendiente")}
           </Badge>
         </div>
       </div>
 
       {/* ── Seção 1: Clone de Voz ── */}
-      <SectionCard title="Clone de Voz" icon={Headphones}>
+      <SectionCard title={t("Clone de voz", "Voice clone", "Clon de voz")} icon={Headphones}>
         <div className="space-y-4">
           {/* Status atual */}
           {persona.voiceCloneId && (
             <div className="flex items-center gap-3 px-4 py-3 border border-green-500/20 bg-green-500/5">
               <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
               <div>
-                <div className="font-mono text-[11px] font-bold text-green-300">Voz clonada com sucesso</div>
+                 <div className="font-mono text-[11px] font-bold text-green-300">{t("Voz clonada com sucesso", "Voice cloned successfully", "Voz clonada correctamente")}</div>
                 <div className="font-mono text-[10px] text-muted-foreground/60">
                   Voice ID: <span className="text-green-400/80">{persona.voiceCloneId}</span>
-                  {persona.voiceCloneUpdatedAt && ` · ${new Date(persona.voiceCloneUpdatedAt).toLocaleDateString("pt-BR")}`}
+                   {persona.voiceCloneUpdatedAt && ` · ${new Date(persona.voiceCloneUpdatedAt).toLocaleDateString(intlLocale(locale))}`}
                 </div>
               </div>
             </div>
           )}
 
-          <FieldRow label="Nome da Voz" sublabel="Identificação da voz clonada">
+          <FieldRow label={t("Nome da voz", "Voice name", "Nombre de la voz")} sublabel={t("Identificação da voz clonada", "Voice clone identifier", "Identificación de la voz clonada")}>
             <Input
               value={voiceName}
               onChange={e => setVoiceName(e.target.value)}
-              placeholder="Ex: João — Voz NexOS"
+              placeholder={t("Ex: João — Voz NexOS", "e.g. Alex — NexOS voice", "Ej.: Alex — Voz de NexOS")}
               className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
             />
           </FieldRow>
 
-          <FieldRow label="Amostras de Voz" sublabel="30–120 segundos falando naturalmente. Quanto mais variado, melhor o clone.">
+          <FieldRow label={t("Amostras de voz", "Voice samples", "Muestras de voz")} sublabel={t("30–120 segundos falando naturalmente. Quanto mais variado, melhor o clone.", "Speak naturally for 30–120 seconds. More variety improves the clone.", "Habla con naturalidad durante 30–120 segundos. Cuanta más variedad, mejor será el clon.")}>
             <div className="space-y-3">
               {/* Recorder */}
               <div className="flex items-center gap-3">
@@ -2161,7 +2232,7 @@ function IdentidadeTab() {
                     style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)", color: "#ef4444" }}
                   >
                     <Mic className="h-3.5 w-3.5" />
-                    {recState === "done" || recState === "recorded" ? "Regravar" : "Gravar Áudio"}
+                    {recState === "done" || recState === "recorded" ? t("Regravar", "Record again", "Volver a grabar") : t("Gravar áudio", "Record audio", "Grabar audio")}
                   </Button>
                 ) : recState === "recording" ? (
                   <Button
@@ -2171,11 +2242,11 @@ function IdentidadeTab() {
                     style={{ background: "rgba(239,68,68,0.25)", border: "1px solid rgba(239,68,68,0.6)", color: "#ef4444" }}
                   >
                     <Square className="h-3 w-3 fill-red-500" />
-                    Parar — {fmt(recSeconds)}
+                    {t("Parar", "Stop", "Detener")} — {fmt(recSeconds)}
                   </Button>
                 ) : null}
 
-                <span className="font-mono text-[10px] text-muted-foreground/40">ou</span>
+                <span className="font-mono text-[10px] text-muted-foreground/40">{t("ou", "or", "o")}</span>
 
                 <label className="cursor-pointer">
                   <input
@@ -2190,7 +2261,7 @@ function IdentidadeTab() {
                     asChild
                     className="rounded-none font-mono text-[10px] uppercase tracking-widest h-8 px-3 gap-2 text-muted-foreground hover:text-foreground pointer-events-none"
                   >
-                    <span><Upload className="h-3.5 w-3.5" />Enviar Arquivo</span>
+                    <span><Upload className="h-3.5 w-3.5" />{t("Enviar arquivo", "Upload file", "Subir archivo")}</span>
                   </Button>
                 </label>
               </div>
@@ -2202,7 +2273,7 @@ function IdentidadeTab() {
                   <audio controls src={audioUrl} className="flex-1 h-8 min-w-0" style={{ filter: "invert(0) hue-rotate(180deg) brightness(0.8)" }} />
                   <button
                     onClick={clearAudio}
-                    title="Excluir gravação e recomeçar"
+                    title={t("Excluir gravação e recomeçar", "Delete recording and start over", "Eliminar grabación y empezar de nuevo")}
                     className="shrink-0 p-1.5 text-muted-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition-colors rounded"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -2218,8 +2289,8 @@ function IdentidadeTab() {
                   className="rounded-none font-mono text-[11px] uppercase tracking-widest h-9 px-5 gap-2 btn-weapon-primary w-full"
                 >
                   {recState === "cloning"
-                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Clonando voz com IA…</>
-                    : <><Sparkles className="h-3.5 w-3.5" />Clonar Minha Voz com IA</>}
+                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t("Clonando voz com IA…", "Cloning voice with AI…", "Clonando voz con IA…")}</>
+                    : <><Sparkles className="h-3.5 w-3.5" />{t("Clonar minha voz com IA", "Clone my voice with AI", "Clonar mi voz con IA")}</>}
                 </Button>
               )}
 
@@ -2230,7 +2301,7 @@ function IdentidadeTab() {
               )}
 
               <div className="font-mono text-[9px] text-muted-foreground/30 leading-relaxed">
-                Fale naturalmente por 30–120s. Inclua variações de tom, pausas, entusiasmo. Evite ruído de fundo. Seu Voice ID é armazenado com segurança e usado apenas em vídeos desta conta.
+                 {t("Fale naturalmente por 30–120s. Inclua variações de tom, pausas, entusiasmo. Evite ruído de fundo. Seu Voice ID é armazenado com segurança e usado apenas em vídeos desta conta.", "Speak naturally for 30–120 seconds. Vary your tone, pauses, and energy. Avoid background noise. Your Voice ID is stored securely and used only in videos for this account.", "Habla con naturalidad durante 30–120 segundos. Varía el tono, las pausas y la energía. Evita el ruido de fondo. Tu Voice ID se almacena de forma segura y solo se usa en videos de esta cuenta.")}
               </div>
             </div>
           </FieldRow>
@@ -2238,7 +2309,7 @@ function IdentidadeTab() {
       </SectionCard>
 
       {/* ── Seção 2: Avatar Digital ── */}
-      <SectionCard title="Avatar Digital" icon={Camera}>
+      <SectionCard title={t("Avatar digital", "Digital avatar", "Avatar digital")} icon={Camera}>
         <div className="space-y-4">
 
           {/* Clone capturado */}
@@ -2246,9 +2317,9 @@ function IdentidadeTab() {
             <div className="flex items-center gap-3 px-4 py-3 border border-green-500/20 bg-green-500/5">
               <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
               <div className="flex-1 min-w-0">
-                <div className="font-mono text-[11px] font-bold text-green-300">Clone de avatar capturado</div>
+                <div className="font-mono text-[11px] font-bold text-green-300">{t("Clone de avatar capturado", "Avatar clone captured", "Clon de avatar capturado")}</div>
                 <div className="font-mono text-[10px] text-muted-foreground/60">
-                  Sessão: {cloneSessionId.slice(0, 12)}… · Disponível para CPL e VSL
+                  {t("Sessão:", "Session:", "Sesión:")} {cloneSessionId.slice(0, 12)}… · {t("Disponível para CPL e VSL", "Available for CPL and VSL", "Disponible para CPL y VSL")}
                 </div>
               </div>
               <Button
@@ -2257,16 +2328,16 @@ function IdentidadeTab() {
                 onClick={() => navigate("/clone-digital")}
                 className="shrink-0 rounded-none font-mono text-[10px] uppercase tracking-widest h-8 px-3 gap-1.5 border-green-500/30 text-green-400 hover:bg-green-500/10"
               >
-                <Camera className="h-3 w-3" /> Regravar
+                <Camera className="h-3 w-3" /> {t("Regravar", "Record again", "Volver a grabar")}
               </Button>
             </div>
           ) : (
             <div className="flex items-start gap-3 px-4 py-3 border border-border/40 bg-background/30">
               <Camera className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
-                <div className="font-mono text-[11px] font-bold text-foreground">Nenhum clone gravado</div>
+                <div className="font-mono text-[11px] font-bold text-foreground">{t("Nenhum clone gravado", "No clone recorded", "No hay ningún clon grabado")}</div>
                 <div className="font-mono text-[10px] text-muted-foreground/60">
-                  Grave 5 takes guiados (~5 min) para criar vídeos com seu rosto e voz clonada.
+                  {t("Grave 5 takes guiados (~5 min) para criar vídeos com seu rosto e voz clonada.", "Record 5 guided takes (~5 min) to create videos with your face and cloned voice.", "Graba 5 tomas guiadas (~5 min) para crear videos con tu rostro y voz clonada.")}
                 </div>
               </div>
               <Button
@@ -2275,73 +2346,73 @@ function IdentidadeTab() {
                 className="shrink-0 rounded-none font-mono text-[10px] uppercase tracking-widest h-8 px-3 gap-1.5"
                 style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.35)", color: "hsl(var(--primary))" }}
               >
-                <Camera className="h-3 w-3" /> Gravar
+                <Camera className="h-3 w-3" /> {t("Gravar", "Record", "Grabar")}
               </Button>
             </div>
           )}
 
           <div className="font-mono text-[9px] text-muted-foreground/30 leading-relaxed">
-            Com sua identidade configurada, os vídeos de lançamento gerados pelo NexOS AI usarão seu perfil de voz clonada automaticamente.
+            {t("Com sua identidade configurada, os vídeos de lançamento gerados pelo NexOS AI usarão seu perfil de voz clonada automaticamente.", "Once your identity is configured, NexOS AI will automatically use your cloned voice profile in generated launch videos.", "Una vez configurada tu identidad, NexOS AI usará automáticamente tu perfil de voz clonada en los videos de lanzamiento.")}
           </div>
         </div>
       </SectionCard>
 
       {/* ── Seção 3: Trejeitos & Presença ── */}
-      <SectionCard title="Trejeitos & Estilo de Presença" icon={Sparkles}>
+      <SectionCard title={t("Trejeitos & Estilo de presença", "Mannerisms & presence style", "Gestos y estilo de presencia")} icon={Sparkles}>
         <div className="space-y-0">
-          <FieldRow label="Energia" sublabel="Como você naturalmente se apresenta">
+          <FieldRow label={t("Energia", "Energy", "Energía")} sublabel={t("Como você naturalmente se apresenta", "How you naturally present yourself", "Cómo te presentas de forma natural")}>
             <select value={energia} onChange={e => setEnergia(e.target.value)} className={SEL_BASE}>
-              <option value="">Selecionar…</option>
-              <option value="baixa">Calma / Reflexiva</option>
-              <option value="moderada">Equilibrada</option>
-              <option value="alta">Energética / Dinâmica</option>
-              <option value="muito_alta">Explosiva / Alta voltagem</option>
+              <option value="">{t("Selecionar…", "Select…", "Seleccionar…")}</option>
+              <option value="baixa">{t("Calma / Reflexiva", "Calm / Reflective", "Tranquila / Reflexiva")}</option>
+              <option value="moderada">{t("Equilibrada", "Balanced", "Equilibrada")}</option>
+              <option value="alta">{t("Energética / Dinâmica", "Energetic / Dynamic", "Enérgica / Dinámica")}</option>
+              <option value="muito_alta">{t("Explosiva / Alta voltagem", "Explosive / High energy", "Explosiva / Alta energía")}</option>
             </select>
           </FieldRow>
 
-          <FieldRow label="Velocidade de Fala" sublabel="Ritmo natural de como você fala">
+          <FieldRow label={t("Velocidade de fala", "Speaking pace", "Velocidad al hablar")} sublabel={t("Ritmo natural de como você fala", "Your natural speaking pace", "Tu ritmo natural al hablar")}>
             <select value={velocidade} onChange={e => setVelocidade(e.target.value)} className={SEL_BASE}>
-              <option value="">Selecionar…</option>
-              <option value="lenta">Lenta / Pausada</option>
-              <option value="moderada">Moderada</option>
-              <option value="rapida">Rápida / Fluida</option>
-              <option value="variavel">Variável (muda conforme contexto)</option>
+              <option value="">{t("Selecionar…", "Select…", "Seleccionar…")}</option>
+              <option value="lenta">{t("Lenta / Pausada", "Slow / Measured", "Lenta / Pausada")}</option>
+              <option value="moderada">{t("Moderada", "Moderate", "Moderada")}</option>
+              <option value="rapida">{t("Rápida / Fluida", "Fast / Fluid", "Rápida / Fluida")}</option>
+              <option value="variavel">{t("Variável (muda conforme contexto)", "Variable (changes with context)", "Variable (cambia según el contexto)")}</option>
             </select>
           </FieldRow>
 
-          <FieldRow label="Uso de Pausas" sublabel="Como você usa silêncio para impacto">
+          <FieldRow label={t("Uso de pausas", "Use of pauses", "Uso de pausas")} sublabel={t("Como você usa silêncio para impacto", "How you use silence for emphasis", "Cómo usas el silencio para dar énfasis")}>
             <select value={pausas} onChange={e => setPausas(e.target.value)} className={SEL_BASE}>
-              <option value="">Selecionar…</option>
-              <option value="frequentes">Frequentes — gosto de deixar respirar</option>
-              <option value="estrategicas">Estratégicas — só nos momentos-chave</option>
-              <option value="minimas">Mínimas — falo de forma contínua</option>
+              <option value="">{t("Selecionar…", "Select…", "Seleccionar…")}</option>
+              <option value="frequentes">{t("Frequentes — gosto de deixar respirar", "Frequent — I like to leave room", "Frecuentes — me gusta dejar espacio")}</option>
+              <option value="estrategicas">{t("Estratégicas — só nos momentos-chave", "Strategic — only at key moments", "Estratégicas — solo en momentos clave")}</option>
+              <option value="minimas">{t("Mínimas — falo de forma contínua", "Minimal — I speak continuously", "Mínimas — hablo de forma continua")}</option>
             </select>
           </FieldRow>
 
-          <FieldRow label="Gestos" sublabel="Uso de mãos e corpo">
+          <FieldRow label={t("Gestos", "Gestures", "Gestos")} sublabel={t("Uso de mãos e corpo", "Use of hands and body", "Uso de las manos y el cuerpo")}>
             <select value={gestos} onChange={e => setGestos(e.target.value)} className={SEL_BASE}>
-              <option value="">Selecionar…</option>
-              <option value="discretos">Discretos / Contidos</option>
-              <option value="moderados">Moderados</option>
-              <option value="expressivos">Expressivos</option>
-              <option value="muito_expressivos">Muito expressivos / Amplificados</option>
+              <option value="">{t("Selecionar…", "Select…", "Seleccionar…")}</option>
+              <option value="discretos">{t("Discretos / Contidos", "Subtle / Restrained", "Discretos / Contenidos")}</option>
+              <option value="moderados">{t("Moderados", "Moderate", "Moderados")}</option>
+              <option value="expressivos">{t("Expressivos", "Expressive", "Expresivos")}</option>
+              <option value="muito_expressivos">{t("Muito expressivos / Amplificados", "Very expressive / Exaggerated", "Muy expresivos / Amplificados")}</option>
             </select>
           </FieldRow>
 
-          <FieldRow label="Tom de Comunicação" sublabel="Estilo dominante de como você fala">
+          <FieldRow label={t("Tom de comunicação", "Communication tone", "Tono de comunicación")} sublabel={t("Estilo dominante de como você fala", "Your dominant speaking style", "Tu estilo predominante al hablar")}>
             <Input
               value={tom}
               onChange={e => setTom(e.target.value)}
-              placeholder="Ex: consultivo-direto, professor-mentor, provocador-estratégico…"
+              placeholder={t("Ex: consultivo-direto, professor-mentor, provocador-estratégico…", "e.g. direct consultant, mentor-teacher, strategic provocateur…", "Ej.: consultivo y directo, profesor y mentor, provocador estratégico…")}
               className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
             />
           </FieldRow>
 
-          <FieldRow label="Trejeitos" sublabel="Expressões, vícios de linguagem, manias específicas">
+          <FieldRow label={t("Trejeitos", "Mannerisms", "Gestos y expresiones")} sublabel={t("Expressões, vícios de linguagem, manias específicas", "Expressions, speech habits, and quirks", "Expresiones, muletillas y hábitos específicos")}>
             <Textarea
               value={trejeitos}
               onChange={e => setTrejeitos(e.target.value)}
-              placeholder="Ex: Começo frases com 'olha...', uso bastante a palavra 'resultado', faço pausa antes de revelar o ponto principal, tenho o hábito de repetir a última palavra com ênfase..."
+              placeholder={t("Ex: Começo frases com 'olha...', uso bastante a palavra 'resultado', faço pausa antes de revelar o ponto principal, tenho o hábito de repetir a última palavra com ênfase...", "e.g. I start sentences with 'look…', often say 'results', pause before the main point, and repeat the last word for emphasis…", "Ej.: Empiezo frases con «mira…», repito mucho «resultado», hago una pausa antes de revelar el punto clave y suelo enfatizar la última palabra…")}
               className="font-mono text-xs rounded-none bg-background/60 border-border/50 focus-visible:ring-primary resize-none"
               rows={4}
             />
@@ -2350,23 +2421,23 @@ function IdentidadeTab() {
       </SectionCard>
 
       {/* ── Seção 4: Marca Pessoal ── */}
-      <SectionCard title="Marca Pessoal & Estilo de Vídeo" icon={Wand2}>
+      <SectionCard title={t("Marca pessoal & estilo de vídeo", "Personal brand & video style", "Marca personal y estilo de video")} icon={Wand2}>
         <div className="space-y-0">
-          <FieldRow label="Presença de Marca" sublabel="Como você se posiciona e se apresenta ao mercado">
+          <FieldRow label={t("Presença de marca", "Brand presence", "Presencia de marca")} sublabel={t("Como você se posiciona e se apresenta ao mercado", "How you position yourself in the market", "Cómo te posicionas y presentas en el mercado")}>
             <Textarea
               value={brandPresence}
               onChange={e => setBrandPresence(e.target.value)}
-              placeholder="Ex: Me posiciono como especialista em resultados rápidos para empreendedoras femininas. Minha identidade é de quem já passou pela dor, transformou, e agora ensina. Tom: direto, sem rodeios, com empat…"
+              placeholder={t("Ex: Me posiciono como especialista em resultados rápidos para empreendedoras femininas. Minha identidade é de quem já passou pela dor, transformou, e agora ensina. Tom: direto, sem rodeios, com empat…", "e.g. I position myself as an expert in fast results for women entrepreneurs. My identity is someone who has experienced the struggle, transformed, and now teaches. Tone: direct, candid, empathetic…", "Ej.: Me posiciono como especialista en resultados rápidos para emprendedoras. Mi identidad es la de alguien que vivió el problema, se transformó y ahora enseña. Tono: directo, claro y empático…")}
               className="font-mono text-xs rounded-none bg-background/60 border-border/50 focus-visible:ring-primary resize-none"
               rows={3}
             />
           </FieldRow>
 
-          <FieldRow label="Estilo de Reels" sublabel="Como você estrutura e entrega seus vídeos curtos">
+          <FieldRow label={t("Estilo de Reels", "Reels style", "Estilo de Reels")} sublabel={t("Como você estrutura e entrega seus vídeos curtos", "How you structure and deliver short-form videos", "Cómo estructuras y presentas tus videos cortos")}>
             <Textarea
               value={reelStyle}
               onChange={e => setReelStyle(e.target.value)}
-              placeholder="Ex: Começo sempre com uma pergunta provocadora nos primeiros 3 segundos. Uso cortes rápidos. Fecho com uma frase de impacto antes do CTA. Prefiro cenário externo com luz natural…"
+              placeholder={t("Ex: Começo sempre com uma pergunta provocadora nos primeiros 3 segundos. Uso cortes rápidos. Fecho com uma frase de impacto antes do CTA. Prefiro cenário externo com luz natural…", "e.g. I open with a provocative question in the first 3 seconds, use quick cuts, and end with an impactful line before the CTA. I prefer outdoor settings with natural light…", "Ej.: Empiezo con una pregunta provocadora durante los primeros 3 segundos, uso cortes rápidos y cierro con una frase impactante antes del CTA. Prefiero exteriores con luz natural…")}
               className="font-mono text-xs rounded-none bg-background/60 border-border/50 focus-visible:ring-primary resize-none"
               rows={3}
             />
@@ -2375,65 +2446,65 @@ function IdentidadeTab() {
       </SectionCard>
 
       {/* ── Seção 5: Lifestyle & Preferências Pessoais ── */}
-      <SectionCard title="Lifestyle & Preferências Pessoais" icon={Wand2}>
+      <SectionCard title={t("Lifestyle & preferências pessoais", "Lifestyle & personal preferences", "Estilo de vida y preferencias personales")} icon={Wand2}>
         <p className="text-[11px] text-muted-foreground/60 mb-4 leading-relaxed">
-          Os agentes de roteiro e direção visual usam esses dados para enriquecer <strong className="text-muted-foreground/80">automaticamente</strong> o{" "}
+          {t("Os agentes de roteiro e direção visual usam esses dados para enriquecer", "Script and art direction agents use this information to automatically enrich", "Los agentes de guion y dirección visual usan estos datos para enriquecer")} <strong className="text-muted-foreground/80">{t("automaticamente", "automatically", "automáticamente")}</strong> {t("o", "the", "el")}{" "}
           <code className="font-mono text-[10px]">visualDirection</code> e os scripts de vídeo — adereços, cenários, hobbies e referências que aparecem de forma natural nos conteúdos, sem que você precise especificar em cada post.
         </p>
         <div className="space-y-0">
-          <FieldRow label="Hobbies & Esportes" sublabel="O que você pratica no tempo livre">
+          <FieldRow label={t("Hobbies & esportes", "Hobbies & sports", "Aficiones y deportes")} sublabel={t("O que você pratica no tempo livre", "What you do in your free time", "Qué practicas en tu tiempo libre")}>
             <Input
               value={lsHobbies}
               onChange={e => setLsHobbies(e.target.value)}
-              placeholder="Ex: golfe, mergulho, automobilismo, equitação, pesca esportiva"
+              placeholder={t("Ex: golfe, mergulho, automobilismo, equitação, pesca esportiva", "e.g. golf, diving, motorsports, horseback riding, sport fishing", "Ej.: golf, buceo, automovilismo, equitación, pesca deportiva")}
               className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
             />
           </FieldRow>
-          <FieldRow label="Gastronomia" sublabel="Culinária, restaurantes, bebidas favoritas">
+          <FieldRow label={t("Gastronomia", "Food & drink", "Gastronomía")} sublabel={t("Culinária, restaurantes, bebidas favoritas", "Favorite cuisines, restaurants, and drinks", "Cocinas, restaurantes y bebidas favoritas")}>
             <Input
               value={lsGastronomy}
               onChange={e => setLsGastronomy(e.target.value)}
-              placeholder="Ex: japonesa, italiana, vinhos naturais, whisky japonês, fine dining"
+              placeholder={t("Ex: japonesa, italiana, vinhos naturais, whisky japonês, fine dining", "e.g. Japanese, Italian, natural wines, Japanese whisky, fine dining", "Ej.: japonesa, italiana, vinos naturales, whisky japonés, alta cocina")}
               className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
             />
           </FieldRow>
-          <FieldRow label="Veículos" sublabel="Carros, motos, embarcações ou aeronaves">
+          <FieldRow label={t("Veículos", "Vehicles", "Vehículos")} sublabel={t("Carros, motos, embarcações ou aeronaves", "Cars, motorcycles, boats, or aircraft", "Coches, motos, embarcaciones o aeronaves")}>
             <Input
               value={lsVehicles}
               onChange={e => setLsVehicles(e.target.value)}
-              placeholder="Ex: Porsche 911 GT3 RS, lancha Azimut 50, Ferrari SF90"
+              placeholder={t("Ex: Porsche 911 GT3 RS, lancha Azimut 50, Ferrari SF90", "e.g. Porsche 911 GT3 RS, Azimut 50 yacht, Ferrari SF90", "Ej.: Porsche 911 GT3 RS, yate Azimut 50, Ferrari SF90")}
               className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
             />
           </FieldRow>
-          <FieldRow label="Adereços & Acessórios" sublabel="Relógios, joias, peças de vestuário icônicas">
+          <FieldRow label={t("Adereços & acessórios", "Props & accessories", "Atrezzo y accesorios")} sublabel={t("Relógios, joias, peças de vestuário icônicas", "Watches, jewelry, and iconic clothing", "Relojes, joyas y prendas icónicas")}>
             <Input
               value={lsAccessories}
               onChange={e => setLsAccessories(e.target.value)}
-              placeholder="Ex: Richard Mille RM 11-03 (casual), Rolex Daytona (formal), Air Jordan 1 Chicago"
+              placeholder={t("Ex: Richard Mille RM 11-03 (casual), Rolex Daytona (formal), Air Jordan 1 Chicago", "e.g. Richard Mille RM 11-03 (casual), Rolex Daytona (formal), Air Jordan 1 Chicago", "Ej.: Richard Mille RM 11-03 (informal), Rolex Daytona (formal), Air Jordan 1 Chicago")}
               className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
             />
           </FieldRow>
-          <FieldRow label="Cenários Favoritos" sublabel="Locais, ambientes e paisagens de referência">
+          <FieldRow label={t("Cenários favoritos", "Favorite settings", "Escenarios favoritos")} sublabel={t("Locais, ambientes e paisagens de referência", "Reference locations, environments, and landscapes", "Lugares, ambientes y paisajes de referencia")}>
             <Input
               value={lsScenarios}
               onChange={e => setLsScenarios(e.target.value)}
-              placeholder="Ex: Alpes suíços, Maldivas, Quinta em Trás-os-Montes, penthouse vista para o mar"
+              placeholder={t("Ex: Alpes suíços, Maldivas, Quinta em Trás-os-Montes, penthouse vista para o mar", "e.g. Swiss Alps, Maldives, countryside estate, penthouse with ocean views", "Ej.: Alpes suizos, Maldivas, finca rural, ático con vistas al mar")}
               className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
             />
           </FieldRow>
-          <FieldRow label="Países & Destinos" sublabel="Países com que você tem afinidade ou frequenta">
+          <FieldRow label={t("Países & destinos", "Countries & destinations", "Países y destinos")} sublabel={t("Países com que você tem afinidade ou frequenta", "Countries you feel connected to or visit often", "Países con los que tienes afinidad o que visitas con frecuencia")}>
             <Input
               value={lsCountries}
               onChange={e => setLsCountries(e.target.value)}
-              placeholder="Ex: Portugal, Japão, Maldivas, Mônaco, Dubai, Itália"
+              placeholder={t("Ex: Portugal, Japão, Maldivas, Mônaco, Dubai, Itália", "e.g. Portugal, Japan, Maldives, Monaco, Dubai, Italy", "Ej.: Portugal, Japón, Maldivas, Mónaco, Dubái, Italia")}
               className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
             />
           </FieldRow>
-          <FieldRow label="Outros Elementos" sublabel="Qualquer detalhe de estilo de vida relevante">
+          <FieldRow label={t("Outros elementos", "Other details", "Otros elementos")} sublabel={t("Qualquer detalhe de estilo de vida relevante", "Any other relevant lifestyle details", "Cualquier otro detalle relevante sobre tu estilo de vida")}>
             <Textarea
               value={lsOther}
               onChange={e => setLsOther(e.target.value)}
-              placeholder="Ex: colecionador de arte contemporânea, frequenta leilões em Londres, pratica meditação diária, tem uma adega com mais de 300 rótulos…"
+              placeholder={t("Ex: colecionador de arte contemporânea, frequenta leilões em Londres, pratica meditação diária, tem uma adega com mais de 300 rótulos…", "e.g. contemporary art collector, attends auctions in London, meditates daily, has a wine cellar with over 300 labels…", "Ej.: coleccionista de arte contemporáneo, asiste a subastas en Londres, medita a diario, tiene una bodega con más de 300 referencias…")}
               className="font-mono text-xs rounded-none bg-background/60 border-border/50 focus-visible:ring-primary resize-none"
               rows={3}
             />
@@ -2444,14 +2515,14 @@ function IdentidadeTab() {
       {/* ── Save Button ── */}
       <div className="flex items-center justify-between pt-2 border-t border-border/30">
         <div className="font-mono text-[10px] text-muted-foreground/40">
-          Os agentes usam esses dados para gerar roteiros e takes de vídeo no seu estilo
+          {t("Os agentes usam esses dados para gerar roteiros e takes de vídeo no seu estilo", "Agents use this information to generate scripts and video takes in your style", "Los agentes usan estos datos para generar guiones y tomas de video con tu estilo")}
         </div>
         <Button
           onClick={() => void handleSavePersona()}
           disabled={saving}
           className="rounded-none font-mono uppercase text-xs tracking-widest h-9 px-6 gap-2 btn-weapon-primary shrink-0"
         >
-          {saving ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Salvando…</> : <><CheckCircle2 className="h-3.5 w-3.5" />Salvar Identidade</>}
+          {saving ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t("Salvando…", "Saving…", "Guardando…")}</> : <><CheckCircle2 className="h-3.5 w-3.5" />{t("Salvar identidade", "Save identity", "Guardar identidad")}</>}
         </Button>
       </div>
 
@@ -2460,6 +2531,16 @@ function IdentidadeTab() {
 }
 
 export default function Settings() {
+  const t = useUiText();
+  const tabLabels: Record<Tab, string> = {
+    perfil: t("Perfil", "Profile", "Perfil"),
+    workspace: t("Workspace", "Workspace", "Espacio de trabajo"),
+    autonomia: t("Autonomia NexOS AI", "NexOS AI Autonomy", "Autonomía de NexOS AI"),
+    compliance: t("Identificação", "Identity verification", "Identificación"),
+    seguranca: t("Segurança", "Security", "Seguridad"),
+    integracoes: t("Integrações", "Integrations", "Integraciones"),
+    identidade: t("Identidade", "Identity", "Identidad"),
+  };
   const initialTab = (): Tab => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -2474,10 +2555,10 @@ export default function Settings() {
     <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6 overflow-x-hidden">
       <div className="border-b border-border/50 pb-5">
         <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
-          Configurações
+          {t("Configurações", "Settings", "Configuración")}
         </h1>
         <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mt-1">
-          Perfil · Workspace · Segurança · Integrações
+          {t("Perfil · Workspace · Segurança · Integrações", "Profile · Workspace · Security · Integrations", "Perfil · Espacio de trabajo · Seguridad · Integraciones")}
         </p>
       </div>
 
@@ -2497,7 +2578,7 @@ export default function Settings() {
                 }`}
             >
               <Icon className="h-3.5 w-3.5 shrink-0" />
-              <span className="hidden sm:inline">{t.label}</span>
+               <span className="hidden sm:inline">{tabLabels[t.id]}</span>
             </button>
           );
         })}

@@ -1,5 +1,6 @@
 import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Music2, Share2, ThumbsUp, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useUiText } from "@/lib/i18n";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -67,23 +68,24 @@ function fmtNum(n: number): string {
 // ── Metrics Strip ─────────────────────────────────────────────────────────────
 
 function MetricsStrip({ piece }: { piece: PreviewPiece }) {
+  const t = useUiText();
   const m = estimatePostMetrics(piece);
   return (
     <div className="flex flex-wrap gap-2 mt-2 px-0.5">
       <div className="flex items-center gap-1 bg-muted/20 border border-border/30 px-2 py-1 rounded-sm">
-        <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">Alcance</span>
+        <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">{t("Alcance", "Reach", "Alcance")}</span>
         <span className="font-mono text-[10px] font-bold text-foreground">{fmtNum(m.reach)}</span>
       </div>
       <div className="flex items-center gap-1 bg-muted/20 border border-border/30 px-2 py-1 rounded-sm">
-        <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">Eng.</span>
+        <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">{t("Eng.", "Eng.", "Inter.")}</span>
         <span className="font-mono text-[10px] font-bold text-primary">{m.engagementRate}%</span>
       </div>
       <div className="flex items-center gap-1 bg-muted/20 border border-border/30 px-2 py-1 rounded-sm">
-        <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">Leads</span>
+        <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">{t("Leads", "Leads", "Prospectos")}</span>
         <span className="font-mono text-[10px] font-bold text-success">{m.leadsLabel}</span>
       </div>
       <div className="flex items-center gap-1 bg-muted/20 border border-border/30 px-2 py-1 rounded-sm">
-        <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">Conv.</span>
+        <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">{t("Conv.", "Conv.", "Conv.")}</span>
         <span className="font-mono text-[10px] font-bold text-yellow-400">{m.conversionPct}%</span>
       </div>
     </div>
@@ -93,12 +95,13 @@ function MetricsStrip({ piece }: { piece: PreviewPiece }) {
 // ── Instagram Post ─────────────────────────────────────────────────────────────
 
 function InstagramPost({ piece }: { piece: PreviewPiece }) {
+  const t = useUiText();
   const m = estimatePostMetrics(piece);
   const caption = piece.body.slice(0, 140) + (piece.body.length > 140 ? "..." : "");
   const hashtags = piece.hashtags?.slice(0, 5).join(" ") ?? "#lançamento #digital #resultado";
   const isReel = piece.type === "reel";
   const likes = Math.round(m.engagements * 0.7);
-  const handle = piece.creatorName ?? "seu.perfil";
+  const handle = piece.creatorName ?? t("seu.perfil", "your.profile", "tu.perfil");
   const initial = handle.charAt(0).toUpperCase();
 
   return (
@@ -109,7 +112,7 @@ function InstagramPost({ piece }: { piece: PreviewPiece }) {
           <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 flex items-center justify-center text-white font-bold text-[10px]">{initial}</div>
           <div>
             <div className="font-semibold text-[11px] leading-tight">{handle}</div>
-            <div className="text-[9px] text-gray-400">Patrocinado</div>
+            <div className="text-[9px] text-gray-400">{t("Patrocinado", "Sponsored", "Patrocinado")}</div>
           </div>
         </div>
         <MoreHorizontal className="h-4 w-4 text-gray-400" />
@@ -124,7 +127,7 @@ function InstagramPost({ piece }: { piece: PreviewPiece }) {
               <Video className="h-4 w-4 text-white" />
             </div>
           )}
-          <div className="text-white/50 text-[10px] uppercase tracking-widest mb-2">Visual</div>
+          <div className="text-white/50 text-[10px] uppercase tracking-widest mb-2">{t("Visual", "Visual", "Visual")}</div>
           <div className="text-white/80 text-[11px] leading-relaxed text-center px-2 font-medium">
             {piece.visualDirection?.slice(0, 80) ?? "Arte gerada pelo agente com identidade visual da campanha"}
           </div>
@@ -161,7 +164,7 @@ function InstagramPost({ piece }: { piece: PreviewPiece }) {
 
       {/* Caption */}
       <div className="px-3 pb-3">
-        {!isReel && <div className="font-semibold text-[11px] mb-0.5">{fmtNum(likes)} curtidas</div>}
+        {!isReel && <div className="font-semibold text-[11px] mb-0.5">{fmtNum(likes)} {t("curtidas", "likes", "Me gusta")}</div>}
         <div className="text-[11px] leading-relaxed text-gray-800">
           <span className="font-semibold">{handle}</span> {caption}
         </div>
@@ -177,7 +180,8 @@ function InstagramPost({ piece }: { piece: PreviewPiece }) {
 // ── Instagram Story ────────────────────────────────────────────────────────────
 
 function InstagramStory({ piece }: { piece: PreviewPiece }) {
-  const handle = piece.creatorName ?? "seu.perfil";
+  const t = useUiText();
+  const handle = piece.creatorName ?? t("seu.perfil", "your.profile", "tu.perfil");
   const initial = handle.charAt(0).toUpperCase();
   return (
     <div className="bg-black rounded-xl overflow-hidden shadow-lg text-white text-xs font-sans max-w-[180px] w-full"
@@ -192,7 +196,7 @@ function InstagramStory({ piece }: { piece: PreviewPiece }) {
       <div className="flex items-center gap-1.5 px-2 py-1.5">
         <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 flex items-center justify-center text-white font-bold text-[8px]">{initial}</div>
         <span className="text-[10px] font-semibold">{handle}</span>
-        <span className="text-[9px] text-white/50 ml-0.5">agora</span>
+         <span className="text-[9px] text-white/50 ml-0.5">{t("agora", "now", "ahora")}</span>
       </div>
       {/* Content */}
       <div className="flex-1 relative"
@@ -214,7 +218,7 @@ function InstagramStory({ piece }: { piece: PreviewPiece }) {
       {/* Bottom */}
       <div className="px-2 py-2">
         <div className="border border-white/30 rounded-full px-3 py-1 text-[9px] text-center text-white/70">
-          Enviar mensagem
+           {t("Enviar mensagem", "Send message", "Enviar mensaje")}
         </div>
       </div>
     </div>
@@ -224,11 +228,12 @@ function InstagramStory({ piece }: { piece: PreviewPiece }) {
 // ── Facebook Post ─────────────────────────────────────────────────────────────
 
 function FacebookPost({ piece }: { piece: PreviewPiece }) {
+  const t = useUiText();
   const m = estimatePostMetrics(piece);
   const reactions = Math.round(m.engagements * 0.65);
   const comments = Math.round(m.engagements * 0.2);
   const shares = Math.round(m.engagements * 0.15);
-  const handle = piece.creatorName ?? "Seu Perfil";
+  const handle = piece.creatorName ?? t("Seu Perfil", "Your Profile", "Tu perfil");
   const initial = handle.charAt(0).toUpperCase();
 
   return (
@@ -240,7 +245,7 @@ function FacebookPost({ piece }: { piece: PreviewPiece }) {
           <div>
             <div className="font-semibold text-[12px] text-blue-800 leading-tight">{handle}</div>
             <div className="flex items-center gap-1 text-[9px] text-gray-500">
-              <span>Agora</span>
+               <span>{t("Agora", "Now", "Ahora")}</span>
               <span>·</span>
               <span>🌐</span>
             </div>
@@ -253,7 +258,7 @@ function FacebookPost({ piece }: { piece: PreviewPiece }) {
       <div className="px-3 pb-2">
         <div className="text-[12px] text-gray-800 leading-relaxed">
           {piece.body.slice(0, 200)}{piece.body.length > 200 ? "... " : " "}
-          {piece.body.length > 200 && <span className="text-gray-500 cursor-pointer">ver mais</span>}
+          {piece.body.length > 200 && <span className="text-gray-500 cursor-pointer">{t("ver mais", "see more", "ver más")}</span>}
         </div>
       </div>
 
@@ -261,7 +266,7 @@ function FacebookPost({ piece }: { piece: PreviewPiece }) {
       <div className="w-full h-36 relative overflow-hidden"
            style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)" }}>
         <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center">
-          <div className="text-white/40 text-[9px] uppercase tracking-wider mb-1">Criativo</div>
+          <div className="text-white/40 text-[9px] uppercase tracking-wider mb-1">{t("Criativo", "Creative", "Creatividad")}</div>
           <div className="text-white/70 text-[10px] text-center px-4 leading-relaxed">
             {piece.visualDirection?.slice(0, 60) ?? "Arte gerada com identidade visual da campanha"}
           </div>
@@ -275,16 +280,16 @@ function FacebookPost({ piece }: { piece: PreviewPiece }) {
           <span className="ml-1">{fmtNum(reactions)}</span>
         </div>
         <div className="text-[10px] text-gray-500">
-          {fmtNum(comments)} comentários · {fmtNum(shares)} compartilhamentos
+          {fmtNum(comments)} {t("comentários", "comments", "comentarios")} · {fmtNum(shares)} {t("compartilhamentos", "shares", "compartidos")}
         </div>
       </div>
 
       {/* Actions */}
       <div className="flex justify-around px-2 py-1">
         {[
-          { icon: ThumbsUp, label: "Curtir" },
-          { icon: MessageCircle, label: "Comentar" },
-          { icon: Share2, label: "Compartilhar" },
+          { icon: ThumbsUp, label: t("Curtir", "Like", "Me gusta") },
+          { icon: MessageCircle, label: t("Comentar", "Comment", "Comentar") },
+          { icon: Share2, label: t("Compartilhar", "Share", "Compartir") },
         ].map(({ icon: Icon, label }) => (
           <button key={label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-gray-100 text-gray-600">
             <Icon className="h-3.5 w-3.5" />
@@ -299,6 +304,7 @@ function FacebookPost({ piece }: { piece: PreviewPiece }) {
 // ── TikTok Preview ─────────────────────────────────────────────────────────────
 
 function TikTokPost({ piece }: { piece: PreviewPiece }) {
+  const t = useUiText();
   const m = estimatePostMetrics(piece);
   const likes = fmtNum(Math.round(m.reach * 0.09));
   const comments = fmtNum(Math.round(m.reach * 0.009));
@@ -315,7 +321,7 @@ function TikTokPost({ piece }: { piece: PreviewPiece }) {
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="text-center p-4">
           <Video className="h-8 w-8 text-white/20 mx-auto mb-2" />
-          <div className="text-white/30 text-[9px] uppercase tracking-widest">Vídeo TikTok</div>
+          <div className="text-white/30 text-[9px] uppercase tracking-widest">{t("Vídeo TikTok", "TikTok video", "Vídeo de TikTok")}</div>
         </div>
       </div>
 
@@ -350,15 +356,15 @@ function TikTokPost({ piece }: { piece: PreviewPiece }) {
         </div>
         <div className="flex items-center gap-1 mt-1">
           <Music2 className="h-2.5 w-2.5 text-white/60" />
-          <span className="text-[8px] text-white/60">Música em tendência · ♪</span>
+           <span className="text-[8px] text-white/60">{t("Música em tendência", "Trending sound", "Sonido popular")} · ♪</span>
         </div>
       </div>
 
       {/* Top username */}
       <div className="absolute top-4 left-0 right-0 flex justify-center">
         <div className="flex items-center gap-1 bg-black/30 rounded-full px-2 py-0.5">
-          <span className="text-[9px] text-white/50">Recomendados</span>
-          <span className="text-[9px] text-white">Seguindo</span>
+           <span className="text-[9px] text-white/50">{t("Recomendados", "For You", "Para ti")}</span>
+           <span className="text-[9px] text-white">{t("Seguindo", "Following", "Siguiendo")}</span>
         </div>
       </div>
     </div>
@@ -376,6 +382,7 @@ interface SocialPostPreviewProps {
 }
 
 export function SocialPostPreview({ piece, showMetrics = true, onApprove, onReject, loading }: SocialPostPreviewProps) {
+  const t = useUiText();
   const isLoading = loading === piece.id;
 
   const previewEl =
@@ -384,10 +391,10 @@ export function SocialPostPreview({ piece, showMetrics = true, onApprove, onReje
     piece.type === "story" ? <InstagramStory piece={piece} /> :
     <InstagramPost piece={piece} />;
 
-  const SEGMENT_LABEL: Record<string, string> = { hot: "🔥 Quentes", warm: "🌡️ Mornos", cold: "❄️ Frios", all: "Todos" };
+  const SEGMENT_LABEL: Record<string, string> = { hot: t("🔥 Quentes", "🔥 Hot", "🔥 Calientes"), warm: t("🌡️ Mornos", "🌡️ Warm", "🌡️ Templados"), cold: t("❄️ Frios", "❄️ Cold", "❄️ Fríos"), all: t("Todos", "All", "Todos") };
   const PHASE_MAP: Record<number, string> = {
-    0: "Pré-lançamento", 1: "Captura", 2: "Aquecimento", 3: "Autoridade",
-    4: "Desejo", 5: "🚀 Abertura", 6: "Escassez", 7: "⚡ Fechamento",
+    0: t("Pré-lançamento", "Pre-launch", "Prelanzamiento"), 1: t("Captura", "Capture", "Captación"), 2: t("Aquecimento", "Warm-up", "Preparación"), 3: t("Autoridade", "Authority", "Autoridad"),
+    4: t("Desejo", "Desire", "Deseo"), 5: t("🚀 Abertura", "🚀 Launch", "🚀 Apertura"), 6: t("Escassez", "Scarcity", "Escasez"), 7: t("⚡ Fechamento", "⚡ Closing", "⚡ Cierre"),
   };
 
   const statusColor =
@@ -400,7 +407,7 @@ export function SocialPostPreview({ piece, showMetrics = true, onApprove, onReje
       {/* Meta row */}
       <div className="flex flex-wrap items-center gap-1.5">
         <Badge variant="outline" className="font-mono text-[10px] rounded-none px-1.5 py-0 uppercase tracking-widest border-muted-foreground/30 text-muted-foreground">
-          Dia {piece.dayIndex}
+           {t("Dia", "Day", "Día")} {piece.dayIndex}
         </Badge>
         {piece.segment && piece.segment !== "all" && (
           <Badge variant="outline" className="font-mono text-[10px] rounded-none px-1.5 py-0">
@@ -408,7 +415,7 @@ export function SocialPostPreview({ piece, showMetrics = true, onApprove, onReje
           </Badge>
         )}
         <span className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest ml-auto">
-          {PHASE_MAP[piece.dayIndex] ?? `Dia ${piece.dayIndex}`}
+           {PHASE_MAP[piece.dayIndex] ?? `${t("Dia", "Day", "Día")} ${piece.dayIndex}`}
         </span>
       </div>
 
@@ -432,13 +439,15 @@ export function SocialPostPreview({ piece, showMetrics = true, onApprove, onReje
               disabled={isLoading}
               className="flex-1 h-7 font-mono text-[11px] uppercase tracking-widest border border-success/50 text-success bg-success/10 hover:bg-success/20 transition-colors disabled:opacity-50"
             >
-              {isLoading ? "..." : "✓ Aprovar"}
+              {isLoading ? "..." : `✓ ${t("Aprovar", "Approve", "Aprobar")}`}
             </button>
           )}
           {onReject && (
             <button
               onClick={() => onReject(piece.id)}
               disabled={isLoading}
+              aria-label={t("Rejeitar publicação", "Reject post", "Rechazar publicación")}
+              title={t("Rejeitar publicação", "Reject post", "Rechazar publicación")}
               className="h-7 px-4 font-mono text-[11px] uppercase tracking-widest border border-border/50 text-muted-foreground hover:text-destructive hover:border-destructive/50 transition-colors"
             >
               ✕
@@ -450,7 +459,7 @@ export function SocialPostPreview({ piece, showMetrics = true, onApprove, onReje
         <div className={`text-center font-mono text-[11px] uppercase tracking-widest py-1 ${
           piece.status === "approved" ? "text-success" : "text-destructive"
         }`}>
-          {piece.status === "approved" ? "✓ Aprovado" : "✕ Rejeitado"}
+           {piece.status === "approved" ? `✓ ${t("Aprovado", "Approved", "Aprobado")}` : `✕ ${t("Rejeitado", "Rejected", "Rechazado")}`}
         </div>
       )}
     </div>

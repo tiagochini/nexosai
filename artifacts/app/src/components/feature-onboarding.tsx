@@ -10,6 +10,7 @@ import { X, Lightbulb, ChevronRight, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMode } from "@/lib/mode";
 import { useFeatureOnboarding, type FeatureKey } from "@/hooks/useFeatureOnboarding";
+import { useUiText } from "@/lib/i18n";
 
 export interface FeatureOnboardingProps {
   featureKey: FeatureKey;
@@ -33,6 +34,7 @@ export function FeatureOnboarding({
   actionLabel,
   onAction,
 }: FeatureOnboardingProps) {
+  const t = useUiText();
   const { isFundador } = useMode();
   const { isOpen, isFirstVisit, close } = useFeatureOnboarding(featureKey);
 
@@ -47,7 +49,7 @@ export function FeatureOnboarding({
         <button
           onClick={close}
           className="absolute top-3 right-3 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-          aria-label="Fechar explicação"
+          aria-label={t("Fechar explicação", "Close explanation", "Cerrar explicación")}
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -60,7 +62,7 @@ export function FeatureOnboarding({
             </span>
             {isFirstVisit && (
               <span className="font-mono text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary border border-primary/30">
-                NOVO
+                {t("NOVO", "NEW", "NUEVO")}
               </span>
             )}
           </div>
@@ -98,7 +100,7 @@ export function FeatureOnboarding({
               className="rounded-none font-mono uppercase tracking-widest text-[11px] h-7 px-3 text-muted-foreground/60 hover:text-muted-foreground"
               onClick={close}
             >
-              Entendi
+              {t("Entendi", "Got it", "Entendido")}
             </Button>
           </div>
         </div>
@@ -112,7 +114,7 @@ export function FeatureOnboarding({
       <button
         onClick={close}
         className="absolute top-3 right-4 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-        aria-label="Fechar explicação"
+        aria-label={t("Fechar explicação", "Close explanation", "Cerrar explicación")}
       >
         <X className="h-3.5 w-3.5" />
       </button>
@@ -128,7 +130,7 @@ export function FeatureOnboarding({
                 </span>
                 {isFirstVisit && (
                   <span className="font-mono text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary border border-primary/30">
-                    NOVO
+                    {t("NOVO", "NEW", "NUEVO")}
                   </span>
                 )}
               </div>
@@ -154,7 +156,7 @@ export function FeatureOnboarding({
               className="rounded-none font-mono uppercase tracking-widest text-[11px] h-7 px-3 text-muted-foreground/60 hover:text-muted-foreground"
               onClick={close}
             >
-              Entendi
+              {t("Entendi", "Got it", "Entendido")}
             </Button>
           </div>
         </div>
@@ -174,7 +176,11 @@ export function FeatureOnboardingTrigger({
   featureKey: FeatureKey;
   label?: string;
 }) {
+  const t = useUiText();
   const { openManually } = useFeatureOnboarding(featureKey);
+  const translatedLabel = label === "Ver explicação desta área"
+    ? t(label, "View this area’s explanation", "Ver explicación de esta sección")
+    : label;
 
   return (
     <button
@@ -182,7 +188,7 @@ export function FeatureOnboardingTrigger({
       className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
     >
       <BookOpen className="h-3 w-3" />
-      {label}
+      {translatedLabel}
     </button>
   );
 }

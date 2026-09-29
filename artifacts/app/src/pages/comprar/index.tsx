@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -39,8 +40,8 @@ interface CardInstallmentOption {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function fmtBRL(cents: number) {
-  return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+function fmtBRL(cents: number, locale: string) {
+  return new Intl.NumberFormat(intlLocale(locale as "pt-BR" | "en-US" | "en-AU" | "es-LA"), { style: "currency", currency: "BRL" }).format(cents / 100);
 }
 
 function formatBarcode(code: string) {
@@ -50,21 +51,22 @@ function formatBarcode(code: string) {
 }
 
 function useCountdown(expiresAt?: string | null) {
+  const t = useUiText();
   const [remaining, setRemaining] = useState("");
   useEffect(() => {
     if (!expiresAt) return;
     const update = () => {
       const diff = new Date(expiresAt).getTime() - Date.now();
-      if (diff <= 0) { setRemaining("Expirado"); return; }
+      if (diff <= 0) { setRemaining(t("Expirado", "Expired", "Vencido")); return; }
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
-      setRemaining(h > 0 ? `${h}h ${m}m` : `${m}m ${s.toString().padStart(2,"0")}s`);
+      setRemaining(h > 0 ? t(`${h}h ${m}m`, `${h}h ${m}m`, `${h} h ${m} min`) : t(`${m}m ${s.toString().padStart(2,"0")}s`, `${m}m ${s.toString().padStart(2,"0")}s`, `${m} min ${s.toString().padStart(2,"0")} s`));
     };
     update();
-    const t = setInterval(update, 1000);
-    return () => clearInterval(t);
-  }, [expiresAt]);
+    const intervalId = setInterval(update, 1000);
+    return () => clearInterval(intervalId);
+  }, [expiresAt, t]);
   return remaining;
 }
 
@@ -77,6 +79,8 @@ const METHOD_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
 // ── Payment display ───────────────────────────────────────────────────────────
 
 function PaymentDisplay({ sale, onPaid }: { sale: Sale; onPaid: () => void }) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const [copied, setCopied] = useState(false);
   const countdown = useCountdown(sale.pixData?.expiresAt);
 
@@ -99,12 +103,12 @@ function PaymentDisplay({ sale, onPaid }: { sale: Sale; onPaid: () => void }) {
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
-      toast.success(`${label} copiado!`);
+      toast.success(t(`${label} copiado!`, `${label} copied!`, `¡${label} copiado!`));
       setTimeout(() => setCopied(false), 2000);
     }).catch(() => {});
   };
 
-  const amountBrl = fmtBRL(sale.amountCents);
+  const amountBrl = fmtBRL(sale.amountCents, locale);
 
   // Credit card — show result
   if (sale.method === "credit_card") {
@@ -116,9 +120,9 @@ function PaymentDisplay({ sale, onPaid }: { sale: Sale; onPaid: () => void }) {
           <>
             <CheckCheck className="h-12 w-12 text-success mx-auto" />
             <div>
-              <div className="font-mono text-lg font-bold uppercase tracking-widest text-success">Pagamento aprovado!</div>
+              <div className="font-mono text-lg font-bold uppercase tracking-widest text-success">{t("Pagamento aprovado!", "Payment approved!", "¡Pago aprobado!")}</div>
               <p className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mt-1">
-                {card?.brand} •••• {card?.last4} · {card?.installmentCount ?? 1}x de {fmtBRL(card?.installmentValueCents ?? sale.amountCents)}
+                {card?.brand} •••• {card?.last4} · {card?.installmentCount ?? 1}x {t("de", "of", "de")} {fmtBRL(card?.installmentValueCents ?? sale.amountCents, locale)}
               </p>
             </div>
           </>
@@ -126,9 +130,9 @@ function PaymentDisplay({ sale, onPaid }: { sale: Sale; onPaid: () => void }) {
           <>
             <AlertCircle className="h-10 w-10 text-yellow-400 mx-auto" />
             <div>
-              <div className="font-mono text-sm font-bold text-foreground">Processando pagamento...</div>
+              <div className="font-mono text-sm font-bold text-foreground">{t("Processando pagamento...", "Processing payment...", "Procesando el pago...")}</div>
               <p className="font-mono text-[11px] text-muted-foreground mt-1">
-                {card?.brand} •••• {card?.last4} · {card?.installmentCount ?? 1}x de {fmtBRL(card?.installmentValueCents ?? sale.amountCents)}
+                {card?.brand} •••• {card?.last4} · {card?.installmentCount ?? 1}x {t("de", "of", "de")} {fmtBRL(card?.installmentValueCents ?? sale.amountCents, locale)}
               </p>
             </div>
           </>
@@ -145,7 +149,7 @@ function PaymentDisplay({ sale, onPaid }: { sale: Sale; onPaid: () => void }) {
       <div className="flex items-center justify-between px-5 py-3 border-b border-border/30 bg-muted/10">
         <div className="flex items-center gap-2">
           <div className="font-mono text-xs font-bold uppercase tracking-widest text-foreground">
-            {sale.method === "pix" ? "PIX" : "Boleto"} · {amountBrl}
+            {sale.method === "pix" ? "PIX" : t("Boleto", "Bank slip", "Boleto")} · {amountBrl}
           </div>
         </div>
         {countdown && (
@@ -159,22 +163,22 @@ function PaymentDisplay({ sale, onPaid }: { sale: Sale; onPaid: () => void }) {
             {pix.qrCode && (
               <div className="flex flex-col sm:flex-row gap-5 items-start">
                 <div className="border-2 border-primary/30 p-2 bg-white inline-block">
-                  <img src={`data:image/png;base64,${pix.qrCode}`} alt="QR Code PIX" className="w-40 h-40 block" />
+                  <img src={`data:image/png;base64,${pix.qrCode}`} alt={t("QR Code PIX", "PIX QR code", "Código QR de PIX")} className="w-40 h-40 block" />
                 </div>
                 <div className="flex-1 space-y-3">
                   <div>
-                    <div className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-widest mb-1">Pix Copia e Cola</div>
+                    <div className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-widest mb-1">{t("PIX copia e cola", "PIX copy and paste", "PIX para copiar y pegar")}</div>
                     <div className="border border-border/40 bg-muted/10 p-3 font-mono text-[11px] text-muted-foreground break-all max-h-20 overflow-y-auto">
                       {pix.copiaECola}
                     </div>
                   </div>
                   <Button
-                    onClick={() => handleCopy(pix.copiaECola!, "Código PIX")}
+                    onClick={() => handleCopy(pix.copiaECola!, t("Código PIX", "PIX code", "Código PIX"))}
                     variant="outline"
                     className="w-full rounded-none font-mono uppercase tracking-widest text-xs gap-2 border-primary/30"
                   >
                     {copied ? <CheckCheck className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-                    {copied ? "Copiado!" : "Copiar código PIX"}
+                    {copied ? t("Copiado!", "Copied!", "¡Copiado!") : t("Copiar código PIX", "Copy PIX code", "Copiar código PIX")}
                   </Button>
                 </div>
               </div>
@@ -182,7 +186,7 @@ function PaymentDisplay({ sale, onPaid }: { sale: Sale; onPaid: () => void }) {
             <div className="flex items-center gap-2 pt-2 border-t border-border/30">
               <RefreshCw className="h-3.5 w-3.5 text-muted-foreground/40 animate-spin" />
               <span className="font-mono text-[11px] text-muted-foreground/50 uppercase tracking-widest">
-                Aguardando confirmação automática...
+                {t("Aguardando confirmação automática...", "Waiting for automatic confirmation...", "Esperando la confirmación automática...")}
               </span>
             </div>
           </div>
@@ -194,19 +198,19 @@ function PaymentDisplay({ sale, onPaid }: { sale: Sale; onPaid: () => void }) {
             {boleto.barcode && (
               <>
                 <div>
-                  <div className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-widest mb-1">Linha Digitável</div>
+                  <div className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-widest mb-1">{t("Linha de pagamento", "Payment reference", "Línea de pago")}</div>
                   <div className="border border-border/40 bg-muted/10 p-3 font-mono text-[11px] text-muted-foreground break-all">
                     {formatBarcode(boleto.barcode)}
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={() => handleCopy(boleto.barcode!, "Código")} variant="outline" className="flex-1 rounded-none font-mono uppercase tracking-widest text-xs gap-2">
+                  <Button onClick={() => handleCopy(boleto.barcode!, t("Código", "Code", "Código"))} variant="outline" className="flex-1 rounded-none font-mono uppercase tracking-widest text-xs gap-2">
                     {copied ? <CheckCheck className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-                    Copiar
+                    {t("Copiar", "Copy", "Copiar")}
                   </Button>
                   {boleto.barcodeUrl && (
                     <Button onClick={() => window.open(boleto.barcodeUrl!, "_blank")} variant="outline" className="flex-1 rounded-none font-mono uppercase tracking-widest text-xs gap-2">
-                      <ExternalLink className="h-3.5 w-3.5" /> Abrir PDF
+                      <ExternalLink className="h-3.5 w-3.5" /> {t("Abrir PDF", "Open PDF", "Abrir PDF")}
                     </Button>
                   )}
                 </div>
@@ -215,7 +219,7 @@ function PaymentDisplay({ sale, onPaid }: { sale: Sale; onPaid: () => void }) {
             <div className="flex items-center gap-2 pt-2 border-t border-border/30">
               <RefreshCw className="h-3.5 w-3.5 text-muted-foreground/40 animate-spin" />
               <span className="font-mono text-[11px] text-muted-foreground/50 uppercase tracking-widest">
-                Aguardando confirmação...
+                {t("Aguardando confirmação...", "Waiting for confirmation...", "Esperando la confirmación...")}
               </span>
             </div>
           </div>
@@ -228,6 +232,8 @@ function PaymentDisplay({ sale, onPaid }: { sale: Sale; onPaid: () => void }) {
 // ── Checkout form ─────────────────────────────────────────────────────────────
 
 function CheckoutForm({ product, onSale }: { product: PublicProduct; onSale: (s: Sale) => void }) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const [method, setMethod] = useState<"pix" | "boleto" | "credit_card">("pix");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -255,7 +261,7 @@ function CheckoutForm({ product, onSale }: { product: PublicProduct; onSale: (s:
     fetch(`/api/products/${product.id}/installments`)
       .then(async (response) => {
         const data = await response.json() as { options?: CardInstallmentOption[]; error?: string };
-        if (!response.ok || !data.options?.length) throw new Error(data.error ?? "Parcelamento indisponível.");
+        if (!response.ok || !data.options?.length) throw new Error(data.error ?? t("Parcelamento indisponível.", "Installments are unavailable.", "Las cuotas no están disponibles."));
         if (!cancelled) {
           setInstallmentOptions(data.options);
           setInstallmentCount(data.options[0]?.installmentCount ?? 1);
@@ -268,7 +274,7 @@ function CheckoutForm({ product, onSale }: { product: PublicProduct; onSale: (s:
         if (!cancelled) setInstallmentsLoading(false);
       });
     return () => { cancelled = true; };
-  }, [method, installmentOptions.length, product.id]);
+  }, [method, installmentOptions.length, product.id, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,45 +306,45 @@ function CheckoutForm({ product, onSale }: { product: PublicProduct; onSale: (s:
       });
       const data = await res.json() as { sale?: Sale; error?: string };
       if (!res.ok || !data.sale) {
-        setError(data.error ?? "Erro ao processar pagamento.");
+        setError(data.error ?? t("Erro ao processar pagamento.", "Couldn't process payment.", "No se pudo procesar el pago."));
         return;
       }
       onSale(data.sale);
     } catch {
-      setError("Erro de conexão. Verifique sua internet.");
+      setError(t("Erro de conexão. Verifique sua internet.", "Connection error. Check your internet connection.", "Error de conexión. Revisa tu conexión a internet."));
     } finally {
       setLoading(false);
     }
   };
 
   const methods = [
-    { value: "pix" as const, label: "PIX", sub: "Instantâneo · QR Code", icon: QrCode },
-    { value: "boleto" as const, label: "Boleto", sub: "Vence em 3 dias", icon: FileText },
-    { value: "credit_card" as const, label: "Cartão", sub: "À vista ou parcelado", icon: CreditCard },
+    { value: "pix" as const, label: "PIX", sub: t("Instantâneo · QR Code", "Instant · QR code", "Instantáneo · código QR"), icon: QrCode },
+    { value: "boleto" as const, label: t("Boleto", "Bank slip", "Boleto"), sub: t("Vence em 3 dias", "Due in 3 days", "Vence en 3 días"), icon: FileText },
+    { value: "credit_card" as const, label: t("Cartão", "Card", "Tarjeta"), sub: t("À vista ou parcelado", "One-time or instalments", "Un solo pago o cuotas"), icon: CreditCard },
   ];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Buyer info */}
       <div className="space-y-3">
-        <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">Seus dados</div>
+        <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">{t("Seus dados", "Your details", "Tus datos")}</div>
         <div className="space-y-1.5">
-          <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Nome completo</Label>
-          <Input value={name} onChange={e => setName(e.target.value)} placeholder="Como você se chama" required className="rounded-none" />
+          <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("Nome completo", "Full name", "Nombre completo")}</Label>
+          <Input value={name} onChange={e => setName(e.target.value)} placeholder={t("Como você se chama", "Your name", "Cómo te llamas")} required className="rounded-none" />
         </div>
         <div className="space-y-1.5">
-          <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Email</Label>
-          <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required className="rounded-none" />
+          <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("E-mail", "Email", "Correo electrónico")}</Label>
+          <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required className="rounded-none" />
         </div>
         <div className="space-y-1.5">
-          <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">CPF (opcional)</Label>
+          <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("CPF (opcional)", "CPF (optional)", "CPF (opcional)")}</Label>
           <Input value={cpf} onChange={e => setCpf(e.target.value)} placeholder="000.000.000-00" className="rounded-none" />
         </div>
       </div>
 
       {/* Method selector */}
       <div className="space-y-2">
-        <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">Forma de pagamento</div>
+        <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">{t("Forma de pagamento", "Payment method", "Forma de pago")}</div>
         <div className="grid grid-cols-3 gap-2">
           {methods.map(m => {
             const Icon = m.icon;
@@ -366,10 +372,10 @@ function CheckoutForm({ product, onSale }: { product: PublicProduct; onSale: (s:
       {method === "credit_card" && (
         <div className="border border-border/40 bg-muted/5 p-4 space-y-3">
           <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground font-bold flex items-center gap-2">
-            <Lock className="h-3 w-3" /> Dados do cartão · Cobrança segura via Asaas
+            <Lock className="h-3 w-3" /> {t("Dados do cartão · Cobrança segura via Asaas", "Card details · Secure payment via Asaas", "Datos de la tarjeta · Pago seguro a través de Asaas")}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="card-installments" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Parcelamento</Label>
+            <Label htmlFor="card-installments" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("Parcelamento", "Installments", "Cuotas")}</Label>
             <select
               id="card-installments"
               value={installmentCount}
@@ -377,20 +383,20 @@ function CheckoutForm({ product, onSale }: { product: PublicProduct; onSale: (s:
               disabled={installmentsLoading || installmentOptions.length === 0}
               className="w-full h-10 border border-border bg-background px-3 font-mono text-xs text-foreground disabled:opacity-50"
             >
-              {installmentsLoading && <option>Calculando opções...</option>}
+              {installmentsLoading && <option>{t("Calculando opções...", "Calculating options...", "Calculando opciones...")}</option>}
               {!installmentsLoading && installmentOptions.map((option) => (
                 <option key={option.installmentCount} value={option.installmentCount}>
-                  {option.installmentCount}x de {fmtBRL(option.installmentValueCents)} · total {fmtBRL(option.totalCents)}
+                  {option.installmentCount}x {t("de", "of", "de")} {fmtBRL(option.installmentValueCents, locale)} · {t("total", "total", "total")} {fmtBRL(option.totalCents, locale)}
                 </option>
               ))}
             </select>
           </div>
           <div className="space-y-1.5">
-            <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Nome no cartão</Label>
+            <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("Nome no cartão", "Name on card", "Nombre en la tarjeta")}</Label>
             <Input value={cardHolder} onChange={e => setCardHolder(e.target.value)} placeholder="NOME SOBRENOME" required={method === "credit_card"} className="rounded-none uppercase" />
           </div>
           <div className="space-y-1.5">
-            <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Número do cartão</Label>
+            <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("Número do cartão", "Card number", "Número de tarjeta")}</Label>
             <Input
               value={cardNumber}
               onChange={e => {
@@ -405,20 +411,20 @@ function CheckoutForm({ product, onSale }: { product: PublicProduct; onSale: (s:
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div className="space-y-1.5">
-              <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Mês</Label>
+            <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("Mês", "Month", "Mes")}</Label>
               <Input value={cardMonth} onChange={e => setCardMonth(e.target.value.replace(/\D/g,"").slice(0,2))} placeholder="MM" required={method === "credit_card"} className="rounded-none font-mono" maxLength={2} />
             </div>
             <div className="space-y-1.5">
-              <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Ano</Label>
-              <Input value={cardYear} onChange={e => setCardYear(e.target.value.replace(/\D/g,"").slice(0,4))} placeholder="AAAA" required={method === "credit_card"} className="rounded-none font-mono" maxLength={4} />
+            <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("Ano", "Year", "Año")}</Label>
+            <Input value={cardYear} onChange={e => setCardYear(e.target.value.replace(/\D/g,"").slice(0,4))} placeholder={t("AAAA", "YYYY", "AAAA")} required={method === "credit_card"} className="rounded-none font-mono" maxLength={4} />
             </div>
             <div className="space-y-1.5">
-              <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">CVV</Label>
+            <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">CVV</Label>
               <Input value={cardCvv} onChange={e => setCardCvv(e.target.value.replace(/\D/g,"").slice(0,4))} placeholder="123" required={method === "credit_card"} className="rounded-none font-mono" maxLength={4} />
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">CPF do titular</Label>
+          <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("CPF do titular", "Cardholder's CPF", "CPF del titular")}</Label>
             <Input value={cardCpf} onChange={e => setCardCpf(e.target.value)} placeholder="000.000.000-00" className="rounded-none" />
           </div>
         </div>
@@ -433,18 +439,18 @@ function CheckoutForm({ product, onSale }: { product: PublicProduct; onSale: (s:
       {/* Total + CTA */}
       <div className="border-t border-border/30 pt-4 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Total</span>
-          <span className="font-mono text-2xl font-black text-primary">{fmtBRL(chargedAmount)}</span>
+          <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("Total", "Total", "Total")}</span>
+          <span className="font-mono text-2xl font-black text-primary">{fmtBRL(chargedAmount, locale)}</span>
         </div>
         <Button type="submit" disabled={loading} className="w-full h-12 rounded-none btn-weapon-primary font-mono uppercase tracking-widest font-bold text-sm gap-2">
           {loading ? (
-            <><Loader2 className="h-4 w-4 animate-spin" /> Processando...</>
+            <><Loader2 className="h-4 w-4 animate-spin" /> {t("Processando...", "Processing...", "Procesando...")}</>
           ) : (
-            <><Shield className="h-4 w-4" /> Pagar agora <ArrowRight className="h-4 w-4" /></>
+            <><Shield className="h-4 w-4" /> {t("Pagar agora", "Pay now", "Pagar ahora")} <ArrowRight className="h-4 w-4" /></>
           )}
         </Button>
         <p className="font-mono text-[11px] text-center text-muted-foreground/40 uppercase tracking-widest flex items-center justify-center gap-1.5">
-          <Lock className="h-3 w-3" /> Pagamento seguro via Asaas
+          <Lock className="h-3 w-3" /> {t("Pagamento seguro via Asaas", "Secure payment via Asaas", "Pago seguro a través de Asaas")}
         </p>
       </div>
     </form>
@@ -454,6 +460,7 @@ function CheckoutForm({ product, onSale }: { product: PublicProduct; onSale: (s:
 // ── Success screen ────────────────────────────────────────────────────────────
 
 function SuccessScreen({ successUrl }: { successUrl?: string }) {
+  const t = useUiText();
   useEffect(() => {
     if (!successUrl) return;
     const t = setTimeout(() => { window.location.href = successUrl; }, 3000);
@@ -466,16 +473,16 @@ function SuccessScreen({ successUrl }: { successUrl?: string }) {
         <CheckCheck className="h-10 w-10 text-success" />
       </div>
       <div>
-        <div className="font-mono text-[11px] uppercase tracking-widest text-success font-bold mb-2">Compra confirmada!</div>
-        <h2 className="font-mono font-black uppercase text-2xl tracking-tight text-foreground mb-2">Obrigado!</h2>
+        <div className="font-mono text-[11px] uppercase tracking-widest text-success font-bold mb-2">{t("Compra confirmada!", "Purchase confirmed!", "¡Compra confirmada!")}</div>
+        <h2 className="font-mono font-black uppercase text-2xl tracking-tight text-foreground mb-2">{t("Obrigado!", "Thank you!", "¡Gracias!")}</h2>
         <p className="font-mono text-xs text-muted-foreground">
-          Você receberá um email com os detalhes da sua compra.
-          {successUrl && " Redirecionando em instantes..."}
+          {t("Você receberá um e-mail com os detalhes da sua compra.", "You'll receive an email with your purchase details.", "Recibirás un correo con los detalles de tu compra.")}
+          {successUrl && ` ${t("Redirecionando em instantes...", "Redirecting shortly...", "Serás redirigido en unos instantes...")}`}
         </p>
       </div>
       {successUrl && (
         <Button onClick={() => { window.location.href = successUrl; }} className="rounded-none font-mono uppercase tracking-widest text-xs gap-2">
-          <ChevronRight className="h-3.5 w-3.5" /> Continuar
+          <ChevronRight className="h-3.5 w-3.5" /> {t("Continuar", "Continue", "Continuar")}
         </Button>
       )}
     </div>
@@ -485,6 +492,8 @@ function SuccessScreen({ successUrl }: { successUrl?: string }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ComprarPage() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const params = useParams<{ productId: string }>();
   const productId = params.productId;
 
@@ -515,7 +524,7 @@ export default function ComprarPage() {
             NexOS
           </div>
           <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">
-            <Lock className="h-3 w-3" /> Compra segura
+            <Lock className="h-3 w-3" /> {t("Compra segura", "Secure purchase", "Compra segura")}
           </div>
         </div>
       </nav>
@@ -530,7 +539,7 @@ export default function ComprarPage() {
         ) : notFound ? (
           <div className="text-center py-20 space-y-4">
             <X className="h-12 w-12 text-muted-foreground/30 mx-auto" />
-            <p className="font-mono text-muted-foreground uppercase tracking-widest">Produto não encontrado ou inativo.</p>
+            <p className="font-mono text-muted-foreground uppercase tracking-widest">{t("Produto não encontrado ou inativo.", "Product not found or inactive.", "Producto no encontrado o inactivo.")}</p>
           </div>
         ) : product ? (
           <div className="border border-border/30 bg-card/30 backdrop-blur-sm p-8 relative">
@@ -546,26 +555,26 @@ export default function ComprarPage() {
                 {/* Product summary */}
                 <div className="border border-border/30 bg-muted/10 p-4">
                   <div className="font-mono text-sm font-bold text-foreground">{product.name}</div>
-                  <div className="font-mono text-2xl font-black text-primary mt-1">{fmtBRL(sale.amountCents)}</div>
+                  <div className="font-mono text-2xl font-black text-primary mt-1">{fmtBRL(sale.amountCents, locale)}</div>
                 </div>
                 <PaymentDisplay sale={sale} onPaid={() => setPaid(true)} />
                 <button
                   onClick={() => setSale(null)}
                   className="font-mono text-[11px] text-muted-foreground/50 hover:text-muted-foreground uppercase tracking-widest transition-colors"
                 >
-                  ← Escolher outra forma de pagamento
+                  ← {t("Escolher outra forma de pagamento", "Choose another payment method", "Elegir otra forma de pago")}
                 </button>
               </div>
             ) : (
               <div className="space-y-6">
                 {/* Product header */}
                 <div className="border-b border-border/30 pb-5">
-                  <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold mb-1">Você está comprando</div>
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold mb-1">{t("Você está comprando", "You're purchasing", "Estás comprando")}</div>
                   <h1 className="font-mono font-black text-xl text-foreground">{product.name}</h1>
                   {product.description && (
                     <p className="font-mono text-xs text-muted-foreground/70 mt-2 leading-relaxed">{product.description}</p>
                   )}
-                  <div className="font-mono text-3xl font-black text-primary mt-3">{fmtBRL(product.priceCents)}</div>
+                  <div className="font-mono text-3xl font-black text-primary mt-3">{fmtBRL(product.priceCents, locale)}</div>
                 </div>
                 <CheckoutForm product={product} onSale={setSale} />
               </div>

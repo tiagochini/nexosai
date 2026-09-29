@@ -14,7 +14,7 @@ import {
   ChevronsUpDown, Check, Plus, Loader2, Server
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
-import { useAppI18n } from "@/lib/i18n";
+import { useAppI18n, useUiText, useUiLocale, intlLocale } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { RecordButton } from "@/components/recording/RecordButton";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -30,6 +30,7 @@ import { useWorkspaceSocket } from "@/lib/socket";
 function WorkspaceSwitcher({ onNav, isMobileHeader }: { onNav?: () => void; isMobileHeader?: boolean }) {
   const { workspacesData, switchWorkspace, workspace } = useAuth();
   const [switching, setSwitching] = useState(false);
+  const t = useUiText();
 
   if (!workspacesData) return null;
 
@@ -40,7 +41,7 @@ function WorkspaceSwitcher({ onNav, isMobileHeader }: { onNav?: () => void; isMo
       await switchWorkspace(id);
       onNav?.();
     } catch (err: any) {
-      toast.error(err.message || "Erro ao trocar de workspace");
+      toast.error(err.message || t("Erro ao trocar de workspace", "Couldn't switch workspace", "No se pudo cambiar de espacio de trabajo"));
       setSwitching(false);
     }
   };
@@ -48,25 +49,25 @@ function WorkspaceSwitcher({ onNav, isMobileHeader }: { onNav?: () => void; isMo
   const triggerButton = isMobileHeader ? (
     <button
       disabled={switching}
-      title={workspace?.name || "Selecionar workspace"}
+      title={workspace?.name || t("Selecionar workspace", "Select workspace", "Seleccionar espacio de trabajo")}
       className="flex min-w-0 w-full items-center gap-1.5 px-2 py-1.5 bg-muted/20 border border-border/50 rounded-sm hover:bg-muted/40 transition-colors disabled:opacity-50"
     >
       <span className="font-mono text-[10px] font-semibold truncate text-foreground uppercase tracking-wider">
-        {switching ? "Trocando..." : (workspace?.name || "...")}
+        {switching ? t("Trocando...", "Switching...", "Cambiando...") : (workspace?.name || "...")}
       </span>
       {switching ? <Loader2 className="h-3 w-3 text-muted-foreground animate-spin shrink-0" /> : <ChevronsUpDown className="h-3 w-3 text-muted-foreground shrink-0" />}
     </button>
   ) : (
     <button
       disabled={switching}
-      title={workspace?.name || "Selecionar workspace"}
+      title={workspace?.name || t("Selecionar workspace", "Select workspace", "Seleccionar espacio de trabajo")}
       className="flex items-center justify-between w-full px-3 py-2 bg-muted/20 border border-border/50 rounded-sm hover:bg-muted/40 transition-colors disabled:opacity-50"
     >
       <div className="flex flex-col items-start min-w-0">
-        <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground/60 mb-0.5">Operação</span>
+        <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground/60 mb-0.5">{t("Operação", "Workspace", "Espacio de trabajo")}</span>
         <div className="flex items-center gap-2 max-w-full">
           <span className="font-mono text-xs font-semibold truncate text-foreground">
-            {switching ? "Trocando..." : (workspace?.name || "...")}
+            {switching ? t("Trocando...", "Switching...", "Cambiando...") : (workspace?.name || "...")}
           </span>
         </div>
       </div>
@@ -81,7 +82,7 @@ function WorkspaceSwitcher({ onNav, isMobileHeader }: { onNav?: () => void; isMo
           {triggerButton}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-[240px] rounded-none border border-primary/20 bg-card/95 backdrop-blur-xl font-mono">
-          <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">Suas Operações</DropdownMenuLabel>
+          <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">{t("Suas operações", "Your workspaces", "Tus espacios de trabajo")}</DropdownMenuLabel>
           <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-border/30">
             {workspacesData.workspaces.map(ws => (
               <DropdownMenuItem
@@ -104,16 +105,16 @@ function WorkspaceSwitcher({ onNav, isMobileHeader }: { onNav?: () => void; isMo
             <Link href="/settings?tab=workspace&workspaceAction=add" onClick={onNav}>
               <Plus className="h-3.5 w-3.5 mr-2" />
               <span className="flex flex-col">
-                <span className="text-xs font-semibold uppercase tracking-widest">Adicionar workspace</span>
+                <span className="text-xs font-semibold uppercase tracking-widest">{t("Adicionar workspace", "Add workspace", "Añadir espacio de trabajo")}</span>
                 <span className="mt-0.5 text-[9px] normal-case tracking-normal text-muted-foreground">
-                  Nova marca, cliente ou operação
+                  {t("Nova marca, cliente ou operação", "New brand, client, or operation", "Nueva marca, cliente u operación")}
                 </span>
               </span>
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="cursor-pointer rounded-none focus:bg-primary/10 py-2">
             <Link href="/settings?tab=workspace" onClick={onNav}>
-              <Settings className="h-3.5 w-3.5 mr-2" /> <span className="text-[10px] uppercase tracking-widest">Gerenciar operações</span>
+              <Settings className="h-3.5 w-3.5 mr-2" /> <span className="text-[10px] uppercase tracking-widest">{t("Gerenciar operações", "Manage workspaces", "Administrar espacios de trabajo")}</span>
             </Link>
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -124,15 +125,18 @@ function WorkspaceSwitcher({ onNav, isMobileHeader }: { onNav?: () => void; isMo
 
 function AdminTopupButton({ onSuccess, compact }: { onSuccess: () => void; compact?: boolean }) {
   const [loading, setLoading] = useState(false);
+  const { locale } = useUiLocale();
+  const t = useUiText();
   const handleTopup = async () => {
     if (loading) return;
     setLoading(true);
     try {
       const result = await customFetch<{ ok: boolean; credited: number; newBalance: number }>("/api/credits/admin-topup", { method: "POST" });
-      toast.success(`+${result.credited.toLocaleString("pt-BR")} créditos recarregados. Saldo: ${result.newBalance.toLocaleString("pt-BR")} cr`);
+      const numberFormat = new Intl.NumberFormat(intlLocale(locale));
+      toast.success(t(`+${numberFormat.format(result.credited)} créditos recarregados. Saldo: ${numberFormat.format(result.newBalance)} cr`, `+${numberFormat.format(result.credited)} credits added. Balance: ${numberFormat.format(result.newBalance)} credits`, `+${numberFormat.format(result.credited)} créditos recargados. Saldo: ${numberFormat.format(result.newBalance)} créditos`));
       onSuccess();
     } catch {
-      toast.error("Erro ao recarregar créditos.");
+      toast.error(t("Erro ao recarregar créditos.", "Couldn't add credits.", "No se pudieron recargar los créditos."));
     } finally {
       setLoading(false);
     }
@@ -145,7 +149,7 @@ function AdminTopupButton({ onSuccess, compact }: { onSuccess: () => void; compa
         className="mt-1 flex items-center gap-1 font-mono text-[11px] text-primary uppercase tracking-widest hover:text-primary/80 disabled:opacity-50 transition-colors animate-pulse"
       >
         <RefreshCw className={`h-2.5 w-2.5 ${loading ? "animate-spin" : ""}`} />
-        {loading ? "Recarregando..." : "Recarregar Grátis"}
+        {loading ? t("Recarregando...", "Reloading...", "Recargando...") : t("Recarregar grátis", "Top up for free", "Recargar gratis")}
       </button>
     );
   }
@@ -156,7 +160,7 @@ function AdminTopupButton({ onSuccess, compact }: { onSuccess: () => void; compa
       className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2 h-9 w-full"
     >
       <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-      {loading ? "Recarregando..." : "Recarregar Créditos (Grátis)"}
+      {loading ? t("Recarregando...", "Reloading...", "Recargando...") : t("Recarregar créditos (grátis)", "Top up credits (free)", "Recargar créditos (gratis)")}
     </Button>
   );
 }
@@ -176,6 +180,8 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
   const queryClient = useQueryClient();
   const [savingLocale, setSavingLocale] = useState(false);
   const tr = useAppI18n();
+  const t = useUiText();
+  const { locale } = useUiLocale();
 
   const currentLocale: LocaleCode = (user?.locale as LocaleCode | undefined) ?? "pt-BR";
   const currentLocaleOpt = LOCALE_OPTIONS.find(o => o.value === currentLocale) ?? LOCALE_OPTIONS[0]!
@@ -189,10 +195,10 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locale }),
       });
-      toast.success("Idioma do agente atualizado.");
+      toast.success(t("Idioma da plataforma atualizado.", "Platform language updated.", "Idioma de la plataforma actualizado."));
       await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     } catch {
-      toast.error("Erro ao salvar idioma.");
+      toast.error(t("Erro ao salvar idioma.", "Couldn't save language.", "No se pudo guardar el idioma."));
     } finally {
       setSavingLocale(false);
     }
@@ -232,11 +238,11 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       label: tr.nav.main,
       items: [
         { name: tr.sidebar.dashboard,  href: "/",          icon: LayoutDashboard },
-        { name: "Cockpit do Lançamento", href: "/launcher", icon: Crosshair },
-        { name: "Briefing Central", href: "/intake", icon: FileText, badge: "Hub" },
+        { name: t("Cockpit do lançamento", "Launch cockpit", "Panel de lanzamiento"), href: "/launcher", icon: Crosshair },
+        { name: t("Briefing central", "Central brief", "Resumen central"), href: "/intake", icon: FileText, badge: "Hub" },
         { name: tr.sidebar.campaigns,  href: "/campaigns", icon: Rocket },
-        { name: "Inteligência de Mercado", href: "/market-intel", icon: Radar, badge: "IA" },
-        { name: "Presença Social", href: "/presence", icon: Megaphone, badge: "IA" },
+        { name: t("Inteligência de mercado", "Market intelligence", "Inteligencia de mercado"), href: "/market-intel", icon: Radar, badge: "IA" },
+        { name: t("Presença social", "Social presence", "Presencia en redes"), href: "/presence", icon: Megaphone, badge: "IA" },
       ],
     },
     {
@@ -246,25 +252,25 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       ],
     },
     {
-      label: "Criação",
+      label: t("Criação", "Creation", "Creación"),
       items: [
-        { name: "Clone de Voz & Avatar", href: "/settings?tab=identidade", icon: Fingerprint, badge: "IA" },
+        { name: t("Clone de voz e avatar", "Voice & avatar cloning", "Clonación de voz y avatar"), href: "/settings?tab=identidade", icon: Fingerprint, badge: "IA" },
         { name: tr.sidebar.vsl,           href: "/vsls",             icon: Video        },
-        { name: "Produção de Vídeo",   href: "/video-production", icon: Clapperboard },
-        { name: "Vídeo Diário",           href: "/video-diario",     icon: Zap,  badge: "✦" },
+        { name: t("Produção de vídeo", "Video production", "Producción de video"), href: "/video-production", icon: Clapperboard },
+        { name: t("Vídeo diário", "Daily video", "Video diario"), href: "/video-diario", icon: Zap, badge: "✦" },
         { name: tr.sidebar.video,         href: "/video-editor",     icon: Film         },
-        { name: "Gravações",              href: "/recordings",        icon: Camera       },
+        { name: t("Gravações", "Recordings", "Grabaciones"), href: "/recordings", icon: Camera },
       ],
     },
     {
       label: tr.nav.tools,
       expertOnly: true,
       items: [
-        { name: "Mídia Autônoma",        href: "/paid-media",        icon: Target, badge: "IA" },
+        { name: t("Mídia autônoma", "Autonomous media", "Medios autónomos"), href: "/paid-media", icon: Target, badge: "IA" },
         { name: tr.sidebar.social,       href: "/social",            icon: Share2     },
         { name: tr.sidebar.moderation,   href: "/social/moderation", icon: Shield     },
         { name: tr.sidebar.sequences,    href: "/sequences",         icon: Workflow   },
-        { name: "Pipeline Regional",    href: "/pipeline",          icon: Network    },
+        { name: t("Pipeline regional", "Regional pipeline", "Flujo regional"), href: "/pipeline", icon: Network },
         { name: "Lifecycle",             href: "/lifecycle",         icon: Activity   },
         { name: tr.sidebar.revenue,      href: "/revenue",           icon: DollarSign },
         { name: tr.sidebar.compliance,   href: "/compliance",        icon: Shield     },
@@ -280,20 +286,20 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       expertOnly: true,
       items: [
         { name: tr.sidebar.affiliates, href: "/affiliate",  icon: Star   },
-        { name: "Self-Proof Engine",   href: "/self-proof", icon: Shield },
+        { name: "Self-Proof Engine", href: "/self-proof", icon: Shield },
       ],
     },
     {
       label: tr.nav.automations,
       items: [
         { name: tr.sidebar.products,       href: "/produtos",      icon: ShoppingBag },
-        { name: "Atendimento",             href: "/atendimento",   icon: MessageSquare },
+        { name: t("Atendimento", "Customer support", "Atención"), href: "/atendimento", icon: MessageSquare },
         { name: tr.sidebar.integrations,   href: "/integracoes",   icon: Link2, badge: "!" },
-        { name: "Infraestrutura",          href: "/infraestrutura", icon: Server },
+        { name: t("Infraestrutura", "Infrastructure", "Infraestructura"), href: "/infraestrutura", icon: Server },
       ],
     },
     {
-      label: "Academia",
+      label: t("Academia", "Academy", "Academia"),
       items: [
         { name: "NexOS Academy", href: "/nexos-academy/", icon: GraduationCap, external: true },
       ],
@@ -323,8 +329,8 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
             </div>
             <div>
               <div className="font-mono font-black text-2xl uppercase tracking-[0.12em] text-foreground leading-tight">NexOS</div>
-              <div className="font-mono text-sm uppercase tracking-[0.3em] text-primary leading-tight">Plataforma NexOS</div>
-              <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground/50 leading-tight mt-1">Operações Inteligentes</div>
+              <div className="font-mono text-sm uppercase tracking-[0.3em] text-primary leading-tight">{t("Plataforma NexOS", "NexOS Platform", "Plataforma NexOS")}</div>
+              <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground/50 leading-tight mt-1">{t("Operações inteligentes", "Smart operations", "Operaciones inteligentes")}</div>
             </div>
           </div>
         </Link>
@@ -412,7 +418,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
                   : "text-muted-foreground hover:text-foreground"}`}
             >
               <Gauge className="h-2.5 w-2.5" />
-              Fundador
+              {t("Fundador", "Founder", "Fundador")}
             </button>
             <button
               onClick={() => setMode("arquiteto")}
@@ -422,17 +428,17 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
                   : "text-muted-foreground hover:text-foreground"}`}
             >
               <Zap className="h-2.5 w-2.5" />
-              Arquiteto
+              {t("Arquiteto", "Architect", "Arquitecto")}
             </button>
           </div>
           {mode === "fundador" && (
             <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest mt-1.5 px-1 leading-relaxed">
-              Visão e resultado · foco no lançamento
+              {t("Visão e resultado · foco no lançamento", "Vision and outcomes · launch focus", "Visión y resultados · enfoque en el lanzamiento")}
             </p>
           )}
           {mode === "arquiteto" && (
             <p className="font-mono text-[11px] text-cyan-500/40 uppercase tracking-widest mt-1.5 px-1 leading-relaxed">
-              Profundidade total · agentes · traces · pesos
+              {t("Profundidade total · agentes · traces · pesos", "Full detail · agents · traces · weights", "Profundidad total · agentes · trazas · pesos")}
             </p>
           )}
         </div>
@@ -444,7 +450,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
           <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">{tr.credits.label}</span>
           <Link href="/credits" onClick={onNav}>
             <span className="font-mono text-[11px] text-primary hover:underline uppercase tracking-widest">
-              {balance.toLocaleString("pt-BR")} cr
+              {new Intl.NumberFormat(intlLocale(locale)).format(balance)} {t("cr", "credits", "créditos")}
             </span>
           </Link>
         </div>
@@ -458,7 +464,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
           <AdminTopupButton onSuccess={() => queryClient.invalidateQueries({ queryKey: getGetCreditsBalanceQueryKey() })} compact />
         ) : isAdmin ? (
           <div className="mt-1 font-mono text-[11px] text-primary/60 uppercase tracking-widest">
-            FOUNDER MODE
+             {t("MODO FUNDADOR", "FOUNDER MODE", "MODO FUNDADOR")}
           </div>
         ) : isLow ? (
           <div className="mt-1 font-mono text-[11px] text-destructive uppercase tracking-widest animate-pulse">
@@ -511,7 +517,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
             {isAdmin && (
               <DropdownMenuItem asChild className="cursor-pointer focus:bg-red-400/10 focus:text-red-400 rounded-none font-mono text-xs uppercase tracking-widest">
                 <Link href="/admin/nexos-launch" onClick={onNav}>
-                  <Rocket className="h-3.5 w-3.5 mr-2" />Sala de Lançamento
+               <Rocket className="h-3.5 w-3.5 mr-2" />{t("Sala de lançamento", "Launch room", "Sala de lanzamiento")}
                 </Link>
               </DropdownMenuItem>
             )}
@@ -520,7 +526,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
             <div className="px-2 py-1.5">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Globe className="h-3 w-3 text-muted-foreground/50" />
-                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">{tr.user.ai_language}</span>
+               <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">{t("Idioma da plataforma", "Platform language", "Idioma de la plataforma")}</span>
               </div>
               <div className="grid grid-cols-2 gap-0.5">
                 {LOCALE_OPTIONS.map(opt => (
@@ -559,11 +565,13 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
 function TopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
   const { workspace } = useAuth();
   const { open: isSearchOpen, setOpen: setSearchOpen } = useGlobalSearch();
+  const t = useUiText();
 
   return (
     <header className="h-16 min-w-0 overflow-hidden border-b border-border/50 bg-background/95 backdrop-blur-sm flex items-center justify-between gap-2 px-3 shrink-0 sm:px-4">
       <button
         onClick={onMenuOpen}
+        aria-label={t("Abrir menu", "Open menu", "Abrir menú")}
         className="p-2 hover:bg-muted/30 rounded-sm transition-colors md:hidden"
       >
         <Menu className="h-5 w-5 text-muted-foreground" />
@@ -594,6 +602,7 @@ function TopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
         <Button
           variant="ghost"
           size="icon"
+          aria-label={t("Buscar", "Search", "Buscar")}
           onClick={() => setSearchOpen(true)}
           className="hidden h-9 w-9 rounded-sm hover:bg-muted/30 sm:inline-flex"
         >

@@ -14,18 +14,22 @@ import {
   ArrowUpRight, Cpu, ChevronRight, Package, ListFilter,
   Timer, DollarSign, Layers, Activity, RefreshCw,
 } from "lucide-react";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 function AdminTopupButton({ onSuccess }: { onSuccess: () => void }) {
   const [loading, setLoading] = useState(false);
+  const { locale } = useUiLocale();
+  const t = useUiText();
   const handleTopup = async () => {
     if (loading) return;
     setLoading(true);
     try {
       const result = await customFetch<{ ok: boolean; credited: number; newBalance: number }>("/api/credits/admin-topup", { method: "POST" });
-      toast.success(`+${result.credited.toLocaleString("pt-BR")} créditos recarregados. Novo saldo: ${result.newBalance.toLocaleString("pt-BR")} cr`);
+      const nf = new Intl.NumberFormat(intlLocale(locale));
+      toast.success(t(`+${nf.format(result.credited)} créditos recarregados. Novo saldo: ${nf.format(result.newBalance)} cr`, `+${nf.format(result.credited)} credits added. New balance: ${nf.format(result.newBalance)} credits`, `+${nf.format(result.credited)} créditos recargados. Nuevo saldo: ${nf.format(result.newBalance)} créditos`));
       onSuccess();
     } catch {
-      toast.error("Erro ao recarregar créditos.");
+      toast.error(t("Erro ao recarregar créditos.", "Couldn't top up credits.", "No se pudieron recargar los créditos."));
     } finally {
       setLoading(false);
     }
@@ -37,7 +41,7 @@ function AdminTopupButton({ onSuccess }: { onSuccess: () => void }) {
       className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2 h-9"
     >
       <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-      {loading ? "Recarregando..." : "Recarregar Créditos (Grátis)"}
+      {loading ? t("Recarregando...", "Reloading...", "Recargando...") : t("Recarregar créditos (grátis)", "Top up credits (free)", "Recargar créditos (gratis)")}
     </Button>
   );
 }
@@ -133,17 +137,53 @@ const PROVIDER_BADGE: Record<string, { label: string; color: string }> = {
   gemini:    { label: "Gemini",   color: "text-blue-400 border-blue-400/30 bg-blue-400/10" },
 };
 
-function getActionMeta(action: string) {
-  return ACTION_META[action] ?? { label: action, icon: Zap, color: "text-muted-foreground" };
+function getActionMeta(action: string, t: ReturnType<typeof useUiText>) {
+  const meta = ACTION_META[action] ?? { label: action, icon: Zap, color: "text-muted-foreground" };
+  const english: Record<string, string> = {
+    strategy_generation: "Strategy", intake_conversation: "Briefing", intake_finalize: "Finalize intake",
+    content_generation: "Content generation", compliance_check: "Compliance", analytics_report: "Report",
+    vsl_generation: "VSL generated", email_sequence_item: "Sequence item", whatsapp_sequence_item: "WhatsApp sequence",
+    nurturing_message: "Nurture copy", agent_direct_chat: "Agent chat", sequence_plan: "Sequence plan",
+    credit_topup: "Credit top-up", purchase: "Credit pack", video_concept: "Video concept",
+    video_script: "Video script", video_storyboard: "Storyboard", video_low_res: "Preview clip",
+    video_high_res: "Final HD clip", video_avatar: "AI avatar", video_voice_clone: "Cloned voice",
+    video_hybrid: "AI hybrid edit", video_filming_brief: "Filming guide",
+  };
+  const spanish: Record<string, string> = {
+    strategy_generation: "Estrategia", intake_conversation: "Resumen", intake_finalize: "Finalizar resumen",
+    content_generation: "Generación de contenido", compliance_check: "Cumplimiento", analytics_report: "Informe",
+    vsl_generation: "VSL generado", email_sequence_item: "Elemento de secuencia", whatsapp_sequence_item: "Secuencia de WhatsApp",
+    nurturing_message: "Contenido de nurturing", agent_direct_chat: "Chat con agente", sequence_plan: "Plan de secuencia",
+    credit_topup: "Recarga de créditos", purchase: "Paquete de créditos", video_concept: "Concepto de video",
+    video_script: "Guion de video", video_storyboard: "Storyboard", video_low_res: "Clip de vista previa",
+    video_high_res: "Clip final HD", video_avatar: "Avatar IA", video_voice_clone: "Voz clonada",
+    video_hybrid: "Edición híbrida IA", video_filming_brief: "Guía de grabación",
+  };
+  return { ...meta, label: t(meta.label, english[action] ?? meta.label, spanish[action] ?? meta.label) };
 }
 
-function agentLabel(agentType: string | null) {
-  if (!agentType) return "Desconhecido";
-  return AGENT_LABELS[agentType] ?? agentType.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+function agentLabel(agentType: string | null, t: ReturnType<typeof useUiText>) {
+  if (!agentType) return t("Desconhecido", "Unknown", "Desconocido");
+  const label = AGENT_LABELS[agentType] ?? agentType.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  const english: Record<string, string> = {
+    command: "ARES — Command", execution_governor: "Execution Governance", strategy: "Strategist",
+    offer: "Offer Agent", campaign_memory: "Campaign Memory", vsl_script: "VSL Writer",
+    email_sequence: "Email Sequence", whatsapp_sequence: "WhatsApp Sequence", sales_warmer: "Marco — Lead Nurturing",
+    sales_closer: "Vitor — Closing", sales_objection: "Clara — Objections", sales_consultant: "Alex — Consultant",
+    sales_desire: "Renata — Desire",
+  };
+  const spanish: Record<string, string> = {
+    command: "ARES — Comando", execution_governor: "Gobernanza de ejecución", strategy: "Estratega",
+    offer: "Agente de ofertas", campaign_memory: "Memoria de campaña", vsl_script: "Guionista de VSL",
+    email_sequence: "Secuencia de correo", whatsapp_sequence: "Secuencia de WhatsApp", sales_warmer: "Marco — Nutrición de leads",
+    sales_closer: "Vitor — Cierre", sales_objection: "Clara — Objeciones", sales_consultant: "Alex — Consultor",
+    sales_desire: "Renata — Deseo",
+  };
+  return t(label, english[agentType] ?? label, spanish[agentType] ?? label);
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleString("pt-BR", {
+function formatDate(iso: string, locale: string) {
+  return new Date(iso).toLocaleString(intlLocale(locale as "pt-BR" | "en-US" | "en-AU" | "es-LA"), {
     day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
   });
 }
@@ -160,6 +200,9 @@ const PLAN_CREDITS: Record<string, number> = {
 };
 
 function CreditGauge({ balance, included, isAdmin, onTopup }: { balance: number; included: number; isAdmin?: boolean; onTopup?: () => void }) {
+  const { locale } = useUiLocale();
+  const t = useUiText();
+  const numberFormat = new Intl.NumberFormat(intlLocale(locale));
   const pct = included > 0 ? Math.min(100, (balance / included) * 100) : 0;
   const used = Math.max(0, included - balance);
   const isLow = balance < 150;
@@ -199,45 +242,45 @@ function CreditGauge({ balance, included, isAdmin, onTopup }: { balance: number;
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="font-mono font-bold text-2xl text-foreground leading-none">{Math.round(pct)}%</span>
-              <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mt-0.5">restante</span>
+              <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mt-0.5">{t("restante", "remaining", "restante")}</span>
             </div>
           </div>
         </div>
 
         <div className="flex-1 space-y-4">
           <div>
-            <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground mb-1">Saldo Disponível</div>
+            <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground mb-1">{t("Saldo disponível", "Available balance", "Saldo disponible")}</div>
             <div className="flex items-baseline gap-2 flex-wrap">
               <span
                 className="font-mono font-bold text-5xl"
                 style={{ color: gaugeColor, textShadow: `0 0 20px ${gaugeColor}` }}
               >
-                {balance.toLocaleString("pt-BR")}
+                {numberFormat.format(balance)}
               </span>
               <span className="font-mono text-sm text-muted-foreground">Cr</span>
               {isLow && (
                 <Badge variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest text-destructive border-destructive/40 bg-destructive/10 animate-pulse ml-2">
-                  Baixo — recarregue
+                  {t("Baixo — recarregue", "Low — top up", "Bajo — recargar")}
                 </Badge>
               )}
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="border border-border/30 bg-background/40 p-3">
-              <div className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mb-1">Incluídos</div>
-              <div className="font-mono font-bold text-lg text-foreground">{included.toLocaleString("pt-BR")}</div>
+              <div className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mb-1">{t("Incluídos", "Included", "Incluidos")}</div>
+              <div className="font-mono font-bold text-lg text-foreground">{numberFormat.format(included)}</div>
             </div>
             <div className="border border-border/30 bg-background/40 p-3">
-              <div className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mb-1">Utilizados</div>
-              <div className="font-mono font-bold text-lg text-muted-foreground">{used.toLocaleString("pt-BR")}</div>
+              <div className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mb-1">{t("Utilizados", "Used", "Utilizados")}</div>
+              <div className="font-mono font-bold text-lg text-muted-foreground">{numberFormat.format(used)}</div>
             </div>
             <div className="border border-border/30 bg-background/40 p-3">
-              <div className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mb-1">Lançamentos ok</div>
-              <div className="font-mono font-bold text-lg text-foreground">{launchesLeft} <span className="text-xs text-muted-foreground font-normal">restantes</span></div>
+              <div className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mb-1">{t("Lançamentos possíveis", "Estimated launches", "Lanzamientos posibles")}</div>
+              <div className="font-mono font-bold text-lg text-foreground">{numberFormat.format(launchesLeft)} <span className="text-xs text-muted-foreground font-normal">{t("restantes", "remaining", "restantes")}</span></div>
             </div>
             <div className="border border-border/30 bg-background/40 p-3">
-              <div className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mb-1">Lançamentos feitos</div>
-              <div className="font-mono font-bold text-lg text-muted-foreground">{launchesUsed}</div>
+              <div className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mb-1">{t("Lançamentos feitos", "Launches used", "Lanzamientos realizados")}</div>
+              <div className="font-mono font-bold text-lg text-muted-foreground">{numberFormat.format(launchesUsed)}</div>
             </div>
           </div>
           {isAdmin && balance < 500 && onTopup ? (
@@ -246,7 +289,7 @@ function CreditGauge({ balance, included, isAdmin, onTopup }: { balance: number;
             <Link href="/billing">
               <Button className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2 h-9">
                 <Zap className="h-3.5 w-3.5" />
-                Comprar Pack de Créditos
+                {t("Comprar pacote de créditos", "Buy a credit pack", "Comprar paquete de créditos")}
                 <ChevronRight className="h-3.5 w-3.5" />
               </Button>
             </Link>
@@ -258,6 +301,9 @@ function CreditGauge({ balance, included, isAdmin, onTopup }: { balance: number;
 }
 
 function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
+  const { locale } = useUiLocale();
+  const t = useUiText();
+  const numberFormat = new Intl.NumberFormat(intlLocale(locale));
   const [view, setView] = useState<"timeline" | "by_agent" | "by_campaign">("timeline");
   const { isAdmin } = useAuth();
 
@@ -281,8 +327,8 @@ function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
     return (
       <div className="flex flex-col items-center py-16 gap-2">
         <Activity className="h-8 w-8 text-muted-foreground/20" />
-        <p className="font-mono text-xs text-muted-foreground/60 uppercase tracking-widest">Nenhum uso de agente ainda</p>
-        <p className="font-mono text-xs text-muted-foreground/40">Execute um lançamento para ver o extrato aqui</p>
+        <p className="font-mono text-xs text-muted-foreground/60 uppercase tracking-widest">{t("Nenhum uso de agente ainda", "No agent usage yet", "Aún no hay uso de agentes")}</p>
+        <p className="font-mono text-xs text-muted-foreground/40">{t("Execute um lançamento para ver o extrato aqui", "Run a launch to see activity here", "Ejecuta un lanzamiento para ver la actividad aquí")}</p>
       </div>
     );
   }
@@ -292,17 +338,17 @@ function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
       {/* Totais */}
       <div className={`grid divide-x divide-border/30 border-b border-border/30 ${isAdmin ? "grid-cols-3" : "grid-cols-2"}`}>
         <div className="px-5 py-4">
-          <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">Total Consumido</div>
-          <div className="font-mono font-bold text-2xl text-destructive">{data.totalCredits.toLocaleString("pt-BR")} <span className="text-xs font-normal text-muted-foreground">cr</span></div>
+            <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">{t("Total consumido", "Total used", "Total consumido")}</div>
+            <div className="font-mono font-bold text-2xl text-destructive">{numberFormat.format(data.totalCredits)} <span className="text-xs font-normal text-muted-foreground">{t("cr", "credits", "créditos")}</span></div>
         </div>
         {isAdmin && (
           <div className="px-5 py-4">
-            <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">Custo Real (USD)</div>
+              <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">{t("Custo real (USD)", "Actual cost (USD)", "Costo real (USD)")}</div>
             <div className="font-mono font-bold text-2xl text-foreground">${parseFloat(data.totalCostUsd).toFixed(2)}</div>
           </div>
         )}
         <div className="px-5 py-4">
-          <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">Chamadas do agente</div>
+          <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">{t("Chamadas do agente", "Agent calls", "Llamadas del agente")}</div>
           <div className="font-mono font-bold text-2xl text-foreground">{data.entries.length}</div>
         </div>
       </div>
@@ -310,9 +356,9 @@ function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
       {/* Navegação de views */}
       <div className="flex border-b border-border/30 bg-muted/5">
         {([
-          ["timeline",    "Linha do Tempo", Timer],
-          ["by_agent",    "Por Agente",     Bot],
-          ["by_campaign", "Por Campanha",   Layers],
+          ["timeline",    t("Linha do tempo", "Timeline", "Cronología"), Timer],
+          ["by_agent",    t("Por agente", "By agent", "Por agente"), Bot],
+          ["by_campaign", t("Por campanha", "By campaign", "Por campaña"), Layers],
         ] as const).map(([v, label, Icon]) => (
           <button
             key={v}
@@ -335,7 +381,7 @@ function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/30 bg-muted/10">
-                {["Agente", "Provedor", "Créditos", ...(isAdmin ? ["Custo"] : []), "Duração", "Campanha", "Data"].map(h => (
+                {[t("Agente", "Agent", "Agente"), t("Provedor", "Provider", "Proveedor"), t("Créditos", "Credits", "Créditos"), ...(isAdmin ? [t("Custo", "Cost", "Costo")] : []), t("Duração", "Duration", "Duración"), t("Campanha", "Campaign", "Campaña"), t("Data", "Date", "Fecha")].map(h => (
                   <th key={h} className="px-4 py-2 text-left font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -348,7 +394,7 @@ function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <Bot className="h-3 w-3 shrink-0 text-primary/60" />
-                        <span className="font-mono text-xs text-foreground">{agentLabel(e.agentType)}</span>
+                        <span className="font-mono text-xs text-foreground">{agentLabel(e.agentType, t)}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -377,7 +423,7 @@ function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
                       )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="font-mono text-xs text-muted-foreground/60">{formatDate(e.createdAt)}</span>
+                      <span className="font-mono text-xs text-muted-foreground/60">{formatDate(e.createdAt, locale)}</span>
                     </td>
                   </tr>
                 );
@@ -397,10 +443,10 @@ function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
                 <span className="font-mono text-xs text-muted-foreground/40 w-5 shrink-0">{i + 1}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-mono text-xs text-foreground font-medium">{agentLabel(a.agentType)}</span>
+                    <span className="font-mono text-xs text-foreground font-medium">{agentLabel(a.agentType, t)}</span>
                     <div className="flex items-center gap-3 shrink-0">
                       <span className="font-mono text-[11px] text-muted-foreground">{a.calls}x</span>
-                      <span className="font-mono text-sm font-bold text-destructive">{a.credits} cr</span>
+                      <span className="font-mono text-sm font-bold text-destructive">{numberFormat.format(a.credits)} {t("cr", "credits", "créditos")}</span>
                     </div>
                   </div>
                   <div className="h-1.5 bg-border/30 rounded-none overflow-hidden">
@@ -410,7 +456,7 @@ function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
                     />
                   </div>
                   <div className="flex justify-between mt-1">
-                    <span className="font-mono text-[10px] text-muted-foreground/40">{pct.toFixed(1)}% do total</span>
+                    <span className="font-mono text-[10px] text-muted-foreground/40">{pct.toFixed(1)}% {t("do total", "of total", "del total")}</span>
                   </div>
                 </div>
               </div>
@@ -435,12 +481,12 @@ function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
                           <span className="font-mono text-xs text-primary/80 hover:text-primary cursor-pointer truncate block">{c.campaignName}</span>
                         </Link>
                       ) : (
-                        <span className="font-mono text-xs text-muted-foreground/60">Sem campanha (testes/chat)</span>
+                        <span className="font-mono text-xs text-muted-foreground/60">{t("Sem campanha (testes/chat)", "No campaign (tests/chat)", "Sin campaña (pruebas/chat)")}</span>
                       )}
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="font-mono text-[11px] text-muted-foreground">{c.calls} chamadas</span>
-                      <span className="font-mono text-sm font-bold text-destructive">{c.credits} cr</span>
+                      <span className="font-mono text-[11px] text-muted-foreground">{numberFormat.format(c.calls)} {t("chamadas", "calls", "llamadas")}</span>
+                      <span className="font-mono text-sm font-bold text-destructive">{numberFormat.format(c.credits)} {t("cr", "credits", "créditos")}</span>
                     </div>
                   </div>
                   <div className="h-1.5 bg-border/30 rounded-none overflow-hidden">
@@ -450,7 +496,7 @@ function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
                     />
                   </div>
                   <div className="mt-1">
-                    <span className="font-mono text-[10px] text-muted-foreground/40">{pct.toFixed(1)}% do total</span>
+                    <span className="font-mono text-[10px] text-muted-foreground/40">{pct.toFixed(1)}% {t("do total", "of total", "del total")}</span>
                   </div>
                 </div>
               </div>
@@ -463,17 +509,18 @@ function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
 }
 
 function CostReference() {
+  const t = useUiText();
   const costs = [
-    { action: "Estratégia Completa",    cost: 45,  icon: Bot },
-    { action: "Geração de Conteúdo",    cost: 161, icon: FileText },
-    { action: "Sequência PLF (15 msg)", cost: 37,  icon: Mail },
-    { action: "Lançamento típico total",cost: 420, icon: Zap },
-    { action: "Copy de Nurturing",      cost: 2,   icon: Mail },
-    { action: "Relatório de Analytics", cost: 5,   icon: BarChart3 },
-    { action: "VSL Script",             cost: 8,   icon: Video },
-    { action: "Chat com Agente",        cost: 3,   icon: Cpu },
-    { action: "Compliance Check",       cost: 32,  icon: Shield },
-    { action: "Plano de Sequência",     cost: 7,   icon: Bot },
+    { action: t("Estratégia completa", "Complete strategy", "Estrategia completa"), cost: 45, icon: Bot, highlight: false },
+    { action: t("Geração de conteúdo", "Content generation", "Generación de contenido"), cost: 161, icon: FileText, highlight: false },
+    { action: t("Sequência PLF (15 mensagens)", "PLF sequence (15 messages)", "Secuencia PLF (15 mensajes)"), cost: 37, icon: Mail, highlight: false },
+    { action: t("Lançamento típico total", "Typical full launch", "Lanzamiento típico completo"), cost: 420, icon: Zap, highlight: true },
+    { action: t("Copy de nurturing", "Nurture copy", "Contenido de nurturing"), cost: 2, icon: Mail, highlight: false },
+    { action: t("Relatório de analytics", "Analytics report", "Informe de analítica"), cost: 5, icon: BarChart3, highlight: false },
+    { action: t("Roteiro VSL", "VSL script", "Guion de VSL"), cost: 8, icon: Video, highlight: false },
+    { action: t("Chat com agente", "Agent chat", "Chat con agente"), cost: 3, icon: Cpu, highlight: false },
+    { action: t("Verificação de compliance", "Compliance check", "Revisión de cumplimiento"), cost: 32, icon: Shield, highlight: false },
+    { action: t("Plano de sequência", "Sequence plan", "Plan de secuencia"), cost: 7, icon: Bot, highlight: false },
   ];
 
   return (
@@ -481,7 +528,7 @@ function CostReference() {
       <div className="px-5 py-3 border-b border-border/40 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Zap className="h-3.5 w-3.5 text-primary" />
-          <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Custo por Ação do agente</span>
+            <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("Custo por ação do agente", "Cost per agent action", "Costo por acción del agente")}</span>
         </div>
         <span className="font-mono text-[11px] text-muted-foreground/50">1 cr ≈ R$0,17</span>
       </div>
@@ -489,7 +536,7 @@ function CostReference() {
         {costs.map((c, i) => {
           const Icon = c.icon;
           const isOdd = i % 2 === 1;
-          const isHighlight = c.action.includes("total");
+          const isHighlight = c.highlight ?? false;
           return (
             <div key={c.action} className={`flex items-center justify-between px-4 py-3 border-b border-border/20 last:border-0 ${isOdd ? "sm:border-l border-border/20" : ""} ${isHighlight ? "bg-primary/5" : ""}`}>
               <div className="flex items-center gap-2">
@@ -511,6 +558,9 @@ function CostReference() {
 type TabId = "extrato" | "agentes" | "referencia";
 
 export default function CreditsPage() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
+  const numberFormat = new Intl.NumberFormat(intlLocale(locale));
   const { plan, planSlug, workspace, isAdmin } = useAuth();
   const workspaceId = workspace?.id;
   const queryClient = useQueryClient();
@@ -537,9 +587,9 @@ export default function CreditsPage() {
   const totalSpent = debits.reduce((s, t) => s + Math.abs(t.amount), 0);
 
   const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
-    { id: "agentes",   label: "Extrato por Agente",   icon: Activity },
-    { id: "extrato",   label: "Histórico de Débitos",  icon: Clock },
-    { id: "referencia",label: "Tabela de Custos",      icon: ListFilter },
+    { id: "agentes",   label: t("Extrato por agente", "Agent usage", "Uso por agente"), icon: Activity },
+    { id: "extrato",   label: t("Histórico de débitos", "Debit history", "Historial de débitos"), icon: Clock },
+    { id: "referencia",label: t("Tabela de custos", "Cost table", "Tabla de costos"), icon: ListFilter },
   ];
 
   return (
@@ -548,16 +598,16 @@ export default function CreditsPage() {
       <div className="border-b border-border/50 pb-5 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
-            Créditos do agente
+            {t("Créditos do agente", "Agent credits", "Créditos del agente")}
           </h1>
           <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mt-1">
-            Saldo · Extrato detalhado · Custo por Agente
+            {t("Saldo · Extrato detalhado · Custo por agente", "Balance · Detailed statement · Cost per agent", "Saldo · Estado detallado · Costo por agente")}
           </p>
         </div>
         <Link href="/billing">
           <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline shrink-0 gap-2">
             <Package className="h-3 w-3" />
-            Comprar Pack
+            {t("Comprar pacote", "Buy a pack", "Comprar paquete")}
           </Button>
         </Link>
       </div>
@@ -572,9 +622,9 @@ export default function CreditsPage() {
       {/* Quick stats */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Transações",  value: transactions.length, icon: Clock,       color: "text-foreground" },
-          { label: "Total Gasto", value: totalSpent,          icon: TrendingDown, color: "text-destructive" },
-          { label: "Recargas",    value: topUps.length,       icon: TrendingUp,   color: "text-success" },
+          { label: t("Transações", "Transactions", "Transacciones"), value: transactions.length, icon: Clock, color: "text-foreground" },
+          { label: t("Total gasto", "Total spent", "Total gastado"), value: totalSpent, icon: TrendingDown, color: "text-destructive" },
+          { label: t("Recargas", "Top-ups", "Recargas"), value: topUps.length, icon: TrendingUp, color: "text-success" },
         ].map((s) => {
           const Icon = s.icon;
           return (
@@ -584,7 +634,7 @@ export default function CreditsPage() {
                 <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{s.label}</span>
               </div>
               <div className={`font-mono font-bold text-2xl ${s.color}`}>
-                {s.value.toLocaleString("pt-BR")}
+                {numberFormat.format(s.value)}
               </div>
             </div>
           );
@@ -619,7 +669,7 @@ export default function CreditsPage() {
         {activeTab === "extrato" && (
           <>
             <div className="px-5 py-3 border-b border-border/40 flex items-center justify-between">
-              <span className="font-mono text-[11px] text-muted-foreground">{transactions.length} transações</span>
+              <span className="font-mono text-[11px] text-muted-foreground">{numberFormat.format(transactions.length)} {t("transações", "transactions", "transacciones")}</span>
             </div>
             {loadingHistory ? (
               <div className="p-6 space-y-3">
@@ -628,21 +678,21 @@ export default function CreditsPage() {
             ) : transactions.length === 0 ? (
               <div className="flex flex-col items-center py-16 gap-2">
                 <Zap className="h-8 w-8 text-muted-foreground/20" />
-                <p className="font-mono text-xs text-muted-foreground/60 uppercase tracking-widest">Nenhuma transação ainda</p>
+                <p className="font-mono text-xs text-muted-foreground/60 uppercase tracking-widest">{t("Nenhuma transação ainda", "No transactions yet", "Aún no hay transacciones")}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-border/30 bg-muted/10">
-                      {["Ação", "Créditos", "Saldo Antes", "Saldo Depois", "Data"].map(h => (
+                      {[t("Ação", "Action", "Acción"), t("Créditos", "Credits", "Créditos"), t("Saldo antes", "Balance before", "Saldo anterior"), t("Saldo depois", "Balance after", "Saldo posterior"), t("Data", "Date", "Fecha")].map(h => (
                         <th key={h} className="px-4 py-2 text-left font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
                     {transactions.map((tx) => {
-                      const meta = getActionMeta(tx.action);
+                      const meta = getActionMeta(tx.action, t);
                       const Icon = meta.icon;
                       const isDebit = tx.amount < 0;
                       return (
@@ -665,7 +715,7 @@ export default function CreditsPage() {
                             <span className="font-mono text-xs text-muted-foreground">{tx.balanceAfter}</span>
                           </td>
                           <td className="px-4 py-3">
-                            <span className="font-mono text-xs text-muted-foreground/60">{formatDate(tx.createdAt)}</span>
+                            <span className="font-mono text-xs text-muted-foreground/60">{formatDate(tx.createdAt, locale)}</span>
                           </td>
                         </tr>
                       );
@@ -686,13 +736,13 @@ export default function CreditsPage() {
       {/* CTA */}
       <div className="border border-primary/20 bg-primary/5 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <div className="font-mono font-bold text-sm uppercase tracking-widest text-primary mb-1">Precisa de mais créditos?</div>
-          <div className="font-mono text-xs text-muted-foreground">Packs a partir de R$85 — sem mensalidade, sem prazo de validade</div>
+          <div className="font-mono font-bold text-sm uppercase tracking-widest text-primary mb-1">{t("Precisa de mais créditos?", "Need more credits?", "¿Necesitas más créditos?")}</div>
+          <div className="font-mono text-xs text-muted-foreground">{t("Pacotes a partir de R$85 — sem mensalidade, sem prazo de validade", "Packs from R$85 — no subscription and no expiration", "Paquetes desde R$85 — sin mensualidad ni fecha de vencimiento")}</div>
         </div>
         <Link href="/billing">
           <Button className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary shrink-0 gap-2">
             <Package className="h-3.5 w-3.5" />
-            Ver Packs
+            {t("Ver pacotes", "View packs", "Ver paquetes")}
             <ChevronRight className="h-3.5 w-3.5" />
           </Button>
         </Link>

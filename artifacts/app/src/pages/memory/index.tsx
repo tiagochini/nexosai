@@ -9,6 +9,7 @@ import {
   Brain, Trash2, RefreshCw, Sparkles, Clock,
   TrendingUp, ChevronDown, ChevronUp, Info, Filter,
 } from "lucide-react";
+import { useUiText, useUiLocale, intlLocale } from "@/lib/i18n";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface MemoryEntry {
@@ -34,24 +35,24 @@ interface MemoryStats {
 }
 
 // ── Label maps ─────────────────────────────────────────────────────────────────
-const AGENT_LABEL: Record<string, string> = {
-  command: "Comandante", strategy: "Estrategista", launch_manager: "Gerente de Lançamento",
-  offer: "Especialista em Oferta", product_builder: "Product Builder",
-  copywriter: "Copywriter", creative_director: "Diretor Criativo",
-  landing_page: "Landing Page", targeting: "Targeting Expert",
-  media_buyer: "Media Buyer", affiliate_campaign: "Afiliados",
-  analytics: "Analista de Performance", optimization: "Otimizador",
-  video: "Vídeo", creator_growth: "Creator Growth", compliance: "Compliance",
+const AGENT_LABEL: Record<string, readonly [string, string, string]> = {
+  command: ["Comandante", "Commander", "Comandante"], strategy: ["Estrategista", "Strategist", "Estratega"], launch_manager: ["Gerente de Lançamento", "Launch Manager", "Responsable de lanzamiento"],
+  offer: ["Especialista em Oferta", "Offer Specialist", "Especialista en ofertas"], product_builder: ["Product Builder", "Product Builder", "Product Builder"],
+  copywriter: ["Copywriter", "Copywriter", "Copywriter"], creative_director: ["Diretor Criativo", "Creative Director", "Director creativo"],
+  landing_page: ["Landing Page", "Landing Page", "Landing Page"], targeting: ["Targeting Expert", "Targeting Expert", "Experto en segmentación"],
+  media_buyer: ["Media Buyer", "Media Buyer", "Media Buyer"], affiliate_campaign: ["Afiliados", "Affiliates", "Afiliados"],
+  analytics: ["Analista de Performance", "Performance Analyst", "Analista de rendimiento"], optimization: ["Otimizador", "Optimizer", "Optimizador"],
+  video: ["Vídeo", "Video", "Vídeo"], creator_growth: ["Creator Growth", "Creator Growth", "Creator Growth"], compliance: ["Compliance", "Compliance", "Cumplimiento"],
 };
-const TYPE_BADGE: Record<string, { label: string; className: string }> = {
-  performance_insight:  { label: "Performance",   className: "text-success border-success/40 bg-success/10" },
-  strategy_pattern:     { label: "Estratégia",    className: "text-primary border-primary/40 bg-primary/10" },
-  audience_insight:     { label: "Audiência",     className: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10" },
-  content_template:     { label: "Template",      className: "text-cyan-400 border-cyan-400/40 bg-cyan-400/10" },
-  market_reference:     { label: "Mercado",       className: "text-purple-400 border-purple-400/40 bg-purple-400/10" },
-  compliance_flag:      { label: "Compliance",    className: "text-red-400 border-red-400/40 bg-red-400/10" },
-  offer_framework:      { label: "Oferta",        className: "text-orange-400 border-orange-400/40 bg-orange-400/10" },
-  agent_preference:     { label: "Preferência",   className: "text-muted-foreground border-border bg-muted/20" },
+const TYPE_BADGE: Record<string, { label: readonly [string, string, string]; className: string }> = {
+  performance_insight:  { label: ["Performance", "Performance", "Rendimiento"], className: "text-success border-success/40 bg-success/10" },
+  strategy_pattern:     { label: ["Estratégia", "Strategy", "Estrategia"], className: "text-primary border-primary/40 bg-primary/10" },
+  audience_insight:     { label: ["Audiência", "Audience", "Audiencia"], className: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10" },
+  content_template:     { label: ["Template", "Template", "Plantilla"], className: "text-cyan-400 border-cyan-400/40 bg-cyan-400/10" },
+  market_reference:     { label: ["Mercado", "Market", "Mercado"], className: "text-purple-400 border-purple-400/40 bg-purple-400/10" },
+  compliance_flag:      { label: ["Compliance", "Compliance", "Cumplimiento"], className: "text-red-400 border-red-400/40 bg-red-400/10" },
+  offer_framework:      { label: ["Oferta", "Offer", "Oferta"], className: "text-orange-400 border-orange-400/40 bg-orange-400/10" },
+  agent_preference:     { label: ["Preferência", "Preference", "Preferencia"], className: "text-muted-foreground border-border bg-muted/20" },
 };
 
 function QualityBar({ score }: { score?: number }) {
@@ -68,6 +69,9 @@ function QualityBar({ score }: { score?: number }) {
 }
 
 export default function MemoryPage() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
+  const numberLocale = intlLocale(locale);
   const qc = useQueryClient();
   const [filterAgent, setFilterAgent] = useState("");
   const [filterType, setFilterType] = useState("");
@@ -96,11 +100,11 @@ export default function MemoryPage() {
       return customFetch<unknown>(`/api/memory/${id}`, { method: "DELETE" });
     },
     onSuccess: () => {
-      toast.success("Memória removida do cérebro compartilhado");
+      toast.success(t("Memória removida do cérebro compartilhado", "Memory removed from the shared brain", "Memoria eliminada del cerebro compartido"));
       void qc.invalidateQueries({ queryKey: ["/api/memory"] });
       void qc.invalidateQueries({ queryKey: ["/api/memory/stats"] });
     },
-    onError: () => toast.error("Não foi possível remover esta memória"),
+    onError: () => toast.error(t("Não foi possível remover esta memória", "Could not remove this memory", "No se pudo eliminar esta memoria")),
   });
 
   const stats = statsData?.stats;
@@ -116,11 +120,11 @@ export default function MemoryPage() {
         <div className="flex items-center gap-2 mb-1">
           <Brain className="h-4 w-4 text-primary" />
           <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
-            Memória do agente
+            {t("Memória do agente", "Agent Memory", "Memoria del agente")}
           </h1>
         </div>
         <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-          Conhecimento acumulado pelos agentes ao longo das suas campanhas
+          {t("Conhecimento acumulado pelos agentes ao longo das suas campanhas", "Knowledge accumulated by agents across your campaigns", "Conocimiento acumulado por los agentes durante tus campañas")}
         </p>
       </div>
 
@@ -128,9 +132,7 @@ export default function MemoryPage() {
       <div className="border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
         <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
         <p className="font-mono text-[11px] text-muted-foreground/80 leading-relaxed">
-          Cada agente armazena aqui o que aprendeu sobre seu negócio, mercado e audiência.
-          Quanto mais você usa a plataforma, mais preciso e personalizado fica o output de cada agente.
-          Memórias de referência pública não podem ser deletadas.
+          {t("Cada agente armazena aqui o que aprendeu sobre seu negócio, mercado e audiência. Quanto mais você usa a plataforma, mais preciso e personalizado fica o output de cada agente. Memórias de referência pública não podem ser deletadas.", "Each agent stores what it learns about your business, market, and audience here. The more you use the platform, the more precise and personalized each agent's output becomes. Public reference memories cannot be deleted.", "Cada agente guarda aquí lo que aprende sobre tu negocio, mercado y audiencia. Cuanto más uses la plataforma, más precisos y personalizados serán los resultados de cada agente. Las memorias de referencia pública no se pueden eliminar.")}
         </p>
       </div>
 
@@ -142,17 +144,17 @@ export default function MemoryPage() {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="border border-border/50 bg-card/40 p-3">
-            <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">Total</div>
+            <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">{t("Total", "Total", "Total")}</div>
             <div className="font-mono text-2xl font-bold text-primary mt-1">{stats?.total ?? 0}</div>
-            <div className="font-mono text-[11px] text-muted-foreground/40">memórias ativas</div>
+            <div className="font-mono text-[11px] text-muted-foreground/40">{t("memórias ativas", "active memories", "memorias activas")}</div>
           </div>
           {Object.entries(stats?.byType ?? {}).slice(0, 3).map(([type, count]) => {
             const badge = TYPE_BADGE[type];
             return (
               <div key={type} className="border border-border/50 bg-card/40 p-3">
-                <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">{badge?.label ?? type}</div>
+                <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">{badge ? t(...badge.label) : type}</div>
                 <div className={`font-mono text-2xl font-bold mt-1 ${badge?.className.split(" ")[0] ?? "text-primary"}`}>{count as number}</div>
-                <div className="font-mono text-[11px] text-muted-foreground/40">entradas</div>
+                <div className="font-mono text-[11px] text-muted-foreground/40">{t("entradas", "entries", "entradas")}</div>
               </div>
             );
           })}
@@ -167,9 +169,9 @@ export default function MemoryPage() {
           onChange={e => setFilterAgent(e.target.value)}
           className="font-mono text-xs uppercase tracking-widest bg-card/40 border border-border/50 px-2.5 py-1.5 text-foreground focus:outline-none focus:border-primary/50 rounded-none"
         >
-          <option value="">Todos os agentes</option>
+          <option value="">{t("Todos os agentes", "All agents", "Todos los agentes")}</option>
           {allAgents.map(role => (
-            <option key={role} value={role}>{AGENT_LABEL[role] ?? role}</option>
+            <option key={role} value={role}>{AGENT_LABEL[role] ? t(...AGENT_LABEL[role]) : role}</option>
           ))}
         </select>
         <select
@@ -177,9 +179,9 @@ export default function MemoryPage() {
           onChange={e => setFilterType(e.target.value)}
           className="font-mono text-xs uppercase tracking-widest bg-card/40 border border-border/50 px-2.5 py-1.5 text-foreground focus:outline-none focus:border-primary/50 rounded-none"
         >
-          <option value="">Todos os tipos</option>
-          {allTypes.map(t => (
-            <option key={t} value={t}>{TYPE_BADGE[t]?.label ?? t}</option>
+          <option value="">{t("Todos os tipos", "All types", "Todos los tipos")}</option>
+          {allTypes.map(type => (
+            <option key={type} value={type}>{TYPE_BADGE[type] ? t(...TYPE_BADGE[type].label) : type}</option>
           ))}
         </select>
         {(filterAgent || filterType) && (
@@ -187,10 +189,10 @@ export default function MemoryPage() {
             onClick={() => { setFilterAgent(""); setFilterType(""); }}
             className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60 hover:text-primary flex items-center gap-1 transition-colors"
           >
-            <RefreshCw className="h-2.5 w-2.5" />Limpar
+            <RefreshCw className="h-2.5 w-2.5" />{t("Limpar", "Clear", "Limpiar")}
           </button>
         )}
-        <span className="ml-auto font-mono text-[11px] text-muted-foreground/50">{memories.length} {memories.length === 1 ? "entrada" : "entradas"}</span>
+        <span className="ml-auto font-mono text-[11px] text-muted-foreground/50">{memories.length} {memories.length === 1 ? t("entrada", "entry", "entrada") : t("entradas", "entries", "entradas")}</span>
       </div>
 
       {/* ── Memory list ── */}
@@ -202,17 +204,17 @@ export default function MemoryPage() {
         <div className="border border-border/30 bg-muted/10 p-10 text-center">
           <Brain className="h-8 w-8 text-muted-foreground/20 mx-auto mb-3" />
           <p className="font-mono text-xs text-muted-foreground/50 uppercase tracking-widest">
-            {filterAgent || filterType ? "Nenhuma memória com esses filtros" : "Nenhuma memória armazenada ainda"}
+            {filterAgent || filterType ? t("Nenhuma memória com esses filtros", "No memories match these filters", "No hay memorias con estos filtros") : t("Nenhuma memória armazenada ainda", "No memories stored yet", "Todavía no hay memorias guardadas")}
           </p>
           <p className="font-mono text-[11px] text-muted-foreground/30 mt-1">
-            Execute campanhas com os agentes para acumular memória contextual
+            {t("Execute campanhas com os agentes para acumular memória contextual", "Run campaigns with agents to build contextual memory", "Ejecuta campañas con los agentes para acumular memoria contextual")}
           </p>
         </div>
       ) : (
         <div className="space-y-1">
           {memories.map(mem => {
             const badge = TYPE_BADGE[mem.memoryType];
-            const agentLabel = AGENT_LABEL[mem.agentRole] ?? mem.agentRole;
+             const agentLabel = AGENT_LABEL[mem.agentRole] ? t(...AGENT_LABEL[mem.agentRole]) : mem.agentRole;
             const isExpanded = expanded === mem.id;
             return (
               <div key={mem.id} className={`border bg-card/40 transition-all ${mem.isNegative ? "border-destructive/20" : "border-border/50"}`}>
@@ -223,7 +225,7 @@ export default function MemoryPage() {
                   {/* Type badge */}
                   {badge && (
                     <Badge variant="outline" className={`rounded-none font-mono text-[7px] px-1.5 py-0.5 shrink-0 ${badge.className}`}>
-                      {badge.label}
+                       {t(...badge.label)}
                     </Badge>
                   )}
 
@@ -241,7 +243,7 @@ export default function MemoryPage() {
                     <QualityBar score={mem.qualityScore ?? undefined} />
                     {mem.usageCount > 0 && (
                       <span className="font-mono text-[11px] text-muted-foreground/40 hidden sm:block">
-                        {mem.usageCount}× usado
+                         {t(`${mem.usageCount}× usado`, `${mem.usageCount}× used`, `${mem.usageCount}× usado`)}
                       </span>
                     )}
                     {!mem.isPublicReference && (
@@ -252,13 +254,13 @@ export default function MemoryPage() {
                         }}
                         disabled={deleteMutation.isPending}
                         className="p-1 hover:text-destructive text-muted-foreground/30 transition-colors"
-                        title="Remover memória"
+                         title={t("Remover memória", "Remove memory", "Eliminar memoria")}
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>
                     )}
                     {mem.isPublicReference && (
-                      <Sparkles className="h-3 w-3 text-primary/30" aria-label="Referência pública" />
+                       <Sparkles className="h-3 w-3 text-primary/30" aria-label={t("Referência pública", "Public reference", "Referencia pública")} />
                     )}
                     {isExpanded ? <ChevronUp className="h-3 w-3 text-muted-foreground/40" /> : <ChevronDown className="h-3 w-3 text-muted-foreground/40" />}
                   </div>
@@ -278,17 +280,17 @@ export default function MemoryPage() {
                     <div className="flex items-center gap-4 pt-1">
                       <span className="font-mono text-[11px] text-muted-foreground/40 flex items-center gap-1">
                         <Clock className="h-2.5 w-2.5" />
-                        {new Date(mem.createdAt).toLocaleDateString("pt-BR")}
+                         {new Date(mem.createdAt).toLocaleDateString(numberLocale)}
                       </span>
                       {mem.lastUsedAt && (
                         <span className="font-mono text-[11px] text-muted-foreground/40 flex items-center gap-1">
                           <TrendingUp className="h-2.5 w-2.5" />
-                          Último uso: {new Date(mem.lastUsedAt).toLocaleDateString("pt-BR")}
+                           {t("Último uso:", "Last used:", "Último uso:")} {new Date(mem.lastUsedAt).toLocaleDateString(numberLocale)}
                         </span>
                       )}
                       {mem.isNegative && (
                         <Badge variant="outline" className="rounded-none font-mono text-[7px] text-destructive border-destructive/30 bg-destructive/10">
-                          Aprendizado Negativo
+                           {t("Aprendizado Negativo", "Negative Learning", "Aprendizaje negativo")}
                         </Badge>
                       )}
                     </div>

@@ -12,6 +12,7 @@ import {
   XCircle, Filter, Calendar, Type, Search, Activity, Terminal, RefreshCw, Eye, ArrowLeft, ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useUiText } from "@/lib/i18n";
 import {
   Drawer,
   DrawerClose,
@@ -83,42 +84,46 @@ function PreviewText({ content }: { content: unknown }) {
 }
 
 function PreviewImage({ content, title }: { content: unknown, title: string }) {
+  const t = useUiText();
   const url = typeof content === "string" && (content.startsWith('http') || content.startsWith('/'))
     ? content
     : findUrl(content, ['mediaUrl', 'mediaUrls', 'previewUrl', 'finalUrl', 'lowResUrl', 'url', 'src', 'imageUrl']);
   
-  const alt = (content as any)?.alt || title || "Preview image";
+  const fallbackAlt = t("Imagem de pré-visualização", "Preview image", "Imagen de vista previa");
+  const alt = (content as any)?.alt || title || fallbackAlt;
   
   if (!url) return <PreviewStructured content={content} />;
   
   return (
     <div className="flex flex-col items-center gap-3">
       <img src={url} alt={alt} className="max-w-full h-auto object-contain max-h-[60vh] border border-border/20 bg-black/50" />
-      {alt !== "Preview image" && <div className="text-xs text-muted-foreground font-mono">{alt}</div>}
+      {alt !== fallbackAlt && <div className="text-xs text-muted-foreground font-mono">{alt}</div>}
     </div>
   );
 }
 
 function PreviewVideo({ content, title }: { content: unknown, title: string }) {
+  const t = useUiText();
   const url = typeof content === "string" && (content.startsWith('http') || content.startsWith('/'))
     ? content
     : findUrl(content, ['finalVideoUrl', 'mediaUrl', 'mediaUrls', 'previewUrl', 'finalUrl', 'lowResUrl', 'url', 'src']);
     
   const poster = typeof content === "object" && content ? findUrl(content, ['poster', 'thumbnail']) : undefined;
-  const alt = (content as any)?.alt || title || "Preview video";
+  const alt = (content as any)?.alt || title || t("Vídeo de pré-visualização", "Preview video", "Video de vista previa");
 
   if (!url) return <PreviewStructured content={content} />;
 
   return (
     <div className="flex flex-col items-center gap-3 w-full">
       <video src={url} poster={poster} controls className="max-w-full h-auto object-contain max-h-[60vh] border border-border/20 bg-black/50" aria-label={alt}>
-        <p className="text-xs text-muted-foreground font-mono">Vídeo indisponível nativamente: <a href={url} target="_blank" rel="noreferrer" className="text-primary hover:underline">{alt}</a>.</p>
+        <p className="text-xs text-muted-foreground font-mono">{t("Vídeo indisponível nativamente:", "Video cannot be played natively:", "El video no se puede reproducir de forma nativa:")} <a href={url} target="_blank" rel="noreferrer" className="text-primary hover:underline">{alt}</a>.</p>
       </video>
     </div>
   );
 }
 
 function PreviewPage({ content }: { content: unknown }) {
+  const t = useUiText();
   const htmlRaw = typeof content === "string" ? content : (content as any)?.html || (content as any)?.content?.html;
   
   if (typeof htmlRaw === "string") {
@@ -126,7 +131,7 @@ function PreviewPage({ content }: { content: unknown }) {
     if (safeHtml) {
       return (
         <div className="w-full h-[70vh] border border-border/30 bg-white">
-          <iframe srcDoc={safeHtml} sandbox="" className="w-full h-full border-0 bg-white" title="Page Preview" />
+          <iframe srcDoc={safeHtml} sandbox="" className="w-full h-full border-0 bg-white" title={t("Pré-visualização da página", "Page Preview", "Vista previa de página")} />
         </div>
       );
     }
@@ -154,27 +159,28 @@ function PreviewMessage({ content }: { content: unknown }) {
 }
 
 function PreviewAd({ content }: { content: unknown }) {
+  const t = useUiText();
   const obj = (typeof content === "object" && content) ? content : {};
   const nested = (obj as any).content || (obj as any).concept || obj;
   
   const headline = nested.headline || nested.title;
   const body = nested.body || nested.text || nested.primaryText;
   const imageUrl = findUrl(obj, ['imageUrl', 'mediaUrl', 'previewUrl', 'url', 'src', 'image']);
-  const cta = nested.cta || nested.callToAction || "Learn More";
+  const cta = nested.cta || nested.callToAction || t("Saiba mais", "Learn More", "Más información");
 
   return (
     <div className="max-w-sm w-full border border-border/30 bg-black overflow-hidden flex flex-col mx-auto shadow-xl">
       {imageUrl && (
         <div className="w-full aspect-[4/5] bg-black/50 border-b border-border/20 flex items-center justify-center relative overflow-hidden">
-          <img src={imageUrl} alt="Ad media" className="absolute inset-0 w-full h-full object-cover blur-sm opacity-30" />
-          <img src={imageUrl} alt="Ad media" className="relative max-w-full max-h-full object-contain" />
+          <img src={imageUrl} alt={t("Mídia do anúncio", "Ad media", "Contenido del anuncio")} className="absolute inset-0 w-full h-full object-cover blur-sm opacity-30" />
+          <img src={imageUrl} alt={t("Mídia do anúncio", "Ad media", "Contenido del anuncio")} className="relative max-w-full max-h-full object-contain" />
         </div>
       )}
       <div className="p-5 flex flex-col gap-3">
         {headline && <div className="font-sans font-bold text-base text-foreground leading-tight">{headline}</div>}
         {body && <div className="font-sans text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">{body}</div>}
         <button type="button" className="mt-3 w-full py-2.5 bg-primary/20 border border-primary/30 text-primary text-xs uppercase tracking-widest font-bold cursor-not-allowed opacity-80" disabled data-testid="ad-preview-cta">
-          {cta} (Simulated)
+          {cta} ({t("Simulado", "Simulated", "Simulado")})
         </button>
       </div>
       <PreviewStructured content={content} skipKeys={["headline", "title", "body", "text", "primaryText", "imageUrl", "mediaUrl", "cta", "callToAction"]} />
@@ -183,6 +189,7 @@ function PreviewAd({ content }: { content: unknown }) {
 }
 
 function PreviewStructured({ content, skipKeys = [] }: { content: unknown, skipKeys?: string[] }) {
+  const t = useUiText();
   if (content === undefined || content === null) return null;
   if (typeof content !== "object") {
     return <div className="font-mono text-[10px] text-muted-foreground whitespace-pre-wrap p-4 bg-black/40 border border-white/5">{String(content)}</div>;
@@ -195,7 +202,7 @@ function PreviewStructured({ content, skipKeys = [] }: { content: unknown, skipK
 
   return (
     <div className="mt-6 relative w-full">
-      <div className="absolute top-0 left-0 px-2 py-0.5 bg-white/10 text-[8px] text-white/50 uppercase tracking-widest z-10 border-b border-r border-white/10">Structured Data</div>
+      <div className="absolute top-0 left-0 px-2 py-0.5 bg-white/10 text-[8px] text-white/50 uppercase tracking-widest z-10 border-b border-r border-white/10">{t("Dados estruturados", "Structured Data", "Datos estructurados")}</div>
       <pre className="pt-7 pb-3 px-4 border border-white/5 bg-[#050505] text-[10px] text-muted-foreground/80 whitespace-pre-wrap break-words overflow-x-auto max-w-full">
         {JSON.stringify(displayObj, null, 2)}
       </pre>
@@ -203,16 +210,28 @@ function PreviewStructured({ content, skipKeys = [] }: { content: unknown, skipK
   );
 }
 
+function previewStateLabel(state: string, t: ReturnType<typeof useUiText>) {
+  const labels: Record<string, [string, string, string]> = {
+    ready: ["Pronto", "Ready", "Listo"],
+    unavailable: ["Indisponível", "Unavailable", "No disponible"],
+    pending: ["Pendente", "Pending", "Pendiente"],
+    failed: ["Falhou", "Failed", "Fallido"],
+  };
+  const copy = labels[state];
+  return copy ? t(copy[0], copy[1], copy[2]) : state;
+}
+
 function UniversalPreviewRenderer({ record }: { record: ControlRoomPreviewRecord }) {
+  const t = useUiText();
   if (record.preview.state === "unavailable") {
     return (
       <div className="flex flex-col items-center justify-center p-10 text-center border border-dashed border-border/30 bg-black/20 h-full w-full">
         <XCircle className="h-10 w-10 text-muted-foreground/30 mb-4" />
-        <div className="font-mono text-[12px] uppercase tracking-widest text-muted-foreground font-bold">Preview Indisponível</div>
+        <div className="font-mono text-[12px] uppercase tracking-widest text-muted-foreground font-bold">{t("Preview Indisponível", "Preview Unavailable", "Vista previa no disponible")}</div>
         {record.preview.reason ? (
           <div className="font-mono text-[10px] text-muted-foreground/60 mt-2 max-w-md">{record.preview.reason}</div>
         ) : (
-          <div className="font-mono text-[10px] text-muted-foreground/60 mt-2">Nenhum conteúdo de preview encontrado.</div>
+          <div className="font-mono text-[10px] text-muted-foreground/60 mt-2">{t("Nenhum conteúdo de preview encontrado.", "No preview content found.", "No se encontró contenido de vista previa.")}</div>
         )}
       </div>
     );
@@ -248,6 +267,7 @@ export function UniversalPreviewDrawer({
   onOpenChange: (open: boolean) => void;
   campaignId: string;
 }) {
+  const t = useUiText();
   const [filters, setFilters] = useState({
     kind: "",
     status: "",
@@ -266,11 +286,11 @@ export function UniversalPreviewDrawer({
   const validationError = useMemo(() => {
     if (filters.updatedFrom && filters.updatedTo) {
       const f = new Date(filters.updatedFrom).getTime();
-      const t = new Date(filters.updatedTo).getTime();
-      if (!isNaN(f) && !isNaN(t) && f >= t) return "Data inicial deve ser menor que a data final.";
+      const toTimestamp = new Date(filters.updatedTo).getTime();
+      if (!isNaN(f) && !isNaN(toTimestamp) && f >= toTimestamp) return t("Data inicial deve ser menor que a data final.", "Start date must be earlier than end date.", "La fecha inicial debe ser anterior a la fecha final.");
     }
     return null;
-  }, [filters]);
+  }, [filters, t]);
 
   const {
     data,
@@ -360,7 +380,7 @@ export function UniversalPreviewDrawer({
                 <button
                   onClick={() => setSelectedRecord(null)}
                   className="p-1.5 border border-border/40 bg-black/40 hover:bg-white/5 hover:border-border/80 transition-colors text-muted-foreground hover:text-white shrink-0"
-                  aria-label="Voltar para a lista"
+                  aria-label={t("Voltar para a lista", "Back to list", "Volver a la lista")}
                   data-testid="btn-back-to-preview-list"
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -369,17 +389,17 @@ export function UniversalPreviewDrawer({
               <div>
                 <DrawerTitle className="font-mono text-sm uppercase tracking-widest text-primary flex items-center gap-2">
                   <Eye className="h-4 w-4" />
-                  Universal Previews
+                  {t("Previews Universais", "Universal Previews", "Vistas previas universales")}
                 </DrawerTitle>
                 <DrawerDescription className="font-mono text-[10px] uppercase tracking-wider mt-1 text-muted-foreground">
                   {selectedRecord ? (
                     <span>Visualizando: {selectedRecord.source.title}</span>
                   ) : isLoading ? (
-                    <span className="animate-pulse">Consultando previews...</span>
+                    <span className="animate-pulse">{t("Consultando previews...", "Loading previews...", "Consultando vistas previas...")}</span>
                   ) : (
-                    <span>Exibindo {loaded} de {total} itens persistidos</span>
+                    <span>{t(`Exibindo ${loaded} de ${total} itens persistidos`, `Showing ${loaded} of ${total} persisted items`, `Mostrando ${loaded} de ${total} elementos guardados`)}</span>
                   )}
-                  {!selectedRecord && appliedFiltersCount > 0 && ` • ${appliedFiltersCount} filtro(s) ativo(s)`}
+                  {!selectedRecord && appliedFiltersCount > 0 && ` • ${t(`${appliedFiltersCount} filtro(s) ativo(s)`, `${appliedFiltersCount} active filter(s)`, `${appliedFiltersCount} filtro(s) activo(s)`)}`}
                 </DrawerDescription>
               </div>
             </div>
@@ -396,7 +416,7 @@ export function UniversalPreviewDrawer({
                 data-testid={`link-source-${selectedRecord.source.id}`}
               >
                 <ExternalLink className="h-3 w-3 mr-2" />
-                Abrir Fonte Original
+                {t("Abrir Fonte Original", "Open Original Source", "Abrir fuente original")}
               </Link>
             )}
           </DrawerHeader>
@@ -409,7 +429,7 @@ export function UniversalPreviewDrawer({
                 <div className="flex items-center justify-between">
                   <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold flex items-center gap-2">
                     <Filter className="h-3 w-3" />
-                    Filtros
+                    {t("Filtros", "Filters", "Filtros")}
                   </h3>
                   {appliedFiltersCount > 0 && (
                     <button
@@ -417,7 +437,7 @@ export function UniversalPreviewDrawer({
                       className="text-[9px] uppercase tracking-widest text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
                       data-testid="btn-reset-preview-filters"
                     >
-                      Resetar
+                      {t("Resetar", "Reset", "Restablecer")}
                     </button>
                   )}
                 </div>
@@ -425,7 +445,7 @@ export function UniversalPreviewDrawer({
                 <div className="space-y-3">
                   <div className="space-y-1">
                     <label className="text-[9px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5" htmlFor="preview-filter-kind">
-                      <Type className="h-3 w-3" /> Tipo (Kind)
+                      <Type className="h-3 w-3" /> {t("Tipo", "Type", "Tipo")}
                     </label>
                     <select
                       id="preview-filter-kind"
@@ -434,27 +454,27 @@ export function UniversalPreviewDrawer({
                       className="w-full bg-black border border-border/30 text-[10px] p-1.5 text-white focus-visible:outline-none focus-visible:border-primary/60 transition-colors"
                       data-testid="select-preview-kind"
                     >
-                      <option value="">Todos</option>
-                      <option value="content_piece">Content Piece</option>
-                      <option value="media_brief">Media Brief</option>
-                      <option value="creative">Creative</option>
-                      <option value="social_post">Social Post</option>
-                      <option value="campaign_asset">Campaign Asset</option>
-                      <option value="page">Page</option>
-                      <option value="video_project">Video Project</option>
+                      <option value="">{t("Todos", "All", "Todos")}</option>
+                      <option value="content_piece">{t("Peça de conteúdo", "Content Piece", "Pieza de contenido")}</option>
+                      <option value="media_brief">{t("Brief de mídia", "Media Brief", "Brief de medios")}</option>
+                      <option value="creative">{t("Criativo", "Creative", "Creativo")}</option>
+                      <option value="social_post">{t("Publicação social", "Social Post", "Publicación social")}</option>
+                      <option value="campaign_asset">{t("Ativo de campanha", "Campaign Asset", "Recurso de campaña")}</option>
+                      <option value="page">{t("Página", "Page", "Página")}</option>
+                      <option value="video_project">{t("Projeto de vídeo", "Video Project", "Proyecto de video")}</option>
                     </select>
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-[9px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5" htmlFor="preview-filter-status">
-                      <Terminal className="h-3 w-3" /> Status
+                      <Terminal className="h-3 w-3" /> {t("Status", "Status", "Estado")}
                     </label>
                     <input
                       id="preview-filter-status"
                       type="text"
                       value={filters.status}
                       onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}
-                      placeholder="ex: ready, approved..."
+                      placeholder={t("ex.: ready, approved...", "e.g. ready, approved...", "p. ej.: ready, approved...")}
                       className="w-full bg-black border border-border/30 text-[10px] p-1.5 text-white focus-visible:outline-none focus-visible:border-primary/60 placeholder:text-muted-foreground/30 transition-colors"
                       data-testid="input-preview-status"
                     />
@@ -462,7 +482,7 @@ export function UniversalPreviewDrawer({
 
                   <div className="space-y-1">
                     <label className="text-[9px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5" htmlFor="preview-filter-from">
-                      <Calendar className="h-3 w-3" /> Modificado Após
+                      <Calendar className="h-3 w-3" /> {t("Modificado Após", "Modified After", "Modificado después de")}
                     </label>
                     <input
                       id="preview-filter-from"
@@ -476,7 +496,7 @@ export function UniversalPreviewDrawer({
 
                   <div className="space-y-1">
                     <label className="text-[9px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5" htmlFor="preview-filter-to">
-                      <Calendar className="h-3 w-3" /> Modificado Antes
+                      <Calendar className="h-3 w-3" /> {t("Modificado Antes", "Modified Before", "Modificado antes de")}
                     </label>
                     <input
                       id="preview-filter-to"
@@ -496,27 +516,27 @@ export function UniversalPreviewDrawer({
                   <div className="flex-1 flex items-center justify-center">
                     <div className="flex flex-col items-center gap-3">
                       <RefreshCw className="h-6 w-6 text-primary animate-spin" />
-                      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Carregando previews...</span>
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Carregando previews...", "Loading previews...", "Cargando vistas previas...")}</span>
                     </div>
                   </div>
                 ) : isInitialError ? (
                   <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                     <XCircle className="h-8 w-8 text-destructive mb-3" />
-                    <div className="font-mono text-[11px] uppercase tracking-widest text-destructive mb-2 font-bold">Falha na Busca</div>
-                    <p className="font-mono text-[9px] text-muted-foreground max-w-md mb-4">{error?.message || "Erro ao carregar os previews."}</p>
+                    <div className="font-mono text-[11px] uppercase tracking-widest text-destructive mb-2 font-bold">{t("Falha na Busca", "Search Failed", "Error en la búsqueda")}</div>
+                    <p className="font-mono text-[9px] text-muted-foreground max-w-md mb-4">{error?.message || t("Erro ao carregar os previews.", "Failed to load previews.", "No se pudieron cargar las vistas previas.")}</p>
                     <Button type="button" onClick={onRetryInitial} variant="outline" className="font-mono text-[10px] uppercase tracking-widest border-border/30 hover:bg-white/5" data-testid="btn-retry-previews">
-                      Tentar Novamente
+                      {t("Tentar Novamente", "Try Again", "Intentar de nuevo")}
                     </Button>
                   </div>
                 ) : allRecords.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                     <Search className="h-8 w-8 text-muted-foreground/30 mb-3" />
                     <div className="font-mono text-[11px] uppercase tracking-widest text-white/50 mb-2 font-bold">
-                      {appliedFiltersCount > 0 ? "Nenhum preview para os filtros" : "Nenhum preview disponível"}
+                      {appliedFiltersCount > 0 ? t("Nenhum preview para os filtros", "No previews match the filters", "No hay vistas previas para estos filtros") : t("Nenhum preview disponível", "No previews available", "No hay vistas previas disponibles")}
                     </div>
                     {appliedFiltersCount > 0 && (
                       <Button type="button" onClick={handleReset} variant="outline" className="mt-4 font-mono text-[10px] uppercase tracking-widest border-primary/30 text-primary hover:bg-primary/10" data-testid="btn-empty-reset-filters">
-                        Limpar Filtros
+                        {t("Limpar Filtros", "Clear Filters", "Limpiar filtros")}
                       </Button>
                     )}
                   </div>
@@ -536,7 +556,7 @@ export function UniversalPreviewDrawer({
                             <div className="flex items-start justify-between gap-2">
                               <span className="text-[11px] uppercase tracking-wider text-white font-bold line-clamp-1">{rec.source.title}</span>
                               <span className={`px-1.5 py-0.5 border text-[8px] tracking-widest uppercase shrink-0 ${rec.preview.state === 'ready' ? 'border-success/30 bg-success/10 text-success' : 'border-destructive/30 bg-destructive/10 text-destructive'}`} data-testid="list-preview-status">
-                                {rec.preview.state}
+                                {previewStateLabel(rec.preview.state, t)}
                               </span>
                             </div>
                             <div className="flex flex-wrap items-center gap-2 text-[9px] text-muted-foreground uppercase tracking-widest">
@@ -547,7 +567,7 @@ export function UniversalPreviewDrawer({
                               <span>{rec.preview.representation}</span>
                             </div>
                             <div className="text-[8px] text-muted-foreground/60 mt-1">
-                              Atualizado: {new Date(rec.source.updatedAt).toLocaleString("pt-BR")}
+                              {t("Atualizado", "Updated", "Actualizado")}: {new Date(rec.source.updatedAt).toLocaleString()}
                             </div>
                           </div>
                         </button>
@@ -556,9 +576,9 @@ export function UniversalPreviewDrawer({
 
                     {isFetchNextPageError && (
                       <div className="p-4 flex flex-col items-center gap-2 border-t border-destructive/20 bg-destructive/5" role="alert">
-                        <div className="text-[10px] text-destructive uppercase tracking-widest">Falha ao carregar mais itens</div>
+                        <div className="text-[10px] text-destructive uppercase tracking-widest">{t("Falha ao carregar mais itens", "Failed to load more items", "No se pudieron cargar más elementos")}</div>
                         <Button type="button" onClick={onRetryNextPage} variant="outline" className="font-mono text-[9px] uppercase tracking-widest border-destructive/30 text-destructive" data-testid="btn-retry-next-page">
-                          Tentar Novamente
+                          {t("Tentar Novamente", "Try Again", "Intentar de nuevo")}
                         </Button>
                       </div>
                     )}
@@ -574,9 +594,9 @@ export function UniversalPreviewDrawer({
                           data-testid="btn-load-more-previews"
                         >
                           {isFetchingNextPage ? (
-                            <><RefreshCw className="mr-2 h-3 w-3 animate-spin" /> Carregando...</>
+                            <><RefreshCw className="mr-2 h-3 w-3 animate-spin" /> {t("Carregando...", "Loading...", "Cargando...")}</>
                           ) : (
-                            "Carregar Mais"
+                            t("Carregar Mais", "Load More", "Cargar más")
                           )}
                         </Button>
                       </div>
@@ -585,7 +605,7 @@ export function UniversalPreviewDrawer({
                     {!hasNextPage && allRecords.length > 0 && (
                       <div className="p-6 text-center font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 flex items-center justify-center gap-3">
                         <div className="h-px w-8 bg-border/20" />
-                        Fim dos previews
+                        {t("Fim dos previews", "End of previews", "Fin de las vistas previas")}
                         <div className="h-px w-8 bg-border/20" />
                       </div>
                     )}
@@ -606,7 +626,7 @@ export function UniversalPreviewDrawer({
                       <span>•</span>
                       <span>{selectedRecord.preview.representation}</span>
                       <span>•</span>
-                      <span className={`${selectedRecord.preview.state === 'ready' ? 'text-success' : 'text-destructive'}`} data-testid="detail-preview-status">{selectedRecord.preview.state}</span>
+                      <span className={`${selectedRecord.preview.state === 'ready' ? 'text-success' : 'text-destructive'}`} data-testid="detail-preview-status">{previewStateLabel(selectedRecord.preview.state, t)}</span>
                     </div>
                   </div>
                 </div>
@@ -620,8 +640,8 @@ export function UniversalPreviewDrawer({
             {!selectedRecord && (
               <div className="hidden lg:flex flex-1 flex-col items-center justify-center p-8 bg-[#02040a] text-center">
                 <Eye className="h-12 w-12 text-white/5 mb-4" />
-                <h3 className="font-mono text-[12px] uppercase tracking-widest text-white/30 font-bold mb-2">Nenhum Item Selecionado</h3>
-                <p className="font-mono text-[10px] text-muted-foreground max-w-sm">Selecione um entregável na lista à esquerda para inspecionar sua representação em modo seguro.</p>
+                <h3 className="font-mono text-[12px] uppercase tracking-widest text-white/30 font-bold mb-2">{t("Nenhum Item Selecionado", "No Item Selected", "Ningún elemento seleccionado")}</h3>
+                <p className="font-mono text-[10px] text-muted-foreground max-w-sm">{t("Selecione um entregável na lista à esquerda para inspecionar sua representação em modo seguro.", "Select a deliverable from the list on the left to inspect its representation in safe mode.", "Selecciona un entregable de la lista de la izquierda para inspeccionar su representación en modo seguro.")}</p>
               </div>
             )}
           </div>
@@ -629,7 +649,7 @@ export function UniversalPreviewDrawer({
           <DrawerFooter className="border-t border-border/20 shrink-0 bg-[#030712] flex-row justify-end p-4">
             <DrawerClose asChild>
               <Button variant="outline" className="rounded-none font-mono text-[10px] uppercase tracking-widest border-border/40 hover:bg-white/5" data-testid="btn-close-universal-preview">
-                Fechar Previews
+                {t("Fechar Previews", "Close Previews", "Cerrar vistas previas")}
               </Button>
             </DrawerClose>
           </DrawerFooter>

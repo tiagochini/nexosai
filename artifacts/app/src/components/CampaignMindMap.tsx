@@ -8,6 +8,7 @@ import {
   Shield, Users, Star, Play, BookOpen, LayoutList,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useUiText } from "@/lib/i18n";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -693,6 +694,7 @@ function PhaseNode({
 // ── Root component ─────────────────────────────────────────────────────────────
 
 export function CampaignMindMap({ campaign, agents, checkpoints, pieces, campaignId }: MindMapProps) {
+  const t = useUiText();
   const [allExpanded, setAllExpanded] = useState(false);
   const [key, setKey] = useState(0);
 
@@ -723,11 +725,11 @@ export function CampaignMindMap({ campaign, agents, checkpoints, pieces, campaig
           </div>
           <div className="min-w-0">
             <div className="font-mono text-[12px] font-bold uppercase tracking-widest text-foreground/80">
-              Mapa de Execução
+              {t("Mapa de Execução", "Execution Map", "Mapa de Ejecución")}
             </div>
             <div className="font-mono text-[10px] text-muted-foreground/45">
-              {totalAgents} agente{totalAgents !== 1 ? "s" : ""} · {totalPieces} peça{totalPieces !== 1 ? "s" : ""}
-              {approvedPieces > 0 && ` · ${approvedPieces} aprovada${approvedPieces !== 1 ? "s" : ""}`}
+              {totalAgents} {t("agentes", "agents", "agentes")} · {totalPieces} {t("peças", "pieces", "piezas")}
+              {approvedPieces > 0 && ` · ${approvedPieces} ${t("aprovadas", "approved", "aprobadas")}`}
             </div>
           </div>
         </div>
@@ -747,7 +749,7 @@ export function CampaignMindMap({ campaign, agents, checkpoints, pieces, campaig
             className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50
               hover:text-muted-foreground/80 border border-border/25 px-2.5 py-1.5 hover:bg-muted/10 transition-colors"
           >
-            {allExpanded ? "Recolher" : "Expandir"} Tudo
+            {allExpanded ? t("Recolher", "Collapse", "Contraer") : t("Expandir", "Expand", "Expandir")} {t("Tudo", "All", "Todo")}
           </button>
         </div>
       </div>
@@ -811,17 +813,17 @@ export function CampaignMindMap({ campaign, agents, checkpoints, pieces, campaig
       <div className="px-4 py-2.5 border-t border-border/20 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
-            Agentes: {completedAgents}/{totalAgents} concluídos
+            {t("Agentes:", "Agents:", "Agentes:")} {completedAgents}/{totalAgents} {t("concluídos", "completed", "completados")}
           </span>
           {totalPieces > 0 && (
             <span className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
-              Conteúdo: {approvedPieces}/{totalPieces} aprovados
+              {t("Conteúdo:", "Content:", "Contenido:")} {approvedPieces}/{totalPieces} {t("aprovados", "approved", "aprobados")}
             </span>
           )}
         </div>
         <Link href={`/campaigns/${campaignId}`}>
           <span className="font-mono text-[10px] text-primary/50 hover:text-primary/80 uppercase tracking-widest transition-colors">
-            Ver Campanha →
+            {t("Ver Campanha →", "View Campaign →", "Ver Campaña →")}
           </span>
         </Link>
       </div>

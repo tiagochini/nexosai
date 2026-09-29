@@ -12,7 +12,6 @@ import {
   LifecycleTimelineResponseOnboardingItem,
   LifecycleTimelineResponseRecoveryItem
 } from "@workspace/api-client-react";
-import { format } from "date-fns";
 import { 
   Activity, Users, ShieldAlert, AlertTriangle, Play, RefreshCw, 
   Search, Shield, Info, History, ArrowRight, User
@@ -22,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 // ─── Interfaces & Extended Types ─────────────────────────────────────────────
 
@@ -29,19 +29,19 @@ type PrivacyContact = LifecycleContact & { emailMasked?: string };
 
 // ─── Formatting Helpers ──────────────────────────────────────────────────────
 
-function formatMoney(cents: number = 0) {
-  return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+function formatMoney(cents: number = 0, locale: string) {
+  return new Intl.NumberFormat(intlLocale(locale as "pt-BR" | "en-US" | "en-AU" | "es-LA"), { style: "currency", currency: "BRL" }).format(cents / 100);
 }
 
-function getStatusBadgeProps(status: string) {
+function getStatusBadgeProps(status: string, t: ReturnType<typeof useUiText>) {
   switch (status.toLowerCase()) {
     case "pending":
-      return { label: "Pendente", color: "text-yellow-500 border-yellow-500/30 bg-yellow-500/10" };
+      return { label: t("Pendente", "Pending", "Pendiente"), color: "text-yellow-500 border-yellow-500/30 bg-yellow-500/10" };
     case "suppressed":
-      return { label: "Suprimido", color: "text-muted-foreground border-border/40 bg-muted/10" };
+      return { label: t("Suprimido", "Suppressed", "Suprimido"), color: "text-muted-foreground border-border/40 bg-muted/10" };
     case "confirmed":
     case "completed":
-      return { label: "Concluído no registro", color: "text-success border-success/30 bg-success/10" };
+      return { label: t("Concluído no registro", "Recorded as completed", "Registrado como completado"), color: "text-success border-success/30 bg-success/10" };
     default:
       return { label: status, color: "text-muted-foreground border-border/30 bg-muted/10" };
   }
@@ -56,6 +56,8 @@ function getRiskColor(risk: number = 0) {
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function TimelineSheet({ contactId, onClose }: { contactId: string | null; onClose: () => void }) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const { data, isLoading, isError } = useGetLifecycleTimeline(contactId || "", undefined, {
     query: { 
       enabled: !!contactId,
@@ -73,21 +75,21 @@ function TimelineSheet({ contactId, onClose }: { contactId: string | null; onClo
       type: e.type,
       status: e.status,
       date: e.occurredAt || e.processedAt || new Date().toISOString(),
-      description: `Evento processado. Status: ${e.status}.`
+      description: t(`Evento processado. Status: ${e.status}.`, `Event processed. Status: ${e.status}.`, `Evento procesado. Estado: ${e.status}.`)
     })),
     ...onboarding.map(o => ({
       id: o.id,
       type: "onboarding",
       status: o.status,
       date: o.createdAt,
-      description: `Processo de onboarding. Status: ${o.status}.`
+      description: t(`Processo de onboarding. Status: ${o.status}.`, `Onboarding process. Status: ${o.status}.`, `Proceso de incorporación. Estado: ${o.status}.`)
     })),
     ...recovery.map(r => ({
       id: r.id,
       type: "recovery",
       status: r.status,
       date: r.createdAt,
-      description: `Tentativa de recuperação via ${r.channel}. Status: ${r.status}.`
+      description: t(`Tentativa de recuperação via ${r.channel}. Status: ${r.status}.`, `Recovery attempt via ${r.channel}. Status: ${r.status}.`, `Intento de recuperación por ${r.channel}. Estado: ${r.status}.`)
     }))
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -96,7 +98,7 @@ function TimelineSheet({ contactId, onClose }: { contactId: string | null; onClo
       <SheetContent side="right" className="w-[400px] sm:w-[540px] border-l border-primary/20 bg-card/95 backdrop-blur-xl p-0 flex flex-col font-mono">
         <SheetHeader className="p-6 border-b border-border/50 shrink-0">
           <SheetTitle className="text-sm uppercase tracking-widest text-primary flex items-center gap-2">
-            <History className="h-4 w-4" /> Histórico do Contato
+            <History className="h-4 w-4" /> {t("Histórico do contato", "Contact history", "Historial del contacto")}
           </SheetTitle>
           <div className="text-[11px] text-muted-foreground/60 uppercase tracking-widest">
             ID: {contactId}
@@ -108,11 +110,11 @@ function TimelineSheet({ contactId, onClose }: { contactId: string | null; onClo
             Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-16 w-full bg-muted/20" />)
           ) : isError ? (
             <div className="text-xs text-destructive border border-destructive/30 bg-destructive/10 p-4 uppercase tracking-widest">
-              Falha ao carregar timeline.
+              {t("Falha ao carregar histórico.", "Couldn't load timeline.", "No se pudo cargar el historial.")}
             </div>
           ) : allTimelineItems.length === 0 ? (
             <div className="text-xs text-muted-foreground/50 border border-border/30 p-6 text-center uppercase tracking-widest">
-              Nenhum evento registrado.
+              {t("Nenhum evento registrado.", "No events recorded.", "No hay eventos registrados.")}
             </div>
           ) : (
             <div className="relative border-l border-border/30 ml-3 space-y-6">
@@ -120,7 +122,7 @@ function TimelineSheet({ contactId, onClose }: { contactId: string | null; onClo
                 <div key={item.id} className="relative pl-6">
                   <div className="absolute left-[-5px] top-1 h-2.5 w-2.5 rounded-full bg-background border border-primary/50" />
                   <div className="text-[10px] text-muted-foreground/60 mb-1">
-                    {format(new Date(item.date), "dd/MM/yyyy HH:mm")}
+                    {new Date(item.date).toLocaleString(intlLocale(locale), { dateStyle: "short", timeStyle: "short" })}
                   </div>
                   <div className="border border-border/40 bg-muted/5 p-3 group hover:border-primary/30 transition-colors">
                     <div className="flex items-center gap-2 mb-2">
@@ -148,6 +150,8 @@ function TimelineSheet({ contactId, onClose }: { contactId: string | null; onClo
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function LifecyclePage() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const [activeTab, setActiveTab] = useState<"overview" | "contacts" | "actions">("overview");
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
 
@@ -169,16 +173,16 @@ export default function LifecyclePage() {
           M12 Lifecycle
         </h1>
         <p className="text-xs font-mono text-muted-foreground/60 uppercase tracking-widest max-w-2xl leading-relaxed">
-          Painel de operações de ciclo de vida. Visão local de estágios, LTV registrado e ações retidas em pendência.
+          {t("Painel de operações de ciclo de vida. Visão local de estágios, LTV registrado e ações retidas em pendência.", "Lifecycle operations dashboard. Local view of stages, recorded LTV, and actions held as pending.", "Panel de operaciones del ciclo de vida. Vista local de las etapas, el LTV registrado y las acciones pendientes.")}
         </p>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-border/40">
         {[
-          { id: "overview", label: "Overview", icon: Activity },
-          { id: "contacts", label: "Contatos", icon: Users },
-          { id: "actions", label: "Ações Pendentes", icon: ShieldAlert }
+          { id: "overview", label: t("Visão geral", "Overview", "Resumen"), icon: Activity },
+          { id: "contacts", label: t("Contatos", "Contacts", "Contactos"), icon: Users },
+          { id: "actions", label: t("Ações pendentes", "Pending actions", "Acciones pendientes"), icon: ShieldAlert }
         ].map(t => (
           <button
             key={t.id}
@@ -211,17 +215,15 @@ export default function LifecyclePage() {
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="relative z-10">
                     <div className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-1">
-                      LTV Registrado (Local)
+                      {t("LTV registrado (local)", "Recorded LTV (local)", "LTV registrado (local)")}
                     </div>
                     <div className="text-3xl font-mono font-bold text-foreground mt-2">
-                      {formatMoney(overview.ltv?.recordedLifetimeValueCents)}
+                      {formatMoney(overview.ltv?.recordedLifetimeValueCents, locale)}
                     </div>
                     <div className="mt-4 flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/20 p-3">
                       <Info className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
                       <div className="text-[10px] font-mono text-yellow-500/80 leading-relaxed uppercase tracking-widest">
-                        Aviso: Valor derivado de {overview.ltv?.contacts || 0} contatos. 
-                        Atribuição estrita: {overview.ltv?.attribution || "Não atribuído externamente"}. 
-                        Não implica recebimento bancário liquidado.
+                        {t(`Aviso: Valor derivado de ${overview.ltv?.contacts || 0} contatos. Atribuição estrita: ${overview.ltv?.attribution || "Não atribuído externamente"}. Não implica recebimento bancário liquidado.`, `Note: Value derived from ${overview.ltv?.contacts || 0} contacts. Strict attribution: ${overview.ltv?.attribution || "Not externally attributed"}. This does not imply a settled bank payment.`, `Aviso: Valor derivado de ${overview.ltv?.contacts || 0} contactos. Atribución estricta: ${overview.ltv?.attribution || "Sin atribución externa"}. No implica un pago bancario liquidado.`)}
                       </div>
                     </div>
                   </div>
@@ -230,7 +232,7 @@ export default function LifecyclePage() {
                 {/* Referrals */}
                 <div className="border border-border/50 bg-card/30 p-5 col-span-1 md:col-span-2">
                   <div className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-4">
-                    Métricas de Indicação
+                    {t("Métricas de indicação", "Referral metrics", "Métricas de referidos")}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {overview.referrals && Object.keys(overview.referrals).length > 0 ? (
@@ -242,7 +244,7 @@ export default function LifecyclePage() {
                       ))
                     ) : (
                       <div className="col-span-2 text-center text-xs font-mono text-muted-foreground/50 py-4 uppercase tracking-widest">
-                        Sem dados de indicação
+                        {t("Sem dados de indicação", "No referral data", "No hay datos de referidos")}
                       </div>
                     )}
                   </div>
@@ -251,7 +253,7 @@ export default function LifecyclePage() {
                 {/* Estágios */}
                 <div className="border border-border/50 bg-card/30 p-5 col-span-1 md:col-span-4">
                   <div className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-4">
-                    Estágios de Contato
+                    {t("Estágios de contato", "Contact stages", "Etapas del contacto")}
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {Object.entries(overview.contactStages || {}).map(([stage, count]) => (
@@ -262,7 +264,7 @@ export default function LifecyclePage() {
                     ))}
                     {(!overview.contactStages || Object.keys(overview.contactStages).length === 0) && (
                       <div className="col-span-4 text-center text-xs font-mono text-muted-foreground/50 py-4 uppercase tracking-widest">
-                        Sem dados de estágio
+                        {t("Sem dados de estágio", "No stage data", "No hay datos de etapas")}
                       </div>
                     )}
                   </div>
@@ -271,7 +273,7 @@ export default function LifecyclePage() {
                 {/* Resumo de Ações */}
                 <div className="border border-border/50 bg-card/30 p-5 col-span-1 md:col-span-4">
                   <div className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-4">
-                    Estado das Ações do Sistema
+                    {t("Estado das ações do sistema", "System action status", "Estado de las acciones del sistema")}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                     {Object.entries(overview.actions || {}).map(([actionType, statuses]) => (
@@ -281,7 +283,7 @@ export default function LifecyclePage() {
                         </div>
                         <div className="space-y-2">
                           {Object.entries(statuses || {}).map(([status, count]) => {
-                            const badge = getStatusBadgeProps(status);
+                            const badge = getStatusBadgeProps(status, t);
                             return (
                               <div key={status} className="flex items-center justify-between text-[11px] font-mono">
                                 <span className={badge.color + " uppercase tracking-widest"}>{badge.label}</span>
@@ -294,7 +296,7 @@ export default function LifecyclePage() {
                     ))}
                     {(!overview.actions || Object.keys(overview.actions).length === 0) && (
                       <div className="col-span-4 text-center text-xs font-mono text-muted-foreground/50 py-8 uppercase tracking-widest border border-border/20">
-                        Nenhuma métrica de ação registrada
+                        {t("Nenhuma métrica de ação registrada", "No action metrics recorded", "No hay métricas de acciones registradas")}
                       </div>
                     )}
                   </div>
@@ -303,7 +305,7 @@ export default function LifecyclePage() {
               </div>
             ) : (
               <div className="text-center p-12 border border-border/30 text-muted-foreground font-mono text-xs uppercase tracking-widest">
-                Falha ao carregar overview.
+                {t("Falha ao carregar visão geral.", "Couldn't load overview.", "No se pudo cargar el resumen.")}
               </div>
             )}
           </div>
@@ -316,7 +318,7 @@ export default function LifecyclePage() {
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input 
-                  placeholder="Filtrar por nome ou ID..." 
+                  placeholder={t("Filtrar por nome ou ID...", "Filter by name or ID...", "Filtrar por nombre o ID...")}
                   className="pl-9 font-mono text-xs h-9 rounded-none bg-muted/10 border-border/40 focus-visible:border-primary/50"
                 />
               </div>
@@ -326,11 +328,11 @@ export default function LifecyclePage() {
               <table className="w-full text-left font-mono text-xs whitespace-nowrap">
                 <thead className="bg-muted/20 text-[10px] uppercase tracking-widest text-muted-foreground">
                   <tr>
-                    <th className="p-3 font-medium">ID / Contato</th>
-                    <th className="p-3 font-medium">Estágio</th>
-                    <th className="p-3 font-medium">Risco de Churn</th>
-                    <th className="p-3 font-medium">Última Atividade</th>
-                    <th className="p-3 font-medium text-right">Ação</th>
+                    <th className="p-3 font-medium">ID / {t("Contato", "Contact", "Contacto")}</th>
+                    <th className="p-3 font-medium">{t("Estágio", "Stage", "Etapa")}</th>
+                    <th className="p-3 font-medium">{t("Risco de churn", "Churn risk", "Riesgo de abandono")}</th>
+                    <th className="p-3 font-medium">{t("Última atividade", "Last activity", "Última actividad")}</th>
+                    <th className="p-3 font-medium text-right">{t("Ação", "Action", "Acción")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/30">
@@ -347,14 +349,14 @@ export default function LifecyclePage() {
                   ) : !contacts || contacts.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="p-8 text-center text-muted-foreground uppercase tracking-widest">
-                        Nenhum contato encontrado
+                        {t("Nenhum contato encontrado", "No contacts found", "No se encontraron contactos")}
                       </td>
                     </tr>
                   ) : (
                     contacts.map(c => (
                       <tr key={c.id} className="hover:bg-muted/10 transition-colors">
                         <td className="p-3">
-                          <div className="font-bold text-foreground">{c.displayLabel || "Desconhecido"}</div>
+                          <div className="font-bold text-foreground">{c.displayLabel || t("Desconhecido", "Unknown", "Desconocido")}</div>
                           <div className="text-[10px] text-muted-foreground/50 mt-0.5">{c.emailMasked || c.email || c.id}</div>
                         </td>
                         <td className="p-3">
@@ -373,7 +375,7 @@ export default function LifecyclePage() {
                           )}
                         </td>
                         <td className="p-3 text-muted-foreground/70 text-[11px]">
-                          {c.lastActivityAt ? format(new Date(c.lastActivityAt), "dd/MM/yyyy HH:mm") : "—"}
+                          {c.lastActivityAt ? new Date(c.lastActivityAt).toLocaleString(intlLocale(locale), { dateStyle: "short", timeStyle: "short" }) : "—"}
                         </td>
                         <td className="p-3 text-right">
                           <Button 
@@ -382,7 +384,7 @@ export default function LifecyclePage() {
                             onClick={() => setSelectedContact(c.id)}
                             className="h-7 text-[10px] rounded-none uppercase tracking-widest text-primary hover:text-primary hover:bg-primary/10"
                           >
-                            Timeline <ArrowRight className="h-3 w-3 ml-1.5" />
+                            {t("Histórico", "Timeline", "Historial")} <ArrowRight className="h-3 w-3 ml-1.5" />
                           </Button>
                         </td>
                       </tr>
@@ -401,10 +403,10 @@ export default function LifecyclePage() {
               <Shield className="h-5 w-5 text-yellow-500 shrink-0" />
               <div>
                 <div className="text-xs font-mono font-bold text-yellow-500 uppercase tracking-widest mb-1">
-                  Ações de Ciclo de Vida não implicam envio
+                  {t("Ações do ciclo de vida não implicam envio", "Lifecycle actions do not imply delivery", "Las acciones del ciclo de vida no implican envío")}
                 </div>
                 <div className="text-[10px] font-mono text-yellow-500/80 leading-relaxed uppercase tracking-widest max-w-3xl">
-                  Registros "Pendentes" ou "Concluído no registro" refletem o estado da intenção no sistema. Envios reais para canais externos dependem da infraestrutura de telecomunicações e não são garantidos por esta interface (sem prova de entrega).
+                  {t('Registros "Pendentes" ou "Concluído no registro" refletem o estado da intenção no sistema. Envios reais para canais externos dependem da infraestrutura de telecomunicações e não são garantidos por esta interface (sem prova de entrega).', 'Records marked "Pending" or "Recorded as completed" reflect the intent status in the system. Actual delivery to external channels depends on telecommunications infrastructure and is not guaranteed by this interface (no proof of delivery).', 'Los registros "Pendiente" o "Registrado como completado" reflejan el estado de la intención en el sistema. La entrega real a canales externos depende de la infraestructura de telecomunicaciones y esta interfaz no la garantiza (sin comprobante de entrega).')}
                 </div>
               </div>
             </div>
@@ -414,11 +416,11 @@ export default function LifecyclePage() {
                 Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-32 w-full bg-muted/20" />)
               ) : !actions || actions.length === 0 ? (
                 <div className="col-span-1 lg:col-span-2 border border-border/30 p-12 text-center text-muted-foreground font-mono text-xs uppercase tracking-widest">
-                  Nenhuma ação registrada
+                  {t("Nenhuma ação registrada", "No actions recorded", "No hay acciones registradas")}
                 </div>
               ) : (
                 actions.map(act => {
-                  const badge = getStatusBadgeProps(act.status);
+                   const badge = getStatusBadgeProps(act.status, t);
                   return (
                     <div key={act.id} className="border border-border/50 bg-card/30 p-4 hover:border-primary/30 transition-colors">
                       <div className="flex items-start justify-between mb-3">
@@ -431,23 +433,23 @@ export default function LifecyclePage() {
                           </Badge>
                         </div>
                         <div className="text-[10px] font-mono text-muted-foreground/50 text-right">
-                          {format(new Date(act.createdAt), "dd/MM HH:mm")}
+                          {new Date(act.createdAt).toLocaleString(intlLocale(locale), { dateStyle: "short", timeStyle: "short" })}
                         </div>
                       </div>
                       
                       <div className="space-y-1.5 mb-3">
                         <div className="text-xs font-mono text-foreground/80 flex items-center justify-between">
-                          <span className="text-muted-foreground/60">Canal:</span>
-                          <span className="uppercase">{act.channel || "Não especificado"}</span>
+                          <span className="text-muted-foreground/60">{t("Canal:", "Channel:", "Canal:")}</span>
+                          <span className="uppercase">{act.channel || t("Não especificado", "Not specified", "No especificado")}</span>
                         </div>
                         <div className="text-xs font-mono text-foreground/80 flex items-center justify-between">
-                          <span className="text-muted-foreground/60">Risco Associado:</span>
+                          <span className="text-muted-foreground/60">{t("Risco associado:", "Associated risk:", "Riesgo asociado:")}</span>
                           <span className={getRiskColor(act.riskScore || 0)}>{act.riskScore != null ? (act.riskScore).toFixed(1) + "%" : "—"}</span>
                         </div>
                       </div>
 
                       <div className="text-[10px] font-mono text-muted-foreground/60 bg-muted/10 p-2 border border-border/20 line-clamp-2" title={act.reason || undefined}>
-                        {act.reason || "Sem motivo registrado"}
+                        {act.reason || t("Sem motivo registrado", "No reason recorded", "No se registró un motivo")}
                       </div>
                     </div>
                   );

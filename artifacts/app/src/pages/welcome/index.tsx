@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { hasDoneTour } from "@/components/AppTour";
+import { useUiText } from "@/lib/i18n";
 
 const WELCOME_SEEN_KEY = "nexos_welcome_seen";
 
@@ -29,38 +30,38 @@ export function markWelcomeSeen() {
   try { localStorage.setItem(WELCOME_SEEN_KEY, "1"); } catch {}
 }
 
-const TEAM = [
+const getTeam = (t: ReturnType<typeof useUiText>) => [
   {
-    name: "Erick", role: "General das Operações", icon: Rocket,
+    name: "Erick", role: t("General das Operações", "Operations General", "General de operaciones"), icon: Rocket,
     color: "text-primary border-primary/30 bg-primary/8",
-    desc: "Orquestra toda a operação e alinha os outros 63 agentes rumo ao seu objetivo.",
+    desc: t("Orquestra toda a operação e alinha os outros 63 agentes rumo ao seu objetivo.", "Coordinates the entire operation and aligns the other 63 agents with your goal.", "Coordina toda la operación y guía a los otros 63 agentes hacia tu objetivo."),
   },
   {
-    name: "Jefferson", role: "Arquiteto do Lançamento", icon: Brain,
+    name: "Jefferson", role: t("Arquiteto do Lançamento", "Launch Architect", "Arquitecto de lanzamiento"), icon: Brain,
     color: "text-cyan-400 border-cyan-400/30 bg-cyan-400/8",
-    desc: "Monta a estratégia completa do zero: posicionamento, narrativa e cronograma.",
+    desc: t("Monta a estratégia completa do zero: posicionamento, narrativa e cronograma.", "Builds the complete strategy from scratch: positioning, narrative, and timeline.", "Crea la estrategia completa desde cero: posicionamiento, narrativa y cronograma."),
   },
   {
-    name: "Gary", role: "Mestre das Palavras", icon: Pen,
+    name: "Gary", role: t("Mestre das Palavras", "Wordsmith", "Maestro de las palabras"), icon: Pen,
     color: "text-yellow-400 border-yellow-400/30 bg-yellow-400/8",
-    desc: "Escreve toda a copy — anúncios, e-mails, páginas — no seu tom de voz.",
+    desc: t("Escreve toda a copy — anúncios, e-mails, páginas — no seu tom de voz.", "Writes all your copy — ads, emails, and pages — in your voice.", "Escribe todo el contenido — anuncios, correos y páginas — con tu tono de voz."),
   },
   {
-    name: "Nicholas", role: "Maximizador de ROAS", icon: Target,
+    name: "Nicholas", role: t("Maximizador de ROAS", "ROAS Optimizer", "Optimizador de ROAS"), icon: Target,
     color: "text-orange-400 border-orange-400/30 bg-orange-400/8",
-    desc: "Cuida da mídia paga: públicos, verba e otimização de campanha em tempo real.",
+    desc: t("Cuida da mídia paga: públicos, verba e otimização de campanha em tempo real.", "Manages paid media: audiences, budgets, and real-time campaign optimization.", "Gestiona los medios pagados: audiencias, presupuesto y optimización de campañas en tiempo real."),
   },
   {
-    name: "Alexandre", role: "Arquiteto de Ofertas", icon: ShoppingCart,
+    name: "Alexandre", role: t("Arquiteto de Ofertas", "Offer Architect", "Arquitecto de ofertas"), icon: ShoppingCart,
     color: "text-success border-success/30 bg-success/8",
-    desc: "Constrói a oferta: preço, bônus e garantia para maximizar conversão.",
+    desc: t("Constrói a oferta: preço, bônus e garantia para maximizar conversão.", "Builds your offer — pricing, bonuses, and guarantees — to maximize conversion.", "Diseña tu oferta — precio, bonos y garantía — para maximizar la conversión."),
   },
 ];
 
-const EXPECTATIONS = [
-  { icon: Clock, text: "15 minutos de briefing guiado por IA — sem planilha, sem enrolação." },
-  { icon: Brain, text: "Estratégia completa pronta para aprovar em minutos, não semanas." },
-  { icon: CheckCircle2, text: "Você aprova cada etapa — nada vai ao ar sem seu ok." },
+const getExpectations = (t: ReturnType<typeof useUiText>) => [
+  { icon: Clock, text: t("15 minutos de briefing guiado por IA — sem planilha, sem enrolação.", "A 15-minute AI-guided brief — no spreadsheets, no busywork.", "15 minutos de resumen guiado por IA: sin hojas de cálculo ni complicaciones.") },
+  { icon: Brain, text: t("Estratégia completa pronta para aprovar em minutos, não semanas.", "A complete strategy ready for your approval in minutes, not weeks.", "Una estrategia completa lista para aprobar en minutos, no semanas.") },
+  { icon: CheckCircle2, text: t("Você aprova cada etapa — nada vai ao ar sem seu ok.", "You approve every step — nothing goes live without your approval.", "Apruebas cada paso: nada se publica sin tu autorización.") },
 ];
 
 type Phase = "celebration" | "team" | "expectations";
@@ -102,10 +103,13 @@ function Confetti() {
 export default function Welcome() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const t = useUiText();
   const [phase, setPhase] = useState<Phase>("celebration");
   const [showConfetti, setShowConfetti] = useState(true);
   const markSeen = useMarkOnboardingSeen();
-  const firstName = user?.name?.split(" ")[0] ?? "você";
+  const firstName = user?.name?.split(" ")[0] ?? t("você", "you", "tú");
+  const team = getTeam(t);
+  const expectations = getExpectations(t);
 
   useEffect(() => {
     markWelcomeSeen();
@@ -153,15 +157,15 @@ export default function Welcome() {
                 </div>
               </div>
               <div className="font-mono text-[11px] uppercase tracking-widest text-primary/60">
-                Parabéns, {firstName}.
+                {t(`Parabéns, ${firstName}.`, `Congratulations, ${firstName}.`, `Felicidades, ${firstName}.`)}
               </div>
               <h1 className="font-mono font-black text-3xl md:text-4xl uppercase tracking-tight text-foreground leading-tight">
-                Você acabou de fazer<br />
-                <span className="text-primary">a melhor decisão</span><br />
-                do seu lançamento.
+                {t("Você acabou de fazer", "You just made", "Acabas de tomar")}<br />
+                <span className="text-primary">{t("a melhor decisão", "the best decision", "la mejor decisión")}</span><br />
+                {t("do seu lançamento.", "for your launch.", "para tu lanzamiento.")}
               </h1>
               <p className="font-mono text-sm text-muted-foreground/70 leading-relaxed max-w-md mx-auto">
-                Enquanto outros gastam R$8.000 em agências e semanas com copywriters, você acaba de contratar uma equipe inteira de especialistas em IA — pronta para trabalhar agora.
+                {t("Enquanto outros gastam R$8.000 em agências e semanas com copywriters, você acaba de contratar uma equipe inteira de especialistas em IA — pronta para trabalhar agora.", "While others spend R$8,000 on agencies and weeks waiting for copywriters, you've just hired a full team of AI specialists — ready to work now.", "Mientras otros gastan R$8.000 en agencias y esperan semanas por redactores, acabas de contratar a todo un equipo de especialistas en IA, listo para trabajar ahora.")}
               </p>
             </div>
 
@@ -169,7 +173,7 @@ export default function Welcome() {
               onClick={() => setPhase("team")}
               className="w-full max-w-sm mx-auto rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-12 text-sm"
             >
-              Conhecer meu time
+              {t("Conhecer meu time", "Meet my team", "Conocer a mi equipo")}
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -179,17 +183,17 @@ export default function Welcome() {
         {phase === "team" && (
           <div className="max-w-2xl w-full mt-4 space-y-6">
             <div className="text-center space-y-1">
-              <div className="font-mono text-[11px] uppercase tracking-widest text-primary/60">Seu time chegou</div>
+              <div className="font-mono text-[11px] uppercase tracking-widest text-primary/60">{t("Seu time chegou", "Your team is here", "Tu equipo ya llegó")}</div>
               <h2 className="font-mono font-black text-2xl uppercase tracking-tight text-foreground">
-                Conheça alguns dos seus agentes
+                {t("Conheça alguns dos seus agentes", "Meet some of your agents", "Conoce a algunos de tus agentes")}
               </h2>
               <p className="font-mono text-xs text-muted-foreground/60 mt-1">
-                São 64 no total — estes já começam trabalhando na sua primeira campanha.
+                {t("São 64 no total — estes já começam trabalhando na sua primeira campanha.", "There are 64 in total — these agents are ready to start on your first campaign.", "Son 64 en total; estos ya están listos para trabajar en tu primera campaña.")}
               </p>
             </div>
 
             <div className="space-y-2.5">
-              {TEAM.map((agent) => {
+              {team.map((agent) => {
                 const Icon = agent.icon;
                 return (
                   <div key={agent.name} className={`border ${agent.color} px-4 py-3 flex items-center gap-3`}>
@@ -213,7 +217,7 @@ export default function Welcome() {
               onClick={() => setPhase("expectations")}
               className="w-full rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-12 text-sm"
             >
-              O que esperar agora
+              {t("O que esperar agora", "What to expect next", "Qué esperar ahora")}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
@@ -225,15 +229,15 @@ export default function Welcome() {
             <div className="space-y-3">
               <div className="text-5xl">🔥</div>
               <h2 className="font-mono font-black text-2xl md:text-3xl uppercase tracking-tight text-foreground">
-                Agora vamos lançar.
+                {t("Agora vamos lançar.", "Now let's launch.", "Ahora vamos a lanzar.")}
               </h2>
               <p className="font-mono text-sm text-muted-foreground/70 leading-relaxed max-w-sm mx-auto">
-                É simples: você responde um briefing rápido, e o time entra em ação.
+                {t("É simples: você responde um briefing rápido, e o time entra em ação.", "It's simple: answer a quick brief, and your team gets to work.", "Es sencillo: respondes un breve cuestionario y tu equipo se pone en marcha.")}
               </p>
             </div>
 
             <div className="space-y-2 text-left">
-              {EXPECTATIONS.map((e, i) => {
+              {expectations.map((e, i) => {
                 const Icon = e.icon;
                 return (
                   <div key={i} className="border border-border/30 bg-card/30 px-4 py-3 flex items-center gap-3">
@@ -250,7 +254,7 @@ export default function Welcome() {
                 className="w-full rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-12 text-sm"
               >
                 <Rocket className="h-4 w-4" />
-                Criar minha primeira campanha
+                {t("Criar minha primeira campanha", "Create my first campaign", "Crear mi primera campaña")}
               </Button>
               <Button
                 onClick={() => finishAndGo("/dashboard")}
@@ -258,13 +262,13 @@ export default function Welcome() {
                 className="w-full rounded-none font-mono uppercase tracking-widest h-10 text-xs border-border/50 hover:border-primary/50 hover:text-primary gap-2"
               >
                 <Bot className="h-3.5 w-3.5" />
-                Fazer tour guiado antes (2 min)
+                {t("Fazer tour guiado antes (2 min)", "Take the 2-minute guided tour first", "Hacer primero el recorrido guiado (2 min)")}
               </Button>
               <button
                 onClick={() => finishAndGo("/dashboard")}
                 className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/30 hover:text-muted-foreground/50 transition-colors"
               >
-                Ir para o dashboard sem tour
+                {t("Ir para o dashboard sem tour", "Go to the dashboard without the tour", "Ir al panel sin el recorrido")}
               </button>
             </div>
           </div>

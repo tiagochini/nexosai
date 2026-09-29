@@ -15,6 +15,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
+import { useUiText } from "@/lib/i18n";
 import {
   CheckCircle2, XCircle, ChevronDown, ChevronUp,
   ExternalLink, Loader2, MessageCircle, Mail,
@@ -95,6 +96,65 @@ const INTEGRATION_WIZARDS = {
       { label: "Cole no NexOS AI", detail: "Configurações → Integrações → TikTok Business → Colar Client Key + Secret → Autorizar" },
     ],
   },
+};
+
+const WIZARD_TRANSLATIONS: Record<string, [string, string]> = {
+  "Disparar mensagens para leads, sequências e notificações de abertura do carrinho": ["Send messages to leads, sequences, and cart-opening notifications", "Enviar mensajes a prospectos, secuencias y notificaciones de apertura del carrito"],
+  "Acesse o Meta Business Manager": ["Open Meta Business Manager", "Abre Meta Business Manager"],
+  "Vá em business.facebook.com → Configurações → WhatsApp": ["Go to business.facebook.com → Settings → WhatsApp", "Ve a business.facebook.com → Configuración → WhatsApp"],
+  "Adicione seu número de telefone": ["Add your phone number", "Añade tu número de teléfono"],
+  "Menu WhatsApp → Números de Telefone → Adicionar número. Verifique via SMS ou ligação.": ["WhatsApp menu → Phone Numbers → Add Number. Verify by SMS or phone call.", "Menú WhatsApp → Números de teléfono → Añadir número. Verifica por SMS o llamada."],
+  "Crie um App na Meta for Developers": ["Create an app in Meta for Developers", "Crea una aplicación en Meta for Developers"],
+  "developers.facebook.com → Meus Apps → Criar App → Negócios. Adicione o produto WhatsApp Business.": ["developers.facebook.com → My Apps → Create App → Business. Add the WhatsApp Business product.", "developers.facebook.com → Mis aplicaciones → Crear aplicación → Negocios. Añade el producto WhatsApp Business."],
+  "Obtenha as credenciais": ["Get the credentials", "Obtén las credenciales"],
+  "No painel do App: copie o Phone Number ID e o Token de Acesso Permanente (começa com EAAB...)": ["In the app dashboard: copy the Phone Number ID and Permanent Access Token (starts with EAAB...)", "En el panel de la aplicación: copia el Phone Number ID y el token de acceso permanente (empieza con EAAB...)"],
+  "Cole aqui no NexOS AI": ["Paste them into NexOS AI", "Pégalos en NexOS AI"],
+  "Configurações → Integrações → WhatsApp Business → Colar credenciais → Conectar": ["Settings → Integrations → WhatsApp Business → Paste credentials → Connect", "Configuración → Integraciones → WhatsApp Business → Pegar credenciales → Conectar"],
+  "Alternativa ao WhatsApp para disparo de mensagens em grupos e canais de leads": ["An alternative to WhatsApp for sending messages to lead groups and channels", "Una alternativa a WhatsApp para enviar mensajes a grupos y canales de prospectos"],
+  "Abra o Telegram e procure @BotFather": ["Open Telegram and search for @BotFather", "Abre Telegram y busca @BotFather"],
+  "Pesquise @BotFather na barra de busca do Telegram": ["Search for @BotFather in Telegram's search bar", "Busca @BotFather en la barra de búsqueda de Telegram"],
+  "Crie um bot novo": ["Create a new bot", "Crea un bot nuevo"],
+  "Envie /newbot → escolha nome → escolha username (deve terminar em 'bot')": ["Send /newbot → choose a name → choose a username (must end in 'bot')", "Envía /newbot → elige un nombre → elige un nombre de usuario (debe terminar en 'bot')"],
+  "Copie o token gerado": ["Copy the generated token", "Copia el token generado"],
+  "O BotFather responde com token no formato 1234567890:ABCdef...": ["BotFather replies with a token in the format 1234567890:ABCdef...", "BotFather responde con un token con el formato 1234567890:ABCdef..."],
+  "Cole o token no NexOS AI": ["Paste the token into NexOS AI", "Pega el token en NexOS AI"],
+  "Configurações → Integrações → Telegram → Colar token → Conectar": ["Settings → Integrations → Telegram → Paste token → Connect", "Configuración → Integraciones → Telegram → Pegar token → Conectar"],
+  "Criar e disparar fluxos de email para leads capturados durante o lançamento": ["Create and send email flows to leads captured during the launch", "Crear y enviar flujos de correo a los prospectos captados durante el lanzamiento"],
+  "Acesse o RD Station": ["Open RD Station", "Abre RD Station"],
+  "app.rdstation.com → crie sua conta (tem plano gratuito)": ["app.rdstation.com → create your account (a free plan is available)", "app.rdstation.com → crea tu cuenta (hay un plan gratuito)"],
+  "Gere uma chave de API": ["Generate an API key", "Genera una clave de API"],
+  "Menu → Configurações → Integrações → API → Gerar nova chave de API": ["Menu → Settings → Integrations → API → Generate new API key", "Menú → Configuración → Integraciones → API → Generar nueva clave de API"],
+  "Copie a chave gerada": ["Copy the generated key", "Copia la clave generada"],
+  "A chave tem formato longo de letras e números. Copie ela completa.": ["The key is a long string of letters and numbers. Copy it in full.", "La clave es una cadena larga de letras y números. Cópiala completa."],
+  "Cole no NexOS AI": ["Paste it into NexOS AI", "Pégala en NexOS AI"],
+  "Configurações → Integrações → RD Station → Colar chave → Conectar": ["Settings → Integrations → RD Station → Paste key → Connect", "Configuración → Integraciones → RD Station → Pegar clave → Conectar"],
+  "Automação de email marketing e segmentação de leads durante o lançamento": ["Email marketing automation and lead segmentation during the launch", "Automatización de email marketing y segmentación de prospectos durante el lanzamiento"],
+  "Acesse o ActiveCampaign": ["Open ActiveCampaign", "Abre ActiveCampaign"],
+  "activecampaign.com → crie ou entre na sua conta": ["activecampaign.com → create or sign in to your account", "activecampaign.com → crea una cuenta o inicia sesión"],
+  "Encontre suas credenciais de API": ["Find your API credentials", "Encuentra tus credenciales de API"],
+  "Ícone do usuário → Minha Conta → Developer → URL da API e Chave de API": ["User icon → My Account → Developer → API URL and API Key", "Icono de usuario → Mi cuenta → Developer → URL y clave de API"],
+  "Copie a URL e a chave": ["Copy the URL and key", "Copia la URL y la clave"],
+  "URL: https://sua-conta.api-us1.com. Chave: sequência longa. Copie ambas.": ["URL: https://your-account.api-us1.com. Key: a long string. Copy both.", "URL: https://tu-cuenta.api-us1.com. Clave: una cadena larga. Copia ambas."],
+  "Configurações → Integrações → ActiveCampaign → Colar URL e chave → Conectar": ["Settings → Integrations → ActiveCampaign → Paste URL and key → Connect", "Configuración → Integraciones → ActiveCampaign → Pegar URL y clave → Conectar"],
+  "Auto-post de conteúdo orgânico, Stories e Reels gerados pelo NexOS AI durante o lançamento": ["Automatically publish organic content, Stories, and Reels generated by NexOS AI during the launch", "Publicación automática de contenido orgánico, Stories y Reels generados por NexOS AI durante el lanzamiento"],
+  "Acesse o Meta Business Suite": ["Open Meta Business Suite", "Abre Meta Business Suite"],
+  "business.facebook.com → certifique-se que sua Página do Instagram está vinculada à conta Business": ["business.facebook.com → make sure your Instagram Page is linked to your Business account", "business.facebook.com → asegúrate de que tu página de Instagram esté vinculada a tu cuenta Business"],
+  "developers.facebook.com → Meus Apps → Criar App → Tipo: Negócios. Adicione o produto Instagram Graph API.": ["developers.facebook.com → My Apps → Create App → Type: Business. Add the Instagram Graph API product.", "developers.facebook.com → Mis aplicaciones → Crear aplicación → Tipo: Negocios. Añade el producto Instagram Graph API."],
+  "Gere um token de acesso": ["Generate an access token", "Genera un token de acceso"],
+  "No painel do App: Ferramentas → Gerador de Token de Acesso → selecione sua Página → copie o token de longa duração (60 dias).": ["In the app dashboard: Tools → Access Token Generator → select your Page → copy the long-lived token (60 days).", "En el panel de la aplicación: Herramientas → Generador de tokens de acceso → selecciona tu página → copia el token de larga duración (60 días)."],
+  "Obtenha o Instagram Account ID": ["Get the Instagram Account ID", "Obtén el Instagram Account ID"],
+  "Faça GET https://graph.facebook.com/me/accounts com seu token → copie o id da página vinculada ao Instagram.": ["Send GET https://graph.facebook.com/me/accounts with your token → copy the ID of the Page linked to Instagram.", "Haz GET https://graph.facebook.com/me/accounts con tu token → copia el ID de la página vinculada a Instagram."],
+  "Configurações → Integrações → Instagram → Colar token + Account ID → Conectar": ["Settings → Integrations → Instagram → Paste token + Account ID → Connect", "Configuración → Integraciones → Instagram → Pegar token + Account ID → Conectar"],
+  "Auto-post de vídeos curtos e TikTok Ads com conteúdo gerado pelo NexOS AI": ["Automatically publish short videos and TikTok Ads using content generated by NexOS AI", "Publicación automática de vídeos cortos y anuncios de TikTok con contenido generado por NexOS AI"],
+  "Acesse o TikTok for Business": ["Open TikTok for Business", "Abre TikTok for Business"],
+  "business.tiktok.com → crie uma conta Business ou entre na existente": ["business.tiktok.com → create a Business account or sign in to an existing one", "business.tiktok.com → crea una cuenta Business o inicia sesión en una existente"],
+  "Crie um App no TikTok Developers": ["Create an app in TikTok Developers", "Crea una aplicación en TikTok Developers"],
+  "developers.tiktok.com → Meus Apps → Criar App → tipo: Web. Habilite Content Posting API.": ["developers.tiktok.com → My Apps → Create App → type: Web. Enable Content Posting API.", "developers.tiktok.com → Mis aplicaciones → Crear aplicación → tipo: Web. Activa Content Posting API."],
+  "Configure as permissões": ["Configure permissions", "Configura los permisos"],
+  "No App: Produtos → Content Posting API → solicite acesso. Adicione o escopo video.publish.": ["In the app: Products → Content Posting API → request access. Add the video.publish scope.", "En la aplicación: Productos → Content Posting API → solicita acceso. Añade el permiso video.publish."],
+  "Gere as credenciais OAuth": ["Generate OAuth credentials", "Genera las credenciales OAuth"],
+  "Client Key e Client Secret ficam em Gerenciar Apps → seu app → Chaves e Credenciais.": ["Find the Client Key and Client Secret in Manage Apps → your app → Keys and Credentials.", "Encuentra Client Key y Client Secret en Administrar aplicaciones → tu aplicación → Claves y credenciales."],
+  "Configurações → Integrações → TikTok Business → Colar Client Key + Secret → Autorizar": ["Settings → Integrations → TikTok Business → Paste Client Key + Secret → Authorize", "Configuración → Integraciones → TikTok Business → Pegar Client Key + Secret → Autorizar"],
 };
 
 // ─── Content piece labels ──────────────────────────────────────────────────────
@@ -201,6 +261,7 @@ const CHANNEL_TO_PROVIDERS: Record<string, string[]> = {
 const DEFAULT_SOCIAL_CHANNELS = ["instagram", "tiktok"];
 
 export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launching, plannedChannels }: Props) {
+  const t = useUiText();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [content, setContent]           = useState<ContentPiece[]>([]);
   const [financials, setFinancials]     = useState<LaunchFinancials | null>(null);
@@ -412,7 +473,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
     return (
       <div className="border border-border/30 p-6 flex items-center justify-center gap-3">
         <Loader2 className="h-4 w-4 animate-spin text-primary" />
-        <span className="font-mono text-sm text-muted-foreground">Verificando pré-requisitos de lançamento...</span>
+        <span className="font-mono text-sm text-muted-foreground">{t("Verificando pré-requisitos de lançamento...", "Checking launch prerequisites...", "Verificando requisitos previos del lanzamiento...")}</span>
       </div>
     );
   }
@@ -425,59 +486,59 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
     };
     const SCAN_GATES = [
       {
-        label: "Canal de Mensagens",
+        label: t("Canal de Mensagens", "Messaging Channel", "Canal de mensajes"),
         icon: <MessageCircle className="h-4 w-4" />,
         passed: hasMessaging,
-        passMsg: whatsappConn ? "WhatsApp Business conectado" : "Telegram conectado",
-        failMsg: "WhatsApp Business ou Telegram obrigatório — vá em Integrações → Mensagens",
+        passMsg: whatsappConn ? t("WhatsApp Business conectado", "WhatsApp Business connected", "WhatsApp Business conectado") : t("Telegram conectado", "Telegram connected", "Telegram conectado"),
+        failMsg: t("WhatsApp Business ou Telegram obrigatório — vá em Integrações → Mensagens", "WhatsApp Business or Telegram is required — go to Integrations → Messaging", "Se requiere WhatsApp Business o Telegram — ve a Integraciones → Mensajes"),
       },
       {
-        label: "Plataforma de Email",
+        label: t("Plataforma de Email", "Email Platform", "Plataforma de correo"),
         icon: <Mail className="h-4 w-4" />,
         passed: hasEmail,
-        passMsg: rdConn ? "RD Station conectado" : "ActiveCampaign conectado",
-        failMsg: "RD Station ou ActiveCampaign obrigatório — vá em Integrações → Email",
+        passMsg: rdConn ? t("RD Station conectado", "RD Station connected", "RD Station conectado") : t("ActiveCampaign conectado", "ActiveCampaign connected", "ActiveCampaign conectado"),
+        failMsg: t("RD Station ou ActiveCampaign obrigatório — vá em Integrações → Email", "RD Station or ActiveCampaign is required — go to Integrations → Email", "Se requiere RD Station o ActiveCampaign — ve a Integraciones → Correo"),
       },
       {
-        label: "Redes Sociais",
+        label: t("Redes Sociais", "Social Networks", "Redes sociales"),
         icon: <Users className="h-4 w-4" />,
         passed: hasSocial,
-        passMsg: `Conectado: ${connectedSocials} — auto-post ativo`,
-        failMsg: "Conecte Instagram ou TikTok para distribuição automática do conteúdo gerado",
+        passMsg: t(`Conectado: ${connectedSocials} — auto-post ativo`, `Connected: ${connectedSocials} — auto-post active`, `Conectadas: ${connectedSocials} — publicación automática activa`),
+        failMsg: t("Conecte Instagram ou TikTok para distribuição automática do conteúdo gerado", "Connect Instagram or TikTok to automatically distribute generated content", "Conecta Instagram o TikTok para distribuir automáticamente el contenido generado"),
       },
       {
-        label: "Aprovação de Conteúdo",
+        label: t("Aprovação de Conteúdo", "Content Approval", "Aprobación de contenido"),
         icon: <FileText className="h-4 w-4" />,
         passed: allContentApproved,
-        passMsg: `${approvedCount} peça${approvedCount !== 1 ? "s" : ""} aprovada${approvedCount !== 1 ? "s" : ""}`,
+        passMsg: t(`${approvedCount} peça${approvedCount !== 1 ? "s" : ""} aprovada${approvedCount !== 1 ? "s" : ""}`, `${approvedCount} creative${approvedCount !== 1 ? "s" : ""} approved`, `${approvedCount} pieza${approvedCount !== 1 ? "s" : ""} aprobada${approvedCount !== 1 ? "s" : ""}`),
         failMsg: noContent
-          ? "Nenhuma peça gerada — gere o conteúdo antes de lançar"
-          : `${pendingPieces.length} peça${pendingPieces.length !== 1 ? "s" : ""} aguardando revisão — abra a aba Conteúdo`,
+          ? t("Nenhuma peça gerada — gere o conteúdo antes de lançar", "No content generated — create content before launching", "No se generó contenido — créalo antes de lanzar")
+          : t(`${pendingPieces.length} peça${pendingPieces.length !== 1 ? "s" : ""} aguardando revisão — abra a aba Conteúdo`, `${pendingPieces.length} item${pendingPieces.length !== 1 ? "s" : ""} awaiting review — open the Content tab`, `${pendingPieces.length} pieza${pendingPieces.length !== 1 ? "s" : ""} pendiente${pendingPieces.length !== 1 ? "s" : ""} de revisión — abre la pestaña Contenido`),
       },
       {
-        label: "Produzir Entregáveis",
+        label: t("Produzir Entregáveis", "Produce Deliverables", "Producir entregables"),
         icon: <Image className="h-4 w-4" />,
         passed: deliverablesReady,
         passMsg: creativesAllApproved
-          ? `${approvedCreativesCnt} criativo${approvedCreativesCnt !== 1 ? "s" : ""} aprovado${approvedCreativesCnt !== 1 ? "s" : ""}${completedVideosCnt > 0 ? ` + ${completedVideosCnt} vídeo${completedVideosCnt !== 1 ? "s" : ""} concluído${completedVideosCnt !== 1 ? "s" : ""}` : ""}`
-          : "Confirmado manualmente — sem entregáveis visuais necessários",
+          ? t(`${approvedCreativesCnt} criativo${approvedCreativesCnt !== 1 ? "s" : ""} aprovado${approvedCreativesCnt !== 1 ? "s" : ""}${completedVideosCnt > 0 ? ` + ${completedVideosCnt} vídeo${completedVideosCnt !== 1 ? "s" : ""} concluído${completedVideosCnt !== 1 ? "s" : ""}` : ""}`, `${approvedCreativesCnt} creative${approvedCreativesCnt !== 1 ? "s" : ""} approved${completedVideosCnt > 0 ? ` + ${completedVideosCnt} video${completedVideosCnt !== 1 ? "s" : ""} completed` : ""}`, `${approvedCreativesCnt} creatividad${approvedCreativesCnt !== 1 ? "es aprobadas" : " aprobada"}${completedVideosCnt > 0 ? ` + ${completedVideosCnt} vídeo${completedVideosCnt !== 1 ? "s" : ""} completado${completedVideosCnt !== 1 ? "s" : ""}` : ""}`)
+          : t("Confirmado manualmente — sem entregáveis visuais necessários", "Manually confirmed — no visual deliverables needed", "Confirmado manualmente — no se necesitan recursos visuales"),
         failMsg: hasNoDeliverableWork
-          ? "Nenhuma imagem ou vídeo gerado ainda — produza os entregáveis ou confirme que não são necessários"
-          : `${pendingCreativesCnt} criativo${pendingCreativesCnt !== 1 ? "s" : ""} aguardando aprovação final`,
+          ? t("Nenhuma imagem ou vídeo gerado ainda — produza os entregáveis ou confirme que não são necessários", "No images or videos generated yet — create deliverables or confirm they are not needed", "Aún no hay imágenes ni videos — produce los recursos o confirma que no son necesarios")
+          : t(`${pendingCreativesCnt} criativo${pendingCreativesCnt !== 1 ? "s" : ""} aguardando aprovação final`, `${pendingCreativesCnt} creative${pendingCreativesCnt !== 1 ? "s" : ""} awaiting final approval`, `${pendingCreativesCnt} creatividad${pendingCreativesCnt !== 1 ? "es" : ""} pendiente${pendingCreativesCnt !== 1 ? "s" : ""} de aprobación final`),
       },
       {
-        label: "Funil & Landing Page",
+        label: t("Funil & Landing Page", "Funnel & Landing Page", "Embudo y página de aterrizaje"),
         icon: <TrendingUp className="h-4 w-4" />,
         passed: funnelConfirmed,
-        passMsg: "Landing page e checkout confirmados como publicados",
-        failMsg: "Confirme que sua landing page está publicada e checkout ativo antes de lançar",
+        passMsg: t("Landing page e checkout confirmados como publicados", "Landing page and checkout confirmed as published", "Página de aterrizaje y checkout confirmados como publicados"),
+        failMsg: t("Confirme que sua landing page está publicada e checkout ativo antes de lançar", "Confirm your landing page is published and checkout is active before launching", "Confirma que tu página de aterrizaje está publicada y el checkout activo antes de lanzar"),
       },
       {
-        label: "Plano Financeiro",
+        label: t("Plano Financeiro", "Financial Plan", "Plan financiero"),
         icon: <DollarSign className="h-4 w-4" />,
         passed: finReady,
-        passMsg: "Plano revisado e confirmado",
-        failMsg: "Revise e confirme o plano financeiro abaixo antes de lançar",
+        passMsg: t("Plano revisado e confirmado", "Plan reviewed and confirmed", "Plan revisado y confirmado"),
+        failMsg: t("Revise e confirme o plano financeiro abaixo antes de lançar", "Review and confirm the financial plan below before launching", "Revisa y confirma el plan financiero antes de lanzar"),
       },
     ] as const;
 
@@ -495,9 +556,9 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                 : <ShieldCheck className="h-4 w-4 text-yellow-400" />}
           </div>
           <div>
-            <div className="font-mono text-sm font-bold uppercase tracking-widest">Auditoria de Pré-Lançamento</div>
+            <div className="font-mono text-sm font-bold uppercase tracking-widest">{t("Auditoria de Pré-Lançamento", "Pre-Launch Audit", "Auditoría Previa al Lanzamiento")}</div>
             <div className="font-mono text-[10px] text-muted-foreground/50 mt-0.5">
-              {revealedGates < 4 ? `Verificando ${revealedGates + 1} de 4...` : "Auditoria concluída"}
+              {revealedGates < 4 ? t(`Verificando ${revealedGates + 1} de 4...`, `Checking ${revealedGates + 1} of 4...`, `Verificando ${revealedGates + 1} de 4...`) : t("Auditoria concluída", "Audit complete", "Auditoría completada")}
             </div>
           </div>
         </div>
@@ -570,11 +631,11 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
               onClick={completeScanNow}
               className="font-mono text-[10px] text-muted-foreground/30 hover:text-muted-foreground/60 uppercase tracking-widest transition-colors"
             >
-              Pular animação
+              {t("Pular animação", "Skip animation", "Omitir animación")}
             </button>
           ) : (
             <div className={`font-mono text-[10px] uppercase tracking-widest font-bold ${allPassed ? "text-green-400" : "text-yellow-400"}`}>
-              {allPassed ? "✓ Todos os gates aprovados" : `${SCAN_GATES.filter(g => !g.passed).length} pendente${SCAN_GATES.filter(g => !g.passed).length !== 1 ? "s" : ""}`}
+              {allPassed ? t("✓ Todos os gates aprovados", "✓ All checks approved", "✓ Todas las verificaciones aprobadas") : t(`${SCAN_GATES.filter(g => !g.passed).length} pendente${SCAN_GATES.filter(g => !g.passed).length !== 1 ? "s" : ""}`, `${SCAN_GATES.filter(g => !g.passed).length} pending`, `${SCAN_GATES.filter(g => !g.passed).length} pendiente${SCAN_GATES.filter(g => !g.passed).length !== 1 ? "s" : ""}`)}
             </div>
           )}
           {revealedGates >= 6 && (
@@ -582,7 +643,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
               onClick={completeScanNow}
               className="rounded-none font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5 btn-weapon-primary"
             >
-              {allPassed ? "Ver Checklist Completo" : "Resolver Pendências"}
+              {allPassed ? t("Ver Checklist Completo", "View Full Checklist", "Ver lista completa") : t("Resolver Pendências", "Resolve Pending Items", "Resolver pendientes")}
               <ChevronDown className="h-3 w-3" />
             </Button>
           )}
@@ -599,7 +660,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
       const body = await customFetch<{ url: string }>(`/api/integrations/oauth/start/${provider}`);
       const popup = window.open(body.url, "nexos_oauth", "width=620,height=700,scrollbars=yes,resizable=yes");
       if (!popup) {
-        setOauthError("Popup bloqueado pelo browser. Permita popups para este site e tente novamente.");
+        setOauthError(t("Popup bloqueado pelo navegador. Permita pop-ups para este site e tente novamente.", "Popup blocked by your browser. Allow pop-ups for this site and try again.", "El navegador bloqueó la ventana emergente. Permite las ventanas emergentes para este sitio e inténtalo de nuevo."));
         setOauthLoading(null);
         return;
       }
@@ -613,7 +674,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
             customFetch<{ integrations: Integration[] }>("/api/workspaces/me/integrations").catch(() => ({ integrations: [] })),
           ]).then(([intRes]) => setIntegrations(intRes.integrations ?? []));
         } else {
-          setOauthError(event.data.error ?? "Falha na autenticação.");
+          setOauthError(event.data.error ?? t("Falha na autenticação.", "Authentication failed.", "Error de autenticación."));
         }
       };
       window.addEventListener("message", handler);
@@ -626,7 +687,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
       }, 600);
     } catch {
       setOauthLoading(null);
-      setOauthError("Erro ao iniciar autenticação. Verifique sua conexão e tente novamente.");
+      setOauthError(t("Erro ao iniciar a autenticação. Verifique sua conexão e tente novamente.", "Error starting authentication. Check your connection and try again.", "Error al iniciar la autenticación. Comprueba tu conexión e inténtalo de nuevo."));
     }
   };
 
@@ -641,11 +702,11 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
         <div className="flex items-center gap-3">
           <ShieldCheck className="h-4 w-4 text-primary" />
           <div>
-            <div className="font-mono text-sm font-bold uppercase tracking-widest">Controladoria de Lançamento</div>
+            <div className="font-mono text-sm font-bold uppercase tracking-widest">{t("Controladoria de Lançamento", "Launch Control", "Control de Lanzamiento")}</div>
             <div className="font-mono text-[10px] text-muted-foreground/50 mt-0.5">
               {allReady
-                ? "Todos os gates aprovados — lançamento liberado"
-                : `${passedGates}/6 verificações aprovadas — complete o restante antes de lançar`}
+                ? t("Todos os gates aprovados — lançamento liberado", "All gates approved — launch cleared", "Todas las verificaciones aprobadas — lanzamiento autorizado")
+                : t(`${passedGates}/6 verificações aprovadas — complete o restante antes de lançar`, `${passedGates}/6 checks approved — complete the remaining steps before launch`, `${passedGates}/6 verificaciones aprobadas — completa el resto antes de lanzar`)}
             </div>
           </div>
         </div>
@@ -654,16 +715,16 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
           : failedGates > 0 ? "border-red-500/40 text-red-400 bg-red-500/5"
           : "border-yellow-500/40 text-yellow-400 bg-yellow-500/5"
         }`}>
-          {allReady ? "✓ Liberado" : `${failedGates} pendente${failedGates > 1 ? "s" : ""}`}
+          {allReady ? t("✓ Liberado", "✓ Cleared", "✓ Autorizado") : t(`${failedGates} pendente${failedGates > 1 ? "s" : ""}`, `${failedGates} pending`, `${failedGates} pendiente${failedGates !== 1 ? "s" : ""}`)}
         </Badge>
       </div>
 
       {/* ── Gate 1: Canal de Mensagens ──────────────────────────────────────── */}
       <GateRow
         id="messaging" icon={<MessageCircle className="h-4 w-4" />}
-        label="Canal de Mensagens" passed={hasMessaging}
-        passDetail={whatsappConn ? "WhatsApp Business conectado" : "Telegram conectado"}
-        failDetail="WhatsApp Business ou Telegram obrigatório para disparar mensagens aos leads"
+        label={t("Canal de Mensagens", "Messaging Channel", "Canal de mensajes")} passed={hasMessaging}
+        passDetail={whatsappConn ? t("WhatsApp Business conectado", "WhatsApp Business connected", "WhatsApp Business conectado") : t("Telegram conectado", "Telegram connected", "Telegram conectado")}
+        failDetail={t("WhatsApp Business ou Telegram obrigatório para disparar mensagens aos leads", "WhatsApp Business or Telegram is required to send messages to leads", "Se requiere WhatsApp Business o Telegram para enviar mensajes a los prospectos")}
         wizardKey={hasMessaging ? null : missingMsg}
         expandedWizard={expandedWizard} expandedStep={expandedStep}
         onToggleWizard={(id) => { setExpandedWizard(expandedWizard === id ? null : id); setExpandedStep(null); }}
@@ -673,9 +734,9 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
       {/* ── Gate 2: Plataforma de Email ─────────────────────────────────────── */}
       <GateRow
         id="email" icon={<Mail className="h-4 w-4" />}
-        label="Plataforma de Email" passed={hasEmail}
-        passDetail={rdConn ? "RD Station conectado" : "ActiveCampaign conectado"}
-        failDetail="RD Station ou ActiveCampaign obrigatório para sequências de email do lançamento"
+        label={t("Plataforma de Email", "Email Platform", "Plataforma de correo")} passed={hasEmail}
+        passDetail={rdConn ? t("RD Station conectado", "RD Station connected", "RD Station conectado") : t("ActiveCampaign conectado", "ActiveCampaign connected", "ActiveCampaign conectado")}
+        failDetail={t("RD Station ou ActiveCampaign obrigatório para sequências de email do lançamento", "RD Station or ActiveCampaign is required for launch email sequences", "Se requiere RD Station o ActiveCampaign para las secuencias de correo del lanzamiento")}
         wizardKey={hasEmail ? null : missingEmail}
         expandedWizard={expandedWizard} expandedStep={expandedStep}
         onToggleWizard={(id) => { setExpandedWizard(expandedWizard === id ? null : id); setExpandedStep(null); }}
@@ -698,14 +759,14 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
           </div>
           <div className="flex-1 min-w-0">
             <div className={`font-mono text-xs font-bold ${hasSocial ? "text-green-300" : "text-red-300"}`}>
-              Redes Sociais — {channelStatus.map(c => c.label).join(" + ")} (todas obrigatórias)
+              {t("Redes Sociais", "Social Networks", "Redes sociales")} — {channelStatus.map(c => c.label).join(" + ")} ({t("todas obrigatórias", "all required", "todas obligatorias")})
             </div>
             <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
               {hasSocial
-                ? `Conectado: ${connectedSocials} — posts e Reels publicados automaticamente conforme o calendário`
+                ? t(`Conectado: ${connectedSocials} — posts e Reels publicados automaticamente conforme o calendário`, `Connected: ${connectedSocials} — posts and Reels are automatically published on schedule`, `Conectado: ${connectedSocials} — publicaciones y Reels se publican automáticamente según el calendario`)
                 : missingSocialLabels.length === channelStatus.length
-                  ? `Conecte ${missingSocialLabels.join(" + ")} para distribuição automática`
-                  : `${missingSocialLabels.join(", ")} ${missingSocialLabels.length === 1 ? "ainda não conectado" : "ainda não conectados"} — conecte para completar o Gate 5`}
+                  ? t(`Conecte ${missingSocialLabels.join(" + ")} para distribuição automática`, `Connect ${missingSocialLabels.join(" + ")} for automatic distribution`, `Conecta ${missingSocialLabels.join(" + ")} para la distribución automática`)
+                  : t(`${missingSocialLabels.join(", ")} ${missingSocialLabels.length === 1 ? "ainda não conectado" : "ainda não conectados"} — conecte para completar o Gate 5`, `${missingSocialLabels.join(", ")} ${missingSocialLabels.length === 1 ? "not connected yet" : "not connected yet"} — connect to complete check 5`, `${missingSocialLabels.join(", ")} aún no está conectado — conecta para completar la verificación 5`)}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -726,7 +787,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                   <span className="text-base">📸</span>
                   <div>
                     <div className="font-mono text-[11px] font-bold">Instagram Business</div>
-                    <div className="font-mono text-[9px] text-muted-foreground/50">Posts, Stories e Reels automáticos via Meta Graph API</div>
+                    <div className="font-mono text-[9px] text-muted-foreground/50">{t("Posts, Stories e Reels automáticos via Meta Graph API", "Automatic posts, Stories, and Reels via Meta Graph API", "Publicaciones, Stories y Reels automáticos mediante Meta Graph API")}</div>
                   </div>
                 </div>
                 {!hasInstagram && (
@@ -738,12 +799,12 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                     style={{ background: "rgba(24,119,242,0.12)", border: "1px solid rgba(24,119,242,0.35)", color: "#1877F2" }}
                   >
                     {oauthLoading === "instagram"
-                      ? <><Loader2 className="h-3 w-3 animate-spin" />Aguardando…</>
-                      : <>Entrar com Instagram</>}
+                      ? <><Loader2 className="h-3 w-3 animate-spin" />{t("Aguardando…", "Waiting…", "Esperando…")}</>
+                      : <>{t("Entrar com Instagram", "Connect Instagram", "Conectar Instagram")}</>}
                   </Button>
                 )}
                 {hasInstagram && (
-                  <span className="font-mono text-[10px] text-green-400/70">Conectado ✓</span>
+                  <span className="font-mono text-[10px] text-green-400/70">{t("Conectado ✓", "Connected ✓", "Conectado ✓")}</span>
                 )}
               </div>
 
@@ -756,7 +817,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                   <span className="text-base">🎵</span>
                   <div>
                     <div className="font-mono text-[11px] font-bold">TikTok Business</div>
-                    <div className="font-mono text-[9px] text-muted-foreground/50">Vídeos curtos e TikTok Ads via Content Posting API</div>
+                    <div className="font-mono text-[9px] text-muted-foreground/50">{t("Vídeos curtos e TikTok Ads via Content Posting API", "Short videos and TikTok Ads via Content Posting API", "Videos cortos y anuncios de TikTok mediante Content Posting API")}</div>
                   </div>
                 </div>
                 {!hasTikTok && (
@@ -768,12 +829,12 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                     style={{ background: "rgba(254,44,85,0.10)", border: "1px solid rgba(254,44,85,0.35)", color: "#fe2c55" }}
                   >
                     {oauthLoading === "tiktok"
-                      ? <><Loader2 className="h-3 w-3 animate-spin" />Aguardando…</>
-                      : <>Entrar com TikTok</>}
+                      ? <><Loader2 className="h-3 w-3 animate-spin" />{t("Aguardando…", "Waiting…", "Esperando…")}</>
+                      : <>{t("Entrar com TikTok", "Connect TikTok", "Conectar TikTok")}</>}
                   </Button>
                 )}
                 {hasTikTok && (
-                  <span className="font-mono text-[10px] text-green-400/70">Conectado ✓</span>
+                  <span className="font-mono text-[10px] text-green-400/70">{t("Conectado ✓", "Connected ✓", "Conectado ✓")}</span>
                 )}
               </div>
 
@@ -816,29 +877,29 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
           </div>
           <div className="flex-1 min-w-0">
             <div className={`font-mono text-xs font-bold ${allContentApproved && verifyPhase >= 3 ? "text-green-300" : allContentApproved ? "text-yellow-300" : "text-red-300"}`}>
-              {!allContentApproved ? "Aprovação de Conteúdo do Schedule"
-                : verifyPhase === 0 ? "Verificando aprovações..."
-                : verifyPhase === 1 ? "Verificando conformidade CONAR..."
-                : verifyPhase === 2 ? "Validando cronograma de publicação..."
-                : "Conteúdo verificado — schedule completo"}
+              {!allContentApproved ? t("Aprovação de Conteúdo do Schedule", "Schedule Content Approval", "Aprobación del contenido programado")
+                : verifyPhase === 0 ? t("Verificando aprovações...", "Checking approvals...", "Verificando aprobaciones...")
+                : verifyPhase === 1 ? t("Verificando conformidade CONAR...", "Checking CONAR compliance...", "Verificando cumplimiento de CONAR...")
+                : verifyPhase === 2 ? t("Validando cronograma de publicação...", "Validating publishing schedule...", "Validando el calendario de publicaciones...")
+                : t("Conteúdo verificado — schedule completo", "Content verified — schedule complete", "Contenido verificado — programación completa")}
             </div>
             {/* Animated sub-steps when content is approved */}
             {allContentApproved && verifyPhase > 0 && (
               <div className="flex flex-col gap-0.5 mt-1.5">
                 <div className={`flex items-center gap-1.5 font-mono text-[9px] transition-opacity duration-300 ${verifyPhase >= 1 ? "opacity-100" : "opacity-30"}`}>
                   <CheckCircle2 className="h-2.5 w-2.5 text-green-400 shrink-0" />
-                  <span className="text-green-400/80">{approvedCount} peça{approvedCount !== 1 ? "s" : ""} aprovada{approvedCount !== 1 ? "s" : ""}</span>
+                  <span className="text-green-400/80">{t(`${approvedCount} peça${approvedCount !== 1 ? "s" : ""} aprovada${approvedCount !== 1 ? "s" : ""}`, `${approvedCount} piece${approvedCount !== 1 ? "s" : ""} approved`, `${approvedCount} pieza${approvedCount !== 1 ? "s" : ""} aprobada${approvedCount !== 1 ? "s" : ""}`)}</span>
                 </div>
                 {verifyPhase >= 2 && (
                   <div className="flex items-center gap-1.5 font-mono text-[9px]">
                     <CheckCircle2 className="h-2.5 w-2.5 text-green-400 shrink-0" />
-                    <span className="text-green-400/80">Sem violações CONAR/CDC detectadas</span>
+                    <span className="text-green-400/80">{t("Sem violações CONAR/CDC detectadas", "No CONAR/CDC violations detected", "No se detectaron infracciones de CONAR/CDC")}</span>
                   </div>
                 )}
                 {verifyPhase >= 3 && (
                   <div className="flex items-center gap-1.5 font-mono text-[9px]">
                     <CheckCircle2 className="h-2.5 w-2.5 text-green-400 shrink-0" />
-                    <span className="text-green-400/80">Cronograma de publicação validado</span>
+                    <span className="text-green-400/80">{t("Cronograma de publicação validado", "Publishing schedule validated", "Calendario de publicación validado")}</span>
                   </div>
                 )}
               </div>
@@ -846,8 +907,8 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
             {!allContentApproved && (
               <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
                 {noContent
-                  ? "Nenhuma peça gerada — gere o conteúdo antes de lançar"
-                  : `${pendingPieces.length} peça${pendingPieces.length > 1 ? "s" : ""} aguardando revisão e aprovação`}
+                  ? t("Nenhuma peça gerada — gere o conteúdo antes de lançar", "No content generated — generate content before launch", "No se generó contenido — genéralo antes de lanzar")
+                  : t(`${pendingPieces.length} peça${pendingPieces.length > 1 ? "s" : ""} aguardando revisão e aprovação`, `${pendingPieces.length} piece${pendingPieces.length > 1 ? "s" : ""} awaiting review and approval`, `${pendingPieces.length} pieza${pendingPieces.length > 1 ? "s" : ""} pendiente${pendingPieces.length > 1 ? "s" : ""} de revisión y aprobación`)}
               </div>
             )}
           </div>
@@ -895,7 +956,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
             })}
             {!allContentApproved && (
               <div className="px-3 py-3 bg-background/10 flex items-center justify-between">
-                <div className="font-mono text-[10px] text-muted-foreground/50">Revise e aprove cada peça na página de conteúdo</div>
+                <div className="font-mono text-[10px] text-muted-foreground/50">{t("Revise e aprove cada peça na página de conteúdo", "Review and approve each piece on the content page", "Revisa y aprueba cada pieza en la página de contenido")}</div>
                 <Button asChild size="sm" className="font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5">
                   <Link href={`/campaigns/${campaignId}/content`}>
                     <Eye className="h-3 w-3" />Abrir Conteúdo
@@ -908,7 +969,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
 
         {contentExpanded && noContent && (
           <div className="mx-5 mb-4 border border-border/30 px-4 py-3 bg-background/20 text-center">
-            <div className="font-mono text-[10px] text-muted-foreground/50">Nenhuma peça gerada. Gere o conteúdo antes de lançar.</div>
+            <div className="font-mono text-[10px] text-muted-foreground/50">{t("Nenhuma peça gerada. Gere o conteúdo antes de lançar.", "No content generated. Generate content before launching.", "No se generó contenido. Genéralo antes de lanzar.")}</div>
           </div>
         )}
       </div>
@@ -925,7 +986,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <Image className="h-3.5 w-3.5 text-pink-400" />
-              <span className="font-mono text-sm font-bold uppercase tracking-wide">Produzir Entregáveis</span>
+              <span className="font-mono text-sm font-bold uppercase tracking-wide">{t("Produzir Entregáveis", "Produce Deliverables", "Producir Entregables")}</span>
               <Badge variant="outline" className={`font-mono text-[9px] rounded-none px-1.5 uppercase ${deliverablesReady ? "border-success/40 text-success" : "border-destructive/40 text-destructive"}`}>
                 {deliverablesReady ? "Pronto" : "Pendente"}
               </Badge>
@@ -942,29 +1003,29 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
             <div className="px-4 py-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Image className="h-3.5 w-3.5 text-pink-400 shrink-0" />
-                <span className="font-mono text-[11px] text-foreground/90">Criativos (banners/imagens)</span>
+                <span className="font-mono text-[11px] text-foreground/90">{t("Criativos (banners/imagens)", "Creatives (banners/images)", "Creatividades (banners/imágenes)")}</span>
               </div>
               <span className={`font-mono text-[11px] ${creativesAllApproved || totalCreatives === 0 ? "text-muted-foreground" : "text-yellow-400"}`}>
-                {totalCreatives === 0 ? "Nenhum gerado" : `${approvedCreativesCnt}/${totalCreatives} aprovados`}
+              {totalCreatives === 0 ? t("Nenhum gerado", "None generated", "Ninguno generado") : t(`${approvedCreativesCnt}/${totalCreatives} aprovados`, `${approvedCreativesCnt}/${totalCreatives} approved`, `${approvedCreativesCnt}/${totalCreatives} aprobados`)}
               </span>
             </div>
             <div className="px-4 py-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Clapperboard className="h-3.5 w-3.5 text-blue-400 shrink-0" />
-                <span className="font-mono text-[11px] text-foreground/90">Vídeos</span>
+                <span className="font-mono text-[11px] text-foreground/90">{t("Vídeos", "Videos", "Videos")}</span>
               </div>
               <span className="font-mono text-[11px] text-muted-foreground">
-                {videoProjects.length === 0 ? "Nenhum criado" : `${completedVideosCnt}/${videoProjects.length} concluídos`}
-                {vslsWithoutVideo.length > 0 && ` • ${vslsWithoutVideo.length} roteiro(s) sem vídeo`}
+                {videoProjects.length === 0 ? t("Nenhum criado", "None created", "Ninguno creado") : t(`${completedVideosCnt}/${videoProjects.length} concluídos`, `${completedVideosCnt}/${videoProjects.length} completed`, `${completedVideosCnt}/${videoProjects.length} completados`)}
+                {vslsWithoutVideo.length > 0 && ` • ${t(`${vslsWithoutVideo.length} roteiro(s) sem vídeo`, `${vslsWithoutVideo.length} script(s) without video`, `${vslsWithoutVideo.length} guion(es) sin vídeo`)}`}
               </span>
             </div>
             <div className="px-4 py-3 bg-background/10 flex items-center justify-between gap-3">
               <div className="font-mono text-[10px] text-muted-foreground/50">
-                Gere e aprove as imagens/vídeos no Estúdio de Criativos, na aba de Conteúdo
+                {t("Gere e aprove as imagens/vídeos no Estúdio de Criativos, na aba de Conteúdo", "Generate and approve images/videos in Creative Studio, under the Content tab", "Genera y aprueba las imágenes y vídeos en el Estudio creativo, en la pestaña Contenido")}
               </div>
               <Button asChild size="sm" className="font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5">
                 <Link href={`/campaigns/${campaignId}/content`}>
-                  <Clapperboard className="h-3 w-3" />Produzir Entregáveis
+                  <Clapperboard className="h-3 w-3" />{t("Produzir Entregáveis", "Produce Deliverables", "Producir entregables")}
                 </Link>
               </Button>
             </div>
@@ -977,7 +1038,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                   className="mt-0.5 accent-primary"
                 />
                 <span className="font-mono text-[10px] text-muted-foreground/80 leading-relaxed">
-                  Confirmo que este lançamento não precisa de imagens/vídeos adicionais aprovados agora (ex: campanha de teste)
+                  {t("Confirmo que este lançamento não precisa de imagens/vídeos adicionais aprovados agora (ex: campanha de teste)", "I confirm this launch does not need additional approved images/videos right now (e.g., a test campaign)", "Confirmo que este lanzamiento no necesita imágenes o vídeos adicionales aprobados ahora (p. ej., una campaña de prueba)")}
                 </span>
               </label>
             )}
@@ -999,14 +1060,14 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
           </div>
           <div className="flex-1 min-w-0">
             <div className={`font-mono text-xs font-bold ${finReady ? "text-green-300" : "text-red-300"}`}>
-              Plano Financeiro & Distribuição de Mídia
+              {t("Plano Financeiro & Distribuição de Mídia", "Financial Plan & Media Distribution", "Plan financiero y distribución de medios")}
             </div>
             <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
               {finReady
-                ? "Plano revisado e confirmado"
+                ? t("Plano revisado e confirmado", "Plan reviewed and confirmed", "Plan revisado y confirmado")
                 : financials?.hasBudget
-                ? "Revise a estrutura de custo e retorno estimado — confirme antes de lançar"
-                : "Orçamento de tráfego não informado no intake — verifique o plano abaixo"}
+                ? t("Revise a estrutura de custo e retorno estimado — confirme antes de lançar", "Review the cost structure and estimated return — confirm before launching", "Revisa la estructura de costes y el retorno estimado — confirma antes de lanzar")
+                : t("Orçamento de tráfego não informado no intake — verifique o plano abaixo", "No traffic budget was provided in the intake — review the plan below", "No se indicó un presupuesto de tráfico en el intake — revisa el plan a continuación")}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -1020,9 +1081,9 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
             {/* ── No budget data ─────────────────────────────────────────── */}
             {!financials?.hasBudget && (
               <div className="border border-yellow-500/20 bg-yellow-500/5 px-4 py-3">
-                <div className="font-mono text-[11px] text-yellow-400 font-bold mb-1">Orçamento não cadastrado</div>
+                <div className="font-mono text-[11px] text-yellow-400 font-bold mb-1">{t("Orçamento não cadastrado", "Budget not set", "Presupuesto no registrado")}</div>
                 <div className="font-mono text-[10px] text-muted-foreground/60 leading-relaxed">
-                  O intake desta campanha não incluiu orçamento de tráfego. Antes de lançar, garanta que seu planejamento financeiro está definido (quanto vai investir em Meta Ads, Google Ads, etc.). Você pode confirmar assim mesmo ou voltar ao intake e informar o orçamento.
+                  {t("O intake desta campanha não incluiu orçamento de tráfego. Antes de lançar, garanta que seu planejamento financeiro está definido (quanto vai investir em Meta Ads, Google Ads, etc.). Você pode confirmar assim mesmo ou voltar ao intake e informar o orçamento.", "This campaign's intake did not include a traffic budget. Before launching, make sure your financial plan is defined (how much you will invest in Meta Ads, Google Ads, etc.). You can confirm anyway or return to the intake and enter the budget.", "El intake de esta campaña no incluyó un presupuesto de tráfico. Antes de lanzar, asegúrate de definir tu planificación financiera (cuánto invertirás en Meta Ads, Google Ads, etc.). Puedes confirmar de todos modos o volver al intake e indicar el presupuesto.")}
                 </div>
               </div>
             )}
@@ -1033,13 +1094,13 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                 {/* ── Budget slider ───────────────────────────────────────── */}
                 <div className="border border-primary/20 bg-primary/5 px-4 py-4 space-y-4">
                   <div className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
-                    Ajuste o orçamento — projeções atualizam em tempo real
+                    {t("Ajuste o orçamento — projeções atualizam em tempo real", "Adjust the budget — projections update in real time", "Ajusta el presupuesto — las proyecciones se actualizan en tiempo real")}
                   </div>
 
                   {/* Paid traffic budget slider */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest">Budget de Tráfego Pago</span>
+                      <span className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest">{t("Budget de Tráfego Pago", "Paid Traffic Budget", "Presupuesto de Tráfico Pago")}</span>
                       <span className="font-mono text-sm font-bold text-primary">{R$(localBudget)}</span>
                     </div>
                     <div className="relative">
@@ -1079,11 +1140,11 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                   {/* Retargeting % slider */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest">% Retargeting</span>
+                      <span className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest">% {t("Retargeting", "Retargeting", "Retargeting")}</span>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-[10px] text-cyan-400">{localRetargetPct}% retargeting</span>
+                        <span className="font-mono text-[10px] text-cyan-400">{localRetargetPct}% {t("retargeting", "retargeting", "retargeting")}</span>
                         <span className="font-mono text-[10px] text-muted-foreground/30">·</span>
-                        <span className="font-mono text-[10px] text-primary/70">{100 - localRetargetPct}% prospecção</span>
+                        <span className="font-mono text-[10px] text-primary/70">{100 - localRetargetPct}% {t("prospecção", "prospecting", "prospección")}</span>
                       </div>
                     </div>
                     <input
@@ -1097,19 +1158,19 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                       style={{ accentColor: "hsl(var(--primary))" }}
                     />
                     <div className="flex justify-between">
-                      <span className="font-mono text-[9px] text-muted-foreground/25">10% retarget</span>
-                      <span className="font-mono text-[9px] text-muted-foreground/25">50% retarget</span>
+                      <span className="font-mono text-[9px] text-muted-foreground/25">10% {t("retargeting", "retargeting", "retargeting")}</span>
+                      <span className="font-mono text-[9px] text-muted-foreground/25">50% {t("retargeting", "retargeting", "retargeting")}</span>
                     </div>
                   </div>
 
                   {/* Split summary */}
                   <div className="grid grid-cols-2 gap-2 pt-1">
                     <div className="border border-primary/20 bg-background/30 px-3 py-2">
-                      <div className="font-mono text-[9px] text-primary/50 uppercase tracking-widest mb-0.5">Prospecção ({100 - localRetargetPct}%)</div>
+                      <div className="font-mono text-[9px] text-primary/50 uppercase tracking-widest mb-0.5">{t("Prospecção", "Prospecting", "Prospección")} ({100 - localRetargetPct}%)</div>
                       <div className="font-mono text-sm font-bold text-primary">{R$(scaled.prospecting)}</div>
                     </div>
                     <div className="border border-cyan-500/20 bg-background/30 px-3 py-2">
-                      <div className="font-mono text-[9px] text-cyan-400/50 uppercase tracking-widest mb-0.5">Retargeting ({localRetargetPct}%)</div>
+                      <div className="font-mono text-[9px] text-cyan-400/50 uppercase tracking-widest mb-0.5">{t("Retargeting", "Retargeting", "Retargeting")} ({localRetargetPct}%)</div>
                       <div className="font-mono text-sm font-bold text-cyan-400">{R$(scaled.retargeting)}</div>
                     </div>
                   </div>
@@ -1118,10 +1179,10 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                 {/* KPI strip — live values */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {[
-                    { icon: <DollarSign className="h-3.5 w-3.5" />, label: "Investimento Total",  value: R$(localBudget),                       sub: "tráfego pago" },
-                    { icon: <Target      className="h-3.5 w-3.5" />, label: "Leads Pagos",         value: scaled.paidLeads.mid.toLocaleString("pt-BR"), sub: `${scaled.paidLeads.low}–${scaled.paidLeads.high} (faixa)` },
-                    { icon: <Users       className="h-3.5 w-3.5" />, label: "Total Leads",         value: scaled.totalLeads.mid.toLocaleString("pt-BR"), sub: `+${scaled.organicLeads.mid} orgânico` },
-                    { icon: <TrendingUp  className="h-3.5 w-3.5" />, label: "Receita Projetada",   value: R$(scaled.totalRevenue.mid),           sub: `ROAS ${scaled.totalRoas.mid.toFixed(1)}x realista` },
+                    { icon: <DollarSign className="h-3.5 w-3.5" />, label: t("Investimento Total", "Total Investment", "Inversión total"),  value: R$(localBudget),                       sub: t("tráfego pago", "paid traffic", "tráfico pagado") },
+                    { icon: <Target      className="h-3.5 w-3.5" />, label: t("Leads Pagos", "Paid Leads", "Prospectos pagados"),         value: scaled.paidLeads.mid.toLocaleString("pt-BR"), sub: `${scaled.paidLeads.low}–${scaled.paidLeads.high} ${t("(faixa)", "(range)", "(rango)")}` },
+                    { icon: <Users       className="h-3.5 w-3.5" />, label: t("Total Leads", "Total Leads", "Total de prospectos"),         value: scaled.totalLeads.mid.toLocaleString("pt-BR"), sub: `+${scaled.organicLeads.mid} ${t("orgânico", "organic", "orgánicos")}` },
+                    { icon: <TrendingUp  className="h-3.5 w-3.5" />, label: t("Receita Projetada", "Projected Revenue", "Ingresos proyectados"),   value: R$(scaled.totalRevenue.mid),           sub: `ROAS ${scaled.totalRoas.mid.toFixed(1)}x ${t("realista", "realistic", "realista")}` },
                   ].map(kpi => (
                     <div key={kpi.label} className="border border-border/30 bg-background/30 px-3 py-2.5">
                       <div className="flex items-center gap-1.5 text-muted-foreground/40 mb-1">{kpi.icon}<span className="font-mono text-[9px] uppercase tracking-widest">{kpi.label}</span></div>
@@ -1135,7 +1196,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                 {scaled.platforms.length > 0 && (
                   <div className="border border-border/30 bg-background/20">
                     <div className="px-4 py-2 border-b border-border/20 font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest flex items-center gap-2">
-                      <BarChart3 className="h-3 w-3" />Distribuição por Plataforma
+                      <BarChart3 className="h-3 w-3" />{t("Distribuição por Plataforma", "Distribution by Platform", "Distribución por plataforma")}
                     </div>
                     {scaled.platforms.map(p => (
                       <div key={p.platform} className="flex items-center gap-3 px-4 py-2.5 border-b border-border/10 last:border-0 hover:bg-background/20 transition-colors">
@@ -1150,7 +1211,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                         </div>
                         <div className="text-right shrink-0 space-y-0.5">
                           <div className="font-mono text-[10px] text-foreground/70">
-                            <span className="text-muted-foreground/40">Leads: </span>{p.leads.low}–{p.leads.high}
+                            <span className="text-muted-foreground/40">{t("Leads:", "Leads:", "Prospectos:")} </span>{p.leads.low}–{p.leads.high}
                           </div>
                           <div className="font-mono text-[9px] text-muted-foreground/40">
                             CPL R${p.cpl.low}–R${p.cpl.high} • ROAS {p.roas.mid.toFixed(1)}x
@@ -1164,11 +1225,11 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                 {/* Revenue scenarios — scaled */}
                 <div className="border border-border/30 bg-background/20">
                   <div className="px-4 py-2 border-b border-border/20 font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
-                    Cenários de Retorno (Pessimista / Realista / Otimista)
+                    {t("Cenários de Retorno (Pessimista / Realista / Otimista)", "Return Scenarios (Pessimistic / Realistic / Optimistic)", "Escenarios de retorno (pesimista / realista / optimista)")}
                   </div>
                   <div className="grid grid-cols-3 divide-x divide-border/20">
                     {(["low", "mid", "high"] as const).map((sc, i) => {
-                      const labels = ["Pess.", "Real.", "Otim."];
+                      const labels = [t("Pess.", "Pess.", "Pesim."), t("Real.", "Real.", "Real."), t("Otim.", "Optim.", "Optim.")];
                       const colors = ["text-red-400", "text-yellow-400", "text-green-400"];
                       const rev    = scaled.totalRevenue[sc];
                       const roi    = scaled.totalRoi[sc];
@@ -1185,10 +1246,10 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                   </div>
                   <div className="px-4 py-2 border-t border-border/10 flex items-center justify-between">
                     <div className="font-mono text-[9px] text-muted-foreground/30">
-                      Break-even: {scaled.breakEvenSales} venda{scaled.breakEvenSales !== 1 ? "s" : ""}
-                      {financials.revenueTarget ? ` • Meta: ${R$(financials.revenueTarget)}` : ""}
+                      {t("Ponto de equilíbrio", "Break-even", "Punto de equilibrio")}: {scaled.breakEvenSales} {t("venda", "sale", "venta")}{scaled.breakEvenSales !== 1 ? t("s", "s", "s") : ""}
+                      {financials.revenueTarget ? ` • ${t("Meta", "Target", "Meta")}: ${R$(financials.revenueTarget)}` : ""}
                     </div>
-                    <div className="font-mono text-[9px] text-muted-foreground/25">+{scaled.organicLeads.mid} leads orgânicos estimados</div>
+                    <div className="font-mono text-[9px] text-muted-foreground/25">+{scaled.organicLeads.mid} {t("leads orgânicos estimados", "estimated organic leads", "prospectos orgánicos estimados")}</div>
                   </div>
                 </div>
 
@@ -1209,13 +1270,13 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                 className="w-full rounded-none font-mono uppercase tracking-widest text-xs h-10 gap-2 border-primary/30 text-primary hover:bg-primary/10"
               >
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                {financials?.hasBudget ? "Revisei e Confirmo o Plano Financeiro" : "Confirmo que defini meu orçamento externamente"}
+                {financials?.hasBudget ? t("Revisei e Confirmo o Plano Financeiro", "I have reviewed and confirm the Financial Plan", "Revisé y confirmo el plan financiero") : t("Confirmo que defini meu orçamento externamente", "I confirm that I set my budget externally", "Confirmo que definí mi presupuesto externamente")}
               </Button>
             ) : (
               <div className="flex items-center justify-center gap-2 py-2 font-mono text-[11px] text-green-400">
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                Plano financeiro confirmado
-                <button onClick={() => setFinConfirmed(false)} className="ml-2 text-muted-foreground/30 hover:text-muted-foreground text-[9px] underline">desfazer</button>
+                {t("Plano financeiro confirmado", "Financial plan confirmed", "Plan financiero confirmado")}
+                <button onClick={() => setFinConfirmed(false)} className="ml-2 text-muted-foreground/30 hover:text-muted-foreground text-[9px] underline">{t("desfazer", "undo", "deshacer")}</button>
               </div>
             )}
           </div>
@@ -1238,12 +1299,12 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
           </div>
           <div className="flex-1 min-w-0">
             <div className={`font-mono text-xs font-bold ${funnelConfirmed ? "text-green-300" : "text-red-300"}`}>
-              Funil & Landing Page
+              {t("Funil & Landing Page", "Funnel & Landing Page", "Embudo y página de aterrizaje")}
             </div>
             <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
               {funnelConfirmed
-                ? `Landing page confirmada: ${landingUrl}`
-                : "Informe a URL pública da sua landing page antes de lançar"}
+                ? t(`Landing page confirmada: ${landingUrl}`, `Landing page confirmed: ${landingUrl}`, `Página de aterrizaje confirmada: ${landingUrl}`)
+                : t("Informe a URL pública da sua landing page antes de lançar", "Enter your public landing page URL before launching", "Introduce la URL pública de tu página de aterrizaje antes de lanzar")}
             </div>
           </div>
           <div className="shrink-0">
@@ -1255,14 +1316,14 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
           {/* URL input */}
           <div className="border border-border/30 bg-background/20 p-4 space-y-3">
             <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">
-              URL da Landing Page publicada
+              {t("URL da Landing Page publicada", "Published Landing Page URL", "URL de la página de aterrizaje publicada")}
             </div>
             <div className="flex gap-2">
               <input
                 type="url"
                 value={landingUrlInput}
                 onChange={e => setLandingUrlInput(e.target.value)}
-                placeholder="https://seu-dominio.com/produto"
+                placeholder={t("https://seu-dominio.com/produto", "https://your-domain.com/product", "https://tu-dominio.com/producto")}
                 className="flex-1 bg-background/30 border border-border/40 px-3 py-2 font-mono text-[11px] text-foreground placeholder-muted-foreground/30 focus:outline-none focus:border-primary/40 focus:bg-background/50"
               />
               {landingUrlInput.startsWith("http") ? (
@@ -1275,27 +1336,27 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                   }}
                   className="rounded-none font-mono text-[10px] uppercase tracking-widest h-9 px-3 gap-1.5 btn-weapon-primary shrink-0"
                 >
-                  <CheckCircle2 className="h-3 w-3" />Confirmar
+                  <CheckCircle2 className="h-3 w-3" />{t("Confirmar", "Confirm", "Confirmar")}
                 </Button>
               ) : (
                 <Button size="sm" disabled className="rounded-none font-mono text-[10px] uppercase tracking-widest h-9 px-3 opacity-30 shrink-0">
-                  Confirmar
+                  {t("Confirmar", "Confirm", "Confirmar")}
                 </Button>
               )}
             </div>
             {landingUrlInput && !landingUrlInput.startsWith("http") && (
-              <div className="font-mono text-[9px] text-red-400/70">URL deve começar com https://</div>
+              <div className="font-mono text-[9px] text-red-400/70">{t("URL deve começar com https://", "URL must start with https://", "La URL debe comenzar con https://")}</div>
             )}
           </div>
 
           {/* Checklist items */}
           <div className="border border-border/30 bg-background/20 px-4 py-3 space-y-2">
-            <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mb-2">Verificações antes de lançar</div>
+              <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mb-2">{t("Verificações antes de lançar", "Pre-launch checks", "Verificaciones previas al lanzamiento")}</div>
             {[
-              { text: "Landing page publicada e acessível pelo link acima", done: funnelConfirmed },
-              { text: "Checkout configurado e aceitando pagamentos (Hotmart, Kiwify, etc.)", done: false },
-              { text: "Pixel do Meta e/ou TikTok instalado na landing page", done: hasSocial },
-              { text: "Página de obrigado configurada com evento de conversão", done: false },
+              { text: t("Landing page publicada e acessível pelo link acima", "Landing page published and accessible at the link above", "Página de aterrizaje publicada y accesible en el enlace anterior"), done: funnelConfirmed },
+              { text: t("Checkout configurado e aceitando pagamentos (Hotmart, Kiwify, etc.)", "Checkout configured and accepting payments (Hotmart, Kiwify, etc.)", "Checkout configurado y aceptando pagos (Hotmart, Kiwify, etc.)"), done: false },
+              { text: t("Pixel do Meta e/ou TikTok instalado na landing page", "Meta and/or TikTok Pixel installed on the landing page", "Píxel de Meta o TikTok instalado en la página de aterrizaje"), done: hasSocial },
+              { text: t("Página de obrigado configurada com evento de conversão", "Thank-you page configured with a conversion event", "Página de agradecimiento configurada con un evento de conversión"), done: false },
             ].map((item, i) => (
               <div key={i} className="flex items-start gap-2">
                 <CheckCircle2 className={`h-3 w-3 mt-0.5 shrink-0 ${item.done ? "text-green-400/60" : "text-muted-foreground/20"}`} />
@@ -1312,7 +1373,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                 onClick={() => { setLandingUrl(""); setLandingUrlInput(""); try { localStorage.removeItem(funnelKey); } catch {} }}
                 className="text-muted-foreground/30 hover:text-muted-foreground text-[9px] underline shrink-0"
               >
-                alterar
+                {t("alterar", "change", "cambiar")}
               </button>
             </div>
           )}
@@ -1328,22 +1389,22 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
             className="w-full rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-12 text-sm"
           >
             {launching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
-            {launching ? "Lançando..." : "Lançar Campanha Agora"}
+            {launching ? t("Lançando...", "Launching...", "Lanzando...") : t("Lançar Campanha Agora", "Launch Campaign Now", "Lanzar campaña ahora")}
           </Button>
         ) : (
           <div className="space-y-2">
             <Button disabled className="w-full rounded-none font-mono uppercase tracking-widest font-black gap-2 h-12 text-sm opacity-30 cursor-not-allowed">
               <Rocket className="h-4 w-4" />
-              Lançar Campanha
+              {t("Lançar Campanha", "Launch Campaign", "Lanzar campaña")}
             </Button>
             <div className="text-center font-mono text-[10px] text-muted-foreground/50 space-x-1">
-              {!hasMessaging && <span>Configure mensagens •</span>}
-              {!hasEmail && <span>Configure email •</span>}
-              {!hasSocial && <span>{!hasInstagram && !hasTikTok ? "Conecte Instagram + TikTok •" : !hasInstagram ? "Conecte Instagram •" : "Conecte TikTok •"}</span>}
-              {!allContentApproved && !noContent && <span>Aprove {pendingPieces.length} peça{pendingPieces.length > 1 ? "s" : ""} •</span>}
-              {noContent && <span>Gere o conteúdo •</span>}
-              {!funnelConfirmed && <span>Informe a URL da landing page •</span>}
-              {!finReady && <span>Confirme o plano financeiro</span>}
+              {!hasMessaging && <span>{t("Configure mensagens •", "Configure messaging •", "Configura los mensajes •")}</span>}
+              {!hasEmail && <span>{t("Configure email •", "Configure email •", "Configura el correo •")}</span>}
+              {!hasSocial && <span>{!hasInstagram && !hasTikTok ? t("Conecte Instagram + TikTok •", "Connect Instagram + TikTok •", "Conecta Instagram + TikTok •") : !hasInstagram ? t("Conecte Instagram •", "Connect Instagram •", "Conecta Instagram •") : t("Conecte TikTok •", "Connect TikTok •", "Conecta TikTok •")}</span>}
+              {!allContentApproved && !noContent && <span>{t(`Aprove ${pendingPieces.length} peça${pendingPieces.length > 1 ? "s" : ""} •`, `Approve ${pendingPieces.length} piece${pendingPieces.length !== 1 ? "s" : ""} •`, `Aprueba ${pendingPieces.length} pieza${pendingPieces.length !== 1 ? "s" : ""} •`)}</span>}
+              {noContent && <span>{t("Gere o conteúdo •", "Generate content •", "Genera el contenido •")}</span>}
+              {!funnelConfirmed && <span>{t("Informe a URL da landing page •", "Enter the landing page URL •", "Introduce la URL de la página de aterrizaje •")}</span>}
+              {!finReady && <span>{t("Confirme o plano financeiro", "Confirm the financial plan", "Confirma el plan financiero")}</span>}
             </div>
           </div>
         )}
@@ -1372,8 +1433,13 @@ function GateRow({
   id, icon, label, passed, passDetail, failDetail,
   wizardKey, expandedWizard, expandedStep, onToggleWizard, onToggleStep,
 }: GateRowProps) {
+  const t = useUiText();
   const isOpen = expandedWizard === id;
   const wizard = wizardKey ? INTEGRATION_WIZARDS[wizardKey] : null;
+  const localizeWizardText = (text: string) => {
+    const translations = WIZARD_TRANSLATIONS[text];
+    return translations ? t(text, translations[0], translations[1]) : text;
+  };
 
   return (
     <div className="border-t border-border/20">
@@ -1392,7 +1458,7 @@ function GateRow({
         {wizard && (
           <div className="flex items-center gap-2 shrink-0">
             <span className="font-mono text-[10px] text-primary/70 uppercase tracking-widest">
-              {isOpen ? "Fechar guia" : "Ver passo a passo"}
+              {isOpen ? t("Fechar guia", "Close guide", "Cerrar guía") : t("Ver passo a passo", "View step-by-step guide", "Ver guía paso a paso")}
             </span>
             {isOpen ? <ChevronUp className="h-3.5 w-3.5 text-primary/50" /> : <ChevronDown className="h-3.5 w-3.5 text-primary/50" />}
           </div>
@@ -1405,12 +1471,12 @@ function GateRow({
             <span className="text-xl shrink-0">{wizard.icon}</span>
             <div>
               <div className="font-mono text-xs font-bold text-primary">{wizard.name}</div>
-              <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">{wizard.why}</div>
+              <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">{localizeWizardText(wizard.why)}</div>
             </div>
           </div>
           <div className="p-4 space-y-2">
             <div className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest mb-3">
-              Siga os passos abaixo para conectar agora:
+              {t("Siga os passos abaixo para conectar agora:", "Follow the steps below to connect now:", "Sigue estos pasos para conectar ahora:")}
             </div>
             {wizard.steps.map((step, idx) => {
               const stepOpen = expandedStep === idx;
@@ -1424,12 +1490,12 @@ function GateRow({
                     <div className="w-5 h-5 rounded bg-primary/15 border border-primary/20 flex items-center justify-center shrink-0">
                       <span className="font-mono text-[9px] font-bold text-primary">{idx + 1}</span>
                     </div>
-                    <div className="font-mono text-[11px] font-medium flex-1">{step.label}</div>
+                    <div className="font-mono text-[11px] font-medium flex-1">{localizeWizardText(step.label)}</div>
                     {stepOpen ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />}
                   </div>
                   {stepOpen && (
                     <div className="px-11 pb-3">
-                      <div className="font-mono text-[10px] text-muted-foreground/70 leading-relaxed">{step.detail}</div>
+                      <div className="font-mono text-[10px] text-muted-foreground/70 leading-relaxed">{localizeWizardText(step.detail)}</div>
                       {("url" in step) && (step as { url?: string }).url && (
                         <a
                           href={(step as { url?: string }).url}
@@ -1437,7 +1503,7 @@ function GateRow({
                           className="inline-flex items-center gap-1.5 mt-2 font-mono text-[10px] text-primary/70 hover:text-primary transition-colors"
                           onClick={e => e.stopPropagation()}
                         >
-                          <ExternalLink className="h-3 w-3" />Abrir agora
+                          <ExternalLink className="h-3 w-3" />{t("Abrir agora", "Open now", "Abrir ahora")}
                         </a>
                       )}
                     </div>
@@ -1446,10 +1512,10 @@ function GateRow({
               );
             })}
             <div className="mt-3 pt-3 border-t border-border/20 flex items-center justify-between">
-              <div className="font-mono text-[10px] text-muted-foreground/40">Após conectar, esta verificação atualiza automaticamente.</div>
+              <div className="font-mono text-[10px] text-muted-foreground/40">{t("Após conectar, esta verificação atualiza automaticamente.", "After connecting, this check updates automatically.", "Después de conectar, esta verificación se actualiza automáticamente.")}</div>
               <Button asChild size="sm" className="font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5" onClick={e => e.stopPropagation()}>
                 <Link href="/integracoes">
-                  <Zap className="h-3 w-3" />Ir para Integrações
+                  <Zap className="h-3 w-3" />{t("Ir para Integrações", "Go to Integrations", "Ir a Integraciones")}
                 </Link>
               </Button>
             </div>

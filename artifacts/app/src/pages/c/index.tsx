@@ -5,6 +5,7 @@ import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, Send, MessageCircle, X, ChevronDown, User, Bot, ArrowRight, CheckCircle2 } from "lucide-react";
+import { useUiText } from "@/lib/i18n";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,7 @@ function LeadCaptureForm({
   sequence: SequenceInfo;
   onCaptured: (name: string, email: string) => void;
 }) {
+  const t = useUiText();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -59,9 +61,9 @@ function LeadCaptureForm({
           <CheckCircle2 className="h-7 w-7 text-emerald-400" />
         </div>
         <div>
-          <p className="font-semibold text-foreground text-lg">Você está dentro!</p>
+          <p className="font-semibold text-foreground text-lg">{t("Você está dentro!", "You're in!", "¡Ya estás dentro!")}</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Confirme seu e-mail e fique de olho nas próximas mensagens.
+            {t("Confirme seu e-mail e fique de olho nas próximas mensagens.", "Confirm your email and keep an eye out for upcoming messages.", "Confirma tu correo y presta atención a los próximos mensajes.")}
           </p>
         </div>
       </div>
@@ -76,7 +78,7 @@ function LeadCaptureForm({
       <input
         required
         type="text"
-        placeholder="Seu nome"
+        placeholder={t("Seu nome", "Your name", "Tu nombre")}
         value={name}
         onChange={(e) => setName(e.target.value)}
         className="w-full bg-background/60 border border-border/60 px-4 py-3 text-sm rounded-md focus:outline-none focus:border-primary/60 placeholder:text-muted-foreground/50"
@@ -84,20 +86,20 @@ function LeadCaptureForm({
       <input
         required
         type="email"
-        placeholder="Seu melhor e-mail"
+        placeholder={t("Seu melhor e-mail", "Your best email", "Tu mejor correo")}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         className="w-full bg-background/60 border border-border/60 px-4 py-3 text-sm rounded-md focus:outline-none focus:border-primary/60 placeholder:text-muted-foreground/50"
       />
       <input
         type="tel"
-        placeholder="WhatsApp (opcional)"
+        placeholder={t("WhatsApp (opcional)", "WhatsApp (optional)", "WhatsApp (opcional)")}
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
         className="w-full bg-background/60 border border-border/60 px-4 py-3 text-sm rounded-md focus:outline-none focus:border-primary/60 placeholder:text-muted-foreground/50"
       />
       {isError && (
-        <p className="text-xs text-destructive">Algo deu errado. Tente novamente.</p>
+        <p className="text-xs text-destructive">{t("Algo deu errado. Tente novamente.", "Something went wrong. Please try again.", "Algo salió mal. Inténtalo de nuevo.")}</p>
       )}
       <Button
         type="submit"
@@ -108,12 +110,12 @@ function LeadCaptureForm({
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
           <>
-            {sequence.ctaText ?? "Quero participar"} <ArrowRight className="h-4 w-4" />
+            {sequence.ctaText ?? t("Quero participar", "I want to join", "Quiero participar")} <ArrowRight className="h-4 w-4" />
           </>
         )}
       </Button>
       <p className="text-[11px] text-center text-muted-foreground/50">
-        Sem spam. Você pode cancelar a qualquer momento.
+        {t("Sem spam. Você pode cancelar a qualquer momento.", "No spam. You can unsubscribe at any time.", "Sin spam. Puedes cancelar cuando quieras.")}
       </p>
     </form>
   );
@@ -132,10 +134,11 @@ function ChatWidget({
 }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
+  const t = useUiText();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      content: `Olá${contactName ? `, ${contactName.split(" ")[0]}` : ""}! 👋 Tem alguma dúvida sobre ${productName}? Estou aqui pra ajudar.`,
+      content: t(`Olá${contactName ? `, ${contactName.split(" ")[0]}` : ""}! 👋 Tem alguma dúvida sobre ${productName}? Estou aqui pra ajudar.`, `Hi${contactName ? `, ${contactName.split(" ")[0]}` : ""}! 👋 Do you have any questions about ${productName}? I'm here to help.`, `¡Hola${contactName ? `, ${contactName.split(" ")[0]}` : ""}! 👋 ¿Tienes alguna pregunta sobre ${productName}? Estoy aquí para ayudarte.`),
     },
   ]);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -156,7 +159,7 @@ function ChatWidget({
     onError: () => {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Desculpe, tive um problema técnico. Tente novamente em instantes." },
+        { role: "assistant", content: t("Desculpe, tive um problema técnico. Tente novamente em instantes.", "Sorry, I ran into a technical issue. Please try again shortly.", "Lo siento, tuve un problema técnico. Inténtalo de nuevo en unos momentos.") },
       ]);
     },
   });
@@ -178,6 +181,7 @@ function ChatWidget({
       {/* Floating button */}
       <button
         onClick={() => setOpen(!open)}
+        aria-label={open ? t("Fechar chat", "Close chat", "Cerrar chat") : t("Abrir chat", "Open chat", "Abrir chat")}
         className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary shadow-lg shadow-primary/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
       >
         {open ? <X className="h-5 w-5 text-primary-foreground" /> : <MessageCircle className="h-5 w-5 text-primary-foreground" />}
@@ -193,10 +197,10 @@ function ChatWidget({
               <Bot className="h-4 w-4 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold leading-tight">Assistente</p>
+               <p className="text-sm font-semibold leading-tight">{t("Assistente", "Assistant", "Asistente")}</p>
               <p className="text-[11px] text-muted-foreground leading-tight">{productName}</p>
             </div>
-            <button onClick={() => setOpen(false)} className="text-muted-foreground/50 hover:text-foreground transition-colors">
+             <button onClick={() => setOpen(false)} aria-label={t("Fechar chat", "Close chat", "Cerrar chat")} className="text-muted-foreground/50 hover:text-foreground transition-colors">
               <ChevronDown className="h-4 w-4" />
             </button>
           </div>
@@ -247,7 +251,7 @@ function ChatWidget({
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                placeholder="Digite sua dúvida..."
+                placeholder={t("Digite sua dúvida...", "Type your question...", "Escribe tu pregunta...")}
                 disabled={isPending}
                 className="flex-1 bg-background/60 border border-border/50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground/40"
               />
@@ -270,6 +274,7 @@ function ChatWidget({
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function LeadCapturePage() {
+  const t = useUiText();
   const [, params] = useRoute("/c/:sequenceId");
   const sequenceId = params?.sequenceId ?? "";
   const [capturedName, setCapturedName] = useState<string | null>(null);
@@ -286,7 +291,7 @@ export default function LeadCapturePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-center p-8">
         <div>
-          <p className="text-muted-foreground font-mono text-sm">Página não encontrada.</p>
+           <p className="text-muted-foreground font-mono text-sm">{t("Página não encontrada.", "Page not found.", "Página no encontrada.")}</p>
         </div>
       </div>
     );
@@ -310,7 +315,7 @@ export default function LeadCapturePage() {
   if (!sequence.leadCaptureEnabled) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-center p-8">
-        <p className="text-muted-foreground font-mono text-sm">Esta página não está disponível no momento.</p>
+         <p className="text-muted-foreground font-mono text-sm">{t("Esta página não está disponível no momento.", "This page is not available right now.", "Esta página no está disponible en este momento.")}</p>
       </div>
     );
   }
@@ -331,7 +336,7 @@ export default function LeadCapturePage() {
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-xs text-primary font-semibold mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            Lista exclusiva aberta
+             {t("Lista exclusiva aberta", "Exclusive list is open", "Lista exclusiva abierta")}
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight leading-tight text-foreground">
@@ -350,7 +355,7 @@ export default function LeadCapturePage() {
           {!captured ? (
             <>
               <p className="text-sm text-muted-foreground mb-5 text-center">
-                Preencha os dados abaixo para garantir seu lugar:
+                 {t("Preencha os dados abaixo para garantir seu lugar:", "Fill out the details below to secure your spot:", "Completa los datos para reservar tu lugar:")}
               </p>
               <LeadCaptureForm
                 sequenceId={sequenceId}
@@ -367,13 +372,13 @@ export default function LeadCapturePage() {
                 <CheckCircle2 className="h-8 w-8 text-emerald-400" />
               </div>
               <p className="font-bold text-lg">
-                {capturedName ? `Bem-vindo, ${capturedName.split(" ")[0]}!` : "Você está dentro!"}
+                 {capturedName ? t(`Bem-vindo, ${capturedName.split(" ")[0]}!`, `Welcome, ${capturedName.split(" ")[0]}!`, `¡Te damos la bienvenida, ${capturedName.split(" ")[0]}!`) : t("Você está dentro!", "You're in!", "¡Ya estás dentro!")}
               </p>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Você receberá as próximas informações por e-mail. Fique de olho — o conteúdo exclusivo começa em breve.
+                 {t("Você receberá as próximas informações por e-mail. Fique de olho — o conteúdo exclusivo começa em breve.", "We'll email you more information soon. Keep an eye out — exclusive content is coming soon.", "Recibirás más información por correo pronto. Mantente atento: el contenido exclusivo llegará pronto.")}
               </p>
               <p className="text-xs text-primary font-semibold mt-2">
-                Tem dúvidas? Use o chat ao lado →
+                 {t("Tem dúvidas? Use o chat ao lado →", "Questions? Use the chat →", "¿Tienes dudas? Usa el chat →")}
               </p>
             </div>
           )}
@@ -382,7 +387,7 @@ export default function LeadCapturePage() {
         {/* Social proof hint */}
         <div className="mt-8 text-center">
           <p className="text-xs text-muted-foreground/50">
-            Seus dados estão protegidos. Política de privacidade LGPD.
+             {t("Seus dados estão protegidos. Política de privacidade LGPD.", "Your data is protected. See our privacy policy.", "Tus datos están protegidos. Consulta nuestra política de privacidad.")}
           </p>
         </div>
       </div>

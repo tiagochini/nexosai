@@ -12,6 +12,7 @@ import {
   Brain, ChevronDown, ChevronRight, CheckCircle2, XCircle,
   Cpu, Shield, Sparkles, Scale, GitBranch, Eye,
 } from "lucide-react";
+import { useUiText } from "@/lib/i18n";
 
 // ─── Types (mirrors backend) ──────────────────────────────────────────────────
 
@@ -73,10 +74,10 @@ interface DecisionTrace {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const INFLUENCE_LABEL: Record<string, string> = {
-  primary:    "Primário",
-  secondary:  "Secundário",
-  validation: "Validação",
+const INFLUENCE_LABEL: Record<string, [string, string, string]> = {
+  primary:    ["Primário", "Primary", "Principal"],
+  secondary:  ["Secundário", "Secondary", "Secundario"],
+  validation: ["Validação", "Validation", "Validación"],
 };
 
 const INFLUENCE_COLOR: Record<string, string> = {
@@ -116,9 +117,17 @@ function SectionHeader({ icon: Icon, label, count }: { icon: React.ElementType; 
 }
 
 function AgentCard({ agent, index }: { agent: TraceAgent; index: number }) {
+  const t = useUiText();
   const [open, setOpen] = useState(false);
   const infColor = INFLUENCE_COLOR[agent.influence] ?? INFLUENCE_COLOR["secondary"]!;
   const provColor = PROVIDER_COLOR[agent.aiProvider ?? ""] ?? "text-white/40";
+  const statusLabels: Record<string, string> = {
+    completed: t("concluído", "completed", "completado"),
+    failed: t("falhou", "failed", "fallido"),
+    running: t("em execução", "running", "en curso"),
+    pending: t("pendente", "pending", "pendiente"),
+    skipped: t("ignorado", "skipped", "omitido"),
+  };
 
   return (
     <div className="border border-white/8 rounded-lg overflow-hidden">
@@ -128,7 +137,7 @@ function AgentCard({ agent, index }: { agent: TraceAgent; index: number }) {
       >
         <span className="font-mono text-[10px] text-white/20 w-4 shrink-0">{index + 1}</span>
         <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${infColor} shrink-0`}>
-          {INFLUENCE_LABEL[agent.influence]}
+          {INFLUENCE_LABEL[agent.influence] ? t(...INFLUENCE_LABEL[agent.influence]) : agent.influence}
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-mono text-white/80 font-semibold truncate">{agent.agentType}</p>
@@ -138,7 +147,7 @@ function AgentCard({ agent, index }: { agent: TraceAgent; index: number }) {
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <span className={`text-[10px] font-mono ${agent.status === "completed" ? "text-emerald-400" : "text-white/30"}`}>
-            {STATUS_ICON[agent.status] ?? "?"} {agent.status}
+            {STATUS_ICON[agent.status] ?? "?"} {statusLabels[agent.status] ?? agent.status}
           </span>
           {agent.creditsUsed > 0 && (
             <span className="text-[10px] font-mono text-white/30">{agent.creditsUsed} cr</span>
@@ -158,6 +167,7 @@ function AgentCard({ agent, index }: { agent: TraceAgent; index: number }) {
 }
 
 function DecisionCard({ decision }: { decision: TraceDecision }) {
+  const t = useUiText();
   const [open, setOpen] = useState(false);
   return (
     <div className="border border-white/8 rounded-lg overflow-hidden">
@@ -168,7 +178,7 @@ function DecisionCard({ decision }: { decision: TraceDecision }) {
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest">{decision.dimension}</p>
           <p className="text-sm font-mono text-white/90 font-semibold">{decision.value}</p>
-          <p className="text-[10px] font-mono text-white/30">por {decision.agent}</p>
+          <p className="text-[10px] font-mono text-white/30">{t("por", "by", "por")} {decision.agent}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <div className="flex flex-col items-end gap-1">
@@ -185,7 +195,7 @@ function DecisionCard({ decision }: { decision: TraceDecision }) {
       </button>
       {open && (
         <div className="px-4 pb-3 border-t border-white/5 pt-2 space-y-1">
-          <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest mb-1">Porque:</p>
+          <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest mb-1">{t("Por quê:", "Why:", "¿Por qué:")}</p>
           {decision.rationale.map((r, i) => (
             <p key={i} className="text-[11px] text-white/60 font-mono">· {r}</p>
           ))}
@@ -198,6 +208,7 @@ function DecisionCard({ decision }: { decision: TraceDecision }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function DecisionTracePanel({ campaignId }: { campaignId: string }) {
+  const t = useUiText();
   const [activeSection, setActiveSection] = useState<"agents" | "decisions" | "doctrine" | "critique" | "memory">("decisions");
 
   const { data, isLoading, error } = useQuery({
@@ -213,7 +224,7 @@ export function DecisionTracePanel({ campaignId }: { campaignId: string }) {
       <div className="border border-cyan-500/20 rounded-xl bg-cyan-500/5 p-6 animate-pulse">
         <div className="flex items-center gap-3 mb-4">
           <Brain className="h-4 w-4 text-cyan-400" />
-          <span className="font-mono text-xs uppercase tracking-widest text-cyan-400">Carregando Trilha de Decisão...</span>
+           <span className="font-mono text-xs uppercase tracking-widest text-cyan-400">{t("Carregando trilha de decisão...", "Loading decision trace...", "Cargando el registro de decisiones...")}</span>
         </div>
         <div className="space-y-2">
           {[...Array(3)].map((_, i) => (
@@ -230,7 +241,7 @@ export function DecisionTracePanel({ campaignId }: { campaignId: string }) {
         <div className="flex items-center gap-3">
           <Brain className="h-4 w-4 text-white/30" />
           <span className="font-mono text-xs uppercase tracking-widest text-white/30">
-            Trilha de decisão disponível após estratégia ser gerada
+             {t("A trilha de decisões estará disponível após a geração da estratégia", "Decision trace available after strategy generation", "El registro de decisiones estará disponible después de generar la estrategia")}
           </span>
         </div>
       </div>
@@ -238,11 +249,11 @@ export function DecisionTracePanel({ campaignId }: { campaignId: string }) {
   }
 
   const SECTIONS = [
-    { id: "decisions" as const, label: "Decisões",    icon: Scale,      count: trace.keyDecisions.length   },
-    { id: "agents"   as const, label: "Agentes",      icon: Cpu,        count: trace.agentChain.length     },
+    { id: "decisions" as const, label: t("Decisões", "Decisions", "Decisiones"),    icon: Scale,      count: trace.keyDecisions.length   },
+    { id: "agents"   as const, label: t("Agentes", "Agents", "Agentes"),      icon: Cpu,        count: trace.agentChain.length     },
     { id: "doctrine" as const, label: "Doctrine",     icon: Shield,     count: trace.doctrineChecks.length },
     { id: "critique" as const, label: "Self-Critique", icon: Sparkles,  count: trace.selfCritique.strengths.length + trace.selfCritique.risks.length },
-    { id: "memory"   as const, label: "Memória",      icon: GitBranch,  count: trace.memoryInfluence.conflicts.length + trace.memoryInfluence.verticalInsights.length },
+    { id: "memory"   as const, label: t("Memória", "Memory", "Memoria"),      icon: GitBranch,  count: trace.memoryInfluence.conflicts.length + trace.memoryInfluence.verticalInsights.length },
   ];
 
   return (
@@ -255,16 +266,16 @@ export function DecisionTracePanel({ campaignId }: { campaignId: string }) {
           </div>
           <div>
             <h3 className="font-mono text-sm font-bold text-white uppercase tracking-widest">
-              Trilha de Decisão
+               {t("Trilha de decisões", "Decision trace", "Registro de decisiones")}
             </h3>
             <p className="font-mono text-[10px] text-cyan-400/60 uppercase tracking-widest">
-              Modo Arquiteto · explainability total
+               {t("Modo Arquiteto · explicabilidade total", "Architect Mode · full explainability", "Modo Arquitecto · explicabilidad total")}
             </p>
           </div>
         </div>
         <div className="text-right">
           <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest">
-            {trace.agentChain.length} agentes · {trace.keyDecisions.length} decisões
+             {trace.agentChain.length} {t("agentes", "agents", "agentes")} · {trace.keyDecisions.length} {t("decisões", "decisions", "decisiones")}
           </p>
         </div>
       </div>
@@ -302,16 +313,16 @@ export function DecisionTracePanel({ campaignId }: { campaignId: string }) {
         {/* Decisions */}
         {activeSection === "decisions" && (
           <>
-            <SectionHeader icon={Scale} label="Decisões estratégicas com racional" count={trace.keyDecisions.length} />
+            <SectionHeader icon={Scale} label={t("Decisões estratégicas com justificativa", "Strategic decisions and rationale", "Decisiones estratégicas y justificación")} count={trace.keyDecisions.length} />
             {trace.keyDecisions.length === 0 ? (
-              <p className="text-xs font-mono text-white/30">Sem decisões registradas ainda.</p>
+              <p className="text-xs font-mono text-white/30">{t("Ainda não há decisões registradas.", "No decisions recorded yet.", "Aún no hay decisiones registradas.")}</p>
             ) : (
               trace.keyDecisions.map((d, i) => <DecisionCard key={i} decision={d} />)
             )}
             {trace.decisionWeights.weightedKPIs.length > 0 && (
               <div className="mt-4 pt-4 border-t border-white/5">
                 <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest mb-2">
-                  Pesos aplicados · perfil {trace.decisionWeights.appliedProfile}
+                   {t("Pesos aplicados · perfil", "Applied weights · profile", "Pesos aplicados · perfil")} {trace.decisionWeights.appliedProfile}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {trace.decisionWeights.weightedKPIs.map((k, i) => (
@@ -328,9 +339,9 @@ export function DecisionTracePanel({ campaignId }: { campaignId: string }) {
         {/* Agent chain */}
         {activeSection === "agents" && (
           <>
-            <SectionHeader icon={Cpu} label="Cadeia de agentes executados" count={trace.agentChain.length} />
+            <SectionHeader icon={Cpu} label={t("Cadeia de agentes executados", "Executed agent chain", "Cadena de agentes ejecutados")} count={trace.agentChain.length} />
             {trace.agentChain.length === 0 ? (
-              <p className="text-xs font-mono text-white/30">Nenhum agente executado ainda.</p>
+              <p className="text-xs font-mono text-white/30">{t("Nenhum agente foi executado ainda.", "No agents have run yet.", "Aún no se ejecutaron agentes.")}</p>
             ) : (
               trace.agentChain.map((a, i) => <AgentCard key={i} agent={a} index={i} />)
             )}
@@ -340,9 +351,9 @@ export function DecisionTracePanel({ campaignId }: { campaignId: string }) {
         {/* Doctrine */}
         {activeSection === "doctrine" && (
           <>
-            <SectionHeader icon={Shield} label="Doctrine Gate — 7 princípios validados" count={trace.doctrineChecks.length} />
+            <SectionHeader icon={Shield} label={t("Doctrine Gate — 7 princípios validados", "Doctrine Gate — 7 principles validated", "Doctrine Gate — 7 principios validados")} count={trace.doctrineChecks.length} />
             {trace.doctrineChecks.length === 0 ? (
-              <p className="text-xs font-mono text-white/30">Doctrine Gate ainda não rodou para esta campanha.</p>
+              <p className="text-xs font-mono text-white/30">{t("O Doctrine Gate ainda não foi executado para esta campanha.", "Doctrine Gate has not run for this campaign yet.", "Doctrine Gate aún no se ejecutó para esta campaña.")}</p>
             ) : (
               <div className="space-y-2">
                 {trace.doctrineChecks.map((c, i) => (
@@ -365,15 +376,15 @@ export function DecisionTracePanel({ campaignId }: { campaignId: string }) {
         {/* Self-critique */}
         {activeSection === "critique" && (
           <>
-            <SectionHeader icon={Sparkles} label="Self-Critique — Claude auditando Claude" />
+            <SectionHeader icon={Sparkles} label={t("Autoavaliação — Claude auditando Claude", "Self-critique — Claude auditing Claude", "Autoevaluación — Claude audita a Claude")} />
             {!trace.selfCritique.ran ? (
-              <p className="text-xs font-mono text-white/30">Self-critique ainda não executado.</p>
+              <p className="text-xs font-mono text-white/30">{t("A autoavaliação ainda não foi executada.", "Self-critique has not run yet.", "La autoevaluación aún no se ejecutó.")}</p>
             ) : (
               <div className="space-y-4">
                 {trace.selfCritique.overallScore !== null && (
                   <div className="flex items-center gap-4 px-4 py-3 rounded-lg border border-white/8">
                     <div>
-                      <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest">Score geral</p>
+                      <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest">{t("Pontuação geral", "Overall score", "Puntuación general")}</p>
                       <p className="text-2xl font-mono font-black text-white">{trace.selfCritique.overallScore}<span className="text-sm text-white/30">/100</span></p>
                     </div>
                     <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
@@ -386,7 +397,7 @@ export function DecisionTracePanel({ campaignId }: { campaignId: string }) {
                 )}
                 {trace.selfCritique.strengths.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-mono text-emerald-400/60 uppercase tracking-widest mb-2">Forças</p>
+                    <p className="text-[10px] font-mono text-emerald-400/60 uppercase tracking-widest mb-2">{t("Pontos fortes", "Strengths", "Fortalezas")}</p>
                     {trace.selfCritique.strengths.map((s, i) => (
                       <p key={i} className="text-xs font-mono text-white/60 mb-1">✓ {s}</p>
                     ))}
@@ -394,7 +405,7 @@ export function DecisionTracePanel({ campaignId }: { campaignId: string }) {
                 )}
                 {trace.selfCritique.risks.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-mono text-amber-400/60 uppercase tracking-widest mb-2">Riscos</p>
+                    <p className="text-[10px] font-mono text-amber-400/60 uppercase tracking-widest mb-2">{t("Riscos", "Risks", "Riesgos")}</p>
                     {trace.selfCritique.risks.map((r, i) => (
                       <p key={i} className="text-xs font-mono text-white/60 mb-1">⚠ {r}</p>
                     ))}
@@ -402,7 +413,7 @@ export function DecisionTracePanel({ campaignId }: { campaignId: string }) {
                 )}
                 {trace.selfCritique.suggestions.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-mono text-cyan-400/60 uppercase tracking-widest mb-2">Sugestões</p>
+                    <p className="text-[10px] font-mono text-cyan-400/60 uppercase tracking-widest mb-2">{t("Sugestões", "Suggestions", "Sugerencias")}</p>
                     {trace.selfCritique.suggestions.map((s, i) => (
                       <p key={i} className="text-xs font-mono text-white/60 mb-1">→ {s}</p>
                     ))}
@@ -416,11 +427,11 @@ export function DecisionTracePanel({ campaignId }: { campaignId: string }) {
         {/* Memory influence */}
         {activeSection === "memory" && (
           <>
-            <SectionHeader icon={GitBranch} label="Influência da memória cognitiva" />
+            <SectionHeader icon={GitBranch} label={t("Influência da memória cognitiva", "Cognitive memory influence", "Influencia de la memoria cognitiva")} />
             <div className="space-y-4">
               {trace.memoryInfluence.alignmentScore !== null && (
                 <div className="px-4 py-3 rounded-lg border border-white/8 bg-white/2">
-                  <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest mb-1">Score de alinhamento</p>
+                  <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest mb-1">{t("Pontuação de alinhamento", "Alignment score", "Puntuación de alineación")}</p>
                   <div className="flex items-center gap-3">
                     <p className="text-xl font-mono font-black text-white">{trace.memoryInfluence.alignmentScore}<span className="text-sm text-white/30">/100</span></p>
                     <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
@@ -434,13 +445,13 @@ export function DecisionTracePanel({ campaignId }: { campaignId: string }) {
               )}
               {trace.memoryInfluence.creativeDirection && (
                 <div className="px-4 py-3 rounded-lg border border-violet-500/20 bg-violet-500/5">
-                  <p className="text-[10px] font-mono text-violet-400/60 uppercase tracking-widest mb-1">Direção criativa aprovada</p>
+                  <p className="text-[10px] font-mono text-violet-400/60 uppercase tracking-widest mb-1">{t("Direção criativa aprovada", "Approved creative direction", "Dirección creativa aprobada")}</p>
                   <p className="text-xs font-mono text-violet-300">{trace.memoryInfluence.creativeDirection}</p>
                 </div>
               )}
               {trace.memoryInfluence.verticalInsights.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-mono text-blue-400/60 uppercase tracking-widest mb-2">Insights verticais injetados</p>
+                  <p className="text-[10px] font-mono text-blue-400/60 uppercase tracking-widest mb-2">{t("Insights do setor incorporados", "Vertical insights applied", "Perspectivas del sector incorporadas")}</p>
                   {trace.memoryInfluence.verticalInsights.map((v, i) => (
                     <p key={i} className="text-xs font-mono text-white/50 mb-1">· {v}</p>
                   ))}
@@ -448,14 +459,14 @@ export function DecisionTracePanel({ campaignId }: { campaignId: string }) {
               )}
               {trace.memoryInfluence.conflicts.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-mono text-red-400/60 uppercase tracking-widest mb-2">Conflitos detectados</p>
+                  <p className="text-[10px] font-mono text-red-400/60 uppercase tracking-widest mb-2">{t("Conflitos detectados", "Conflicts detected", "Conflictos detectados")}</p>
                   {trace.memoryInfluence.conflicts.map((c, i) => (
                     <p key={i} className="text-xs font-mono text-white/50 mb-1">⚡ {c}</p>
                   ))}
                 </div>
               )}
               {trace.memoryInfluence.conflicts.length === 0 && trace.memoryInfluence.verticalInsights.length === 0 && !trace.memoryInfluence.creativeDirection && (
-                <p className="text-xs font-mono text-white/30">Memória disponível após execução dos agentes de estratégia.</p>
+                <p className="text-xs font-mono text-white/30">{t("A memória ficará disponível após a execução dos agentes de estratégia.", "Memory becomes available after strategy agents run.", "La memoria estará disponible después de ejecutar los agentes de estrategia.")}</p>
               )}
             </div>
           </>

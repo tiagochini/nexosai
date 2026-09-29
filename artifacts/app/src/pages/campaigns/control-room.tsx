@@ -29,6 +29,7 @@ import { ConditionalExecutionPanel } from "./components/conditional-execution-pa
 import { RealizationContractPanel } from "./components/realization-contract-panel";
 import { OperationalCouncilPanel } from "./components/operational-council-panel";
 import { GitCompare } from "lucide-react";
+import { useUiText } from "@/lib/i18n";
 import {
   useGetCampaignControlRoomApprovals,
   getGetCampaignControlRoomApprovalsQueryKey,
@@ -133,13 +134,14 @@ function Metric({ label, value }: { label: string, value: React.ReactNode }) {
 }
 
 function UnavailablePanel({ title, icon: Icon, reason }: { title: string, icon: any, reason?: string }) {
+  const t = useUiText();
   return (
     <section className="border border-border/20 bg-black/40 border-dashed p-6 flex flex-col items-center justify-center text-center h-full min-h-[150px]">
       <div className="w-10 h-10 rounded-full border border-border/30 bg-background/30 flex items-center justify-center mb-3">
         <Icon className="h-4 w-4 text-muted-foreground/40" />
       </div>
       <h2 className="font-mono text-xs uppercase tracking-widest text-muted-foreground font-bold mb-1">{title}</h2>
-      <p className="font-mono text-[10px] text-muted-foreground/50">{reason || "Data currently unavailable"}</p>
+      <p className="font-mono text-[10px] text-muted-foreground/50">{reason || t("Dados indisponíveis no momento", "Data currently unavailable", "Datos no disponibles en este momento")}</p>
     </section>
   );
 }
@@ -196,6 +198,7 @@ function DetailDrawer({
   children: ReactNode;
   footer?: ReactNode;
 }) {
+  const t = useUiText();
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[88vh] border-primary/25 bg-[#030712] text-foreground">
@@ -211,7 +214,7 @@ function DetailDrawer({
             {footer}
             <DrawerClose asChild>
               <Button variant="outline" className="rounded-none font-mono text-[10px] uppercase tracking-widest">
-                Fechar
+                {t("Fechar", "Close", "Cerrar")}
               </Button>
             </DrawerClose>
           </DrawerFooter>
@@ -222,8 +225,9 @@ function DetailDrawer({
 }
 
 function MasterplanPanel({ data, campaignId }: { data: ControlRoomResponse["masterplan"], campaignId: string }) {
+  const t = useUiText();
   if (!data.available) {
-    return <UnavailablePanel title="Masterplan" icon={Database} reason={data.reason} />;
+    return <UnavailablePanel title={t("Plano mestre", "Masterplan", "Plan maestro")} icon={Database} reason={data.reason} />;
   }
 
   return (
@@ -232,36 +236,36 @@ function MasterplanPanel({ data, campaignId }: { data: ControlRoomResponse["mast
       <div className="p-3 border-b border-primary/20 flex justify-between items-center bg-primary/5">
         <div className="flex items-center gap-2">
           <Database className="h-4 w-4 text-primary" />
-          <h2 className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">Masterplan</h2>
+          <h2 className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">{t("Plano mestre", "Masterplan", "Plan maestro")}</h2>
         </div>
         <div className="px-2 py-0.5 border border-success/40 bg-success/10 text-success font-mono text-[9px] uppercase tracking-wider">
-          {data.status || "Active"}
+          {data.status || t("Ativo", "Active", "Activo")}
         </div>
       </div>
 
       <div className="p-4 space-y-4">
         <div>
-          <div className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest mb-1">Title</div>
-          <div className="text-sm font-sans font-medium text-white/90">{data.title || "Strategy Draft"}</div>
+          <div className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest mb-1">{t("Título", "Title", "Título")}</div>
+          <div className="text-sm font-sans font-medium text-white/90">{data.title || t("Rascunho de estratégia", "Strategy Draft", "Borrador de estrategia")}</div>
         </div>
 
         {data.objective && (
           <div>
-            <div className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest mb-1">Objective</div>
+            <div className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest mb-1">{t("Objetivo", "Objective", "Objetivo")}</div>
             <div className="text-[11px] font-mono text-primary/80 leading-relaxed line-clamp-2">{data.objective}</div>
           </div>
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Metric label="Version" value={`v${data.version || 1}.0`} />
-          <Metric label="Content Hash" value={data.contentHash?.substring(0, 8) || "N/A"} />
+          <Metric label={t("Versão", "Version", "Versión")} value={`v${data.version || 1}.0`} />
+          <Metric label={t("Hash do conteúdo", "Content Hash", "Hash del contenido")} value={data.contentHash?.substring(0, 8) || "N/A"} />
         </div>
 
         <Link
           href={`/campaigns/${campaignId}/strategy`}
           className="mt-2 w-full flex items-center justify-center gap-2 py-2 border border-primary/30 bg-primary/5 hover:bg-primary/20 hover:border-primary/60 transition-all font-mono text-[10px] text-primary uppercase tracking-widest cursor-pointer"
         >
-          View Strategy Document <ChevronRight className="h-3 w-3" />
+          {t("Ver documento de estratégia", "View Strategy Document", "Ver documento de estrategia")} <ChevronRight className="h-3 w-3" />
         </Link>
       </div>
     </section>
@@ -269,8 +273,9 @@ function MasterplanPanel({ data, campaignId }: { data: ControlRoomResponse["mast
 }
 
 function DeliverablesPanel({ data, campaignId }: { data: ControlRoomResponse["deliverables"], campaignId: string }) {
+  const t = useUiText();
   if (!data.available) {
-    return <UnavailablePanel title="Deliverables Pipeline" icon={Layers} reason={data.reason} />;
+    return <UnavailablePanel title={t("Pipeline de entregáveis", "Deliverables Pipeline", "Flujo de entregables")} icon={Layers} reason={data.reason} />;
   }
 
   const records = data.records || [];
@@ -292,21 +297,21 @@ function DeliverablesPanel({ data, campaignId }: { data: ControlRoomResponse["de
         <div className="p-3 border-b border-primary/20 flex justify-between items-center gap-3 bg-primary/5">
           <div className="flex items-center gap-2">
             <Layers className="h-4 w-4 text-primary" />
-            <h2 className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">Deliverables Pipeline</h2>
+            <h2 className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">{t("Pipeline de entregáveis", "Deliverables Pipeline", "Flujo de entregables")}</h2>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap justify-end">
             <ActionCounter
-              label="Composição"
+              label={t("Composição", "Composition", "Composición")}
               value={total}
               onClick={() => openDeliverables(null)}
-              title="Ver composição dos entregáveis"
+              title={t("Ver composição dos entregáveis", "View deliverables composition", "Ver composición de entregables")}
             />
             <ActionCounter
-              label="Preview"
+              label={t("Prévia", "Preview", "Vista previa")}
               value={`${previewReady}/${total}`}
               tone={previewReady === total ? "success" : "primary"}
               onClick={() => setPreviewDrawerOpen(true)}
-              title="Ver Previews Universais"
+              title={t("Ver Previews Universais", "View universal previews", "Ver vistas previas universales")}
             />
           </div>
         </div>
@@ -320,7 +325,7 @@ function DeliverablesPanel({ data, campaignId }: { data: ControlRoomResponse["de
                   key={`${rec.kind}-${rec.status}-${rec.type}-${rec.platform}-${i}`}
                   onClick={() => openDeliverables(rec)}
                   className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60"
-                  aria-label={`Ver ${rec.total} entregáveis ${rec.type} com status ${rec.status}`}
+                  aria-label={t(`Ver ${rec.total} entregáveis ${rec.type} com status ${rec.status}`, `View ${rec.total} ${rec.type} deliverables with status ${rec.status}`, `Ver ${rec.total} entregables ${rec.type} con estado ${rec.status}`)}
                 >
                   <div className="flex flex-col">
                     <span className="font-mono text-[11px] text-white uppercase tracking-wider">{rec.platform} {rec.type}</span>
@@ -335,7 +340,7 @@ function DeliverablesPanel({ data, campaignId }: { data: ControlRoomResponse["de
             </div>
           ) : (
             <div className="p-6 text-center font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-              Pipeline is empty
+              {t("O pipeline está vazio", "Pipeline is empty", "El flujo está vacío")}
             </div>
           )}
         </div>
@@ -344,21 +349,21 @@ function DeliverablesPanel({ data, campaignId }: { data: ControlRoomResponse["de
             href={`/campaigns/${campaignId}/content`}
             className="w-full flex items-center justify-center gap-2 py-2 border border-primary/30 bg-primary/5 hover:bg-primary/20 hover:border-primary/60 transition-all font-mono text-[10px] text-primary uppercase tracking-widest cursor-pointer"
           >
-            Open Content Factory <ChevronRight className="h-3 w-3" />
+            {t("Abrir fábrica de conteúdo", "Open Content Factory", "Abrir fábrica de contenido")} <ChevronRight className="h-3 w-3" />
           </Link>
         </div>
       </section>
       <DetailDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
-        title={selectedRecord ? `${selectedRecord.type} · ${selectedRecord.status}` : "Composição dos entregáveis"}
-        description={`${selectedRecord ? selectedRecord.total : total} registros persistidos na campanha`}
+        title={selectedRecord ? `${selectedRecord.type} · ${selectedRecord.status}` : t("Composição dos entregáveis", "Deliverables composition", "Composición de entregables")}
+        description={t(`${selectedRecord ? selectedRecord.total : total} registros persistidos na campanha`, `${selectedRecord ? selectedRecord.total : total} records saved in the campaign`, `${selectedRecord ? selectedRecord.total : total} registros guardados en la campaña`)}
         footer={(
           <Link
             href={`/campaigns/${campaignId}/content`}
             className="inline-flex h-9 items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 rounded-none font-mono text-[10px] uppercase tracking-widest px-4 py-2"
           >
-            Abrir fábrica de conteúdo
+            {t("Abrir fábrica de conteúdo", "Open Content Factory", "Abrir fábrica de contenido")}
           </Link>
         )}
       >
@@ -366,7 +371,7 @@ function DeliverablesPanel({ data, campaignId }: { data: ControlRoomResponse["de
           {drawerRecords.map((rec, i) => (
             <div key={`${rec.kind}-${rec.status}-${rec.type}-${rec.platform}-${i}`} className="border border-border/25 bg-black/40 p-3 flex items-center justify-between gap-4">
               <div>
-                <div className="font-mono text-[11px] uppercase tracking-wider text-white">{rec.platform || "geral"} · {rec.type}</div>
+                <div className="font-mono text-[11px] uppercase tracking-wider text-white">{rec.platform || t("geral", "general", "general")} · {rec.type}</div>
                 <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground mt-1">{rec.kind} · {rec.status}</div>
               </div>
               <span className="font-mono text-lg font-bold text-primary">{rec.total}</span>
@@ -384,8 +389,9 @@ function DeliverablesPanel({ data, campaignId }: { data: ControlRoomResponse["de
 }
 
 function CredentialsPanel({ data }: { data: ControlRoomResponse["credentials"] }) {
+  const t = useUiText();
   if (!data.available) {
-    return <UnavailablePanel title="Integration Health" icon={ShieldCheck} reason={data.reason} />;
+    return <UnavailablePanel title={t("Saúde das integrações", "Integration Health", "Estado de las integraciones")} icon={ShieldCheck} reason={data.reason} />;
   }
 
   const records = data.records || [];
@@ -405,12 +411,12 @@ function CredentialsPanel({ data }: { data: ControlRoomResponse["credentials"] }
         <div className="p-3 border-b border-success/20 flex flex-wrap justify-between items-center gap-3 bg-success/5">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-success" />
-            <h2 className="font-mono text-[11px] uppercase tracking-widest text-success font-bold">System Credentials</h2>
+            <h2 className="font-mono text-[11px] uppercase tracking-widest text-success font-bold">{t("Credenciais do sistema", "System Credentials", "Credenciales del sistema")}</h2>
           </div>
           <div className="flex items-center gap-1.5">
-            <ActionCounter label="Total" value={records.length} onClick={() => { setHealthFilter("all"); setDrawerOpen(true); }} title="Ver todas as integrações" />
-            <ActionCounter label="Saudáveis" value={healthyCount} tone="success" onClick={() => { setHealthFilter("healthy"); setDrawerOpen(true); }} title="Ver integrações saudáveis" />
-            <ActionCounter label="Bloqueios" value={blockedCount} tone={blockedCount > 0 ? "danger" : "neutral"} onClick={() => { setHealthFilter("blocked"); setDrawerOpen(true); }} title="Ver integrações bloqueadas" />
+            <ActionCounter label={t("Total", "Total", "Total")} value={records.length} onClick={() => { setHealthFilter("all"); setDrawerOpen(true); }} title={t("Ver todas as integrações", "View all integrations", "Ver todas las integraciones")} />
+            <ActionCounter label={t("Saudáveis", "Healthy", "Saludables")} value={healthyCount} tone="success" onClick={() => { setHealthFilter("healthy"); setDrawerOpen(true); }} title={t("Ver integrações saudáveis", "View healthy integrations", "Ver integraciones saludables")} />
+            <ActionCounter label={t("Bloqueios", "Blocked", "Bloqueadas")} value={blockedCount} tone={blockedCount > 0 ? "danger" : "neutral"} onClick={() => { setHealthFilter("blocked"); setDrawerOpen(true); }} title={t("Ver integrações bloqueadas", "View blocked integrations", "Ver integraciones bloqueadas")} />
           </div>
         </div>
 
@@ -425,7 +431,7 @@ function CredentialsPanel({ data }: { data: ControlRoomResponse["credentials"] }
                     key={`${rec.provider}-${rec.accountId}-${i}`}
                     onClick={() => { setHealthFilter(ok ? "healthy" : "blocked"); setDrawerOpen(true); }}
                     className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-success/60"
-                    aria-label={`Ver integração ${rec.provider}, estado ${rec.health.state}`}
+                    aria-label={t(`Ver integração ${rec.provider}, estado ${rec.health.state}`, `View ${rec.provider} integration, status ${rec.health.state}`, `Ver integración ${rec.provider}, estado ${rec.health.state}`)}
                   >
                     <div className="flex flex-col">
                       <span className="font-mono text-[11px] text-white uppercase tracking-wider">{rec.provider}</span>
@@ -446,7 +452,7 @@ function CredentialsPanel({ data }: { data: ControlRoomResponse["credentials"] }
             </div>
           ) : (
             <div className="p-6 text-center font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-              No credentials bound
+              {t("Nenhuma credencial vinculada", "No credentials bound", "No hay credenciales vinculadas")}
             </div>
           )}
         </div>
@@ -455,21 +461,21 @@ function CredentialsPanel({ data }: { data: ControlRoomResponse["credentials"] }
             href={`/integracoes`}
             className="w-full flex items-center justify-center gap-2 py-2 border border-success/30 bg-success/5 hover:bg-success/20 hover:border-success/60 transition-all font-mono text-[10px] text-success uppercase tracking-widest cursor-pointer"
           >
-            Manage Integrations <ChevronRight className="h-3 w-3" />
+            {t("Gerenciar integrações", "Manage Integrations", "Gestionar integraciones")} <ChevronRight className="h-3 w-3" />
           </Link>
         </div>
       </section>
       <DetailDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
-        title={healthFilter === "healthy" ? "Integrações saudáveis" : healthFilter === "blocked" ? "Integrações bloqueadas" : "Saúde das integrações"}
-        description={`${filteredRecords.length} de ${records.length} integrações persistidas no workspace`}
+        title={healthFilter === "healthy" ? t("Integrações saudáveis", "Healthy integrations", "Integraciones saludables") : healthFilter === "blocked" ? t("Integrações bloqueadas", "Blocked integrations", "Integraciones bloqueadas") : t("Saúde das integrações", "Integration health", "Estado de las integraciones")}
+        description={t(`${filteredRecords.length} de ${records.length} integrações persistidas no workspace`, `${filteredRecords.length} of ${records.length} integrations saved in the workspace`, `${filteredRecords.length} de ${records.length} integraciones guardadas en el espacio de trabajo`)}
         footer={(
           <Link
             href="/integracoes"
             className="inline-flex h-9 items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 rounded-none font-mono text-[10px] uppercase tracking-widest px-4 py-2"
           >
-            Gerenciar integrações
+            {t("Gerenciar integrações", "Manage integrations", "Gestionar integraciones")}
           </Link>
         )}
       >
@@ -490,7 +496,7 @@ function CredentialsPanel({ data }: { data: ControlRoomResponse["credentials"] }
             );
           }) : (
             <div className="border border-border/25 bg-black/30 p-6 text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              Nenhum registro nesta categoria
+              {t("Nenhum registro nesta categoria", "No records in this category", "No hay registros en esta categoría")}
             </div>
           )}
         </div>
@@ -500,6 +506,7 @@ function CredentialsPanel({ data }: { data: ControlRoomResponse["credentials"] }
 }
 
 function ApprovalCenterPanel({ campaignId }: { campaignId: string }) {
+  const t = useUiText();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { data } = useGetCampaignControlRoomApprovals(campaignId, undefined, {
     query: {
@@ -521,26 +528,26 @@ function ApprovalCenterPanel({ campaignId }: { campaignId: string }) {
         <div className="p-3 border-b border-primary/20 flex justify-between items-center bg-primary/5 shrink-0">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-primary" />
-            <h2 className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">Centro de Aprovações</h2>
+            <h2 className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">{t("Centro de Aprovações", "Approval Center", "Centro de aprobaciones")}</h2>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap justify-end">
              {pendingCount > 0 ? (
                <>
                  <ActionCounter
-                   label="Pendentes"
+                    label={t("Pendentes", "Pending", "Pendientes")}
                    value={pendingCount}
                    tone="primary"
                    onClick={() => setDrawerOpen(true)}
-                   title="Ver aprovações pendentes"
+                    title={t("Ver aprovações pendentes", "View pending approvals", "Ver aprobaciones pendientes")}
                  />
-                 {slaScheduled > 0 && <ActionCounter label="Agendado" value={slaScheduled} tone="neutral" onClick={() => setDrawerOpen(true)} title="Prazos agendados" />}
-                 {slaDueSoon > 0 && <ActionCounter label="Vence Breve" value={slaDueSoon} tone="warning" onClick={() => setDrawerOpen(true)} title="Prazos vencendo em breve" />}
-                 {slaOverdue > 0 && <ActionCounter label="Atrasado" value={slaOverdue} tone="danger" onClick={() => setDrawerOpen(true)} title="Prazos atrasados" />}
-                 {slaExpired > 0 && <ActionCounter label="Expirado" value={slaExpired} tone="danger" onClick={() => setDrawerOpen(true)} title="Prazos expirados" />}
+                  {slaScheduled > 0 && <ActionCounter label={t("Agendado", "Scheduled", "Programado")} value={slaScheduled} tone="neutral" onClick={() => setDrawerOpen(true)} title={t("Prazos agendados", "Scheduled deadlines", "Plazos programados")} />}
+                  {slaDueSoon > 0 && <ActionCounter label={t("Vence em breve", "Due soon", "Vence pronto")} value={slaDueSoon} tone="warning" onClick={() => setDrawerOpen(true)} title={t("Prazos vencendo em breve", "Deadlines due soon", "Plazos próximos a vencer")} />}
+                  {slaOverdue > 0 && <ActionCounter label={t("Atrasado", "Overdue", "Atrasado")} value={slaOverdue} tone="danger" onClick={() => setDrawerOpen(true)} title={t("Prazos atrasados", "Overdue deadlines", "Plazos vencidos")} />}
+                  {slaExpired > 0 && <ActionCounter label={t("Expirado", "Expired", "Expirado")} value={slaExpired} tone="danger" onClick={() => setDrawerOpen(true)} title={t("Prazos expirados", "Expired deadlines", "Plazos expirados")} />}
                </>
              ) : (
                <div className="px-2 py-0.5 border border-success/40 bg-success/10 text-success font-mono text-[9px] uppercase tracking-wider">
-                 Tudo Certo
+                  {t("Tudo certo", "All clear", "Todo en orden")}
                </div>
              )}
           </div>
@@ -548,7 +555,7 @@ function ApprovalCenterPanel({ campaignId }: { campaignId: string }) {
 
         <div className="p-4 space-y-4">
           <div className="font-sans text-xs text-muted-foreground leading-relaxed">
-             Revise e autorize master plans, peças de conteúdo e checkpoints estratégicos antes da execução do orquestrador.
+              {t("Revise e autorize planos mestres, peças de conteúdo e pontos de controle estratégicos antes da execução do orquestrador.", "Review and authorize master plans, content assets, and strategic checkpoints before the orchestrator runs.", "Revisa y autoriza los planes maestros, las piezas de contenido y los puntos de control estratégicos antes de que se ejecute el orquestador.")}
           </div>
 
           <Button
@@ -557,7 +564,7 @@ function ApprovalCenterPanel({ campaignId }: { campaignId: string }) {
             onClick={() => setDrawerOpen(true)}
             className="w-full font-mono text-[10px] uppercase tracking-widest border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 hover:border-primary/70 hover:text-primary rounded-none h-10 transition-colors"
           >
-            Abrir Centro de Aprovações
+            {t("Abrir Centro de Aprovações", "Open Approval Center", "Abrir centro de aprobaciones")}
           </Button>
         </div>
       </section>
@@ -572,8 +579,9 @@ function ApprovalCenterPanel({ campaignId }: { campaignId: string }) {
 }
 
 function CheckpointsPanel({ data, campaignId }: { data: ControlRoomResponse["pendingCheckpoints"], campaignId: string }) {
+  const t = useUiText();
   if (!data.available) {
-    return <UnavailablePanel title="Actionable Checkpoints" icon={Clock} reason={data.reason} />;
+    return <UnavailablePanel title={t("Pontos de controle acionáveis", "Actionable Checkpoints", "Puntos de control accionables")} icon={Clock} reason={data.reason} />;
   }
 
   const records = data.records || [];
@@ -587,10 +595,10 @@ function CheckpointsPanel({ data, campaignId }: { data: ControlRoomResponse["pen
       <div className="p-3 border-b border-[#FFB000]/20 flex justify-between items-center bg-[#FFB000]/5 shrink-0">
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4 text-[#FFB000]" />
-          <h2 className="font-mono text-[11px] uppercase tracking-widest text-[#FFB000] font-bold">Pending Checkpoints</h2>
+          <h2 className="font-mono text-[11px] uppercase tracking-widest text-[#FFB000] font-bold">{t("Pontos de controle pendentes", "Pending Checkpoints", "Puntos de control pendientes")}</h2>
         </div>
         {pendingCount > 0 && (
-          <ActionCounter label="Requeridos" value={pendingCount} tone="warning" onClick={() => setDrawerOpen(true)} title="Ver checkpoints pendentes" />
+          <ActionCounter label={t("Obrigatórios", "Required", "Obligatorios")} value={pendingCount} tone="warning" onClick={() => setDrawerOpen(true)} title={t("Ver pontos de controle pendentes", "View pending checkpoints", "Ver puntos de control pendientes")} />
         )}
       </div>
 
@@ -612,11 +620,11 @@ function CheckpointsPanel({ data, campaignId }: { data: ControlRoomResponse["pen
                       </span>
                     </div>
                     <div className="font-sans text-xs text-foreground/80 mb-1.5 line-clamp-1">
-                      Approval required for {rec.assetId || "execution step"}
+                      {t(`Aprovação necessária para ${rec.assetId || "etapa de execução"}`, `Approval required for ${rec.assetId || "execution step"}`, `Se requiere aprobación para ${rec.assetId || "paso de ejecución"}`)}
                     </div>
                     <div className="flex items-center gap-3 font-mono text-[9px] text-muted-foreground/50 uppercase tracking-wider">
-                      <span>Generated: {new Date(rec.createdAt).toLocaleTimeString()}</span>
-                      {rec.dueAt && <span>Due: {new Date(rec.dueAt).toLocaleTimeString()}</span>}
+                      <span>{t("Gerado", "Generated", "Generado")}: {new Date(rec.createdAt).toLocaleTimeString()}</span>
+                      {rec.dueAt && <span>{t("Vence", "Due", "Vence")}: {new Date(rec.dueAt).toLocaleTimeString()}</span>}
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-[#FFB000]/40 group-hover/row:text-[#FFB000] transition-colors shrink-0 mt-1" />
@@ -627,8 +635,8 @@ function CheckpointsPanel({ data, campaignId }: { data: ControlRoomResponse["pen
         ) : (
           <div className="p-8 flex flex-col items-center justify-center text-center h-full">
             <CheckCircle2 className="h-8 w-8 text-success/40 mb-3" />
-            <div className="font-mono text-[11px] uppercase tracking-widest text-success font-bold">All Clear</div>
-            <div className="font-mono text-[9px] text-muted-foreground mt-1 uppercase tracking-widest">No pending actions</div>
+            <div className="font-mono text-[11px] uppercase tracking-widest text-success font-bold">{t("Tudo certo", "All Clear", "Todo en orden")}</div>
+            <div className="font-mono text-[9px] text-muted-foreground mt-1 uppercase tracking-widest">{t("Nenhuma ação pendente", "No pending actions", "No hay acciones pendientes")}</div>
           </div>
         )}
       </div>
@@ -636,14 +644,14 @@ function CheckpointsPanel({ data, campaignId }: { data: ControlRoomResponse["pen
     <DetailDrawer
       open={drawerOpen}
       onOpenChange={setDrawerOpen}
-      title="Checkpoints pendentes"
-      description={`${pendingCount} aprovações exigem decisão`}
+      title={t("Pontos de controle pendentes", "Pending checkpoints", "Puntos de control pendientes")}
+      description={t(`${pendingCount} aprovações exigem decisão`, `${pendingCount} approvals require a decision`, `${pendingCount} aprobaciones requieren una decisión`)}
       footer={(
         <Link
           href={`/campaigns/${campaignId}`}
           className="inline-flex h-9 items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 rounded-none font-mono text-[10px] uppercase tracking-widest px-4 py-2"
         >
-          Abrir campanha
+          {t("Abrir campanha", "Open campaign", "Abrir campaña")}
         </Link>
       )}
     >
@@ -653,7 +661,7 @@ function CheckpointsPanel({ data, campaignId }: { data: ControlRoomResponse["pen
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="font-mono text-[11px] uppercase tracking-wider text-[#FFB000]">{rec.checkpointType.replace(/_/g, " ")}</div>
-                <div className="font-mono text-[9px] text-muted-foreground mt-1">Asset: {rec.assetId}</div>
+                <div className="font-mono text-[9px] text-muted-foreground mt-1">{t("Ativo", "Asset", "Activo")}: {rec.assetId}</div>
               </div>
               <span className="font-mono text-[9px] uppercase tracking-widest text-[#FFB000]">{rec.status}</span>
             </div>
@@ -676,6 +684,7 @@ function EvidenceExplorerDrawer({
   campaignId: string;
   initialState: "all" | "planned" | "attempted" | "provider_confirmed" | "artifact_qc";
 }) {
+  const t = useUiText();
   const [filters, setFilters] = useState({
     state: "",
     subjectType: "",
@@ -699,14 +708,14 @@ function EvidenceExplorerDrawer({
   const isValidUUID = (str: string) => !str || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
 
   const validationError = useMemo(() => {
-    if (filters.subjectId && !isValidUUID(filters.subjectId)) return "ID deve ser um UUID válido.";
+    if (filters.subjectId && !isValidUUID(filters.subjectId)) return t("ID deve ser um UUID válido.", "ID must be a valid UUID.", "El ID debe ser un UUID válido.");
     if (filters.from && filters.to) {
       const f = new Date(filters.from).getTime();
-      const t = new Date(filters.to).getTime();
-      if (!isNaN(f) && !isNaN(t) && f >= t) return "Data inicial deve ser menor que a data final.";
+      const endTime = new Date(filters.to).getTime();
+      if (!isNaN(f) && !isNaN(endTime) && f >= endTime) return t("Data inicial deve ser menor que a data final.", "Start date must be earlier than the end date.", "La fecha inicial debe ser anterior a la fecha final.");
     }
     return null;
-  }, [filters]);
+  }, [filters, t]);
 
   const {
     data,
@@ -782,15 +791,15 @@ function EvidenceExplorerDrawer({
             <div>
               <DrawerTitle className="font-mono text-sm uppercase tracking-widest text-primary flex items-center gap-2">
                 <Terminal className="h-4 w-4" />
-                Explorador de Evidências
+                  {t("Explorador de evidências", "Evidence Explorer", "Explorador de evidencias")}
               </DrawerTitle>
               <DrawerDescription className="font-mono text-[10px] uppercase tracking-wider mt-1 text-muted-foreground">
                 {isLoading ? (
-                  <span className="animate-pulse">Consultando base de dados...</span>
+                  <span className="animate-pulse">{t("Consultando base de dados...", "Querying database...", "Consultando la base de datos...")}</span>
                 ) : (
-                  <span>Exibindo {loaded} de {total} registros persistidos</span>
+                  <span>{t(`Exibindo ${loaded} de ${total} registros persistidos`, `Showing ${loaded} of ${total} saved records`, `Mostrando ${loaded} de ${total} registros guardados`)}</span>
                 )}
-                {appliedFiltersCount > 0 && ` • ${appliedFiltersCount} filtro(s) ativo(s)`}
+                {appliedFiltersCount > 0 && ` • ${t(`${appliedFiltersCount} filtro(s) ativo(s)`, `${appliedFiltersCount} active filter(s)`, `${appliedFiltersCount} filtro(s) activo(s)`)}`}
               </DrawerDescription>
             </div>
             {validationError && (
@@ -807,14 +816,14 @@ function EvidenceExplorerDrawer({
               <div className="flex items-center justify-between">
                 <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold flex items-center gap-2">
                   <Filter className="h-3 w-3" />
-                  Filtros
+                  {t("Filtros", "Filters", "Filtros")}
                 </h3>
                 {appliedFiltersCount > 0 && (
                   <button
                     onClick={handleReset}
                     className="text-[9px] uppercase tracking-widest text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
                   >
-                    Resetar
+                    {t("Resetar", "Reset", "Restablecer")}
                   </button>
                 )}
               </div>
@@ -822,7 +831,7 @@ function EvidenceExplorerDrawer({
               <div className="space-y-3">
                 <div className="space-y-1">
                   <label className="text-[9px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5" htmlFor="filter-state">
-                    <Tag className="h-3 w-3" /> Estado
+                    <Tag className="h-3 w-3" /> {t("Estado", "State", "Estado")}
                   </label>
                   <select
                     id="filter-state"
@@ -830,17 +839,17 @@ function EvidenceExplorerDrawer({
                     onChange={e => setFilters(f => ({ ...f, state: e.target.value }))}
                     className="w-full bg-black border border-border/30 text-[10px] p-1.5 text-white focus-visible:outline-none focus-visible:border-primary/60 transition-colors"
                   >
-                    <option value="">Todos</option>
-                    <option value="planned">Planejado</option>
-                    <option value="attempted">Tentativa</option>
-                    <option value="provider_confirmed">Confirmado</option>
-                    <option value="artifact_qc">Qualidade Verificada</option>
+                    <option value="">{t("Todos", "All", "Todos")}</option>
+                    <option value="planned">{t("Planejado", "Planned", "Planificado")}</option>
+                    <option value="attempted">{t("Tentativa", "Attempted", "Intentado")}</option>
+                    <option value="provider_confirmed">{t("Confirmado", "Confirmed", "Confirmado")}</option>
+                    <option value="artifact_qc">{t("Qualidade verificada", "Quality checked", "Calidad verificada")}</option>
                   </select>
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-[9px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5" htmlFor="filter-type">
-                    <Type className="h-3 w-3" /> Tipo de Sujeito
+                    <Type className="h-3 w-3" /> {t("Tipo de sujeito", "Subject type", "Tipo de sujeto")}
                   </label>
                   <select
                     id="filter-type"
@@ -848,33 +857,33 @@ function EvidenceExplorerDrawer({
                     onChange={e => setFilters(f => ({ ...f, subjectType: e.target.value }))}
                     className="w-full bg-black border border-border/30 text-[10px] p-1.5 text-white focus-visible:outline-none focus-visible:border-primary/60 transition-colors"
                   >
-                    <option value="">Todos</option>
-                    <option value="social_post">Social Post</option>
-                    <option value="paid_media_attempt">Paid Media Attempt</option>
-                    <option value="paid_media_launch_plan">Paid Media Launch Plan</option>
-                    <option value="paid_media_proposal">Paid Media Proposal</option>
-                    <option value="product_sale">Product Sale</option>
-                    <option value="revenue_event">Revenue Event</option>
+                    <option value="">{t("Todos", "All", "Todos")}</option>
+                    <option value="social_post">{t("Publicação em rede social", "Social Post", "Publicación en redes sociales")}</option>
+                    <option value="paid_media_attempt">{t("Tentativa de mídia paga", "Paid Media Attempt", "Intento de medios pagados")}</option>
+                    <option value="paid_media_launch_plan">{t("Plano de lançamento de mídia paga", "Paid Media Launch Plan", "Plan de lanzamiento de medios pagados")}</option>
+                    <option value="paid_media_proposal">{t("Proposta de mídia paga", "Paid Media Proposal", "Propuesta de medios pagados")}</option>
+                    <option value="product_sale">{t("Venda de produto", "Product Sale", "Venta de producto")}</option>
+                    <option value="revenue_event">{t("Evento de receita", "Revenue Event", "Evento de ingresos")}</option>
                   </select>
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-[9px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5" htmlFor="filter-id">
-                    <Hash className="h-3 w-3" /> ID (UUID)
+                    <Hash className="h-3 w-3" /> {t("ID (UUID)", "ID (UUID)", "ID (UUID)")}
                   </label>
                   <input
                     id="filter-id"
                     type="text"
                     value={filters.subjectId}
                     onChange={e => setFilters(f => ({ ...f, subjectId: e.target.value }))}
-                    placeholder="ex: 123e4567-..."
+                    placeholder={t("ex.: 123e4567-...", "e.g. 123e4567-...", "p. ej.: 123e4567-...")}
                     className="w-full bg-black border border-border/30 text-[10px] p-1.5 text-white focus-visible:outline-none focus-visible:border-primary/60 placeholder:text-muted-foreground/30 transition-colors"
                   />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-[9px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5" htmlFor="filter-from">
-                    <Calendar className="h-3 w-3" /> Data Inicial
+                    <Calendar className="h-3 w-3" /> {t("Data inicial", "Start date", "Fecha inicial")}
                   </label>
                   <input
                     id="filter-from"
@@ -887,7 +896,7 @@ function EvidenceExplorerDrawer({
 
                 <div className="space-y-1">
                   <label className="text-[9px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5" htmlFor="filter-to">
-                    <Calendar className="h-3 w-3" /> Data Final
+                    <Calendar className="h-3 w-3" /> {t("Data final", "End date", "Fecha final")}
                   </label>
                   <input
                     id="filter-to"
@@ -903,7 +912,7 @@ function EvidenceExplorerDrawer({
                 <div className="mt-4 pt-4 border-t border-border/20 space-y-4">
                   {firstPage.facets.states.length > 0 && (
                     <div>
-                      <div className="text-[9px] uppercase tracking-widest text-muted-foreground mb-2 font-bold">Estados</div>
+                      <div className="text-[9px] uppercase tracking-widest text-muted-foreground mb-2 font-bold">{t("Estados", "States", "Estados")}</div>
                       <div className="space-y-1">
                         {firstPage.facets.states.map(f => (
                           <div key={f.value} className="flex justify-between items-center text-[9px]">
@@ -916,7 +925,7 @@ function EvidenceExplorerDrawer({
                   )}
                   {firstPage.facets.subjectTypes.length > 0 && (
                     <div>
-                      <div className="text-[9px] uppercase tracking-widest text-muted-foreground mb-2 font-bold mt-4">Tipos</div>
+                      <div className="text-[9px] uppercase tracking-widest text-muted-foreground mb-2 font-bold mt-4">{t("Tipos", "Types", "Tipos")}</div>
                       <div className="space-y-1">
                         {firstPage.facets.subjectTypes.map(f => (
                           <div key={f.value} className="flex justify-between items-center text-[9px]">
@@ -937,27 +946,27 @@ function EvidenceExplorerDrawer({
                 <div className="flex-1 flex items-center justify-center">
                   <div className="flex flex-col items-center gap-3">
                     <Activity className="h-6 w-6 text-primary animate-pulse" />
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Carregando telemetria...</span>
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Carregando telemetria...", "Loading telemetry...", "Cargando telemetría...")}</span>
                   </div>
                 </div>
               ) : isError ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                   <XCircle className="h-8 w-8 text-destructive mb-3" />
-                  <div className="font-mono text-[11px] uppercase tracking-widest text-destructive mb-2 font-bold">Falha na Busca</div>
-                  <p className="font-mono text-[9px] text-muted-foreground max-w-md mb-4">{error?.message || "Ocorreu um erro ao carregar as evidências."}</p>
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-destructive mb-2 font-bold">{t("Falha na busca", "Search failed", "Error en la búsqueda")}</div>
+                  <p className="font-mono text-[9px] text-muted-foreground max-w-md mb-4">{error?.message || t("Ocorreu um erro ao carregar as evidências.", "An error occurred while loading evidence.", "Se produjo un error al cargar las evidencias.")}</p>
                   <Button onClick={() => refetch()} variant="outline" className="font-mono text-[10px] uppercase tracking-widest border-border/30 hover:bg-white/5">
-                    Tentar Novamente
+                    {t("Tentar novamente", "Try again", "Intentar de nuevo")}
                   </Button>
                 </div>
               ) : allRecords.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                   <Database className="h-8 w-8 text-muted-foreground/30 mb-3" />
                   <div className="font-mono text-[11px] uppercase tracking-widest text-white/50 mb-2 font-bold">
-                    {appliedFiltersCount > 0 ? "Nenhum resultado para os filtros" : "Nenhuma evidência registrada"}
+                    {appliedFiltersCount > 0 ? t("Nenhum resultado para os filtros", "No results for these filters", "No hay resultados para estos filtros") : t("Nenhuma evidência registrada", "No evidence recorded", "No hay evidencias registradas")}
                   </div>
                   {appliedFiltersCount > 0 && (
                     <Button onClick={handleReset} variant="outline" className="mt-4 font-mono text-[10px] uppercase tracking-widest border-primary/30 text-primary hover:bg-primary/10">
-                      Limpar Filtros
+                      {t("Limpar filtros", "Clear filters", "Limpiar filtros")}
                     </Button>
                   )}
                 </div>
@@ -975,8 +984,8 @@ function EvidenceExplorerDrawer({
                           </div>
                           <div className="text-[9px] text-muted-foreground flex flex-col gap-1">
                             <span className="truncate">ID: <span className="text-white/70">{rec.subjectId}</span></span>
-                            <span>Data: <span className="text-white/70">{new Date(rec.createdAt).toLocaleString("pt-BR")}</span></span>
-                            {rec.masterplanVersionId && <span>Plano v{rec.masterplanVersionId}</span>}
+                            <span>{t("Data:", "Date:", "Fecha:")} <span className="text-white/70">{new Date(rec.createdAt).toLocaleString("pt-BR")}</span></span>
+                            {rec.masterplanVersionId && <span>{t("Plano", "Plan", "Plan")} v{rec.masterplanVersionId}</span>}
                             {rec.contextFingerprint && <span>CTX: {rec.contextFingerprint.substring(0, 8)}</span>}
                           </div>
                         </div>
@@ -993,7 +1002,7 @@ function EvidenceExplorerDrawer({
 
                       {typeof rec.details === "object" && rec.details !== null && Object.keys(rec.details).length > 0 && (
                         <div className="mt-4 relative">
-                          <div className="absolute top-0 left-0 px-2 py-0.5 bg-white/10 text-[8px] text-white/50 uppercase tracking-widest z-10 border-b border-r border-white/10">Payload</div>
+                          <div className="absolute top-0 left-0 px-2 py-0.5 bg-white/10 text-[8px] text-white/50 uppercase tracking-widest z-10 border-b border-r border-white/10">{t("Dados", "Payload", "Datos")}</div>
                           <pre className="pt-6 pb-2 px-3 border border-white/5 bg-[#050505] text-[10px] text-muted-foreground/80 whitespace-pre-wrap break-words overflow-x-auto max-h-[300px]">
                             {JSON.stringify(rec.details, null, 2)}
                           </pre>
@@ -1011,9 +1020,9 @@ function EvidenceExplorerDrawer({
                         className="font-mono text-[10px] uppercase tracking-widest border-primary/30 text-primary hover:bg-primary/10 w-full sm:w-auto h-9"
                       >
                         {isFetchingNextPage ? (
-                          <><RefreshCw className="mr-2 h-3 w-3 animate-spin" /> Carregando...</>
+                            <><RefreshCw className="mr-2 h-3 w-3 animate-spin" /> {t("Carregando...", "Loading...", "Cargando...")}</>
                         ) : (
-                          "Carregar Mais Registros"
+                          t("Carregar mais registros", "Load more records", "Cargar más registros")
                         )}
                       </Button>
                     </div>
@@ -1022,14 +1031,14 @@ function EvidenceExplorerDrawer({
                   {isFetchNextPageError && (
                     <div className="border border-destructive/30 bg-destructive/5 p-3 text-center" role="alert">
                       <p className="font-mono text-[9px] uppercase tracking-widest text-destructive">
-                        Não foi possível carregar a próxima página. Os registros já carregados foram preservados.
+                        {t("Não foi possível carregar a próxima página. Os registros já carregados foram preservados.", "Could not load the next page. Previously loaded records have been preserved.", "No se pudo cargar la siguiente página. Se conservaron los registros ya cargados.")}
                       </p>
                       <Button
                         onClick={handleFetchNextPage}
                         variant="outline"
                         className="mt-3 font-mono text-[9px] uppercase tracking-widest border-destructive/30 text-destructive"
                       >
-                        Tentar novamente
+                        {t("Tentar novamente", "Try again", "Intentar de nuevo")}
                       </Button>
                     </div>
                   )}
@@ -1037,7 +1046,7 @@ function EvidenceExplorerDrawer({
                   {!hasNextPage && allRecords.length > 0 && (
                     <div className="pt-6 pb-4 text-center text-[9px] uppercase tracking-widest text-muted-foreground/50 flex items-center justify-center gap-3">
                       <div className="h-px w-8 bg-border/20" />
-                      Fim da telemetria
+                      {t("Fim da telemetria", "End of telemetry", "Fin de la telemetría")}
                       <div className="h-px w-8 bg-border/20" />
                     </div>
                   )}
@@ -1049,7 +1058,7 @@ function EvidenceExplorerDrawer({
           <DrawerFooter className="border-t border-border/20 shrink-0 bg-[#030712] flex-row justify-end p-4">
             <DrawerClose asChild>
               <Button variant="outline" className="rounded-none font-mono text-[10px] uppercase tracking-widest border-border/40 hover:bg-white/5">
-                Fechar Explorador
+                {t("Fechar explorador", "Close Explorer", "Cerrar explorador")}
               </Button>
             </DrawerClose>
           </DrawerFooter>
@@ -1060,6 +1069,7 @@ function EvidenceExplorerDrawer({
 }
 
 function ExecutionEvidencePanel({ data, campaignId }: { data: ControlRoomResponse["executionEvidence"], campaignId: string }) {
+  const t = useUiText();
   const records = data?.records || [];
   type EvidenceFilter = "all" | "planned" | "attempted" | "provider_confirmed" | "artifact_qc";
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -1076,14 +1086,14 @@ function ExecutionEvidencePanel({ data, campaignId }: { data: ControlRoomRespons
       <div className="p-3 border-b border-primary/20 flex flex-wrap justify-between items-center gap-3 bg-primary/5 shrink-0">
         <div className="flex items-center gap-2">
           <Terminal className="h-4 w-4 text-primary" />
-          <h2 className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">Execution Telemetry</h2>
+            <h2 className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">{t("Telemetria de execução", "Execution Telemetry", "Telemetría de ejecución")}</h2>
         </div>
         <div className="flex items-center gap-1.5 flex-wrap justify-end">
-          <ActionCounter label="Eventos" value={records.length} tone="primary" onClick={() => openEvidence("all")} title="Ver eventos carregados" />
-          <ActionCounter label="Planejados" value={countFor("planned")} onClick={() => openEvidence("planned")} title="Ver ações planejadas" />
-          <ActionCounter label="Tentativas" value={countFor("attempted")} tone="warning" onClick={() => openEvidence("attempted")} title="Ver tentativas de execução" />
-          <ActionCounter label="Confirmados" value={countFor("provider_confirmed")} tone="success" onClick={() => openEvidence("provider_confirmed")} title="Ver confirmações do provedor" />
-          <ActionCounter label="QC" value={countFor("artifact_qc")} tone="primary" onClick={() => openEvidence("artifact_qc")} title="Ver verificações de qualidade" />
+          <ActionCounter label={t("Eventos", "Events", "Eventos")} value={records.length} tone="primary" onClick={() => openEvidence("all")} title={t("Ver eventos carregados", "View loaded events", "Ver eventos cargados")} />
+          <ActionCounter label={t("Planejados", "Planned", "Planificados")} value={countFor("planned")} onClick={() => openEvidence("planned")} title={t("Ver ações planejadas", "View planned actions", "Ver acciones planificadas")} />
+          <ActionCounter label={t("Tentativas", "Attempts", "Intentos")} value={countFor("attempted")} tone="warning" onClick={() => openEvidence("attempted")} title={t("Ver tentativas de execução", "View execution attempts", "Ver intentos de ejecución")} />
+          <ActionCounter label={t("Confirmados", "Confirmed", "Confirmados")} value={countFor("provider_confirmed")} tone="success" onClick={() => openEvidence("provider_confirmed")} title={t("Ver confirmações do provedor", "View provider confirmations", "Ver confirmaciones del proveedor")} />
+          <ActionCounter label="QC" value={countFor("artifact_qc")} tone="primary" onClick={() => openEvidence("artifact_qc")} title={t("Ver verificações de qualidade", "View quality checks", "Ver controles de calidad")} />
         </div>
       </div>
 
@@ -1091,9 +1101,9 @@ function ExecutionEvidencePanel({ data, campaignId }: { data: ControlRoomRespons
         {!data?.available && records.length === 0 ? (
           <div className="p-10 text-center font-mono text-[10px] text-muted-foreground uppercase tracking-widest flex-1 flex flex-col items-center justify-center">
             <Terminal className="h-6 w-6 text-muted-foreground/30 mb-3" />
-            <div>{data?.reason || "Awaiting execution data..."}</div>
+            <div>{data?.reason || t("Aguardando dados de execução...", "Awaiting execution data...", "Esperando datos de ejecución...")}</div>
             <Button onClick={() => openEvidence("all")} variant="outline" className="mt-4 border-primary/30 text-primary font-mono text-[9px] uppercase tracking-widest hover:bg-primary/10">
-              Explorar Histórico Completo
+              {t("Explorar histórico completo", "Explore Full History", "Explorar historial completo")}
             </Button>
           </div>
         ) : records.length > 0 ? (
@@ -1126,9 +1136,9 @@ function ExecutionEvidencePanel({ data, campaignId }: { data: ControlRoomRespons
           </div>
         ) : (
           <div className="p-10 text-center font-mono text-[10px] text-muted-foreground uppercase tracking-widest flex-1 flex flex-col items-center justify-center">
-            Awaiting execution data...
+            {t("Aguardando dados de execução...", "Awaiting execution data...", "Esperando datos de ejecución...")}
             <Button onClick={() => openEvidence("all")} variant="outline" className="mt-4 border-primary/30 text-primary font-mono text-[9px] uppercase tracking-widest hover:bg-primary/10">
-              Explorar Histórico Completo
+              {t("Explorar histórico completo", "Explore Full History", "Explorar historial completo")}
             </Button>
           </div>
         )}
@@ -1145,6 +1155,7 @@ function ExecutionEvidencePanel({ data, campaignId }: { data: ControlRoomRespons
 }
 
 function LoadingState() {
+  const t = useUiText();
   return (
     <div className="min-h-screen bg-[#030712] flex flex-col items-center justify-center relative overflow-hidden">
       <div className="absolute inset-0 scanline-overlay opacity-30 pointer-events-none" />
@@ -1154,7 +1165,7 @@ function LoadingState() {
           <Activity className="h-8 w-8 text-primary opacity-50 m-4" />
         </div>
         <div className="font-mono text-[11px] text-primary uppercase tracking-widest animate-pulse font-bold">
-          Establishing Uplink...
+          {t("Estabelecendo conexão...", "Establishing Uplink...", "Estableciendo conexión...")}
         </div>
       </div>
     </div>
@@ -1162,21 +1173,22 @@ function LoadingState() {
 }
 
 function ErrorState({ error, onRetry }: { error: Error, onRetry: () => void }) {
+  const t = useUiText();
   return (
     <div className="min-h-screen bg-[#030712] flex flex-col items-center justify-center relative overflow-hidden text-center p-6">
       <div className="absolute inset-0 scanline-overlay opacity-30 pointer-events-none" />
       <div className="relative z-10 max-w-md w-full border border-destructive/30 bg-destructive/5 p-8 flex flex-col items-center backdrop-blur-md">
         <XCircle className="h-10 w-10 text-destructive mb-4" />
-        <h2 className="font-mono text-sm uppercase tracking-widest text-destructive font-bold mb-2">Telemetry Lost</h2>
+        <h2 className="font-mono text-sm uppercase tracking-widest text-destructive font-bold mb-2">{t("Telemetria perdida", "Telemetry Lost", "Telemetría perdida")}</h2>
         <p className="font-mono text-xs text-muted-foreground mb-6 line-clamp-3">
-          {error.message || "Failed to retrieve control room data from server."}
+          {error.message || t("Falha ao obter dados da sala de controle do servidor.", "Failed to retrieve control room data from server.", "No se pudieron obtener los datos de la sala de control del servidor.")}
         </p>
         <Button
           onClick={onRetry}
           variant="outline"
           className="border-destructive/30 text-destructive hover:bg-destructive/10 font-mono text-[10px] uppercase tracking-widest h-8"
         >
-          <RefreshCw className="h-3 w-3 mr-2" /> Retry Connection
+          <RefreshCw className="h-3 w-3 mr-2" /> {t("Tentar conexão novamente", "Retry Connection", "Reintentar conexión")}
         </Button>
       </div>
     </div>
@@ -1184,6 +1196,7 @@ function ErrorState({ error, onRetry }: { error: Error, onRetry: () => void }) {
 }
 
 export default function ControlRoom() {
+  const t = useUiText();
   const [, params] = useRoute("/campaigns/:id/control-room");
   const id = params?.id || "";
   const [versionDiffOpen, setVersionDiffOpen] = useState(false);
@@ -1220,6 +1233,7 @@ export default function ControlRoom() {
           <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
             <Link
               href={`/campaigns/${id}`}
+              aria-label={t("Voltar à campanha", "Back to campaign", "Volver a la campaña")}
               className="p-2 border border-border/40 bg-black/40 hover:bg-white/5 hover:border-border/80 transition-colors text-muted-foreground hover:text-white shrink-0"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -1233,17 +1247,17 @@ export default function ControlRoom() {
                   {data.campaign.title}
                 </h1>
                 <div className="hidden sm:block px-2 py-0.5 border border-primary/40 bg-primary/10 text-primary font-mono text-[9px] font-bold uppercase tracking-widest">
-                  Control Room
+                  {t("Sala de controle", "Control Room", "Sala de control")}
                 </div>
               </div>
               <div className="flex items-center gap-2 sm:gap-3 mt-1 font-mono text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-widest truncate">
                 <span className="flex items-center gap-1.5 shrink-0">
                   <Activity className="h-3 w-3 text-primary" />
-                  PHASE: <span className="text-white/80">{data.campaign.currentPhase || "N/A"}</span>
+                  {t("FASE:", "PHASE:", "FASE:")} <span className="text-white/80">{data.campaign.currentPhase || "N/A"}</span>
                 </span>
                 <span className="opacity-40">•</span>
                 <span className={`shrink-0 ${["executing", "live", "analyzing", "generating"].includes(data.campaign.status) ? "text-primary font-bold animate-pulse" : "text-white/80"}`}>
-                  STATUS: {data.campaign.status}
+                  {t("STATUS:", "STATUS:", "ESTADO:")} {data.campaign.status}
                 </span>
               </div>
             </div>
@@ -1256,7 +1270,7 @@ export default function ControlRoom() {
                onClick={() => refetch()}
              >
                <RefreshCw className="h-3.5 w-3.5 sm:mr-2" />
-               <span className="hidden sm:inline">Sync</span>
+                <span className="hidden sm:inline">{t("Sincronizar", "Sync", "Sincronizar")}</span>
              </Button>
           </div>
         </div>
@@ -1271,7 +1285,7 @@ export default function ControlRoom() {
             <div className="flex items-center justify-between border border-border/20 bg-black/40 p-3">
               <div className="flex items-center gap-2">
                 <GitCompare className="h-4 w-4 text-muted-foreground" />
-                <span className="font-mono text-[10px] uppercase tracking-widest text-white">Controle de Versão</span>
+                <span className="font-mono text-[10px] uppercase tracking-widest text-white">{t("Controle de versão", "Version Control", "Control de versiones")}</span>
               </div>
               <Button
                 variant="outline"
@@ -1280,7 +1294,7 @@ export default function ControlRoom() {
                 data-testid="btn-open-version-diff"
                 onClick={() => setVersionDiffOpen(true)}
               >
-                Comparar Histórico
+                {t("Comparar histórico", "Compare History", "Comparar historial")}
               </Button>
             </div>
             <MasterplanPanel data={data.masterplan} campaignId={id} />

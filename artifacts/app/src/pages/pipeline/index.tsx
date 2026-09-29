@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { useRef } from "react";
+import { useUiText } from "@/lib/i18n";
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
 
@@ -76,52 +77,52 @@ interface FullPipeline {
 
 // ─── Tier config ──────────────────────────────────────────────────────────────
 
-const TIER_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
+const TIER_CONFIG: Record<string, { label: [string, string, string]; color: string; bg: string; border: string }> = {
   validacao: {
-    label: "Validação",
+    label: ["Validação", "Validation", "Validación"],
     color: "text-emerald-400",
     bg: "bg-emerald-500/10",
     border: "border-emerald-500/30",
   },
   aprendizado: {
-    label: "Aprendizado",
+    label: ["Aprendizado", "Learning", "Aprendizaje"],
     color: "text-blue-400",
     bg: "bg-blue-500/10",
     border: "border-blue-500/30",
   },
   aceleracao: {
-    label: "Aceleração",
+    label: ["Aceleração", "Acceleration", "Aceleración"],
     color: "text-violet-400",
     bg: "bg-violet-500/10",
     border: "border-violet-500/30",
   },
   dominancia: {
-    label: "Dominância",
+    label: ["Dominância", "Dominance", "Dominancia"],
     color: "text-amber-400",
     bg: "bg-amber-500/10",
     border: "border-amber-500/30",
   },
   segunda_onda: {
-    label: "2ª Onda",
+    label: ["2ª onda", "Wave 2", "2.ª ola"],
     color: "text-rose-400",
     bg: "bg-rose-500/10",
     border: "border-rose-500/30",
   },
   nacional: {
-    label: "Gran Finale",
+    label: ["Grande final", "Grand finale", "Gran final"],
     color: "text-yellow-300",
     bg: "bg-yellow-400/10",
     border: "border-yellow-400/40",
   },
 };
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  strategy_ready: { label: "Na fila", color: "text-zinc-400", icon: Clock },
-  approved: { label: "Captura ativa", color: "text-blue-400", icon: Zap },
-  executing: { label: "Executando", color: "text-primary", icon: Play },
-  live: { label: "Ao vivo", color: "text-emerald-400", icon: Globe },
-  completed: { label: "Concluída", color: "text-zinc-500", icon: CheckCircle2 },
-  cancelled: { label: "Cancelada", color: "text-red-400", icon: AlertCircle },
+const STATUS_CONFIG: Record<string, { label: [string, string, string]; color: string; icon: React.ElementType }> = {
+  strategy_ready: { label: ["Na fila", "Queued", "En cola"], color: "text-zinc-400", icon: Clock },
+  approved: { label: ["Captação ativa", "Active capture", "Captación activa"], color: "text-blue-400", icon: Zap },
+  executing: { label: ["Executando", "Running", "En ejecución"], color: "text-primary", icon: Play },
+  live: { label: ["Ao vivo", "Live", "En vivo"], color: "text-emerald-400", icon: Globe },
+  completed: { label: ["Concluída", "Completed", "Completada"], color: "text-zinc-500", icon: CheckCircle2 },
+  cancelled: { label: ["Cancelada", "Cancelled", "Cancelada"], color: "text-red-400", icon: AlertCircle },
 };
 
 // ─── Campaign card (conveyor belt item) ───────────────────────────────────────
@@ -137,6 +138,7 @@ function RegionCard({
   isCapture: boolean;
   isCurrent: boolean;
 }) {
+  const t = useUiText();
   const bd = campaign.brainData ?? {};
   const tier = TIER_CONFIG[bd.tier ?? "validacao"] ?? TIER_CONFIG.validacao;
   const status = STATUS_CONFIG[campaign.status] ?? STATUS_CONFIG.strategy_ready;
@@ -158,14 +160,14 @@ function RegionCard({
       {isCurrent && (
         <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
           <Badge className="bg-primary text-primary-foreground text-[10px] px-2 py-0.5 font-bold">
-            EXECUTANDO
+            {t("EXECUTANDO", "RUNNING", "EN EJECUCIÓN")}
           </Badge>
         </div>
       )}
       {isCapture && !isCurrent && (
         <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
           <Badge className="bg-blue-500 text-white text-[10px] px-2 py-0.5 font-bold">
-            CAPTURA ATIVA
+            {t("CAPTAÇÃO ATIVA", "ACTIVE CAPTURE", "CAPTACIÓN ACTIVA")}
           </Badge>
         </div>
       )}
@@ -173,7 +175,7 @@ function RegionCard({
       <div className="flex items-start justify-between mb-3">
         <span className="text-[10px] font-mono text-zinc-500">W{bd.week ?? (campaign.pipelinePosition ?? 0) + 1}</span>
         <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded", tier.bg, tier.color)}>
-          {tier.label}
+          {t(...tier.label)}
         </span>
       </div>
 
@@ -192,13 +194,13 @@ function RegionCard({
 
       <div className="space-y-1 text-[11px]">
         <div className="flex justify-between text-zinc-400">
-          <span>Budget</span>
+          <span>{t("Orçamento", "Budget", "Presupuesto")}</span>
           <span className="font-mono text-zinc-300">
             {bd.budgetBRL ? `R$${(bd.budgetBRL / 1000).toFixed(0)}k` : "—"}
           </span>
         </div>
         <div className="flex justify-between text-zinc-400">
-          <span>Meta</span>
+          <span>{t("Meta", "Target", "Meta")}</span>
           <span className="font-mono text-zinc-300">
             {bd.targetBRL ? `R$${(bd.targetBRL / 1000).toFixed(0)}k` : "—"}
           </span>
@@ -207,7 +209,7 @@ function RegionCard({
 
       <div className={cn("mt-3 pt-2 border-t border-zinc-700/50 flex items-center gap-1.5", status.color)}>
         <StatusIcon className="w-3 h-3" />
-        <span className="text-[10px] font-medium">{status.label}</span>
+        <span className="text-[10px] font-medium">{t(...status.label)}</span>
       </div>
     </div>
   );
@@ -216,21 +218,21 @@ function RegionCard({
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
 function EmptyPipeline() {
+  const t = useUiText();
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center">
       <div className="w-20 h-20 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
         <Network className="w-10 h-10 text-primary" />
       </div>
       <div>
-        <h2 className="text-2xl font-bold text-zinc-100 mb-2">Nenhum pipeline configurado</h2>
+        <h2 className="text-2xl font-bold text-zinc-100 mb-2">{t("Nenhum pipeline configurado", "No pipeline configured", "No hay ningún pipeline configurado")}</h2>
         <p className="text-zinc-400 max-w-md">
-          O Pipeline Regional orquestra uma sequência de lançamentos semana a semana, região por região.
-          A Operação Brasil 52 aparecerá aqui assim que for configurada.
+          {t("O Pipeline Regional organiza uma sequência de lançamentos semana a semana e região por região. A Operação Brasil 52 aparecerá aqui assim que for configurada.", "The Regional Pipeline coordinates launches week by week and region by region. Brazil Operation 52 will appear here once it is configured.", "El Pipeline Regional coordina una secuencia de lanzamientos semana a semana y región por región. La Operación Brasil 52 aparecerá aquí cuando esté configurada.")}
         </p>
       </div>
       <div className="flex items-center gap-2 text-sm text-zinc-500">
         <AlertCircle className="w-4 h-4" />
-        <span>Execute o seeder de campanhas regionais para ativar o pipeline.</span>
+        <span>{t("Execute o inicializador de campanhas regionais para ativar o pipeline.", "Run the regional campaign seeder to activate the pipeline.", "Ejecuta el inicializador de campañas regionales para activar el pipeline.")}</span>
       </div>
     </div>
   );
@@ -239,6 +241,7 @@ function EmptyPipeline() {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function PipelinePage() {
+  const t = useUiText();
   const apiFetch = useApiAuth();
   const [, navigate] = useLocation();
   const beltRef = useRef<HTMLDivElement>(null);
@@ -297,7 +300,7 @@ export default function PipelinePage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-zinc-500 flex items-center gap-2">
           <RefreshCw className="w-4 h-4 animate-spin" />
-          Carregando pipeline...
+          {t("Carregando pipeline...", "Loading pipeline...", "Cargando pipeline...")}
         </div>
       </div>
     );
@@ -323,7 +326,7 @@ export default function PipelinePage() {
             <div>
               <h1 className="text-base font-semibold text-zinc-100 leading-none">{pipeline.name}</h1>
               <p className="text-xs text-zinc-500 mt-0.5">
-                {completedCount} de {totalCampaigns} regiões · Ciclo: <span className="text-zinc-400 font-medium">Sexta → Quinta (7 dias)</span> · Carrinho abre Segunda
+                {t(`${completedCount} de ${totalCampaigns} regiões · Ciclo:`, `${completedCount} of ${totalCampaigns} regions · Cycle:`, `${completedCount} de ${totalCampaigns} regiones · Ciclo:`)} <span className="text-zinc-400 font-medium">{t("Sexta → Quinta (7 dias)", "Friday → Thursday (7 days)", "Viernes → jueves (7 días)")}</span> · {t("Carrinho abre na segunda", "Cart opens Monday", "El carrito abre el lunes")}
               </p>
             </div>
           </div>
@@ -336,7 +339,7 @@ export default function PipelinePage() {
               className="border-zinc-700 text-zinc-400 hover:text-zinc-200 text-xs"
             >
               <MapPin className="w-3.5 h-3.5 mr-1.5" />
-              Localizar atual
+              {t("Ir para a atual", "Locate current", "Ir a la actual")}
             </Button>
             {currentCampaign && (
               <Button
@@ -344,7 +347,7 @@ export default function PipelinePage() {
                 onClick={() => navigate(`/campaigns/${currentCampaign.id}`)}
                 className="text-xs"
               >
-                Ver campanha ativa
+                {t("Ver campanha ativa", "View active campaign", "Ver campaña activa")}
                 <ChevronRight className="w-3.5 h-3.5 ml-1" />
               </Button>
             )}
@@ -356,7 +359,7 @@ export default function PipelinePage() {
           <Progress value={progressPct} className="h-1.5 bg-zinc-800" />
           <div className="flex justify-between text-[10px] text-zinc-600 mt-1">
             <span>W1 — Roraima</span>
-            <span className="text-primary font-medium">{progressPct}% concluído</span>
+            <span className="text-primary font-medium">{progressPct}% {t("concluído", "complete", "completado")}</span>
             <span>W52 — Brasil Todo</span>
           </div>
         </div>
@@ -368,28 +371,28 @@ export default function PipelinePage() {
           {[
             {
               icon: CheckCircle2,
-              label: "Regiões concluídas",
+              label: t("Regiões concluídas", "Regions completed", "Regiones completadas"),
               value: completedCount,
               suffix: `/ ${totalCampaigns}`,
               color: "text-emerald-400",
             },
             {
               icon: Zap,
-              label: "Em execução",
+              label: t("Em execução", "In progress", "En curso"),
               value: activeCampaigns.length,
-              suffix: "ativa(s)",
+              suffix: t("ativa(s)", "active", "activa(s)"),
               color: "text-primary",
             },
             {
               icon: DollarSign,
-              label: "Budget total",
+              label: t("Orçamento total", "Total budget", "Presupuesto total"),
               value: `R$${(totalBudget / 1000).toFixed(0)}k`,
-              suffix: "52 semanas",
+              suffix: t("52 semanas", "52 weeks", "52 semanas"),
               color: "text-zinc-300",
             },
             {
               icon: Target,
-              label: "Meta de receita",
+              label: t("Meta de receita", "Revenue target", "Meta de ingresos"),
               value: `R$${(totalRevenueMeta / 1000000).toFixed(1)}M`,
               suffix: `ROI ${totalBudget > 0 ? (totalRevenueMeta / totalBudget).toFixed(1) : "—"}x`,
               color: "text-amber-400",
@@ -420,7 +423,7 @@ export default function PipelinePage() {
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
                     <span className="text-xs font-semibold text-primary uppercase tracking-wide">
-                      Executando agora — Semana {(currentCampaign.pipelinePosition ?? 0) + 1}
+                      {t(`Executando agora — Semana ${(currentCampaign.pipelinePosition ?? 0) + 1}`, `Running now — Week ${(currentCampaign.pipelinePosition ?? 0) + 1}`, `En ejecución — Semana ${(currentCampaign.pipelinePosition ?? 0) + 1}`)}
                     </span>
                   </div>
                   <Button
@@ -429,7 +432,7 @@ export default function PipelinePage() {
                     onClick={() => navigate(`/campaigns/${currentCampaign.id}`)}
                     className="border-primary/30 text-primary hover:bg-primary/10 text-xs h-7"
                   >
-                    Abrir <ArrowRight className="w-3 h-3 ml-1" />
+                    {t("Abrir", "Open", "Abrir")} <ArrowRight className="w-3 h-3 ml-1" />
                   </Button>
                 </div>
                 <div className="text-3xl font-black text-zinc-100 mb-1">
@@ -438,9 +441,9 @@ export default function PipelinePage() {
                 <div className="text-sm text-zinc-300 mb-3">{currentCampaign.brainData?.region ?? currentCampaign.title}</div>
                 <div className="grid grid-cols-3 gap-3 text-center">
                   {[
-                    { label: "CPM est.", value: currentCampaign.brainData?.cpmEst ?? "—" },
-                    { label: "Budget", value: currentCampaign.brainData?.budgetBRL ? `R$${(currentCampaign.brainData.budgetBRL / 1000).toFixed(0)}k` : "—" },
-                    { label: "Meta", value: currentCampaign.brainData?.targetBRL ? `R$${(currentCampaign.brainData.targetBRL / 1000).toFixed(0)}k` : "—" },
+                    { label: t("CPM estimado", "Est. CPM", "CPM estimado"), value: currentCampaign.brainData?.cpmEst ?? "—" },
+                    { label: t("Orçamento", "Budget", "Presupuesto"), value: currentCampaign.brainData?.budgetBRL ? `R$${(currentCampaign.brainData.budgetBRL / 1000).toFixed(0)}k` : "—" },
+                    { label: t("Meta", "Target", "Meta"), value: currentCampaign.brainData?.targetBRL ? `R$${(currentCampaign.brainData.targetBRL / 1000).toFixed(0)}k` : "—" },
                   ].map((item) => (
                     <div key={item.label} className="bg-zinc-900/50 rounded-lg p-2">
                       <div className="text-[10px] text-zinc-500 mb-0.5">{item.label}</div>
@@ -462,7 +465,7 @@ export default function PipelinePage() {
                   <div className="flex items-center gap-2">
                     <Zap className="w-4 h-4 text-blue-400" />
                     <span className="text-xs font-semibold text-blue-400 uppercase tracking-wide">
-                      Próxima — Captura ativa — Semana {(nextCapture.pipelinePosition ?? 0) + 1}
+                      {t(`Próxima — captação ativa — semana ${(nextCapture.pipelinePosition ?? 0) + 1}`, `Next — active capture — week ${(nextCapture.pipelinePosition ?? 0) + 1}`, `Siguiente — captación activa — semana ${(nextCapture.pipelinePosition ?? 0) + 1}`)}
                     </span>
                   </div>
                   <Button
@@ -471,7 +474,7 @@ export default function PipelinePage() {
                     onClick={() => navigate(`/campaigns/${nextCapture.id}`)}
                     className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10 text-xs h-7"
                   >
-                    Abrir <ArrowRight className="w-3 h-3 ml-1" />
+                    {t("Abrir", "Open", "Abrir")} <ArrowRight className="w-3 h-3 ml-1" />
                   </Button>
                 </div>
                 <div className="text-3xl font-black text-zinc-100 mb-1">
@@ -480,9 +483,9 @@ export default function PipelinePage() {
                 <div className="text-sm text-zinc-300 mb-3">{nextCapture.brainData?.region ?? nextCapture.title}</div>
                 <div className="grid grid-cols-3 gap-3 text-center">
                   {[
-                    { label: "CPM est.", value: nextCapture.brainData?.cpmEst ?? "—" },
-                    { label: "Budget", value: nextCapture.brainData?.budgetBRL ? `R$${(nextCapture.brainData.budgetBRL / 1000).toFixed(0)}k` : "—" },
-                    { label: "Meta", value: nextCapture.brainData?.targetBRL ? `R$${(nextCapture.brainData.targetBRL / 1000).toFixed(0)}k` : "—" },
+                    { label: t("CPM estimado", "Est. CPM", "CPM estimado"), value: nextCapture.brainData?.cpmEst ?? "—" },
+                    { label: t("Orçamento", "Budget", "Presupuesto"), value: nextCapture.brainData?.budgetBRL ? `R$${(nextCapture.brainData.budgetBRL / 1000).toFixed(0)}k` : "—" },
+                    { label: t("Meta", "Target", "Meta"), value: nextCapture.brainData?.targetBRL ? `R$${(nextCapture.brainData.targetBRL / 1000).toFixed(0)}k` : "—" },
                   ].map((item) => (
                     <div key={item.label} className="bg-zinc-900/50 rounded-lg p-2">
                       <div className="text-[10px] text-zinc-500 mb-0.5">{item.label}</div>
@@ -495,9 +498,9 @@ export default function PipelinePage() {
               <div className="bg-zinc-900/40 border border-zinc-800/50 rounded-xl p-5 flex flex-col items-center justify-center gap-3 text-center">
                 <BarChart2 className="w-8 h-8 text-zinc-600" />
                 <div>
-                  <p className="text-sm text-zinc-400 font-medium">Próxima região na fila</p>
+                  <p className="text-sm text-zinc-400 font-medium">{t("Próxima região na fila", "Next region in queue", "Próxima región en cola")}</p>
                   <p className="text-xs text-zinc-600 mt-1">
-                    Quando a campanha atual atingir o status "Executando", a próxima região entra automaticamente em captura.
+                    {t('Quando a campanha atual atingir o status "Executando", a próxima região entrará automaticamente em captação.', 'When the current campaign reaches "Running" status, the next region will automatically enter capture.', 'Cuando la campaña actual alcance el estado "En ejecución", la siguiente región entrará automáticamente en captación.')}
                   </p>
                 </div>
               </div>
@@ -547,7 +550,7 @@ export default function PipelinePage() {
 
             {campaigns.length === 0 && (
               <div className="flex-1 flex items-center justify-center py-16 text-zinc-600 text-sm">
-                Nenhuma campanha vinculada ao pipeline ainda.
+                {t("Nenhuma campanha vinculada ao pipeline ainda.", "No campaigns linked to the pipeline yet.", "Aún no hay campañas vinculadas al pipeline.")}
               </div>
             )}
           </div>
@@ -556,9 +559,9 @@ export default function PipelinePage() {
         {/* ── Manual advance ── */}
         <div className="mt-6 flex items-center justify-between border-t border-zinc-800/50 pt-5">
           <div>
-            <p className="text-sm text-zinc-400 font-medium">Avançar manualmente</p>
+            <p className="text-sm text-zinc-400 font-medium">{t("Avançar manualmente", "Advance manually", "Avanzar manualmente")}</p>
             <p className="text-xs text-zinc-600">
-              Use apenas para testes. Em produção, o avanço é automático quando a campanha atual entra em execução.
+              {t("Use apenas para testes. Em produção, o avanço é automático quando a campanha atual entra em execução.", "Use for testing only. In production, the pipeline advances automatically when the current campaign starts execution.", "Úsalo solo para pruebas. En producción, el pipeline avanza automáticamente cuando la campaña actual comienza a ejecutarse.")}
             </p>
           </div>
           <Button
@@ -573,7 +576,7 @@ export default function PipelinePage() {
             ) : (
               <>
                 <TrendingUp className="w-4 h-4 mr-2" />
-                Avançar pipeline
+                {t("Avançar pipeline", "Advance pipeline", "Avanzar pipeline")}
               </>
             )}
           </Button>

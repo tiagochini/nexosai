@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { StrategyMasterplan, parseStrategyInsights } from "./campaigns/strategy-masterplan";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
+import { useUiText, useUiLocale, intlLocale } from "@/lib/i18n";
 import { useMode } from "@/lib/mode";
 import { IdentityMemoryCard } from "@/components/IdentityMemoryCard";
 import { AvatarVoiceCloneGate } from "@/components/AvatarVoiceCloneGate";
@@ -122,6 +123,116 @@ const MODEL_LABEL: Record<string, string> = {
   plf: "PLF", formula_de_lancamento: "Fórmula de Lançamento",
   semente: "Semente", afiliado: "Afiliado", perpetual: "Perpétuo", custom: "Custom",
 };
+const STATUS_LABEL_TRANSLATIONS: Record<string, [string, string]> = {
+  draft: ["Draft", "Borrador"],
+  intake: ["Agent briefing", "Briefing con el agente"],
+  analyzing: ["Analyzing", "Analizando"],
+  strategy_ready: ["Strategy Ready", "Estrategia lista"],
+  generating: ["Generating Content", "Generando contenido"],
+  awaiting_approval: ["Awaiting Approval", "Esperando aprobación"],
+  approved: ["Approved", "Aprobado"],
+  executing: ["In Progress", "En ejecución"],
+  live: ["Live", "En vivo"],
+  completed: ["Completed", "Completado"],
+};
+const AGENT_ROLE_LABEL_TRANSLATIONS: Record<string, [string, string]> = {
+  command: ["Commander", "Comandante"],
+  strategy: ["Strategist", "Estratega"],
+  launch_manager: ["Launch Manager", "Gerente de lanzamiento"],
+  offer: ["Offer Specialist", "Especialista en ofertas"],
+  product_builder: ["Product Builder", "Desarrollador de producto"],
+  copywriter: ["Copywriter", "Copywriter"],
+  creative_director: ["Creative Director", "Director creativo"],
+  creative: ["Creative Director", "Director creativo"],
+  landing_page: ["Landing Page Expert", "Especialista en páginas de aterrizaje"],
+  targeting: ["Targeting Expert", "Especialista en segmentación"],
+  media_buyer: ["Media Buyer", "Comprador de medios"],
+  affiliate_campaign: ["Affiliate Specialist", "Especialista en afiliados"],
+  analytics: ["Performance Analyst", "Analista de rendimiento"],
+  optimization: ["Optimizer", "Optimizador"],
+  video: ["Video Strategist", "Estratega de vídeo"],
+  video_strategy: ["Video Strategist", "Estratega de vídeo"],
+  creator_growth: ["Creator Growth", "Crecimiento de creadores"],
+  compliance: ["Compliance Officer", "Responsable de cumplimiento"],
+  profile_builder: ["Profile Builder", "Creador de perfiles"],
+  intake: ["Briefing", "Briefing"],
+  ad_copy: ["Ad Copy", "Texto de anuncios"],
+  cpl_script: ["CPL Script", "Guion CPL"],
+  vsl_script: ["VSL Script", "Guion VSL"],
+  webinar_script: ["Webinar Script", "Guion de webinar"],
+  live_script: ["Live Script", "Guion de directo"],
+  stories_sequence: ["Stories Sequence", "Secuencia de Stories"],
+  media_brief: ["Media Brief", "Brief de medios"],
+  financial_projector: ["Financial Projector", "Proyector financiero"],
+  launch_sequence_builder: ["Sequence Builder", "Constructor de secuencias"],
+  social_media: ["Social Media", "Redes sociales"],
+  whatsapp_response: ["WhatsApp Auto-Reply", "Respuesta automática de WhatsApp"],
+  perpetual_launch_manager: ["Evergreen Launch Manager", "Gestor de lanzamientos perpetuos"],
+  continuous_sales_manager: ["Continuous Sales Manager", "Gestor de ventas continuas"],
+  item_copy: ["Item Copy", "Texto de producto"],
+};
+const PIPELINE_STEP_TRANSLATIONS: Record<string, [string, string]> = {
+  intake: ["Briefing", "Briefing"],
+  strategy: ["Strategy", "Estrategia"],
+  content: ["Content", "Contenido"],
+  launch: ["Launch", "Lanzamiento"],
+  monitor: ["Monitor", "Supervisar"],
+};
+const MODEL_LABEL_TRANSLATIONS: Record<string, [string, string]> = {
+  plf: ["PLF", "PLF"],
+  formula_de_lancamento: ["Launch Formula", "Fórmula de lanzamiento"],
+  semente: ["Seed", "Semilla"],
+  afiliado: ["Affiliate", "Afiliado"],
+  perpetual: ["Evergreen", "Perpetuo"],
+  custom: ["Custom", "Personalizado"],
+};
+
+function localizedDashboardStatus(status: string, t: ReturnType<typeof useUiText>) {
+  const label = STATUS_LABEL[status];
+  if (!label) return status;
+  const translations = STATUS_LABEL_TRANSLATIONS[status];
+  return translations ? t(label, translations[0], translations[1]) : label;
+}
+
+function localizedAgentRole(role: string, t: ReturnType<typeof useUiText>) {
+  const label = AGENT_ROLE_LABEL[role];
+  if (!label) return role;
+  const translations = AGENT_ROLE_LABEL_TRANSLATIONS[role];
+  return translations ? t(label, translations[0], translations[1]) : label;
+}
+
+function localizedModelLabel(model: string, t: ReturnType<typeof useUiText>) {
+  const label = MODEL_LABEL[model];
+  if (!label) return model;
+  const translations = MODEL_LABEL_TRANSLATIONS[model];
+  return translations ? t(label, translations[0], translations[1]) : label;
+}
+
+function localizedPipelineStep(stepId: string, label: string, t: ReturnType<typeof useUiText>) {
+  const translations = PIPELINE_STEP_TRANSLATIONS[stepId];
+  return translations ? t(label, translations[0], translations[1]) : label;
+}
+
+function localizedAgentStatus(status: string, t: ReturnType<typeof useUiText>) {
+  const translations: Record<string, [string, string, string]> = {
+    completed: ["Concluído", "Completed", "Completado"],
+    running: ["Em execução", "Running", "En ejecución"],
+    failed: ["Falhou", "Failed", "Fallido"],
+  };
+  const label = translations[status];
+  return label ? t(label[0], label[1], label[2]) : status;
+}
+
+function localizedSequenceStatus(status: string, t: ReturnType<typeof useUiText>) {
+  const translations: Record<string, [string, string, string]> = {
+    active: ["Ativa", "Active", "Activa"],
+    live: ["Ativa", "Active", "Activa"],
+    draft: ["Rascunho", "Draft", "Borrador"],
+    generating: ["Gerando", "Generating", "Generando"],
+  };
+  const label = translations[status];
+  return label ? t(label[0], label[1], label[2]) : status;
+}
 
 // ─── Mini Components ──────────────────────────────────────────────────────────
 
@@ -185,12 +296,13 @@ function KpiCard({
 // ─── Execution Flowchart ──────────────────────────────────────────────────────
 
 function ExecutionFlowchart({ campaigns }: { campaigns: Array<{ id: string; status: string }> }) {
+  const t = useUiText();
   const nodes = [
-    { id: "intake",    label: "Briefing",    icon: FileText,  statuses: ["draft", "intake"],         color: "text-blue-400  border-blue-400/40  bg-blue-400/10",  href: null },
-    { id: "strategy",  label: "Estratégia",  icon: Target,    statuses: ["analyzing","strategy_ready"], color: "text-cyan-400  border-cyan-400/40  bg-cyan-400/10",  href: null },
-    { id: "content",   label: "Conteúdo",    icon: Layers,    statuses: ["generating","awaiting_approval","approved"], color: "text-purple-400 border-purple-400/40 bg-purple-400/10", href: null },
-    { id: "launch",    label: "Lançamento",  icon: Rocket,    statuses: ["executing","live"],         color: "text-success    border-success/40    bg-success/10",    href: null },
-    { id: "monitor",   label: "Resultados",  icon: BarChart2, statuses: ["completed"],                color: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10", href: "/revenue" },
+    { id: "intake",    label: t("Briefing", "Briefing", "Briefing"), statuses: ["draft", "intake"],         icon: FileText,  color: "text-blue-400  border-blue-400/40  bg-blue-400/10",  href: null },
+    { id: "strategy",  label: t("Estratégia", "Strategy", "Estrategia"), statuses: ["analyzing","strategy_ready"], icon: Target,    color: "text-cyan-400  border-cyan-400/40  bg-cyan-400/10",  href: null },
+    { id: "content",   label: t("Conteúdo", "Content", "Contenido"), statuses: ["generating","awaiting_approval","approved"], icon: Layers,    color: "text-purple-400 border-purple-400/40 bg-purple-400/10", href: null },
+    { id: "launch",    label: t("Lançamento", "Launch", "Lanzamiento"), statuses: ["executing","live"],         icon: Rocket,    color: "text-success    border-success/40    bg-success/10",    href: null },
+    { id: "monitor",   label: t("Resultados", "Results", "Resultados"), statuses: ["completed"],                icon: BarChart2, color: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10", href: "/revenue" },
   ];
 
   const statusCounts = nodes.map(node => ({
@@ -202,7 +314,7 @@ function ExecutionFlowchart({ campaigns }: { campaigns: Array<{ id: string; stat
   return (
     <div className="border border-border/50 bg-card/30 p-4 overflow-x-auto">
       <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/50 mb-4">
-        Fluxo de Execução · Visão Geral
+        {t("Fluxo de Execução · Visão Geral", "Execution Flow · Overview", "Flujo de Ejecución · Resumen")}
       </div>
       <div className="flex items-center gap-0 min-w-max">
         {statusCounts.map((node, idx) => {
@@ -252,6 +364,7 @@ function ExecutionFlowchart({ campaigns }: { campaigns: Array<{ id: string; stat
 }
 
 function PipelineProgress({ status }: { status: string }) {
+  const t = useUiText();
   const currentIdx = PIPELINE_ORDER.indexOf(status);
   const total = PIPELINE_ORDER.length - 1;
   const pct = total > 0 ? Math.round((currentIdx / total) * 100) : 0;
@@ -278,15 +391,15 @@ function PipelineProgress({ status }: { status: string }) {
                 isActive ? "text-primary font-bold" :
                 isDone   ? "text-muted-foreground/60" :
                            "text-muted-foreground/30"
-              }`}>{step.label}</span>
+              }`}>{localizedPipelineStep(step.id, step.label, t)}</span>
             </div>
           );
         })}
       </div>
       <div className="flex items-center justify-between">
-        <span className="font-mono text-xs text-muted-foreground/50">{pct}% concluído</span>
+        <span className="font-mono text-xs text-muted-foreground/50">{t(`${pct}% concluído`, `${pct}% complete`, `${pct}% completado`)}</span>
         <span className={`font-mono text-[11px] uppercase tracking-widest ${STATUS_COLOR[status]?.split(" ")[0] ?? "text-primary"}`}>
-          {STATUS_LABEL[status] ?? status}
+          {localizedDashboardStatus(status, t)}
         </span>
       </div>
     </div>
@@ -320,6 +433,7 @@ interface ReferralStats {
 }
 
 function ReferralWidget() {
+  const t = useUiText();
   const [copied, setCopied] = useState(false);
 
   const { data, isLoading } = useQuery({
@@ -350,7 +464,7 @@ function ReferralWidget() {
           <Gift className="h-4 w-4" />
         </div>
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Indicações</p>
+          <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Indicações", "Referrals", "Referencias")}</p>
           <p className="font-mono text-base font-bold text-foreground leading-tight">
             {data.referralCode}
           </p>
@@ -362,11 +476,11 @@ function ReferralWidget() {
       {/* Stats */}
       <div className="flex items-center gap-6 flex-1 flex-wrap">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Indicados</p>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Indicados", "Referrals", "Referidos")}</p>
           <p className="font-mono text-lg font-bold text-primary">{data.referralCount}</p>
         </div>
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Créditos ganhos</p>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Créditos ganhos", "Credits earned", "Créditos ganados")}</p>
           <p className="font-mono text-lg font-bold text-success">{data.totalCreditsEarned} cr</p>
         </div>
         <div className="flex-1">
@@ -400,6 +514,7 @@ function ReferralWidget() {
 }
 
 function SalesTeamPanel() {
+  const t = useUiText();
   const { data, isLoading } = useQuery({
     queryKey: ["/api/sales-team/analytics"],
     queryFn: async () => {
@@ -417,21 +532,21 @@ function SalesTeamPanel() {
     <div className="border border-border/30 bg-card/20 px-4 py-3 flex items-center gap-3 flex-wrap">
       <div className="flex items-center gap-1.5 text-cyan-400 shrink-0">
         <MessageSquare className="h-3.5 w-3.5" />
-        <span className="font-mono text-[11px] uppercase tracking-widest font-bold">Time de Vendas</span>
+        <span className="font-mono text-[11px] uppercase tracking-widest font-bold">{t("Time de Vendas", "Sales Team", "Equipo de Ventas")}</span>
       </div>
       <div className="w-px h-4 bg-border/40 shrink-0" />
       <div className="flex items-center gap-4 flex-1 flex-wrap">
         <div className="flex items-center gap-1.5">
-          <span className="font-mono text-[11px] text-muted-foreground/60">Ativos:</span>
+          <span className="font-mono text-[11px] text-muted-foreground/60">{t("Ativos:", "Active:", "Activos:")}</span>
           <span className={`font-mono text-[11px] font-bold ${analytics.active > 0 ? "text-primary" : "text-muted-foreground/40"}`}>{analytics.active}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="font-mono text-[11px] text-muted-foreground/60">Convertidos hoje:</span>
+          <span className="font-mono text-[11px] text-muted-foreground/60">{t("Convertidos hoje:", "Converted today:", "Convertidos hoy:")}</span>
           <span className={`font-mono text-[11px] font-bold ${analytics.todayConversions > 0 ? "text-green-400" : "text-muted-foreground/40"}`}>{analytics.todayConversions}</span>
         </div>
         {hasActivity && (
           <div className="flex items-center gap-1.5">
-            <span className="font-mono text-[11px] text-muted-foreground/60">Taxa:</span>
+            <span className="font-mono text-[11px] text-muted-foreground/60">{t("Taxa:", "Rate:", "Tasa:")}</span>
             <span className="font-mono text-[11px] font-bold text-amber-400">{analytics.conversionRate}%</span>
           </div>
         )}
@@ -440,7 +555,7 @@ function SalesTeamPanel() {
         <Button size="sm" variant="outline"
           className="rounded-none font-mono text-[10px] uppercase tracking-widest h-6 px-2 border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/10 gap-1">
           <ChevronRight className="h-3 w-3" />
-          {hasActivity ? "Ver Atendimentos" : "Iniciar Atendimento"}
+          {hasActivity ? t("Ver Atendimentos", "View Conversations", "Ver Conversaciones") : t("Iniciar Atendimento", "Start Conversation", "Iniciar Conversación")}
         </Button>
       </Link>
     </div>
@@ -448,6 +563,7 @@ function SalesTeamPanel() {
 }
 
 function IntakeHubStatus() {
+  const t = useUiText();
   const { data, isLoading } = useQuery({
     queryKey: ["/api/products"],
     queryFn: async () => {
@@ -471,10 +587,10 @@ function IntakeHubStatus() {
   const hasDraft = draftStatus === "draft";
 
   const renderBadge = () => {
-    if (isApproved) return <Badge variant="outline" className="border-success/40 text-success text-[9px] px-1 py-0 h-4">Aprovado</Badge>;
-    if (isLocked) return <Badge variant="outline" className="border-primary/40 text-primary text-[9px] px-1 py-0 h-4">Bloqueado</Badge>;
-    if (hasDraft) return <Badge variant="outline" className="border-amber-400/40 text-amber-400 text-[9px] px-1 py-0 h-4">Rascunho</Badge>;
-    return <span className="font-mono text-[9px] text-muted-foreground">Pendente</span>;
+    if (isApproved) return <Badge variant="outline" className="border-success/40 text-success text-[9px] px-1 py-0 h-4">{t("Aprovado", "Approved", "Aprobado")}</Badge>;
+    if (isLocked) return <Badge variant="outline" className="border-primary/40 text-primary text-[9px] px-1 py-0 h-4">{t("Bloqueado", "Blocked", "Bloqueado")}</Badge>;
+    if (hasDraft) return <Badge variant="outline" className="border-amber-400/40 text-amber-400 text-[9px] px-1 py-0 h-4">{t("Rascunho", "Draft", "Borrador")}</Badge>;
+    return <span className="font-mono text-[9px] text-muted-foreground">{t("Pendente", "Pending", "Pendiente")}</span>;
   };
 
   const statusColor = isApproved ? "text-success" : isLocked ? "text-primary" : hasDraft ? "text-amber-400" : "text-muted-foreground";
@@ -574,13 +690,13 @@ function IntegrationHealthPanel() {
 
 // ─── Smart Next Action ────────────────────────────────────────────────────────
 
-function nextAction(campaigns: { id: string; title: string; status: string }[]) {
+function nextAction(campaigns: { id: string; title: string; status: string }[], t: ReturnType<typeof useUiText>) {
   if (!campaigns.length) {
     return {
       icon: Rocket, color: "text-primary", bg: "border-primary/20 bg-primary/5",
-      title: "Inicie sua primeira missão de lançamento",
-      sub: "O agente monta toda a estratégia, cria o conteúdo e executa automaticamente",
-      href: "/campaigns/new", cta: "Criar Campanha",
+      title: t("Inicie sua primeira missão de lançamento", "Start your first launch mission", "Inicia tu primera misión de lanzamiento"),
+      sub: t("O agente monta toda a estratégia, cria o conteúdo e executa automaticamente", "The agent builds the strategy, creates the content, and executes automatically", "El agente prepara la estrategia, crea el contenido y ejecuta automáticamente"),
+      href: "/campaigns/new", cta: t("Criar Campanha", "Create Campaign", "Crear campaña"),
     };
   }
   const live        = campaigns.find(c => c.status === "live");
@@ -594,54 +710,57 @@ function nextAction(campaigns: { id: string; title: string; status: string }[]) 
 
   if (live) return {
     icon: Play, color: "text-success", bg: "border-success/20 bg-success/5",
-    title: `Campanha ao vivo: "${live.title}"`,
-    sub: "Acompanhe métricas em tempo real e aplique ajustes do agente",
-    href: `/campaigns/${live.id}`, cta: "Ver Métricas",
+    title: `${t("Campanha ao vivo", "Campaign live", "Campaña en vivo")}: "${live.title}"`,
+    sub: t("Acompanhe métricas em tempo real e aplique ajustes do agente", "Track real-time metrics and apply the agent's recommendations", "Sigue las métricas en tiempo real y aplica los ajustes del agente"),
+    href: `/campaigns/${live.id}`, cta: t("Ver Métricas", "View Metrics", "Ver métricas"),
   };
   if (approval) return {
     icon: CheckCircle2, color: "text-yellow-400", bg: "border-yellow-400/20 bg-yellow-400/5",
-    title: `Conteúdo aguarda sua aprovação: "${approval.title}"`,
-    sub: "A agente gerou o conteúdo completo. Revise e aprove para lançar.",
-    href: `/campaigns/${approval.id}`, cta: "Revisar Agora",
+    title: `${t("Conteúdo aguarda sua aprovação", "Content awaiting your approval", "Contenido pendiente de tu aprobación")}: "${approval.title}"`,
+    sub: t("A agente gerou o conteúdo completo. Revise e aprove para lançar.", "The agent generated the complete content. Review and approve it to launch.", "El agente generó todo el contenido. Revísalo y apruébalo para lanzar."),
+    href: `/campaigns/${approval.id}`, cta: t("Revisar Agora", "Review Now", "Revisar ahora"),
   };
   if (approved) return {
     icon: Zap, color: "text-green-400", bg: "border-green-400/20 bg-green-400/5",
-    title: `Pronto para lançar: "${approved.title}"`,
-    sub: "Conteúdo aprovado. Execute o lançamento agora.",
-    href: `/campaigns/${approved.id}`, cta: "Lançar",
+    title: `${t("Pronto para lançar", "Ready to launch", "Listo para lanzar")}: "${approved.title}"`,
+    sub: t("Conteúdo aprovado. Execute o lançamento agora.", "Content approved. Start the launch now.", "Contenido aprobado. Inicia el lanzamiento ahora."),
+    href: `/campaigns/${approved.id}`, cta: t("Lançar", "Launch", "Lanzar"),
   };
   if (executing || generating || analyzing) {
     const c = executing ?? generating ?? analyzing!;
     return {
       icon: Bot, color: "text-primary", bg: "border-primary/20 bg-primary/5",
-      title: `Em execução: "${c.title}"`,
-      sub: "Os agentes estão trabalhando. Acompanhe na aba Agentes.",
-      href: `/campaigns/${c.id}`, cta: "Ver Agentes",
+      title: `${t("Em execução", "In progress", "En curso")}: "${c.title}"`,
+      sub: t("Os agentes estão trabalhando. Acompanhe na aba Agentes.", "Agents are working. Follow their progress in the Agents tab.", "Los agentes están trabajando. Sigue su progreso en la pestaña Agentes."),
+      href: `/campaigns/${c.id}`, cta: t("Ver Agentes", "View Agents", "Ver agentes"),
     };
   }
   if (ready) return {
     icon: Target, color: "text-cyan-400", bg: "border-cyan-400/20 bg-cyan-400/5",
-    title: `Estratégia pronta para "${ready.title}"`,
-    sub: "Estratégia criada. Inicie a geração de conteúdo com o agente.",
-    href: `/campaigns/${ready.id}`, cta: "Gerar Conteúdo",
+    title: `${t("Estratégia pronta para", "Strategy ready for", "Estrategia lista para")} "${ready.title}"`,
+    sub: t("Estratégia criada. Inicie a geração de conteúdo com o agente.", "Strategy created. Start content generation with the agent.", "Estrategia creada. Inicia la generación de contenido con el agente."),
+    href: `/campaigns/${ready.id}`, cta: t("Gerar Conteúdo", "Generate Content", "Generar contenido"),
   };
   if (intake) return {
     icon: Bot, color: "text-blue-400", bg: "border-blue-400/20 bg-blue-400/5",
-    title: `Continue o briefing: "${intake.title}"`,
-    sub: "A agente está aguardando suas respostas para montar a estratégia de lançamento.",
-    href: `/campaigns/${intake.id}/intake`, cta: "Continuar Briefing",
+    title: `${t("Continue o briefing", "Continue the briefing", "Continúa el briefing")}: "${intake.title}"`,
+    sub: t("A agente está aguardando suas respostas para montar a estratégia de lançamento.", "The agent is waiting for your answers to build the launch strategy.", "El agente espera tus respuestas para preparar la estrategia de lanzamiento."),
+    href: `/campaigns/${intake.id}/intake`, cta: t("Continuar Briefing", "Continue Briefing", "Continuar briefing"),
   };
   return {
     icon: Workflow, color: "text-cyan-400", bg: "border-cyan-400/20 bg-cyan-400/5",
-    title: "Configure sequências de automação para seu lançamento",
-    sub: "Email + WhatsApp automatizados para nutrir e converter sua lista",
-    href: "/sequences", cta: "Ver Sequências",
+    title: t("Configure sequências de automação para seu lançamento", "Set up automated sequences for your launch", "Configura secuencias automatizadas para tu lanzamiento"),
+    sub: t("Email + WhatsApp automatizados para nutrir e converter sua lista", "Automated email + WhatsApp to nurture and convert your list", "Correo y WhatsApp automatizados para nutrir y convertir tu lista"),
+    href: "/sequences", cta: t("Ver Sequências", "View Sequences", "Ver secuencias"),
   };
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function Dashboard() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
+  const numberLocale = intlLocale(locale);
   const { user, workspace, plan, planSlug, isAdmin } = useAuth();
   const [, setLocation] = useLocation();
   const [onboardingChecked, setOnboardingChecked] = useState(false);
@@ -704,7 +823,7 @@ export default function Dashboard() {
       });
     },
     onSuccess: () => {
-      toast.success("Estratégia aprovada! Gerando conteúdo...");
+      toast.success(t("Estratégia aprovada! Gerando conteúdo...", "Strategy approved! Generating content...", "¡Estrategia aprobada! Generando contenido..."));
       void queryClient.invalidateQueries({ queryKey: [getListCampaignsQueryKey()] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -743,7 +862,7 @@ export default function Dashboard() {
   const creditsPct      = totalCredits > 0 ? Math.min(100, Math.round((creditsBalance / totalCredits) * 100)) : 0;
   const creditsLow      = creditsPct < 15;
   const revenueTotal    = revenueData?.total ?? 0;
-  const action          = nextAction(campaigns);
+  const action          = nextAction(campaigns, t);
   const ActionIcon      = action.icon;
 
   const recentAgents = [...(agentsData?.agents ?? [])].reverse().slice(0, 6);
@@ -768,12 +887,12 @@ export default function Dashboard() {
   // ── Fundador View — guided, simplified, emotional ─────────────────────────
   if (isFundador) {
     const firstName = user?.name?.split(" ")[0] ?? "você";
-    const MISSION_PHASES = [
-      { id: "intake",    label: "Briefing",    desc: "Agente conversa com você", icon: "01" },
-      { id: "strategy",  label: "Estratégia",  desc: "Plano gerado",         icon: "02" },
-      { id: "content",   label: "Conteúdo",    desc: "Copy pronto",          icon: "03" },
-      { id: "executing", label: "Execução",    desc: "Disparo automático",   icon: "04" },
-      { id: "live",      label: "Ao Vivo",     desc: "Carrinho aberto",      icon: "05" },
+        const MISSION_PHASES = [
+      { id: "intake",    label: t("Briefing", "Briefing", "Briefing"),    desc: t("Agente conversa com você", "Agent talks with you", "El agente conversa contigo"), icon: "01" },
+      { id: "strategy",  label: t("Estratégia", "Strategy", "Estrategia"),  desc: t("Plano gerado", "Plan generated", "Plan generado"),         icon: "02" },
+      { id: "content",   label: t("Conteúdo", "Content", "Contenido"),    desc: t("Copy pronto", "Copy ready", "Textos listos"),          icon: "03" },
+      { id: "executing", label: t("Execução", "Execution", "Ejecución"), desc: t("Disparo automático", "Automated send", "Envío automático"),   icon: "04" },
+      { id: "live",      label: t("Ao Vivo", "Live", "En vivo"),     desc: t("Carrinho aberto", "Cart open", "Carrito abierto"),      icon: "05" },
     ];
     const phaseIndex = activeCampaign
       ? Math.max(0, MISSION_PHASES.findIndex(p => activeCampaign.status.includes(p.id)))
@@ -788,16 +907,16 @@ export default function Dashboard() {
           <div className="flex items-center justify-center gap-2 mb-3">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             <span className="font-mono text-[11px] uppercase tracking-widest text-primary/70">
-              {liveCampaigns > 0 ? `${liveCampaigns} campanha ao vivo` : "Plataforma pronta"}
+              {liveCampaigns > 0 ? t(`${liveCampaigns} campanha ao vivo`, `${liveCampaigns} live campaign${liveCampaigns !== 1 ? "s" : ""}`, `${liveCampaigns} campaña${liveCampaigns !== 1 ? "s" : ""} en vivo`) : t("Plataforma pronta", "Platform ready", "Plataforma lista")}
             </span>
           </div>
           <h1 className="font-mono font-black text-2xl uppercase tracking-tight text-foreground mb-1">
-            Olá, <span className="text-primary">{firstName}</span>.
+            {t("Olá", "Hello", "Hola")}, <span className="text-primary">{firstName}</span>.
           </h1>
           <p className="font-mono text-sm text-muted-foreground/60">
             {activeCampaign
-              ? "Aqui está onde sua missão está agora."
-              : "O time está esperando seu briefing."}
+              ? t("Aqui está onde sua missão está agora.", "Here's where your mission stands.", "Así va tu misión.")
+              : t("O time está esperando seu briefing.", "The team is waiting for your briefing.", "El equipo espera tu briefing.")}
           </p>
         </div>
 
@@ -810,7 +929,7 @@ export default function Dashboard() {
             <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary/60" />
             <div className="p-5">
               <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">
-                Missão em Andamento
+                {t("Missão em Andamento", "Mission in Progress", "Misión en curso")}
               </div>
               <h2 className="font-mono font-bold text-base uppercase tracking-tight text-foreground mb-4">
                 {activeCampaign.title}
@@ -835,7 +954,7 @@ export default function Dashboard() {
                   <Link href={`/campaigns/${activeCampaign.id}/intake`} className="flex-1">
                     <Button className="w-full rounded-none font-mono uppercase tracking-widest text-xs h-10 btn-weapon-primary gap-2">
                       <Bot className="h-3.5 w-3.5" />
-                      Continuar Briefing
+                      {t("Continuar Briefing", "Continue Briefing", "Continuar briefing")}
                       <ChevronRight className="h-3.5 w-3.5" />
                     </Button>
                   </Link>
@@ -843,7 +962,7 @@ export default function Dashboard() {
                   <Link href={`/campaigns/${activeCampaign.id}`} className="flex-1">
                     <Button className="w-full rounded-none font-mono uppercase tracking-widest text-xs h-10 btn-weapon-primary gap-2">
                       <Rocket className="h-3.5 w-3.5" />
-                      Ver Minha Campanha
+                      {t("Ver Minha Campanha", "View My Campaign", "Ver mi campaña")}
                       <ChevronRight className="h-3.5 w-3.5" />
                     </Button>
                   </Link>
@@ -859,15 +978,15 @@ export default function Dashboard() {
             <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary/60" />
             <Bot className="h-8 w-8 text-primary/60 mx-auto mb-3" />
             <h2 className="font-mono font-black text-lg uppercase tracking-tight text-foreground mb-2">
-              O time está pronto para você.
+              {t("O time está pronto para você.", "The team is ready for you.", "El equipo está listo para ti.")}
             </h2>
             <p className="font-mono text-sm text-muted-foreground/60 mb-5 leading-relaxed">
-              Três minutos de conversa com o agente e você tem estratégia, copy e cronograma prontos.
+              {t("Três minutos de conversa com o agente e você tem estratégia, copy e cronograma prontos.", "A three-minute conversation with the agent gets you a ready-to-use strategy, copy, and timeline.", "Una conversación de tres minutos con el agente te da una estrategia, textos y cronograma listos.")}
             </p>
             <Link href="/onboarding">
               <Button className="rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-12 px-8 text-sm">
                 <Bot className="h-4 w-4" />
-                Criar minha campanha
+                {t("Criar minha campanha", "Create my campaign", "Crear mi campaña")}
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -883,22 +1002,22 @@ export default function Dashboard() {
           return (
             <div className="grid grid-cols-2 gap-3">
               <div className="border border-border/30 bg-card/20 px-4 py-3">
-                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Lançamentos disponíveis</div>
+                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">{t("Lançamentos disponíveis", "Available launches", "Lanzamientos disponibles")}</div>
                 <div className={`font-mono font-bold text-xl ${remaining === 0 ? "text-yellow-400" : "text-foreground"}`}>
                   {remaining}
                 </div>
-                <div className="font-mono text-[11px] text-muted-foreground/40">{usedCampaigns} de {maxCampaigns} usados</div>
+                <div className="font-mono text-[11px] text-muted-foreground/40">{t(`${usedCampaigns} de ${maxCampaigns} usados`, `${usedCampaigns} of ${maxCampaigns} used`, `${usedCampaigns} de ${maxCampaigns} usados`)}</div>
                 <div className="mt-2 h-0.5 bg-muted/20">
                   <div className="h-full bg-primary transition-all" style={{ width: `${capacityPct}%` }} />
                 </div>
               </div>
               <div className="border border-border/30 bg-card/20 px-4 py-3">
-                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Receita</div>
+                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">{t("Receita", "Revenue", "Ingresos")}</div>
                 <div className="font-mono font-bold text-xl text-success">
-                  {revenueTotal > 0 ? `R$${(revenueTotal / 100).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}` : "—"}
+                  {revenueTotal > 0 ? `R$${(revenueTotal / 100).toLocaleString(intlLocale(locale), { maximumFractionDigits: 0 })}` : "—"}
                 </div>
                 <div className="font-mono text-[11px] text-muted-foreground/40">
-                  {revenueData?.transactionCount ? `${revenueData.transactionCount} vendas` : "Configure webhooks"}
+                  {revenueData?.transactionCount ? t(`${revenueData.transactionCount} vendas`, `${revenueData.transactionCount} sales`, `${revenueData.transactionCount} ventas`) : t("Configure webhooks", "Configure webhooks", "Configura los webhooks")}
                 </div>
               </div>
             </div>
@@ -911,7 +1030,7 @@ export default function Dashboard() {
             <ActionIcon className="h-4 w-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">Próxima Ação</div>
+            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">{t("Próxima Ação", "Next Action", "Próxima Acción")}</div>
             <div className={`font-mono font-bold text-sm ${action.color}`}>{action.title}</div>
           </div>
           <Link href={action.href} className="shrink-0">
@@ -925,12 +1044,12 @@ export default function Dashboard() {
         {/* Modo toggle hint */}
         <div className="text-center pt-2">
           <span className="font-mono text-[11px] text-muted-foreground/30 uppercase tracking-widest">
-            Quer ver todos os painéis técnicos?{" "}
+            {t("Quer ver todos os painéis técnicos?", "Want to see all technical dashboards?", "¿Quieres ver todos los paneles técnicos?")}{" "}
             <button
               onClick={() => {}}
               className="text-primary/50 hover:text-primary underline underline-offset-2 transition-colors"
             >
-              Mude para Arquiteto na barra lateral
+              {t("Mude para Arquiteto na barra lateral", "Switch to Architect in the sidebar", "Cambia a Arquitecto en la barra lateral")}
             </button>
           </span>
         </div>
@@ -947,12 +1066,12 @@ export default function Dashboard() {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3 mb-1">
             <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
-              Central de Lançamento
+              {t("Central de Lançamento", "Launch Center", "Centro de lanzamientos")}
             </h1>
             {liveCampaigns > 0 && (
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-success animate-pulse" style={{ boxShadow: "0 0 8px hsl(var(--success))" }} />
-                <span className="font-mono text-[11px] uppercase tracking-widest text-success font-bold">{liveCampaigns} ao vivo</span>
+                <span className="font-mono text-[11px] uppercase tracking-widest text-success font-bold">{t(`${liveCampaigns} ao vivo`, `${liveCampaigns} live`, `${liveCampaigns} en vivo`)}</span>
               </div>
             )}
           </div>
@@ -964,8 +1083,8 @@ export default function Dashboard() {
         <Link href="/campaigns/new">
           <Button className="rounded-none font-mono uppercase tracking-widest font-bold gap-2 btn-weapon-primary text-xs px-4 shrink-0">
             <Plus className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Nova Campanha</span>
-            <span className="sm:hidden">Nova</span>
+            <span className="hidden sm:inline">{t("Nova Campanha", "New Campaign", "Nueva campaña")}</span>
+            <span className="sm:hidden">{t("Nova", "New", "Nueva")}</span>
           </Button>
         </Link>
       </div>
@@ -983,24 +1102,24 @@ export default function Dashboard() {
             <div className="flex items-center gap-2 mb-3">
               <Bot className="h-4 w-4 text-primary" />
               <span className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">
-                NexOS · 64 agentes prontos para trabalhar
+                {t("NexOS · 64 agentes prontos para trabalhar", "NexOS · 64 agents ready to work", "NexOS · 64 agentes listos para trabajar")}
               </span>
             </div>
 
             <h2 className="font-mono font-black text-xl md:text-2xl uppercase tracking-tight text-foreground mb-2 leading-tight">
-              Sua próxima receita começa com uma conversa de 3 minutos.
+              {t("Sua próxima receita começa com uma conversa de 3 minutos.", "Your next revenue stream starts with a 3-minute conversation.", "Tus próximos ingresos comienzan con una conversación de 3 minutos.")}
             </h2>
             <p className="font-mono text-sm text-muted-foreground/70 leading-relaxed mb-5 max-w-2xl">
-              Conta para a agente o que você quer vender. Em menos de uma hora, você tem estratégia, copy completo, sequência de WhatsApp, emails e cronograma prontos para aprovar.{" "}
-              <strong className="text-foreground">Sem copywriter. Sem agência. Sem esperar.</strong>
+              {t("Conta para a agente o que você quer vender. Em menos de uma hora, você tem estratégia, copy completo, sequência de WhatsApp, emails e cronograma prontos para aprovar.", "Tell the agent what you want to sell. In less than an hour, you'll have a complete strategy, copy, WhatsApp sequence, emails, and timeline ready for approval.", "Cuéntale al agente qué quieres vender. En menos de una hora tendrás una estrategia completa, textos, secuencia de WhatsApp, correos y cronograma listos para aprobar.")}{" "}
+              <strong className="text-foreground">{t("Sem copywriter. Sem agência. Sem esperar.", "No copywriter. No agency. No waiting.", "Sin copywriter. Sin agencia. Sin esperas.")}</strong>
             </p>
 
             {/* Social proof + anti-requisite strip */}
             <div className="flex flex-wrap gap-x-5 gap-y-2 mb-6">
               {[
-                { value: "R$41.200", label: "lançamento de 312 leads" },
-                { value: "7 dias", label: "do briefing ao carrinho aberto" },
-                { value: "64 agentes", label: "trabalhando ao mesmo tempo" },
+                { value: "R$41.200", label: t("lançamento de 312 leads", "launch with 312 leads", "lanzamiento con 312 prospectos") },
+                { value: t("7 dias", "7 days", "7 días"), label: t("do briefing ao carrinho aberto", "from briefing to cart opening", "del briefing a la apertura del carrito") },
+                { value: t("64 agentes", "64 agents", "64 agentes"), label: t("trabalhando ao mesmo tempo", "working at the same time", "trabajando al mismo tiempo") },
               ].map(stat => (
                 <div key={stat.label} className="flex items-baseline gap-1.5">
                   <span className="font-mono font-black text-base text-primary">{stat.value}</span>
@@ -1013,7 +1132,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2 mb-6 border border-destructive/20 bg-destructive/5 px-3 py-2 w-fit">
               <div className="w-1.5 h-1.5 rounded-full bg-destructive/60 animate-pulse shrink-0" />
               <span className="font-mono text-[11px] text-destructive/70 uppercase tracking-widest">
-                Cada semana sem lançar é receita que não volta — sua base esfria enquanto você planeja
+                {t("Cada semana sem lançar é receita que não volta — sua base esfria enquanto você planeja", "Every week without launching is revenue lost — your audience cools while you plan", "Cada semana sin lanzar es dinero que no vuelve — tu audiencia pierde interés mientras planeas")}
               </span>
             </div>
 
@@ -1022,14 +1141,14 @@ export default function Dashboard() {
               <Link href="/campaigns/new">
                 <Button className="rounded-none font-mono uppercase tracking-widest font-bold gap-2 btn-weapon-primary h-11 px-7 text-sm">
                   <Rocket className="h-4 w-4" />
-                  Criar minha primeira campanha
+                  {t("Criar minha primeira campanha", "Create my first campaign", "Crear mi primera campaña")}
                   <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
               </Link>
               <Link href="/agents">
                 <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest h-11 px-5 text-xs border-border/50 hover:border-primary/50 hover:text-primary gap-2">
                   <Bot className="h-3.5 w-3.5" />
-                  Conversar com os Agentes agente
+                  {t("Conversar com os Agentes agente", "Talk to the Agents", "Hablar con los agentes")}
                 </Button>
               </Link>
             </div>
@@ -1037,9 +1156,9 @@ export default function Dashboard() {
             {/* Steps mini-preview */}
             <div className="mt-6 pt-5 border-t border-border/30 grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
-                { step: "01", label: "Briefing (≈3 min)", desc: "A agente conversa com você sobre produto, público e meta. Sem formulário chato." },
-                { step: "02", label: "Plano completo gerado", desc: "Estratégia, copy, cronograma de emails e WhatsApp — tudo pronto para você aprovar." },
-                { step: "03", label: "Execução automática", desc: "Você aprova. A agente dispara, segmenta, abre carrinho e fecha. Você acompanha o faturamento." },
+                { step: "01", label: t("Briefing (≈3 min)", "Briefing (≈3 min)", "Briefing (≈3 min)"), desc: t("A agente conversa com você sobre produto, público e meta. Sem formulário chato.", "The agent talks with you about your product, audience, and goal. No tedious forms.", "El agente conversa contigo sobre tu producto, público y objetivo. Sin formularios tediosos.") },
+                { step: "02", label: t("Plano completo gerado", "Complete plan generated", "Plan completo generado"), desc: t("Estratégia, copy, cronograma de emails e WhatsApp — tudo pronto para você aprovar.", "Strategy, copy, and email and WhatsApp schedules — all ready for your approval.", "Estrategia, textos y cronogramas de correo y WhatsApp — todo listo para que lo apruebes.") },
+                { step: "03", label: t("Execução automática", "Automatic execution", "Ejecución automática"), desc: t("Você aprova. A agente dispara, segmenta, abre carrinho e fecha. Você acompanha o faturamento.", "You approve. The agent sends, segments, opens and closes the cart. You track revenue.", "Apruebas. El agente envía, segmenta y abre y cierra el carrito. Tú sigues los ingresos.") },
               ].map(item => (
                 <div key={item.step} className="flex gap-3">
                   <span className="font-mono text-[11px] text-primary/40 tracking-widest shrink-0 mt-0.5 font-bold">{item.step}</span>
@@ -1064,7 +1183,7 @@ export default function Dashboard() {
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
               <div className="min-w-0">
                 <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-1">
-                  Missão em Progresso
+                  {t("Missão em Progresso", "Mission in Progress", "Misión en curso")}
                 </div>
                 <h2 className="font-mono font-bold text-base sm:text-lg uppercase tracking-tight text-foreground break-words">
                   {activeCampaign.title}
@@ -1077,7 +1196,7 @@ export default function Dashboard() {
                   )}
                   {(activeCampaign as unknown as Record<string,string>)["track"] && (
                     <span className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest">
-                      · Track {(activeCampaign as unknown as Record<string,string>)["track"]}
+                      · {t("Trilha", "Track", "Nivel")} {(activeCampaign as unknown as Record<string,string>)["track"]}
                     </span>
                   )}
                 </div>
@@ -1085,22 +1204,22 @@ export default function Dashboard() {
               <div className="flex items-center gap-2 flex-wrap">
                 {pendingCheckpoints.length > 0 && (
                   <Badge variant="outline" className="rounded-none font-mono text-[11px] border-yellow-400/40 text-yellow-400 bg-yellow-400/10 animate-pulse">
-                    {pendingCheckpoints.length} Aprovação
+                    {t(`${pendingCheckpoints.length} Aprovação`, `${pendingCheckpoints.length} Approval`, `${pendingCheckpoints.length} aprobación`)}
                   </Badge>
                 )}
                 <Badge variant="outline" className={`rounded-none font-mono text-[11px] uppercase tracking-widest px-2 py-1 ${STATUS_COLOR[activeCampaign.status] ?? "text-primary border-primary/40 bg-primary/10"}`}>
-                  {STATUS_LABEL[activeCampaign.status] ?? activeCampaign.status}
+                  {localizedDashboardStatus(activeCampaign.status, t)}
                 </Badge>
                 {(activeCampaign.status === "intake" || activeCampaign.status === "draft") ? (
                   <Link href={`/campaigns/${activeCampaign.id}/intake`}>
                     <Button size="sm" className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 btn-weapon-primary">
-                      Briefing<ChevronRight className="h-2.5 w-2.5" />
+                      {t("Briefing", "Briefing", "Briefing")}<ChevronRight className="h-2.5 w-2.5" />
                     </Button>
                   </Link>
                 ) : (
                   <Link href={`/campaigns/${activeCampaign.id}`}>
                     <Button size="sm" variant="outline" className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 btn-weapon-outline">
-                      Abrir<ChevronRight className="h-2.5 w-2.5" />
+                      {t("Abrir", "Open", "Abrir")}<ChevronRight className="h-2.5 w-2.5" />
                     </Button>
                   </Link>
                 )}
@@ -1114,64 +1233,64 @@ export default function Dashboard() {
       {/* ── KPI Row ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard
-          label="Créditos do agente"
-          value={creditsBalance.toLocaleString("pt-BR")}
-          sub={`${creditsPct}% de ${totalCredits.toLocaleString("pt-BR")} cr incluídos`}
+          label={t("Créditos do agente", "Agent Credits", "Créditos del agente")}
+          value={creditsBalance.toLocaleString(numberLocale)}
+          sub={t(`${creditsPct}% de ${totalCredits.toLocaleString(numberLocale)} cr incluídos`, `${creditsPct}% of ${totalCredits.toLocaleString(numberLocale)} credits included`, `${creditsPct}% de ${totalCredits.toLocaleString(numberLocale)} créditos incluidos`)}
           icon={CreditCard}
           color={creditsLow ? "yellow" : "primary"}
           href="/credits"
           loading={loadingCredits}
           breakdown={[
-            { label: "Saldo atual",  value: creditsBalance.toLocaleString("pt-BR") },
-            { label: "Créditos incluídos",  value: totalCredits.toLocaleString("pt-BR") },
-            { label: "Utilizado",    value: `${100 - creditsPct}%` },
+            { label: t("Saldo atual", "Current balance", "Saldo actual"),  value: creditsBalance.toLocaleString(numberLocale) },
+            { label: t("Créditos incluídos", "Credits included", "Créditos incluidos"),  value: totalCredits.toLocaleString(numberLocale) },
+            { label: t("Utilizado", "Used", "Utilizado"),    value: `${100 - creditsPct}%` },
           ]}
           expanded={expandedKpi === "credits"}
           onToggle={() => setExpandedKpi(expandedKpi === "credits" ? null : "credits")}
         />
         <KpiCard
-          label="Receita do Produto"
-          value={revenueTotal > 0 ? `R$${(revenueTotal / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : "—"}
-          sub={revenueData?.transactionCount ? `${revenueData.transactionCount} vendas` : "Configure webhooks →"}
+          label={t("Receita do Produto", "Product Revenue", "Ingresos del producto")}
+          value={revenueTotal > 0 ? `R$${(revenueTotal / 100).toLocaleString(numberLocale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : "—"}
+          sub={revenueData?.transactionCount ? t(`${revenueData.transactionCount} vendas`, `${revenueData.transactionCount} sales`, `${revenueData.transactionCount} ventas`) : t("Configure webhooks →", "Configure webhooks →", "Configura los webhooks →")}
           icon={DollarSign}
           color="success"
           href="/revenue"
           loading={loadingRevenue}
           breakdown={revenueData?.byPlatform
-            ? Object.entries(revenueData.byPlatform).slice(0, 3).map(([k, v]) => ({ label: k, value: `R$${(Number(v) / 100).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}` }))
-            : [{ label: "Sem dados", value: "—" }]
+            ? Object.entries(revenueData.byPlatform).slice(0, 3).map(([k, v]) => ({ label: k, value: `R$${(Number(v) / 100).toLocaleString(numberLocale, { maximumFractionDigits: 0 })}` }))
+            : [{ label: t("Sem dados", "No data", "Sin datos"), value: "—" }]
           }
           expanded={expandedKpi === "revenue"}
           onToggle={() => setExpandedKpi(expandedKpi === "revenue" ? null : "revenue")}
         />
         <KpiCard
-          label="Sequências Ativas"
+          label={t("Sequências Ativas", "Active Sequences", "Secuencias activas")}
           value={activeSequences}
-          sub={`${(sequencesData?.sequences ?? []).length} total configuradas`}
+          sub={t(`${(sequencesData?.sequences ?? []).length} total configuradas`, `${(sequencesData?.sequences ?? []).length} configured in total`, `${(sequencesData?.sequences ?? []).length} configuradas en total`)}
           icon={Workflow}
           color="cyan"
           href="/sequences"
           loading={loadingSequences}
           breakdown={[
-            { label: "Ativas",    value: activeSequences },
-            { label: "Total",     value: (sequencesData?.sequences ?? []).length },
-            { label: "Inativas",  value: (sequencesData?.sequences ?? []).length - activeSequences },
+            { label: t("Ativas", "Active", "Activas"),    value: activeSequences },
+            { label: t("Total", "Total", "Total"),     value: (sequencesData?.sequences ?? []).length },
+            { label: t("Inativas", "Inactive", "Inactivas"),  value: (sequencesData?.sequences ?? []).length - activeSequences },
           ]}
           expanded={expandedKpi === "sequences"}
           onToggle={() => setExpandedKpi(expandedKpi === "sequences" ? null : "sequences")}
         />
         <KpiCard
-          label="Missões em Andamento"
+          label={t("Missões em Andamento", "Missions in Progress", "Misiones en curso")}
           value={activeCampaigns}
-          sub={liveCampaigns > 0 ? `${liveCampaigns} ao vivo agora` : "Campanhas em progresso"}
+          sub={liveCampaigns > 0 ? t(`${liveCampaigns} ao vivo agora`, `${liveCampaigns} live now`, `${liveCampaigns} en vivo ahora`) : t("Campanhas em progresso", "Campaigns in progress", "Campañas en curso")}
           icon={Rocket}
           color={liveCampaigns > 0 ? "success" : "primary"}
           href="/campaigns"
           loading={loadingCampaigns}
           breakdown={[
-            { label: "Ao vivo",     value: liveCampaigns },
-            { label: "Ativas",      value: activeCampaigns },
-            { label: "Total",       value: campaigns.length },
+            { label: t("Ao vivo", "Live", "En vivo"),     value: liveCampaigns },
+            { label: t("Ativas", "Active", "Activas"),      value: activeCampaigns },
+            { label: t("Total", "Total", "Total"),       value: campaigns.length },
           ]}
           expanded={expandedKpi === "campaigns"}
           onToggle={() => setExpandedKpi(expandedKpi === "campaigns" ? null : "campaigns")}
@@ -1207,7 +1326,7 @@ export default function Dashboard() {
             >
               <div className="w-2 h-2 rounded-full bg-cyan-400 shrink-0 animate-pulse" style={{ boxShadow: "0 0 8px hsl(180 100% 60%)" }} />
               <span className="font-mono text-[11px] uppercase tracking-widest text-cyan-400 font-bold flex-1 text-left">
-                ⚡ Masterplan Pronto — Aprovação Necessária
+                ⚡ {t("Masterplan Pronto — Aprovação Necessária", "Masterplan Ready — Approval Required", "Masterplan listo — requiere aprobación")}
               </span>
               <span className="font-mono text-[10px] text-cyan-400/60 uppercase tracking-widest">{readyCampaign.title}</span>
               <span className="font-mono text-[10px] text-cyan-400/40 ml-2">{masterplanExpanded ? "▲" : "▼"}</span>
@@ -1218,11 +1337,11 @@ export default function Dashboard() {
                 {!readyCampaignFull ? (
                   <div className="p-6 text-center">
                     <Loader2 className="h-5 w-5 animate-spin text-cyan-400/50 mx-auto mb-2" />
-                    <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest">Carregando masterplan...</p>
+                    <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest">{t("Carregando masterplan...", "Loading masterplan...", "Cargando masterplan...")}</p>
                   </div>
                 ) : !hasData ? (
                   <div className="p-4 text-center">
-                    <p className="font-mono text-xs text-muted-foreground/40">Dados do plano não disponíveis.</p>
+                    <p className="font-mono text-xs text-muted-foreground/40">{t("Dados do plano não disponíveis.", "Plan data unavailable.", "Datos del plan no disponibles.")}</p>
                   </div>
                 ) : (
                   <div className="p-4">
@@ -1238,12 +1357,12 @@ export default function Dashboard() {
                     className="flex-1 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-11 text-sm"
                   >
                     {approveMutation.isPending
-                      ? <><Loader2 className="h-4 w-4 animate-spin" /> Gerando conteúdo...</>
-                      : <><CheckCircle2 className="h-4 w-4" /> Aprovar e Gerar Conteúdo</>}
+                      ? <><Loader2 className="h-4 w-4 animate-spin" /> {t("Gerando conteúdo...", "Generating content...", "Generando contenido...")}</>
+                      : <><CheckCircle2 className="h-4 w-4" /> {t("Aprovar e Gerar Conteúdo", "Approve and Generate Content", "Aprobar y Generar Contenido")}</>}
                   </Button>
                   <Link href={`/campaigns/${readyCampaign.id}`} className="shrink-0">
                     <Button variant="outline" className="w-full sm:w-auto rounded-none font-mono uppercase tracking-widest text-[11px] h-11 gap-1.5 btn-weapon-outline">
-                      Abrir Campanha <ChevronRight className="h-3 w-3" />
+                      {t("Abrir Campanha", "Open Campaign", "Abrir campaña")} <ChevronRight className="h-3 w-3" />
                     </Button>
                   </Link>
                 </div>
@@ -1265,7 +1384,7 @@ export default function Dashboard() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">
-              Próxima Ação Recomendada pelo agente
+              {t("Próxima Ação Recomendada pelo agente", "Next Action Recommended by the Agent", "Próxima Acción Recomendada por el agente")}
             </div>
             <div className={`font-mono font-bold text-sm leading-snug ${action.color}`}>{action.title}</div>
             <div className="font-mono text-xs text-muted-foreground/60 mt-0.5 leading-snug line-clamp-2 sm:line-clamp-1">{action.sub}</div>
@@ -1287,11 +1406,11 @@ export default function Dashboard() {
           <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bot className="h-3.5 w-3.5 text-primary" />
-              <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Atividade dos Especialistas</span>
+              <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("Atividade dos Especialistas", "Specialist Activity", "Actividad de especialistas")}</span>
             </div>
             {activeCampaign && (
               <Link href={`/campaigns/${activeCampaign.id}`}>
-                <span className="font-mono text-[11px] text-primary hover:underline uppercase tracking-widest">Ver Todos →</span>
+                <span className="font-mono text-[11px] text-primary hover:underline uppercase tracking-widest">{t("Ver Todos →", "View All →", "Ver todos →")}</span>
               </Link>
             )}
           </div>
@@ -1300,14 +1419,14 @@ export default function Dashboard() {
               <div className="py-8 text-center">
                 <Bot className="h-6 w-6 text-muted-foreground/20 mx-auto mb-2" />
                 <p className="font-mono text-xs text-muted-foreground/40 uppercase tracking-widest">
-                  Nenhuma campanha ativa
+                  {t("Nenhuma campanha ativa", "No active campaigns", "No hay campañas activas")}
                 </p>
               </div>
             ) : recentAgents.length === 0 ? (
               <div className="py-8 text-center">
                 <Loader2 className="h-5 w-5 text-muted-foreground/20 mx-auto mb-2 animate-spin" />
                 <p className="font-mono text-xs text-muted-foreground/40 uppercase tracking-widest">
-                  Aguardando execução dos agentes
+                  {t("Aguardando execução dos agentes", "Waiting for agents to run", "Esperando la ejecución de los agentes")}
                 </p>
               </div>
             ) : (
@@ -1322,12 +1441,12 @@ export default function Dashboard() {
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="font-mono text-xs font-bold text-foreground/80 truncate">
-                      {AGENT_ROLE_LABEL[agent.agentRole] ?? agent.agentRole}
+                      {localizedAgentRole(agent.agentRole, t)}
                     </div>
                     <div className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest">
                       {agent.completedAt
-                        ? `Concluído · ${new Date(agent.completedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
-                        : `Iniciado · ${new Date(agent.startedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`}
+                        ? `${t("Concluído", "Completed", "Completado")} · ${new Date(agent.completedAt).toLocaleTimeString(numberLocale, { hour: "2-digit", minute: "2-digit" })}`
+                        : `${t("Iniciado", "Started", "Iniciado")} · ${new Date(agent.startedAt).toLocaleTimeString(numberLocale, { hour: "2-digit", minute: "2-digit" })}`}
                     </div>
                   </div>
                   <Badge variant="outline" className={`rounded-none font-mono text-[11px] shrink-0 ${
@@ -1336,7 +1455,7 @@ export default function Dashboard() {
                     agent.status === "failed"    ? "border-destructive/40 text-destructive" :
                     "border-border/40 text-muted-foreground"
                   }`}>
-                    {agent.status}
+                    {localizedAgentStatus(agent.status, t)}
                   </Badge>
                 </div>
               ))
@@ -1349,10 +1468,10 @@ export default function Dashboard() {
           <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Workflow className="h-3.5 w-3.5 text-cyan-400" />
-              <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Sequências de Automação</span>
+              <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("Sequências de Automação", "Automation Sequences", "Secuencias de Automatización")}</span>
             </div>
             <Link href="/sequences">
-              <span className="font-mono text-[11px] text-primary hover:underline uppercase tracking-widest">Ver Todas →</span>
+              <span className="font-mono text-[11px] text-primary hover:underline uppercase tracking-widest">{t("Ver Todas →", "View All →", "Ver todas →")}</span>
             </Link>
           </div>
           <div className="divide-y divide-border/20">
@@ -1364,11 +1483,11 @@ export default function Dashboard() {
               <div className="py-8 text-center">
                 <Workflow className="h-6 w-6 text-muted-foreground/20 mx-auto mb-2" />
                 <p className="font-mono text-xs text-muted-foreground/40 uppercase tracking-widest mb-3">
-                  Nenhuma sequência criada
+                  {t("Nenhuma sequência criada", "No sequences created", "No hay secuencias creadas")}
                 </p>
                 <Link href="/sequences/new">
                   <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[11px] tracking-widest btn-weapon-outline gap-1.5">
-                    <Plus className="h-3 w-3" />Criar Sequência
+                    <Plus className="h-3 w-3" />{t("Criar Sequência", "Create Sequence", "Crear secuencia")}
                   </Button>
                 </Link>
               </div>
@@ -1388,7 +1507,7 @@ export default function Dashboard() {
                         {seq.name}
                       </div>
                       <div className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest">
-                        {MODEL_LABEL[seq.model] ?? seq.model} · {seq.totalDays} dias
+                         {localizedModelLabel(seq.model, t)} · {seq.totalDays} {t("dias", "days", "días")}
                       </div>
                     </div>
                     <Badge variant="outline" className={`rounded-none font-mono text-[11px] shrink-0 ${
@@ -1396,7 +1515,7 @@ export default function Dashboard() {
                       seq.status === "draft"    ? "border-border/40 text-muted-foreground" :
                       "border-primary/40 text-primary"
                     }`}>
-                      {seq.status === "active" || seq.status === "live" ? "Ativa" : seq.status === "draft" ? "Rascunho" : seq.status}
+                      {localizedSequenceStatus(seq.status, t)}
                     </Badge>
                   </div>
                 </Link>
@@ -1412,11 +1531,11 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             <Rocket className="h-3.5 w-3.5 text-muted-foreground/60" />
             <h2 className="text-xs font-mono uppercase tracking-widest font-bold text-muted-foreground">
-              Todas as Missões · {campaigns.length}
+              {t("Todas as Missões", "All Missions", "Todas las misiones")} · {campaigns.length}
             </h2>
           </div>
           <Link href="/campaigns">
-            <span className="font-mono text-xs text-primary hover:underline uppercase tracking-widest">Ver todas →</span>
+             <span className="font-mono text-xs text-primary hover:underline uppercase tracking-widest">{t("Ver todas →", "View all →", "Ver todas →")}</span>
           </Link>
         </div>
 
@@ -1430,11 +1549,11 @@ export default function Dashboard() {
             <div className="py-12 text-center flex flex-col items-center gap-3">
               <AlertTriangle className="h-6 w-6 text-muted-foreground/30" />
               <p className="font-mono text-xs text-muted-foreground/50 uppercase tracking-widest">
-                Nenhuma missão ainda
+                 {t("Nenhuma missão ainda", "No missions yet", "Aún no hay misiones")}
               </p>
               <Link href="/campaigns/new">
                 <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-1.5">
-                  <Plus className="h-3 w-3" />Iniciar primeira missão
+                   <Plus className="h-3 w-3" />{t("Iniciar primeira missão", "Start first mission", "Iniciar primera misión")}
                 </Button>
               </Link>
             </div>
@@ -1461,7 +1580,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <Badge variant="outline" className={`rounded-none font-mono text-[11px] uppercase tracking-widest hidden sm:flex ${STATUS_COLOR[c.status] ?? "text-primary border-primary/40 bg-primary/10"}`}>
-                        {STATUS_LABEL[c.status] ?? c.status}
+                         {localizedDashboardStatus(c.status, t)}
                       </Badge>
                       <Link href={`/campaigns/${c.id}`}>
                         <Button variant="ghost" size="icon" className="rounded-sm h-7 w-7 hover:bg-primary/10 hover:text-primary">
@@ -1492,10 +1611,10 @@ export default function Dashboard() {
       {/* ── Quick Access Grid ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {[
-          { label: "Especialistas",    href: "/agents",     icon: Bot,       color: "hover:border-purple-400/40 hover:text-purple-400" },
-          { label: "VSL Studio",    href: "/vsls",       icon: BarChart3, color: "hover:border-cyan-400/40 hover:text-cyan-400" },
-          { label: "Afiliados",     href: "/affiliate",  icon: Star,      color: "hover:border-yellow-400/40 hover:text-yellow-400" },
-          { label: "Configurações", href: "/settings",   icon: Target,    color: "hover:border-primary/40 hover:text-primary" },
+          { label: t("Especialistas", "Specialists", "Especialistas"), href: "/agents",     icon: Bot,       color: "hover:border-purple-400/40 hover:text-purple-400" },
+          { label: t("VSL Studio", "VSL Studio", "Estudio VSL"), href: "/vsls",       icon: BarChart3, color: "hover:border-cyan-400/40 hover:text-cyan-400" },
+          { label: t("Afiliados", "Affiliates", "Afiliados"), href: "/affiliate",  icon: Star,      color: "hover:border-yellow-400/40 hover:text-yellow-400" },
+          { label: t("Configurações", "Settings", "Configuración"), href: "/settings",   icon: Target,    color: "hover:border-primary/40 hover:text-primary" },
         ].map(ql => {
           const Icon = ql.icon;
           return (
@@ -1526,6 +1645,8 @@ function WeeklyReportCard({
   activeCampaigns: number;
   activeSequences: number;
 }) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const today    = new Date();
   const dayOfWeek = today.getDay(); // 0=sun, 1=mon
   const isMonday  = dayOfWeek === 1;
@@ -1545,10 +1666,18 @@ function WeeklyReportCard({
 
   const aiInsight =
     activeCampaigns === 0
-      ? "Nenhuma campanha ativa esta semana. Inicie uma missão para ativar os agentes."
+      ? t("Nenhuma campanha ativa esta semana. Inicie uma missão para ativar os agentes.", "No active campaigns this week. Start a mission to activate the agents.", "No hay campañas activas esta semana. Inicia una misión para activar a los agentes.")
       : weekRevenue > 0
-        ? `R$ ${(weekRevenue / 100).toLocaleString("pt-BR", { maximumFractionDigits: 0 })} em receita nos últimos 7 dias — ${weekSales} venda${weekSales !== 1 ? "s" : ""}. Continue executando as sequências ativas.`
-        : `${activeCampaigns} campanha${activeCampaigns > 1 ? "s" : ""} ativa${activeCampaigns > 1 ? "s" : ""}. Configure webhooks de receita para monitoramento completo.`;
+        ? t(
+            `R$ ${(weekRevenue / 100).toLocaleString(intlLocale(locale), { maximumFractionDigits: 0 })} em receita nos últimos 7 dias — ${weekSales} venda${weekSales !== 1 ? "s" : ""}. Continue executando as sequências ativas.`,
+            `R$ ${(weekRevenue / 100).toLocaleString(intlLocale(locale), { maximumFractionDigits: 0 })} in revenue over the last 7 days — ${weekSales} sale${weekSales !== 1 ? "s" : ""}. Keep your active sequences running.`,
+            `R$ ${(weekRevenue / 100).toLocaleString(intlLocale(locale), { maximumFractionDigits: 0 })} en ingresos durante los últimos 7 días — ${weekSales} venta${weekSales !== 1 ? "s" : ""}. Sigue ejecutando las secuencias activas.`,
+          )
+        : t(
+            `${activeCampaigns} campanha${activeCampaigns > 1 ? "s" : ""} ativa${activeCampaigns > 1 ? "s" : ""}. Configure webhooks de receita para monitoramento completo.`,
+            `${activeCampaigns} active campaign${activeCampaigns > 1 ? "s" : ""}. Configure revenue webhooks for full monitoring.`,
+            `${activeCampaigns} campaña${activeCampaigns > 1 ? "s" : ""} activa${activeCampaigns > 1 ? "s" : ""}. Configura los webhooks de ingresos para un seguimiento completo.`,
+          );
 
   return (
     <div className={`border relative overflow-hidden ${isMonday ? "border-primary/40 bg-primary/5" : "border-border/40 bg-card/20"}`}>
@@ -1561,29 +1690,29 @@ function WeeklyReportCard({
             <div className="flex items-center gap-2 mb-0.5">
               <Calendar className="h-3.5 w-3.5 text-primary" />
               <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-                {isMonday ? "📊 Relatório Semanal — " : "Semana "}Semana {weekNum} · {today.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+                {isMonday && `📊 ${t("Relatório Semanal", "Weekly Report", "Informe semanal")} — `}{t("Semana", "Week", "Semana")} {weekNum} · {today.toLocaleDateString(intlLocale(locale), { month: "long", year: "numeric" })}
               </span>
               {isMonday && (
                 <Badge variant="outline" className="rounded-none font-mono text-[11px] px-1.5 text-primary border-primary/40 bg-primary/10">
-                  Nova semana
+                  {t("Nova semana", "New week", "Nueva semana")}
                 </Badge>
               )}
             </div>
-            <h3 className="font-mono font-bold text-sm uppercase tracking-tight">Performance Semanal</h3>
+            <h3 className="font-mono font-bold text-sm uppercase tracking-tight">{t("Performance Semanal", "Weekly Performance", "Rendimiento semanal")}</h3>
           </div>
           <Link href="/revenue">
             <Button variant="ghost" size="sm" className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1 text-primary hover:bg-primary/10 shrink-0">
-              Ver Detalhes <ChevronRight className="h-2.5 w-2.5" />
+              {t("Ver Detalhes", "View Details", "Ver detalles")} <ChevronRight className="h-2.5 w-2.5" />
             </Button>
           </Link>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           {[
-            { label: "Receita semana", value: weekRevenue > 0 ? `R$ ${(weekRevenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}` : "—", color: "text-success" },
-            { label: "Vendas", value: weekSales > 0 ? String(weekSales) : "—", color: "text-primary" },
-            { label: "Campanhas ativas", value: String(activeCampaigns), color: "text-cyan-400" },
-            { label: "Sequências ativas", value: String(activeSequences), color: "text-yellow-400" },
+            { label: t("Receita semana", "Weekly Revenue", "Ingresos semanales"), value: weekRevenue > 0 ? `R$ ${(weekRevenue / 100).toLocaleString(intlLocale(locale), { minimumFractionDigits: 0 })}` : "—", color: "text-success" },
+            { label: t("Vendas", "Sales", "Ventas"), value: weekSales > 0 ? String(weekSales) : "—", color: "text-primary" },
+            { label: t("Campanhas ativas", "Active Campaigns", "Campañas activas"), value: String(activeCampaigns), color: "text-cyan-400" },
+            { label: t("Sequências ativas", "Active Sequences", "Secuencias activas"), value: String(activeSequences), color: "text-yellow-400" },
           ].map(item => (
             <div key={item.label} className="border border-border/20 bg-background/30 px-3 py-2">
               <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-1">{item.label}</div>
@@ -1595,7 +1724,7 @@ function WeeklyReportCard({
         {/* Health score bar */}
         <div className="mb-3">
           <div className="flex justify-between mb-1">
-            <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60">Health Score da Semana</span>
+            <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60">{t("Health Score da Semana", "Weekly Health Score", "Puntuación de salud semanal")}</span>
             <span className={`font-mono text-[11px] font-bold ${trendColor}`}>{healthScore}/100</span>
           </div>
           <div className="h-1 bg-muted/20 overflow-hidden">
@@ -1615,7 +1744,7 @@ function WeeklyReportCard({
         {isMonday && (
           <div className="mt-3 flex items-center gap-2 text-[11px] font-mono text-muted-foreground/40 uppercase tracking-widest">
             <Mail className="h-3 w-3" />
-            Relatório enviado para o seu email esta manhã
+            {t("Relatório enviado para o seu email esta manhã", "Report sent to your email this morning", "Informe enviado a tu correo esta mañana")}
           </div>
         )}
       </div>

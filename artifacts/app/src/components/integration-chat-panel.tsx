@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   Sparkles, Send, Paperclip, X, Loader2, ImageIcon, AlertTriangle, Copy, LogOut, MessageCircleQuestion,
 } from "lucide-react";
+import { useUiText } from "@/lib/i18n";
 
 interface ChatMessage {
   id: string;
@@ -49,13 +50,14 @@ function parseCredentialsBlock(text: string): { clean: string; detected: Detecte
   return { clean, detected: Object.keys(detected).length > 0 ? detected : null };
 }
 
-function copyValue(label: string, value: string) {
+function copyValue(label: string, value: string, t: (pt: string, en: string, es: string) => string) {
   navigator.clipboard?.writeText(value).then(() => {
-    toast.success(`${label} copiado!`);
-  }).catch(() => toast.error("Não consegui copiar. Selecione o texto manualmente."));
+    toast.success(`${label} ${t("copiado!", "copied!", "¡copiado!")}`);
+  }).catch(() => toast.error(t("Não consegui copiar. Selecione o texto manualmente.", "Couldn’t copy. Select the text manually.", "No se pudo copiar. Selecciona el texto manualmente.")));
 }
 
 export function IntegrationChatPanel() {
+  const t = useUiText();
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -83,7 +85,7 @@ export function IntegrationChatPanel() {
       setConversation(res.conversation);
       setMessages(res.messages);
     } catch {
-      setError("Não consegui carregar o assistente agora. Tente novamente em instantes.");
+      setError(t("Não consegui carregar o assistente agora. Tente novamente em instantes.", "I couldn’t load the assistant right now. Please try again shortly.", "No pude cargar el asistente ahora. Inténtalo de nuevo en un momento."));
     } finally {
       setLoading(false);
       setLoaded(true);
@@ -123,7 +125,7 @@ export function IntegrationChatPanel() {
     const optimisticUser: ChatMessage = {
       id: `tmp-${Date.now()}`,
       role: "user",
-      content: text || "(enviei um print para você analisar)",
+      content: text || t("(enviei um print para você analisar)", "(I sent a screenshot for you to review)", "(envié una captura para que la revises)"),
       imageUrl: imagesSnapshot[0]?.dataUrl,
     };
     setMessages(prev => [...prev, optimisticUser]);
@@ -147,11 +149,11 @@ export function IntegrationChatPanel() {
     } catch (err) {
       setMessages(prev => prev.filter(m => m.id !== optimisticUser.id));
       if (err instanceof ApiError && err.status === 402) {
-        setError("Créditos insuficientes para continuar a conversa. Adicione créditos para seguir recebendo ajuda.");
+        setError(t("Créditos insuficientes para continuar a conversa. Adicione créditos para seguir recebendo ajuda.", "Not enough credits to continue this conversation. Add credits to keep getting help.", "No tienes créditos suficientes para continuar la conversación. Añade créditos para seguir recibiendo ayuda."));
       } else if (err instanceof ApiError) {
-        setError((err.data as { error?: string } | null)?.error ?? "Não consegui responder agora. Tente de novo em instantes.");
+        setError((err.data as { error?: string } | null)?.error ?? t("Não consegui responder agora. Tente de novo em instantes.", "I couldn’t respond right now. Please try again shortly.", "No pude responder ahora. Inténtalo de nuevo en un momento."));
       } else {
-        setError("Erro de conexão. Verifique sua internet e tente novamente.");
+        setError(t("Erro de conexão. Verifique sua internet e tente novamente.", "Connection error. Check your internet and try again.", "Error de conexión. Comprueba tu conexión a Internet e inténtalo de nuevo."));
       }
     } finally {
       setSending(false);
@@ -166,9 +168,9 @@ export function IntegrationChatPanel() {
       setConversation(null);
       setMessages([]);
       setLoaded(false);
-      toast.success("Conversa encerrada.");
+      toast.success(t("Conversa encerrada.", "Conversation ended.", "Conversación finalizada."));
     } catch {
-      toast.error("Não consegui encerrar a conversa agora.");
+      toast.error(t("Não consegui encerrar a conversa agora.", "I couldn’t end the conversation right now.", "No pude finalizar la conversación ahora."));
     } finally {
       setEnding(false);
     }
@@ -181,7 +183,7 @@ export function IntegrationChatPanel() {
         className="fixed bottom-6 right-6 z-[500] flex items-center gap-2 btn-weapon-primary rounded-full px-4 py-3 shadow-lg shadow-primary/20 font-mono text-[11px] uppercase tracking-widest"
       >
         <MessageCircleQuestion className="h-4 w-4" />
-        Ajuda para conectar
+        {t("Ajuda para conectar", "Connection help", "Ayuda para conectar")}
       </button>
     );
   }
@@ -192,7 +194,7 @@ export function IntegrationChatPanel() {
         <div className="flex items-center gap-2">
           <Sparkles className="h-3.5 w-3.5 text-primary" />
           <span className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">
-            Especialista em Integrações
+            {t("Especialista em Integrações", "Integration Specialist", "Especialista en integraciones")}
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -200,17 +202,17 @@ export function IntegrationChatPanel() {
             <button
               onClick={handleEndConversation}
               disabled={ending}
-              title="Encerrar conversa"
+              title={t("Encerrar conversa", "End conversation", "Finalizar conversación")}
               className="font-mono text-[9px] text-muted-foreground/50 hover:text-destructive uppercase tracking-widest flex items-center gap-1"
             >
               {ending ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <LogOut className="h-2.5 w-2.5" />}
-              Encerrar
+              {t("Encerrar", "End", "Finalizar")}
             </button>
           )}
           <button
             onClick={() => setOpen(false)}
-            aria-label="Fechar chat de integrações"
-            title="Fechar"
+            aria-label={t("Fechar chat de integrações", "Close integrations chat", "Cerrar chat de integraciones")}
+            title={t("Fechar", "Close", "Cerrar")}
             className="text-muted-foreground/50 hover:text-foreground"
           >
             <X className="h-4 w-4" />
@@ -240,23 +242,23 @@ export function IntegrationChatPanel() {
                   </div>
                   {m.imageUrl && (
                     <div className="flex justify-end">
-                      <img src={m.imageUrl} alt="print enviado" className="h-14 w-14 object-cover border border-border/40" />
+                      <img src={m.imageUrl} alt={t("print enviado", "screenshot sent", "captura enviada")} className="h-14 w-14 object-cover border border-border/40" />
                     </div>
                   )}
                   {detected && (
                     <div className="border border-primary/30 bg-primary/5 p-2 space-y-1">
-                      <p className="font-mono text-[9px] uppercase tracking-widest text-primary/80">Credenciais detectadas</p>
+                      <p className="font-mono text-[9px] uppercase tracking-widest text-primary/80">{t("Credenciais detectadas", "Credentials detected", "Credenciales detectadas")}</p>
                       {Object.entries(detected).map(([key, value]) => (
                         <button
                           key={key}
-                          onClick={() => copyValue(key, value as string)}
+                          onClick={() => copyValue(key, value as string, t)}
                           className="w-full flex items-center justify-between gap-2 font-mono text-[10px] text-foreground/80 hover:text-primary border border-border/30 px-2 py-1"
                         >
                           <span className="truncate">{key}: {value as string}</span>
                           <Copy className="h-2.5 w-2.5 shrink-0" />
                         </button>
                       ))}
-                      <p className="font-mono text-[9px] text-muted-foreground/50">Copie e cole no formulário da integração correspondente.</p>
+                      <p className="font-mono text-[9px] text-muted-foreground/50">{t("Copie e cole no formulário da integração correspondente.", "Copy and paste into the corresponding integration form.", "Copia y pega en el formulario de la integración correspondiente.")}</p>
                     </div>
                   )}
                 </div>
@@ -267,7 +269,7 @@ export function IntegrationChatPanel() {
             <div className="flex justify-start">
               <div className="px-3 py-2 bg-muted/20 border border-border/30 flex items-center gap-2">
                 <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                <span className="font-mono text-[11px] text-muted-foreground/60">Digitando…</span>
+                <span className="font-mono text-[11px] text-muted-foreground/60">{t("Digitando…", "Typing…", "Escribiendo…")}</span>
               </div>
             </div>
           )}
@@ -288,6 +290,7 @@ export function IntegrationChatPanel() {
               <img src={img.dataUrl} alt={img.name} className="h-10 w-10 object-cover border border-border/40" />
               <button
                 onClick={() => setPendingImages(prev => prev.filter((_, j) => j !== i))}
+                aria-label={t("Remover imagem", "Remove image", "Quitar imagen")}
                 className="absolute -top-1.5 -right-1.5 bg-background border border-border/50 rounded-full p-0.5"
               >
                 <X className="h-2.5 w-2.5" />
@@ -310,7 +313,7 @@ export function IntegrationChatPanel() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={pendingImages.length >= MAX_IMAGES || !conversation}
-            title="Enviar print ou foto"
+            title={t("Enviar print ou foto", "Send screenshot or photo", "Enviar captura o foto")}
             className="border border-border/50 p-2 text-muted-foreground/60 hover:text-primary hover:border-primary/40 transition-colors disabled:opacity-40"
           >
             <Paperclip className="h-4 w-4" />
@@ -319,17 +322,17 @@ export function IntegrationChatPanel() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-            placeholder="Digite sua resposta ou anexe um print…"
+            placeholder={t("Digite sua resposta ou anexe um print…", "Type your reply or attach a screenshot…", "Escribe tu respuesta o adjunta una captura…")}
             rows={1}
             disabled={!conversation}
             className="flex-1 bg-background border border-border/50 px-3 py-2 text-[12px] font-mono focus:outline-none focus:border-primary/50 resize-none max-h-20 disabled:opacity-50"
           />
-          <Button onClick={sendMessage} disabled={sending || !conversation || (!input.trim() && pendingImages.length === 0)} className="h-[38px] px-3 btn-weapon-primary rounded-none">
+          <Button onClick={sendMessage} aria-label={t("Enviar mensagem", "Send message", "Enviar mensaje")} disabled={sending || !conversation || (!input.trim() && pendingImages.length === 0)} className="h-[38px] px-3 btn-weapon-primary rounded-none">
             {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
           </Button>
         </div>
         <p className="font-mono text-[9px] text-muted-foreground/40 flex items-center gap-1">
-          <ImageIcon className="h-2.5 w-2.5" /> Aceita fotos e prints de tela
+          <ImageIcon className="h-2.5 w-2.5" /> {t("Aceita fotos e prints de tela", "Photos and screenshots are supported", "Se aceptan fotos y capturas")}
         </p>
       </div>
     </div>

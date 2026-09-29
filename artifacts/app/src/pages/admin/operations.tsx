@@ -27,6 +27,7 @@ import {
   ArrowLeft, Search, RefreshCw, Activity, Server, Database, Network, Clock, 
   AlertTriangle, ShieldAlert, XCircle, RotateCcw, Link2, Target, CheckCircle2, ListFilter
 } from "lucide-react";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -136,18 +137,18 @@ interface DeadLetterDetail {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatRelative(dateStr: string) {
+function formatRelative(dateStr: string, t: ReturnType<typeof useUiText>) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const minutes = Math.floor(diff / 60000);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return t(`${minutes} min atrás`, `${minutes}m ago`, `hace ${minutes} min`);
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t(`${hours} h atrás`, `${hours}h ago`, `hace ${hours} h`);
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return t(`${days} d atrás`, `${days}d ago`, `hace ${days} d`);
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleString("en-US", {
+function formatDate(dateStr: string, locale: string) {
+  return new Date(dateStr).toLocaleString(locale, {
     month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
   });
 }
@@ -165,6 +166,8 @@ function StatusDot({ status }: { status: string }) {
 
 export default function OperationsPage() {
   const { user } = useAuth();
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const queryClient = useQueryClient();
 
   const [searchWorkspace, setSearchWorkspace] = useState("");
@@ -229,7 +232,7 @@ export default function OperationsPage() {
           },
         } : current,
       );
-      toast.success("Replay job queued successfully");
+      toast.success(t("Tarefa de repetição adicionada à fila.", "Replay job queued successfully.", "Tarea de repetición añadida a la cola."));
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["/api/admin/operations/status"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/admin/dead-letters", id] }),
@@ -237,9 +240,9 @@ export default function OperationsPage() {
     },
     onError: (err) => {
       if (typeof err === "object" && err !== null && "status" in err && err.status === 409) {
-        toast.error("Conflict: Dead letter already claimed or replayed");
+        toast.error(t("Conflito: tarefa com falha já reivindicada ou repetida.", "Conflict: dead letter already claimed or replayed.", "Conflicto: la tarea fallida ya fue reclamada o repetida."));
       } else {
-        toast.error("Failed to trigger replay");
+        toast.error(t("Não foi possível iniciar a repetição.", "Failed to trigger replay.", "No se pudo iniciar la repetición."));
       }
     }
   });
@@ -247,7 +250,7 @@ export default function OperationsPage() {
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <p className="text-zinc-400 font-mono text-sm uppercase tracking-widest">Unauthorized access</p>
+        <p className="text-zinc-400 font-mono text-sm uppercase tracking-widest">{t("Acesso não autorizado", "Unauthorized access", "Acceso no autorizado")}</p>
       </div>
     );
   }
@@ -265,17 +268,17 @@ export default function OperationsPage() {
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/admin">
-              <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white" aria-label="Back to Admin">
+              <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white" aria-label={t("Voltar ao admin", "Back to Admin", "Volver al admin")}>
                 <ArrowLeft className="w-4 h-4" />
               </Button>
             </Link>
             <div>
               <h1 className="text-lg font-bold text-white flex items-center gap-2 font-mono uppercase tracking-widest">
                 <Activity className="w-5 h-5 text-red-400" />
-                Operations Control
+                {t("Controle de operações", "Operations Control", "Control de operaciones")}
               </h1>
               <p className="text-xs text-zinc-500 font-mono uppercase tracking-wider mt-1">
-                System Health & Intervention Surface
+                {t("Saúde do sistema e intervenções", "System Health & Intervention Surface", "Estado del sistema e intervenciones")}
               </p>
             </div>
           </div>
@@ -293,7 +296,7 @@ export default function OperationsPage() {
               className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2 border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefetching ? "animate-spin" : ""}`} />
-              Sync
+              {t("Sincronizar", "Sync", "Sincronizar")}
             </Button>
           </div>
         </div>
@@ -313,7 +316,7 @@ export default function OperationsPage() {
             {isLoading ? <Skeleton className="h-6 w-24 bg-zinc-800" /> : (
               <div>
                 <div className="font-mono text-lg text-zinc-100 uppercase">{health?.health.status ?? "unknown"}</div>
-                <div className="font-mono text-[10px] text-zinc-500 mt-1">Uptime: {Math.floor((health?.health.uptime ?? 0) / 60)}m</div>
+                <div className="font-mono text-[10px] text-zinc-500 mt-1">{t("Tempo ativo:", "Uptime:", "Tiempo activo:")} {Math.floor((health?.health.uptime ?? 0) / 60)} min</div>
               </div>
             )}
           </div>
@@ -329,7 +332,7 @@ export default function OperationsPage() {
             {isLoading ? <Skeleton className="h-6 w-24 bg-zinc-800" /> : (
               <div>
                 <div className="font-mono text-lg text-zinc-100 uppercase">{health?.health.services.database.ok ? "OK" : "DOWN"}</div>
-                <div className="font-mono text-[10px] text-zinc-500 mt-1">{health?.health.services.database.latencyMs ?? 0}ms latency</div>
+                <div className="font-mono text-[10px] text-zinc-500 mt-1">{health?.health.services.database.latencyMs ?? 0} ms {t("de latência", "latency", "de latencia")}</div>
               </div>
             )}
           </div>
@@ -345,7 +348,7 @@ export default function OperationsPage() {
             {isLoading ? <Skeleton className="h-6 w-24 bg-zinc-800" /> : (
               <div>
                 <div className="font-mono text-lg text-zinc-100 uppercase">{health?.health.services.redis.ok ? "OK" : "DOWN"}</div>
-                <div className="font-mono text-[10px] text-zinc-500 mt-1">{health?.health.services.redis.latencyMs ?? 0}ms latency</div>
+                <div className="font-mono text-[10px] text-zinc-500 mt-1">{health?.health.services.redis.latencyMs ?? 0} ms {t("de latência", "latency", "de latencia")}</div>
               </div>
             )}
           </div>
@@ -362,7 +365,7 @@ export default function OperationsPage() {
               <div>
                 <div className="font-mono text-lg text-zinc-100 uppercase">{health?.health.services.queue.ok ? "OK" : "DOWN"}</div>
                 <div className="font-mono text-[10px] text-zinc-500 mt-1">
-                  Orchestrator: {health?.health.services.queue.workers.orchestration ? "Active" : "Offline"}
+                  {t("Orquestrador:", "Orchestrator:", "Orquestador:")} {health?.health.services.queue.workers.orchestration ? t("Ativo", "Active", "Activo") : t("Offline", "Offline", "Desconectado")}
                 </div>
               </div>
             )}
@@ -383,21 +386,21 @@ export default function OperationsPage() {
                 </div>
                 <div className="space-y-1">
                   <div className="flex justify-between font-mono text-[10px] text-zinc-500">
-                    <span>Started</span>
-                    <span className="text-zinc-400">{formatRelative(s.startedAt)}</span>
+                    <span>{t("Iniciado", "Started", "Iniciado")}</span>
+                    <span className="text-zinc-400">{formatRelative(s.startedAt, t)}</span>
                   </div>
                   <div className="flex justify-between font-mono text-[10px] text-zinc-500">
-                    <span>Last Tick</span>
+                    <span>{t("Última atividade", "Last tick", "Última actividad")}</span>
                     <span className={s.stale ? "text-red-400" : "text-zinc-400"}>
-                      {s.lastTickAt ? formatRelative(s.lastTickAt) : "Never"}
+                      {s.lastTickAt ? formatRelative(s.lastTickAt, t) : t("Nunca", "Never", "Nunca")}
                     </span>
                   </div>
                   <div className="flex justify-between font-mono text-[10px] text-zinc-500">
-                    <span>Duration</span>
+                    <span>{t("Duração", "Duration", "Duración")}</span>
                     <span className="text-zinc-400">{s.lastDurationMs}ms</span>
                   </div>
                   <div className="flex justify-between font-mono text-[10px] text-zinc-500">
-                    <span>In-flight</span>
+                    <span>{t("Em andamento", "In flight", "En curso")}</span>
                     <span className="text-zinc-400">{s.inFlight}</span>
                   </div>
                 </div>
@@ -410,35 +413,35 @@ export default function OperationsPage() {
         <div className="border border-zinc-800 bg-zinc-900/20 p-4">
           <div className="flex items-center gap-3 mb-4">
             <ListFilter className="w-4 h-4 text-zinc-500" />
-            <span className="font-mono text-xs uppercase tracking-widest text-zinc-500">Global Filters</span>
+            <span className="font-mono text-xs uppercase tracking-widest text-zinc-500">{t("Filtros globais", "Global Filters", "Filtros globales")}</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <Input 
-              placeholder="Workspace ID" 
+              placeholder={t("ID do workspace", "Workspace ID", "ID del workspace")}
               value={searchWorkspace} 
               onChange={e => setSearchWorkspace(e.target.value)}
               className="bg-zinc-950 border-zinc-800 font-mono text-xs rounded-none focus-visible:ring-1 focus-visible:ring-red-500/50 text-zinc-100"
             />
             <Input 
-              placeholder="Campaign ID" 
+              placeholder={t("ID da campanha", "Campaign ID", "ID de la campaña")}
               value={searchCampaign} 
               onChange={e => setSearchCampaign(e.target.value)}
               className="bg-zinc-950 border-zinc-800 font-mono text-xs rounded-none focus-visible:ring-1 focus-visible:ring-red-500/50 text-zinc-100"
             />
             <Input 
-              placeholder="Provider (e.g. meta)" 
+              placeholder={t("Provedor (ex.: Meta)", "Provider (e.g. Meta)", "Proveedor (p. ej., Meta)")}
               value={searchProvider} 
               onChange={e => setSearchProvider(e.target.value)}
               className="bg-zinc-950 border-zinc-800 font-mono text-xs rounded-none focus-visible:ring-1 focus-visible:ring-red-500/50 text-zinc-100"
             />
             <Select value={limit} onValueChange={setLimit}>
               <SelectTrigger className="bg-zinc-950 border-zinc-800 font-mono text-xs rounded-none focus:ring-1 focus:ring-red-500/50 text-zinc-100">
-                <SelectValue placeholder="Limit" />
+                <SelectValue placeholder={t("Limite", "Limit", "Límite")} />
               </SelectTrigger>
               <SelectContent className="bg-zinc-900 border-zinc-800 rounded-none font-mono text-xs text-zinc-100">
-                <SelectItem value="10">Limit 10</SelectItem>
-                <SelectItem value="50">Limit 50</SelectItem>
-                <SelectItem value="100">Limit 100</SelectItem>
+                <SelectItem value="10">{t("Limite 10", "Limit 10", "Límite 10")}</SelectItem>
+                <SelectItem value="50">{t("Limite 50", "Limit 50", "Límite 50")}</SelectItem>
+                <SelectItem value="100">{t("Limite 100", "Limit 100", "Límite 100")}</SelectItem>
               </SelectContent>
             </Select>
             <Button
@@ -452,7 +455,7 @@ export default function OperationsPage() {
               className="rounded-none font-mono uppercase text-xs tracking-widest gap-2"
             >
               <Search className="h-3.5 w-3.5" />
-              Apply filters
+              {t("Aplicar filtros", "Apply filters", "Aplicar filtros")}
             </Button>
           </div>
         </div>
@@ -460,7 +463,7 @@ export default function OperationsPage() {
         {error ? (
           <div className="border border-red-500/30 bg-red-500/10 p-6 flex flex-col items-center justify-center">
             <ShieldAlert className="w-8 h-8 text-red-500 mb-3" />
-            <p className="font-mono text-sm text-red-400 uppercase tracking-widest">Failed to fetch operations status</p>
+            <p className="font-mono text-sm text-red-400 uppercase tracking-widest">{t("Falha ao carregar o status das operações", "Failed to fetch operations status", "No se pudo cargar el estado de las operaciones")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -470,7 +473,7 @@ export default function OperationsPage() {
               <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/80">
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-orange-400" />
-                  <span className="font-mono text-xs uppercase tracking-widest text-zinc-300">Stuck Campaigns</span>
+                  <span className="font-mono text-xs uppercase tracking-widest text-zinc-300">{t("Campanhas travadas", "Stuck Campaigns", "Campañas atascadas")}</span>
                 </div>
                 <Badge variant="outline" className="rounded-none bg-zinc-950 border-zinc-800 text-zinc-400 font-mono text-[10px]">
                   {health?.stuckCampaigns.length ?? 0}
@@ -484,15 +487,15 @@ export default function OperationsPage() {
                   </div>
                 ) : health?.stuckCampaigns.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-zinc-500 font-mono text-xs uppercase tracking-widest p-8">
-                    No stuck campaigns
+                    {t("Nenhuma campanha travada", "No stuck campaigns", "No hay campañas atascadas")}
                   </div>
                 ) : (
                   <table className="w-full text-left text-sm">
                     <thead className="bg-zinc-950 font-mono text-[10px] text-zinc-500 uppercase tracking-widest sticky top-0">
                       <tr>
-                        <th className="px-4 py-2 font-normal">Campaign</th>
-                        <th className="px-4 py-2 font-normal">Status</th>
-                        <th className="px-4 py-2 font-normal">Age</th>
+                        <th className="px-4 py-2 font-normal">{t("Campanha", "Campaign", "Campaña")}</th>
+                        <th className="px-4 py-2 font-normal">{t("Status", "Status", "Estado")}</th>
+                        <th className="px-4 py-2 font-normal">{t("Tempo", "Age", "Tiempo")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800/50">
@@ -508,7 +511,7 @@ export default function OperationsPage() {
                             </Badge>
                           </td>
                           <td className="px-4 py-3 font-mono text-xs text-zinc-400">
-                            {formatRelative(c.updatedAt)}
+                            {formatRelative(c.updatedAt, t)}
                           </td>
                         </tr>
                       ))}
@@ -523,10 +526,10 @@ export default function OperationsPage() {
               <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/80">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-red-500" />
-                  <span className="font-mono text-xs uppercase tracking-widest text-zinc-300">Dead Letters</span>
+                  <span className="font-mono text-xs uppercase tracking-widest text-zinc-300">{t("Tarefas com falha", "Dead Letters", "Tareas fallidas")}</span>
                 </div>
                 <Badge variant="outline" className={`rounded-none font-mono text-[10px] ${health?.deadLetters.available ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-zinc-950 border-zinc-800 text-zinc-400"}`}>
-                  {health?.deadLetters.entries.length ?? 0} {health?.deadLetters.available ? "in queue (more available)" : "in queue"}
+                  {health?.deadLetters.entries.length ?? 0} {health?.deadLetters.available ? t("na fila (há mais)", "in queue (more available)", "en cola (hay más)") : t("na fila", "in queue", "en cola")}
                 </Badge>
               </div>
               <div className="flex-1 overflow-auto p-0">
@@ -537,16 +540,16 @@ export default function OperationsPage() {
                   </div>
                 ) : health?.deadLetters.entries.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-zinc-500 font-mono text-xs uppercase tracking-widest p-8">
-                    Queue is clear
+                    {t("Fila vazia", "Queue is clear", "Cola vacía")}
                   </div>
                 ) : (
                   <table className="w-full text-left text-sm">
                     <thead className="bg-zinc-950 font-mono text-[10px] text-zinc-500 uppercase tracking-widest sticky top-0">
                       <tr>
-                        <th className="px-4 py-2 font-normal">Action</th>
-                        <th className="px-4 py-2 font-normal">Class</th>
-                        <th className="px-4 py-2 font-normal">Status</th>
-                        <th className="px-4 py-2 font-normal">Action</th>
+                        <th className="px-4 py-2 font-normal">{t("Ação", "Action", "Acción")}</th>
+                        <th className="px-4 py-2 font-normal">{t("Classificação", "Class", "Clasificación")}</th>
+                        <th className="px-4 py-2 font-normal">{t("Status", "Status", "Estado")}</th>
+                        <th className="px-4 py-2 font-normal">{t("Ação", "Action", "Acción")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800/50">
@@ -554,7 +557,7 @@ export default function OperationsPage() {
                         <tr key={dl.id} className="hover:bg-zinc-800/20 transition-colors">
                           <td className="px-4 py-3">
                             <div className="font-mono text-xs text-zinc-300 truncate max-w-[150px]" title={dl.action}>{dl.action}</div>
-                            <div className="font-mono text-[10px] text-zinc-600">{formatRelative(dl.lastFailedAt)}</div>
+                            <div className="font-mono text-[10px] text-zinc-600">{formatRelative(dl.lastFailedAt, t)}</div>
                           </td>
                           <td className="px-4 py-3 font-mono text-[10px] text-zinc-400 uppercase">
                             {dl.classification}
@@ -587,7 +590,7 @@ export default function OperationsPage() {
               <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/80">
                 <div className="flex items-center gap-2">
                   <Link2 className="w-4 h-4 text-blue-400" />
-                  <span className="font-mono text-xs uppercase tracking-widest text-zinc-300">Integration Health</span>
+                  <span className="font-mono text-xs uppercase tracking-widest text-zinc-300">{t("Saúde das integrações", "Integration Health", "Estado de las integraciones")}</span>
                 </div>
                 <Badge variant="outline" className="rounded-none bg-zinc-950 border-zinc-800 text-zinc-400 font-mono text-[10px]">
                   {health?.integrations.length ?? 0}
@@ -601,16 +604,16 @@ export default function OperationsPage() {
                   </div>
                 ) : health?.integrations.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-zinc-500 font-mono text-xs uppercase tracking-widest p-8">
-                    No matching integrations
+                    {t("Nenhuma integração encontrada", "No matching integrations", "No se encontraron integraciones")}
                   </div>
                 ) : (
                   <table className="w-full text-left text-sm">
                     <thead className="bg-zinc-950 font-mono text-[10px] text-zinc-500 uppercase tracking-widest sticky top-0">
                       <tr>
-                        <th className="px-4 py-2 font-normal">Provider / Account</th>
-                        <th className="px-4 py-2 font-normal">Health</th>
-                        <th className="px-4 py-2 font-normal">Expiry</th>
-                        <th className="px-4 py-2 font-normal">Updated</th>
+                        <th className="px-4 py-2 font-normal">{t("Provedor / conta", "Provider / Account", "Proveedor / cuenta")}</th>
+                        <th className="px-4 py-2 font-normal">{t("Saúde", "Health", "Estado")}</th>
+                        <th className="px-4 py-2 font-normal">{t("Expiração", "Expiry", "Vencimiento")}</th>
+                        <th className="px-4 py-2 font-normal">{t("Atualizado", "Updated", "Actualizado")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800/50">
@@ -630,14 +633,14 @@ export default function OperationsPage() {
                                 <Badge variant="outline" className={`rounded-none font-mono text-[10px] uppercase tracking-widest ${i.expiry === "expired" ? "border-red-500/30 text-red-400 bg-red-500/10" : i.expiry === "expiring_soon" ? "border-yellow-500/30 text-yellow-400 bg-yellow-500/10" : "border-zinc-800 text-zinc-400 bg-zinc-950"}`}>
                                   {i.expiry}
                                 </Badge>
-                                {i.expiresAt && <div className="font-mono text-[10px] text-zinc-600 mt-1">{formatRelative(i.expiresAt)}</div>}
+                                {i.expiresAt && <div className="font-mono text-[10px] text-zinc-600 mt-1">{formatRelative(i.expiresAt, t)}</div>}
                               </div>
                             ) : (
-                              <span className="font-mono text-[10px] text-zinc-600">N/A</span>
+                              <span className="font-mono text-[10px] text-zinc-600">{t("N/D", "N/A", "N/D")}</span>
                             )}
                           </td>
                           <td className="px-4 py-3 font-mono text-xs text-zinc-400">
-                            {formatRelative(i.updatedAt)}
+                            {formatRelative(i.updatedAt, t)}
                           </td>
                         </tr>
                       ))}
@@ -652,7 +655,7 @@ export default function OperationsPage() {
               <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/80">
                 <div className="flex items-center gap-2">
                   <XCircle className="w-4 h-4 text-zinc-500" />
-                  <span className="font-mono text-xs uppercase tracking-widest text-zinc-300">Recent Failures</span>
+                  <span className="font-mono text-xs uppercase tracking-widest text-zinc-300">{t("Falhas recentes", "Recent Failures", "Fallos recientes")}</span>
                 </div>
                 <Badge variant="outline" className="rounded-none bg-zinc-950 border-zinc-800 text-zinc-400 font-mono text-[10px]">
                   {health?.recentFailures.length ?? 0}
@@ -666,15 +669,15 @@ export default function OperationsPage() {
                   </div>
                 ) : health?.recentFailures.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-zinc-500 font-mono text-xs uppercase tracking-widest p-8">
-                    No recent failures
+                    {t("Nenhuma falha recente", "No recent failures", "No hay fallos recientes")}
                   </div>
                 ) : (
                   <table className="w-full text-left text-sm">
                     <thead className="bg-zinc-950 font-mono text-[10px] text-zinc-500 uppercase tracking-widest sticky top-0">
                       <tr>
-                        <th className="px-4 py-2 font-normal">Agent / Action</th>
-                        <th className="px-4 py-2 font-normal">Campaign</th>
-                        <th className="px-4 py-2 font-normal">Occurred</th>
+                        <th className="px-4 py-2 font-normal">{t("Agente / ação", "Agent / Action", "Agente / acción")}</th>
+                        <th className="px-4 py-2 font-normal">{t("Campanha", "Campaign", "Campaña")}</th>
+                        <th className="px-4 py-2 font-normal">{t("Ocorrência", "Occurred", "Ocurrido")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800/50">
@@ -690,7 +693,7 @@ export default function OperationsPage() {
                             </div>
                           </td>
                           <td className="px-4 py-3 font-mono text-xs text-zinc-400">
-                            {formatRelative(f.occurredAt)}
+                            {formatRelative(f.occurredAt, t)}
                           </td>
                         </tr>
                       ))}
@@ -710,7 +713,7 @@ export default function OperationsPage() {
           <DialogHeader className="p-6 border-b border-zinc-800 bg-zinc-900/50">
             <DialogTitle className="font-mono uppercase tracking-widest text-sm flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-red-500" />
-              Dead Letter Inspection
+              {t("Inspeção de tarefa com falha", "Dead Letter Inspection", "Inspección de tarea fallida")}
             </DialogTitle>
             <DialogDescription className="font-mono text-xs text-zinc-500 mt-2">
               ID: {selectedDeadLetterId}
@@ -727,66 +730,66 @@ export default function OperationsPage() {
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Action</p>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">{t("Ação", "Action", "Acción")}</p>
                     <p className="font-mono text-xs text-zinc-300">{deadLetterDetail.deadLetter.action}</p>
                   </div>
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Classification</p>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">{t("Classificação", "Classification", "Clasificación")}</p>
                     <Badge variant="outline" className="rounded-none bg-zinc-900 border-zinc-700 text-zinc-300 font-mono text-[10px] uppercase tracking-widest">
                       {deadLetterDetail.deadLetter.classification}
                     </Badge>
                   </div>
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Source</p>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">{t("Origem", "Source", "Origen")}</p>
                     <p className="font-mono text-xs text-zinc-300">{deadLetterDetail.deadLetter.source}</p>
                   </div>
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Attempt Count</p>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">{t("Número de tentativas", "Attempt Count", "Número de intentos")}</p>
                     <p className="font-mono text-xs text-zinc-300">{deadLetterDetail.deadLetter.attemptCount}</p>
                   </div>
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">First Failed</p>
-                    <p className="font-mono text-xs text-zinc-300">{formatDate(deadLetterDetail.deadLetter.firstFailedAt)}</p>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">{t("Primeira falha", "First Failed", "Primer fallo")}</p>
+                    <p className="font-mono text-xs text-zinc-300">{formatDate(deadLetterDetail.deadLetter.firstFailedAt, intlLocale(locale))}</p>
                   </div>
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Last Failed</p>
-                    <p className="font-mono text-xs text-zinc-300">{formatDate(deadLetterDetail.deadLetter.lastFailedAt)}</p>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">{t("Última falha", "Last Failed", "Último fallo")}</p>
+                    <p className="font-mono text-xs text-zinc-300">{formatDate(deadLetterDetail.deadLetter.lastFailedAt, intlLocale(locale))}</p>
                   </div>
                 </div>
 
                 <div>
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-red-400 mb-2">Error Summary</p>
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-red-400 mb-2">{t("Resumo do erro", "Error Summary", "Resumen del error")}</p>
                   <div className="bg-red-500/5 border border-red-500/20 p-3 overflow-x-auto">
                     <pre className="font-mono text-xs text-red-300 whitespace-pre-wrap">
-                      {deadLetterDetail.deadLetter.errorSummary || "No error details available"}
+                      {deadLetterDetail.deadLetter.errorSummary || t("Detalhes do erro indisponíveis", "No error details available", "Detalles del error no disponibles")}
                     </pre>
                   </div>
                 </div>
 
                 {(deadLetterDetail.deadLetter.replayJobId || deadLetterDetail.deadLetter.replayErrorSummary) && (
                   <div className="border border-zinc-800 bg-zinc-900/50 p-4">
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-400 mb-3 border-b border-zinc-800 pb-2">Replay Evidence</p>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-400 mb-3 border-b border-zinc-800 pb-2">{t("Dados da repetição", "Replay Evidence", "Datos de repetición")}</p>
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
-                        <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Replay Job ID</p>
+                        <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">{t("ID da tarefa repetida", "Replay Job ID", "ID de tarea repetida")}</p>
                         <p className="font-mono text-xs text-zinc-300">{deadLetterDetail.deadLetter.replayJobId || "—"}</p>
                       </div>
                       <div>
-                        <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Replayed By</p>
+                        <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">{t("Repetida por", "Replayed By", "Repetida por")}</p>
                         <p className="font-mono text-xs text-zinc-300 truncate">{deadLetterDetail.deadLetter.replayedBy || "—"}</p>
                       </div>
                       <div>
-                        <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Replayed At</p>
-                        <p className="font-mono text-xs text-zinc-300">{deadLetterDetail.deadLetter.replayedAt ? formatDate(deadLetterDetail.deadLetter.replayedAt) : "—"}</p>
+                        <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">{t("Repetida em", "Replayed At", "Repetida el")}</p>
+                        <p className="font-mono text-xs text-zinc-300">{deadLetterDetail.deadLetter.replayedAt ? formatDate(deadLetterDetail.deadLetter.replayedAt, intlLocale(locale)) : "—"}</p>
                       </div>
                       <div>
-                        <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Finished At</p>
-                        <p className="font-mono text-xs text-zinc-300">{deadLetterDetail.deadLetter.replayFinishedAt ? formatDate(deadLetterDetail.deadLetter.replayFinishedAt) : "—"}</p>
+                        <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 mb-1">{t("Finalizada em", "Finished At", "Finalizada el")}</p>
+                        <p className="font-mono text-xs text-zinc-300">{deadLetterDetail.deadLetter.replayFinishedAt ? formatDate(deadLetterDetail.deadLetter.replayFinishedAt, intlLocale(locale)) : "—"}</p>
                       </div>
                     </div>
                     {deadLetterDetail.deadLetter.replayErrorSummary && (
                       <div>
-                        <p className="font-mono text-[10px] uppercase tracking-widest text-red-400 mb-2">Replay Error</p>
+                        <p className="font-mono text-[10px] uppercase tracking-widest text-red-400 mb-2">{t("Erro ao repetir", "Replay Error", "Error al repetir")}</p>
                         <div className="bg-red-500/5 border border-red-500/20 p-3 overflow-x-auto">
                           <pre className="font-mono text-xs text-red-300 whitespace-pre-wrap">
                             {deadLetterDetail.deadLetter.replayErrorSummary}
@@ -802,7 +805,7 @@ export default function OperationsPage() {
 
           <DialogFooter className="p-4 border-t border-zinc-800 bg-zinc-900/50 sm:justify-between items-center flex-row flex">
             <div className="font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
-              Replay Status: {deadLetterDetail?.deadLetter.replayStatus || "Unknown"}
+              {t("Status da repetição:", "Replay Status:", "Estado de repetición:")} {deadLetterDetail?.deadLetter.replayStatus || "unknown"}
             </div>
             <div className="flex gap-2">
               <Button 
@@ -810,7 +813,7 @@ export default function OperationsPage() {
                 onClick={() => setSelectedDeadLetterId(null)}
                 className="rounded-none font-mono text-xs uppercase tracking-widest border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200"
               >
-                Cancel
+                {t("Cancelar", "Cancel", "Cancelar")}
               </Button>
               <Button 
                 variant="default"
@@ -828,7 +831,7 @@ export default function OperationsPage() {
                 ) : (
                   <RotateCcw className="w-3.5 h-3.5" />
                 )}
-                Confirm Replay
+                {t("Confirmar repetição", "Confirm Replay", "Confirmar repetición")}
               </Button>
             </div>
           </DialogFooter>

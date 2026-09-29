@@ -3,6 +3,7 @@ import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Loader2, TrendingUp, Users, ShoppingCart, DollarSign, Info, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useUiText } from "@/lib/i18n";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -69,10 +70,10 @@ const roiColor = (roi: number) =>
 const roasColor = (roas: number) =>
   roas >= 3 ? "text-emerald-400" : roas >= 1.5 ? "text-cyan-400" : roas >= 1 ? "text-yellow-400" : "text-red-400";
 
-const SCENARIO_LABELS: Record<Scenario, { label: string; sub: string; dot: string }> = {
-  low: { label: "Pessimista",  sub: "CPL alto, conversão baixa",   dot: "bg-yellow-500" },
-  mid: { label: "Realista",    sub: "Benchmarks médios do mercado", dot: "bg-cyan-400" },
-  high:{ label: "Otimista",   sub: "Criativos fortes, alta conversão", dot: "bg-emerald-400" },
+const SCENARIO_LABELS: Record<Scenario, { label: [string, string, string]; sub: [string, string, string]; dot: string }> = {
+  low: { label: ["Pessimista", "Pessimistic", "Pesimista"], sub: ["CPL alto, conversão baixa", "High CPL, low conversion", "CPL alto, conversión baja"], dot: "bg-yellow-500" },
+  mid: { label: ["Realista", "Realistic", "Realista"], sub: ["Benchmarks médios do mercado", "Average market benchmarks", "Referencias promedio del mercado"], dot: "bg-cyan-400" },
+  high:{ label: ["Otimista", "Optimistic", "Optimista"], sub: ["Criativos fortes, alta conversão", "Strong creative, high conversion", "Creativos sólidos, alta conversión"], dot: "bg-emerald-400" },
 };
 
 const PLATFORM_COLORS: Record<string, string> = {
@@ -104,11 +105,12 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
 // ── Budget bar (allocation visual) ─────────────────────────────────────────────
 
 function AllocationBar({ platforms }: { platforms: PlatformSim[] }) {
+  const t = useUiText();
   const total = platforms.reduce((s, p) => s + p.budgetPct, 0);
   return (
     <div className="space-y-2">
       <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">
-        Distribuição recomendada do budget
+        {t("Distribuição recomendada do orçamento", "Recommended budget allocation", "Distribución recomendada del presupuesto")}
       </div>
       <div className="flex h-3 rounded-none overflow-hidden gap-px">
         {platforms.map((p) => (
@@ -135,6 +137,7 @@ function AllocationBar({ platforms }: { platforms: PlatformSim[] }) {
 // ── Platform card ──────────────────────────────────────────────────────────────
 
 function PlatformCard({ p, scenario }: { p: PlatformSim; scenario: Scenario }) {
+  const t = useUiText();
   const [open, setOpen] = useState(false);
   const roas = p.roas[scenario];
   return (
@@ -147,20 +150,20 @@ function PlatformCard({ p, scenario }: { p: PlatformSim; scenario: Scenario }) {
           <span className="text-base">{p.icon}</span>
           <div>
             <div className="font-mono text-xs font-bold text-foreground">{p.label}</div>
-            <div className="font-mono text-[10px] text-muted-foreground/50">{fmtBRL(p.budgetAllocation)} · {p.budgetPct}% do budget</div>
+            <div className="font-mono text-[10px] text-muted-foreground/50">{fmtBRL(p.budgetAllocation)} · {p.budgetPct}% {t("do orçamento", "of budget", "del presupuesto")}</div>
           </div>
         </div>
         <div className="flex items-center gap-4 shrink-0">
           <div className="text-right hidden sm:block">
-            <div className="font-mono text-[10px] text-muted-foreground/50">ROAS</div>
+            <div className="font-mono text-[10px] text-muted-foreground/50">{t("ROAS", "ROAS", "ROAS")}</div>
             <div className={`font-mono text-sm font-bold ${roasColor(roas)}`}>{roas.toFixed(1)}x</div>
           </div>
           <div className="text-right">
-            <div className="font-mono text-[10px] text-muted-foreground/50">Leads</div>
+            <div className="font-mono text-[10px] text-muted-foreground/50">{t("Leads", "Leads", "Prospectos")}</div>
             <div className="font-mono text-sm font-bold text-primary">{fmtNum(p.leads[scenario])}</div>
           </div>
           <div className="text-right hidden sm:block">
-            <div className="font-mono text-[10px] text-muted-foreground/50">Vendas</div>
+            <div className="font-mono text-[10px] text-muted-foreground/50">{t("Vendas", "Sales", "Ventas")}</div>
             <div className="font-mono text-sm font-bold text-foreground">{p.sales[scenario]}</div>
           </div>
           {open ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />}
@@ -169,12 +172,12 @@ function PlatformCard({ p, scenario }: { p: PlatformSim; scenario: Scenario }) {
 
       {open && (
         <div className="border-t border-border/20 p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 animate-in slide-in-from-top-1 duration-150">
-          <Stat label="Impressões"  value={fmtNum(p.impressions[scenario])} />
-          <Stat label="Alcance"     value={fmtNum(p.reach[scenario])} />
+          <Stat label={t("Impressões", "Impressions", "Impresiones")} value={fmtNum(p.impressions[scenario])} />
+          <Stat label={t("Alcance", "Reach", "Alcance")} value={fmtNum(p.reach[scenario])} />
           <Stat label="Leads"       value={fmtNum(p.leads[scenario])} />
-          <Stat label="CPL"         value={fmtBRL(Math.round(p.cpl[scenario]))} sub="custo por lead" />
-          <Stat label="Vendas"      value={`${p.sales[scenario]}`} />
-          <Stat label="CPA"         value={p.cpa[scenario] > 0 ? fmtBRL(p.cpa[scenario]) : "–"} sub="custo por venda" />
+          <Stat label="CPL" value={fmtBRL(Math.round(p.cpl[scenario]))} sub={t("custo por lead", "cost per lead", "costo por lead")} />
+          <Stat label={t("Vendas", "Sales", "Ventas")} value={`${p.sales[scenario]}`} />
+          <Stat label="CPA" value={p.cpa[scenario] > 0 ? fmtBRL(p.cpa[scenario]) : "–"} sub={t("custo por venda", "cost per sale", "costo por venta")} />
           <div className="col-span-full">
             <div className="font-mono text-[10px] text-muted-foreground/50 mt-1 leading-relaxed">{p.notes}</div>
           </div>
@@ -204,19 +207,20 @@ function KpiCard({ icon: Icon, label, value, sub, color }: {
 // ── Break-even strip ───────────────────────────────────────────────────────────
 
 function BreakEven({ sim }: { sim: BudgetSimulation }) {
+  const t = useUiText();
   return (
     <div className="border border-border/30 bg-card/20 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
       <div>
-        <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">Ponto de equilíbrio</div>
+        <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">{t("Ponto de equilíbrio", "Break-even point", "Punto de equilibrio")}</div>
         <div className="font-mono text-sm text-foreground">
-          Você precisa de <span className="text-primary font-bold">{sim.breakEvenSales} vendas</span> para cobrir o investimento
-          <span className="text-muted-foreground/50 ml-1">(CPA máx. {fmtBRL(sim.breakEvenCpa)})</span>
+          {t("Você precisa de", "You need", "Necesitas")} <span className="text-primary font-bold">{sim.breakEvenSales} {t("vendas", "sales", "ventas")}</span> {t("para cobrir o investimento", "to cover the investment", "para cubrir la inversión")}
+          <span className="text-muted-foreground/50 ml-1">({t("CPA máx.", "Max. CPA", "CPA máx.")} {fmtBRL(sim.breakEvenCpa)})</span>
         </div>
       </div>
       <div className="font-mono text-[10px] text-muted-foreground/40 shrink-0">
         {sim.totalSales.mid >= sim.breakEvenSales
-          ? <span className="text-emerald-400">✓ Cenário realista supera o break-even</span>
-          : <span className="text-yellow-400">⚠ Cenário realista abaixo do break-even — otimize criativos</span>}
+          ? <span className="text-emerald-400">✓ {t("O cenário realista supera o ponto de equilíbrio", "Realistic scenario exceeds break-even", "El escenario realista supera el punto de equilibrio")}</span>
+          : <span className="text-yellow-400">⚠ {t("Cenário realista abaixo do ponto de equilíbrio — otimize os criativos", "Realistic scenario is below break-even — optimize creative", "El escenario realista está por debajo del punto de equilibrio: optimiza los creativos")}</span>}
       </div>
     </div>
   );
@@ -237,6 +241,7 @@ export function BudgetSimulator({
   campaignType?: string;
   productCategory?: string;
 }) {
+  const t = useUiText();
   const [sim, setSim] = useState<BudgetSimulation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -269,7 +274,7 @@ export function BudgetSimulator({
       <div className="border border-primary/20 bg-card/30 p-4 flex items-center gap-3">
         <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />
         <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
-          Calculando simulação com benchmarks reais...
+           {t("Calculando a simulação com dados de referência...", "Calculating simulation with real benchmarks...", "Calculando la simulación con datos de referencia...")}
         </span>
       </div>
     );
@@ -278,9 +283,9 @@ export function BudgetSimulator({
   if (error || !sim) {
     return (
       <div className="border border-border/30 bg-card/20 p-4 flex items-center justify-between gap-3">
-        <span className="font-mono text-xs text-muted-foreground">Não foi possível carregar a simulação.</span>
+        <span className="font-mono text-xs text-muted-foreground">{t("Não foi possível carregar a simulação.", "Could not load the simulation.", "No se pudo cargar la simulación.")}</span>
         <Button variant="ghost" size="sm" onClick={() => void load()} className="font-mono text-xs gap-1.5">
-          <RefreshCw className="h-3 w-3" />Tentar novamente
+          <RefreshCw className="h-3 w-3" />{t("Tentar novamente", "Try again", "Intentar de nuevo")}
         </Button>
       </div>
     );
@@ -296,13 +301,13 @@ export function BudgetSimulator({
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
             <span className="font-mono text-xs font-bold uppercase tracking-widest text-primary">
-              Simulação de Alcance e Retorno
+               {t("Simulação de alcance e retorno", "Reach and return simulation", "Simulación de alcance y retorno")}
             </span>
           </div>
           <div className="font-mono text-[10px] text-muted-foreground/50 mt-0.5">
-            Budget: <span className="text-foreground font-bold">{fmtBRL(sim.budget)}</span>
-            &nbsp;·&nbsp; Ticket: <span className="text-foreground font-bold">{fmtBRL(sim.productPrice)}</span>
-            &nbsp;·&nbsp; Dados reais Q1 2026
+             {t("Orçamento:", "Budget:", "Presupuesto:")} <span className="text-foreground font-bold">{fmtBRL(sim.budget)}</span>
+             &nbsp;·&nbsp; {t("Preço:", "Price:", "Precio:")} <span className="text-foreground font-bold">{fmtBRL(sim.productPrice)}</span>
+             &nbsp;·&nbsp; {t("Dados reais do 1º trimestre de 2026", "Real Q1 2026 data", "Datos reales del primer trimestre de 2026")}
           </div>
         </div>
         <Button
@@ -311,7 +316,7 @@ export function BudgetSimulator({
           onClick={() => void load()}
           className="font-mono text-[10px] uppercase tracking-widest gap-1.5 text-muted-foreground hover:text-foreground h-7 px-2"
         >
-          <RefreshCw className="h-3 w-3" />Atualizar
+           <RefreshCw className="h-3 w-3" />{t("Atualizar", "Refresh", "Actualizar")}
         </Button>
       </div>
 
@@ -329,10 +334,10 @@ export function BudgetSimulator({
                 >
                   <div className="flex items-center gap-1.5">
                     <div className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-                    {meta.label}
+                    {t(...meta.label)}
                   </div>
                   <span className="text-[9px] text-muted-foreground/60 data-[state=active]:text-primary-foreground/70 hidden sm:block">
-                    {meta.sub}
+                     {t(...meta.sub)}
                   </span>
                 </TabsTrigger>
               );
@@ -345,28 +350,28 @@ export function BudgetSimulator({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <KpiCard
                   icon={Users}
-                  label="Alcance total"
+                   label={t("Alcance total", "Total reach", "Alcance total")}
                   value={fmtNum(sim.totalReach[sc])}
-                  sub="pessoas únicas impactadas"
+                   sub={t("pessoas únicas impactadas", "unique people reached", "personas únicas alcanzadas")}
                   color="text-blue-400"
                 />
                 <KpiCard
                   icon={TrendingUp}
-                  label="Leads gerados"
+                   label={t("Leads gerados", "Leads generated", "Contactos generados")}
                   value={fmtNum(sim.totalLeads[sc])}
-                  sub="contatos capturados"
+                   sub={t("contatos capturados", "contacts captured", "contactos captados")}
                   color="text-cyan-400"
                 />
                 <KpiCard
                   icon={ShoppingCart}
-                  label="Vendas estimadas"
+                   label={t("Vendas estimadas", "Estimated sales", "Ventas estimadas")}
                   value={`${sim.totalSales[sc]}`}
-                  sub={`CPA médio ${fmtBRL(sim.totalSales[sc] > 0 ? Math.round(sim.budget / sim.totalSales[sc]) : 0)}`}
+                   sub={`${t("CPA médio", "Avg. CPA", "CPA promedio")} ${fmtBRL(sim.totalSales[sc] > 0 ? Math.round(sim.budget / sim.totalSales[sc]) : 0)}`}
                   color="text-primary"
                 />
                 <KpiCard
                   icon={DollarSign}
-                  label="Faturamento"
+                   label={t("Faturamento", "Revenue", "Ingresos")}
                   value={fmtBRL(sim.totalRevenue[sc])}
                   sub={`ROAS ${sim.totalRoas[sc].toFixed(1)}x · ROI ${sim.totalRoi[sc] > 0 ? "+" : ""}${sim.totalRoi[sc]}%`}
                   color={roiColor(sim.totalRoi[sc])}
@@ -379,7 +384,7 @@ export function BudgetSimulator({
               {/* Platform breakdown */}
               <div className="space-y-1.5">
                 <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">
-                  Detalhamento por plataforma — clique para expandir
+                   {t("Detalhamento por plataforma — clique para expandir", "Breakdown by platform — click to expand", "Detalle por plataforma — haz clic para ampliar")}
                 </div>
                 {sim.platforms.map((p) => (
                   <PlatformCard key={p.platform} p={p} scenario={sc} />

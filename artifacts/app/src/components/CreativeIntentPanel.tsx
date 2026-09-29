@@ -9,6 +9,7 @@ import {
   Wand2, CheckCircle2, Loader2, ChevronDown, ChevronUp,
   Zap, Eye, Target, AlertTriangle, Sparkles, RotateCcw,
 } from "lucide-react";
+import { useUiText } from "@/lib/i18n";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,12 +44,12 @@ interface CreativeIntentData {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const ARCHETYPE_LABELS: Record<string, string> = {
-  authority:     "Autoridade",
-  aspiration:    "Aspiração",
-  fear_removal:  "Remoção de Medo",
-  curiosity:     "Curiosidade",
-  community:     "Comunidade",
+const ARCHETYPE_LABELS: Record<string, [string, string, string]> = {
+  authority:     ["Autoridade", "Authority", "Autoridad"],
+  aspiration:    ["Aspiração", "Aspiration", "Aspiración"],
+  fear_removal:  ["Remoção de medo", "Fear removal", "Eliminar el miedo"],
+  curiosity:     ["Curiosidade", "Curiosity", "Curiosidad"],
+  community:     ["Comunidade", "Community", "Comunidad"],
 };
 
 const PLATFORM_COLORS: Record<string, string> = {
@@ -91,6 +92,7 @@ function DraftCard({
   onApprove: (index: number) => void;
   approving: boolean;
 }) {
+  const t = useUiText();
   const [expanded, setExpanded] = useState(false);
   const letters = ["A", "B", "C"];
 
@@ -116,7 +118,7 @@ function DraftCard({
                 {draft.title}
               </div>
               <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
-                {ARCHETYPE_LABELS[draft.archetype] ?? draft.archetype}
+                 {ARCHETYPE_LABELS[draft.archetype] ? t(...ARCHETYPE_LABELS[draft.archetype]) : draft.archetype}
               </div>
             </div>
           </div>
@@ -127,7 +129,7 @@ function DraftCard({
             }`}>
               {draft.confidenceScore}
             </div>
-            <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">confidence</div>
+            <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("confiança", "confidence", "confianza")}</div>
           </div>
         </div>
 
@@ -139,9 +141,9 @@ function DraftCard({
 
         {/* Score bars */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-          <ScoreBar label="ICP Alignment" value={draft.icpAlignment}
+          <ScoreBar label={t("Aderência ao perfil ideal", "ICP alignment", "Alineación con el perfil ideal")} value={draft.icpAlignment}
             color={draft.icpAlignment >= 80 ? "text-emerald-400" : draft.icpAlignment >= 65 ? "text-yellow-400" : "text-red-400"} />
-          <ScoreBar label="Retenção" value={draft.retentionPrediction}
+          <ScoreBar label={t("Retenção", "Retention", "Retención")} value={draft.retentionPrediction}
             color={draft.retentionPrediction >= 80 ? "text-emerald-400" : draft.retentionPrediction >= 65 ? "text-yellow-400" : "text-red-400"} />
         </div>
       </div>
@@ -171,33 +173,33 @@ function DraftCard({
           className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors py-2 w-full"
         >
           {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-          {expanded ? "Menos detalhes" : "Ver direção completa"}
+          {expanded ? t("Menos detalhes", "Fewer details", "Menos detalles") : t("Ver direção completa", "View full direction", "Ver dirección completa")}
         </button>
 
         {expanded && (
           <div className="pb-4 space-y-3 border-t border-border/20 pt-3">
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Estilo Visual</div>
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">{t("Estilo visual", "Visual style", "Estilo visual")}</div>
               <p className="font-mono text-xs text-foreground/80 leading-relaxed">{draft.visualStyle}</p>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Enquadramento Narrativo</div>
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">{t("Enquadramento narrativo", "Narrative framing", "Enfoque narrativo")}</div>
               <p className="font-mono text-xs text-foreground/80 leading-relaxed">{draft.narrativeFraming}</p>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">CTA Principal</div>
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">{t("CTA principal", "Primary CTA", "Llamada a la acción principal")}</div>
               <p className="font-mono text-xs text-cyan-400/80 italic">"{draft.cta}"</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-widest text-emerald-400/70 mb-1 flex items-center gap-1">
-                  <Zap className="h-3 w-3" /> Por que funciona
+                  <Zap className="h-3 w-3" /> {t("Por que funciona", "Why it works", "Por qué funciona")}
                 </div>
                 <p className="font-mono text-xs text-foreground/70 leading-relaxed">{draft.keyInsight}</p>
               </div>
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-widest text-red-400/70 mb-1 flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" /> Risco
+                  <AlertTriangle className="h-3 w-3" /> {t("Risco", "Risk", "Riesgo")}
                 </div>
                 <p className="font-mono text-xs text-foreground/70 leading-relaxed">{draft.risk}</p>
               </div>
@@ -212,7 +214,7 @@ function DraftCard({
           {isApproved ? (
             <div className="flex items-center gap-2 font-mono text-xs text-emerald-400 py-2">
               <CheckCircle2 className="h-4 w-4" />
-              Direção aprovada — criativos finais seguirão esta direção
+              {t("Direção aprovada — os criativos finais seguirão esta orientação", "Direction approved — final creative will follow this direction", "Dirección aprobada: los creativos finales seguirán esta orientación")}
             </div>
           ) : (
             <Button
@@ -221,7 +223,7 @@ function DraftCard({
               disabled={approving}
             >
               {approving ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Target className="h-3 w-3 mr-2" />}
-              Aprovar Direção {letters[draft.index]}
+              {t("Aprovar direção", "Approve direction", "Aprobar dirección")} {letters[draft.index]}
             </Button>
           )}
         </div>
@@ -233,6 +235,7 @@ function DraftCard({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function CreativeIntentPanel({ campaignId }: { campaignId: string }) {
+  const t = useUiText();
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -250,9 +253,9 @@ export function CreativeIntentPanel({ campaignId }: { campaignId: string }) {
     ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["creative-intent", campaignId] });
-      toast.success("3 direções criativas geradas — escolha a que mais ressoa com sua visão");
+      toast.success(t("3 direções criativas geradas — escolha a que mais combina com sua visão.", "3 creative directions generated — choose the one that best fits your vision.", "Se generaron 3 direcciones creativas: elige la que mejor refleje tu visión."));
     },
-    onError: (e: any) => toast.error(e.message ?? "Falha ao gerar direções"),
+    onError: (e: any) => toast.error(e.message ?? t("Falha ao gerar direções", "Failed to generate directions", "No se pudieron generar las direcciones")),
   });
 
   const approveMutation = useMutation({
@@ -263,16 +266,16 @@ export function CreativeIntentPanel({ campaignId }: { campaignId: string }) {
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["creative-intent", campaignId] });
       const draft = res.intent.drafts[res.intent.approvedDraftIndex ?? 0];
-      toast.success(`Direção "${draft?.title}" aprovada — será usada na geração de criativos`);
+      toast.success(t(`Direção "${draft?.title}" aprovada — será usada na geração de criativos`, `Direction "${draft?.title}" approved — it will guide creative generation`, `Dirección "${draft?.title}" aprobada: se usará para generar los creativos`));
     },
-    onError: (e: any) => toast.error(e.message ?? "Falha ao aprovar direção"),
+    onError: (e: any) => toast.error(e.message ?? t("Falha ao aprovar direção", "Failed to approve direction", "No se pudo aprobar la dirección")),
   });
 
   const revokeMutation = useMutation({
     mutationFn: () => customFetch(`/api/campaigns/${campaignId}/creative-intent/approval`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["creative-intent", campaignId] });
-      toast.info("Aprovação removida — você pode escolher outra direção");
+      toast.info(t("Aprovação removida — você pode escolher outra direção", "Approval removed — you can choose a different direction", "Se retiró la aprobación: puedes elegir otra dirección"));
     },
   });
 
@@ -294,10 +297,10 @@ export function CreativeIntentPanel({ campaignId }: { campaignId: string }) {
           <Sparkles className="h-4 w-4 text-violet-400" />
           <div>
             <div className="font-mono text-xs font-bold uppercase tracking-widest">
-              Direção Criativa
+              {t("Direção criativa", "Creative direction", "Dirección creativa")}
             </div>
             <div className="font-mono text-[10px] text-muted-foreground">
-              Defina a filosofia visual antes de gerar os criativos finais
+              {t("Defina a filosofia visual antes de gerar os criativos finais", "Define the visual approach before generating final creative", "Define el enfoque visual antes de generar los creativos finales")}
             </div>
           </div>
         </div>
@@ -305,17 +308,17 @@ export function CreativeIntentPanel({ campaignId }: { campaignId: string }) {
           {isApproved && (
             <Badge className="font-mono text-[10px] uppercase bg-emerald-400/10 text-emerald-400 border-emerald-400/30">
               <CheckCircle2 className="h-3 w-3 mr-1" />
-              Direção Aprovada
+              {t("Direção aprovada", "Direction approved", "Dirección aprobada")}
             </Badge>
           )}
           {!isApproved && intent && (
             <Badge variant="outline" className="font-mono text-[10px] uppercase border-yellow-400/30 text-yellow-400">
-              Aguardando Aprovação
+              {t("Aguardando aprovação", "Awaiting approval", "Pendiente de aprobación")}
             </Badge>
           )}
           {!intent && (
             <Badge variant="outline" className="font-mono text-[10px] uppercase border-border/30 text-muted-foreground">
-              Não Iniciado
+              {t("Não iniciado", "Not started", "Sin iniciar")}
             </Badge>
           )}
         </div>
@@ -326,14 +329,18 @@ export function CreativeIntentPanel({ campaignId }: { campaignId: string }) {
         <div className="p-6 text-center space-y-4">
           <div className="space-y-1">
             <p className="font-mono text-sm text-foreground/80">
-              NEXOS não desperdiça créditos gerando criativos aleatórios.
+              {t("O NEXOS não desperdiça créditos gerando criativos aleatórios.", "NEXOS does not waste credits on random creative.", "NEXOS no desperdicia créditos en creativos aleatorios.")}
             </p>
             <p className="font-mono text-xs text-muted-foreground max-w-md mx-auto">
-              Primeiro ela apresenta a direção estratégica visual. Você aprova. Só então o sistema produz os criativos finais — com precisão e intenção.
+              {t("Primeiro, apresenta uma direção visual estratégica. Você aprova. Só então o sistema produz os criativos finais, com precisão e intenção.", "First, it presents a strategic visual direction. You approve it, then the system produces the final creative with precision and intent.", "Primero presenta una dirección visual estratégica. La apruebas y, después, el sistema produce los creativos finales con precisión e intención.")}
             </p>
           </div>
           <div className="flex items-center justify-center gap-6 py-2">
-            {["Conceito", "Aprovação", "Produção"].map((step, i) => (
+            {[
+              t("Conceito", "Concept", "Concepto"),
+              t("Aprovação", "Approval", "Aprobación"),
+              t("Produção", "Production", "Producción"),
+            ].map((step, i) => (
               <div key={step} className="flex items-center gap-2">
                 <div className="flex flex-col items-center gap-1">
                   <div className={`w-6 h-6 border font-mono text-[10px] flex items-center justify-center ${
@@ -351,12 +358,12 @@ export function CreativeIntentPanel({ campaignId }: { campaignId: string }) {
             disabled={generateMutation.isPending}
           >
             {generateMutation.isPending
-              ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Gerando direções (10 créditos)…</>
-              : <><Wand2 className="h-3.5 w-3.5" />Definir Direção Criativa — 10 créditos</>
+               ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t("Gerando direções (10 créditos)…", "Generating directions (10 credits)…", "Generando direcciones (10 créditos)…")}</>
+               : <><Wand2 className="h-3.5 w-3.5" />{t("Definir direção criativa — 10 créditos", "Set creative direction — 10 credits", "Definir dirección creativa — 10 créditos")}</>
             }
           </Button>
           <p className="font-mono text-[10px] text-muted-foreground/50">
-            Barato. A produção final é cobrada apenas após sua aprovação.
+            {t("A produção final só é cobrada depois da sua aprovação.", "Final production is charged only after you approve a direction.", "La producción final solo se cobra después de que apruebes la dirección.")}
           </p>
         </div>
       )}
@@ -366,7 +373,7 @@ export function CreativeIntentPanel({ campaignId }: { campaignId: string }) {
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-between mb-1">
             <p className="font-mono text-[11px] text-muted-foreground">
-              Escolha a direção que mais ressoa com sua visão para esta campanha.
+              {t("Escolha a direção que mais combina com sua visão para esta campanha.", "Choose the direction that best fits your vision for this campaign.", "Elige la dirección que mejor refleje tu visión para esta campaña.")}
             </p>
             <Button
               variant="ghost"
@@ -379,7 +386,7 @@ export function CreativeIntentPanel({ campaignId }: { campaignId: string }) {
                 ? <Loader2 className="h-3 w-3 animate-spin" />
                 : <RotateCcw className="h-3 w-3" />
               }
-              Regerar
+              {t("Gerar novamente", "Regenerate", "Volver a generar")}
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -421,7 +428,7 @@ export function CreativeIntentPanel({ campaignId }: { campaignId: string }) {
                   <div className="flex items-center gap-2 font-mono text-xs text-emerald-400">
                     <CheckCircle2 className="h-4 w-4" />
                     <span>
-                      <strong>{approved.title}</strong> aprovada — todos os agentes de criativo seguirão esta direção
+                       {t(`Direção "${approved.title}" aprovada — todos os agentes criativos seguirão esta orientação`, `Direction "${approved.title}" approved — all creative agents will follow it`, `Dirección "${approved.title}" aprobada: todos los agentes creativos seguirán esta orientación`)}
                     </span>
                   </div>
                   <Button
@@ -432,7 +439,7 @@ export function CreativeIntentPanel({ campaignId }: { campaignId: string }) {
                     disabled={revokeMutation.isPending}
                   >
                     <RotateCcw className="h-3 w-3" />
-                    Alterar
+                    {t("Alterar", "Change", "Cambiar")}
                   </Button>
                 </div>
               </div>

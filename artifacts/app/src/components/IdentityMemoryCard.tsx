@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { Brain, RefreshCw, ChevronDown, ChevronRight, TrendingUp } from "lucide-react";
+import { useUiText, useUiLocale, intlLocale } from "@/lib/i18n";
 
 interface StrategicPattern {
   pattern:  string;
@@ -34,16 +35,24 @@ interface IdentityProfile {
   founderNotes:         string[];
 }
 
+type TranslationTriple = readonly [string, string, string];
+
 const STRENGTH_COLOR = {
   strong:   "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
   moderate: "text-amber-400 bg-amber-500/10 border-amber-500/20",
   weak:     "text-white/30 bg-white/5 border-white/10",
 };
 
-const AGGRESSION_LABEL = {
-  low:      "Conservador",
-  moderate: "Equilibrado",
-  high:     "Agressivo",
+const AGGRESSION_LABEL: Record<NonNullable<IdentityProfile["aggressionLevel"]>, TranslationTriple> = {
+  low:      ["Conservador", "Conservative", "Conservador"],
+  moderate: ["Equilibrado", "Balanced", "Equilibrado"],
+  high:     ["Agressivo", "Aggressive", "Agresivo"],
+};
+
+const STRENGTH_LABEL: Record<StrategicPattern["strength"], TranslationTriple> = {
+  strong: ["Forte", "Strong", "Fuerte"],
+  moderate: ["Moderado", "Moderate", "Moderado"],
+  weak: ["Fraco", "Weak", "Débil"],
 };
 
 const AGGRESSION_COLOR = {
@@ -53,6 +62,8 @@ const AGGRESSION_COLOR = {
 };
 
 export function IdentityMemoryCard() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const [expanded, setExpanded] = useState(false);
   const queryClient = useQueryClient();
 
@@ -81,10 +92,10 @@ export function IdentityMemoryCard() {
         </div>
         <div className="flex-1">
           <h3 className="font-mono text-sm font-bold text-white uppercase tracking-widest">
-            Memória de Identidade
+             {t("Memória de Identidade", "Identity Memory", "Memoria de identidad")}
           </h3>
           <p className="font-mono text-[10px] text-violet-400/60 uppercase tracking-widest">
-            {isLoading ? "Carregando..." : `${profile?.campaignsLearned ?? 0} campanhas aprendidas · perfil estratégico persistente`}
+            {isLoading ? t("Carregando...", "Loading...", "Cargando...") : t(`${profile?.campaignsLearned ?? 0} campanhas aprendidas · perfil estratégico persistente`, `${profile?.campaignsLearned ?? 0} campaigns learned · persistent strategic profile`, `${profile?.campaignsLearned ?? 0} campañas aprendidas · perfil estratégico persistente`)}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -93,6 +104,8 @@ export function IdentityMemoryCard() {
               onClick={e => { e.stopPropagation(); refresh.mutate(); }}
               className="p-1.5 rounded-lg border border-white/10 hover:border-violet-500/30 hover:bg-violet-500/10 transition-colors"
               disabled={refresh.isPending}
+              title={t("Atualizar perfil", "Refresh profile", "Actualizar perfil")}
+              aria-label={t("Atualizar perfil", "Refresh profile", "Actualizar perfil")}
             >
               <RefreshCw className={`h-3 w-3 text-white/40 ${refresh.isPending ? "animate-spin" : ""}`} />
             </button>
@@ -109,27 +122,27 @@ export function IdentityMemoryCard() {
         <div className="flex items-center gap-6 px-6 py-3">
           {profile.preferredTone && (
             <div>
-              <p className="text-[9px] font-mono text-white/20 uppercase tracking-widest">Tom</p>
+               <p className="text-[9px] font-mono text-white/20 uppercase tracking-widest">{t("Tom", "Tone", "Tono")}</p>
               <p className="text-xs font-mono text-violet-300">{profile.preferredTone}</p>
             </div>
           )}
           {profile.aggressionLevel && (
             <div>
-              <p className="text-[9px] font-mono text-white/20 uppercase tracking-widest">Estilo</p>
+               <p className="text-[9px] font-mono text-white/20 uppercase tracking-widest">{t("Estilo", "Style", "Estilo")}</p>
               <p className={`text-xs font-mono ${AGGRESSION_COLOR[profile.aggressionLevel]}`}>
-                {AGGRESSION_LABEL[profile.aggressionLevel]}
+                {t(...AGGRESSION_LABEL[profile.aggressionLevel])}
               </p>
             </div>
           )}
           {profile.topPositioning && (
             <div>
-              <p className="text-[9px] font-mono text-white/20 uppercase tracking-widest">Posicionamento</p>
+              <p className="text-[9px] font-mono text-white/20 uppercase tracking-widest">{t("Posicionamento", "Positioning", "Posicionamiento")}</p>
               <p className="text-xs font-mono text-blue-300">{profile.topPositioning}</p>
             </div>
           )}
           {profile.successfulTriggers.length > 0 && (
             <div>
-              <p className="text-[9px] font-mono text-white/20 uppercase tracking-widest">Top gatilho</p>
+              <p className="text-[9px] font-mono text-white/20 uppercase tracking-widest">{t("Top gatilho", "Top trigger", "Principal detonante")}</p>
               <p className="text-xs font-mono text-emerald-300">{profile.successfulTriggers[0]}</p>
             </div>
           )}
@@ -139,7 +152,7 @@ export function IdentityMemoryCard() {
       {!expanded && (!profile || profile.campaignsLearned === 0) && !isLoading && (
         <div className="px-6 py-3">
           <p className="text-xs font-mono text-white/20">
-            Perfil será construído automaticamente após a primeira campanha executada.
+             {t("Perfil será construído automaticamente após a primeira campanha executada.", "Your profile will be built automatically after your first campaign is run.", "El perfil se creará automáticamente después de ejecutar la primera campaña.")}
           </p>
         </div>
       )}
@@ -151,9 +164,9 @@ export function IdentityMemoryCard() {
           {/* Top stats */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "Campanhas",   value: String(profile.campaignsLearned), color: "text-white" },
-              { label: "Tom preferido", value: profile.preferredTone ?? "—",   color: "text-violet-300" },
-              { label: "Estilo",        value: profile.aggressionLevel ? AGGRESSION_LABEL[profile.aggressionLevel] : "—", color: profile.aggressionLevel ? AGGRESSION_COLOR[profile.aggressionLevel] : "text-white/30" },
+              { label: t("Campanhas", "Campaigns", "Campañas"), value: String(profile.campaignsLearned), color: "text-white" },
+              { label: t("Tom preferido", "Preferred tone", "Tono preferido"), value: profile.preferredTone ?? "—", color: "text-violet-300" },
+              { label: t("Estilo", "Style", "Estilo"), value: profile.aggressionLevel ? t(...AGGRESSION_LABEL[profile.aggressionLevel]) : "—", color: profile.aggressionLevel ? AGGRESSION_COLOR[profile.aggressionLevel] : "text-white/30" },
             ].map(s => (
               <div key={s.label} className="p-3 rounded-lg border border-white/8 bg-white/2">
                 <p className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-1">{s.label}</p>
@@ -167,13 +180,13 @@ export function IdentityMemoryCard() {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="h-3 w-3 text-violet-400" />
-                <p className="text-[10px] font-mono text-violet-400/70 uppercase tracking-widest font-semibold">Padrões estratégicos</p>
+                <p className="text-[10px] font-mono text-violet-400/70 uppercase tracking-widest font-semibold">{t("Padrões estratégicos", "Strategic patterns", "Patrones estratégicos")}</p>
               </div>
               <div className="space-y-2">
                 {profile.strategicPatterns.map((p, i) => (
                   <div key={i} className="flex items-start gap-3 px-3 py-2.5 rounded-lg border border-white/8 bg-white/2">
                     <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${STRENGTH_COLOR[p.strength]} shrink-0`}>
-                      {p.strength}
+                       {t(...STRENGTH_LABEL[p.strength])}
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-mono text-white/70">{p.pattern}</p>
@@ -189,7 +202,7 @@ export function IdentityMemoryCard() {
           <div className="grid grid-cols-2 gap-4">
             {profile.successfulTriggers.length > 0 && (
               <div>
-                <p className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-2">Gatilhos que convertem</p>
+                <p className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-2">{t("Gatilhos que convertem", "Triggers that convert", "Detonantes que convierten")}</p>
                 <div className="flex flex-wrap gap-1">
                   {profile.successfulTriggers.map((t, i) => (
                     <span key={i} className="text-[10px] font-mono px-2 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/8 text-emerald-300">
@@ -201,7 +214,7 @@ export function IdentityMemoryCard() {
             )}
             {profile.brandVoiceKeywords.length > 0 && (
               <div>
-                <p className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-2">Voz da marca</p>
+                <p className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-2">{t("Voz da marca", "Brand voice", "Voz de marca")}</p>
                 <div className="flex flex-wrap gap-1">
                   {profile.brandVoiceKeywords.map((k, i) => (
                     <span key={i} className="text-[10px] font-mono px-2 py-0.5 rounded border border-violet-500/20 bg-violet-500/8 text-violet-300">
@@ -216,7 +229,7 @@ export function IdentityMemoryCard() {
           {/* ICP evolution */}
           {profile.icpEvolution.length > 0 && (
             <div>
-              <p className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-2">Evolução do ICP</p>
+              <p className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-2">{t("Evolução do ICP", "ICP evolution", "Evolución del ICP")}</p>
               <div className="space-y-1">
                 {profile.icpEvolution.map((desc, i) => (
                   <p key={i} className="text-[11px] font-mono text-white/40">· {desc}</p>
@@ -228,7 +241,7 @@ export function IdentityMemoryCard() {
           {/* Founder notes */}
           {profile.founderNotes.length > 0 && (
             <div>
-              <p className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-2">Notas do founder</p>
+              <p className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-2">{t("Notas do founder", "Founder notes", "Notas del fundador")}</p>
               <div className="space-y-1">
                 {profile.founderNotes.map((n, i) => (
                   <p key={i} className="text-[11px] font-mono text-white/40 italic">"{n}"</p>
@@ -238,7 +251,7 @@ export function IdentityMemoryCard() {
           )}
 
           <p className="text-[9px] font-mono text-white/15 uppercase tracking-widest">
-            Última atualização: {new Date(profile.lastUpdatedAt).toLocaleDateString("pt-BR")}
+            {t("Última atualização:", "Last updated:", "Última actualización:")} {new Date(profile.lastUpdatedAt).toLocaleDateString(intlLocale(locale))}
           </p>
         </div>
       )}

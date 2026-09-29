@@ -28,6 +28,7 @@ import {
   Activity,
 } from "lucide-react";
 import { Link } from "wouter";
+import { useUiText } from "@/lib/i18n";
 
 // ── Departamentos (agrupa agentes em conceitos humanos) ──────────────────────
 
@@ -82,31 +83,31 @@ const STATUS_STATE: Record<string, "idle" | "working" | "needs_action" | "done">
   completed: "done", cancelled: "idle",
 };
 
-function getNextStepLabel(status: string): string {
+function getNextStepLabel(status: string, t: ReturnType<typeof useUiText>): string {
   switch (status) {
-    case "intake":            return "Continuar briefing";
-    case "strategy_ready":    return "Revisar estratégia";
-    case "awaiting_approval": return "Aprovar conteúdo";
-    case "approved":          return "Preparar lançamento";
-    case "live":              return "Ver resultados";
-    case "completed":         return "Ver relatório final";
-    default:                  return "Ver detalhes";
+    case "intake":            return t("Continuar briefing", "Continue briefing", "Continuar briefing");
+    case "strategy_ready":    return t("Revisar estratégia", "Review strategy", "Revisar estrategia");
+    case "awaiting_approval": return t("Aprovar conteúdo", "Approve content", "Aprobar contenido");
+    case "approved":          return t("Preparar lançamento", "Prepare launch", "Preparar lanzamiento");
+    case "live":              return t("Ver resultados", "View results", "Ver resultados");
+    case "completed":         return t("Ver relatório final", "View final report", "Ver informe final");
+    default:                  return t("Ver detalhes", "View details", "Ver detalles");
   }
 }
 
-function getHappening(status: string): string {
+function getHappening(status: string, t: ReturnType<typeof useUiText>): string {
   switch (status) {
-    case "intake":            return "Seu briefing está sendo coletado. A agente está conhecendo seu negócio.";
-    case "analyzing":         return "O time de estratégia está analisando seu mercado, público e oferta.";
-    case "strategy_ready":    return "A estratégia está pronta. Revise e aprove para avançar para criação.";
-    case "generating":        return "Os especialistas estão criando copies, emails, WhatsApp e roteiros.";
-    case "awaiting_approval": return "O conteúdo está pronto para você revisar e aprovar antes do lançamento.";
-    case "approved":          return "Tudo aprovado. Configurando integrações e agendamentos automáticos.";
-    case "executing":         return "O lançamento está sendo executado. Acompanhe os primeiros resultados.";
-    case "live":              return "Sua campanha está ao vivo. A agente monitora e otimiza em tempo real.";
-    case "paused":            return "Campanha pausada. Retome quando estiver pronto.";
-    case "completed":         return "Lançamento concluído. Veja o relatório completo de resultados.";
-    default:                  return "Processando...";
+    case "intake":            return t("Seu briefing está sendo coletado. A agente está conhecendo seu negócio.", "Your briefing is being collected. The agent is learning about your business.", "Estamos recopilando tu briefing. El agente está conociendo tu negocio.");
+    case "analyzing":         return t("O time de estratégia está analisando seu mercado, público e oferta.", "The strategy team is analyzing your market, audience, and offer.", "El equipo de estrategia analiza tu mercado, audiencia y oferta.");
+    case "strategy_ready":    return t("A estratégia está pronta. Revise e aprove para avançar para criação.", "The strategy is ready. Review and approve it to continue to creation.", "La estrategia está lista. Revísala y apruébala para continuar con la creación.");
+    case "generating":        return t("Os especialistas estão criando copies, emails, WhatsApp e roteiros.", "Specialists are creating copy, emails, WhatsApp messages, and scripts.", "Los especialistas crean textos, correos, mensajes de WhatsApp y guiones.");
+    case "awaiting_approval": return t("O conteúdo está pronto para você revisar e aprovar antes do lançamento.", "Content is ready for you to review and approve before launch.", "El contenido está listo para que lo revises y apruebes antes del lanzamiento.");
+    case "approved":          return t("Tudo aprovado. Configurando integrações e agendamentos automáticos.", "Everything is approved. Setting up integrations and automated scheduling.", "Todo está aprobado. Configurando integraciones y programación automática.");
+    case "executing":         return t("O lançamento está sendo executado. Acompanhe os primeiros resultados.", "The launch is underway. Track the first results.", "El lanzamiento está en marcha. Sigue los primeros resultados.");
+    case "live":              return t("Sua campanha está ao vivo. A agente monitora e otimiza em tempo real.", "Your campaign is live. The agent monitors and optimizes in real time.", "Tu campaña está en vivo. El agente supervisa y optimiza en tiempo real.");
+    case "paused":            return t("Campanha pausada. Retome quando estiver pronto.", "Campaign paused. Resume when you're ready.", "Campaña pausada. Reanúdala cuando quieras.");
+    case "completed":         return t("Lançamento concluído. Veja o relatório completo de resultados.", "Launch complete. View the full results report.", "Lanzamiento completado. Consulta el informe completo de resultados.");
+    default:                  return t("Processando...", "Processing...", "Procesando...");
   }
 }
 
@@ -130,6 +131,7 @@ function fmtBrl(v: number): string {
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function WarRoom() {
+  const t = useUiText();
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { isArquiteto } = useMode();
@@ -186,7 +188,10 @@ export default function WarRoom() {
   const pendingDepts = DEPARTMENTS.filter(d => !d.phases.includes(status));
   const agents = (agentsData?.agents ?? []).slice(-6).reverse();
   const checkpoints = (agentsData?.checkpoints ?? []).filter(c => c.status === "awaiting_review");
-  const nextStepLabel = getNextStepLabel(status);
+  const nextStepLabel = getNextStepLabel(status, t);
+  const statusLabel = t(STATUS_LABEL[status] ?? status,
+    status === "intake" ? "Agent briefing" : status === "analyzing" ? "Strategy Team at Work" : status === "strategy_ready" ? "Strategy Ready for Review" : status === "generating" ? "Creating Copy and Creatives" : status === "awaiting_approval" ? "Awaiting Your Approval" : status === "approved" ? "Approved — Preparing Launch" : status === "executing" ? "Launch in Progress" : status === "live" ? "Campaign Live" : status === "paused" ? "Paused" : status === "completed" ? "Completed" : status === "cancelled" ? "Cancelled" : status,
+    status === "intake" ? "Briefing con el agente" : status === "analyzing" ? "Equipo estratégico trabajando" : status === "strategy_ready" ? "Estrategia lista para revisión" : status === "generating" ? "Creando textos y creatividades" : status === "awaiting_approval" ? "Esperando tu aprobación" : status === "approved" ? "Aprobado — preparando lanzamiento" : status === "executing" ? "Lanzamiento en ejecución" : status === "live" ? "Campaña en vivo" : status === "paused" ? "Pausado" : status === "completed" ? "Completado" : status === "cancelled" ? "Cancelado" : status);
   const nextStepHref = status === "intake" ? `/campaigns/${id}/intake`
     : status === "awaiting_approval" ? `/campaigns/${id}/content`
     : `/campaigns/${id}`;
@@ -200,31 +205,31 @@ export default function WarRoom() {
       {/* Back to campaign */}
       <Link href={`/campaigns/${id}`}>
         <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest -ml-2 text-muted-foreground hover:text-foreground gap-1.5">
-          <ArrowLeft className="h-3 w-3" />Campanha
+          <ArrowLeft className="h-3 w-3" />{t("Campanha", "Campaign", "Campaña")}
         </Button>
       </Link>
 
       {/* Feature onboarding — first visit */}
       <FeatureOnboarding
         featureKey={FEATURE_KEYS.WAR_ROOM}
-        title="Sua War Room de Lançamento"
-        description="Esta é a central de controle da sua campanha. Aqui você acompanha o que o time está fazendo, o que precisa da sua aprovação e o próximo passo."
+        title={t("Sua War Room de Lançamento", "Your Launch War Room", "Tu War Room de Lanzamiento")}
+        description={t("Esta é a central de controle da sua campanha. Aqui você acompanha o que o time está fazendo, o que precisa da sua aprovação e o próximo passo.", "This is your campaign control centre. Track what the team is doing, what needs your approval, and the next step.", "Este es el centro de control de tu campaña. Aquí puedes seguir el trabajo del equipo, lo que requiere tu aprobación y el próximo paso.")}
         steps={[
-          "Acompanhe o progresso por departamento",
-          "Quando aparecer 'Aguarda aprovação', é hora de agir",
-          "Use 'Ver mais' para ver detalhes técnicos do que os agentes fizeram",
+          t("Acompanhe o progresso por departamento", "Track progress by department", "Sigue el progreso por departamento"),
+          t("Quando aparecer 'Aguarda aprovação', é hora de agir", "When 'Awaiting approval' appears, it's time to act", "Cuando aparezca 'Esperando aprobación', es momento de actuar"),
+          t("Use 'Ver mais' para ver detalhes técnicos do que os agentes fizeram", "Use 'See more' to view technical details of agent work", "Usa 'Ver más' para consultar los detalles técnicos del trabajo de los agentes"),
         ]}
         variant="banner"
       />
 
       {/* UX Context Bar */}
       <UxContextBar
-        where={STATUS_LABEL[status] ?? status}
-        happening={getHappening(status)}
+        where={statusLabel}
+        happening={getHappening(status, t)}
         understood={campaign.title}
         requiresApproval={
           checkpoints.length > 0
-            ? `${checkpoints.length} item${checkpoints.length > 1 ? "s" : ""} esperando sua aprovação`
+            ? t(`${checkpoints.length} item${checkpoints.length > 1 ? "s" : ""} esperando sua aprovação`, `${checkpoints.length} item${checkpoints.length > 1 ? "s" : ""} awaiting your approval`, `${checkpoints.length} elemento${checkpoints.length > 1 ? "s" : ""} esperando tu aprobación`)
             : undefined
         }
         nextStep={nextStepLabel}
@@ -237,7 +242,7 @@ export default function WarRoom() {
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">
-              Campanha em andamento
+              {t("Campanha em andamento", "Campaign in progress", "Campaña en curso")}
             </div>
             <h1 className="font-mono font-black text-xl uppercase tracking-tight text-foreground">
               {campaign.title}
@@ -252,7 +257,7 @@ export default function WarRoom() {
             }`}
           >
             {status === "live" && <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse mr-1.5 inline-block" />}
-            {STATUS_LABEL[status] ?? status}
+            {statusLabel}
           </Badge>
         </div>
 
@@ -260,7 +265,7 @@ export default function WarRoom() {
         <div className="mb-1">
           <div className="flex items-center justify-between mb-1.5">
             <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">
-              Progresso da operação
+              {t("Progresso da operação", "Operation progress", "Progreso de la operación")}
             </span>
             <span className="font-mono text-[11px] font-bold text-primary">{progress}%</span>
           </div>
@@ -279,10 +284,10 @@ export default function WarRoom() {
           <div className="flex items-center gap-2 px-4 py-3 border-b border-success/20">
             <Activity className="h-3.5 w-3.5 text-success" />
             <span className="font-mono text-[11px] uppercase tracking-widest text-success font-bold">
-              Métricas ao Vivo
+              {t("Métricas ao Vivo", "Live Metrics", "Métricas en Vivo")}
             </span>
             <span className="ml-auto font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
-              Atualiza a cada 15s
+              {t("Atualiza a cada 15s", "Refreshes every 15s", "Se actualiza cada 15 s")}
             </span>
           </div>
           {liveStats ? (
@@ -291,19 +296,19 @@ export default function WarRoom() {
               <div className="p-4">
                 <div className="flex items-center gap-1.5 mb-1">
                   <Users className="h-3 w-3 text-muted-foreground/40" />
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Leads</span>
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">{t("Leads", "Leads", "Prospectos")}</span>
                 </div>
                 <div className="font-mono font-black text-2xl text-foreground">
                   {(liveStats.totalLeads ?? 0).toLocaleString("pt-BR")}
                 </div>
                 {(liveStats.leadsLast24h ?? 0) > 0 && (
                   <div className="font-mono text-[10px] text-success mt-0.5">
-                    +{liveStats.leadsLast24h} nas últimas 24h
+                    {t(`+${liveStats.leadsLast24h} nas últimas 24h`, `+${liveStats.leadsLast24h} in the last 24h`, `+${liveStats.leadsLast24h} en las últimas 24 h`)}
                   </div>
                 )}
                 {(liveStats.leadsLastHour ?? 0) > 0 && (
                   <div className="font-mono text-[10px] text-success/70">
-                    +{liveStats.leadsLastHour} última hora
+                    {t(`+${liveStats.leadsLastHour} última hora`, `+${liveStats.leadsLastHour} in the last hour`, `+${liveStats.leadsLastHour} en la última hora`)}
                   </div>
                 )}
               </div>
@@ -312,7 +317,7 @@ export default function WarRoom() {
               <div className="p-4">
                 <div className="flex items-center gap-1.5 mb-1">
                   <CheckCircle2 className="h-3 w-3 text-muted-foreground/40" />
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Vendas</span>
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">{t("Vendas", "Sales", "Ventas")}</span>
                 </div>
                 <div className="font-mono font-black text-2xl text-foreground">
                   {(liveStats.totalSales ?? 0).toLocaleString("pt-BR")}
@@ -328,14 +333,14 @@ export default function WarRoom() {
               <div className="p-4">
                 <div className="flex items-center gap-1.5 mb-1">
                   <DollarSign className="h-3 w-3 text-muted-foreground/40" />
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Receita</span>
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">{t("Receita", "Revenue", "Ingresos")}</span>
                 </div>
                 <div className={`font-mono font-black text-2xl ${(liveStats.totalRevenueBrl ?? 0) > 0 ? "text-success" : "text-foreground"}`}>
                   {(liveStats.totalRevenueBrl ?? 0) > 0 ? fmtBrl(liveStats.totalRevenueBrl) : "—"}
                 </div>
                 {(liveStats.revenueBrlLast24h ?? 0) > 0 && (
                   <div className="font-mono text-[10px] text-success mt-0.5">
-                    +{fmtBrl(liveStats.revenueBrlLast24h)} hoje
+                    {t(`+${fmtBrl(liveStats.revenueBrlLast24h)} hoje`, `+${fmtBrl(liveStats.revenueBrlLast24h)} today`, `+${fmtBrl(liveStats.revenueBrlLast24h)} hoy`)}
                   </div>
                 )}
               </div>
@@ -344,14 +349,14 @@ export default function WarRoom() {
               <div className="p-4">
                 <div className="flex items-center gap-1.5 mb-1">
                   <TrendingUp className="h-3 w-3 text-muted-foreground/40" />
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Engaj. 24h</span>
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">{t("Engaj. 24h", "Engagement 24h", "Interacción 24 h")}</span>
                 </div>
                 <div className="font-mono font-black text-2xl text-foreground">
                   {(liveStats.engagementEventsLast24h ?? 0).toLocaleString("pt-BR")}
                 </div>
                 {(liveStats.activeSequences ?? 0) > 0 && (
                   <div className="font-mono text-[10px] text-primary/70 mt-0.5">
-                    {liveStats.activeSequences} seq. ativas
+                    {t(`${liveStats.activeSequences} seq. ativas`, `${liveStats.activeSequences} active sequences`, `${liveStats.activeSequences} secuencias activas`)}
                   </div>
                 )}
               </div>
@@ -373,7 +378,7 @@ export default function WarRoom() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">
-            Departamentos
+            {t("Departamentos", "Departments", "Departamentos")}
           </span>
           <FeatureOnboardingTrigger featureKey={FEATURE_KEYS.WAR_ROOM} />
         </div>
@@ -397,7 +402,7 @@ export default function WarRoom() {
                 )}
                 <Icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? "text-primary" : "text-muted-foreground/30"}`} />
                 <span className={`font-mono text-[11px] uppercase tracking-widest font-bold ${isActive ? "text-foreground/80" : "text-muted-foreground/30"}`}>
-                  {dept.label}
+                  {t(dept.label, ({ strategy: "Strategy", product: "Product", offer: "Offer", audience: "Audience", copy: "Copy", creatives: "Creatives", funnel: "Funnel", automation: "Automation", traffic: "Traffic", integrations: "Integrations", metrics: "Metrics", approvals: "Approvals" } as Record<string, string>)[dept.id] ?? dept.label, ({ strategy: "Estrategia", product: "Producto", offer: "Oferta", audience: "Audiencia", copy: "Textos", creatives: "Creatividades", funnel: "Embudo", automation: "Automatización", traffic: "Tráfico", integrations: "Integraciones", metrics: "Métricas", approvals: "Aprobaciones" } as Record<string, string>)[dept.id] ?? dept.label)}
                 </span>
               </div>
             );
@@ -411,15 +416,15 @@ export default function WarRoom() {
           <div className="flex items-center gap-2 mb-2">
             <AlertCircle className="h-4 w-4 text-yellow-400" />
             <span className="font-mono text-[11px] uppercase tracking-widest text-yellow-400 font-bold">
-              {checkpoints.length} aprovação{checkpoints.length > 1 ? "ões" : ""} pendente{checkpoints.length > 1 ? "s" : ""}
+              {t(`${checkpoints.length} aprovação${checkpoints.length > 1 ? "ões" : ""} pendente${checkpoints.length > 1 ? "s" : ""}`, `${checkpoints.length} pending approval${checkpoints.length > 1 ? "s" : ""}`, `${checkpoints.length} aprobación${checkpoints.length > 1 ? "es" : ""} pendiente${checkpoints.length > 1 ? "s" : ""}`)}
             </span>
           </div>
           <p className="font-mono text-xs text-muted-foreground/70 mb-3">
-            O time está aguardando sua decisão para avançar.
+            {t("O time está aguardando sua decisão para avançar.", "The team is waiting for your decision to continue.", "El equipo espera tu decisión para continuar.")}
           </p>
           <Link href={`/campaigns/${id}/content`}>
             <Button size="sm" className="rounded-none font-mono uppercase tracking-widest text-[11px] h-8 gap-1.5 btn-weapon-primary">
-              Revisar e aprovar
+              {t("Revisar e aprovar", "Review and approve", "Revisar y aprobar")}
               <ChevronRight className="h-3 w-3" />
             </Button>
           </Link>
@@ -432,7 +437,7 @@ export default function WarRoom() {
         className="w-full flex items-center justify-center gap-2 py-3 border border-border/30 hover:border-border/50 font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 hover:text-muted-foreground transition-colors"
       >
         {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-        {expanded ? "Ver menos" : "Ver mais — agentes e decisões"}
+        {expanded ? t("Ver menos", "See less", "Ver menos") : t("Ver mais — agentes e decisões", "See more — agents and decisions", "Ver más — agentes y decisiones")}
       </button>
 
       {/* ── Detalhes expandidos ── */}
@@ -442,7 +447,7 @@ export default function WarRoom() {
           {agents.length > 0 && (
             <div className="border border-border/30 p-4">
               <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-3">
-                O que o time fez recentemente
+                {t("O que o time fez recentemente", "What the team did recently", "Actividad reciente del equipo")}
               </div>
               <div className="space-y-2">
                 {agents.map((agent) => (
@@ -460,8 +465,8 @@ export default function WarRoom() {
                       agent.status === "running"   ? "text-primary/70" :
                       "text-muted-foreground/40"
                     }`}>
-                      {agent.status === "completed" ? "Concluído" :
-                       agent.status === "running"   ? "Em andamento" : agent.status}
+                      {agent.status === "completed" ? t("Concluído", "Completed", "Completado") :
+                       agent.status === "running"   ? t("Em andamento", "In progress", "En curso") : agent.status}
                     </span>
                   </div>
                 ))}
@@ -474,7 +479,7 @@ export default function WarRoom() {
             <div className="flex items-center justify-center gap-2 py-3 border border-border/20 hover:border-border/40 transition-colors cursor-pointer">
               <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/40" />
               <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40 hover:text-muted-foreground/60">
-                Abrir visão técnica completa
+                 {t("Abrir visão técnica completa", "Open full technical view", "Abrir vista técnica completa")}
               </span>
             </div>
           </Link>
@@ -486,7 +491,7 @@ export default function WarRoom() {
         <div className="border border-border/30 bg-card/20 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">
-              Próximo passo
+              {t("Próximo passo", "Next step", "Siguiente paso")}
             </div>
             <p className="font-mono text-sm text-foreground/80 font-bold">
               {nextStepLabel}

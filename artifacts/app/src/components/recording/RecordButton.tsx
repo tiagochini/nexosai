@@ -25,6 +25,7 @@ import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { useUiText, useUiLocale, intlLocale } from "@/lib/i18n";
 import {
   Circle, Square, Pause, Play, Download, Minimize2, Maximize2,
   Radio, Tag, Video, CheckCircle2, XCircle, Mic,
@@ -59,20 +60,20 @@ type EventType =
   | "creative_delivered" | "budget_set" | "campaign_activated"
   | "cart_opened" | "cart_closed" | "metrics_snapshot" | "custom";
 
-const EVENT_LABELS: Record<EventType, string> = {
-  briefing_started: "Briefing iniciado",
-  briefing_completed: "Briefing concluído",
-  strategy_generated: "Estratégia gerada",
-  copy_generated: "Copy gerada",
-  approval_requested: "Aprovação solicitada",
-  approved: "Aprovado",
-  creative_delivered: "Criativo entregue",
-  budget_set: "Orçamento definido",
-  campaign_activated: "Campanha ativada",
-  cart_opened: "Carrinho aberto",
-  cart_closed: "Carrinho fechado",
-  metrics_snapshot: "Snapshot métricas",
-  custom: "Evento personalizado",
+const EVENT_LABEL_TRANSLATIONS: Record<EventType, readonly [string, string, string]> = {
+  briefing_started: ["Briefing iniciado", "Briefing started", "Briefing iniciado"],
+  briefing_completed: ["Briefing concluído", "Briefing completed", "Briefing completado"],
+  strategy_generated: ["Estratégia gerada", "Strategy generated", "Estrategia generada"],
+  copy_generated: ["Copy gerada", "Copy generated", "Copy generado"],
+  approval_requested: ["Aprovação solicitada", "Approval requested", "Aprobación solicitada"],
+  approved: ["Aprovado", "Approved", "Aprobado"],
+  creative_delivered: ["Criativo entregue", "Creative delivered", "Creativo entregado"],
+  budget_set: ["Orçamento definido", "Budget set", "Presupuesto definido"],
+  campaign_activated: ["Campanha ativada", "Campaign activated", "Campaña activada"],
+  cart_opened: ["Carrinho aberto", "Cart opened", "Carrito abierto"],
+  cart_closed: ["Carrinho fechado", "Cart closed", "Carrito cerrado"],
+  metrics_snapshot: ["Snapshot métricas", "Metrics snapshot", "Instantánea de métricas"],
+  custom: ["Evento personalizado", "Custom event", "Evento personalizado"],
 };
 
 const QUICK_EVENTS: EventType[] = [
@@ -191,6 +192,8 @@ function PreflightDialog({
   onStart: () => void;
   onClose: () => void;
 }) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   return (
     <div className="fixed inset-0 z-[9000] flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm">
       <div className="w-full sm:max-w-lg border border-border bg-background shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90dvh]">
@@ -198,9 +201,9 @@ function PreflightDialog({
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-card/60 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-2.5 h-2.5 rounded-full bg-destructive animate-pulse" />
-            <span className="font-mono text-sm uppercase tracking-widest font-bold">Configurar Gravação</span>
+            <span className="font-mono text-sm uppercase tracking-widest font-bold">{t("Configurar Gravação", "Configure Recording", "Configurar grabación")}</span>
           </div>
-          <button onClick={onClose} aria-label="Fechar" className="text-muted-foreground hover:text-foreground transition-colors">
+          <button onClick={onClose} aria-label={t("Fechar", "Close", "Cerrar")} className="text-muted-foreground hover:text-foreground transition-colors">
             <XCircle className="h-4 w-4" />
           </button>
         </div>
@@ -209,12 +212,12 @@ function PreflightDialog({
           {/* Session name */}
           <div>
             <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70 block mb-2">
-              Nome da Sessão
+              {t("Nome da Sessão", "Session Name", "Nombre de la sesión")}
             </label>
             <input
               value={config.sessionName}
               onChange={e => onConfig({ ...config, sessionName: e.target.value })}
-              placeholder={`Gravação ${new Date().toLocaleDateString("pt-BR")}`}
+              placeholder={t(`Gravação ${new Date().toLocaleDateString(intlLocale(locale))}`, `Recording ${new Date().toLocaleDateString(intlLocale(locale))}`, `Grabación ${new Date().toLocaleDateString(intlLocale(locale))}`)}
               autoFocus
               className="w-full border border-border/50 bg-card/40 px-3 py-2.5 text-sm font-mono
                 text-foreground placeholder:text-muted-foreground/40 focus:border-primary/50 focus:outline-none"
@@ -224,24 +227,24 @@ function PreflightDialog({
           {/* Audio mode */}
           <div>
             <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70 block mb-2">
-              Captura de Áudio
+              {t("Captura de Áudio", "Audio Capture", "Captura de audio")}
             </label>
             <div className="grid grid-cols-2 gap-2">
               <AudioModeOption value="both" current={config.audioMode}
-                label="Ambos" icon={<Mic className="h-4 w-4" />}
-                desc="App + microfone misturados"
+                label={t("Ambos", "Both", "Ambos")} icon={<Mic className="h-4 w-4" />}
+                desc={t("App + microfone misturados", "App + microphone mixed", "App + micrófono mezclados")}
                 onChange={v => onConfig({ ...config, audioMode: v })} />
               <AudioModeOption value="mic" current={config.audioMode}
-                label="Microfone" icon={<Mic className="h-4 w-4" />}
-                desc="Somente seu microfone"
+                label={t("Microfone", "Microphone", "Micrófono")} icon={<Mic className="h-4 w-4" />}
+                desc={t("Somente seu microfone", "Microphone only", "Solo tu micrófono")}
                 onChange={v => onConfig({ ...config, audioMode: v })} />
               <AudioModeOption value="app" current={config.audioMode}
-                label="App / Sistema" icon={<Volume2 className="h-4 w-4" />}
-                desc="Áudio interno do sistema"
+                label={t("App / Sistema", "App / System", "App / Sistema")} icon={<Volume2 className="h-4 w-4" />}
+                desc={t("Áudio interno do sistema", "System audio", "Audio interno del sistema")}
                 onChange={v => onConfig({ ...config, audioMode: v })} />
               <AudioModeOption value="none" current={config.audioMode}
-                label="Nenhum" icon={<VolumeX className="h-4 w-4" />}
-                desc="Apenas vídeo, sem áudio"
+                label={t("Nenhum", "None", "Ninguno")} icon={<VolumeX className="h-4 w-4" />}
+                desc={t("Apenas vídeo, sem áudio", "Video only, no audio", "Solo video, sin audio")}
                 onChange={v => onConfig({ ...config, audioMode: v })} />
             </div>
           </div>
@@ -251,7 +254,7 @@ function PreflightDialog({
             {/* Camera toggle */}
             <div>
               <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70 block mb-2">
-                Câmera (PiP)
+                {t("Câmera (PiP)", "Camera (PiP)", "Cámara (PiP)")}
               </label>
               <button
                 type="button"
@@ -265,9 +268,9 @@ function PreflightDialog({
                 <Camera className="h-4 w-4 shrink-0" />
                 <div className="text-left">
                   <div className="font-mono text-[12px] uppercase tracking-widest font-bold">
-                    {config.enableCamera ? "Ativada" : "Desativada"}
+                    {config.enableCamera ? t("Ativada", "Enabled", "Activada") : t("Desativada", "Disabled", "Desactivada")}
                   </div>
-                  <div className="font-mono text-[10px] text-muted-foreground/60">Webcam no canto</div>
+                  <div className="font-mono text-[10px] text-muted-foreground/60">{t("Webcam no canto", "Corner webcam overlay", "Cámara web en una esquina")}</div>
                 </div>
                 <div className={`ml-auto w-8 h-4 rounded-full transition-colors shrink-0 ${
                   config.enableCamera ? "bg-primary" : "bg-border/50"
@@ -282,7 +285,7 @@ function PreflightDialog({
             {/* Quality */}
             <div>
               <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70 block mb-2">
-                Qualidade
+                {t("Qualidade", "Quality", "Calidad")}
               </label>
               <div className="space-y-1.5">
                 {(["auto", "1080", "4k"] as QualityPreset[]).map(q => (
@@ -299,7 +302,7 @@ function PreflightDialog({
                     {q === "4k" && <Sparkles className="h-3 w-3 shrink-0" />}
                     {q !== "4k" && <Settings2 className="h-3 w-3 shrink-0" />}
                     <span className="font-mono text-[11px] uppercase tracking-widest font-bold">
-                      {q === "auto" ? "Auto" : q === "1080" ? "Full HD" : "4K Ultra"}
+                      {q === "auto" ? t("Auto", "Auto", "Auto") : q === "1080" ? "Full HD" : "4K Ultra"}
                     </span>
                   </button>
                 ))}
@@ -309,8 +312,7 @@ function PreflightDialog({
 
           {/* Info note */}
           <p className="font-mono text-[10px] text-muted-foreground/50 leading-relaxed border border-border/20 bg-card/20 px-3 py-2">
-            O browser pedirá para selecionar o que compartilhar (aba ou tela inteira).
-            O vídeo é enviado ao servidor automaticamente e baixado para seu device ao parar.
+            {t("O browser pedirá para selecionar o que compartilhar (aba ou tela inteira). O vídeo é enviado ao servidor automaticamente e baixado para seu dispositivo ao parar.", "Your browser will ask what to share (a tab or your entire screen). The video is uploaded to the server automatically and downloaded to your device when you stop.", "El navegador te pedirá que selecciones qué compartir (una pestaña o toda la pantalla). El video se sube automáticamente al servidor y se descarga en tu dispositivo al detener la grabación.")}
           </p>
         </div>
 
@@ -321,14 +323,14 @@ function PreflightDialog({
             variant="outline"
             className="flex-1 h-12 rounded-none font-mono text-sm uppercase tracking-widest border-border/50 text-muted-foreground hover:text-foreground"
           >
-            Cancelar
+            {t("Cancelar", "Cancel", "Cancelar")}
           </Button>
           <Button
             onClick={onStart}
             className="flex-[2] h-12 rounded-none font-mono text-sm uppercase tracking-widest font-bold btn-weapon-primary"
           >
             <Circle className="h-4 w-4 mr-2 fill-current animate-pulse" />
-            Iniciar →
+            {t("Iniciar →", "Start →", "Iniciar →")}
           </Button>
         </div>
       </div>
@@ -339,6 +341,7 @@ function PreflightDialog({
 // ── Countdown Overlay ──────────────────────────────────────────────────────────
 
 function CountdownOverlay({ onDone }: { onDone: () => void }) {
+  const t = useUiText();
   const [count, setCount] = useState<number | "GO">(3);
 
   useEffect(() => {
@@ -376,12 +379,12 @@ function CountdownOverlay({ onDone }: { onDone: () => void }) {
         </div>
         {!isGo && (
           <p className="font-mono text-xs uppercase tracking-[0.5em] text-white/40 mt-4">
-            Gravação começa em
+            {t("Gravação começa em", "Recording starts in", "La grabación comienza en")}
           </p>
         )}
         {isGo && (
           <p className="font-mono text-sm uppercase tracking-[0.5em] text-primary/80 mt-2">
-            Gravando!
+            {t("Gravando!", "Recording!", "¡Grabando!")}
           </p>
         )}
       </div>
@@ -399,6 +402,7 @@ function CountdownOverlay({ onDone }: { onDone: () => void }) {
 // ── Webcam PiP Overlay (draggable) ────────────────────────────────────────────
 
 function WebcamPip({ stream }: { stream: MediaStream }) {
+  const t = useUiText();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const dragging = useRef(false);
@@ -441,12 +445,12 @@ function WebcamPip({ stream }: { stream: MediaStream }) {
       style={style}
       className="w-36 h-24 border-2 border-primary/60 shadow-2xl overflow-hidden bg-black cursor-grab active:cursor-grabbing select-none"
       onMouseDown={onMouseDown}
-      title="Arraste para reposicionar"
+      title={t("Arraste para reposicionar", "Drag to reposition", "Arrastra para cambiar de posición")}
     >
       <video ref={videoRef} muted autoPlay playsInline className="w-full h-full object-cover scale-x-[-1] pointer-events-none" />
       <div className="absolute bottom-1 left-1 flex items-center gap-1 bg-black/60 px-1.5 py-0.5 pointer-events-none">
         <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
-        <span className="font-mono text-[9px] uppercase tracking-widest text-white/80">⠿ Cam</span>
+        <span className="font-mono text-[9px] uppercase tracking-widest text-white/80">⠿ {t("Câmera", "Camera", "Cámara")}</span>
       </div>
     </div>
   );
@@ -456,6 +460,8 @@ function WebcamPip({ stream }: { stream: MediaStream }) {
 
 export function RecordButton({ campaignId }: { campaignId?: string }) {
   const { workspace } = useAuth();
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const [, setLocation] = useLocation();
 
   // ── UI State ───────────────────────────────────────────────────────────────
@@ -533,7 +539,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
           setUiState(active.state);
           setElapsed(calcActiveMs(active));
           if (active.state === "recording") startTimer(active);
-          toast.info(`Sessão "${active.name}" restaurada`, { duration: 3000 });
+          toast.info(t(`Sessão "${active.name}" restaurada`, `Session "${active.name}" restored`, `Sesión "${active.name}" restaurada`), { duration: 3000 });
         }
       } catch { /* silently ignore */ }
       finally { if (!cancelled) setSyncLoading(false); }
@@ -604,8 +610,8 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
 
   // ── Start capture ──────────────────────────────────────────────────────────
   const startCapture = async (cfg: SetupConfig) => {
-    if (!workspace) { toast.error("Workspace não carregado"); setUiState("idle"); return; }
-    const name = cfg.sessionName.trim() || `Gravação ${new Date().toLocaleString("pt-BR")}`;
+    if (!workspace) { toast.error(t("Workspace não carregado", "Workspace not loaded", "Espacio de trabajo no cargado")); setUiState("idle"); return; }
+    const name = cfg.sessionName.trim() || t(`Gravação ${new Date().toLocaleString(intlLocale(locale))}`, `Recording ${new Date().toLocaleString(intlLocale(locale))}`, `Grabación ${new Date().toLocaleString(intlLocale(locale))}`);
     const videoConstraints = getVideoConstraints(cfg.quality);
     const needSystemAudio = cfg.audioMode === "app" || cfg.audioMode === "both";
     const needMic = cfg.audioMode === "mic" || cfg.audioMode === "both";
@@ -620,7 +626,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       setHasSystem(displayStream.getAudioTracks().length > 0);
       displayStreamRef.current = displayStream;
     } catch {
-      toast.error("Compartilhamento de tela cancelado ou negado.");
+      toast.error(t("Compartilhamento de tela cancelado ou negado.", "Screen sharing was cancelled or denied.", "Se canceló o denegó el uso compartido de pantalla."));
       setUiState("idle");
       return;
     }
@@ -652,9 +658,9 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       } catch {
         setHasMic(false);
         if (cfg.audioMode === "mic") {
-          toast.warning("Microfone não disponível — gravando sem áudio.");
+          toast.warning(t("Microfone não disponível — gravando sem áudio.", "Microphone unavailable — recording without audio.", "Micrófono no disponible: se grabará sin audio."));
         } else {
-          toast.warning("Microfone não disponível — gravando apenas áudio do sistema.");
+          toast.warning(t("Microfone não disponível — gravando apenas áudio do sistema.", "Microphone unavailable — recording system audio only.", "Micrófono no disponible: se grabará solo el audio del sistema."));
         }
       }
     }
@@ -672,7 +678,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
         setHasCamera(true);
       } catch {
         setHasCamera(false);
-        toast.warning("Câmera não disponível — gravando sem overlay de câmera.");
+        toast.warning(t("Câmera não disponível — gravando sem overlay de câmera.", "Camera unavailable — recording without camera overlay.", "Cámara no disponible: se grabará sin superposición de cámara."));
       }
     }
 
@@ -764,7 +770,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       micStream?.getTracks().forEach(t => t.stop());
       cameraStream?.getTracks().forEach(t => t.stop());
       audioCtxRef.current?.close().catch(() => {});
-      toast.error("Erro ao iniciar sessão no servidor.");
+      toast.error(t("Erro ao iniciar sessão no servidor.", "Error starting server session.", "Error al iniciar la sesión en el servidor."));
       setUiState("idle");
       return;
     }
@@ -789,7 +795,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
 
       // Guard: if blob is empty (stream died before recording started), reset cleanly
       if (blob.size < 512) {
-        toast.error("Nenhum conteúdo foi gravado. Verifique se o compartilhamento de tela estava ativo e tente novamente.");
+        toast.error(t("Nenhum conteúdo foi gravado. Verifique se o compartilhamento de tela estava ativo e tente novamente.", "No content was recorded. Check that screen sharing was active and try again.", "No se grabó contenido. Comprueba que el uso compartido de pantalla estuviera activo e inténtalo de nuevo."));
         setUiState("idle");
         setRecording(null);
         recordingRef.current = null;
@@ -804,7 +810,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       // Auto-download to device gallery immediately
       const safeName = name.replace(/[^a-z0-9]/gi, "_").slice(0, 40);
       triggerDeviceDownload(blob, `${safeName}_${Date.now()}.webm`);
-      toast.success("Download da cópia local iniciado.");
+      toast.success(t("Download da cópia local iniciado.", "Local copy download started.", "Se inició la descarga de la copia local."));
 
       // Upload to server
       const currentRec = recordingRef.current;
@@ -815,8 +821,8 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
           setUploadDone(true);
           toast.success(
             <div className="flex flex-col gap-1">
-              <span className="font-bold">Vídeo salvo com sucesso!</span>
-              <span className="text-xs">Disponível na pasta "Gravações automáticas".</span>
+              <span className="font-bold">{t("Vídeo salvo com sucesso!", "Video saved successfully!", "¡Video guardado correctamente!")}</span>
+              <span className="text-xs">{t('Disponível na pasta "Gravações automáticas".', 'Available in the "Automatic recordings" folder.', 'Disponible en la carpeta "Grabaciones automáticas".')}</span>
               <Button
                 variant="link"
                 className="p-0 h-auto text-xs text-primary justify-start mt-1"
@@ -829,7 +835,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
           );
         } catch {
           setUploadDone(false);
-          toast.error("Upload ao servidor falhou — use o arquivo baixado localmente.");
+      toast.error(t("Upload ao servidor falhou — use o arquivo baixado localmente.", "Server upload failed — use the locally downloaded file.", "Falló la carga al servidor: usa el archivo descargado localmente."));
         } finally {
           setUploading(false);
         }
@@ -849,7 +855,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       audioCtxRef.current?.close().catch(() => {});
       if (canvasRafRef.current !== null) { cancelAnimationFrame(canvasRafRef.current); canvasRafRef.current = null; }
       try { await customFetch(`/api/recordings/${rec.id}/stop`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); } catch { /* best-effort */ }
-      toast.error("Compartilhamento de tela encerrado antes de iniciar. Tente novamente.");
+      toast.error(t("Compartilhamento de tela encerrado antes de iniciar. Tente novamente.", "Screen sharing ended before recording started. Try again.", "El uso compartido de pantalla terminó antes de iniciar. Inténtalo de nuevo."));
       setUiState("idle");
       return;
     }
@@ -880,7 +886,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       recordingRef.current = data.recording;
       setUiState("paused");
       stopTimer();
-    } catch { toast.error("Erro ao pausar"); }
+    } catch { toast.error(t("Erro ao pausar", "Error pausing", "Error al pausar")); }
   };
 
   // ── Resume ─────────────────────────────────────────────────────────────────
@@ -896,7 +902,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       recordingRef.current = data.recording;
       setUiState("recording");
       startTimer(data.recording);
-    } catch { toast.error("Erro ao retomar"); }
+    } catch { toast.error(t("Erro ao retomar", "Error resuming", "Error al reanudar")); }
   };
 
   // ── Stop ───────────────────────────────────────────────────────────────────
@@ -938,8 +944,8 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
         body: JSON.stringify({ type, phase: "geral" }),
       });
       setEventCount(c => c + 1);
-      setLastEvent(EVENT_LABELS[type]);
-    } catch { toast.error("Erro ao registrar evento"); }
+      setLastEvent(t(...EVENT_LABEL_TRANSLATIONS[type]));
+    } catch { toast.error(t("Erro ao registrar evento", "Error recording event", "Error al registrar el evento")); }
     finally { setFiringEvent(false); }
   };
 
@@ -956,10 +962,10 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
     try {
       await uploadVideoToServer(videoBlob, recording.id);
       setUploadDone(true);
-      toast.success('Vídeo salvo em "Gravações automáticas".');
+      toast.success(t('Vídeo salvo em "Gravações automáticas".', 'Video saved in "Automatic recordings".', 'Video guardado en "Grabaciones automáticas".'));
     } catch {
       setUploadDone(false);
-      toast.error("O reenvio falhou. A cópia local continua disponível para nova tentativa.");
+      toast.error(t("O reenvio falhou. A cópia local continua disponível para nova tentativa.", "Upload retry failed. The local copy is still available to try again.", "Falló el reintento de carga. La copia local sigue disponible para volver a intentarlo."));
     } finally {
       setUploading(false);
     }
@@ -976,7 +982,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       const blob = await response.blob();
       triggerDeviceDownload(blob, `${recording.name.replace(/[^a-z0-9]/gi, "_").slice(0, 40)}.zip`);
     } catch {
-      toast.error("Não foi possível exportar a timeline.");
+      toast.error(t("Não foi possível exportar a timeline.", "Could not export the timeline.", "No se pudo exportar la línea de tiempo."));
     }
   };
 
@@ -1027,7 +1033,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       {/* ── Minimized pill ── */}
       {minimized && hasActive && createPortal(
         <button
-          onClick={() => setMinimized(false)} aria-label="Restaurar painel"
+          onClick={() => setMinimized(false)} aria-label={t("Restaurar painel", "Restore panel", "Restaurar panel")}
           className={`fixed bottom-6 right-6 z-[9000] flex items-center gap-2 px-3 py-2 border
             text-xs font-mono uppercase tracking-widest shadow-lg transition-all
             ${uiState === "paused"
@@ -1050,7 +1056,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
             setOpen(o => !o);
           }
         }}
-        title={hasActive ? "Painel de Gravação" : uiState === "stopped" ? "Sessão Concluída" : "Iniciar Gravação de Lançamento"}
+        title={hasActive ? t("Painel de Gravação", "Recording Panel", "Panel de grabación") : uiState === "stopped" ? t("Sessão Concluída", "Session Complete", "Sesión completada") : t("Iniciar Gravação de Lançamento", "Start Launch Recording", "Iniciar grabación del lanzamiento")}
         className={`flex items-center gap-2 px-3 h-9 border text-xs font-mono uppercase tracking-widest transition-all
           ${uiState === "recording"
             ? "border-destructive/60 bg-destructive/10 text-destructive hover:bg-destructive/20"
@@ -1074,10 +1080,10 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
           : uiState === "paused"
           ? <span className="tabular-nums">⏸ {fmtDuration(elapsed)}</span>
           : uiState === "stopped"
-          ? <span>Sessão Salva</span>
+          ? <span>{t("Sessão Salva", "Session Saved", "Sesión guardada")}</span>
           : showSetup
-          ? <span>Configurando...</span>
-          : <span>Gravar</span>
+          ? <span>{t("Configurando...", "Configuring...", "Configurando...")}</span>
+          : <span>{t("Gravar", "Record", "Grabar")}</span>
         }
       </button>
 
@@ -1091,14 +1097,14 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
           </button>
           <div className="w-px h-8 bg-white/20" />
           <button onClick={pauseCapture} className="flex items-center gap-1.5 px-3 py-2.5 hover:bg-white/10 transition-colors">
-            <Pause className="h-3.5 w-3.5" /><span className="hidden sm:inline">Pausar</span>
+            <Pause className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("Pausar", "Pause", "Pausar")}</span>
           </button>
           {camStream && (
             <>
               <div className="w-px h-8 bg-white/20" />
               <button
                 onClick={() => setCamPaused(p => !p)}
-                title={camPaused ? "Reativar câmera" : "Pausar câmera"} aria-label={camPaused ? "Reativar câmera" : "Pausar câmera"}
+                title={camPaused ? t("Reativar câmera", "Resume camera", "Reactivar cámara") : t("Pausar câmera", "Pause camera", "Pausar cámara")} aria-label={camPaused ? t("Reativar câmera", "Resume camera", "Reactivar cámara") : t("Pausar câmera", "Pause camera", "Pausar cámara")}
                 className={`flex items-center gap-1.5 px-3 py-2.5 hover:bg-white/10 transition-colors ${camPaused ? "opacity-40" : ""}`}
               >
                 <Camera className={`h-3.5 w-3.5 ${camPaused ? "opacity-50" : ""}`} />
@@ -1107,7 +1113,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
           )}
           <div className="w-px h-8 bg-white/20" />
           <button onClick={() => void stopCapture()} className="flex items-center gap-1.5 px-3 py-2.5 bg-black/20 hover:bg-black/40 transition-colors">
-            <Square className="h-3.5 w-3.5 fill-current" /><span className="hidden sm:inline">Parar</span>
+            <Square className="h-3.5 w-3.5 fill-current" /><span className="hidden sm:inline">{t("Parar", "Stop", "Detener")}</span>
           </button>
         </div>,
         document.body,
@@ -1123,14 +1129,14 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
           </button>
           <div className="w-px h-8 bg-black/20" />
           <button onClick={resumeCapture} className="flex items-center gap-1.5 px-3 py-2.5 hover:bg-black/10 transition-colors font-bold">
-            <Play className="h-3.5 w-3.5 fill-current" /><span className="hidden sm:inline">Retomar</span>
+            <Play className="h-3.5 w-3.5 fill-current" /><span className="hidden sm:inline">{t("Retomar", "Resume", "Reanudar")}</span>
           </button>
           {camStream && (
             <>
               <div className="w-px h-8 bg-black/20" />
               <button
                 onClick={() => setCamPaused(p => !p)}
-                title={camPaused ? "Reativar câmera" : "Pausar câmera"} aria-label={camPaused ? "Reativar câmera" : "Pausar câmera"}
+                title={camPaused ? t("Reativar câmera", "Resume camera", "Reactivar cámara") : t("Pausar câmera", "Pause camera", "Pausar cámara")} aria-label={camPaused ? t("Reativar câmera", "Resume camera", "Reactivar cámara") : t("Pausar câmera", "Pause camera", "Pausar cámara")}
                 className={`flex items-center gap-1.5 px-3 py-2.5 hover:bg-black/10 transition-colors ${camPaused ? "opacity-40" : ""}`}
               >
                 <Camera className="h-3.5 w-3.5" />
@@ -1139,7 +1145,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
           )}
           <div className="w-px h-8 bg-black/20" />
           <button onClick={() => void stopCapture()} className="flex items-center gap-1.5 px-3 py-2.5 bg-black/20 hover:bg-black/30 transition-colors">
-            <Square className="h-3.5 w-3.5 fill-current" /><span className="hidden sm:inline">Parar</span>
+            <Square className="h-3.5 w-3.5 fill-current" /><span className="hidden sm:inline">{t("Parar", "Stop", "Detener")}</span>
           </button>
         </div>,
         document.body,
@@ -1152,16 +1158,16 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card/60 shrink-0">
             <div className="flex items-center gap-2">
               <Radio className={`h-4 w-4 ${hasActive ? "text-destructive" : "text-primary"}`} />
-              <span className="font-mono text-xs uppercase tracking-widest font-bold">Gravação de Lançamento</span>
+              <span className="font-mono text-xs uppercase tracking-widest font-bold">{t("Gravação de Lançamento", "Launch Recording", "Grabación del lanzamiento")}</span>
             </div>
             <div className="flex items-center gap-1">
               {hasActive && (
                 <button onClick={() => { setMinimized(true); setOpen(false); }}
-                  className="p-1.5 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-colors" title="Minimizar" aria-label="Minimizar">
+                  className="p-1.5 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-colors" title={t("Minimizar", "Minimise", "Minimizar")} aria-label={t("Minimizar", "Minimise", "Minimizar")}>
                   <Minimize2 className="h-3.5 w-3.5" />
                 </button>
               )}
-              <button onClick={() => setOpen(false)} aria-label="Fechar painel" className="p-1.5 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-colors">
+              <button onClick={() => setOpen(false)} aria-label={t("Fechar painel", "Close panel", "Cerrar panel")} className="p-1.5 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-colors">
                 <XCircle className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -1171,7 +1177,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
             {syncLoading && (
               <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" />
-                Verificando sessões ativas…
+                {t("Verificando sessões ativas…", "Checking active sessions…", "Comprobando sesiones activas…")}
               </div>
             )}
 
@@ -1188,7 +1194,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
                   <div className="flex-1 min-w-0">
                     <p className="font-mono text-xs font-bold text-foreground truncate">{recording?.name}</p>
                     <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-                      {uiState === "paused" ? "Pausado" : "Gravando"}
+                      {uiState === "paused" ? t("Pausado", "Paused", "En pausa") : t("Gravando", "Recording", "Grabando")}
                     </p>
                   </div>
                   <span className="font-mono text-xl font-bold tabular-nums">{fmtDuration(elapsed)}</span>
@@ -1196,23 +1202,23 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
 
                 {/* Active stream badges */}
                 <div className="flex gap-1.5 flex-wrap">
-                  {hasSystem && <Badge variant="outline" className="text-[10px] font-mono rounded-none border-emerald-500/40 text-emerald-400"><Monitor className="h-2.5 w-2.5 mr-1" />Sistema</Badge>}
-                  {hasMic && <Badge variant="outline" className="text-[10px] font-mono rounded-none border-blue-500/40 text-blue-400"><Mic className="h-2.5 w-2.5 mr-1" />Microfone</Badge>}
-                  {hasCamera && <Badge variant="outline" className="text-[10px] font-mono rounded-none border-primary/40 text-primary"><Camera className="h-2.5 w-2.5 mr-1" />Câmera</Badge>}
-                  {!hasSystem && !hasMic && <Badge variant="outline" className="text-[10px] font-mono rounded-none border-yellow-400/40 text-yellow-400"><AlertTriangle className="h-2.5 w-2.5 mr-1" />Sem áudio</Badge>}
-                  <Badge variant="outline" className="text-[10px] font-mono rounded-none border-border/40 text-muted-foreground"><Tag className="h-2.5 w-2.5 mr-1" />{eventCount} marcos</Badge>
+                  {hasSystem && <Badge variant="outline" className="text-[10px] font-mono rounded-none border-emerald-500/40 text-emerald-400"><Monitor className="h-2.5 w-2.5 mr-1" />{t("Sistema", "System", "Sistema")}</Badge>}
+                  {hasMic && <Badge variant="outline" className="text-[10px] font-mono rounded-none border-blue-500/40 text-blue-400"><Mic className="h-2.5 w-2.5 mr-1" />{t("Microfone", "Microphone", "Micrófono")}</Badge>}
+                  {hasCamera && <Badge variant="outline" className="text-[10px] font-mono rounded-none border-primary/40 text-primary"><Camera className="h-2.5 w-2.5 mr-1" />{t("Câmera", "Camera", "Cámara")}</Badge>}
+                  {!hasSystem && !hasMic && <Badge variant="outline" className="text-[10px] font-mono rounded-none border-yellow-400/40 text-yellow-400"><AlertTriangle className="h-2.5 w-2.5 mr-1" />{t("Sem áudio", "No audio", "Sin audio")}</Badge>}
+                  <Badge variant="outline" className="text-[10px] font-mono rounded-none border-border/40 text-muted-foreground"><Tag className="h-2.5 w-2.5 mr-1" />{t(`${eventCount} marcos`, `${eventCount} markers`, `${eventCount} marcadores`)}</Badge>
                 </div>
 
                 {/* Quick events */}
                 <div>
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">Marcar evento</p>
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">{t("Marcar evento", "Mark event", "Marcar evento")}</p>
                   <div className="flex flex-wrap gap-1">
                     {QUICK_EVENTS.map(type => (
                       <button key={type} onClick={() => void fireEvent(type)} disabled={firingEvent}
                         className="text-[10px] font-mono px-2 py-1 border border-border/40 bg-card/40
                           hover:border-primary/40 hover:bg-primary/10 transition-all text-muted-foreground
                           hover:text-foreground disabled:opacity-40">
-                        {EVENT_LABELS[type]}
+                        {t(...EVENT_LABEL_TRANSLATIONS[type])}
                       </button>
                     ))}
                   </div>
@@ -1224,17 +1230,17 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
                   {uiState === "recording" ? (
                     <Button variant="outline" size="sm" onClick={pauseCapture}
                       className="col-span-1 rounded-none font-mono text-[11px] uppercase tracking-widest border-yellow-400/40 text-yellow-400 hover:bg-yellow-400/10">
-                      <Pause className="h-3 w-3 mr-1" />Pausar
+                      <Pause className="h-3 w-3 mr-1" />{t("Pausar", "Pause", "Pausar")}
                     </Button>
                   ) : (
                     <Button variant="outline" size="sm" onClick={resumeCapture}
                       className="col-span-1 rounded-none font-mono text-[11px] uppercase tracking-widest border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10">
-                      <Play className="h-3 w-3 mr-1" />Retomar
+                      <Play className="h-3 w-3 mr-1" />{t("Retomar", "Resume", "Reanudar")}
                     </Button>
                   )}
                   <Button variant="outline" size="sm" onClick={() => void stopCapture()}
                     className="col-span-2 rounded-none font-mono text-[11px] uppercase tracking-widest border-destructive/40 text-destructive hover:bg-destructive/10">
-                    <Square className="h-3 w-3 mr-1 fill-current" />Parar e Salvar
+                    <Square className="h-3 w-3 mr-1 fill-current" />{t("Parar e Salvar", "Stop and Save", "Detener y guardar")}
                   </Button>
                 </div>
               </div>
@@ -1247,14 +1253,14 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
                   <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="font-mono text-xs font-bold text-foreground truncate">{recording?.name}</p>
-                    <p className="font-mono text-[10px] text-muted-foreground">{fmtDuration(elapsed)} · {eventCount} marcos</p>
+                    <p className="font-mono text-[10px] text-muted-foreground">{fmtDuration(elapsed)} · {t(`${eventCount} marcos`, `${eventCount} markers`, `${eventCount} marcadores`)}</p>
                   </div>
                 </div>
 
                 {uploading && (
                   <div className="flex items-center gap-2 px-3 py-2 text-xs font-mono text-muted-foreground border border-border/30">
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                    Enviando vídeo ao servidor…
+                    {t("Enviando vídeo ao servidor…", "Uploading video to server…", "Subiendo video al servidor…")}
                   </div>
                 )}
 
@@ -1262,7 +1268,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
                   <div className="flex items-center gap-2 px-3 py-2 border border-primary/30 bg-primary/5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
                     <div className="font-mono text-[11px]">
-                      <span className="font-bold text-foreground">Salvo no servidor</span>
+                      <span className="font-bold text-foreground">{t("Salvo no servidor", "Saved to server", "Guardado en el servidor")}</span>
                       {recording?.videoSize && <span className="text-muted-foreground ml-1">· {fmtBytes(recording.videoSize)}</span>}
                     </div>
                   </div>
@@ -1273,7 +1279,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-yellow-400" />
                       <p className="font-mono text-[10px] text-yellow-400">
-                        O vídeo ainda não foi salvo na biblioteca.
+                        {t("O vídeo ainda não foi salvo na biblioteca.", "The video has not been saved to the library yet.", "El video aún no se ha guardado en la biblioteca.")}
                       </p>
                     </div>
                     <Button
@@ -1283,7 +1289,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
                       onClick={() => void retryServerUpload()}
                     >
                       <Loader2 className="mr-2 h-3.5 w-3.5" />
-                      Tentar enviar novamente
+                      {t("Tentar enviar novamente", "Try uploading again", "Intentar subir de nuevo")}
                     </Button>
                   </div>
                 )}
@@ -1291,24 +1297,24 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
                 <div className="space-y-2">
                   <Button variant="outline" size="sm" onClick={openInEditor} disabled={!uploadDone}
                     className="w-full rounded-none font-mono text-[11px] uppercase tracking-widest border-primary/40 text-primary hover:bg-primary/10">
-                    <Video className="h-3.5 w-3.5 mr-2" />Abrir no Editor de Vídeo NexOS
+                    <Video className="h-3.5 w-3.5 mr-2" />{t("Abrir no Editor de Vídeo NexOS", "Open in NexOS Video Editor", "Abrir en el editor de video NexOS")}
                   </Button>
 
                   {videoBlob && (
                     <Button variant="outline" size="sm" onClick={downloadLocal}
                       className="w-full rounded-none font-mono text-[11px] uppercase tracking-widest">
-                      <Download className="h-3.5 w-3.5 mr-2" />Baixar para o Device (.webm)
+                      <Download className="h-3.5 w-3.5 mr-2" />{t("Baixar para o Device (.webm)", "Download to device (.webm)", "Descargar al dispositivo (.webm)")}
                     </Button>
                   )}
 
                   <Button variant="outline" size="sm" onClick={() => void downloadZip()}
                     className="w-full rounded-none font-mono text-[11px] uppercase tracking-widest">
-                    <Download className="h-3.5 w-3.5 mr-2" />Exportar Timeline (.zip)
+                    <Download className="h-3.5 w-3.5 mr-2" />{t("Exportar Timeline (.zip)", "Export timeline (.zip)", "Exportar línea de tiempo (.zip)")}
                   </Button>
 
                   <Button variant="ghost" size="sm" onClick={resetSession}
                     className="w-full rounded-none font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-foreground">
-                    <Trash2 className="h-3.5 w-3.5 mr-2" />Nova Sessão
+                    <Trash2 className="h-3.5 w-3.5 mr-2" />{t("Nova Sessão", "New Session", "Nueva sesión")}
                   </Button>
                 </div>
               </div>

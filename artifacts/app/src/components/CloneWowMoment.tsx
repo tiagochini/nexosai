@@ -19,6 +19,7 @@ import {
   Video, BarChart2, Rocket, Users, Zap,
   Volume2, Play, ArrowRight, Star,
 } from "lucide-react";
+import { useUiText } from "@/lib/i18n";
 
 // ── Tour stops ─────────────────────────────────────────────────────────────────
 
@@ -88,6 +89,74 @@ const TOUR_STOPS: TourStop[] = [
     path: "/metrics",
   },
 ];
+
+const TOUR_UI_COPY: Record<string, {
+  module: readonly [string, string, string];
+  headline: readonly [string, string, string];
+  narration: readonly [string, string, string];
+  features: { label: readonly [string, string, string]; desc: readonly [string, string, string] }[];
+}> = {
+  dashboard: {
+    module: ["Central de Comando", "Command Center", "Centro de comando"],
+    headline: ["Sua visão 360° do lançamento", "Your 360° launch overview", "Tu visión 360° del lanzamiento"],
+    narration: ["Aqui você acompanha tudo em tempo real — receita, leads, taxa de abertura, saúde da campanha. É a sua sala de guerra. Os agentes trabalham aqui enquanto você toma decisões.", "Track everything in real time here—revenue, leads, open rate, and campaign health. This is your command center. Agents work here while you make decisions.", "Aquí puedes seguirlo todo en tiempo real: ingresos, leads, tasa de apertura y estado de la campaña. Es tu centro de operaciones. Los agentes trabajan mientras tú decides."],
+    features: [
+      { label: ["Health Score", "Health Score", "Health Score"], desc: ["Calculado de 0 a 100 em tempo real", "Calculated live on a 0–100 scale", "Calculado en tiempo real de 0 a 100"] },
+      { label: ["KPIs ao vivo", "Live KPIs", "KPIs en vivo"], desc: ["Receita, leads, ROAS, CPL", "Revenue, leads, ROAS, CPL", "Ingresos, leads, ROAS, CPL"] },
+      { label: ["Alertas IA", "AI alerts", "Alertas de IA"], desc: ["Detecta anomalias automaticamente", "Detects anomalies automatically", "Detecta anomalías automáticamente"] },
+    ],
+  },
+  campaigns: {
+    module: ["Campanhas", "Campaigns", "Campañas"],
+    headline: ["Onde seu lançamento vive", "Where your launch lives", "Donde vive tu lanzamiento"],
+    narration: ["Cada campanha é uma missão. Briefing, estratégia, conteúdo, lançamento — tudo em sequência automática. Você aprova, os agentes executam. Simples assim.", "Every campaign is a mission. Briefing, strategy, content, launch—all in an automated sequence. You approve; the agents execute. That's it.", "Cada campaña es una misión. Briefing, estrategia, contenido y lanzamiento, todo en secuencia automática. Tú apruebas y los agentes ejecutan. Así de simple."],
+    features: [
+      { label: ["State Machine", "State machine", "State machine"], desc: ["Pipeline automático de fases", "Automated stage pipeline", "Flujo automático de etapas"] },
+      { label: ["Multi-agente", "Multi-agent", "Multiagente"], desc: ["Claude + GPT-4o + Gemini", "Claude + GPT-4o + Gemini", "Claude + GPT-4o + Gemini"] },
+      { label: ["Aprovação", "Approval", "Aprobación"], desc: ["Você aprova, IA executa", "You approve; AI executes", "Tú apruebas y la IA ejecuta"] },
+    ],
+  },
+  sequences: {
+    module: ["Sequências de Lançamento", "Launch Sequences", "Secuencias de lanzamiento"],
+    headline: ["Automação de email + WhatsApp", "Email + WhatsApp automation", "Automatización de email + WhatsApp"],
+    narration: ["Eu programei cada mensagem para sair no momento certo, para a pessoa certa. E-mail, WhatsApp, com copy personalizada por segmento — quente, morno, frio. Tudo dispara sozinho.", "Each message is scheduled for the right person at the right time. Email and WhatsApp copy is tailored by segment—hot, warm, or cold. Everything sends automatically.", "Cada mensaje está programado para la persona adecuada en el momento justo. El texto de email y WhatsApp se adapta a cada segmento: caliente, templado o frío. Todo se envía automáticamente."],
+    features: [
+      { label: ["Email + WhatsApp", "Email + WhatsApp", "Email + WhatsApp"], desc: ["Disparo multicanal automático", "Automated multichannel delivery", "Envío multicanal automático"] },
+      { label: ["Segmentação", "Segmentation", "Segmentación"], desc: ["Quente / Morno / Frio", "Hot / Warm / Cold", "Caliente / Templado / Frío"] },
+      { label: ["Engajamento", "Engagement", "Interacción"], desc: ["Open and click rates in real time", "Open and click rates in real time", "Tasas de apertura y clics en tiempo real"] },
+    ],
+  },
+  agents: {
+    module: ["Agentes NexOS", "NexOS Agents", "Agentes NexOS"],
+    headline: ["64 especialistas trabalhando por você", "64 specialists working for you", "64 especialistas trabajando para ti"],
+    narration: ["Tenho 64 agentes disponíveis — copywriter, estrategista, media buyer, compliance. Você consulta qualquer um em tempo real. Eles sabem tudo sobre o seu lançamento.", "You have 64 agents available—copywriters, strategists, media buyers, and compliance specialists. Consult any of them in real time; they know all about your launch.", "Tienes 64 agentes disponibles: redactores, estrategas, especialistas en medios y cumplimiento. Consulta a cualquiera en tiempo real; conocen tu lanzamiento."],
+    features: [
+      { label: ["64 agentes", "64 agents", "64 agentes"], desc: ["Cada um com especialidade", "Each with a specialty", "Cada uno con una especialidad"] },
+      { label: ["Chat direto", "Direct chat", "Chat directo"], desc: ["Consulta em tempo real", "Real-time consultation", "Consulta en tiempo real"] },
+      { label: ["Multi-provider", "Multi-provider", "Multiproveedor"], desc: ["Claude, GPT-4o, Gemini", "Claude, GPT-4o, Gemini", "Claude, GPT-4o, Gemini"] },
+    ],
+  },
+  atendimento: {
+    module: ["Time de Vendas", "Sales Team", "Equipo de ventas"],
+    headline: ["IA fecha vendas por você", "AI closes sales for you", "La IA cierra ventas por ti"],
+    narration: ["Cada lead que entra vai para o funil certo. O agente de vendas sugere a mensagem ideal para cada estágio — aquecimento, desejo, fechamento, objeções. Você só aprova ou envia.", "Every incoming lead goes to the right funnel. The sales agent suggests the ideal message for each stage—nurturing, desire, closing, and objections. You just approve or send.", "Cada lead entra en el embudo adecuado. El agente de ventas sugiere el mensaje ideal para cada etapa: acercamiento, deseo, cierre y objeciones. Tú solo apruebas o envías."],
+    features: [
+      { label: ["5 Agentes venda", "5 sales agents", "5 agentes de venta"], desc: ["Warmer, Closer, Objeções...", "Warmer, Closer, Objections...", "Warmer, Closer, Objeciones..."] },
+      { label: ["Kanban funil", "Funnel Kanban", "Kanban del embudo"], desc: ["Visualização por estágio", "View by stage", "Vista por etapa"] },
+      { label: ["IA sugere reply", "AI suggests replies", "La IA sugiere respuestas"], desc: ["Copy ideal para cada momento", "Ideal copy for each moment", "Texto ideal para cada momento"] },
+    ],
+  },
+  metrics: {
+    module: ["Métricas & Performance", "Metrics & Performance", "Métricas y rendimiento"],
+    headline: ["Otimização em tempo real", "Real-time optimisation", "Optimización en tiempo real"],
+    narration: ["Se o CTR cair, eu detecto e sugiro trocar o criativo. Se o CPL subir, ajusto a segmentação. Tudo auditado, tudo registrado. Você nunca fica no escuro.", "If CTR drops, I detect it and suggest a new creative. If CPL rises, I adjust targeting. Everything is audited and recorded, so you're never left in the dark.", "Si baja el CTR, lo detecto y sugiero cambiar la creatividad. Si sube el CPL, ajusto la segmentación. Todo queda auditado y registrado; nunca te quedas a oscuras."],
+    features: [
+      { label: ["Score 100pts", "100-point score", "Puntuación de 100 puntos"], desc: ["Receita + ROAS + CPL + Email", "Revenue + ROAS + CPL + email", "Ingresos + ROAS + CPL + email"] },
+      { label: ["Fadiga criativa", "Creative fatigue", "Fatiga creativa"], desc: ["Detecta queda de CTR", "Detects CTR decline", "Detecta caídas del CTR"] },
+      { label: ["Auto-otimização", "Auto-optimisation", "Autooptimización"], desc: ["Score ≤30 → agent activates", "Score ≤30 → agent activates", "Puntuación ≤30 → se activa un agente"] },
+    ],
+  },
+};
 
 // ── Typewriter hook ────────────────────────────────────────────────────────────
 
@@ -164,6 +233,7 @@ interface Props {
 type WowPhase = "clone_speech" | "tour" | "done";
 
 export function CloneWowMoment({ userName, productName, revenueTarget, onProceed }: Props) {
+  const t = useUiText();
   const firstName = userName.split(" ")[0] ?? "você";
 
   const CLONE_SPEECH = `${firstName}, eu sou seu clone — criado com a sua voz e o seu jeito de falar.\n\nSeu lançamento de ${productName ?? "produto"} está traçado. Em 7 dias, ${revenueTarget ?? "R$ 100 mil"} é a meta. Não como promessa — como plano de execução.\n\nEu vou produzir os vídeos, escrever os emails, responder os leads, ajustar os anúncios e monitorar cada métrica — enquanto você foca no que importa: criar e conectar com a sua audiência.\n\nAgora deixa eu te mostrar onde tudo acontece.`;
@@ -182,9 +252,10 @@ export function CloneWowMoment({ userName, productName, revenueTarget, onProceed
 
   const currentStop = TOUR_STOPS[tourIdx]!;
   const StopIcon = currentStop.icon;
+  const currentLabels = TOUR_UI_COPY[currentStop.id];
 
   const { displayed: tourNarration, done: tourDone } = useTypewriter(
-    currentStop.cloneNarration,
+    currentLabels ? t(...currentLabels.narration) : currentStop.cloneNarration,
     20,
     wowPhase === "tour"
   );
@@ -203,10 +274,10 @@ export function CloneWowMoment({ userName, productName, revenueTarget, onProceed
       <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in duration-700 py-6">
         <div className="text-center space-y-2">
           <Badge variant="outline" className="rounded-none font-mono text-[11px] border-primary/40 text-primary uppercase tracking-widest">
-            <Sparkles className="h-3 w-3 mr-1.5" /> Clone NexOS · Ativo
+            <Sparkles className="h-3 w-3 mr-1.5" /> {t("Clone NexOS · Ativo", "NexOS Clone · Active", "Clon NexOS · Activo")}
           </Badge>
           <h2 className="font-mono text-xl font-bold uppercase tracking-tighter text-foreground">
-            Seu Clone tem uma mensagem para você
+            {t("Seu Clone tem uma mensagem para você", "Your clone has a message for you", "Tu clon tiene un mensaje para ti")}
           </h2>
         </div>
 
@@ -221,9 +292,9 @@ export function CloneWowMoment({ userName, productName, revenueTarget, onProceed
           <div className="flex items-start gap-4 pb-2">
             <CloneAvatar name={userName} speaking={!isSpeechDone} />
             <div className="pt-8">
-              <div className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-widest">Falando agora</div>
-              <div className="font-mono text-sm font-bold text-foreground">Clone de {firstName}</div>
-              <div className="font-mono text-[10px] text-primary/70 uppercase tracking-widest mt-0.5">Versão 1.0 · Processando voz</div>
+              <div className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-widest">{t("Falando agora", "Speaking now", "Hablando ahora")}</div>
+              <div className="font-mono text-sm font-bold text-foreground">{t(`Clone de ${firstName}`, `${firstName}'s clone`, `Clon de ${firstName}`)}</div>
+              <div className="font-mono text-[10px] text-primary/70 uppercase tracking-widest mt-0.5">{t("Versão 1.0 · Processando voz", "Version 1.0 · Processing voice", "Versión 1.0 · Procesando voz")}</div>
             </div>
           </div>
 
@@ -243,13 +314,13 @@ export function CloneWowMoment({ userName, productName, revenueTarget, onProceed
                 className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11 px-8 text-sm"
               >
                 <Play className="h-4 w-4" />
-                Iniciar tour guiado
+                {t("Iniciar tour guiado", "Start guided tour", "Iniciar recorrido guiado")}
               </Button>
               <button
                 onClick={onProceed}
                 className="font-mono text-[11px] text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors uppercase tracking-widest underline underline-offset-2"
               >
-                Pular e ir direto para a campanha
+                {t("Pular e ir direto para a campanha", "Skip and go straight to the campaign", "Omitir e ir directamente a la campaña")}
               </button>
             </div>
           )}
@@ -260,7 +331,7 @@ export function CloneWowMoment({ userName, productName, revenueTarget, onProceed
                 onClick={() => setSkipSpeech(true)}
                 className="font-mono text-[10px] text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors uppercase tracking-widest"
               >
-                pular apresentação →
+                {t("pular apresentação →", "skip introduction →", "omitir presentación →")}
               </button>
             </div>
           )}
@@ -277,10 +348,10 @@ export function CloneWowMoment({ userName, productName, revenueTarget, onProceed
         <div className="flex items-center justify-between">
           <div>
             <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60">
-              Tour guiado · {tourIdx + 1} de {TOUR_STOPS.length}
+              {t(`Tour guiado · ${tourIdx + 1} de ${TOUR_STOPS.length}`, `Guided tour · ${tourIdx + 1} of ${TOUR_STOPS.length}`, `Recorrido guiado · ${tourIdx + 1} de ${TOUR_STOPS.length}`)}
             </div>
             <h2 className="font-mono text-lg font-bold uppercase tracking-tight text-foreground mt-0.5">
-              {currentStop.module}
+              {currentLabels ? t(...currentLabels.module) : currentStop.module}
             </h2>
           </div>
           {/* Progress bar */}
@@ -300,8 +371,8 @@ export function CloneWowMoment({ userName, productName, revenueTarget, onProceed
           <div className={`px-5 py-4 border-b border-border/30 flex items-center gap-3 ${currentStop.color}`}>
             <StopIcon className="h-5 w-5" />
             <div>
-              <div className="font-mono text-xs font-bold uppercase tracking-widest">{currentStop.module}</div>
-              <div className="font-mono text-[11px] text-muted-foreground mt-0.5">{currentStop.headline}</div>
+              <div className="font-mono text-xs font-bold uppercase tracking-widest">{currentLabels ? t(...currentLabels.module) : currentStop.module}</div>
+              <div className="font-mono text-[11px] text-muted-foreground mt-0.5">{currentLabels ? t(...currentLabels.headline) : currentStop.headline}</div>
             </div>
           </div>
 
@@ -321,12 +392,15 @@ export function CloneWowMoment({ userName, productName, revenueTarget, onProceed
 
             {/* Feature highlights */}
             <div className="grid grid-cols-3 gap-1.5">
-              {getStopFeatures(currentStop.id).map((f, i) => (
+              {(currentLabels?.features ?? getStopFeatures(currentStop.id).map(f => ({
+                label: [f.label, f.label, f.label] as const,
+                desc: [f.desc, f.desc, f.desc] as const,
+              }))).map((f, i) => (
                 <div key={i} className="border border-border/30 bg-background/40 px-2 py-2">
                   <div className={`font-mono text-[10px] font-bold uppercase tracking-widest ${currentStop.color}`}>
-                    {f.label}
+                    {t(...f.label)}
                   </div>
-                  <div className="font-mono text-[10px] text-muted-foreground mt-0.5 leading-tight">{f.desc}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground mt-0.5 leading-tight">{t(...f.desc)}</div>
                 </div>
               ))}
             </div>
@@ -339,9 +413,9 @@ export function CloneWowMoment({ userName, productName, revenueTarget, onProceed
               className="flex-1 font-mono text-[11px] uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10"
             >
               {tourIdx < TOUR_STOPS.length - 1 ? (
-                <><ChevronRight className="h-3.5 w-3.5" /> Próximo módulo</>
+                <><ChevronRight className="h-3.5 w-3.5" /> {t("Próximo módulo", "Next module", "Siguiente módulo")}</>
               ) : (
-                <><Rocket className="h-3.5 w-3.5" /> Concluir tour</>
+                <><Rocket className="h-3.5 w-3.5" /> {t("Concluir tour", "Finish tour", "Finalizar recorrido")}</>
               )}
             </Button>
             <Button
@@ -349,7 +423,7 @@ export function CloneWowMoment({ userName, productName, revenueTarget, onProceed
               onClick={onProceed}
               className="font-mono text-[10px] uppercase tracking-widest rounded-none text-muted-foreground/40 h-10 px-3"
             >
-              Pular <ArrowRight className="h-3 w-3 ml-1" />
+              {t("Pular", "Skip", "Omitir")} <ArrowRight className="h-3 w-3 ml-1" />
             </Button>
           </div>
         </div>
@@ -384,20 +458,20 @@ export function CloneWowMoment({ userName, productName, revenueTarget, onProceed
           ))}
         </div>
         <h2 className="font-mono text-2xl font-bold uppercase tracking-tighter text-foreground">
-          Você está pronto para lançar
+          {t("Você está pronto para lançar", "You're ready to launch", "Estás listo para lanzar")}
         </h2>
         <p className="font-mono text-xs text-muted-foreground">
-          Clone criado · Plano gerado · Time escalado · Sistema configurado
+          {t("Clone criado · Plano gerado · Time escalado · Sistema configurado", "Clone created · Plan generated · Team assembled · System configured", "Clon creado · Plan generado · Equipo preparado · Sistema configurado")}
         </p>
       </div>
 
       {/* Summary grid */}
       <div className="grid grid-cols-2 gap-2">
         {[
-          { icon: Bot,           label: "Clone NexOS",        value: "Ativo · Voz capturada", color: "text-primary" },
-          { icon: Target,        label: "Meta 7 dias",         value: revenueTarget ?? "R$ 100k+", color: "text-success" },
-          { icon: Zap,           label: "Agentes escalados",   value: "64 especialistas", color: "text-yellow-400" },
-          { icon: Shield,        label: "Compliance",          value: "Verificado automaticamente", color: "text-cyan-400" },
+          { icon: Bot, label: t("Clone NexOS", "NexOS Clone", "Clon NexOS"), value: t("Ativo · Voz capturada", "Active · Voice captured", "Activo · Voz capturada"), color: "text-primary" },
+          { icon: Target, label: t("Meta 7 dias", "7-day target", "Meta de 7 días"), value: revenueTarget ?? "R$ 100k+", color: "text-success" },
+          { icon: Zap, label: t("Agentes escalados", "Agents assigned", "Agentes asignados"), value: t("64 especialistas", "64 specialists", "64 especialistas"), color: "text-yellow-400" },
+          { icon: Shield, label: t("Compliance", "Compliance", "Cumplimiento"), value: t("Verificado automaticamente", "Automatically verified", "Verificado automáticamente"), color: "text-cyan-400" },
         ].map((item, i) => {
           const Icon = item.icon;
           return (
@@ -417,7 +491,7 @@ export function CloneWowMoment({ userName, productName, revenueTarget, onProceed
         className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-13 text-sm"
       >
         <Rocket className="h-4 w-4" />
-        Iniciar meu lançamento agora
+        {t("Iniciar meu lançamento agora", "Start my launch now", "Iniciar mi lanzamiento ahora")}
       </Button>
     </div>
   );

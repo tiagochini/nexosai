@@ -6,8 +6,10 @@ import { ArrowLeft, AlertTriangle, PlayCircle, CheckCircle2, TrendingUp, Activit
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useUiText } from "@/lib/i18n";
 
 export default function SequenceToday() {
+  const t = useUiText();
   const [match, params] = useRoute("/sequences/:id/today");
   const sequenceId = params?.id || "";
 
@@ -40,25 +42,25 @@ export default function SequenceToday() {
         <Link href={`/sequences/${sequenceId}`}>
           <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest mb-6 -ml-2 w-fit text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-3 w-3 mr-2" />
-            Retornar à Sequência
+            {t("Retornar à Sequência", "Back to Sequence", "Volver a la secuencia")}
           </Button>
         </Link>
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <h1 className="text-4xl font-mono uppercase tracking-tighter font-bold text-foreground flex items-center gap-3">
               <Activity className="h-8 w-8 text-primary" />
-              Operação do Dia
+              {t("Operação do Dia", "Today's Operations", "Operación del día")}
             </h1>
-            <p className="text-sm text-muted-foreground mt-2 font-mono uppercase tracking-widest">Status tático e disparos agendados para hoje</p>
+            <p className="text-sm text-muted-foreground mt-2 font-mono uppercase tracking-widest">{t("Status tático e disparos agendados para hoje", "Tactical status and messages scheduled for today", "Estado táctico y envíos programados para hoy")}</p>
           </div>
           <div className="text-left md:text-right bg-card/40 border border-border/50 p-4 min-w-[200px] relative overflow-hidden">
             <div className="absolute inset-0 bg-primary/5"></div>
-            <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground mb-1 relative z-10">Tempo Local</div>
+            <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground mb-1 relative z-10">{t("Tempo Local", "Local Time", "Hora local")}</div>
             <div className="font-mono text-5xl font-bold text-primary drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)] relative z-10 leading-none">
               D{data?.currentDayIndex || 0}
             </div>
             <div className="font-mono text-xs uppercase tracking-widest text-foreground mt-2 relative z-10 bg-background/50 px-2 py-1 inline-block border border-border/50">
-              FASE: <span className="text-primary font-bold">{data?.currentPhaseLabel || 'N/A'}</span>
+              {t("FASE:", "PHASE:", "FASE:")} <span className="text-primary font-bold">{data?.currentPhaseLabel || 'N/A'}</span>
             </div>
           </div>
         </div>
@@ -68,7 +70,7 @@ export default function SequenceToday() {
         <Card className="rounded-none border-border/50 bg-card/40 backdrop-blur-sm card-weapon">
           <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-primary to-transparent opacity-50"></div>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-mono uppercase tracking-widest text-muted-foreground/80">Progresso da Missão</CardTitle>
+            <CardTitle className="text-xs font-mono uppercase tracking-widest text-muted-foreground/80">{t("Progresso da Missão", "Mission Progress", "Progreso de la misión")}</CardTitle>
             <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
@@ -80,7 +82,7 @@ export default function SequenceToday() {
         <Card className="rounded-none border-border/50 bg-card/40 backdrop-blur-sm card-weapon col-span-1 md:col-span-2">
           <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-destructive to-transparent opacity-30"></div>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-mono uppercase tracking-widest text-muted-foreground/80">Alertas do Sistema</CardTitle>
+            <CardTitle className="text-xs font-mono uppercase tracking-widest text-muted-foreground/80">{t("Alertas do Sistema", "System Alerts", "Alertas del sistema")}</CardTitle>
             <AlertTriangle className="h-4 w-4 text-destructive drop-shadow-[0_0_5px_hsl(var(--destructive)/0.5)]" />
           </CardHeader>
           <CardContent>
@@ -96,7 +98,7 @@ export default function SequenceToday() {
             ) : (
               <div className="flex items-center gap-3 font-mono text-xs uppercase tracking-widest text-success mt-2 bg-success/10 border border-success/20 p-4">
                 <CheckCircle2 className="h-4 w-4 drop-shadow-[0_0_5px_hsl(var(--success))]" />
-                Nenhum alerta crítico reportado. Sistemas operando nominalmente.
+                {t("Nenhum alerta crítico reportado. Sistemas operando nominalmente.", "No critical alerts reported. Systems are operating normally.", "No se reportan alertas críticas. Los sistemas funcionan con normalidad.")}
               </div>
             )}
           </CardContent>
@@ -104,7 +106,7 @@ export default function SequenceToday() {
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-sm font-mono uppercase tracking-widest font-bold text-muted-foreground">Disparos de Hoje</h2>
+        <h2 className="text-sm font-mono uppercase tracking-widest font-bold text-muted-foreground">{t("Disparos de Hoje", "Today's Deliveries", "Envíos de hoy")}</h2>
         <div className="border border-border/50 bg-card/40 backdrop-blur-sm relative">
           <div className="absolute left-0 inset-y-0 w-[2px] bg-gradient-to-b from-primary/50 to-transparent"></div>
           
@@ -123,13 +125,13 @@ export default function SequenceToday() {
                   </div>
                   <div className="flex items-center gap-6 shrink-0 lg:justify-end">
                     {item.metadata?.generatedCopy ? (
-                       <Badge variant="outline" className="rounded-none font-mono text-[11px] tracking-widest uppercase border-success/40 text-success bg-success/10 px-3 py-1.5 badge-glow-green">Pronto p/ Disparo</Badge>
+                       <Badge variant="outline" className="rounded-none font-mono text-[11px] tracking-widest uppercase border-success/40 text-success bg-success/10 px-3 py-1.5 badge-glow-green">{t("Pronto p/ Disparo", "Ready to Send", "Listo para enviar")}</Badge>
                      ) : (
-                       <Badge variant="outline" className="rounded-none font-mono text-[11px] tracking-widest uppercase border-destructive/40 text-destructive bg-destructive/10 px-3 py-1.5 badge-glow-red animate-pulse-slow">Copy Pendente</Badge>
+                        <Badge variant="outline" className="rounded-none font-mono text-[11px] tracking-widest uppercase border-destructive/40 text-destructive bg-destructive/10 px-3 py-1.5 badge-glow-red animate-pulse-slow">{t("Copy Pendente", "Copy Pending", "Texto pendiente")}</Badge>
                      )}
                      <Link href={`/sequences/${sequenceId}/copy?item=${item.id}`}>
                        <Button variant="outline" size="sm" className="font-mono text-xs tracking-widest uppercase rounded-none h-9 px-5 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground btn-weapon-outline">
-                         Acessar Estúdio
+                          {t("Acessar Estúdio", "Open Studio", "Abrir estudio")}
                        </Button>
                      </Link>
                   </div>
@@ -141,8 +143,8 @@ export default function SequenceToday() {
               <div className="w-16 h-16 rounded-full border border-border/50 flex items-center justify-center mb-6 bg-muted/10">
                 <PlayCircle className="h-6 w-6 text-muted-foreground/40" />
               </div>
-              <p className="font-mono text-sm uppercase tracking-widest text-muted-foreground font-bold mb-2">Sem atividade operacional</p>
-              <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground/60">Nenhum disparo agendado para o ciclo solar atual.</p>
+              <p className="font-mono text-sm uppercase tracking-widest text-muted-foreground font-bold mb-2">{t("Sem atividade operacional", "No scheduled activity", "Sin actividad programada")}</p>
+              <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground/60">{t("Nenhum disparo agendado para o ciclo solar atual.", "No messages are scheduled for the current cycle.", "No hay envíos programados para el ciclo actual.")}</p>
             </div>
           )}
         </div>

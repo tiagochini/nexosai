@@ -4,8 +4,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, CheckCircle2, Circle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useUiText } from "@/lib/i18n";
 
 export default function SequenceCalendar() {
+  const t = useUiText();
   const [match, params] = useRoute("/sequences/:id/calendar");
   const sequenceId = params?.id || "";
 
@@ -38,11 +40,11 @@ export default function SequenceCalendar() {
         <Link href={`/sequences/${sequenceId}`}>
           <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest mb-6 -ml-2 w-fit text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-3 w-3 mr-2" />
-            Retornar à Sequência
+            {t("Retornar à Sequência", "Back to Sequence", "Volver a la secuencia")}
           </Button>
         </Link>
-        <h1 className="text-4xl font-mono uppercase tracking-tighter font-bold text-foreground">Cronograma de Disparo</h1>
-        <p className="text-sm text-muted-foreground mt-2 font-mono uppercase tracking-widest">Visualização tática linear</p>
+        <h1 className="text-4xl font-mono uppercase tracking-tighter font-bold text-foreground">{t("Cronograma de Disparo", "Delivery Schedule", "Cronograma de envíos")}</h1>
+        <p className="text-sm text-muted-foreground mt-2 font-mono uppercase tracking-widest">{t("Visualização tática linear", "Linear sequence overview", "Vista lineal de la secuencia")}</p>
       </div>
 
       <div className="grid gap-8">
@@ -51,7 +53,7 @@ export default function SequenceCalendar() {
             {/* Day Header Block */}
             <div className="w-32 bg-gradient-to-b from-muted/30 to-muted/10 border-r border-border/50 flex flex-col items-center justify-center p-4 shrink-0 relative overflow-hidden">
               <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <span className="font-mono text-xs uppercase text-primary font-bold tracking-[0.2em] mb-2">Dia</span>
+              <span className="font-mono text-xs uppercase text-primary font-bold tracking-[0.2em] mb-2">{t("Dia", "Day", "Día")}</span>
               <span className="font-mono text-4xl font-bold text-foreground drop-shadow-sm">{day.dayIndex}</span>
               {day.date && <span className="font-mono text-xs text-muted-foreground mt-3 uppercase tracking-widest">{day.date}</span>}
             </div>
@@ -60,7 +62,7 @@ export default function SequenceCalendar() {
             <div className="flex-1 p-0 flex flex-col">
               {/* Phase Header */}
               <div className="px-6 py-3 border-b border-border/50 bg-background/50 font-mono text-xs uppercase font-bold tracking-widest text-muted-foreground flex items-center">
-                <span className="opacity-60 mr-2">FASE:</span> 
+                <span className="opacity-60 mr-2">{t("FASE:", "PHASE:", "FASE:")}</span>
                 <span className="text-primary border-b border-primary/30 pb-0.5">{day.phaseLabel}</span>
               </div>
 
@@ -70,7 +72,7 @@ export default function SequenceCalendar() {
                   <div className="px-8 py-8 flex items-center gap-3">
                     <Clock className="h-4 w-4 text-muted-foreground/40" />
                     <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-                      Pausa tática (Nenhum disparo agendado)
+                       {t("Pausa tática (Nenhum disparo agendado)", "Tactical pause (no messages scheduled)", "Pausa táctica (no hay envíos programados)")}
                     </span>
                   </div>
                 ) : (
@@ -90,16 +92,16 @@ export default function SequenceCalendar() {
                         <div className="flex items-center gap-6 shrink-0 xl:justify-end">
                            {item.metadata?.generatedCopy ? (
                              <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-success bg-success/10 px-3 py-1.5 border border-success/20">
-                               <CheckCircle2 className="h-3 w-3" /> Copy Pronta
+                                <CheckCircle2 className="h-3 w-3" /> {t("Copy Pronta", "Copy Ready", "Texto listo")}
                              </div>
                            ) : (
                              <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-muted-foreground bg-muted/20 px-3 py-1.5 border border-border/50">
-                               <Circle className="h-3 w-3" /> Pendente
+                                <Circle className="h-3 w-3" /> {t("Pendente", "Pending", "Pendiente")}
                              </div>
                            )}
                            <Link href={`/sequences/${sequenceId}/copy?item=${item.id}`}>
                              <Button variant="outline" size="sm" className="font-mono text-xs tracking-widest uppercase rounded-none h-8 px-4 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground btn-weapon-outline">
-                               Ir p/ Estúdio
+                                {t("Ir p/ Estúdio", "Open Studio", "Abrir estudio")}
                              </Button>
                            </Link>
                         </div>

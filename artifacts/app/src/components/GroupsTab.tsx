@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Plus, Trash2, ExternalLink, Users, MessageCircle, Facebook, Send } from "lucide-react";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 interface CampaignGroup {
   id: string;
@@ -44,12 +45,12 @@ const PLATFORM_META: Record<string, { label: string; icon: React.ElementType; co
 };
 
 const SEGMENT_OPTIONS = [
-  { value: "", label: "Todos os segmentos" },
-  { value: "hot", label: "Hot — já comprou / alto engajamento" },
-  { value: "warm", label: "Warm — leads engajados" },
-  { value: "cold", label: "Cold — leads novos / frios" },
-  { value: "vip", label: "VIP — clientes premium" },
-  { value: "afiliados", label: "Afiliados" },
+  { value: "" },
+  { value: "hot" },
+  { value: "warm" },
+  { value: "cold" },
+  { value: "vip" },
+  { value: "afiliados" },
 ];
 
 interface AddGroupFormData {
@@ -71,6 +72,9 @@ const EMPTY_FORM: AddGroupFormData = {
 };
 
 export function GroupsTab({ campaignId }: { campaignId: string }) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
+  const numberLocale = intlLocale(locale);
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<AddGroupFormData>(EMPTY_FORM);
@@ -89,22 +93,22 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
         body: JSON.stringify(body),
       }),
     onSuccess: () => {
-      toast.success("Grupo adicionado com sucesso");
+      toast.success(t("Grupo adicionado com sucesso", "Group added successfully", "Grupo añadido correctamente"));
       void queryClient.invalidateQueries({ queryKey: ["campaign-groups", campaignId] });
       setShowForm(false);
       setForm(EMPTY_FORM);
     },
-    onError: () => toast.error("Erro ao adicionar grupo"),
+    onError: () => toast.error(t("Erro ao adicionar grupo", "Failed to add group", "No se pudo añadir el grupo")),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (groupId: string) =>
       customFetch(`/api/campaigns/${campaignId}/groups/${groupId}`, { method: "DELETE" }),
     onSuccess: () => {
-      toast.success("Grupo removido");
+      toast.success(t("Grupo removido", "Group removed", "Grupo eliminado"));
       void queryClient.invalidateQueries({ queryKey: ["campaign-groups", campaignId] });
     },
-    onError: () => toast.error("Erro ao remover grupo"),
+    onError: () => toast.error(t("Erro ao remover grupo", "Failed to remove group", "No se pudo eliminar el grupo")),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -134,11 +138,11 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-primary" />
           <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-            Grupos de Lançamento
+            {t("Grupos de Lançamento", "Launch Groups", "Grupos de lanzamiento")}
           </span>
           {groups.length > 0 && (
             <Badge variant="outline" className="rounded-none font-mono text-[10px] px-2 py-0.5">
-              {groups.length} grupo{groups.length !== 1 ? "s" : ""}
+              {groups.length} {t("grupo", "group", "grupo")}{groups.length !== 1 ? t("s", "s", "s") : ""}
             </Badge>
           )}
         </div>
@@ -149,7 +153,7 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
           onClick={() => setShowForm(!showForm)}
         >
           <Plus className="h-3 w-3 mr-1" />
-          Adicionar grupo
+          {t("Adicionar grupo", "Add Group", "Añadir grupo")}
         </Button>
       </div>
 
@@ -159,7 +163,7 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
           onSubmit={handleSubmit}
           className="border border-primary/20 bg-primary/5 p-4 space-y-4"
         >
-          <p className="font-mono text-xs uppercase tracking-widest text-primary">Novo grupo</p>
+          <p className="font-mono text-xs uppercase tracking-widest text-primary">{t("Novo grupo", "New Group", "Nuevo grupo")}</p>
 
           {/* Platform selector */}
           <div className="grid grid-cols-3 gap-2">
@@ -187,12 +191,12 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
           {/* Name */}
           <div className="space-y-1">
             <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              Nome do grupo *
+              {t("Nome do grupo *", "Group Name *", "Nombre del grupo *")}
             </label>
             <input
               value={form.groupName}
               onChange={e => setForm(f => ({ ...f, groupName: e.target.value }))}
-              placeholder="Ex: Grupo VIP — Lançamento Turma 2"
+              placeholder={t("Ex.: Grupo VIP — Lançamento Turma 2", "E.g., VIP Group — Cohort 2 Launch", "Ej.: Grupo VIP — Lanzamiento de la generación 2")}
               required
               className="w-full bg-background border border-border/50 px-3 py-2 text-sm font-mono rounded-none focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground/40"
             />
@@ -201,7 +205,7 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
           {/* Link */}
           <div className="space-y-1">
             <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              Link de convite
+              {t("Link de convite", "Invite Link", "Enlace de invitación")}
             </label>
             <input
               value={form.groupLink}
@@ -215,7 +219,7 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Segmento
+                {t("Segmento", "Segment", "Segmento")}
               </label>
               <select
                 value={form.segment}
@@ -223,13 +227,13 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
                 className="w-full bg-background border border-border/50 px-3 py-2 text-sm font-mono rounded-none focus:outline-none focus:border-primary/50 text-foreground"
               >
                 {SEGMENT_OPTIONS.map(s => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
+                  <option key={s.value} value={s.value}>{segmentOptionLabel(s.value, t)}</option>
                 ))}
               </select>
             </div>
             <div className="space-y-1">
               <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Membros (aprox.)
+                {t("Membros (aprox.)", "Members (approx.)", "Miembros (aprox.)")}
               </label>
               <input
                 type="number"
@@ -245,13 +249,13 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
           {/* Description */}
           <div className="space-y-1">
             <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              Descrição / observações
+              {t("Descrição / observações", "Description / notes", "Descripción / notas")}
             </label>
             <textarea
               value={form.description}
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
               rows={2}
-              placeholder="Ex: Grupo principal para leads hot da lista de espera"
+              placeholder={t("Ex.: Grupo principal para leads quentes da lista de espera", "E.g., Main group for hot waitlist leads", "Ej.: Grupo principal para leads calientes de la lista de espera")}
               className="w-full bg-background border border-border/50 px-3 py-2 text-sm font-mono rounded-none focus:outline-none focus:border-primary/50 resize-none placeholder:text-muted-foreground/40"
             />
           </div>
@@ -264,7 +268,7 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
               className="rounded-none font-mono text-xs h-7"
               onClick={() => { setShowForm(false); setForm(EMPTY_FORM); }}
             >
-              Cancelar
+              {t("Cancelar", "Cancel", "Cancelar")}
             </Button>
             <Button
               type="submit"
@@ -272,7 +276,7 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
               className="rounded-none font-mono text-xs h-7 px-4"
               disabled={createMutation.isPending || !form.groupName.trim()}
             >
-              {createMutation.isPending ? "Salvando..." : "Salvar grupo"}
+              {createMutation.isPending ? t("Salvando...", "Saving...", "Guardando...") : t("Salvar grupo", "Save Group", "Guardar grupo")}
             </Button>
           </div>
         </form>
@@ -290,10 +294,10 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
         <div className="py-12 text-center border border-border/30 bg-card/20">
           <Users className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
           <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
-            Nenhum grupo cadastrado
+            {t("Nenhum grupo cadastrado", "No groups added", "No hay grupos registrados")}
           </p>
           <p className="font-mono text-xs text-muted-foreground/50 mt-2 max-w-sm mx-auto">
-            Adicione grupos de WhatsApp, Telegram ou Facebook para organizar seus leads por segmento e facilitar o disparo de mensagens.
+            {t("Adicione grupos de WhatsApp, Telegram ou Facebook para organizar seus leads por segmento e facilitar o envio de mensagens.", "Add WhatsApp, Telegram, or Facebook groups to organize leads by segment and make it easier to send messages.", "Añade grupos de WhatsApp, Telegram o Facebook para organizar tus leads por segmento y facilitar el envío de mensajes.")}
           </p>
         </div>
       )}
@@ -312,7 +316,7 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
               </span>
               <div className="flex-1 h-px bg-border/30" />
               <span className="font-mono text-[10px] text-muted-foreground/40">
-                {platformGroups.length} grupo{platformGroups.length !== 1 ? "s" : ""}
+                {platformGroups.length} {t("grupo", "group", "grupo")}{platformGroups.length !== 1 ? t("s", "s", "s") : ""}
               </span>
             </div>
 
@@ -338,12 +342,12 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
                           "border-border/50 text-muted-foreground"
                         }`}
                       >
-                        {group.segment}
+                        {segmentOptionLabel(group.segment, t)}
                       </Badge>
                     )}
                     {group.memberCount != null && group.memberCount > 0 && (
                       <span className="font-mono text-[10px] text-muted-foreground/60">
-                        {group.memberCount.toLocaleString("pt-BR")} membros
+                        {group.memberCount.toLocaleString(numberLocale)} {t("membros", "members", "miembros")}
                       </span>
                     )}
                   </div>
@@ -362,7 +366,7 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
                       className="inline-flex items-center gap-1 text-[11px] font-mono text-primary hover:underline mt-1"
                     >
                       <ExternalLink className="h-2.5 w-2.5" />
-                      Abrir grupo
+                      {t("Abrir grupo", "Open Group", "Abrir grupo")}
                     </a>
                   )}
                 </div>
@@ -372,7 +376,7 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
                   variant="ghost"
                   className="h-6 w-6 rounded-none text-muted-foreground/40 hover:text-destructive shrink-0"
                   onClick={() => {
-                    if (confirm(`Remover "${group.groupName}"?`)) {
+                    if (confirm(t(`Remover "${group.groupName}"?`, `Remove "${group.groupName}"?`, `¿Eliminar "${group.groupName}"?`))) {
                       deleteMutation.mutate(group.id);
                     }
                   }}
@@ -389,7 +393,7 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
       {/* Summary bar */}
       {!isLoading && groups.length > 0 && (
         <div className="border border-border/30 bg-card/30 p-3 flex items-center gap-4 text-xs font-mono text-muted-foreground flex-wrap">
-          <span className="uppercase tracking-widest">Resumo:</span>
+          <span className="uppercase tracking-widest">{t("Resumo:", "Summary:", "Resumen:")}</span>
           {(["whatsapp", "telegram", "facebook"] as const).map(p => {
             const count = (byPlatform[p] ?? []).length;
             if (!count) return null;
@@ -403,10 +407,22 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
             );
           })}
           <span className="ml-auto">
-            {groups.reduce((sum, g) => sum + (g.memberCount ?? 0), 0).toLocaleString("pt-BR")} membros totais
+            {groups.reduce((sum, g) => sum + (g.memberCount ?? 0), 0).toLocaleString(numberLocale)} {t("membros totais", "total members", "miembros en total")}
           </span>
         </div>
       )}
     </div>
   );
+}
+
+function segmentOptionLabel(value: string, t: ReturnType<typeof useUiText>) {
+  switch (value) {
+    case "": return t("Todos os segmentos", "All segments", "Todos los segmentos");
+    case "hot": return t("Quente — já comprou / alto engajamento", "Hot — purchased / high engagement", "Caliente — ya compró / alta interacción");
+    case "warm": return t("Morno — leads engajados", "Warm — engaged leads", "Templado — leads con interacción");
+    case "cold": return t("Frio — leads novos / frios", "Cold — new / cold leads", "Frío — leads nuevos / fríos");
+    case "vip": return t("VIP — clientes premium", "VIP — premium customers", "VIP — clientes prémium");
+    case "afiliados": return t("Afiliados", "Affiliates", "Afiliados");
+    default: return value;
+  }
 }

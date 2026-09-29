@@ -19,8 +19,10 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { useUiText } from "@/lib/i18n";
 
 export default function SequenceContacts() {
+  const t = useUiText();
   const [match, params] = useRoute("/sequences/:id/contacts");
   const sequenceId = params?.id || "";
   const queryClient = useQueryClient();
@@ -39,14 +41,14 @@ export default function SequenceContacts() {
   const addContactsMutation = useAddSequenceContacts({
     mutation: {
       onSuccess: () => {
-        toast.success("Contato adicionado à base.");
+        toast.success(t("Contato adicionado à base.", "Contact added to the list.", "Contacto añadido a la lista."));
         setIsAddOpen(false);
         setNewEmail("");
         setNewName("");
         queryClient.invalidateQueries({ queryKey: getListSequenceContactsQueryKey(sequenceId) });
       },
       onError: () => {
-        toast.error("Erro ao adicionar contato.");
+        toast.error(t("Erro ao adicionar contato.", "Failed to add contact.", "No se pudo añadir el contacto."));
       }
     }
   });
@@ -67,11 +69,11 @@ export default function SequenceContacts() {
 
   const getSegmentBadge = (segment: string) => {
     switch (segment) {
-      case 'hot': return <Badge variant="outline" className="rounded-none font-mono text-[11px] tracking-widest uppercase bg-red-500/10 text-red-400 border-red-500/30 badge-glow-red">Quente</Badge>;
-      case 'warm': return <Badge variant="outline" className="rounded-none font-mono text-[11px] tracking-widest uppercase bg-yellow-500/10 text-yellow-400 border-yellow-500/30">Morno</Badge>;
-      case 'cold': return <Badge variant="outline" className="rounded-none font-mono text-[11px] tracking-widest uppercase bg-blue-500/10 text-blue-400 border-blue-500/30">Frio</Badge>;
-      case 'converted': return <Badge variant="outline" className="rounded-none font-mono text-[11px] tracking-widest uppercase bg-success/10 text-success border-success/30 badge-glow-green">Convertido</Badge>;
-      case 'unsubscribed': return <Badge variant="outline" className="rounded-none font-mono text-[11px] tracking-widest uppercase bg-muted/30 text-muted-foreground border-border/50">Cancelado</Badge>;
+      case 'hot': return <Badge variant="outline" className="rounded-none font-mono text-[11px] tracking-widest uppercase bg-red-500/10 text-red-400 border-red-500/30 badge-glow-red">{t("Quente", "Hot", "Caliente")}</Badge>;
+      case 'warm': return <Badge variant="outline" className="rounded-none font-mono text-[11px] tracking-widest uppercase bg-yellow-500/10 text-yellow-400 border-yellow-500/30">{t("Morno", "Warm", "Templado")}</Badge>;
+      case 'cold': return <Badge variant="outline" className="rounded-none font-mono text-[11px] tracking-widest uppercase bg-blue-500/10 text-blue-400 border-blue-500/30">{t("Frio", "Cold", "Frío")}</Badge>;
+      case 'converted': return <Badge variant="outline" className="rounded-none font-mono text-[11px] tracking-widest uppercase bg-success/10 text-success border-success/30 badge-glow-green">{t("Convertido", "Converted", "Convertido")}</Badge>;
+      case 'unsubscribed': return <Badge variant="outline" className="rounded-none font-mono text-[11px] tracking-widest uppercase bg-muted/30 text-muted-foreground border-border/50">{t("Cancelado", "Unsubscribed", "Cancelado")}</Badge>;
       default: return <Badge variant="outline" className="rounded-none font-mono text-[11px] tracking-widest uppercase bg-muted/20 text-muted-foreground border-border/50">{segment}</Badge>;
     }
   };
@@ -91,22 +93,22 @@ export default function SequenceContacts() {
         <Link href={`/sequences/${sequenceId}`}>
           <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest mb-6 -ml-2 w-fit text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-3 w-3 mr-2" />
-            Retornar à Sequência
+            {t("Retornar à Sequência", "Back to Sequence", "Volver a la secuencia")}
           </Button>
         </Link>
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <h1 className="text-4xl font-mono uppercase tracking-tighter font-bold text-foreground flex items-center gap-3">
-              Base de Contatos
+              {t("Base de Contatos", "Contact List", "Lista de contactos")}
             </h1>
-            <p className="text-sm text-muted-foreground mt-2 font-mono uppercase tracking-widest">Gestão de leads e inteligência de segmentação</p>
+            <p className="text-sm text-muted-foreground mt-2 font-mono uppercase tracking-widest">{t("Gestão de leads e inteligência de segmentação", "Lead management and segmentation insights", "Gestión de leads e inteligencia de segmentación")}</p>
           </div>
           <div className="flex gap-3 text-right">
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
               <DialogTrigger asChild>
                 <Button className="font-mono uppercase tracking-widest rounded-none gap-2 font-bold h-10 px-6 btn-weapon-primary">
                   <Plus className="h-4 w-4" />
-                  Injetar Lead
+                  {t("Adicionar Lead", "Add Lead", "Añadir lead")}
                 </Button>
               </DialogTrigger>
               <DialogContent className="border border-primary/30 bg-card/90 backdrop-blur-xl rounded-none shadow-[0_0_50px_hsl(var(--primary)/0.15)] sm:max-w-[450px]">
@@ -115,17 +117,17 @@ export default function SequenceContacts() {
                     <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center border border-primary/30">
                       <Database className="h-4 w-4 text-primary" />
                     </div>
-                    Injeção Manual
+                    {t("Adição manual", "Manual Entry", "Adición manual")}
                   </DialogTitle>
                   <DialogDescription className="font-mono text-xs uppercase tracking-widest mt-4 text-muted-foreground">
-                    Adicione um alvo específico à base desta operação.
+                    {t("Adicione um contato específico a esta lista.", "Add a specific contact to this list.", "Añade un contacto específico a esta lista.")}
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleAddContact} className="space-y-5 py-2">
                   <div className="space-y-3">
                     <Label htmlFor="email" className="font-mono text-xs uppercase tracking-widest text-primary flex items-center gap-2">
                       <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse-slow"></span>
-                      Email (Obrigatório)
+                      {t("E-mail (obrigatório)", "Email (required)", "Correo electrónico (obligatorio)")}
                     </Label>
                     <Input 
                       id="email" 
@@ -137,7 +139,7 @@ export default function SequenceContacts() {
                     />
                   </div>
                   <div className="space-y-3">
-                    <Label htmlFor="name" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Nome (Opcional)</Label>
+                    <Label htmlFor="name" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("Nome (opcional)", "Name (optional)", "Nombre (opcional)")}</Label>
                     <Input 
                       id="name" 
                       value={newName} 
@@ -147,7 +149,7 @@ export default function SequenceContacts() {
                   </div>
                   <DialogFooter className="pt-6 border-t border-border/30">
                     <Button type="submit" disabled={addContactsMutation.isPending} className="w-full font-mono uppercase tracking-widest rounded-none font-bold h-12 btn-weapon-primary">
-                      {addContactsMutation.isPending ? "Processando..." : "Confirmar Injeção"}
+                      {addContactsMutation.isPending ? t("Processando...", "Processing...", "Procesando...") : t("Confirmar", "Confirm", "Confirmar")}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -163,12 +165,12 @@ export default function SequenceContacts() {
             <Search className="h-4 w-4 text-muted-foreground" />
             <input 
               type="text" 
-              placeholder="RASTREAR ALVO..." 
+              placeholder={t("RASTREAR CONTATO...", "SEARCH CONTACTS...", "BUSCAR CONTACTOS...")}
               className="bg-transparent border-none outline-none font-mono text-xs uppercase tracking-widest w-full text-foreground placeholder:text-muted-foreground/50"
             />
           </div>
           <div className="font-mono text-xs uppercase tracking-widest bg-background/50 px-4 py-2 border border-border/50">
-            Base Ativa: <span className="text-primary font-bold ml-2 text-sm">{data?.total || 0}</span>
+            {t("Contatos:", "Contacts:", "Contactos:")} <span className="text-primary font-bold ml-2 text-sm">{data?.total || 0}</span>
           </div>
         </div>
 
@@ -177,10 +179,10 @@ export default function SequenceContacts() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-border/50 bg-muted/20">
-                  <th className="p-5 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Identificação</th>
-                  <th className="p-5 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Segmento (Temp)</th>
-                  <th className="p-5 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Score Engajamento</th>
-                  <th className="p-5 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-bold">Status Delivery</th>
+                  <th className="p-5 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-bold">{t("Identificação", "Identity", "Identificación")}</th>
+                  <th className="p-5 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-bold">{t("Segmento (temperatura)", "Segment (temperature)", "Segmento (temperatura)")}</th>
+                  <th className="p-5 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-bold">{t("Pontuação de engajamento", "Engagement Score", "Puntuación de interacción")}</th>
+                  <th className="p-5 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-bold">{t("Status de entrega", "Delivery Status", "Estado de envío")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
@@ -202,9 +204,9 @@ export default function SequenceContacts() {
                     </td>
                     <td className="p-5 text-muted-foreground">
                       <div className="flex items-center gap-2 font-mono text-xs tracking-widest bg-background/30 px-3 py-1.5 w-fit border border-border/50">
-                        <span>REC: <strong className="text-foreground">{contact.itemsReceived || 0}</strong></span>
+                        <span>{t("ENV:", "SENT:", "ENV:")} <strong className="text-foreground">{contact.itemsReceived || 0}</strong></span>
                         <span className="opacity-30">|</span>
-                        <span>ABT: <strong className="text-foreground">{contact.itemsOpened || 0}</strong></span>
+                        <span>{t("ABT:", "OPEN:", "ABR:")} <strong className="text-foreground">{contact.itemsOpened || 0}</strong></span>
                       </div>
                     </td>
                   </tr>
@@ -216,8 +218,8 @@ export default function SequenceContacts() {
               <div className="w-16 h-16 rounded-full border border-border/50 bg-muted/10 flex items-center justify-center mb-6">
                 <Users className="h-8 w-8 text-muted-foreground/30" />
               </div>
-              <p className="font-mono text-sm uppercase tracking-widest text-foreground font-bold mb-2">Base Vazia</p>
-              <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground max-w-md">Nenhum lead injetado no sistema para esta operação.</p>
+              <p className="font-mono text-sm uppercase tracking-widest text-foreground font-bold mb-2">{t("Lista vazia", "No contacts yet", "Lista vacía")}</p>
+              <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground max-w-md">{t("Nenhum lead foi adicionado a esta operação.", "No leads have been added to this sequence.", "Aún no se han añadido leads a esta secuencia.")}</p>
             </div>
           )}
         </div>

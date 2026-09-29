@@ -20,6 +20,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from "@/components/ui/dialog";
+import { useUiText, useUiLocale, intlLocale } from "@/lib/i18n";
 
 interface Folder {
   id: string;
@@ -47,11 +48,11 @@ interface Recording {
   finalizationError?: string;
 }
 
-function statusLabel(rec: Recording) {
-  if (rec.state === "stopped" && rec.finalizationStatus === "ready" && rec.hasVideo) return { label: "Pronto", color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" };
-  if (rec.state === "stopped") return { label: "Sem vídeo", color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/20" };
-  if (rec.state === "paused")  return { label: "Pausada",   color: "bg-orange-500/15 text-orange-400 border-orange-500/20" };
-  return { label: "Gravando", color: "bg-blue-500/15 text-blue-400 border-blue-500/20" };
+function statusLabel(rec: Recording, t: ReturnType<typeof useUiText>) {
+  if (rec.state === "stopped" && rec.finalizationStatus === "ready" && rec.hasVideo) return { label: t("Pronto", "Ready", "Listo"), color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" };
+  if (rec.state === "stopped") return { label: t("Sem vídeo", "No video", "Sin vídeo"), color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/20" };
+  if (rec.state === "paused")  return { label: t("Pausada", "Paused", "Pausada"), color: "bg-orange-500/15 text-orange-400 border-orange-500/20" };
+  return { label: t("Gravando", "Recording", "Grabando"), color: "bg-blue-500/15 text-blue-400 border-blue-500/20" };
 }
 
 function formatBytes(bytes: number) {
@@ -67,6 +68,7 @@ function formatDuration(seconds: number) {
 
 // ── Video Preview Modal ────────────────────────────────────────────────────────
 function VideoPreviewModal({ rec, token, onClose }: { rec: Recording; token: string; onClose: () => void }) {
+  const t = useUiText();
   const streamUrl = `/api/recordings/${rec.id}/video-stream?token=${encodeURIComponent(token)}`;
   return (
     <div className="fixed inset-0 z-[8000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={onClose}>
@@ -78,7 +80,7 @@ function VideoPreviewModal({ rec, token, onClose }: { rec: Recording; token: str
               <div className="font-mono text-xs text-muted-foreground">{formatBytes(rec.videoSize)}{rec.duration ? ` · ${formatDuration(rec.duration)}` : ""}</div>
             )}
           </div>
-          <button onClick={onClose} aria-label="Fechar preview" className="text-muted-foreground hover:text-foreground transition-colors p-1 bg-muted/30 rounded-md">
+          <button onClick={onClose} aria-label={t("Fechar preview", "Close preview", "Cerrar vista previa")} className="text-muted-foreground hover:text-foreground transition-colors p-1 bg-muted/30 rounded-md">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -96,6 +98,9 @@ function VideoPreviewModal({ rec, token, onClose }: { rec: Recording; token: str
 }
 
 export default function RecordingsPage() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
+  const numberLocale = intlLocale(locale);
   const [, navigate] = useLocation();
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -161,9 +166,9 @@ export default function RecordingsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/recordings/folders"] });
       setFolderDialogOpen(false);
-      toast.success(editingFolder ? "Pasta renomeada" : "Pasta criada");
+      toast.success(editingFolder ? t("Pasta renomeada", "Folder renamed", "Carpeta renombrada") : t("Pasta criada", "Folder created", "Carpeta creada"));
     },
-    onError: () => toast.error("Erro ao salvar pasta"),
+    onError: () => toast.error(t("Erro ao salvar pasta", "Error saving folder", "Error al guardar la carpeta")),
   });
 
   const deleteFolderMut = useMutation({
@@ -174,9 +179,9 @@ export default function RecordingsPage() {
       qc.invalidateQueries({ queryKey: ["/api/recordings/folders"] });
       if (selectedFolderId === id) setSelectedFolderId("all");
       setDeletingFolder(null);
-      toast.success("Pasta excluída");
+      toast.success(t("Pasta excluída", "Folder deleted", "Carpeta eliminada"));
     },
-    onError: () => toast.error("Erro ao excluir pasta"),
+    onError: () => toast.error(t("Erro ao excluir pasta", "Error deleting folder", "Error al eliminar la carpeta")),
   });
 
   // -- Actions --
@@ -212,15 +217,15 @@ export default function RecordingsPage() {
       });
 
       if (!uploadRes.ok) {
-        throw new Error(await uploadRes.text().catch(() => "Erro no upload"));
+        throw new Error(await uploadRes.text().catch(() => t("Erro no upload", "Upload failed", "Error al subir el archivo")));
       }
 
       setUploadFile(null);
       void qc.invalidateQueries({ queryKey: ["/api/recordings"] });
-      toast.success("Upload concluído com sucesso");
+      toast.success(t("Upload concluído com sucesso", "Upload completed successfully", "Carga completada correctamente"));
     } catch (e) {
       console.error(e);
-      toast.error("Erro ao enviar vídeo: " + (e instanceof Error ? e.message : "Desconhecido"));
+      toast.error(t("Erro ao enviar vídeo: ", "Error uploading video: ", "Error al subir el vídeo: ") + (e instanceof Error ? e.message : t("Desconhecido", "Unknown error", "Error desconocido")));
     } finally {
       setUploading(false);
     }
@@ -237,9 +242,9 @@ export default function RecordingsPage() {
           : current,
       );
       await qc.invalidateQueries({ queryKey: ["/api/recordings"] });
-      toast.success("Gravação excluída");
+      toast.success(t("Gravação excluída", "Recording deleted", "Grabación eliminada"));
     } catch (e) {
-      toast.error("Erro ao excluir gravação");
+      toast.error(t("Erro ao excluir gravação", "Error deleting recording", "Error al eliminar la grabación"));
     } finally {
       setDeletingId(null);
     }
@@ -258,12 +263,12 @@ export default function RecordingsPage() {
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => null) as { error?: string } | null;
-        throw new Error(payload?.error ?? "Falha ao reenviar o arquivo");
+        throw new Error(payload?.error ?? t("Falha ao reenviar o arquivo", "Failed to re-upload file", "No se pudo volver a subir el archivo"));
       }
       await qc.invalidateQueries({ queryKey: ["/api/recordings"] });
-      toast.success("Vídeo reenviado e salvo na pasta original");
+      toast.success(t("Vídeo reenviado e salvo na pasta original", "Video re-uploaded and saved to the original folder", "Vídeo vuelto a subir y guardado en la carpeta original"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Falha ao reenviar o arquivo");
+      toast.error(error instanceof Error ? error.message : t("Falha ao reenviar o arquivo", "Failed to re-upload file", "No se pudo volver a subir el archivo"));
     } finally {
       setRetryingId(null);
       if (retryInputRef.current) retryInputRef.current.value = "";
@@ -295,8 +300,8 @@ export default function RecordingsPage() {
       {/* Sidebar Folders */}
       <aside className="w-full md:w-64 lg:w-72 border-b md:border-b-0 md:border-r border-border/50 bg-card/20 flex flex-col shrink-0">
         <div className="p-4 border-b border-border/50 flex items-center justify-between shrink-0">
-          <h2 className="font-mono text-sm uppercase tracking-widest font-bold">Pastas</h2>
-          <Button variant="ghost" size="icon" aria-label="Nova pasta" className="h-8 w-8 text-muted-foreground" onClick={() => openFolderDialog()}>
+          <h2 className="font-mono text-sm uppercase tracking-widest font-bold">{t("Pastas", "Folders", "Carpetas")}</h2>
+          <Button variant="ghost" size="icon" aria-label={t("Nova pasta", "New folder", "Nueva carpeta")} className="h-8 w-8 text-muted-foreground" onClick={() => openFolderDialog()}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>
@@ -310,7 +315,7 @@ export default function RecordingsPage() {
           >
             <div className="flex items-center gap-2">
               <FolderIcon className="h-4 w-4 shrink-0" />
-              <span>Todas as gravações</span>
+              <span>{t("Todas as gravações", "All recordings", "Todas las grabaciones")}</span>
             </div>
           </button>
 
@@ -318,7 +323,7 @@ export default function RecordingsPage() {
             <div className="py-4 flex justify-center"><RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" /></div>
           ) : foldersError ? (
             <div className="py-4 px-3 text-xs font-mono text-destructive flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" /> Erro ao carregar pastas
+              <AlertCircle className="h-4 w-4" /> {t("Erro ao carregar pastas", "Error loading folders", "Error al cargar las carpetas")}
             </div>
           ) : (
             <>
@@ -338,16 +343,16 @@ export default function RecordingsPage() {
                   {!folder.isSystem && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button aria-label="Opções da pasta" className="opacity-0 group-hover:opacity-100 hover:text-foreground p-1 rounded-md hover:bg-background transition-all shrink-0">
+                        <button aria-label={t("Opções da pasta", "Folder options", "Opciones de carpeta")} className="opacity-0 group-hover:opacity-100 hover:text-foreground p-1 rounded-md hover:bg-background transition-all shrink-0">
                           <MoreVertical className="h-3.5 w-3.5" />
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="font-mono text-xs">
                         <DropdownMenuItem onClick={() => openFolderDialog(folder)}>
-                          <Pencil className="h-3.5 w-3.5 mr-2" /> Renomear
+                          <Pencil className="h-3.5 w-3.5 mr-2" /> {t("Renomear", "Rename", "Renombrar")}
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-red-400 focus:text-red-400 focus:bg-red-400/10" onClick={() => setDeletingFolder(folder)}>
-                          <Trash2 className="h-3.5 w-3.5 mr-2" /> Excluir
+                          <Trash2 className="h-3.5 w-3.5 mr-2" /> {t("Excluir", "Delete", "Eliminar")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -365,10 +370,10 @@ export default function RecordingsPage() {
         <div className="px-6 py-6 border-b border-border/50 flex flex-col sm:flex-row sm:items-end justify-between gap-4 shrink-0">
           <div>
             <h1 className="font-mono text-2xl font-bold tracking-tight">
-              {selectedFolderId === "all" ? "Todas as gravações" : folders.find(f => f.id === selectedFolderId)?.name || "Gravações"}
+              {selectedFolderId === "all" ? t("Todas as gravações", "All recordings", "Todas las grabaciones") : folders.find(f => f.id === selectedFolderId)?.name || t("Gravações", "Recordings", "Grabaciones")}
             </h1>
             <p className="font-mono text-sm text-muted-foreground mt-1">
-              Biblioteca de vídeos brutos e uploads
+              {t("Biblioteca de vídeos brutos e uploads", "Raw video and upload library", "Biblioteca de vídeos sin procesar y archivos subidos")}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -377,13 +382,13 @@ export default function RecordingsPage() {
               <Input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar gravação..."
+                placeholder={t("Buscar gravação...", "Search recordings...", "Buscar grabaciones...")}
                 className="pl-9 w-full sm:w-64 font-mono text-sm bg-card/30"
               />
             </div>
             <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="font-mono shrink-0">
               <Plus className="h-4 w-4 mr-2" />
-              Upload
+              {t("Upload", "Upload", "Subir")}
             </Button>
           </div>
         </div>
@@ -414,7 +419,7 @@ export default function RecordingsPage() {
                 <CheckCircle2 className="h-10 w-10 text-primary mx-auto" />
                 <div className="font-mono text-base font-bold">{uploadFile.name}</div>
                 <div className="font-mono text-sm text-muted-foreground">
-                  {formatBytes(uploadFile.size)} · Clique para trocar
+                  {formatBytes(uploadFile.size)} · {t("Clique para trocar", "Click to replace", "Haz clic para cambiar")}
                 </div>
                 <Button
                   onClick={e => { e.stopPropagation(); void handleUpload(); }}
@@ -422,8 +427,8 @@ export default function RecordingsPage() {
                   className="font-mono mt-2"
                 >
                   {uploading
-                    ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Enviando…</>
-                    : <><Upload className="h-4 w-4 mr-2" />Confirmar Upload</>
+                    ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />{t("Enviando…", "Uploading…", "Subiendo…")}</>
+                    : <><Upload className="h-4 w-4 mr-2" />{t("Confirmar Upload", "Confirm Upload", "Confirmar carga")}</>
                   }
                 </Button>
               </div>
@@ -431,9 +436,9 @@ export default function RecordingsPage() {
               <div className="space-y-2">
                 <Upload className="h-10 w-10 text-muted-foreground/40 mx-auto group-hover:text-primary transition-colors" />
                 <div className="font-mono text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                  Clique para selecionar ou arraste um vídeo aqui
+                  {t("Clique para selecionar ou arraste um vídeo aqui", "Click to select or drag a video here", "Haz clic para seleccionar o arrastra un vídeo aquí")}
                 </div>
-                <div className="font-mono text-xs text-muted-foreground/60">MP4, MOV, WebM — até 2GB</div>
+                <div className="font-mono text-xs text-muted-foreground/60">{t("MP4, MOV, WebM — até 2GB", "MP4, MOV, WebM — up to 2 GB", "MP4, MOV, WebM — hasta 2 GB")}</div>
               </div>
             )}
           </div>
@@ -442,36 +447,36 @@ export default function RecordingsPage() {
           {isLoadingRecordings ? (
             <div className="flex flex-col items-center justify-center py-20 space-y-4">
               <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-              <span className="font-mono text-sm text-muted-foreground">Carregando gravações...</span>
+               <span className="font-mono text-sm text-muted-foreground">{t("Carregando gravações...", "Loading recordings...", "Cargando grabaciones...")}</span>
             </div>
           ) : recordingsError ? (
             <div className="flex flex-col items-center justify-center py-20 space-y-4 border border-destructive/20 bg-destructive/5 rounded-xl">
               <AlertTriangle className="h-8 w-8 text-destructive/80" />
-              <span className="font-mono text-sm text-destructive">Falha ao carregar gravações</span>
+               <span className="font-mono text-sm text-destructive">{t("Falha ao carregar gravações", "Failed to load recordings", "No se pudieron cargar las grabaciones")}</span>
               <Button variant="outline" size="sm" onClick={() => refetchRecordings()} className="font-mono">
-                Tentar novamente
+                 {t("Tentar novamente", "Try again", "Reintentar")}
               </Button>
             </div>
           ) : filteredRecordings.length === 0 ? (
             <div className="text-center py-20 space-y-3">
               <Film className="h-12 w-12 text-muted-foreground/30 mx-auto" />
               <div className="font-mono text-sm text-muted-foreground">
-                {search ? "Nenhuma gravação encontrada para esta busca" : "Nenhuma gravação nesta pasta"}
+                 {search ? t("Nenhuma gravação encontrada para esta busca", "No recordings found for this search", "No se encontraron grabaciones para esta búsqueda") : t("Nenhuma gravação nesta pasta", "No recordings in this folder", "No hay grabaciones en esta carpeta")}
               </div>
               {!search && (
                 <div className="font-mono text-xs text-muted-foreground/60">
-                  Faça um upload ou utilize o NexOS Launcher para gravar
+                   {t("Faça um upload ou utilize o NexOS Launcher para gravar", "Upload a file or use NexOS Launcher to record", "Sube un archivo o usa NexOS Launcher para grabar")}
                 </div>
               )}
             </div>
           ) : (
             <div className="space-y-3">
               <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground flex justify-between">
-                <span>{filteredRecordings.length} gravação{filteredRecordings.length !== 1 ? "ões" : ""}</span>
+                 <span>{t(`${filteredRecordings.length} gravação${filteredRecordings.length !== 1 ? "ões" : ""}`, `${filteredRecordings.length} recording${filteredRecordings.length !== 1 ? "s" : ""}`, `${filteredRecordings.length} grabación${filteredRecordings.length !== 1 ? "es" : ""}`)}</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-4">
                 {filteredRecordings.map(rec => {
-                  const { label, color } = statusLabel(rec);
+                  const { label, color } = statusLabel(rec, t);
                   const hasVideo = rec.finalizationStatus === "ready" && rec.hasVideo;
                   const isProcessing = rec.finalizationStatus === "pending" || rec.finalizationStatus === "processing";
                   const isFailed = rec.finalizationStatus === "failed";
@@ -490,7 +495,7 @@ export default function RecordingsPage() {
                           )}
                           disabled={!hasVideo}
                           onClick={() => hasVideo && setPreviewRec(rec)}
-                          title={hasVideo ? "Pré-visualizar vídeo" : undefined}
+                          title={hasVideo ? t("Pré-visualizar vídeo", "Preview video", "Vista previa del vídeo") : undefined}
                         >
                           {hasVideo ? (
                             <>
@@ -529,7 +534,7 @@ export default function RecordingsPage() {
                             ) : null}
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3" />
-                              {new Date(rec.createdAt).toLocaleDateString("pt-BR", {
+                              {new Date(rec.createdAt).toLocaleDateString(numberLocale, {
                                 day: "2-digit", month: "short", year: "numeric",
                               })}
                             </span>
@@ -546,14 +551,14 @@ export default function RecordingsPage() {
                       {isProcessing && (
                         <div className="px-3 py-2 rounded bg-blue-500/5 border border-blue-500/10 flex items-center gap-2">
                           <RefreshCw className="h-3.5 w-3.5 text-blue-400 animate-spin" />
-                          <span className="font-mono text-xs text-blue-400">Processando arquivo de vídeo...</span>
+                           <span className="font-mono text-xs text-blue-400">{t("Processando arquivo de vídeo...", "Processing video file...", "Procesando archivo de vídeo...")}</span>
                         </div>
                       )}
                       {isFailed && (
                         <div className="px-3 py-2 rounded bg-red-500/5 border border-red-500/10 flex items-start gap-2">
                           <AlertTriangle className="h-3.5 w-3.5 text-red-400 shrink-0 mt-0.5" />
                           <div className="flex-1">
-                            <div className="font-mono text-xs text-red-400 font-bold">Falha no processamento</div>
+                             <div className="font-mono text-xs text-red-400 font-bold">{t("Falha no processamento", "Processing failed", "Error de procesamiento")}</div>
                             {rec.finalizationError && (
                               <div className="font-mono text-[10px] text-red-400/80 mt-0.5 break-words">{rec.finalizationError}</div>
                             )}
@@ -567,7 +572,7 @@ export default function RecordingsPage() {
                               }}
                             >
                               <Upload className="mr-1.5 h-3.5 w-3.5" />
-                              Reenviar arquivo
+                              {t("Reenviar arquivo", "Re-upload file", "Volver a subir el archivo")}
                             </Button>
                           </div>
                         </div>
@@ -584,7 +589,7 @@ export default function RecordingsPage() {
                               onClick={() => setPreviewRec(rec)}
                             >
                               <Play className="h-3.5 w-3.5 mr-1.5" />
-                              Play
+                               {t("Reproduzir", "Play", "Reproducir")}
                             </Button>
                           )}
                         </div>
@@ -598,14 +603,14 @@ export default function RecordingsPage() {
                                 onClick={() => navigate(`/video-editor?recordingId=${rec.id}`)}
                               >
                                 <Edit2 className="h-3.5 w-3.5 mr-1.5" />
-                                Editar
+                                {t("Editar", "Edit", "Editar")}
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="font-mono text-[11px] h-7 px-2.5 bg-card/50"
                                 onClick={() => window.open(`/api/recordings/${rec.id}/video-stream?token=${encodeURIComponent(token)}&download=1`, "_blank")}
-                                title="Baixar arquivo original"
+                                 title={t("Baixar arquivo original", "Download original file", "Descargar archivo original")}
                               >
                                 <Download className="h-3.5 w-3.5" />
                               </Button>
@@ -618,7 +623,7 @@ export default function RecordingsPage() {
                             className="h-7 w-7 text-muted-foreground hover:text-red-400 hover:bg-red-400/10"
                             disabled={deletingId === rec.id}
                             onClick={() => void deleteRecording(rec.id)}
-                            title="Excluir gravação" aria-label="Excluir gravação"
+                             title={t("Excluir gravação", "Delete recording", "Eliminar grabación")} aria-label={t("Excluir gravação", "Delete recording", "Eliminar grabación")}
                           >
                             {deletingId === rec.id
                               ? <RefreshCw className="h-3 w-3 animate-spin" />
@@ -640,20 +645,20 @@ export default function RecordingsPage() {
       <Dialog open={folderDialogOpen} onOpenChange={setFolderDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-mono">{editingFolder ? "Renomear pasta" : "Nova pasta"}</DialogTitle>
+            <DialogTitle className="font-mono">{editingFolder ? t("Renomear pasta", "Rename folder", "Renombrar carpeta") : t("Nova pasta", "New folder", "Nueva carpeta")}</DialogTitle>
             <DialogDescription className="font-mono text-xs">
               {editingFolder
-                ? "Altere o nome usado para organizar suas gravações."
-                : "Crie uma pasta personalizada para organizar vídeos deste workspace."}
+                ? t("Altere o nome usado para organizar suas gravações.", "Change the name used to organize your recordings.", "Cambia el nombre para organizar tus grabaciones.")
+                : t("Crie uma pasta personalizada para organizar vídeos deste workspace.", "Create a custom folder to organize videos in this workspace.", "Crea una carpeta personalizada para organizar los vídeos de este espacio de trabajo.")}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
             <div className="space-y-2">
-              <label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Nome da pasta</label>
+              <label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("Nome da pasta", "Folder name", "Nombre de la carpeta")}</label>
               <Input
                 value={folderName}
                 onChange={e => setFolderName(e.target.value)}
-                placeholder="Ex: Lançamento Nov/2023"
+                placeholder={t("Ex: Lançamento Nov/2023", "e.g. November 2023 Launch", "p. ej., Lanzamiento noviembre de 2023")}
                 className="font-mono"
                 autoFocus
                 onKeyDown={e => {
@@ -663,14 +668,14 @@ export default function RecordingsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setFolderDialogOpen(false)} className="font-mono">Cancelar</Button>
+            <Button variant="outline" onClick={() => setFolderDialogOpen(false)} className="font-mono">{t("Cancelar", "Cancel", "Cancelar")}</Button>
             <Button
               onClick={() => saveFolderMut.mutate(folderName.trim())}
               disabled={!folderName.trim() || saveFolderMut.isPending}
               className="font-mono"
             >
               {saveFolderMut.isPending ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : null}
-              Salvar
+              {t("Salvar", "Save", "Guardar")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -679,14 +684,14 @@ export default function RecordingsPage() {
       <Dialog open={!!deletingFolder} onOpenChange={(o) => !o && setDeletingFolder(null)}>
         <DialogContent className="sm:max-w-md border-red-500/20">
           <DialogHeader>
-            <DialogTitle className="font-mono text-red-500">Excluir pasta?</DialogTitle>
+            <DialogTitle className="font-mono text-red-500">{t("Excluir pasta?", "Delete folder?", "¿Eliminar carpeta?")}</DialogTitle>
             <DialogDescription className="font-mono text-sm pt-2">
-              Tem certeza que deseja excluir a pasta <strong className="text-foreground">{deletingFolder?.name}</strong>?
-              As gravações dentro dela não serão excluídas, apenas movidas para a visualização geral.
+              {t("Tem certeza que deseja excluir a pasta", "Are you sure you want to delete the folder", "¿Seguro que quieres eliminar la carpeta")} <strong className="text-foreground">{deletingFolder?.name}</strong>?
+              {" "}{t("As gravações dentro dela não serão excluídas, apenas movidas para a visualização geral.", "Recordings inside it will not be deleted; they will be moved to the all recordings view.", "Las grabaciones que contiene no se eliminarán, solo se moverán a la vista general.")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setDeletingFolder(null)} className="font-mono">Cancelar</Button>
+            <Button variant="outline" onClick={() => setDeletingFolder(null)} className="font-mono">{t("Cancelar", "Cancel", "Cancelar")}</Button>
             <Button
               variant="destructive"
               onClick={() => deletingFolder && deleteFolderMut.mutate(deletingFolder.id)}
@@ -694,7 +699,7 @@ export default function RecordingsPage() {
               className="font-mono"
             >
               {deleteFolderMut.isPending ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
-              Excluir Pasta
+              {t("Excluir Pasta", "Delete Folder", "Eliminar carpeta")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { StrategyMasterplan, parseStrategyInsights } from "./strategy-masterplan";
 import { MarketValidationReview } from "@/components/MarketValidationReview";
+import { useUiText } from "@/lib/i18n";
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
@@ -41,17 +42,18 @@ interface LiveEvent {
   type: string;
 }
 
-const ANALYZING_STEPS = [
-  { label: "Agente Comando — orchestração iniciada", done: false },
-  { label: "Execution Governor — planejando pipeline", done: false },
-  { label: "Agente de Estratégia — análise de mercado", done: false },
-  { label: "Agente de Oferta — posicionamento e UVP", done: false },
-  { label: "Agente de Audiência — segmentação de mercado", done: false },
-  { label: "Arquitetura de Campanha — estrutura completa", done: false },
-  { label: "Masterplan — compilação final", done: false },
+const ANALYZING_STEPS: { label: [string, string, string]; done: boolean }[] = [
+  { label: ["Agente Comando — orquestração iniciada", "Command Agent — orchestration started", "Agente Comando — orquestación iniciada"], done: false },
+  { label: ["Execution Governor — planejando o pipeline", "Execution Governor — planning the pipeline", "Execution Governor — planificando el flujo"], done: false },
+  { label: ["Agente de Estratégia — análise de mercado", "Strategy Agent — market analysis", "Agente de Estrategia — análisis de mercado"], done: false },
+  { label: ["Agente de Oferta — posicionamento e UVP", "Offer Agent — positioning and UVP", "Agente de Oferta — posicionamiento y propuesta única de valor"], done: false },
+  { label: ["Agente de Audiência — segmentação de mercado", "Audience Agent — market segmentation", "Agente de Audiencia — segmentación de mercado"], done: false },
+  { label: ["Arquitetura de Campanha — estrutura completa", "Campaign Architecture — complete structure", "Arquitectura de Campaña — estructura completa"], done: false },
+  { label: ["Masterplan — compilação final", "Master plan — final compilation", "Plan maestro — compilación final"], done: false },
 ];
 
 function AnalyzingMasterplanDisplay({ liveEvents }: { liveEvents: LiveEvent[] }) {
+  const t = useUiText();
   const [tick, setTick] = useState(0);
   const [stepIdx, setStepIdx] = useState(0);
   const eventsEndRef = useRef<HTMLDivElement>(null);
@@ -91,16 +93,16 @@ function AnalyzingMasterplanDisplay({ liveEvents }: { liveEvents: LiveEvent[] })
       {/* Title */}
       <div className="text-center space-y-2 max-w-md">
         <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary/50">
-          Sistema de Estratégia — Em Execução
+          {t("Sistema de estratégia — em execução", "Strategy system — running", "Sistema de estrategia — en ejecución")}
         </div>
         <h1 className="font-mono text-2xl font-black uppercase tracking-widest text-foreground">
-          Gerando Masterplan
+          {t("Gerando masterplan", "Generating master plan", "Generando el plan maestro")}
         </h1>
         <p className="font-mono text-xs text-muted-foreground/60">
-          34 agentes de IA construindo seu plano de lançamento completo
+          {t("34 agentes de IA estão criando seu plano completo de lançamento", "34 AI agents are building your complete launch plan", "34 agentes de IA están creando tu plan de lanzamiento completo")}
         </p>
         <div className="font-mono text-[10px] text-primary/40 tabular-nums">
-          Tempo decorrido: {timeStr}
+          {t("Tempo decorrido:", "Elapsed time:", "Tiempo transcurrido:")} {timeStr}
         </div>
       </div>
 
@@ -130,7 +132,7 @@ function AnalyzingMasterplanDisplay({ liveEvents }: { liveEvents: LiveEvent[] })
                 )}
               </div>
               <span className={`font-mono text-[11px] ${isActive ? "text-foreground" : "text-muted-foreground/50"}`}>
-                {step.label}
+                {t(...step.label)}
               </span>
             </div>
           );
@@ -143,7 +145,7 @@ function AnalyzingMasterplanDisplay({ liveEvents }: { liveEvents: LiveEvent[] })
           <div className="px-3 py-1.5 border-b border-border/20 flex items-center gap-1.5">
             <Activity className="h-3 w-3 text-primary/50 animate-pulse" />
             <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">
-              Eventos em tempo real
+              {t("Eventos em tempo real", "Live events", "Eventos en tiempo real")}
             </span>
           </div>
           <div className="max-h-28 overflow-y-auto">
@@ -160,7 +162,7 @@ function AnalyzingMasterplanDisplay({ liveEvents }: { liveEvents: LiveEvent[] })
       )}
 
       <p className="font-mono text-[10px] text-muted-foreground/30 text-center max-w-xs">
-        Este processo leva de 3 a 8 minutos. Você pode fechar esta página — o Masterplan ficará disponível aqui quando pronto.
+        {t("Este processo leva de 3 a 8 minutos. Você pode fechar esta página — o masterplan ficará disponível aqui quando estiver pronto.", "This process takes 3–8 minutes. You can close this page—the master plan will be available here when it is ready.", "Este proceso tarda de 3 a 8 minutos. Puedes cerrar esta página; el plan maestro estará disponible aquí cuando esté listo.")}
       </p>
     </div>
   );
@@ -168,15 +170,15 @@ function AnalyzingMasterplanDisplay({ liveEvents }: { liveEvents: LiveEvent[] })
 
 // ─── History badge ────────────────────────────────────────────────────────────
 
-const STATUS_LABELS: Record<string, string> = {
-  generating: "Gerando Conteúdo",
-  compliance_review: "Revisão de Compliance",
-  awaiting_approval: "Aguardando Aprovação",
-  approved: "Aprovado",
-  executing: "Em Execução",
-  live: "Ao Vivo",
-  paused: "Pausado",
-  completed: "Concluído",
+const STATUS_LABELS: Record<string, [string, string, string]> = {
+  generating: ["Gerando conteúdo", "Generating content", "Generando contenido"],
+  compliance_review: ["Revisão de conformidade", "Compliance review", "Revisión de cumplimiento"],
+  awaiting_approval: ["Aguardando aprovação", "Awaiting approval", "Pendiente de aprobación"],
+  approved: ["Aprovado", "Approved", "Aprobado"],
+  executing: ["Em execução", "Executing", "En ejecución"],
+  live: ["Ao vivo", "Live", "En directo"],
+  paused: ["Pausado", "Paused", "En pausa"],
+  completed: ["Concluído", "Completed", "Completado"],
 };
 
 // ─── Masterplan Types & Panel ──────────────────────────────────────────────────
@@ -210,15 +212,16 @@ function MasterplanPanel({
   isMaterializing: boolean;
   readOnly?: boolean;
 }) {
+  const t = useUiText();
   if (!currentMp) return null;
 
   const score = currentMp.readinessScore ?? 0;
   const scoreColor = score >= 80 ? "text-emerald-400" : score >= 50 ? "text-amber-400" : "text-red-400";
-  const statusLabels: Record<string, string> = {
-    draft: "Rascunho",
-    pending_approval: "Aguardando Aprovação",
-    approved: "Aprovado",
-    superseded: "Substituído"
+  const statusLabels: Record<string, [string, string, string]> = {
+    draft: ["Rascunho", "Draft", "Borrador"],
+    pending_approval: ["Aguardando aprovação", "Awaiting approval", "Pendiente de aprobación"],
+    approved: ["Aprovado", "Approved", "Aprobado"],
+    superseded: ["Substituído", "Superseded", "Reemplazado"]
   };
 
   return (
@@ -229,38 +232,38 @@ function MasterplanPanel({
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-primary/60" />
             <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-foreground">
-              Status do Masterplan
+              {t("Status do masterplan", "Master plan status", "Estado del plan maestro")}
             </h3>
           </div>
           <Badge variant="outline" className="font-mono text-[9px] uppercase border-primary/20 text-primary/80">
-            v{currentMp.version} · {statusLabels[currentMp.status] || currentMp.status}
+            v{currentMp.version} · {statusLabels[currentMp.status] ? t(...statusLabels[currentMp.status]) : currentMp.status}
           </Badge>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <div className="border border-border/20 bg-background/50 p-3">
-            <div className="font-mono text-[9px] text-muted-foreground/60 uppercase mb-1">Prontidão</div>
+            <div className="font-mono text-[9px] text-muted-foreground/60 uppercase mb-1">{t("Prontidão", "Readiness", "Preparación")}</div>
             <div className={`font-mono text-xl font-black ${scoreColor}`}>
               {score}%
             </div>
           </div>
           <div className="border border-border/20 bg-background/50 p-3">
-            <div className="font-mono text-[9px] text-muted-foreground/60 uppercase mb-1">Status</div>
+            <div className="font-mono text-[9px] text-muted-foreground/60 uppercase mb-1">{t("Status", "Status", "Estado")}</div>
             <div className="font-mono text-xs font-bold text-foreground/80 mt-1 truncate">
-              {currentMp.readinessStatus === "ready" ? "Pronto" :
-               currentMp.readinessStatus === "blocked" ? "Bloqueado" :
-               currentMp.readinessStatus === "review_required" ? "Requer Revisão" : (currentMp.readinessStatus || "Processando")}
+              {currentMp.readinessStatus === "ready" ? t("Pronto", "Ready", "Listo") :
+               currentMp.readinessStatus === "blocked" ? t("Bloqueado", "Blocked", "Bloqueado") :
+               currentMp.readinessStatus === "review_required" ? t("Requer revisão", "Review required", "Requiere revisión") : (currentMp.readinessStatus || t("Processando", "Processing", "Procesando"))}
             </div>
           </div>
           <div className="border border-border/20 bg-background/50 p-3 md:col-span-2">
-            <div className="font-mono text-[9px] text-muted-foreground/60 uppercase mb-1">Ações Permitidas</div>
+            <div className="font-mono text-[9px] text-muted-foreground/60 uppercase mb-1">{t("Ações permitidas", "Allowed actions", "Acciones permitidas")}</div>
             <div className="flex flex-wrap gap-1 mt-1">
               {currentMp.allowedActions?.length > 0 ? currentMp.allowedActions.map(a => (
                 <span key={a} className="font-mono text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 border border-primary/20">
                   {a}
                 </span>
               )) : (
-                <span className="font-mono text-[9px] text-muted-foreground/50">Nenhuma</span>
+                <span className="font-mono text-[9px] text-muted-foreground/50">{t("Nenhuma", "None", "Ninguna")}</span>
               )}
             </div>
           </div>
@@ -270,7 +273,7 @@ function MasterplanPanel({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             {currentMp.readinessBlockers?.length > 0 && (
               <div className="border border-red-500/20 bg-red-500/5 p-3">
-                <div className="font-mono text-[9px] text-red-400/80 uppercase mb-2">Bloqueios:</div>
+                <div className="font-mono text-[9px] text-red-400/80 uppercase mb-2">{t("Bloqueios:", "Blockers:", "Bloqueos:")}</div>
                 <ul className="space-y-1">
                   {currentMp.readinessBlockers.map((b, i) => (
                     <li key={i} className="flex items-start gap-2 text-[10px] font-mono text-red-400/70">
@@ -282,7 +285,7 @@ function MasterplanPanel({
             )}
             {currentMp.requiredApprovals?.length > 0 && (
               <div className="border border-amber-500/20 bg-amber-500/5 p-3">
-                <div className="font-mono text-[9px] text-amber-400/80 uppercase mb-2">Aprovações:</div>
+                <div className="font-mono text-[9px] text-amber-400/80 uppercase mb-2">{t("Aprovações:", "Approvals:", "Aprobaciones:")}</div>
                 <ul className="space-y-1">
                   {currentMp.requiredApprovals.map((a, i) => (
                     <li key={i} className="flex items-start gap-2 text-[10px] font-mono text-amber-400/70">
@@ -305,7 +308,7 @@ function MasterplanPanel({
               className="font-mono text-[10px] uppercase tracking-widest gap-2 h-8"
             >
               {isMaterializing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCw className="h-3 w-3" />}
-              Atualizar Materialização
+              {t("Atualizar materialização", "Refresh materialization", "Actualizar materialización")}
             </Button>
             {currentMp.status === "draft" && (
               <Button
@@ -316,7 +319,7 @@ function MasterplanPanel({
                 className="font-mono text-[10px] uppercase tracking-widest gap-2 h-8 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-300"
               >
                 {isMaterializing ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCheck className="h-3 w-3" />}
-                Solicitar Aprovação
+                {t("Solicitar aprovação", "Request approval", "Solicitar aprobación")}
               </Button>
             )}
           </div>
@@ -329,7 +332,7 @@ function MasterplanPanel({
           <div className="flex items-center gap-2 mb-3">
             <List className="h-3.5 w-3.5 text-muted-foreground/50" />
             <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-              Histórico de Versões
+              {t("Histórico de versões", "Version history", "Historial de versiones")}
             </span>
           </div>
           <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
@@ -343,7 +346,7 @@ function MasterplanPanel({
                 </span>
                 <div className="flex-1" />
                 <span className="font-mono text-[9px] text-muted-foreground/50 uppercase">
-                  {statusLabels[v.status] || v.status}
+                  {statusLabels[v.status] ? t(...statusLabels[v.status]) : v.status}
                 </span>
               </div>
             ))}
@@ -357,6 +360,7 @@ function MasterplanPanel({
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function CampaignStrategyPage() {
+  const t = useUiText();
   const [, params] = useRoute("/campaigns/:id/strategy");
   const campaignId = params?.id ?? "";
   const [, setLocation] = useLocation();
@@ -445,10 +449,10 @@ export default function CampaignStrategyPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan"] });
       queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
-      toast.success("Masterplan atualizado.");
+      toast.success(t("Masterplan atualizado.", "Master plan updated.", "Plan maestro actualizado."));
     },
     onError: (err: any) => {
-      toast.error(err?.data?.error || "Falha ao atualizar masterplan.");
+      toast.error(err?.data?.error || t("Falha ao atualizar masterplan.", "Failed to update master plan.", "No se pudo actualizar el plan maestro."));
     }
   });
 
@@ -464,7 +468,7 @@ export default function CampaignStrategyPage() {
       executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } });
     },
     onError: (err: any) => {
-      toast.error(err?.data?.error || "Falha ao aprovar masterplan.");
+      toast.error(err?.data?.error || t("Falha ao aprovar masterplan.", "Failed to approve master plan.", "No se pudo aprobar el plan maestro."));
     }
   });
 
@@ -472,13 +476,13 @@ export default function CampaignStrategyPage() {
   const executeMutation = useExecuteCampaign({
     mutation: {
       onSuccess: () => {
-        toast.success("Aprovado! Gerando as peças de conteúdo...");
+        toast.success(t("Aprovado! Gerando as peças de conteúdo...", "Approved! Generating content...", "¡Aprobado! Generando las piezas de contenido..."));
         queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
         setLocation(`/campaigns/${campaignId}`);
       },
       onError: (err: unknown) => {
         type ErrBody = { error?: string; code?: string };
-        const msg = (err as { data?: ErrBody })?.data?.error ?? "Falha ao iniciar geração.";
+        const msg = (err as { data?: ErrBody })?.data?.error ?? t("Falha ao iniciar geração.", "Failed to start generation.", "No se pudo iniciar la generación.");
         toast.error(msg, { duration: 6000 });
       },
     },
@@ -508,7 +512,7 @@ export default function CampaignStrategyPage() {
   if (!campaign) {
     return (
       <div className="p-16 text-center font-mono text-xs text-muted-foreground/40 uppercase tracking-widest">
-        Campanha não encontrada.
+        {t("Campanha não encontrada.", "Campaign not found.", "No se encontró la campaña.")}
       </div>
     );
   }
@@ -519,7 +523,7 @@ export default function CampaignStrategyPage() {
   const strategyD = (currentMp?.snapshot && typeof currentMp.snapshot === 'object')
     ? (currentMp.snapshot as Record<string, unknown>)
     : ((campaignRaw["strategyData"] ?? {}) as Record<string, unknown>);
-  const campaignTitle = String(intakeD["product.name"] ?? campaign.title ?? "Campanha");
+  const campaignTitle = String(intakeD["product.name"] ?? campaign.title ?? t("Campanha", "Campaign", "Campaña"));
   const track = String(intakeD["launch.track"] ?? "");
   const hasStrategy = Object.keys(strategyD).length > 0;
   const isHistory = isPostStrategy(status);
@@ -552,7 +556,7 @@ export default function CampaignStrategyPage() {
             className="flex items-center gap-1.5 text-muted-foreground/60 hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            <span className="font-mono text-[11px] uppercase tracking-widest">Campanha</span>
+            <span className="font-mono text-[11px] uppercase tracking-widest">{t("Campanha", "Campaign", "Campaña")}</span>
           </button>
 
           <div className="h-3 w-px bg-border/40" />
@@ -567,14 +571,14 @@ export default function CampaignStrategyPage() {
           {isHistory && (
             <Badge variant="outline" className="shrink-0 font-mono text-[9px] uppercase tracking-widest border-border/40 text-muted-foreground/50 gap-1.5">
               <Archive className="h-2.5 w-2.5" />
-              Histórico · {STATUS_LABELS[status] ?? status}
+              {t("Histórico", "History", "Historial")} · {STATUS_LABELS[status] ? t(...STATUS_LABELS[status]) : status}
             </Badge>
           )}
           {isReady && (
             <div className="flex items-center gap-1.5 shrink-0">
               <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
               <span className="font-mono text-[9px] uppercase tracking-widest text-cyan-400 font-bold">
-                Aguardando Aprovação
+                {t("Aguardando aprovação", "Awaiting approval", "Pendiente de aprobación")}
               </span>
             </div>
           )}
@@ -582,7 +586,7 @@ export default function CampaignStrategyPage() {
             <div className="flex items-center gap-1.5 shrink-0">
               <Loader2 className="h-3 w-3 text-primary animate-spin" />
               <span className="font-mono text-[9px] uppercase tracking-widest text-primary/70">
-                Em Geração
+                {t("Em geração", "Generating", "Generando")}
               </span>
             </div>
           )}
@@ -617,10 +621,10 @@ export default function CampaignStrategyPage() {
                 <Zap className="h-4 w-4 text-cyan-400 shrink-0" />
                 <div>
                   <div className="font-mono text-xs font-black uppercase tracking-widest text-cyan-400">
-                    Masterplan Pronto
+                     {t("Masterplan pronto", "Master plan ready", "Plan maestro listo")}
                   </div>
                   <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
-                    Revise o plano abaixo. Quando aprovado, os agentes geram todo o conteúdo automaticamente.
+                     {t("Revise o plano abaixo. Quando aprovado, os agentes gerarão todo o conteúdo automaticamente.", "Review the plan below. Once approved, the agents will generate all content automatically.", "Revisa el plan a continuación. Cuando lo apruebes, los agentes generarán todo el contenido automáticamente.")}
                   </div>
                 </div>
               </div>
@@ -630,8 +634,8 @@ export default function CampaignStrategyPage() {
                 className="shrink-0 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-10 text-xs px-6"
               >
                 {isApproving
-                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Gerando...</>
-                  : <><CheckCheck className="h-3.5 w-3.5" /> Aprovar e Gerar Conteúdo</>}
+                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("Gerando...", "Generating...", "Generando...")}</>
+                  : <><CheckCheck className="h-3.5 w-3.5" /> {t("Aprovar e gerar conteúdo", "Approve and generate content", "Aprobar y generar contenido")}</>}
               </Button>
             </div>
 
@@ -656,7 +660,7 @@ export default function CampaignStrategyPage() {
               <div className="py-20 text-center border border-border/20">
                 <Brain className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
                 <p className="font-mono text-xs text-muted-foreground/40 uppercase tracking-widest">
-                  Masterplan ainda sendo compilado...
+                   {t("O masterplan ainda está sendo compilado...", "The master plan is still being compiled...", "El plan maestro todavía se está compilando...")}
                 </p>
               </div>
             )}
@@ -666,7 +670,7 @@ export default function CampaignStrategyPage() {
               <div className="border border-cyan-400/40 bg-cyan-400/[0.04] p-4 flex flex-col sm:flex-row items-center gap-3 mt-6">
                 <div className="flex-1 min-w-0">
                   <span className="font-mono text-[11px] uppercase tracking-widest text-cyan-400/80">
-                    Tudo revisado? Aprove para gerar o conteúdo completo do lançamento.
+                     {t("Tudo revisado? Aprove para gerar o conteúdo completo do lançamento.", "All reviewed? Approve to generate the complete launch content.", "¿Ya revisaste todo? Aprueba para generar el contenido completo del lanzamiento.")}
                   </span>
                 </div>
                 <Button
@@ -675,8 +679,8 @@ export default function CampaignStrategyPage() {
                   className="shrink-0 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-10 text-xs px-6"
                 >
                   {isApproving
-                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Gerando...</>
-                    : <><CheckCheck className="h-3.5 w-3.5" /> Aprovar e Gerar Conteúdo</>}
+                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("Gerando...", "Generating...", "Generando...")}</>
+                    : <><CheckCheck className="h-3.5 w-3.5" /> {t("Aprovar e gerar conteúdo", "Approve and generate content", "Aprobar y generar contenido")}</>}
                 </Button>
               </div>
             )}
@@ -691,10 +695,10 @@ export default function CampaignStrategyPage() {
               <Archive className="h-4 w-4 text-muted-foreground/40 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <div className="font-mono text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
-                  Masterplan — Histórico da Campanha
+                   {t("Masterplan — histórico da campanha", "Master plan — campaign history", "Plan maestro — historial de la campaña")}
                 </div>
                 <div className="font-mono text-[10px] text-muted-foreground/40 mt-0.5">
-                  Esta estratégia foi aprovada e o pipeline avançou para {STATUS_LABELS[status] ?? status}. O masterplan abaixo é somente leitura.
+                   {t("Esta estratégia foi aprovada e o pipeline avançou para", "This strategy was approved and the pipeline advanced to", "Esta estrategia fue aprobada y el flujo avanzó a")} {STATUS_LABELS[status] ? t(...STATUS_LABELS[status]) : status}. {t("O masterplan abaixo é somente leitura.", "The master plan below is read-only.", "El plan maestro que sigue es de solo lectura.")}
                 </div>
               </div>
               <Button
@@ -703,7 +707,7 @@ export default function CampaignStrategyPage() {
                 onClick={() => setLocation(`/campaigns/${campaignId}`)}
                 className="shrink-0 rounded-none font-mono text-[10px] uppercase tracking-widest gap-1.5 border-border/40"
               >
-                Ver campanha <ChevronRight className="h-3 w-3" />
+                 {t("Ver campanha", "View campaign", "Ver campaña")} <ChevronRight className="h-3 w-3" />
               </Button>
             </div>
 
@@ -729,7 +733,7 @@ export default function CampaignStrategyPage() {
               <div className="py-20 text-center border border-border/20">
                 <BookOpen className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
                 <p className="font-mono text-xs text-muted-foreground/40 uppercase tracking-widest">
-                  Dados de estratégia não disponíveis para esta campanha.
+                   {t("Dados de estratégia não estão disponíveis para esta campanha.", "Strategy data is unavailable for this campaign.", "Los datos de estrategia no están disponibles para esta campaña.")}
                 </p>
               </div>
             )}
@@ -741,7 +745,7 @@ export default function CampaignStrategyPage() {
           <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
             <Clock className="h-8 w-8 text-muted-foreground/20" />
             <p className="font-mono text-xs text-muted-foreground/40 uppercase tracking-widest text-center">
-              Aguardando início da estratégia...
+               {t("Aguardando início da estratégia...", "Waiting for strategy to start...", "Esperando a que comience la estrategia...")}
             </p>
             <Button
               variant="outline"
@@ -749,7 +753,7 @@ export default function CampaignStrategyPage() {
               onClick={() => setLocation(`/campaigns/${campaignId}`)}
               className="rounded-none font-mono text-[10px] uppercase tracking-widest border-border/40"
             >
-              Voltar para a campanha
+               {t("Voltar para a campanha", "Back to campaign", "Volver a la campaña")}
             </Button>
           </div>
         )}

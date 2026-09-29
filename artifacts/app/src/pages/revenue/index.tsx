@@ -15,6 +15,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, Area, AreaChart,
 } from "recharts";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -56,23 +57,25 @@ const PERIOD_DAYS: Record<PeriodKey, number> = { "7d": 7, "30d": 30, "90d": 90, 
 
 // ── Build chart data from real daily revenue ──────────────────────────────────
 function buildChartData(
-  dailyRevenue: Array<{ date: string; gross: number; net: number; sales: number }>
+  dailyRevenue: Array<{ date: string; gross: number; net: number; sales: number }>,
+  locale: string,
 ): Array<{ label: string; value: number; cumulative: number }> {
   let cumulative = 0;
   return dailyRevenue.map(d => {
     cumulative += d.gross;
-    const label = new Date(d.date + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+    const label = new Date(d.date + "T00:00:00").toLocaleDateString(intlLocale(locale), { day: "2-digit", month: "2-digit" });
     return { label, value: d.gross, cumulative };
   });
 }
 
 // ── Custom tooltip ────────────────────────────────────────────────────────────
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
+  const { locale } = useUiLocale();
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-card border border-border/50 px-3 py-2 font-mono text-xs">
       <p className="text-muted-foreground mb-1">{label}</p>
-      <p className="text-success font-bold">R$ {(payload[0].value / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+      <p className="text-success font-bold">R$ {(payload[0].value / 100).toLocaleString(intlLocale(locale), { minimumFractionDigits: 2 })}</p>
     </div>
   );
 }
@@ -98,6 +101,8 @@ function exportCsv(events: RevenueEvent[]) {
 type Tab = "overview" | "chart" | "events" | "webhooks";
 
 export default function RevenuePage() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const [activeTab, setActiveTab]       = useState<Tab>("overview");
   const [period, setPeriod]             = useState<PeriodKey>("30d");
   const [chartType, setChartType]       = useState<"bar" | "area">("area");
@@ -141,20 +146,20 @@ export default function RevenuePage() {
       });
     },
     onSuccess: () => {
-      toast.success("Webhook configurado. Copie a URL e configure na plataforma.");
+      toast.success(t("Webhook configurado. Copie o URL e configure-o na plataforma.", "Webhook configured. Copy the URL and set it up on the platform.", "Webhook configurado. Copia la URL y configúrala en la plataforma."));
       queryClient.invalidateQueries({ queryKey: ["/api/revenue/webhook-configs"] });
       setAddingWebhook(false);
     },
-    onError: () => toast.error("Erro ao configurar webhook"),
+    onError: () => toast.error(t("Erro ao configurar webhook", "Failed to configure webhook", "Error al configurar el webhook")),
   });
 
-  const chartData = buildChartData(summaryData?.dailyRevenue ?? []);
+  const chartData = buildChartData(summaryData?.dailyRevenue ?? [], intlLocale(locale));
   const events = eventsData?.events ?? [];
 
   const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "overview",  label: "Resumo",       icon: DollarSign },
-    { id: "chart",     label: "Evolução",      icon: BarChart3 },
-    { id: "events",    label: "Transações",    icon: CheckCircle2 },
+    { id: "overview",  label: t("Resumo", "Overview", "Resumen"),       icon: DollarSign },
+    { id: "chart",     label: t("Evolução", "Trends", "Evolución"),      icon: BarChart3 },
+    { id: "events",    label: t("Transações", "Transactions", "Transacciones"),    icon: CheckCircle2 },
     { id: "webhooks",  label: "Webhooks",      icon: Link2 },
   ];
 
@@ -165,10 +170,10 @@ export default function RevenuePage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <div className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
-            <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">Receita & Vendas</h1>
+            <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">{t("Receita e vendas", "Revenue & Sales", "Ingresos y ventas")}</h1>
           </div>
           <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-            Hotmart · Kiwify · Eduzz · Stripe · Tempo Real
+            Hotmart · Kiwify · Eduzz · Stripe · {t("Tempo real", "Real time", "Tiempo real")}
           </p>
         </div>
         <Button
@@ -178,20 +183,20 @@ export default function RevenuePage() {
           className="rounded-none font-mono uppercase tracking-widest gap-2 h-9 text-xs btn-weapon-outline shrink-0 w-full sm:w-auto"
         >
           <Download className="h-3.5 w-3.5" />
-          Exportar CSV
+          {t("Exportar CSV", "Export CSV", "Exportar CSV")}
         </Button>
       </div>
 
       <FeatureOnboarding
         featureKey={FEATURE_KEYS.REVENUE}
-        title="RECEITA & VENDAS"
-        description="Visão consolidada de todas as vendas em tempo real — Hotmart, Kiwify, Eduzz e Stripe. Cada venda capturada automaticamente via webhook."
+        title={t("RECEITA E VENDAS", "REVENUE & SALES", "INGRESOS Y VENTAS")}
+        description={t("Visão consolidada de todas as vendas em tempo real — Hotmart, Kiwify, Eduzz e Stripe. Cada venda é capturada automaticamente via webhook.", "A real-time overview of sales across Hotmart, Kiwify, Eduzz, and Stripe. Every sale is automatically captured via webhook.", "Vista consolidada de las ventas en tiempo real — Hotmart, Kiwify, Eduzz y Stripe. Cada venta se captura automáticamente mediante webhook.")}
         variant="banner"
         steps={[
-          "Conecte sua plataforma de pagamento em Integrações",
-          "Cada venda é capturada via webhook e aparece aqui em segundos",
-          "Analise a evolução por período (7d / 30d / 90d) e exporte para CSV",
-          "O score de saúde e relatório semanal são gerados automaticamente toda segunda-feira",
+          t("Conecte sua plataforma de pagamento em Integrações", "Connect your payment platform in Integrations", "Conecta tu plataforma de pagos en Integraciones"),
+          t("Cada venda é capturada via webhook e aparece aqui em segundos", "Every sale is captured via webhook and appears here within seconds", "Cada venta se captura mediante webhook y aparece aquí en segundos"),
+          t("Analise a evolução por período (7d / 30d / 90d) e exporte para CSV", "Review trends by period (7d / 30d / 90d) and export to CSV", "Analiza la evolución por período (7d / 30d / 90d) y exporta a CSV"),
+          t("O score de saúde e o relatório semanal são gerados automaticamente toda segunda-feira", "The health score and weekly report are generated automatically every Monday", "La puntuación de salud y el informe semanal se generan automáticamente cada lunes"),
         ]}
       />
 
@@ -221,20 +226,20 @@ export default function RevenuePage() {
           ) : !summaryData || summaryData.total === 0 ? (
             <div className="py-16 text-center border border-dashed border-border/30">
               <DollarSign className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">Nenhuma receita registrada ainda</p>
-              <p className="font-mono text-xs text-muted-foreground/50 max-w-xs mx-auto">Configure os webhooks das suas plataformas de venda para começar a monitorar receita em tempo real</p>
+              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">{t("Nenhuma receita registrada ainda", "No revenue recorded yet", "Aún no hay ingresos registrados")}</p>
+              <p className="font-mono text-xs text-muted-foreground/50 max-w-xs mx-auto">{t("Configure os webhooks das suas plataformas de venda para começar a monitorar a receita em tempo real.", "Configure webhooks for your sales platforms to start monitoring revenue in real time.", "Configura los webhooks de tus plataformas de venta para empezar a supervisar los ingresos en tiempo real.")}</p>
               <Button onClick={() => setActiveTab("webhooks")} className="mt-4 rounded-none font-mono uppercase tracking-widest gap-2 btn-weapon-primary h-9 text-xs">
-                <Link2 className="h-3.5 w-3.5" />Configurar Webhooks
+                <Link2 className="h-3.5 w-3.5" />{t("Configurar webhooks", "Configure webhooks", "Configurar webhooks")}
               </Button>
             </div>
           ) : (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                  { label: "Receita Total", value: `R$ ${(summaryData.total / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: DollarSign, color: "text-success border-success/20 bg-success/5" },
-                  { label: "Transações", value: String(summaryData.transactionCount), icon: CheckCircle2, color: "text-primary border-primary/20 bg-primary/5" },
-                  { label: "Ticket Médio", value: `R$ ${(summaryData.avgTicket / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: TrendingUp, color: "text-cyan-400 border-cyan-400/20 bg-cyan-400/5" },
-                  { label: "Plataformas", value: String(Object.keys(summaryData.byPlatform).length), icon: Globe, color: "text-yellow-400 border-yellow-400/20 bg-yellow-400/5" },
+                  { label: t("Receita total", "Total revenue", "Ingresos totales"), value: `R$ ${(summaryData.total / 100).toLocaleString(intlLocale(locale), { minimumFractionDigits: 2 })}`, icon: DollarSign, color: "text-success border-success/20 bg-success/5" },
+                  { label: t("Transações", "Transactions", "Transacciones"), value: String(summaryData.transactionCount), icon: CheckCircle2, color: "text-primary border-primary/20 bg-primary/5" },
+                  { label: t("Ticket médio", "Average order", "Pedido promedio"), value: `R$ ${(summaryData.avgTicket / 100).toLocaleString(intlLocale(locale), { minimumFractionDigits: 2 })}`, icon: TrendingUp, color: "text-cyan-400 border-cyan-400/20 bg-cyan-400/5" },
+                  { label: t("Plataformas", "Platforms", "Plataformas"), value: String(Object.keys(summaryData.byPlatform).length), icon: Globe, color: "text-yellow-400 border-yellow-400/20 bg-yellow-400/5" },
                 ].map(kpi => (
                   <div key={kpi.label} className={`border p-4 ${kpi.color}`}>
                     <div className="flex items-center gap-2 mb-2">
@@ -247,7 +252,7 @@ export default function RevenuePage() {
               </div>
 
               <div className="border border-border/50 bg-card/40 p-4">
-                <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-3">Receita Por Plataforma</div>
+                <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-3">{t("Receita por plataforma", "Revenue by platform", "Ingresos por plataforma")}</div>
                 <div className="space-y-3">
                   {Object.entries(summaryData.byPlatform).map(([platform, amount]) => {
                     const pct = Math.round((amount / summaryData.total) * 100);
@@ -400,7 +405,7 @@ export default function RevenuePage() {
           ) : events.length === 0 ? (
             <div className="py-16 text-center">
               <CheckCircle2 className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Nenhuma transação registrada</p>
+              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">{t("Nenhuma transação registrada", "No transactions recorded", "No hay transacciones registradas")}</p>
             </div>
           ) : (
             events.slice(0, 50).map(event => (
@@ -445,7 +450,7 @@ export default function RevenuePage() {
 
           {addingWebhook && (
             <div className="border border-primary/30 bg-card/40 p-4 space-y-3">
-              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground block">Plataforma</label>
+              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground block">{t("Plataforma", "Platform", "Plataforma")}</label>
               <select value={webhookPlatform} onChange={e => setWebhookPlatform(e.target.value)}
                 className="w-full font-mono text-sm bg-background/50 border border-border/50 focus:border-primary/50 focus:outline-none rounded-none h-9 px-3 text-foreground">
                 {Object.entries(PLATFORM_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -453,7 +458,7 @@ export default function RevenuePage() {
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => createWebhookMutation.mutate()} disabled={createWebhookMutation.isPending}
                   className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-xs">
-                  {createWebhookMutation.isPending ? <><Loader2 className="h-3 w-3 animate-spin" />Salvando...</> : <><Zap className="h-3 w-3" />Configurar</>}
+                  {createWebhookMutation.isPending ? <><Loader2 className="h-3 w-3 animate-spin" />{t("Salvando...", "Saving...", "Guardando...")}</> : <><Zap className="h-3 w-3" />{t("Configurar", "Configure", "Configurar")}</>}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setAddingWebhook(false)}
                   className="font-mono uppercase tracking-widest rounded-none h-9 px-4 text-xs text-muted-foreground">
@@ -468,7 +473,7 @@ export default function RevenuePage() {
           ) : (webhooksData?.configs ?? []).length === 0 ? (
             <div className="py-12 text-center">
               <Link2 className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Nenhum webhook configurado</p>
+              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">{t("Nenhum webhook configurado", "No webhooks configured", "No hay webhooks configurados")}</p>
             </div>
           ) : (
             (webhooksData?.configs ?? []).map(config => (

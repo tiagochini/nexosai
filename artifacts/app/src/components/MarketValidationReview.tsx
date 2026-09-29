@@ -35,6 +35,7 @@ import {
   Scale,
   FileWarning,
 } from "lucide-react";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -69,10 +70,10 @@ interface Props {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-const VALIDATOR_LABELS: Record<string, { label: string; icon: React.ElementType }> = {
-  market_validator:      { label: "Mercado & Demanda",     icon: TrendingUp },
-  offer_price_validator: { label: "Oferta & Precificação", icon: DollarSign },
-  brand_validator:       { label: "Marca & Autoridade",    icon: ShieldCheck },
+const VALIDATOR_LABELS: Record<string, { label: [string, string, string]; icon: React.ElementType }> = {
+  market_validator:      { label: ["Mercado e demanda", "Market & demand", "Mercado y demanda"], icon: TrendingUp },
+  offer_price_validator: { label: ["Oferta e precificação", "Offer & pricing", "Oferta y precios"], icon: DollarSign },
+  brand_validator:       { label: ["Marca e autoridade", "Brand & authority", "Marca y autoridad"], icon: ShieldCheck },
 };
 
 function verdictColor(v: MarketVerdictType) {
@@ -93,10 +94,10 @@ function VerdictIcon({ verdict }: { verdict: MarketVerdictType }) {
   return <XCircle className="h-4 w-4 text-red-400 flex-shrink-0" />;
 }
 
-function verdictLabel(v: MarketVerdictType) {
-  if (v === "VIAVEL")             return "Viável";
-  if (v === "VIAVEL_COM_AJUSTES") return "Viável com Ajustes";
-  return "Não Permitido";
+function verdictLabel(v: MarketVerdictType, t: ReturnType<typeof useUiText>) {
+  if (v === "VIAVEL")             return t("Viável", "Viable", "Viable");
+  if (v === "VIAVEL_COM_AJUSTES") return t("Viável com ajustes", "Viable with adjustments", "Viable con ajustes");
+  return t("Não permitido", "Not permitted", "No permitido");
 }
 
 function ScoreBar({ score, verdict }: { score: number; verdict: MarketVerdictType }) {
@@ -117,13 +118,14 @@ function ScoreBar({ score, verdict }: { score: number; verdict: MarketVerdictTyp
 // Exibido dentro de ValidatorCard quando requiresAcknowledgment=true.
 
 function RegulatoryAlertBlock({ alerts }: { alerts: string[] }) {
+  const t = useUiText();
   if (!alerts.length) return null;
   return (
     <div className="border border-orange-400/30 bg-orange-400/5 rounded-none p-3 space-y-2">
       <div className="flex items-center gap-2">
         <Scale className="h-3.5 w-3.5 text-orange-400 flex-shrink-0" />
         <p className="font-mono text-[10px] uppercase tracking-widest text-orange-400/80">
-          Exigências legais / regulatórias
+          {t("Exigências legais e regulatórias", "Legal and regulatory requirements", "Requisitos legales y regulatorios")}
         </p>
       </div>
       <ul className="space-y-1.5">
@@ -141,8 +143,9 @@ function RegulatoryAlertBlock({ alerts }: { alerts: string[] }) {
 // ─── Validator Card ─────────────────────────────────────────────────────────────
 
 function ValidatorCard({ result }: { result: ValidatorResult }) {
+  const t = useUiText();
   const [open, setOpen] = useState(result.verdict !== "VIAVEL" || !!result.requiresAcknowledgment);
-  const meta = VALIDATOR_LABELS[result.validator] ?? { label: result.validator, icon: CheckCircle2 };
+  const meta = VALIDATOR_LABELS[result.validator] ?? { label: [result.validator, result.validator, result.validator] as [string, string, string], icon: CheckCircle2 };
   const Icon = result.requiresAcknowledgment ? ShieldAlert : meta.icon;
   const borderColor = result.requiresAcknowledgment
     ? "border-orange-400/30 bg-orange-400/5"
@@ -157,17 +160,17 @@ function ValidatorCard({ result }: { result: ValidatorResult }) {
       >
         <Icon className={`h-4 w-4 ${result.requiresAcknowledgment ? "text-orange-400" : verdictColor(result.verdict)} flex-shrink-0`} />
         <span className="flex-1 font-mono text-xs uppercase tracking-widest text-foreground/80">
-          {meta.label}
+          {t(...meta.label)}
         </span>
         {result.requiresAcknowledgment ? (
           <span className="font-mono text-[10px] font-bold text-orange-400 uppercase tracking-widest">
-            Aviso Regulatório
+            {t("Aviso regulatório", "Regulatory notice", "Aviso regulatorio")}
           </span>
         ) : (
           <>
             <VerdictIcon verdict={result.verdict} />
             <span className={`font-mono text-xs font-bold ${verdictColor(result.verdict)}`}>
-              {verdictLabel(result.verdict)}
+              {verdictLabel(result.verdict, t)}
             </span>
           </>
         )}
@@ -191,7 +194,7 @@ function ValidatorCard({ result }: { result: ValidatorResult }) {
           {result.criticalIssues.length > 0 && (
             <div>
               <p className="font-mono text-[10px] uppercase tracking-widest text-yellow-400/70 mb-1.5">
-                Pontos de atenção
+                {t("Pontos de atenção", "Points to consider", "Puntos de atención")}
               </p>
               <ul className="space-y-1">
                 {result.criticalIssues.map((issue, i) => (
@@ -207,7 +210,7 @@ function ValidatorCard({ result }: { result: ValidatorResult }) {
           {result.adjustmentSuggestions.length > 0 && (
             <div>
               <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1.5">
-                Sugestões
+                {t("Sugestões", "Suggestions", "Sugerencias")}
               </p>
               <ul className="space-y-1">
                 {result.adjustmentSuggestions.map((s, i) => (
@@ -228,17 +231,17 @@ function ValidatorCard({ result }: { result: ValidatorResult }) {
 // ─── Compliance Block Panel (conteúdo ilegal — sem override) ───────────────────
 
 function ComplianceBlockPanel() {
+  const t = useUiText();
   return (
     <div className="border border-red-500/40 bg-red-500/5 rounded-none p-5 space-y-3">
       <div className="flex items-start gap-3">
         <XCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
         <div className="space-y-1">
           <p className="font-mono text-xs font-bold text-red-400 uppercase tracking-widest">
-            Produto não permitido na plataforma
+             {t("Produto não permitido na plataforma", "Product not permitted on the platform", "Producto no permitido en la plataforma")}
           </p>
           <p className="text-sm text-red-200/70 leading-relaxed">
-            Este produto ou serviço não está em conformidade com as regras de uso da NexOS AI
-            e não pode ser lançado. Para criar um produto diferente, inicie uma nova campanha.
+             {t("Este produto ou serviço não está em conformidade com as regras de uso da NexOS AI e não pode ser lançado. Para criar outro produto, inicie uma nova campanha.", "This product or service does not comply with NexOS AI's usage rules and cannot be launched. To create a different product, start a new campaign.", "Este producto o servicio no cumple las reglas de uso de NexOS AI y no se puede lanzar. Para crear otro producto, inicia una nueva campaña.")}
           </p>
         </div>
       </div>
@@ -261,6 +264,8 @@ function AcknowledgmentPanel({
   regulatoryAlerts?: string[];
   onProceed?: () => void;
 }) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const queryClient = useQueryClient();
 
   const ackMutation = useMutation({
@@ -270,12 +275,12 @@ function AcknowledgmentPanel({
       }) as Response;
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "Falha ao registrar ciência");
+        throw new Error(body.error ?? t("Falha ao registrar ciência", "Failed to record acknowledgment", "No se pudo registrar el reconocimiento"));
       }
       return res.json();
     },
     onSuccess: () => {
-      toast.success("Ciência registrada — pipeline de estratégia iniciado");
+      toast.success(t("Ciência registrada — pipeline de estratégia iniciado", "Acknowledgment recorded — strategy workflow started", "Reconocimiento registrado: se inició el flujo de estrategia"));
       void queryClient.invalidateQueries({ queryKey: ["campaigns", campaignId] });
       onProceed?.();
     },
@@ -289,14 +294,14 @@ function AcknowledgmentPanel({
           <CheckCircle2 className="h-4 w-4 text-orange-400 flex-shrink-0 mt-0.5" />
           <div className="space-y-0.5">
             <p className="font-mono text-[10px] uppercase tracking-widest text-orange-400/80 font-bold">
-              Ciência regulatória confirmada
+              {t("Ciência regulatória confirmada", "Regulatory acknowledgment confirmed", "Reconocimiento regulatorio confirmado")}
             </p>
             <p className="text-xs text-orange-200/70">
-              Registrado em{" "}
+              {t("Registrado em", "Recorded on", "Registrado el")}{" "}
               <span className="font-mono text-orange-300/80">
-                {acknowledgedAt ? new Date(acknowledgedAt).toLocaleString("pt-BR") : "—"}
+                {acknowledgedAt ? new Date(acknowledgedAt).toLocaleString(intlLocale(locale)) : "—"}
               </span>
-              {" "}— self-proof imutável gravado no sistema.
+              {" "}— {t("comprovante imutável gravado no sistema.", "immutable proof saved to the system.", "comprobante inmutable guardado en el sistema.")}
             </p>
           </div>
         </div>
@@ -305,7 +310,7 @@ function AcknowledgmentPanel({
         {regulatoryAlerts && regulatoryAlerts.length > 0 && (
           <div className="pl-7 space-y-1.5">
             <p className="font-mono text-[10px] uppercase tracking-widest text-orange-400/50">
-              Alertas confirmados pelo founder:
+              {t("Alertas confirmados pelo responsável:", "Alerts confirmed by the account owner:", "Alertas confirmados por el responsable:")}
             </p>
             <ul className="space-y-1">
               {regulatoryAlerts.map((alert, i) => (
@@ -327,12 +332,11 @@ function AcknowledgmentPanel({
         <Scale className="h-5 w-5 text-orange-400 flex-shrink-0 mt-0.5" />
         <div className="space-y-1.5">
           <p className="font-mono text-xs font-bold text-orange-400 uppercase tracking-widest">
-            Confirmação de ciência obrigatória
+             {t("Confirmação obrigatória", "Required acknowledgment", "Confirmación obligatoria")}
           </p>
           <p className="text-sm text-foreground/70 leading-relaxed">
-            Este produto opera em um nicho com <strong className="text-foreground/90">exigências legais específicas</strong>.
-            A NexOS AI informa as obrigações regulatórias — a responsabilidade pelo cumprimento
-            é integralmente do empreendedor.
+             {t("Este produto opera em um segmento com ", "This product operates in a category with ", "Este producto opera en un sector con ")}<strong className="text-foreground/90">{t("exigências legais específicas", "specific legal requirements", "requisitos legales específicos")}</strong>.
+             {" "}{t("A NexOS AI informa as obrigações regulatórias; a responsabilidade pelo cumprimento é integralmente do empreendedor.", "NexOS AI provides regulatory information; the entrepreneur remains fully responsible for compliance.", "NexOS AI informa sobre las obligaciones regulatorias; el emprendedor es totalmente responsable de cumplirlas.")}
           </p>
         </div>
       </div>
@@ -349,14 +353,12 @@ function AcknowledgmentPanel({
           <CheckCircle2 className="h-3.5 w-3.5 mr-2" />
         )}
         {ackMutation.isPending
-          ? "Registrando..."
-          : "Confirmo ciência e assumo responsabilidade legal — prosseguir"}
+           ? t("Registrando...", "Recording...", "Registrando...")
+           : t("Confirmo ciência e assumo responsabilidade legal — prosseguir", "I acknowledge and accept legal responsibility — continue", "Reconozco y asumo la responsabilidad legal — continuar")}
       </Button>
 
       <p className="text-[11px] text-muted-foreground/40 leading-relaxed">
-        Ao clicar, você declara ter lido os alertas regulatórios acima e assume total
-        responsabilidade pelo cumprimento das exigências legais aplicáveis. Este registro
-        é gravado com data, hora e identificador do usuário.
+         {t("Ao clicar, você declara ter lido os alertas regulatórios acima e assume total responsabilidade pelo cumprimento das exigências legais aplicáveis. Este registro é gravado com data, hora e identificador do usuário.", "By clicking, you confirm that you have read the regulatory alerts above and accept full responsibility for meeting applicable legal requirements. This record includes the date, time, and user ID.", "Al hacer clic, declaras haber leído los avisos regulatorios y asumes toda la responsabilidad de cumplir los requisitos legales aplicables. Este registro incluye la fecha, la hora y el ID de usuario.")}
       </p>
     </div>
   );
@@ -365,6 +367,8 @@ function AcknowledgmentPanel({
 // ─── Main Component ─────────────────────────────────────────────────────────────
 
 export function MarketValidationReview({ campaignId, marketValidation, onProceed }: Props) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const [collapsed, setCollapsed] = useState(
     marketValidation.overallVerdict === "VIAVEL" &&
     !marketValidation.validators.some((v) => v.requiresAcknowledgment),
@@ -380,14 +384,14 @@ export function MarketValidationReview({ campaignId, marketValidation, onProceed
 
   // Label do header
   const headerLabel = isIllegal
-    ? "Não Permitido"
+    ? t("Não permitido", "Not permitted", "No permitido")
     : needsAck && !alreadyAcknowledged
-    ? "Aviso Regulatório — Aguardando Ciência"
+    ? t("Aviso regulatório — aguardando confirmação", "Regulatory notice — acknowledgment required", "Aviso regulatorio: pendiente de reconocimiento")
     : needsAck && alreadyAcknowledged
-    ? "Regulatório — Ciência Confirmada"
+    ? t("Regulatório — confirmação registrada", "Regulatory acknowledgment recorded", "Reconocimiento regulatorio registrado")
     : isAjustes
-    ? "Viável com Ajustes"
-    : "Viável";
+    ? t("Viável com ajustes", "Viable with adjustments", "Viable con ajustes")
+    : t("Viável", "Viable", "Viable");
 
   const headerBadgeClass = isIllegal
     ? "border-red-400/40 text-red-400 bg-red-400/10"
@@ -424,7 +428,7 @@ export function MarketValidationReview({ campaignId, marketValidation, onProceed
             <VerdictIcon verdict={verdict} />
           )}
           <span className="font-mono text-xs uppercase tracking-widest text-foreground/70">
-            Avaliação Mercadológica
+             {t("Avaliação de mercado", "Market assessment", "Evaluación de mercado")}
           </span>
           <Badge
             variant="outline"
@@ -469,8 +473,7 @@ export function MarketValidationReview({ campaignId, marketValidation, onProceed
           {!isIllegal && !needsAck && isAjustes && (
             <div className="border border-yellow-400/20 bg-yellow-400/5 rounded-none p-4">
               <p className="text-sm text-yellow-200/70 leading-relaxed">
-                Alertas mercadológicos registrados. O pipeline de estratégia continuará normalmente —
-                os agentes considerarão esses pontos durante a geração.
+                 {t("Alertas de mercado registrados. O fluxo de estratégia continuará normalmente; os agentes considerarão esses pontos durante a geração.", "Market alerts recorded. The strategy workflow will continue as usual, and agents will consider these points during generation.", "Avisos de mercado registrados. El flujo de estrategia continuará normalmente y los agentes tendrán en cuenta estos puntos durante la generación.")}
               </p>
             </div>
           )}
@@ -480,13 +483,13 @@ export function MarketValidationReview({ campaignId, marketValidation, onProceed
             <div className="border border-emerald-400/20 bg-emerald-400/5 rounded-none p-4">
               <p className="text-sm text-emerald-200/70 leading-relaxed flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
-                Produto aprovado nos 3 validadores — pipeline prosseguiu automaticamente.
+                 {t("Produto aprovado pelos três validadores — o fluxo continuou automaticamente.", "Product approved by all three validators — the workflow continued automatically.", "Producto aprobado por los tres validadores: el flujo continuó automáticamente.")}
               </p>
             </div>
           )}
 
           <p className="font-mono text-[10px] text-muted-foreground/30">
-            Validado em {new Date(marketValidation.validatedAt).toLocaleString("pt-BR")}
+             {t("Validado em", "Validated on", "Validado el")} {new Date(marketValidation.validatedAt).toLocaleString(intlLocale(locale))}
           </p>
         </div>
       )}

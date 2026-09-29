@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { useUiText } from "@/lib/i18n";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,7 @@ interface DomainProvider {
 }
 
 export function DomainsTab() {
+  const t = useUiText();
   const queryClient = useQueryClient();
   const [domainCheck, setDomainCheck] = useState("");
   const [isChecking, setIsChecking] = useState(false);
@@ -55,7 +57,7 @@ export function DomainsTab() {
       setAvailabilityResult({ available: data.available });
     },
     onError: (err: any) => {
-      toast.error(err.message || "Erro ao verificar domínio.");
+      toast.error(err.message || t("Erro ao verificar domínio.", "Could not check domain.", "No se pudo comprobar el dominio."));
     }
   });
 
@@ -72,11 +74,11 @@ export function DomainsTab() {
       body: JSON.stringify({ ...data, consent: true }),
     }),
     onSuccess: () => {
-      toast.success("Domínio conectado com sucesso.");
+      toast.success(t("Domínio conectado com sucesso.", "Domain connected successfully.", "Dominio conectado correctamente."));
       queryClient.invalidateQueries({ queryKey: ["/api/domains"] });
     },
     onError: (err: any) => {
-      toast.error(err.message || "Erro ao conectar domínio.");
+      toast.error(err.message || t("Erro ao conectar domínio.", "Could not connect domain.", "No se pudo conectar el dominio."));
     }
   });
 
@@ -97,7 +99,7 @@ export function DomainsTab() {
         <div className="border border-border/50 bg-card/40 backdrop-blur-sm relative overflow-hidden card-weapon">
           <div className="px-6 py-4 border-b border-border/40 flex items-center gap-2">
             <Globe className="h-4 w-4 text-primary" />
-            <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Registrars & Disponibilidade</span>
+            <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("Registro e disponibilidade", "Registrars & availability", "Registro y disponibilidad")}</span>
           </div>
           <div className="p-6 space-y-6">
             <div className="flex gap-2">
@@ -123,11 +125,11 @@ export function DomainsTab() {
                   )}
                   <div>
                     <div className={`font-mono text-sm font-bold ${availabilityResult.available ? 'text-success' : 'text-destructive'}`}>
-                      {availabilityResult.available ? "Domínio Disponível" : "Domínio Indisponível"}
+                      {availabilityResult.available ? t("Domínio disponível", "Domain available", "Dominio disponible") : t("Domínio indisponível", "Domain unavailable", "Dominio no disponible")}
                     </div>
                     {availabilityResult.available && (
                       <div className="font-mono text-xs text-muted-foreground mt-1">
-                        Use um provedor automático para registrar.
+                         {t("Use um provedor automático para registrar.", "Use an automatic provider to register it.", "Usa un proveedor automático para registrarlo.")}
                       </div>
                     )}
                   </div>
@@ -136,20 +138,20 @@ export function DomainsTab() {
             )}
 
             <div className="space-y-3 pt-4 border-t border-border/30">
-              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Provedores Habilitados</div>
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">{t("Provedores habilitados", "Enabled providers", "Proveedores habilitados")}</div>
               {providers.filter(p => p.capabilities.includes("registration") || p.capabilities.includes("availability")).map(p => (
                 <div key={p.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 border border-border/30 bg-background/20">
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-sm font-bold text-foreground/90">{p.name}</span>
                       {p.configured ? (
-                        <Badge variant="outline" className="rounded-none border-success/30 text-success bg-success/10 font-mono text-[9px] uppercase">Pronto</Badge>
+                         <Badge variant="outline" className="rounded-none border-success/30 text-success bg-success/10 font-mono text-[9px] uppercase">{t("Pronto", "Ready", "Listo")}</Badge>
                       ) : (
-                        <Badge variant="outline" className="rounded-none border-muted-foreground/30 text-muted-foreground bg-muted/10 font-mono text-[9px] uppercase">Inativo</Badge>
+                         <Badge variant="outline" className="rounded-none border-muted-foreground/30 text-muted-foreground bg-muted/10 font-mono text-[9px] uppercase">{t("Inativo", "Inactive", "Inactivo")}</Badge>
                       )}
                     </div>
                     <div className="font-mono text-[10px] text-muted-foreground mt-1">
-                      Modo: <span className="text-primary">{p.mode}</span>
+                       {t("Modo", "Mode", "Modo")}: <span className="text-primary">{p.mode}</span>
                     </div>
                   </div>
                   
@@ -157,12 +159,12 @@ export function DomainsTab() {
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button variant="outline" size="sm" className="btn-weapon-outline rounded-none font-mono text-[10px] uppercase">
-                          Conectar
+                           {t("Conectar", "Connect", "Conectar")}
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="rounded-none border-primary/30 bg-card/95 backdrop-blur-xl">
                         <DialogHeader>
-                          <DialogTitle className="font-mono uppercase tracking-widest text-primary text-sm">Conectar Domínio Existente</DialogTitle>
+                         <DialogTitle className="font-mono uppercase tracking-widest text-primary text-sm">{t("Conectar domínio existente", "Connect existing domain", "Conectar dominio existente")}</DialogTitle>
                           <DialogDescription className="font-mono text-xs text-muted-foreground mt-2">
                             {p.setupInstructions.join(" ")}
                           </DialogDescription>
@@ -182,7 +184,7 @@ export function DomainsTab() {
                               if (val) connectMutation.mutate({ domain: val, provider: p.id });
                             }}
                           >
-                            <Plus className="h-4 w-4 mr-2" /> Vincular
+                            <Plus className="h-4 w-4 mr-2" /> {t("Vincular", "Link", "Vincular")}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -198,12 +200,12 @@ export function DomainsTab() {
         <div className="border border-border/50 bg-card/40 backdrop-blur-sm relative overflow-hidden card-weapon">
           <div className="px-6 py-4 border-b border-border/40 flex items-center gap-2">
             <Server className="h-4 w-4 text-primary" />
-            <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">DNS & Hosting Targets</span>
+             <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("DNS e destinos de hospedagem", "DNS & hosting targets", "DNS y destinos de alojamiento")}</span>
           </div>
           <div className="p-6 space-y-4">
             <div className="bg-primary/5 border border-primary/20 p-4 mb-4">
               <p className="font-mono text-xs text-muted-foreground leading-relaxed">
-                Os alvos de implantação são usados para hospedar landing pages, funis de conversão e relatórios de inteligência.
+                 {t("Os destinos de implantação são usados para hospedar landing pages, funis de conversão e relatórios de inteligência.", "Deployment targets are used to host landing pages, conversion funnels, and intelligence reports.", "Los destinos de implementación se usan para alojar landing pages, embudos de conversión e informes de inteligencia.")}
               </p>
             </div>
 
@@ -212,9 +214,9 @@ export function DomainsTab() {
                  <div className="flex items-center justify-between">
                    <div className="font-mono text-sm font-bold text-foreground">{target.name}</div>
                    {target.configured ? (
-                     <Badge variant="outline" className="rounded-none border-success/30 text-success bg-success/10 font-mono text-[9px] uppercase">Integrado</Badge>
+                     <Badge variant="outline" className="rounded-none border-success/30 text-success bg-success/10 font-mono text-[9px] uppercase">{t("Integrado", "Integrated", "Integrado")}</Badge>
                    ) : (
-                     <Badge variant="outline" className="rounded-none border-warning/30 text-warning bg-warning/10 font-mono text-[9px] uppercase">Pendente</Badge>
+                     <Badge variant="outline" className="rounded-none border-warning/30 text-warning bg-warning/10 font-mono text-[9px] uppercase">{t("Pendente", "Pending", "Pendiente")}</Badge>
                    )}
                  </div>
                  <div className="space-y-1">
@@ -230,7 +232,7 @@ export function DomainsTab() {
 
             {targetsData?.targets?.length === 0 && (
               <div className="text-center p-8 border border-dashed border-border/50 text-muted-foreground font-mono text-xs">
-                Nenhum alvo de implantação habilitado.
+                 {t("Nenhum destino de implantação habilitado.", "No deployment targets enabled.", "No hay destinos de implementación habilitados.")}
               </div>
             )}
           </div>

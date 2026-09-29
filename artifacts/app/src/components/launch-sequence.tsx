@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetCampaignQueryKey } from "@workspace/api-client-react";
+import { useUiText } from "@/lib/i18n";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,6 +62,7 @@ function ScanLines() {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProviders, onClose }: Props) {
+  const t = useUiText();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [stage, setStage] = useState<Stage>("rocket");
@@ -85,7 +87,7 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
       void queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
     } catch (err) {
       const e = err as { data?: { error?: string } } | Error;
-      const msg = ("data" in e && e.data?.error) || (e instanceof Error ? e.message : "Erro ao iniciar campanha");
+      const msg = ("data" in e && e.data?.error) || (e instanceof Error ? e.message : t("Erro ao iniciar campanha", "Error starting campaign", "Error al iniciar la campaña"));
       toast.error(msg, { duration: 8000 });
     }
   }, [apiCalled, campaignId, queryClient]);
@@ -100,11 +102,11 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
         body: "{}",
       });
       void queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
-      toast.success("Campanha ativada nos canais aprovados.");
+      toast.success(t("Campanha ativada nos canais aprovados.", "Campaign activated on approved channels.", "Campaña activada en los canales aprobados."));
       onClose();
     } catch (err) {
       const e = err as { data?: { error?: string } } | Error;
-      const msg = ("data" in e && e.data?.error) || (e instanceof Error ? e.message : "Erro ao iniciar campanha");
+      const msg = ("data" in e && e.data?.error) || (e instanceof Error ? e.message : t("Erro ao iniciar campanha", "Error starting campaign", "Error al iniciar la campaña"));
       toast.error(msg, { duration: 8000 });
     }
   };
@@ -183,12 +185,12 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
   const hasMissing = Object.values(channelStatuses).some(s => s === "missing");
 
   const COUNTDOWN_LABELS: Record<number, string> = {
-    5: "Preparando execução operacional...",
-    4: "Validando configurações de campanha...",
-    3: "Ativando canais aprovados...",
-    2: "Sincronizando agentes...",
-    1: "Iniciando...",
-    0: "Campanha ativada.",
+    5: t("Preparando execução operacional...", "Preparing operational launch...", "Preparando la ejecución..."),
+    4: t("Validando configurações de campanha...", "Validating campaign settings...", "Validando la configuración de la campaña..."),
+    3: t("Ativando canais aprovados...", "Activating approved channels...", "Activando los canales aprobados..."),
+    2: t("Sincronizando agentes...", "Syncing agents...", "Sincronizando agentes..."),
+    1: t("Iniciando...", "Starting...", "Iniciando..."),
+    0: t("Campanha ativada.", "Campaign activated.", "Campaña activada."),
   };
 
   return (
@@ -202,7 +204,7 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
 
       {/* Close — always visible except countdown/launched — fixed so it never scrolls away */}
       {stage !== "countdown" && stage !== "launched" && (
-        <button onClick={onClose} className="fixed top-5 right-5 text-white/25 hover:text-white/60 transition-colors z-[110]">
+        <button onClick={onClose} aria-label={t("Fechar", "Close", "Cerrar")} className="fixed top-5 right-5 text-white/25 hover:text-white/60 transition-colors z-[110]">
           <X className="h-5 w-5" />
         </button>
       )}
@@ -215,10 +217,10 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
         <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-20 p-6">
           <div className="border border-white/15 bg-black w-full max-w-sm p-6 space-y-4">
             <div className="space-y-1.5">
-              <div className="font-mono text-xs uppercase tracking-[0.3em] text-white/30">Lançamento Direto</div>
-              <h3 className="font-mono text-base font-bold text-white">Ativar campanha agora?</h3>
+              <div className="font-mono text-xs uppercase tracking-[0.3em] text-white/30">{t("Lançamento Direto", "Quick Launch", "Lanzamiento directo")}</div>
+              <h3 className="font-mono text-base font-bold text-white">{t("Ativar campanha agora?", "Activate campaign now?", "¿Activar la campaña ahora?")}</h3>
               <p className="font-mono text-[11px] text-white/40 leading-relaxed">
-                A campanha será iniciada nos canais aprovados. Você poderá monitorar e ajustar pelo painel de controle.
+                {t("A campanha será iniciada nos canais aprovados. Você poderá monitorar e ajustar pelo painel de controle.", "The campaign will start on approved channels. You can monitor and adjust it from the dashboard.", "La campaña se iniciará en los canales aprobados. Podrás supervisarla y ajustarla desde el panel.")}
               </p>
             </div>
             <div className="flex gap-3">
@@ -227,14 +229,14 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
                 style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "white" }}
                 onClick={() => void handleQuickLaunch()}
               >
-                <Zap className="h-3.5 w-3.5 mr-2" />Confirmar
+                <Zap className="h-3.5 w-3.5 mr-2" />{t("Confirmar", "Confirm", "Confirmar")}
               </Button>
               <Button
                 variant="ghost"
                 className="font-mono uppercase tracking-widest rounded-none h-10 px-4 text-xs text-white/40 hover:text-white/70"
                 onClick={() => setQuickLaunchConfirm(false)}
               >
-                Cancelar
+                {t("Cancelar", "Cancel", "Cancelar")}
               </Button>
             </div>
           </div>
@@ -248,20 +250,20 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
           <div className="flex items-center gap-2 border border-white/10 px-4 py-2">
             <Shield className="h-3 w-3 text-white/30" />
             <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/30">
-              Supervisão Estratégica Ativa
+              {t("Supervisão Estratégica Ativa", "Strategic Supervision Active", "Supervisión estratégica activa")}
             </span>
           </div>
 
           <div className="space-y-3">
             <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-white/20">
-              Autorização Operacional · NexOS
+              {t("Autorização Operacional · NexOS", "Operational Authorisation · NexOS", "Autorización operativa · NexOS")}
             </div>
             <h1 className="font-mono font-black text-3xl md:text-4xl uppercase tracking-tighter text-white leading-none">
               {campaignTitle}
             </h1>
             <p className="font-mono text-xs text-white/30 leading-relaxed">
-              Todos os ativos foram aprovados por você.<br />
-              A campanha será iniciada nos canais autorizados acima.
+              {t("Todos os ativos foram aprovados por você.", "You have approved all assets.", "Has aprobado todos los recursos.")}<br />
+              {t("A campanha será iniciada nos canais autorizados acima.", "The campaign will start on the authorised channels above.", "La campaña se iniciará en los canales autorizados indicados.")}
             </p>
           </div>
 
@@ -290,15 +292,15 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
                 style={{ filter: "drop-shadow(0 0 10px rgba(255,255,255,0.4))" }}
               />
               <div className="font-mono font-black text-sm uppercase tracking-[0.12em] text-white leading-none">
-                Ativar<br />
-                <span className="text-white/50 text-[10px]">Campanha</span>
+                {t("Ativar", "Activate", "Activar")}<br />
+                <span className="text-white/50 text-[10px]">{t("Campanha", "Campaign", "Campaña")}</span>
               </div>
             </div>
           </button>
 
           {/* Operational note */}
           <p className="font-mono text-[10px] text-white/18 uppercase tracking-widest">
-            A campanha será ativada nos canais autorizados acima.
+            {t("A campanha será ativada nos canais autorizados acima.", "The campaign will be activated on the authorised channels above.", "La campaña se activará en los canales autorizados indicados.")}
           </p>
 
           {/* Quick Launch option */}
@@ -309,7 +311,7 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
               className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/20 hover:text-white/45 transition-colors flex items-center gap-1.5"
             >
               <Zap className="h-3 w-3" />
-              Lançamento Direto — Modo Rápido
+              {t("Lançamento Direto — Modo Rápido", "Quick Launch — Fast Mode", "Lanzamiento directo — modo rápido")}
             </button>
           </div>
         </div>
@@ -320,13 +322,13 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
         <div className="w-full max-w-lg px-6 space-y-5">
           <div className="text-center space-y-2">
             <div className="font-mono text-[11px] uppercase tracking-[0.35em] text-white/20">
-              Verificação de Canais Autorizados
+              {t("Verificação de Canais Autorizados", "Authorised Channel Check", "Verificación de canales autorizados")}
             </div>
             <h2 className="font-mono font-black text-2xl uppercase tracking-tight text-white">
-              Sincronizando Canais
+              {t("Sincronizando Canais", "Syncing Channels", "Sincronizando canales")}
             </h2>
             <p className="font-mono text-[11px] text-white/25 leading-relaxed">
-              Confirmando quais canais estão prontos para operação.
+              {t("Confirmando quais canais estão prontos para operação.", "Checking which channels are ready to operate.", "Comprobando qué canales están listos para operar.")}
             </p>
           </div>
 
@@ -375,23 +377,25 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
                       <div className="shrink-0">
                         {status === "checking"  && <Loader2 className="h-3.5 w-3.5 text-white/35 animate-spin" />}
                         {status === "connected" && <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />}
-                        {status === "skipped"   && <span className="font-mono text-[10px] uppercase tracking-widest text-white/18">Omitido</span>}
+                        {status === "skipped"   && <span className="font-mono text-[10px] uppercase tracking-widest text-white/18">{t("Omitido", "Skipped", "Omitido")}</span>}
                       </div>
                     </div>
 
                     {status === "connected" && (
-                      <p className="font-mono text-[10px] text-green-400/55 mt-0.5 leading-relaxed">{ch.role}</p>
+                      <p className="font-mono text-[10px] text-green-400/55 mt-0.5 leading-relaxed">{t(ch.role,
+                        ({ instagram: "Organic content and Stories distribution enabled.", facebook: "Organic feed and engagement groups enabled.", meta_ads: "Paid acquisition setup is operational — campaigns are ready to run.", tiktok: "Short-form video and viral distribution channel enabled.", whatsapp: "Automated retention and follow-up flow enabled.", telegram: "Community and broadcast channel enabled.", email: "Nurture and re-engagement sequence operational." } as Record<string, string>)[ch.id] ?? ch.role,
+                        ({ instagram: "Distribución de contenido orgánico e historias activada.", facebook: "Feed orgánico y grupos de interacción habilitados.", meta_ads: "Adquisición de pago operativa: campañas listas para publicarse.", tiktok: "Canal de video corto y distribución viral habilitado.", whatsapp: "Flujo automático de retención y seguimiento habilitado.", telegram: "Canal de comunidad y difusión activado.", email: "Secuencia de nutrición y reactivación operativa." } as Record<string, string>)[ch.id] ?? ch.role)}</p>
                     )}
 
                     {status === "missing" && (
                       <div className="flex items-center gap-2 mt-1.5">
                         <AlertTriangle className="h-3 w-3 text-yellow-400/50 shrink-0" />
-                        <span className="font-mono text-[10px] text-white/25 flex-1">Canal não conectado — será omitido desta execução.</span>
+                        <span className="font-mono text-[10px] text-white/25 flex-1">{t("Canal não conectado — será omitido desta execução.", "Channel not connected — it will be skipped for this launch.", "Canal no conectado: se omitirá en esta ejecución.")}</span>
                         <button
                           onClick={() => skipChannel(ch.id)}
                           className="font-mono text-[10px] uppercase tracking-widest text-white/25 hover:text-white/55 border border-white/8 hover:border-white/20 px-2 py-0.5 transition-all"
                         >
-                          Ok
+                          {t("Ok", "OK", "Vale")}
                         </button>
                       </div>
                     )}
@@ -405,14 +409,14 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
           {allResolved && hasMissing && (
             <div className="border border-white/10 bg-white/[0.03] p-4 space-y-3">
               <p className="font-mono text-xs text-white/40 leading-relaxed">
-                Alguns canais não estão conectados. A campanha será ativada nos canais disponíveis. Você pode conectar os demais a qualquer momento pelo painel.
+                {t("Alguns canais não estão conectados. A campanha será ativada nos canais disponíveis. Você pode conectar os demais a qualquer momento pelo painel.", "Some channels aren’t connected. The campaign will be activated on available channels. You can connect the others anytime from the dashboard.", "Algunos canales no están conectados. La campaña se activará en los canales disponibles. Puedes conectar los demás cuando quieras desde el panel.")}
               </p>
               <Button
                 className="w-full font-mono uppercase tracking-widest rounded-none h-10 gap-2 text-xs"
                 style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.18)", color: "white" }}
                 onClick={() => setStage("countdown")}
               >
-                <Rocket className="h-4 w-4" />Ativar nos Canais Disponíveis
+                <Rocket className="h-4 w-4" />{t("Ativar nos Canais Disponíveis", "Activate Available Channels", "Activar canales disponibles")}
               </Button>
             </div>
           )}
@@ -423,7 +427,7 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
       {stage === "countdown" && (
         <div className="flex flex-col items-center gap-8 text-center px-6">
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-white/20">
-            Preparando Execução Operacional
+            {t("Preparando Execução Operacional", "Preparing Operational Launch", "Preparando la ejecución operativa")}
           </div>
 
           {/* Countdown number */}
@@ -466,10 +470,10 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
 
           <div className="space-y-3">
             <div className="font-mono font-black text-3xl md:text-5xl uppercase tracking-tighter text-white" style={{ textShadow: "0 0 30px rgba(255,255,255,0.25)" }}>
-              Campanha Ativa
+              {t("Campanha Ativa", "Campaign Active", "Campaña activa")}
             </div>
             <p className="font-mono text-xs text-white/35 uppercase tracking-[0.2em]">
-              Operando nos canais aprovados · Sob sua supervisão
+              {t("Operando nos canais aprovados · Sob sua supervisão", "Operating on approved channels · Under your supervision", "Operando en los canales aprobados · Bajo tu supervisión")}
             </p>
           </div>
 
@@ -481,14 +485,14 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
                 <div key={ch.id} className="flex items-center gap-2 font-mono text-[11px] text-white/25 uppercase tracking-widest">
                   <Wifi className="h-3 w-3" style={{ color: ch.color, opacity: 0.6 }} />
                   <Icon className="h-3 w-3" style={{ color: ch.color, opacity: 0.6 }} />
-                  <span>{ch.name} — operacional</span>
+                  <span>{ch.name} — {t("operacional", "operational", "operativo")}</span>
                 </div>
               );
             })}
           </div>
 
           <p className="font-mono text-[10px] text-white/18 uppercase tracking-widest animate-pulse">
-            Abrindo painel de controle...
+            {t("Abrindo painel de controle...", "Opening dashboard...", "Abriendo el panel...")}
           </p>
         </div>
       )}
@@ -505,6 +509,7 @@ interface TriggerProps {
 }
 
 export function LaunchRocketButton({ onClick, loading }: TriggerProps) {
+  const t = useUiText();
   return (
     <div className="flex flex-col items-center gap-3 py-2">
       <button
@@ -521,10 +526,10 @@ export function LaunchRocketButton({ onClick, loading }: TriggerProps) {
           ? <Loader2 className="h-4 w-4 animate-spin" />
           : <Rocket className="h-4 w-4 group-hover:translate-y-[-2px] transition-transform" style={{ filter: "drop-shadow(0 0 8px rgba(255,255,255,0.35))" }} />
         }
-        Ativar Campanha
+        {t("Ativar Campanha", "Launch Campaign", "Activar campaña")}
       </button>
       <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/25">
-        Ativos aprovados · Aguardando sua autorização
+        {t("Ativos aprovados · Aguardando sua autorização", "Assets approved · Awaiting your authorisation", "Recursos aprobados · Esperando tu autorización")}
       </p>
     </div>
   );

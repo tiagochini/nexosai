@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { generateMasterplanPDF, type PdfUserIdentity } from "@/lib/masterplan-pdf";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
+import { useUiText } from "@/lib/i18n";
 
 // ─── Types & utils ────────────────────────────────────────────────────────────
 
@@ -55,12 +56,43 @@ function obj(v: unknown): Obj {
 // ─── Document primitives ──────────────────────────────────────────────────────
 
 function SectionLabel({ n, children }: { n?: string; children: React.ReactNode }) {
+  const t = useUiText();
+  const labels: Record<string, [string, string, string]> = {
+    "Análise de Viabilidade e PMF": ["Análise de Viabilidade e PMF", "Feasibility and PMF Analysis", "Análisis de viabilidad y PMF"],
+    "Proposta Única de Valor": ["Proposta Única de Valor", "Unique Value Proposition", "Propuesta de valor única"],
+    "Mecanismo Único": ["Mecanismo Único", "Unique Mechanism", "Mecanismo único"],
+    "Contexto e Preço": ["Contexto e Preço", "Context and Pricing", "Contexto y precio"],
+    "Vantagens Competitivas": ["Vantagens Competitivas", "Competitive Advantages", "Ventajas competitivas"],
+    "Cenário Competitivo": ["Cenário Competitivo", "Competitive Landscape", "Panorama competitivo"],
+    "Oportunidades · Ameaças · Barreiras": ["Oportunidades · Ameaças · Barreiras", "Opportunities · Threats · Barriers", "Oportunidades · Amenazas · Barreras"],
+    "Avatar Principal": ["Avatar Principal", "Primary Avatar", "Avatar principal"],
+    "Perfil Psicográfico": ["Perfil Psicográfico", "Psychographic Profile", "Perfil psicográfico"],
+    "Estratégia de Sofisticação": ["Estratégia de Sofisticação", "Sophistication Strategy", "Estrategia de sofisticación"],
+    "Gatilhos e Objeções": ["Gatilhos e Objeções", "Triggers and Objections", "Disparadores y objeciones"],
+    "Avatares Secundários": ["Avatares Secundários", "Secondary Avatars", "Avatares secundarios"],
+    "Narrativa Central": ["Narrativa Central", "Core Narrative", "Narrativa central"],
+    "Gancho Emocional": ["Gancho Emocional", "Emotional Hook", "Gancho emocional"],
+    "Mensagens-Chave": ["Mensagens-Chave", "Key Messages", "Mensajes clave"],
+    "Pilares de Conteúdo": ["Pilares de Conteúdo", "Content Pillars", "Pilares de contenido"],
+    "Distribuição por Plataforma": ["Distribuição por Plataforma", "Platform Distribution", "Distribución por plataforma"],
+    "Estratégia de CTA": ["Estratégia de CTA", "CTA Strategy", "Estrategia de CTA"],
+    "Gatilho Dominante": ["Gatilho Dominante", "Dominant Trigger", "Disparador dominante"],
+    "Sequência de Ativação Dia a Dia": ["Sequência de Ativação Dia a Dia", "Day-by-Day Activation Sequence", "Secuencia de activación día a día"],
+    "Ponte de Transformação": ["Ponte de Transformação", "Transformation Bridge", "Puente de transformación"],
+    "Ângulos Anti-Requisito": ["Ângulos Anti-Requisito", "Anti-Requirement Angles", "Ángulos antirrequisito"],
+    "Blueprint de Prova Social": ["Blueprint de Prova Social", "Social Proof Blueprint", "Plan de prueba social"],
+    "Unit Economics": ["Economia Unitária", "Unit Economics", "Economía unitaria"],
+    "Premissas Críticas": ["Premissas Críticas", "Critical Assumptions", "Supuestos críticos"],
+    "Diretrizes de Execução": ["Diretrizes de Execução", "Execution Guidelines", "Directrices de ejecución"],
+  };
   return (
     <div className="flex items-center gap-2 mb-2.5">
       {n && (
         <span className="font-mono text-[9px] text-primary/40 tracking-widest shrink-0">{n}</span>
       )}
-      <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35">{children}</span>
+      <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35">
+        {typeof children === "string" && labels[children] ? t(...labels[children]) : children}
+      </span>
       <div className="flex-1 h-px bg-white/5" />
     </div>
   );
@@ -77,9 +109,14 @@ function QuoteBlock({ children, color = "primary" }: { children: React.ReactNode
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const t = useUiText();
+  const labels: Record<string, [string, string, string]> = {
+    "Posicionamento": ["Posicionamento", "Positioning", "Posicionamiento"],
+    "Justificativa de Preço": ["Justificativa de Preço", "Pricing Rationale", "Justificación del precio"],
+  };
   return (
     <div className="space-y-1">
-      <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35">{label}</div>
+      <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35">{labels[label] ? t(...labels[label]) : label}</div>
       <div className="font-mono text-xs text-foreground/75 leading-relaxed">{children}</div>
     </div>
   );
@@ -146,10 +183,17 @@ function Tag({ children, color = "default" }: { children: React.ReactNode; color
 }
 
 function KpiBox({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  const t = useUiText();
+  const labels: Record<string, [string, string, string]> = {
+    "KPI Principal": ["KPI Principal", "Primary KPI", "KPI principal"],
+    "Meta de Receita": ["Meta de Receita", "Revenue Target", "Meta de ingresos"],
+    "Taxa de Conversão Alvo": ["Taxa de Conversão Alvo", "Target Conversion Rate", "Tasa de conversión objetivo"],
+    "Horizonte de Lançamento": ["Horizonte de Lançamento", "Launch Timeline", "Horizonte del lanzamiento"],
+  };
   if (!value) return null;
   return (
     <div className="border border-white/8 bg-white/[0.02] p-3">
-      <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35 mb-1">{label}</div>
+      <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35 mb-1">{labels[label] ? t(...labels[label]) : label}</div>
       <div className={`font-mono text-sm font-bold ${accent ?? "text-foreground/90"}`}>{value}</div>
     </div>
   );
@@ -220,6 +264,29 @@ const ACCENT_STYLES = {
 };
 
 function Module({ index, id, icon: Icon, title, subtitle, status, accentColor, children, onApprove, onReject, onFlag, isEmpty }: ModuleProps) {
+  const t = useUiText();
+  const titles: Record<string, [string, string, string]> = {
+    "Diagnóstico Executivo": ["Diagnóstico Executivo", "Executive Diagnosis", "Diagnóstico ejecutivo"],
+    "Posicionamento da Oferta": ["Posicionamento da Oferta", "Offer Positioning", "Posicionamiento de la oferta"],
+    "Diagnóstico de Mercado": ["Diagnóstico de Mercado", "Market Diagnosis", "Diagnóstico de mercado"],
+    "Arquétipo de Audiência": ["Arquétipo de Audiência", "Audience Archetype", "Arquetipo de audiencia"],
+    "Arquitetura da Campanha": ["Arquitetura da Campanha", "Campaign Architecture", "Arquitectura de campaña"],
+    "Engenharia de Gatilhos": ["Engenharia de Gatilhos", "Trigger Engineering", "Ingeniería de disparadores"],
+    "Métricas de Performance": ["Métricas de Performance", "Performance Metrics", "Métricas de rendimiento"],
+    "Análise de Riscos": ["Análise de Riscos", "Risk Analysis", "Análisis de riesgos"],
+    "Nota do Estrategista": ["Nota do Estrategista", "Strategist's Note", "Nota del estratega"],
+  };
+  const subtitles: Record<string, [string, string, string]> = {
+    "Contexto, oportunidade e viabilidade de lançamento": ["Contexto, oportunidade e viabilidade de lançamento", "Context, opportunity, and launch feasibility", "Contexto, oportunidad y viabilidad del lanzamiento"],
+    "Proposta única de valor, mecanismo diferenciador e justificativa de preço": ["Proposta única de valor, mecanismo diferenciador e justificativa de preço", "Unique value proposition, differentiating mechanism, and pricing rationale", "Propuesta de valor única, mecanismo diferenciador y justificación del precio"],
+    "Maturidade, cenário competitivo, oportunidades e ameaças": ["Maturidade, cenário competitivo, oportunidades e ameaças", "Maturity, competitive landscape, opportunities, and threats", "Madurez, panorama competitivo, oportunidades y amenazas"],
+    "Avatar principal, perfil psicográfico, objeções e gatilhos de compra": ["Avatar principal, perfil psicográfico, objeções e gatilhos de compra", "Primary avatar, psychographic profile, objections, and purchase triggers", "Avatar principal, perfil psicográfico, objeciones y disparadores de compra"],
+    "Narrativa central, gancho emocional, mensagens-chave e pilares de conteúdo": ["Narrativa central, gancho emocional, mensagens-chave e pilares de conteúdo", "Core narrative, emotional hook, key messages, and content pillars", "Narrativa central, gancho emocional, mensajes clave y pilares de contenido"],
+    "Gatilho dominante, sequência de ativação, ponte de transformação": ["Gatilho dominante, sequência de ativação, ponte de transformação", "Dominant trigger, activation sequence, and transformation bridge", "Disparador dominante, secuencia de activación y puente de transformación"],
+    "KPI principal, meta de receita, taxa de conversão e premissas críticas": ["KPI principal, meta de receita, taxa de conversão e premissas críticas", "Primary KPI, revenue target, conversion rate, and critical assumptions", "KPI principal, meta de ingresos, tasa de conversión y supuestos críticos"],
+    "Nível de risco, ameaças principais e estratégias de mitigação": ["Nível de risco, ameaças principais e estratégias de mitigação", "Risk level, primary threats, and mitigation strategies", "Nivel de riesgo, principales amenazas y estrategias de mitigación"],
+    "Observações finais, recomendações e instruções de execução": ["Observações finais, recomendações e instruções de execução", "Final observations, recommendations, and execution instructions", "Observaciones finales, recomendaciones e instrucciones de ejecución"],
+  };
   const [expanded, setExpanded] = useState(false);
   const accent = ACCENT_STYLES[accentColor];
 
@@ -240,11 +307,11 @@ function Module({ index, id, icon: Icon, title, subtitle, status, accentColor, c
           </div>
           <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground/25" />
           <div className="flex-1 min-w-0">
-            <div className="font-mono text-[11px] font-bold uppercase tracking-widest text-foreground/40">{title}</div>
-            <div className="font-mono text-[9px] text-muted-foreground/25 mt-0.5 truncate">{subtitle}</div>
+            <div className="font-mono text-[11px] font-bold uppercase tracking-widest text-foreground/40">{titles[title] ? t(...titles[title]) : title}</div>
+            <div className="font-mono text-[9px] text-muted-foreground/25 mt-0.5 truncate">{subtitles[subtitle] ? t(...subtitles[subtitle]) : subtitle}</div>
           </div>
           <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border border-white/10 text-muted-foreground/30 bg-white/[0.02] shrink-0">
-            Aguardando
+            {t("Aguardando", "Waiting", "Pendiente")}
           </span>
         </div>
       </div>
@@ -263,19 +330,19 @@ function Module({ index, id, icon: Icon, title, subtitle, status, accentColor, c
         <Icon className={`h-3.5 w-3.5 shrink-0 ${accent.icon}`} />
         <div className="flex-1 min-w-0">
           <div className="font-mono text-[11px] font-bold uppercase tracking-widest text-foreground/85 group-hover:text-foreground transition-colors">
-            {title}
+            {titles[title] ? t(...titles[title]) : title}
           </div>
-          <div className="font-mono text-[9px] text-muted-foreground/40 mt-0.5 truncate">{subtitle}</div>
+          <div className="font-mono text-[9px] text-muted-foreground/40 mt-0.5 truncate">{subtitles[subtitle] ? t(...subtitles[subtitle]) : subtitle}</div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {status === "approved" && (
-            <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border border-emerald-500/35 text-emerald-400/80 bg-emerald-500/[0.06]">✓ Aprovado</span>
+            <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border border-emerald-500/35 text-emerald-400/80 bg-emerald-500/[0.06]">✓ {t("Aprovado", "Approved", "Aprobado")}</span>
           )}
           {status === "rejected" && (
-            <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border border-red-500/35 text-red-400/80 bg-red-500/[0.06]">✕ Rejeitado</span>
+            <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border border-red-500/35 text-red-400/80 bg-red-500/[0.06]">✕ {t("Rejeitado", "Rejected", "Rechazado")}</span>
           )}
           {status === "flagged" && (
-            <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border border-amber-500/35 text-amber-400/80 bg-amber-500/[0.06]">⚠ Sinalizado</span>
+            <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border border-amber-500/35 text-amber-400/80 bg-amber-500/[0.06]">⚠ {t("Sinalizado", "Flagged", "Marcado")}</span>
           )}
           <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/30 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
         </div>
@@ -296,21 +363,21 @@ function Module({ index, id, icon: Icon, title, subtitle, status, accentColor, c
                 status === "approved" ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/8" : "border-white/8 text-muted-foreground/50 hover:border-emerald-500/35 hover:text-emerald-400"
               }`}
               onClick={() => onApprove(id)}>
-              <Check className="h-2.5 w-2.5" />{status === "approved" ? "Aprovado" : "Aprovar"}
+              <Check className="h-2.5 w-2.5" />{status === "approved" ? t("Aprovado", "Approved", "Aprobado") : t("Aprovar", "Approve", "Aprobar")}
             </Button>
             <Button size="sm" variant="outline"
               className={`rounded-none font-mono text-[9px] uppercase tracking-widest h-6 px-3 gap-1.5 transition-all ${
                 status === "rejected" ? "border-red-500/40 text-red-400 bg-red-500/8" : "border-white/8 text-muted-foreground/50 hover:border-red-500/35 hover:text-red-400"
               }`}
               onClick={() => onReject(id)}>
-              <X className="h-2.5 w-2.5" />{status === "rejected" ? "Rejeitado" : "Rejeitar"}
+              <X className="h-2.5 w-2.5" />{status === "rejected" ? t("Rejeitado", "Rejected", "Rechazado") : t("Rejeitar", "Reject", "Rechazar")}
             </Button>
             <Button size="sm" variant="outline"
               className={`rounded-none font-mono text-[9px] uppercase tracking-widest h-6 px-3 gap-1.5 transition-all ${
                 status === "flagged" ? "border-amber-500/40 text-amber-400 bg-amber-500/8" : "border-white/8 text-muted-foreground/50 hover:border-amber-500/35 hover:text-amber-400"
               }`}
               onClick={() => onFlag(id)}>
-              <AlertTriangle className="h-2.5 w-2.5" />{status === "flagged" ? "Sinalizado" : "Sinalizar"}
+              <AlertTriangle className="h-2.5 w-2.5" />{status === "flagged" ? t("Sinalizado", "Flagged", "Marcado") : t("Sinalizar", "Flag", "Marcar")}
             </Button>
           </div>
         </div>
@@ -330,6 +397,7 @@ function BigDominoCard({
   editing: boolean; editValue: string;
   onEdit: () => void; onSave: () => void; onCancelEdit: () => void; onChangeEdit: (v: string) => void;
 }) {
+  const t = useUiText();
   const border = status === "approved" ? "border-emerald-500/50" : status === "rejected" ? "border-red-500/50" : status === "flagged" ? "border-amber-500/50" : "border-primary/25";
   return (
     <div className={`relative border-2 ${border} bg-gradient-to-br from-primary/[0.05] to-transparent transition-all`}
@@ -342,14 +410,14 @@ function BigDominoCard({
 
       <div className="px-5 pt-4 pb-2 flex items-center gap-2">
         <Zap className="h-3.5 w-3.5 text-primary/60" />
-        <span className="font-mono text-[9px] uppercase tracking-widest text-primary/55 font-bold">02 — Big Domino · A Crença Central</span>
+        <span className="font-mono text-[9px] uppercase tracking-widest text-primary/55 font-bold">{t("02 — Big Domino · A crença central", "02 — Big Domino · The core belief", "02 — Big Domino · La creencia central")}</span>
         <div className="flex-1 h-px bg-primary/10" />
         <span className="font-mono text-[9px] text-muted-foreground/20 tracking-widest">02 / 10</span>
       </div>
 
       <div className="px-5 pb-2">
         <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30 mb-3">
-          A UMA crença que, implantada no avatar, colapsa todas as objeções de uma só vez
+          {t("A única crença que, implantada no avatar, colapsa todas as objeções de uma só vez", "The one belief that, once implanted in the avatar, collapses every objection at once", "La única creencia que, una vez implantada en el avatar, elimina todas las objeciones de una vez")}
         </div>
         {editing ? (
           <div className="space-y-2">
@@ -357,9 +425,9 @@ function BigDominoCard({
               className="font-mono text-sm bg-transparent border-primary/15 resize-none min-h-[80px]" />
             <div className="flex gap-2">
               <Button size="sm" variant="outline" className="rounded-none font-mono text-[9px] h-6 px-3 gap-1.5 border-primary/25 text-primary" onClick={onSave}>
-                <Save className="h-2.5 w-2.5" />Salvar
+                <Save className="h-2.5 w-2.5" />{t("Salvar", "Save", "Guardar")}
               </Button>
-              <Button size="sm" variant="ghost" className="rounded-none font-mono text-[9px] h-6 px-3" onClick={onCancelEdit}>Cancelar</Button>
+              <Button size="sm" variant="ghost" className="rounded-none font-mono text-[9px] h-6 px-3" onClick={onCancelEdit}>{t("Cancelar", "Cancel", "Cancelar")}</Button>
             </div>
           </div>
         ) : (
@@ -369,7 +437,7 @@ function BigDominoCard({
             </blockquote>
             <Button size="sm" variant="ghost"
               className="mt-2 rounded-none font-mono text-[9px] h-6 px-2 gap-1 text-muted-foreground/30 hover:text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={onEdit}><Pencil className="h-2.5 w-2.5" />Editar</Button>
+              onClick={onEdit}><Pencil className="h-2.5 w-2.5" />{t("Editar", "Edit", "Editar")}</Button>
           </div>
         )}
       </div>
@@ -377,20 +445,20 @@ function BigDominoCard({
       <div className="px-5 pb-4 flex items-center gap-2 flex-wrap">
         <Button size="sm" variant="outline"
           className={`rounded-none font-mono text-[9px] uppercase tracking-widest h-6 px-3 gap-1.5 ${status === "approved" ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/8" : "border-white/8 text-muted-foreground/50 hover:border-emerald-500/35 hover:text-emerald-400"}`}
-          onClick={() => onApprove("bigDomino")}><Check className="h-2.5 w-2.5" />{status === "approved" ? "Aprovado" : "Aprovar"}
+          onClick={() => onApprove("bigDomino")}><Check className="h-2.5 w-2.5" />{status === "approved" ? t("Aprovado", "Approved", "Aprobado") : t("Aprovar", "Approve", "Aprobar")}
         </Button>
         <Button size="sm" variant="outline"
           className={`rounded-none font-mono text-[9px] uppercase tracking-widest h-6 px-3 gap-1.5 ${status === "rejected" ? "border-red-500/40 text-red-400 bg-red-500/8" : "border-white/8 text-muted-foreground/50 hover:border-red-500/35 hover:text-red-400"}`}
-          onClick={() => onReject("bigDomino")}><X className="h-2.5 w-2.5" />{status === "rejected" ? "Rejeitado" : "Rejeitar"}
+          onClick={() => onReject("bigDomino")}><X className="h-2.5 w-2.5" />{status === "rejected" ? t("Rejeitado", "Rejected", "Rechazado") : t("Rejeitar", "Reject", "Rechazar")}
         </Button>
         <Button size="sm" variant="outline"
           className={`rounded-none font-mono text-[9px] uppercase tracking-widest h-6 px-3 gap-1.5 ${status === "flagged" ? "border-amber-500/40 text-amber-400 bg-amber-500/8" : "border-white/8 text-muted-foreground/50 hover:border-amber-500/35 hover:text-amber-400"}`}
-          onClick={() => onFlag("bigDomino")}><AlertTriangle className="h-2.5 w-2.5" />{status === "flagged" ? "Sinalizado" : "Sinalizar"}
+          onClick={() => onFlag("bigDomino")}><AlertTriangle className="h-2.5 w-2.5" />{status === "flagged" ? t("Sinalizado", "Flagged", "Marcado") : t("Sinalizar", "Flag", "Marcar")}
         </Button>
         {!editing && (
           <Button size="sm" variant="ghost"
             className="rounded-none font-mono text-[9px] uppercase tracking-widest h-6 px-3 gap-1.5 text-muted-foreground/35 hover:text-foreground/60 ml-auto"
-            onClick={onEdit}><Pencil className="h-2.5 w-2.5" />Editar</Button>
+            onClick={onEdit}><Pencil className="h-2.5 w-2.5" />{t("Editar", "Edit", "Editar")}</Button>
         )}
       </div>
     </div>
@@ -411,6 +479,7 @@ interface StrategyMasterplanProps {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, campaignTitle, track }: StrategyMasterplanProps) {
+  const t = useUiText();
   const hasIns = Object.keys(ins).length > 0;
   const src = hasIns ? ins : strategyD;
 
@@ -467,7 +536,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
           <Brain className="h-5 w-5 text-muted-foreground/20" />
         </div>
         <p className="font-mono text-[10px] text-muted-foreground/25 uppercase tracking-widest">
-          O Estrategista está finalizando o masterplan…
+          {t("O estrategista está finalizando o masterplan…", "The strategist is finishing the master plan…", "El estratega está terminando el plan maestro…")}
         </p>
       </div>
     );
@@ -483,14 +552,14 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
             <div className="flex items-center gap-2 mb-2">
               <Award className="h-3.5 w-3.5 text-primary/50" />
               <span className="font-mono text-[9px] uppercase tracking-widest text-primary/50 font-bold">
-                NexOS AI — Proposta Estratégica
+                 {t("NexOS AI — Proposta Estratégica", "NexOS AI — Strategic Proposal", "NexOS AI — Propuesta estratégica")}
               </span>
             </div>
             <h2 className="font-mono text-sm font-black uppercase tracking-widest text-foreground">
-              Masterplan de Lançamento
+              {t("Masterplan de lançamento", "Launch master plan", "Plan maestro de lanzamiento")}
             </h2>
             <p className="font-mono text-[10px] text-muted-foreground/40 mt-1">
-              10 módulos · Elaborado pelo Time NexOS AI · Revise e aprove cada seção
+              {t("10 módulos · Elaborado pela equipe NexOS AI · Revise e aprove cada seção", "10 modules · Prepared by the NexOS AI team · Review and approve each section", "10 módulos · Preparado por el equipo de NexOS AI · Revisa y aprueba cada sección")}
             </p>
           </div>
           <div className="flex flex-col items-end gap-2 shrink-0">
@@ -498,7 +567,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
               <div className="font-mono text-xl font-black text-foreground leading-none">
                 {approvedCount}<span className="text-muted-foreground/25 text-sm font-normal">/{TOTAL_MODULES}</span>
               </div>
-              <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35 mt-0.5">aprovados</div>
+              <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35 mt-0.5">{t("aprovados", "approved", "aprobados")}</div>
             </div>
             {userIdentity && (
               <Button
@@ -507,7 +576,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
                 className="rounded-none font-mono text-[9px] uppercase tracking-widest h-7 px-3 gap-1.5 border-primary/25 text-primary/70 hover:border-primary/50 hover:text-primary transition-all"
                 onClick={() => setShowConsent(true)}
               >
-                <Download className="h-3 w-3" />Baixar PDF
+                <Download className="h-3 w-3" />{t("Baixar PDF", "Download PDF", "Descargar PDF")}
               </Button>
             )}
           </div>
@@ -515,7 +584,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
 
         <div className="mt-4">
           <div className="flex justify-between mb-1">
-            <span className="font-mono text-[9px] text-muted-foreground/30 uppercase tracking-widest">Progresso de revisão</span>
+            <span className="font-mono text-[9px] text-muted-foreground/30 uppercase tracking-widest">{t("Progresso de revisão", "Review progress", "Progreso de revisión")}</span>
             <span className="font-mono text-[9px] text-muted-foreground/40">{progress}%</span>
           </div>
           <div className="h-px bg-white/5 w-full">
@@ -525,12 +594,12 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
 
         <div className="flex flex-wrap gap-1.5 mt-3">
           {approvedCount === TOTAL_MODULES ? (
-            <Tag color="green"><Check className="h-2.5 w-2.5 mr-1" />Masterplan 100% aprovado</Tag>
+            <Tag color="green"><Check className="h-2.5 w-2.5 mr-1" />{t("Masterplan 100% aprovado", "Master plan 100% approved", "Plan maestro 100% aprobado")}</Tag>
           ) : (
             <>
-              <Tag color="default"><Lock className="h-2.5 w-2.5 mr-1" />{TOTAL_MODULES - approvedCount - flaggedCount - rejectedCount} pendentes</Tag>
-              {rejectedCount > 0 && <Tag color="red"><X className="h-2.5 w-2.5 mr-1" />{rejectedCount} rejeitado{rejectedCount > 1 ? "s" : ""}</Tag>}
-              {flaggedCount  > 0 && <Tag color="amber"><AlertTriangle className="h-2.5 w-2.5 mr-1" />{flaggedCount} sinalizado{flaggedCount > 1 ? "s" : ""}</Tag>}
+              <Tag color="default"><Lock className="h-2.5 w-2.5 mr-1" />{TOTAL_MODULES - approvedCount - flaggedCount - rejectedCount} {t("pendentes", "pending", "pendientes")}</Tag>
+              {rejectedCount > 0 && <Tag color="red"><X className="h-2.5 w-2.5 mr-1" />{rejectedCount} {rejectedCount > 1 ? t("rejeitados", "rejected", "rechazados") : t("rejeitado", "rejected", "rechazado")}</Tag>}
+              {flaggedCount  > 0 && <Tag color="amber"><AlertTriangle className="h-2.5 w-2.5 mr-1" />{flaggedCount} {flaggedCount > 1 ? t("sinalizados", "flagged", "marcados") : t("sinalizado", "flagged", "marcado")}</Tag>}
             </>
           )}
         </div>
@@ -553,9 +622,9 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" className="rounded-none font-mono text-[9px] h-6 px-3 gap-1.5 border-primary/25 text-primary"
                   onClick={() => { setSavedEdits(p => ({ ...p, executiveSummary: editValues["executiveSummary"] ?? executiveSummary })); setEditingModule(null); }}>
-                  <Save className="h-2.5 w-2.5" />Salvar
+                  <Save className="h-2.5 w-2.5" />{t("Salvar", "Save", "Guardar")}
                 </Button>
-                <Button size="sm" variant="ghost" className="rounded-none font-mono text-[9px] h-6 px-3" onClick={() => setEditingModule(null)}>Cancelar</Button>
+                <Button size="sm" variant="ghost" className="rounded-none font-mono text-[9px] h-6 px-3" onClick={() => setEditingModule(null)}>{t("Cancelar", "Cancel", "Cancelar")}</Button>
               </div>
             </div>
           ) : (
@@ -565,7 +634,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
               <Button size="sm" variant="ghost"
                 className="mt-2 rounded-none font-mono text-[9px] h-6 px-2 gap-1 text-muted-foreground/30 hover:text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={() => { setEditValues(p => ({ ...p, executiveSummary })); setEditingModule("executiveSummary"); }}>
-                <Pencil className="h-2.5 w-2.5" />Editar
+                <Pencil className="h-2.5 w-2.5" />{t("Editar", "Edit", "Editar")}
               </Button>
             </div>
           )}
@@ -599,7 +668,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
       >
         {str(positioning["uniqueValueProposition"]) && (
           <div>
-            <SectionLabel n="3.1">Proposta Única de Valor</SectionLabel>
+              <SectionLabel n="3.1">Proposta Única de Valor</SectionLabel>
             <QuoteBlock color="violet">{str(positioning["uniqueValueProposition"])}</QuoteBlock>
           </div>
         )}
@@ -637,7 +706,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
       >
         {str(market["marketMaturity"]) && (
           <div className="flex items-center gap-3">
-            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35">Maturidade do Mercado</span>
+            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35">{t("Maturidade do mercado", "Market maturity", "Madurez del mercado")}</span>
             <Tag color="amber">{str(market["marketMaturity"])}</Tag>
           </div>
         )}
@@ -653,19 +722,19 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
               {arr(market["opportunities"]).length > 0 && (
                 <div className="border border-white/8 bg-white/[0.015] p-3">
-                  <div className="font-mono text-[9px] uppercase tracking-widest text-cyan-400/60 mb-2">Oportunidades</div>
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-cyan-400/60 mb-2">{t("Oportunidades", "Opportunities", "Oportunidades")}</div>
                   <BulletList items={arr(market["opportunities"])} color="cyan" />
                 </div>
               )}
               {arr(market["threats"]).length > 0 && (
                 <div className="border border-white/8 bg-white/[0.015] p-3">
-                  <div className="font-mono text-[9px] uppercase tracking-widest text-red-400/60 mb-2">Ameaças</div>
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-red-400/60 mb-2">{t("Ameaças", "Threats", "Amenazas")}</div>
                   <BulletList items={arr(market["threats"])} color="red" />
                 </div>
               )}
               {arr(market["entryBarriers"]).length > 0 && (
                 <div className="border border-white/8 bg-white/[0.015] p-3">
-                  <div className="font-mono text-[9px] uppercase tracking-widest text-amber-400/60 mb-2">Barreiras de Entrada</div>
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-amber-400/60 mb-2">{t("Barreiras de entrada", "Barriers to entry", "Barreras de entrada")}</div>
                   <BulletList items={arr(market["entryBarriers"])} color="amber" />
                 </div>
               )}
@@ -689,7 +758,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
             <div className="border border-white/8 bg-white/[0.015] p-4">
               <div className="flex items-center gap-1.5 mb-2">
                 <Star className="h-2.5 w-2.5 text-cyan-400/50" />
-                <span className="font-mono text-[9px] uppercase tracking-widest text-cyan-400/50">Perfil Central</span>
+                <span className="font-mono text-[9px] uppercase tracking-widest text-cyan-400/50">{t("Perfil central", "Core profile", "Perfil central")}</span>
               </div>
               <p className="font-mono text-xs text-foreground/75 leading-relaxed">{str(audience["primaryAvatar"])}</p>
             </div>
@@ -713,13 +782,13 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {arr(audience["buyingTriggers"]).length > 0 && (
                 <div>
-                  <div className="font-mono text-[9px] uppercase tracking-widest text-amber-400/50 mb-2">Gatilhos de Compra</div>
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-amber-400/50">{t("Gatilhos de compra", "Purchase triggers", "Disparadores de compra")}</div>
                   <NumberedList items={arr(audience["buyingTriggers"])} color="amber" />
                 </div>
               )}
               {arr(audience["objections"]).length > 0 && (
                 <div>
-                  <div className="font-mono text-[9px] uppercase tracking-widest text-red-400/50 mb-2">Objeções Reais</div>
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-red-400/50">{t("Objeções reais", "Real objections", "Objeciones reales")}</div>
                   <NumberedList items={arr(audience["objections"])} color="red" />
                 </div>
               )}
@@ -862,20 +931,20 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
       >
         {str(risks["level"]) && (
           <div className="flex items-center gap-3">
-            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35">Nível Geral</span>
+            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35">{t("Nível geral", "Overall level", "Nivel general")}</span>
             {(() => {
               const level = str(risks["level"]);
-              return level === "low"  ? <Tag color="green">Risco Baixo</Tag>  :
-                     level === "high" ? <Tag color="red">Risco Alto</Tag>    :
-                                        <Tag color="amber">Risco Médio</Tag>;
+              return level === "low"  ? <Tag color="green">{t("Risco baixo", "Low risk", "Riesgo bajo")}</Tag>  :
+                     level === "high" ? <Tag color="red">{t("Risco alto", "High risk", "Riesgo alto")}</Tag>    :
+                                        <Tag color="amber">{t("Risco médio", "Medium risk", "Riesgo medio")}</Tag>;
             })()}
           </div>
         )}
         {(arr(risks["mainRisks"]).length > 0 || arr(risks["mitigations"]).length > 0) && (
           <div>
             <div className="grid grid-cols-2 gap-1 mb-2">
-              <div className="font-mono text-[9px] uppercase tracking-widest text-red-400/50">Riscos</div>
-              <div className="font-mono text-[9px] uppercase tracking-widest text-emerald-400/50">Mitigações</div>
+              <div className="font-mono text-[9px] uppercase tracking-widest text-red-400/50">{t("Riscos", "Risks", "Riesgos")}</div>
+              <div className="font-mono text-[9px] uppercase tracking-widest text-emerald-400/50">{t("Mitigações", "Mitigations", "Mitigaciones")}</div>
             </div>
             <RiskTable risks={arr(risks["mainRisks"])} mitigations={arr(risks["mitigations"])} />
           </div>
@@ -899,9 +968,9 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" className="rounded-none font-mono text-[9px] h-6 px-3 gap-1.5 border-primary/25 text-primary"
                   onClick={() => { setSavedEdits(p => ({ ...p, strategistNotes: editValues["strategistNotes"] ?? strategistNotes })); setEditingModule(null); }}>
-                  <Save className="h-2.5 w-2.5" />Salvar
+                  <Save className="h-2.5 w-2.5" />{t("Salvar", "Save", "Guardar")}
                 </Button>
-                <Button size="sm" variant="ghost" className="rounded-none font-mono text-[9px] h-6 px-3" onClick={() => setEditingModule(null)}>Cancelar</Button>
+                <Button size="sm" variant="ghost" className="rounded-none font-mono text-[9px] h-6 px-3" onClick={() => setEditingModule(null)}>{t("Cancelar", "Cancel", "Cancelar")}</Button>
               </div>
             </div>
           ) : (
@@ -911,7 +980,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
               <Button size="sm" variant="ghost"
                 className="mt-2 rounded-none font-mono text-[9px] h-6 px-2 gap-1 text-muted-foreground/30 hover:text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={() => { setEditValues(p => ({ ...p, strategistNotes })); setEditingModule("strategistNotes"); }}>
-                <Pencil className="h-2.5 w-2.5" />Editar
+                <Pencil className="h-2.5 w-2.5" />{t("Editar", "Edit", "Editar")}
               </Button>
             </div>
           )}
@@ -930,16 +999,16 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
                 <>
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 5px #34d399" }} />
                   <span className="font-mono text-[10px] font-bold text-emerald-400/90 uppercase tracking-widest">
-                    Masterplan aprovado — {approvedCount}/{TOTAL_MODULES}
+                    {t("Masterplan aprovado", "Master plan approved", "Plan maestro aprobado")} — {approvedCount}/{TOTAL_MODULES}
                   </span>
                 </>
               ) : (
                 <>
                   <Crosshair className="h-3 w-3 text-muted-foreground/30" />
                   <span className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">
-                    {approvedCount}/{TOTAL_MODULES} aprovados
-                    {rejectedCount > 0 ? ` · ${rejectedCount} rejeitado${rejectedCount > 1 ? "s" : ""}` : ""}
-                    {flaggedCount  > 0 ? ` · ${flaggedCount} sinalizado${flaggedCount > 1 ? "s" : ""}` : ""}
+                    {approvedCount}/{TOTAL_MODULES} {t("aprovados", "approved", "aprobados")}
+                    {rejectedCount > 0 ? ` · ${rejectedCount} ${rejectedCount > 1 ? t("rejeitados", "rejected", "rechazados") : t("rejeitado", "rejected", "rechazado")}` : ""}
+                    {flaggedCount  > 0 ? ` · ${flaggedCount} ${flaggedCount > 1 ? t("sinalizados", "flagged", "marcados") : t("sinalizado", "flagged", "marcado")}` : ""}
                   </span>
                 </>
               )}
@@ -967,36 +1036,36 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
               <div className="flex items-center gap-2 mb-1">
                 <ShieldCheck className="h-4 w-4 text-primary/70" />
                 <DialogTitle className="font-mono text-sm uppercase tracking-widest font-black text-foreground">
-                  Aviso de Identificação Digital
+                  {t("Aviso de identificação digital", "Digital identification notice", "Aviso de identificación digital")}
                 </DialogTitle>
               </div>
               <DialogDescription asChild>
                 <div className="space-y-4 pt-1">
                   <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">
-                    Ao baixar este Masterplan, seu documento será gerado com <strong className="text-foreground/80">marca d&apos;água digital</strong> contendo seus dados de identificação em todas as páginas:
+                    {t("Ao baixar este masterplan, seu documento será gerado com", "When you download this master plan, your document will include a", "Al descargar este plan maestro, tu documento incluirá una")} <strong className="text-foreground/80">{t("marca d'água digital", "digital watermark", "marca de agua digital")}</strong> {t("contendo seus dados de identificação em todas as páginas:", "containing your identification details on every page:", "con tus datos de identificación en todas las páginas:")}
                   </p>
 
                   <div className="border border-primary/20 bg-primary/[0.04] p-3 space-y-1.5">
                     <div className="flex gap-2">
-                      <span className="font-mono text-[9px] uppercase tracking-widest text-primary/50 w-20 shrink-0">Nome</span>
+                      <span className="font-mono text-[9px] uppercase tracking-widest text-primary/50 w-20 shrink-0">{t("Nome", "Name", "Nombre")}</span>
                       <span className="font-mono text-[11px] text-foreground/80">{userIdentity.name}</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="font-mono text-[9px] uppercase tracking-widest text-primary/50 w-20 shrink-0">Email</span>
+                      <span className="font-mono text-[9px] uppercase tracking-widest text-primary/50 w-20 shrink-0">{t("E-mail", "Email", "Correo electrónico")}</span>
                       <span className="font-mono text-[11px] text-foreground/80">{userIdentity.email}</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="font-mono text-[9px] uppercase tracking-widest text-primary/50 w-20 shrink-0">Conta ID</span>
+                      <span className="font-mono text-[9px] uppercase tracking-widest text-primary/50 w-20 shrink-0">{t("ID da conta", "Account ID", "ID de cuenta")}</span>
                       <span className="font-mono text-[11px] text-foreground/80 truncate">{userIdentity.userId}</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="font-mono text-[9px] uppercase tracking-widest text-primary/50 w-20 shrink-0">Workspace</span>
+                      <span className="font-mono text-[9px] uppercase tracking-widest text-primary/50 w-20 shrink-0">{t("Workspace", "Workspace", "Espacio de trabajo")}</span>
                       <span className="font-mono text-[11px] text-foreground/80">{userIdentity.workspaceName}</span>
                     </div>
                   </div>
 
                   <p className="font-mono text-[10px] text-muted-foreground/50 leading-relaxed">
-                    Este documento é de uso exclusivo e intransferível. Qualquer compartilhamento não autorizado é rastreável por fingerprint único gerado neste download. Ao clicar em <strong className="text-foreground/70">Confirmar e Baixar</strong>, você declara ciência e aceita os Termos de Uso do NexOS AI.
+                    {t("Este documento é de uso exclusivo e intransferível. Qualquer compartilhamento não autorizado é rastreável por uma impressão digital única gerada neste download. Ao clicar em", "This document is for your exclusive use and may not be transferred. Unauthorized sharing can be traced using the unique fingerprint generated for this download. By clicking", "Este documento es para uso exclusivo e intransferible. Cualquier divulgación no autorizada puede rastrearse mediante la huella digital única generada en esta descarga. Al hacer clic en")} <strong className="text-foreground/70">{t("Confirmar e baixar", "Confirm and download", "Confirmar y descargar")}</strong>, {t("você declara ciência e aceita os Termos de Uso do NexOS AI.", "you acknowledge and accept the NexOS AI Terms of Use.", "declaras que estás al tanto y aceptas los Términos de uso de NexOS AI.")}
                   </p>
                 </div>
               </DialogDescription>
@@ -1009,7 +1078,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
                 className="flex-1 rounded-none font-mono text-[9px] uppercase tracking-widest h-8 border border-white/10"
                 onClick={() => setShowConsent(false)}
               >
-                Cancelar
+                {t("Cancelar", "Cancel", "Cancelar")}
               </Button>
               <Button
                 size="sm"
@@ -1021,7 +1090,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
                     const { fingerprint } = generateMasterplanPDF(
                       {
                         campaignId: campaignId ?? "unknown",
-                        campaignTitle: campaignTitle ?? str(strategyD["productName"] as unknown) ?? "Masterplan Estratégico",
+                  campaignTitle: campaignTitle ?? str(strategyD["productName"] as unknown) ?? t("Masterplan Estratégico", "Strategic master plan", "Plan maestro estratégico"),
                         track,
                         executiveSummary,
                         bigDomino,
@@ -1057,8 +1126,8 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
                 }}
               >
                 {downloading
-                  ? <span className="animate-pulse">Gerando PDF…</span>
-                  : <><Download className="h-3 w-3" />Confirmar e Baixar</>}
+                  ? <span className="animate-pulse">{t("Gerando PDF…", "Generating PDF…", "Generando PDF…")}</span>
+                  : <><Download className="h-3 w-3" />{t("Confirmar e baixar", "Confirm and download", "Confirmar y descargar")}</>}
               </Button>
             </div>
           </DialogContent>

@@ -5,24 +5,25 @@ import {
   Bot, Mail, MessageSquare, Palette, Eye,
 } from "lucide-react";
 import type { CampaignEvent } from "@/lib/socket";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 // ── Agent metadata ────────────────────────────────────────────────────────────
 
-const AGENT_META: Record<string, { label: string; icon: React.ReactNode; provider: string }> = {
-  command:              { label: "Comando Estratégico",          icon: <Zap className="h-4 w-4" />,          provider: "claude" },
-  strategy:             { label: "Estrategista de Lançamento",   icon: <Brain className="h-4 w-4" />,         provider: "claude" },
-  profile_builder:      { label: "Construtor de Perfil",         icon: <Users className="h-4 w-4" />,         provider: "claude" },
-  offer:                { label: "Especialista em Oferta",       icon: <Target className="h-4 w-4" />,        provider: "claude" },
-  financial_projector:  { label: "Projetor Financeiro",          icon: <TrendingUp className="h-4 w-4" />,    provider: "gemini" },
-  traffic_intelligence: { label: "Inteligência de Tráfego",      icon: <Activity className="h-4 w-4" />,      provider: "gemini" },
-  creative_director:    { label: "Diretor Criativo",             icon: <Palette className="h-4 w-4" />,       provider: "claude" },
-  copywriter:           { label: "Copywriter",                   icon: <FileText className="h-4 w-4" />,      provider: "gpt" },
-  landing_page:         { label: "Especialista em Landing Page", icon: <Layers className="h-4 w-4" />,        provider: "gpt" },
-  email_sequence:       { label: "Especialista em Email",        icon: <Mail className="h-4 w-4" />,          provider: "gpt" },
-  whatsapp_sequence:    { label: "Especialista em WhatsApp",     icon: <MessageSquare className="h-4 w-4" />, provider: "gpt" },
-  audience:             { label: "Analista de Audiência",        icon: <Users className="h-4 w-4" />,         provider: "gemini" },
-  content_planner:      { label: "Planejador de Conteúdo",       icon: <BookOpen className="h-4 w-4" />,      provider: "claude" },
-  execution_governor:   { label: "Governador de Execução",       icon: <Eye className="h-4 w-4" />,           provider: "claude" },
+const AGENT_META: Record<string, { label: [string, string, string]; icon: React.ReactNode; provider: string }> = {
+  command:              { label: ["Comando Estratégico", "Strategic Command", "Comando estratégico"], icon: <Zap className="h-4 w-4" />, provider: "claude" },
+  strategy:             { label: ["Estrategista de Lançamento", "Launch Strategist", "Estratega de lanzamientos"], icon: <Brain className="h-4 w-4" />, provider: "claude" },
+  profile_builder:      { label: ["Construtor de Perfil", "Profile Builder", "Constructor de perfiles"], icon: <Users className="h-4 w-4" />, provider: "claude" },
+  offer:                { label: ["Especialista em Oferta", "Offer Specialist", "Especialista en ofertas"], icon: <Target className="h-4 w-4" />, provider: "claude" },
+  financial_projector:  { label: ["Projetor Financeiro", "Financial Forecaster", "Proyecciones financieras"], icon: <TrendingUp className="h-4 w-4" />, provider: "gemini" },
+  traffic_intelligence: { label: ["Inteligência de Tráfego", "Traffic Intelligence", "Inteligencia de tráfico"], icon: <Activity className="h-4 w-4" />, provider: "gemini" },
+  creative_director:    { label: ["Diretor Criativo", "Creative Director", "Director creativo"], icon: <Palette className="h-4 w-4" />, provider: "claude" },
+  copywriter:           { label: ["Copywriter", "Copywriter", "Copywriter"], icon: <FileText className="h-4 w-4" />, provider: "gpt" },
+  landing_page:         { label: ["Especialista em Landing Page", "Landing Page Specialist", "Especialista en páginas de aterrizaje"], icon: <Layers className="h-4 w-4" />, provider: "gpt" },
+  email_sequence:       { label: ["Especialista em e-mail", "Email Specialist", "Especialista en correo electrónico"], icon: <Mail className="h-4 w-4" />, provider: "gpt" },
+  whatsapp_sequence:    { label: ["Especialista em WhatsApp", "WhatsApp Specialist", "Especialista en WhatsApp"], icon: <MessageSquare className="h-4 w-4" />, provider: "gpt" },
+  audience:             { label: ["Analista de Audiência", "Audience Analyst", "Analista de audiencia"], icon: <Users className="h-4 w-4" />, provider: "gemini" },
+  content_planner:      { label: ["Planejador de Conteúdo", "Content Planner", "Planificador de contenido"], icon: <BookOpen className="h-4 w-4" />, provider: "claude" },
+  execution_governor:   { label: ["Governador de Execução", "Execution Governor", "Responsable de ejecución"], icon: <Eye className="h-4 w-4" />, provider: "claude" },
 };
 
 const PROVIDER_COLOR: Record<string, string> = {
@@ -56,6 +57,8 @@ interface Props {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function AgentLiveFeed({ events, dbAgents = [], compact = false }: Props) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set());
 
   // Build per-agent state from live socket events
@@ -141,9 +144,9 @@ export function AgentLiveFeed({ events, dbAgents = [], compact = false }: Props)
         <div className="flex items-center gap-3">
           <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />
           <div>
-            <p className="font-mono text-sm text-foreground/70">Inicializando agentes...</p>
+            <p className="font-mono text-sm text-foreground/70">{t("Inicializando agentes...", "Initializing agents...", "Inicializando agentes...")}</p>
             <p className="font-mono text-[11px] text-muted-foreground/40 mt-0.5">
-              Os agentes começarão a aparecer aqui em tempo real
+              {t("Os agentes começarão a aparecer aqui em tempo real", "Agents will appear here in real time", "Los agentes aparecerán aquí en tiempo real")}
             </p>
           </div>
         </div>
@@ -167,10 +170,10 @@ export function AgentLiveFeed({ events, dbAgents = [], compact = false }: Props)
       <div className="px-4 py-3 border-b border-primary/15 flex items-center gap-2.5 bg-primary/5">
         <div className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" style={{ boxShadow: "0 0 6px hsl(var(--primary))" }} />
         <span className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">
-          Agentes em Produção
+          {t("Agentes em produção", "Agents at work", "Agentes en acción")}
         </span>
         <span className="font-mono text-[11px] text-muted-foreground/40 ml-auto">
-          {completedCount}/{mergedAgents.length} concluídos
+          {completedCount}/{mergedAgents.length} {t("concluídos", "completed", "completados")}
         </span>
       </div>
 
@@ -186,7 +189,7 @@ export function AgentLiveFeed({ events, dbAgents = [], compact = false }: Props)
       <div className="divide-y divide-border/15">
         {mergedAgents.map((agent) => {
           const meta = AGENT_META[agent.role] ?? {
-            label: agent.role.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+            label: [agent.role.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()), agent.role.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()), agent.role.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())] as [string, string, string],
             icon: <Bot className="h-4 w-4" />,
             provider: "claude",
           };
@@ -231,7 +234,7 @@ export function AgentLiveFeed({ events, dbAgents = [], compact = false }: Props)
                     agent.status === "running"   ? "text-foreground" :
                     "text-muted-foreground/40"
                   }`}>
-                    {meta.label}
+                    {t(...meta.label)}
                   </span>
                   {!compact && (
                     <span className={`font-mono text-[10px] uppercase tracking-widest ${PROVIDER_COLOR[meta.provider] ?? "text-muted-foreground/40"}`}>
@@ -249,7 +252,7 @@ export function AgentLiveFeed({ events, dbAgents = [], compact = false }: Props)
                   )}
                   {agent.status === "running" && (
                     <span className="font-mono text-[10px] text-primary uppercase tracking-wider animate-pulse">
-                      ativo
+                      {t("ativo", "active", "activo")}
                     </span>
                   )}
                   {agent.thoughts.length > 0 && (
@@ -265,13 +268,13 @@ export function AgentLiveFeed({ events, dbAgents = [], compact = false }: Props)
                 <div className="border-t border-primary/10 bg-black/20 px-4 py-3 space-y-1.5 max-h-52 overflow-y-auto">
                   <div className="font-mono text-[10px] uppercase tracking-widest text-primary/50 mb-2 flex items-center gap-1.5">
                     <Brain className="h-3 w-3" />
-                    Pensamentos do agente
+                    {t("Pensamentos do agente", "Agent thoughts", "Pensamientos del agente")}
                   </div>
                   {agent.thoughts.map((t, i) => (
                     <div key={i} className="flex items-start gap-2 font-mono text-[11px] text-muted-foreground/60 leading-relaxed">
                       <span className="shrink-0 text-primary/30 mt-0.5">·</span>
                       <span className="text-muted-foreground/30 shrink-0 tabular-nums text-[10px] mt-0.5">
-                        {new Date(t.ts).toLocaleTimeString("pt-BR")}
+                        {new Date(t.ts).toLocaleTimeString(intlLocale(locale))}
                       </span>
                       <span>{t.text}</span>
                     </div>
@@ -279,7 +282,7 @@ export function AgentLiveFeed({ events, dbAgents = [], compact = false }: Props)
                   {agent.status === "running" && (
                     <div className="flex items-center gap-2 text-primary/40 font-mono text-[11px] pt-1">
                       <Loader2 className="h-3 w-3 animate-spin shrink-0" />
-                      <span className="animate-pulse">processando...</span>
+                      <span className="animate-pulse">{t("processando...", "processing...", "procesando...")}</span>
                     </div>
                   )}
                 </div>
@@ -292,7 +295,7 @@ export function AgentLiveFeed({ events, dbAgents = [], compact = false }: Props)
       {!compact && mergedAgents.length > 0 && (
         <div className="px-4 py-2 border-t border-border/10 bg-black/10">
           <p className="font-mono text-[10px] text-muted-foreground/25 text-center">
-            Clique em qualquer agente para expandir os pensamentos em tempo real
+            {t("Clique em qualquer agente para expandir os pensamentos em tempo real", "Select an agent to expand its real-time thoughts", "Selecciona un agente para ver sus pensamientos en tiempo real")}
           </p>
         </div>
       )}

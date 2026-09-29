@@ -4,7 +4,8 @@ import { useRegister } from "@workspace/api-client-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useAuth } from "@/lib/auth";
-import { useAppI18n } from "@/lib/i18n";
+import { useAppI18n, useUiLocale, useUiText } from "@/lib/i18n";
+import { GuestLanguageSwitcher } from "@/components/guest-language-switcher";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +37,7 @@ const CORNER_BR = "absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 borde
 const inputClass = "font-mono bg-background/50 border-border/50 focus-visible:ring-primary focus-visible:border-primary focus-visible:shadow-[0_0_10px_hsl(var(--primary)/0.3)] rounded-none transition-all";
 
 function Logo({ size = "md" }: { size?: "sm" | "md" }) {
+  const t = useUiText();
   const h = size === "sm" ? "h-20 w-20" : "h-32 w-32";
   return (
     <div className="flex flex-col items-center mb-6 relative">
@@ -43,7 +45,7 @@ function Logo({ size = "md" }: { size?: "sm" | "md" }) {
       <img src={nexosLogo} alt="NexOS" className={`${h} object-contain mb-2 relative z-10`}
         style={{ imageRendering: "crisp-edges", filter: "drop-shadow(0 0 20px hsl(var(--primary)/0.6))" }} />
       <p className="text-primary text-sm uppercase tracking-[0.3em] font-mono mt-2 font-bold drop-shadow-[0_0_5px_hsl(var(--primary)/0.8)]">
-        Acesso Exclusivo
+        {t("Acesso Exclusivo", "Exclusive Access", "Acceso exclusivo")}
       </p>
     </div>
   );
@@ -74,6 +76,8 @@ export default function Register() {
   const { setToken }    = useAuth();
   const tr = useAppI18n();
   const t = tr.register;
+  const uiText = useUiText();
+  const { locale } = useUiLocale();
 
   const { data: platformStatus } = useQuery({
     queryKey: ["/api/auth/platform-status"],
@@ -111,9 +115,9 @@ export default function Register() {
       }),
     onSuccess: (data) => {
       setReqSent(true);
-      toast.success(data.message ?? "Solicitação enviada!");
+          toast.success(data.message ?? uiText("Solicitação enviada!", "Request sent!", "¡Solicitud enviada!"));
     },
-    onError: (err: Error) => toast.error(err.message ?? "Erro ao enviar solicitação."),
+    onError: (err: Error) => toast.error(err.message ?? uiText("Erro ao enviar solicitação.", "Error sending request.", "Error al enviar la solicitud.")),
   });
 
   const registerMutation = useRegister({
@@ -128,7 +132,7 @@ export default function Register() {
         const code = err?.body?.code;
         if (code === "PLATFORM_CLOSED") {
           setMode("gate");
-          toast.error("Código de convite inválido ou plataforma fechada.");
+          toast.error(uiText("Código de convite inválido ou plataforma fechada.", "Invalid invite code or the platform is closed.", "Código de invitación no válido o plataforma cerrada."));
           return;
         }
         toast.error(t.error);
@@ -148,6 +152,7 @@ export default function Register() {
         ...(phone.trim() ? { phone: phone.trim() } : {}),
         ...(referralCode ? { referralCode } : {}),
         ...(inviteCode ? { inviteCode } : {}),
+        locale,
       },
     });
   };
@@ -161,14 +166,15 @@ export default function Register() {
       <div className={wrapperClass}>
         <div className={innerClass}>
           <Logo />
+          <GuestLanguageSwitcher />
           <div className={CARD_CLASS}>
             <div className={CORNER_TL} /><div className={CORNER_TR} />
             <div className={CORNER_BL} /><div className={CORNER_BR} />
             <div className="relative z-10 space-y-4">
               <div className="text-center space-y-1 mb-6">
-                <h1 className="font-mono text-lg font-bold uppercase tracking-tighter">Como deseja acessar?</h1>
+                <h1 className="font-mono text-lg font-bold uppercase tracking-tighter">{uiText("Como deseja acessar?", "How would you like to access?", "¿Cómo quieres acceder?")}</h1>
                 <p className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-widest">
-                  Escolha uma das opções abaixo
+                  {uiText("Escolha uma das opções abaixo", "Choose one of the options below", "Elige una de las opciones")}
                 </p>
               </div>
 
@@ -180,8 +186,8 @@ export default function Register() {
                   <Lock className="h-4 w-4 text-primary" />
                 </div>
                 <div>
-                  <div className="font-mono text-sm font-bold uppercase tracking-widest text-foreground">Tenho código de convite</div>
-                  <div className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-wider mt-0.5">Inserir código e criar conta</div>
+                   <div className="font-mono text-sm font-bold uppercase tracking-widest text-foreground">{uiText("Tenho código de convite", "I have an invite code", "Tengo un código de invitación")}</div>
+                   <div className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-wider mt-0.5">{uiText("Inserir código e criar conta", "Enter your code and create an account", "Ingresa el código y crea una cuenta")}</div>
                 </div>
               </button>
 
@@ -194,8 +200,8 @@ export default function Register() {
                     <ShoppingCart className="h-4 w-4 text-success" />
                   </div>
                   <div>
-                    <div className="font-mono text-sm font-bold uppercase tracking-widest text-success">Adquirir acesso</div>
-                    <div className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-wider mt-0.5">Comprar e receber acesso imediato</div>
+                     <div className="font-mono text-sm font-bold uppercase tracking-widest text-success">{uiText("Adquirir acesso", "Purchase access", "Comprar acceso")}</div>
+                     <div className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-wider mt-0.5">{uiText("Comprar e receber acesso imediato", "Buy now and get immediate access", "Compra y obtén acceso inmediato")}</div>
                   </div>
                 </button>
               )}
@@ -208,8 +214,8 @@ export default function Register() {
                   <Users className="h-4 w-4 text-muted-foreground/60" />
                 </div>
                 <div>
-                  <div className="font-mono text-sm font-bold uppercase tracking-widest text-muted-foreground">Solicitar liberação</div>
-                  <div className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-wider mt-0.5">Aguardar aprovação do administrador</div>
+                   <div className="font-mono text-sm font-bold uppercase tracking-widest text-muted-foreground">{uiText("Solicitar liberação", "Request access", "Solicitar acceso")}</div>
+                   <div className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-wider mt-0.5">{uiText("Aguardar aprovação do administrador", "Wait for administrator approval", "Espera la aprobación del administrador")}</div>
                 </div>
               </button>
             </div>
@@ -218,7 +224,7 @@ export default function Register() {
           <div className="text-center pt-2">
             <Link href="/login">
               <span className="font-mono text-xs text-primary/60 hover:text-primary uppercase tracking-widest transition-colors">
-                ← Já tenho conta
+                  {uiText("← Já tenho conta", "← I already have an account", "← Ya tengo una cuenta")}
               </span>
             </Link>
           </div>
@@ -233,12 +239,13 @@ export default function Register() {
       <div className={wrapperClass}>
         <div className={innerClass}>
           <Logo size="sm" />
+          <GuestLanguageSwitcher />
           <div className={CARD_CLASS}>
             <div className={CORNER_TL} /><div className={CORNER_TR} />
             <div className={CORNER_BL} /><div className={CORNER_BR} />
             <div className="relative z-10 space-y-4">
               <div className="text-center mb-4">
-                <h1 className="font-mono text-base font-bold uppercase tracking-tighter">Produtos Disponíveis</h1>
+                <h1 className="font-mono text-base font-bold uppercase tracking-tighter">{uiText("Produtos Disponíveis", "Available Products", "Productos disponibles")}</h1>
               </div>
 
               <a
@@ -248,7 +255,7 @@ export default function Register() {
               >
                 <div>
                   <div className="font-mono text-sm font-bold uppercase tracking-widest text-foreground">NexOS Academy</div>
-                  <div className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-wider mt-0.5">Metodologia completa · Acesso vitalício</div>
+                  <div className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-wider mt-0.5">{uiText("Metodologia completa · Acesso vitalício", "Complete methodology · Lifetime access", "Metodología completa · Acceso de por vida")}</div>
                 </div>
                 <div className="text-right shrink-0 ml-4">
                   <div className="font-mono text-lg font-black text-primary">R$2.990</div>
@@ -262,8 +269,8 @@ export default function Register() {
                 className="w-full flex items-center justify-between border border-border/40 bg-card/20 hover:bg-card/40 hover:border-border/70 p-4 transition-all group/btn"
               >
                 <div>
-                  <div className="font-mono text-sm font-bold uppercase tracking-widest text-foreground">Curso de Integrações</div>
-                  <div className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-wider mt-0.5">Meta Ads, redes sociais e conexões</div>
+                  <div className="font-mono text-sm font-bold uppercase tracking-widest text-foreground">{uiText("Curso de Integrações", "Integrations Course", "Curso de integraciones")}</div>
+                  <div className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-wider mt-0.5">{uiText("Meta Ads, redes sociais e conexões", "Meta Ads, social networks, and connections", "Meta Ads, redes sociales y conexiones")}</div>
                 </div>
                 <div className="text-right shrink-0 ml-4">
                   <div className="font-mono text-lg font-black text-foreground">R$1.000</div>
@@ -273,19 +280,19 @@ export default function Register() {
 
               <div className="border border-border/20 bg-card/10 p-4">
                 <div className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest text-center">
-                  NexOS AI Plataforma — Disponível somente na abertura do carrinho para clientes credenciados
+                  {uiText("NexOS AI Plataforma — Disponível somente na abertura do carrinho para clientes credenciados", "NexOS AI Platform — Available only during the enrollment period for approved customers", "Plataforma NexOS AI — Disponible solo durante la apertura de inscripciones para clientes autorizados")}
                 </div>
               </div>
 
               <p className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest text-center">
-                Após a compra você receberá seu código de acesso por e-mail
+                {uiText("Após a compra você receberá seu código de acesso por e-mail", "After purchase, your access code will be sent by email", "Después de la compra, recibirás tu código de acceso por correo electrónico")}
               </p>
             </div>
           </div>
 
           <div className="text-center pt-2">
             <button onClick={() => setMode("gate")} className="font-mono text-xs text-muted-foreground/40 hover:text-primary uppercase tracking-widest transition-colors flex items-center gap-1 mx-auto">
-              <ArrowLeft className="h-3 w-3" /> Voltar
+              <ArrowLeft className="h-3 w-3" /> {uiText("Voltar", "Back", "Volver")}
             </button>
           </div>
         </div>
@@ -299,6 +306,7 @@ export default function Register() {
       <div className={wrapperClass}>
         <div className={innerClass}>
           <Logo size="sm" />
+          <GuestLanguageSwitcher />
           <div className={CARD_CLASS}>
             <div className={CORNER_TL} /><div className={CORNER_TR} />
             <div className={CORNER_BL} /><div className={CORNER_BR} />
@@ -306,42 +314,42 @@ export default function Register() {
               {reqSent ? (
                 <div className="text-center py-6 space-y-3">
                   <CheckCircle2 className="h-8 w-8 text-success mx-auto" />
-                  <h1 className="font-mono text-base font-bold uppercase tracking-tighter text-success">Solicitação Enviada!</h1>
+                  <h1 className="font-mono text-base font-bold uppercase tracking-tighter text-success">{uiText("Solicitação Enviada!", "Request Sent!", "¡Solicitud enviada!")}</h1>
                   <p className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-widest">
-                    Sua solicitação foi recebida. O administrador analisará seu pedido e você receberá um código de acesso pelo WhatsApp.
+                    {uiText("Sua solicitação foi recebida. O administrador analisará seu pedido e você receberá um código de acesso pelo WhatsApp.", "Your request was received. An administrator will review it, and you will receive an access code on WhatsApp.", "Recibimos tu solicitud. Un administrador la revisará y recibirás un código de acceso por WhatsApp.")}
                   </p>
                   <Link href="/login">
                     <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest text-xs btn-weapon-outline mt-2">
-                      Já tenho código → Login
+                      {uiText("Já tenho código → Login", "I have a code → Sign in", "Ya tengo un código → Iniciar sesión")}
                     </Button>
                   </Link>
                 </div>
               ) : (
                 <>
                   <div className="text-center mb-4 space-y-1">
-                    <h1 className="font-mono text-base font-bold uppercase tracking-tighter">Solicitar Liberação</h1>
+                    <h1 className="font-mono text-base font-bold uppercase tracking-tighter">{uiText("Solicitar Liberação", "Request Access", "Solicitar acceso")}</h1>
                     <p className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-widest">
-                      Preencha seus dados — o admin verificará e enviará seu código
+                      {uiText("Preencha seus dados — o admin verificará e enviará seu código", "Enter your details — an administrator will review them and send you a code", "Completa tus datos — un administrador los revisará y te enviará un código")}
                     </p>
                   </div>
 
                   <div className="space-y-3">
                     <div className="space-y-2">
-                      <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Nome completo</Label>
+                      <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{uiText("Nome completo", "Full name", "Nombre completo")}</Label>
                       <Input value={reqName} onChange={e => setReqName(e.target.value)}
-                        placeholder="Seu nome" className={inputClass} />
+                        placeholder={uiText("Seu nome", "Your name", "Tu nombre")} className={inputClass} />
                     </div>
                     <div className="space-y-2">
-                      <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">E-mail</Label>
+                      <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{uiText("E-mail", "Email", "Correo electrónico")}</Label>
                       <Input type="email" value={reqEmail} onChange={e => setReqEmail(e.target.value)}
-                        placeholder="seu@email.com" className={inputClass} />
+                        placeholder={uiText("seu@email.com", "you@email.com", "tu@correo.com")} className={inputClass} />
                     </div>
                     <div className="space-y-2">
                       <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">WhatsApp</Label>
                       <Input type="tel" value={reqWa} onChange={e => setReqWa(e.target.value)}
                         placeholder="11999999999" className={inputClass} />
                       <p className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
-                        Você receberá seu código de acesso aqui
+                        {uiText("Você receberá seu código de acesso aqui", "You will receive your access code here", "Recibirás tu código de acceso aquí")}
                       </p>
                     </div>
                   </div>
@@ -351,7 +359,7 @@ export default function Register() {
                     disabled={!reqName.trim() || !reqWa.trim() || requestMutation.isPending}
                     className="w-full rounded-none font-mono uppercase tracking-widest font-bold btn-weapon-primary h-11 mt-2"
                   >
-                    {requestMutation.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : "Enviar Solicitação →"}
+                    {requestMutation.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : uiText("Enviar Solicitação →", "Send Request →", "Enviar solicitud →")}
                   </Button>
                 </>
               )}
@@ -361,7 +369,7 @@ export default function Register() {
           {!reqSent && (
             <div className="text-center pt-2">
               <button onClick={() => setMode("gate")} className="font-mono text-xs text-muted-foreground/40 hover:text-primary uppercase tracking-widest transition-colors flex items-center gap-1 mx-auto">
-                <ArrowLeft className="h-3 w-3" /> Voltar
+                <ArrowLeft className="h-3 w-3" /> {uiText("Voltar", "Back", "Volver")}
               </button>
             </div>
           )}
@@ -375,6 +383,7 @@ export default function Register() {
     <div className={wrapperClass}>
       <div className="w-full max-w-md relative z-10 animate-in fade-in blur-in duration-1000">
         <Logo size="sm" />
+        <GuestLanguageSwitcher />
 
         <div className={CARD_CLASS}>
           <div className={CORNER_TL} /><div className={CORNER_TR} />
@@ -383,7 +392,7 @@ export default function Register() {
           <form onSubmit={handleRegister} className="space-y-5 relative z-10">
 
             <div className="text-center mb-4">
-              <h1 className="font-mono text-base font-bold uppercase tracking-tighter">Criar Conta</h1>
+              <h1 className="font-mono text-base font-bold uppercase tracking-tighter">{t.title}</h1>
             </div>
 
             <div className="space-y-2">
@@ -468,14 +477,14 @@ export default function Register() {
 
             <div className="space-y-2">
               <Label htmlFor="inviteCode" className="font-mono text-xs uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-                <Lock className="h-3 w-3" /> Código de Convite <span className="text-destructive">*</span>
+                <Lock className="h-3 w-3" /> {uiText("Código de Convite", "Invite Code", "Código de invitación")} <span className="text-destructive">*</span>
               </Label>
               <Input id="inviteCode" type="text" value={inviteCode}
                 onChange={e => setInviteCode(e.target.value.toUpperCase())}
                 placeholder="NEXOS-XXXX-XXXX"
                 className={`${inputClass} uppercase tracking-widest`} />
               <p className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
-                Obrigatório durante o período de acesso exclusivo
+                {uiText("Obrigatório durante o período de acesso exclusivo", "Required during the exclusive access period", "Obligatorio durante el período de acceso exclusivo")}
               </p>
             </div>
 
@@ -483,7 +492,7 @@ export default function Register() {
               <div className="border border-success/30 bg-success/5 px-3 py-2 flex items-center gap-2">
                 <Gift className="h-3.5 w-3.5 text-success shrink-0" />
                 <span className="font-mono text-xs text-success uppercase tracking-widest">
-                  Indicado por: <strong>{referralCode}</strong> — prioridade garantida!
+                  {uiText("Indicado por:", "Referred by:", "Recomendado por:")} <strong>{referralCode}</strong> — {uiText("prioridade garantida!", "priority guaranteed!", "¡prioridad garantizada!")}
                 </span>
               </div>
             )}
@@ -512,7 +521,7 @@ export default function Register() {
 
           <div className="mt-6 text-center relative z-10 border-t border-border/30 pt-6">
             <button onClick={() => setMode("gate")} className="font-mono text-xs text-muted-foreground/40 hover:text-primary uppercase tracking-widest transition-colors flex items-center gap-1 mx-auto">
-              <ArrowLeft className="h-3 w-3" /> Escolher outra opção
+              <ArrowLeft className="h-3 w-3" /> {uiText("Escolher outra opção", "Choose another option", "Elegir otra opción")}
             </button>
           </div>
         </div>

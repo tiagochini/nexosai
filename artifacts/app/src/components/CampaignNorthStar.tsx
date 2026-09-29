@@ -9,6 +9,7 @@
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronUp, Users, Zap, TrendingUp } from "lucide-react";
+import { useUiText } from "@/lib/i18n";
 
 interface Props {
   campaignId: string;
@@ -73,6 +74,7 @@ function formatRevenue(v: unknown): string | null {
 
 /** Expandable text cell — truncated by default, click to reveal all */
 function ExpandableText({ text, clampLines = 2 }: { text: string; clampLines?: number }) {
+  const t = useUiText();
   const [open, setOpen] = useState(false);
   const clampClass = clampLines === 2 ? "line-clamp-2" : clampLines === 3 ? "line-clamp-3" : "line-clamp-4";
   return (
@@ -80,7 +82,7 @@ function ExpandableText({ text, clampLines = 2 }: { text: string; clampLines?: n
       type="button"
       onClick={() => setOpen(o => !o)}
       className="w-full text-left group/text"
-      title={open ? "Clique para recolher" : "Clique para ver tudo"}
+      title={open ? t("Clique para recolher", "Click to collapse", "Haz clic para contraer") : t("Clique para ver tudo", "Click to view all", "Haz clic para ver todo")}
     >
       <div className={`font-mono text-xs text-foreground/80 leading-relaxed transition-all ${open ? "" : clampClass}`}>
         {text}
@@ -88,13 +90,14 @@ function ExpandableText({ text, clampLines = 2 }: { text: string; clampLines?: n
       <div className={`mt-0.5 font-mono text-[9px] uppercase tracking-widest transition-colors ${
         open ? "text-primary/40 group-hover/text:text-primary/60" : "text-muted-foreground/25 group-hover/text:text-primary/40"
       }`}>
-        {open ? "▲ recolher" : "▼ ver mais"}
+        {open ? t("▲ recolher", "▲ collapse", "▲ contraer") : t("▼ ver mais", "▼ show more", "▼ ver más")}
       </div>
     </button>
   );
 }
 
 export function CampaignNorthStar({ campaignId, title, track, intakeData, strategyData }: Props) {
+  const t = useUiText();
   const [expanded, setExpanded] = useState(() => getStoredExpanded(campaignId));
 
   useEffect(() => { storeExpanded(campaignId, expanded); }, [campaignId, expanded]);
@@ -139,6 +142,13 @@ export function CampaignNorthStar({ campaignId, title, track, intakeData, strate
 
   // ── Track ──────────────────────────────────────────────────────────────────
   const trackInfo = track ? (TRACK_LABELS[track] ?? null) : null;
+  const translatedTrackLabel = trackInfo
+    ? trackInfo.label.startsWith("6")
+      ? t("6 Dígitos", "6-figure target", "Meta de 6 cifras")
+      : trackInfo.label.startsWith("8")
+      ? t("8 Dígitos", "8-figure target", "Meta de 8 cifras")
+      : t("10 Dígitos", "10-figure target", "Meta de 10 cifras")
+    : null;
 
   const hasContent = persona || revenueGoal || bigDomino || execSummary;
   if (!hasContent) return null;
@@ -155,14 +165,14 @@ export function CampaignNorthStar({ campaignId, title, track, intakeData, strate
         />
         <div className="flex-1 flex items-center gap-2 min-w-0 text-left">
           <span className="font-mono text-[11px] uppercase tracking-widest text-primary/70 font-bold shrink-0">
-            Norte · {title}
+            {t("Norte", "North Star", "Norte")} · {title}
           </span>
           {trackInfo && (
             <Badge
               variant="outline"
               className={`rounded-none font-mono text-[10px] px-1.5 py-0 shrink-0 ${trackInfo.color}`}
             >
-              {trackInfo.label}
+              {translatedTrackLabel}
             </Badge>
           )}
         </div>
@@ -185,7 +195,7 @@ export function CampaignNorthStar({ campaignId, title, track, intakeData, strate
           <div className="px-4 py-3 flex gap-3">
             <TrendingUp className="h-3.5 w-3.5 text-primary/50 shrink-0 mt-0.5" />
             <div className="min-w-0 w-full">
-              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 mb-0.5">Objetivo</div>
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 mb-0.5">{t("Objetivo", "Goal", "Objetivo")}</div>
               <div className="font-mono text-xs text-foreground/80 font-bold">
                 {revenueGoal ?? "—"}
               </div>
@@ -201,10 +211,10 @@ export function CampaignNorthStar({ campaignId, title, track, intakeData, strate
           <div className="px-4 py-3 flex gap-3">
             <Users className="h-3.5 w-3.5 text-cyan-400/50 shrink-0 mt-0.5" />
             <div className="min-w-0 w-full">
-              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 mb-0.5">Para quem</div>
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 mb-0.5">{t("Para quem", "Audience", "Para quién")}</div>
               {persona
                 ? <ExpandableText text={persona} clampLines={3} />
-                : <span className="font-mono text-xs text-muted-foreground/30 italic">Complete o briefing para preencher</span>
+                : <span className="font-mono text-xs text-muted-foreground/30 italic">{t("Complete o briefing para preencher", "Complete the brief to fill this in", "Completa el brief para rellenar este campo")}</span>
               }
             </div>
           </div>
@@ -213,10 +223,10 @@ export function CampaignNorthStar({ campaignId, title, track, intakeData, strate
           <div className="px-4 py-3 flex gap-3">
             <Zap className="h-3.5 w-3.5 text-yellow-400/50 shrink-0 mt-0.5" />
             <div className="min-w-0 w-full">
-              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 mb-0.5">Grande Domino</div>
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 mb-0.5">{t("Grande dominó", "Big domino", "Gran dominó")}</div>
               {dominoDisplay
                 ? <ExpandableText text={dominoDisplay} clampLines={3} />
-                : <span className="font-mono text-xs text-muted-foreground/30 italic">Gerado após análise de estratégia</span>
+                : <span className="font-mono text-xs text-muted-foreground/30 italic">{t("Gerado após análise de estratégia", "Generated after strategy analysis", "Se genera después del análisis estratégico")}</span>
               }
             </div>
           </div>

@@ -3,15 +3,16 @@
  * Uses the existing @/lib/mode hook — no duplicate state.
  */
 import { useMode, type AppMode } from "@/lib/mode";
+import { useUiText } from "@/lib/i18n";
 import { Gauge, Zap } from "lucide-react";
-
-const MODES: { id: AppMode; label: string; sub: string; Icon: typeof Gauge }[] = [
-  { id: "fundador",  label: "Fundador",  sub: "Visão e resultado", Icon: Gauge },
-  { id: "arquiteto", label: "Arquiteto", sub: "Profundidade total", Icon: Zap  },
-];
 
 export function ModeToggle({ compact = false }: { compact?: boolean }) {
   const { mode, setMode } = useMode();
+  const t = useUiText();
+  const MODES: { id: AppMode; label: string; sub: string; Icon: typeof Gauge }[] = [
+    { id: "fundador",  label: t("Fundador", "Founder", "Fundador"),  sub: t("Visão e resultado", "Vision and outcomes", "Visión y resultados"), Icon: Gauge },
+    { id: "arquiteto", label: t("Arquiteto", "Architect", "Arquitecto"), sub: t("Profundidade total", "Full detail", "Profundidad total"), Icon: Zap  },
+  ];
 
   if (compact) {
     return (

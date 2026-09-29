@@ -11,6 +11,7 @@
 import { ChevronRight, Info, Loader2, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMode } from "@/lib/mode";
+import { useUiText } from "@/lib/i18n";
 
 export interface UxContextProps {
   /** Onde estou — nome da fase/tela atual */
@@ -88,6 +89,7 @@ export function UxContextBar({
   compact = false,
 }: UxContextProps) {
   const { isArquiteto } = useMode();
+  const t = useUiText();
 
   if (isArquiteto && !showInExpertMode) return null;
 
@@ -148,19 +150,19 @@ export function UxContextBar({
         {/* Row 3: detail grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
           {why && (
-            <ContextItem icon={<Info className="h-3 w-3" />} label="Por que importa" value={why} />
+            <ContextItem icon={<Info className="h-3 w-3" />} label={t("Por que importa", "Why it matters", "Por qué importa")} value={why} />
           )}
           {understood && (
-            <ContextItem icon={<CheckCircle2 className="h-3 w-3 text-success" />} label="NEXOS entendeu" value={understood} />
+            <ContextItem icon={<CheckCircle2 className="h-3 w-3 text-success" />} label={t("NEXOS entendeu", "NEXOS understood", "NEXOS entendió")} value={understood} />
           )}
           {missing && (
-            <ContextItem icon={<AlertCircle className="h-3 w-3 text-yellow-400" />} label="Falta decidir" value={missing} />
+            <ContextItem icon={<AlertCircle className="h-3 w-3 text-yellow-400" />} label={t("Falta decidir", "Needs a decision", "Falta decidir")} value={missing} />
           )}
           {canEdit && (
-            <ContextItem icon={<ChevronRight className="h-3 w-3 text-primary" />} label="Você pode editar" value={canEdit} />
+            <ContextItem icon={<ChevronRight className="h-3 w-3 text-primary" />} label={t("Você pode editar", "You can edit", "Puedes editar")} value={canEdit} />
           )}
           {requiresApproval && (
-            <ContextItem icon={<AlertCircle className="h-3 w-3 text-yellow-400" />} label="Aguardando sua aprovação" value={requiresApproval} highlighted />
+            <ContextItem icon={<AlertCircle className="h-3 w-3 text-yellow-400" />} label={t("Aguardando sua aprovação", "Waiting for your approval", "Esperando tu aprobación")} value={requiresApproval} highlighted />
           )}
         </div>
       </div>

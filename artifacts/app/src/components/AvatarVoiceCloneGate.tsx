@@ -14,6 +14,7 @@ import { useLocation } from "wouter";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { Button } from "@/components/ui/button";
 import { Camera, Mic, Check, X, ArrowRight } from "lucide-react";
+import { useUiText } from "@/lib/i18n";
 
 interface PersonaResponse {
   persona: {
@@ -23,6 +24,7 @@ interface PersonaResponse {
 }
 
 export function AvatarVoiceCloneGate() {
+  const t = useUiText();
   const [, navigate] = useLocation();
   const [dismissed, setDismissed] = useState(false);
 
@@ -51,23 +53,23 @@ export function AvatarVoiceCloneGate() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-1">
-                Etapa obrigatória do lançamento
+                {t("Etapa obrigatória do lançamento", "Required launch step", "Paso obligatorio del lanzamiento")}
               </div>
               <h3 className="font-mono text-base font-bold uppercase tracking-tight text-foreground">
-                Configure seu Avatar e Voz
+                {t("Configure seu Avatar e Voz", "Set up your avatar and voice", "Configura tu avatar y voz")}
               </h3>
             </div>
             <button
               onClick={() => setDismissed(true)}
               className="text-muted-foreground/40 hover:text-muted-foreground transition-colors shrink-0"
-              aria-label="Fechar por enquanto"
+              aria-label={t("Fechar por enquanto", "Close for now", "Cerrar por ahora")}
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
           <p className="font-mono text-[12px] text-muted-foreground leading-relaxed">
-            Seu track de lançamento usa vídeos com avatar digital e voz clonada para gerar CPLs e VSLs automaticamente. Finalize as duas etapas abaixo para liberar a geração de vídeo com IA.
+            {t("Seu track de lançamento usa vídeos com avatar digital e voz clonada para gerar CPLs e VSLs automaticamente. Finalize as duas etapas abaixo para liberar a geração de vídeo com IA.", "Your launch track uses videos with a digital avatar and cloned voice to generate CPLs and VSLs automatically. Complete both steps below to enable AI video generation.", "Tu flujo de lanzamiento usa videos con avatar digital y voz clonada para generar CPL y VSL automáticamente. Completa los dos pasos para habilitar la generación de video con IA.")}
           </p>
 
           <div className="space-y-2">
@@ -75,10 +77,10 @@ export function AvatarVoiceCloneGate() {
               {hasAvatar ? <Check className="h-4 w-4 text-green-400 shrink-0" /> : <Camera className="h-4 w-4 text-muted-foreground shrink-0" />}
               <div className="flex-1 min-w-0">
                 <div className={`font-mono text-[11px] font-bold uppercase ${hasAvatar ? "text-green-300" : "text-foreground"}`}>
-                  Avatar Digital
+                  {t("Avatar Digital", "Digital Avatar", "Avatar digital")}
                 </div>
                 <div className="font-mono text-[10px] text-muted-foreground/60">
-                  {hasAvatar ? "Avatar configurado" : "Configure seu avatar digital para vídeos"}
+                  {hasAvatar ? t("Avatar configurado", "Avatar configured", "Avatar configurado") : t("Configure seu avatar digital para vídeos", "Set up your digital avatar for videos", "Configura tu avatar digital para videos")}
                 </div>
               </div>
             </div>
@@ -87,10 +89,10 @@ export function AvatarVoiceCloneGate() {
               {hasVoice ? <Check className="h-4 w-4 text-green-400 shrink-0" /> : <Mic className="h-4 w-4 text-muted-foreground shrink-0" />}
               <div className="flex-1 min-w-0">
                 <div className={`font-mono text-[11px] font-bold uppercase ${hasVoice ? "text-green-300" : "text-foreground"}`}>
-                  Clone de Voz
+                  {t("Clone de Voz", "Voice Clone", "Clon de voz")}
                 </div>
                 <div className="font-mono text-[10px] text-muted-foreground/60">
-                  {hasVoice ? "Voz clonada" : "Grave takes rápidos para clonar sua voz"}
+                  {hasVoice ? t("Voz clonada", "Voice cloned", "Voz clonada") : t("Grave takes rápidos para clonar sua voz", "Record a few quick takes to clone your voice", "Graba unas tomas rápidas para clonar tu voz")}
                 </div>
               </div>
             </div>
@@ -101,7 +103,7 @@ export function AvatarVoiceCloneGate() {
               onClick={() => navigate("/settings?tab=identidade")}
               className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10 text-xs"
             >
-              {hasAvatar || hasVoice ? "Continuar configuração" : "Configurar agora"}
+              {hasAvatar || hasVoice ? t("Continuar configuração", "Continue setup", "Continuar configuración") : t("Configurar agora", "Set up now", "Configurar ahora")}
               <ArrowRight className="h-3.5 w-3.5" />
             </Button>
             <Button
@@ -109,12 +111,12 @@ export function AvatarVoiceCloneGate() {
               onClick={() => setDismissed(true)}
               className="font-mono text-[11px] uppercase tracking-widest rounded-none text-muted-foreground/50 h-10 px-3"
             >
-              Depois
+              {t("Depois", "Later", "Después")}
             </Button>
           </div>
 
           <p className="font-mono text-[9px] text-muted-foreground/30 leading-relaxed">
-            Este lembrete reaparece a cada acesso ao painel até que o avatar e a voz estejam configurados.
+            {t("Este lembrete reaparece a cada acesso ao painel até que o avatar e a voz estejam configurados.", "This reminder appears each time you visit the dashboard until your avatar and voice are configured.", "Este recordatorio vuelve a aparecer cada vez que accedes al panel hasta que configures el avatar y la voz.")}
           </p>
         </div>
       </div>

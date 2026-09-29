@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
+import { useUiText } from "@/lib/i18n";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -125,6 +126,7 @@ interface ToolbarProps {
 }
 
 export function AnnotationToolbar({ selection, onAction, onDismiss }: ToolbarProps) {
+  const t = useUiText();
   const { rect } = selection;
 
   // Position above the selection midpoint, clamped to viewport
@@ -154,7 +156,7 @@ export function AnnotationToolbar({ selection, onAction, onDismiss }: ToolbarPro
           transition-all duration-100 shrink-0"
       >
         <MessageSquare className="h-2.5 w-2.5" />
-        Indagar
+        {t("Indagar", "Question", "Indagar")}
       </button>
       <button
         onClick={() => onAction("sugerir")}
@@ -164,7 +166,7 @@ export function AnnotationToolbar({ selection, onAction, onDismiss }: ToolbarPro
           transition-all duration-100 shrink-0 flex-1"
       >
         <Lightbulb className="h-2.5 w-2.5" />
-        Sugerir
+        {t("Sugerir", "Suggest", "Sugerir")}
       </button>
       <button
         onClick={onDismiss}
@@ -186,6 +188,7 @@ interface DialogProps {
 }
 
 export function AnnotationDialog({ state, campaignId, onClose }: DialogProps) {
+  const t = useUiText();
   const [userMessage, setUserMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
@@ -204,10 +207,10 @@ export function AnnotationDialog({ state, campaignId, onClose }: DialogProps) {
     ? { border: "border-violet-400/30", bg: "bg-violet-400/[0.04]", text: "text-violet-300/80", icon: "text-violet-400/70" }
     : { border: "border-cyan-400/30", bg: "bg-cyan-400/[0.04]", text: "text-cyan-300/80", icon: "text-cyan-400/70" };
 
-  const label = isIndagar ? "Indagar Especialista" : "Sugerir ao Especialista";
+  const label = isIndagar ? t("Indagar Especialista", "Question the Specialist", "Consultar al Especialista") : t("Sugerir ao Especialista", "Suggest to the Specialist", "Sugerir al Especialista");
   const placeholder = isIndagar
-    ? "Questione, discorde ou peça mais profundidade sobre este trecho..."
-    : "Proponha uma abordagem alternativa, solução ou perspectiva adicional...";
+    ? t("Questione, discorde ou peça mais profundidade sobre este trecho...", "Question, disagree, or ask for more depth on this passage...", "Pregunta, discrepa o pide más profundidad sobre este fragmento...")
+    : t("Proponha uma abordagem alternativa, solução ou perspectiva adicional...", "Suggest an alternative approach, solution, or additional perspective...", "Propón un enfoque alternativo, solución o perspectiva adicional...");
 
   const handleSubmit = async () => {
     if (!userMessage.trim()) return;
@@ -231,7 +234,7 @@ export function AnnotationDialog({ state, campaignId, onClose }: DialogProps) {
       );
       setResponse(result.response);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao processar sua pergunta.");
+      setError(err instanceof Error ? err.message : t("Erro ao processar sua pergunta.", "Error processing your question.", "Error al procesar tu pregunta."));
     } finally {
       setLoading(false);
     }
@@ -249,7 +252,7 @@ export function AnnotationDialog({ state, campaignId, onClose }: DialogProps) {
             {label}
           </DialogTitle>
           <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30 mt-0.5">
-            Seção: {state.sectionTitle}
+            {t("Seção:", "Section:", "Sección:")} {state.sectionTitle}
           </div>
         </DialogHeader>
 
@@ -280,7 +283,7 @@ export function AnnotationDialog({ state, campaignId, onClose }: DialogProps) {
           {!response && (
             <div className="space-y-2">
               <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35">
-                {isIndagar ? "Seu questionamento" : "Sua sugestão"}
+                {isIndagar ? t("Seu questionamento", "Your question", "Tu pregunta") : t("Sua sugestão", "Your suggestion", "Tu sugerencia")}
               </div>
               <Textarea
                 ref={textareaRef}
@@ -307,8 +310,8 @@ export function AnnotationDialog({ state, campaignId, onClose }: DialogProps) {
                     }`}
                 >
                   {loading
-                    ? <><Loader2 className="h-2.5 w-2.5 animate-spin" />Analisando…</>
-                    : <><Send className="h-2.5 w-2.5" />Enviar</>}
+                    ? <><Loader2 className="h-2.5 w-2.5 animate-spin" />{t("Analisando…", "Analyzing…", "Analizando…")}</>
+                    : <><Send className="h-2.5 w-2.5" />{t("Enviar", "Send", "Enviar")}</>}
                 </Button>
               </div>
             </div>
@@ -342,7 +345,7 @@ export function AnnotationDialog({ state, campaignId, onClose }: DialogProps) {
                 <Textarea
                   value={userMessage}
                   onChange={e => setUserMessage(e.target.value)}
-                  placeholder="Aprofundar, questionar a resposta..."
+                  placeholder={t("Aprofundar, questionar a resposta...", "Explore further or question the response...", "Profundizar o cuestionar la respuesta...")}
                   className="font-mono text-xs bg-white/[0.02] border-white/10 resize-none min-h-[60px] focus:border-white/25 rounded-none"
                   onKeyDown={e => {
                     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {

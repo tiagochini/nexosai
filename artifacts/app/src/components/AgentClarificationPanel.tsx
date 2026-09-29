@@ -6,6 +6,7 @@ import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { toast } from "sonner";
 import { Bot, X, MessageSquare, AlertTriangle, ChevronRight, CheckCircle2 } from "lucide-react";
 import type { CampaignEvent } from "@/lib/socket";
+import { useUiText } from "@/lib/i18n";
 
 interface ClarificationRequest {
   id: string;
@@ -24,22 +25,23 @@ interface Props {
   events: CampaignEvent[];
 }
 
-const AGENT_LABELS: Record<string, string> = {
-  copywriter: "Copywriter",
-  strategy: "Estrategista",
-  ad_copy: "Ad Copy",
-  profile_builder: "Perfil de Avatar",
-  intake: "Briefing",
-  sequence_builder: "Sequência",
-  landing_page: "Landing Page",
-  vsl_script: "VSL Script",
-  offer_architect: "Arquiteto de Oferta",
-  targeting: "Targeting Expert",
-  analytics: "Analytics",
-  optimization: "Otimização",
+const AGENT_LABELS: Record<string, [string, string, string]> = {
+  copywriter: ["Copywriter", "Copywriter", "Copywriter"],
+  strategy: ["Estrategista", "Strategist", "Estratega"],
+  ad_copy: ["Texto de anúncios", "Ad copy", "Texto publicitario"],
+  profile_builder: ["Perfil de avatar", "Avatar profile", "Perfil de avatar"],
+  intake: ["Briefing", "Brief", "Brief"],
+  sequence_builder: ["Sequência", "Sequence", "Secuencia"],
+  landing_page: ["Landing page", "Landing page", "Página de aterrizaje"],
+  vsl_script: ["Roteiro VSL", "VSL script", "Guion VSL"],
+  offer_architect: ["Arquiteto de oferta", "Offer architect", "Arquitecto de oferta"],
+  targeting: ["Especialista em segmentação", "Targeting specialist", "Especialista en segmentación"],
+  analytics: ["Análise de dados", "Analytics", "Analítica"],
+  optimization: ["Otimização", "Optimization", "Optimización"],
 };
 
 export function AgentClarificationPanel({ campaignId, events }: Props) {
+  const t = useUiText();
   const [pending, setPending] = useState<ClarificationRequest[]>([]);
   const [answered, setAnswered] = useState<Set<string>>(new Set());
   const [draft, setDraft] = useState<Record<string, string>>({});
@@ -101,9 +103,9 @@ export function AgentClarificationPanel({ campaignId, events }: Props) {
       );
       setAnswered((prev) => new Set([...prev, req.id]));
       setPending((prev) => prev.filter((p) => p.id !== req.id));
-      toast.success("Resposta enviada — os agentes vão usar essa informação.");
+      toast.success(t("Resposta enviada — os agentes vão usar essa informação.", "Answer sent — the agents will use this information.", "Respuesta enviada: los agentes usarán esta información."));
     } catch {
-      toast.error("Erro ao enviar resposta.");
+      toast.error(t("Erro ao enviar resposta.", "Error sending answer.", "Error al enviar la respuesta."));
     } finally {
       setSubmitting(null);
     }
@@ -144,16 +146,18 @@ export function AgentClarificationPanel({ campaignId, events }: Props) {
             <div className="flex items-center gap-2">
               <Bot className="h-4 w-4 text-primary shrink-0" />
               <span className="font-mono text-[10px] uppercase tracking-widest text-primary font-bold">
-                {AGENT_LABELS[req.agentRole] ?? req.agentRole}
+                {AGENT_LABELS[req.agentRole]
+                  ? t(...AGENT_LABELS[req.agentRole])
+                  : req.agentRole}
               </span>
               {req.isBriefingGap && (
                 <Badge className="font-mono text-[8px] uppercase tracking-widest bg-blue-500/20 text-blue-300 border-blue-400/30 rounded-none px-1.5">
-                  lacuna no briefing
+                  {t("lacuna no briefing", "briefing gap", "dato faltante en el brief")}
                 </Badge>
               )}
               {req.severity === "blocking" && (
                 <Badge className="font-mono text-[8px] uppercase tracking-widest bg-amber-500/20 text-amber-300 border-amber-400/30 rounded-none px-1.5">
-                  <AlertTriangle className="h-2.5 w-2.5 mr-1" /> importante
+                  <AlertTriangle className="h-2.5 w-2.5 mr-1" /> {t("importante", "important", "importante")}
                 </Badge>
               )}
             </div>
@@ -173,7 +177,7 @@ export function AgentClarificationPanel({ campaignId, events }: Props) {
             </div>
             {req.context && (
               <p className="font-mono text-[11px] text-muted-foreground/50 leading-relaxed ml-5 mb-2 italic">
-                Por quê: {req.context}
+                {t("Por quê:", "Why:", "¿Por qué:")} {req.context}
               </p>
             )}
           </div>
@@ -205,8 +209,8 @@ export function AgentClarificationPanel({ campaignId, events }: Props) {
               onChange={(e) => setDraft((prev) => ({ ...prev, [req.id]: e.target.value }))}
               placeholder={
                 req.options?.length
-                  ? "Ou escreva aqui se preferir personalizar..."
-                  : "Escreva sua resposta..."
+                  ? t("Ou escreva aqui se preferir personalizar...", "Or write your own answer here...", "O escribe tu propia respuesta aquí...")
+                  : t("Escreva sua resposta...", "Write your answer...", "Escribe tu respuesta...")
               }
               className="font-mono text-xs min-h-[60px] bg-background/40 border-border/25 rounded-none resize-none mb-2"
             />
@@ -217,7 +221,7 @@ export function AgentClarificationPanel({ campaignId, events }: Props) {
                 onClick={() => handleDismiss(req)}
                 className="font-mono text-xs h-7 text-muted-foreground/50 hover:text-muted-foreground"
               >
-                Ignorar
+                {t("Ignorar", "Dismiss", "Omitir")}
               </Button>
               <Button
                 size="sm"
@@ -225,7 +229,7 @@ export function AgentClarificationPanel({ campaignId, events }: Props) {
                 disabled={!draft[req.id]?.trim() || submitting === req.id}
                 className="btn-weapon-primary rounded-none font-mono text-xs h-7 gap-1 uppercase tracking-widest"
               >
-                {submitting === req.id ? "Enviando..." : "Responder"} <ChevronRight className="h-3 w-3" />
+                {submitting === req.id ? t("Enviando...", "Sending...", "Enviando...") : t("Responder", "Reply", "Responder")} <ChevronRight className="h-3 w-3" />
               </Button>
             </div>
           </div>

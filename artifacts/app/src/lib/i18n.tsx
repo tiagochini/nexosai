@@ -1,5 +1,4 @@
-import { createContext, useContext } from "react";
-import React from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 
 export type Lang = "pt-BR" | "en-US" | "en-AU" | "es-LA";
 
@@ -105,7 +104,7 @@ export const APP_TRANSLATIONS = {
   "en-US": {
     nav: {
       main: "Core Systems",
-      agent_team: "Agente Especializado",
+      agent_team: "Agent Team",
       tools: "Tools",
       growth: "Growth",
       automations: "Automations",
@@ -129,8 +128,8 @@ export const APP_TRANSLATIONS = {
       affiliates: "Affiliates",
       products: "Products",
       integrations: "Integrations",
-      credits: "Créditos",
-      memory: "Memória",
+      credits: "Agent Credits",
+      memory: "Agent Memory",
       billing: "Plan & Billing",
       settings: "Settings",
       admin: "Admin SaaS",
@@ -143,13 +142,13 @@ export const APP_TRANSLATIONS = {
       advanced_desc: "Manage multiple clients and campaigns",
     },
     credits: {
-      label: "Créditos",
+      label: "Credits",
       low: "Low credits!",
     },
     user: {
       settings: "Settings",
-      credits: "Créditos",
-      ai_language: "Idioma",
+      credits: "Agent Credits",
+      ai_language: "Platform language",
       logout: "Sign Out",
       default_name: "User",
     },
@@ -203,7 +202,7 @@ export const APP_TRANSLATIONS = {
   "en-AU": {
     nav: {
       main: "Core Systems",
-      agent_team: "Agente Especializado",
+      agent_team: "Agent Team",
       tools: "Tools",
       growth: "Growth",
       automations: "Automations",
@@ -227,8 +226,8 @@ export const APP_TRANSLATIONS = {
       affiliates: "Affiliates",
       products: "Products",
       integrations: "Integrations",
-      credits: "Créditos",
-      memory: "Memória",
+      credits: "Agent Credits",
+      memory: "Agent Memory",
       billing: "Plan & Billing",
       settings: "Settings",
       admin: "Admin SaaS",
@@ -241,13 +240,13 @@ export const APP_TRANSLATIONS = {
       advanced_desc: "Manage multiple clients and campaigns",
     },
     credits: {
-      label: "Créditos",
+      label: "Credits",
       low: "Low credits!",
     },
     user: {
       settings: "Settings",
-      credits: "Créditos",
-      ai_language: "Idioma",
+      credits: "Agent Credits",
+      ai_language: "Platform language",
       logout: "Sign Out",
       default_name: "User",
     },
@@ -301,7 +300,7 @@ export const APP_TRANSLATIONS = {
   "es-LA": {
     nav: {
       main: "Sistemas Principales",
-      agent_team: "Equipo do agente",
+      agent_team: "Equipo de agentes",
       tools: "Herramientas",
       growth: "Crecimiento",
       automations: "Automatizaciones",
@@ -325,8 +324,8 @@ export const APP_TRANSLATIONS = {
       affiliates: "Afiliados",
       products: "Productos",
       integrations: "Integraciones",
-      credits: "Créditos do agente",
-      memory: "Memoria do agente",
+      credits: "Créditos de agentes",
+      memory: "Memoria de agentes",
       billing: "Plan y Facturación",
       settings: "Configuración",
       admin: "Admin SaaS",
@@ -344,8 +343,8 @@ export const APP_TRANSLATIONS = {
     },
     user: {
       settings: "Configuración",
-      credits: "Créditos do agente",
-      ai_language: "Idioma do agente",
+      credits: "Créditos de agentes",
+      ai_language: "Idioma de la plataforma",
       logout: "Cerrar Sesión",
       default_name: "Usuario",
     },
@@ -381,8 +380,8 @@ export const APP_TRANSLATIONS = {
       password_confirm_label: "Confirmar contraseña",
       password_confirm_ph: "Repite la contraseña",
       plan_label: "Plan de acceso",
-      plan_solo: "Solo — 3 campañas / 900 créditos incluídos",
-      plan_agency: "Agency — 10 campañas / 2,000 créditos incluídos",
+      plan_solo: "Solo — 3 campañas / 900 créditos incluidos",
+      plan_agency: "Agency — 10 campañas / 2,000 créditos incluidos",
       submit: "Crear mi cuenta",
       submitting: "Creando cuenta...",
       have_account: "¿Ya tienes acceso?",
@@ -400,15 +399,74 @@ export const APP_TRANSLATIONS = {
 export type AppTranslations = typeof APP_TRANSLATIONS["pt-BR"];
 
 const I18nContext = createContext<AppTranslations>(APP_TRANSLATIONS["pt-BR"]);
+const LOCALE_STORAGE_KEY = "nexos.ui-locale";
+
+function isLang(value: string | undefined): value is Lang {
+  return value === "pt-BR" || value === "en-US" || value === "en-AU" || value === "es-LA";
+}
+
+function storedLocale(): Lang {
+  if (typeof window === "undefined") return "pt-BR";
+  try {
+    const value = window.localStorage.getItem(LOCALE_STORAGE_KEY) ?? undefined;
+    return isLang(value) ? value : "pt-BR";
+  } catch {
+    return "pt-BR";
+  }
+}
+
+const LocaleContext = createContext<{ locale: Lang; setGuestLocale: (locale: Lang) => void }>({
+  locale: "pt-BR",
+  setGuestLocale: () => {},
+});
 
 export function useAppI18n() {
   return useContext(I18nContext);
 }
 
+export function useUiLocale() {
+  return useContext(LocaleContext);
+}
+
+/** Inline translations for screens that are being migrated from hard-coded UI copy. */
+export function useUiText() {
+  const { locale } = useUiLocale();
+  return useCallback((pt: string, en: string, es: string, enAu?: string): string => {
+    if (locale === "es-LA") return es;
+    if (locale === "en-AU") return enAu ?? en;
+    if (locale === "en-US") return en;
+    return pt;
+  }, [locale]);
+}
+
+/** es-LA is our persisted code; es-419 is the BCP 47 locale for Latin America. */
+export function intlLocale(locale: string): string {
+  return locale === "es-LA" ? "es-419" : locale;
+}
+
 export { I18nContext };
 
-export function AppI18nProvider({ locale, children }: { locale?: string; children: React.ReactNode }) {
-  const resolved = (locale as Lang | undefined) ?? "pt-BR";
-  const t = (APP_TRANSLATIONS[resolved] ?? APP_TRANSLATIONS["pt-BR"]) as AppTranslations;
-  return <I18nContext.Provider value={t}>{children}</I18nContext.Provider>;
+export function AppI18nProvider({ locale, children }: { locale?: string; children: ReactNode }) {
+  const [guestLocale, setGuestLocaleState] = useState<Lang>(storedLocale);
+  const resolved = isLang(locale) ? locale : guestLocale;
+
+  const setGuestLocale = useCallback((next: Lang) => {
+    setGuestLocaleState(next);
+    try { window.localStorage.setItem(LOCALE_STORAGE_KEY, next); } catch { /* blocked storage */ }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = intlLocale(resolved);
+    if (isLang(locale)) {
+      setGuestLocaleState(locale);
+      try { window.localStorage.setItem(LOCALE_STORAGE_KEY, locale); } catch { /* blocked storage */ }
+    }
+  }, [resolved, locale]);
+
+  const translations = (APP_TRANSLATIONS[resolved] ?? APP_TRANSLATIONS["pt-BR"]) as AppTranslations;
+  return (
+    <LocaleContext.Provider value={{ locale: resolved, setGuestLocale }}>
+      <I18nContext.Provider value={translations}>{children}</I18nContext.Provider>
+    </LocaleContext.Provider>
+  );
 }

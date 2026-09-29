@@ -11,6 +11,7 @@ import {
   ChevronDown, ChevronUp, Camera, Upload, Scissors, Square,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useUiText, useUiLocale, intlLocale } from "@/lib/i18n";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -113,28 +114,28 @@ interface ProviderStatus {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const STATUS_LABELS: Record<VideoStatus, string> = {
-  intake: "Configurando",
-  script_generating: "Gerando roteiro...",
-  script_ready: "Roteiro pronto — aguardando aprovação",
-  script_approved: "Roteiro aprovado",
-  storyboard_generating: "Diretor criando storyboard...",
-  storyboard_ready: "Storyboard pronto — aguardando aprovação",
-  storyboard_approved: "Storyboard aprovado",
-  preview_generating: "Gerando clipes de preview...",
-  preview_ready: "Preview pronto — aguardando aprovação",
-  preview_approved: "Preview aprovado",
-  awaiting_clone: "Aguardando avatar/voz do lançador",
-  final_generating: "Gerando vídeo final HD...",
-  completed: "Concluído",
-  failed: "Erro",
+const STATUS_LABELS: Record<VideoStatus, readonly [string, string, string]> = {
+  intake: ["Configurando", "Setting up", "Configurando"],
+  script_generating: ["Gerando roteiro...", "Generating script...", "Generando guion..."],
+  script_ready: ["Roteiro pronto — aguardando aprovação", "Script ready — awaiting approval", "Guion listo — esperando aprobación"],
+  script_approved: ["Roteiro aprovado", "Script approved", "Guion aprobado"],
+  storyboard_generating: ["Diretor criando storyboard...", "Director is creating the storyboard...", "El director está creando el storyboard..."],
+  storyboard_ready: ["Storyboard pronto — aguardando aprovação", "Storyboard ready — awaiting approval", "Storyboard listo — esperando aprobación"],
+  storyboard_approved: ["Storyboard aprovado", "Storyboard approved", "Storyboard aprobado"],
+  preview_generating: ["Gerando clipes de preview...", "Generating preview clips...", "Generando clips de vista previa..."],
+  preview_ready: ["Preview pronto — aguardando aprovação", "Preview ready — awaiting approval", "Vista previa lista — esperando aprobación"],
+  preview_approved: ["Preview aprovado", "Preview approved", "Vista previa aprobada"],
+  awaiting_clone: ["Aguardando avatar/voz do lançador", "Waiting for launcher's avatar/voice", "Esperando el avatar/voz del lanzador"],
+  final_generating: ["Gerando vídeo final HD...", "Generating final HD video...", "Generando vídeo final en HD..."],
+  completed: ["Concluído", "Completed", "Completado"],
+  failed: ["Erro", "Error", "Error"],
 };
 
-const PIPELINE_STEPS = [
-  { key: "script", label: "Roteiro", statuses: ["script_generating","script_ready","script_approved"] },
-  { key: "storyboard", label: "Storyboard", statuses: ["storyboard_generating","storyboard_ready","storyboard_approved"] },
-  { key: "preview", label: "Preview", statuses: ["preview_generating","preview_ready","preview_approved"] },
-  { key: "final", label: "Final HD", statuses: ["final_generating","completed"] },
+const PIPELINE_STEPS: { key: string; label: readonly [string, string, string]; statuses: string[] }[] = [
+  { key: "script", label: ["Roteiro", "Script", "Guion"] as const, statuses: ["script_generating","script_ready","script_approved"] },
+  { key: "storyboard", label: ["Storyboard", "Storyboard", "Storyboard"] as const, statuses: ["storyboard_generating","storyboard_ready","storyboard_approved"] },
+  { key: "preview", label: ["Preview", "Preview", "Vista previa"] as const, statuses: ["preview_generating","preview_ready","preview_approved"] },
+  { key: "final", label: ["Final HD", "Final HD", "Final HD"] as const, statuses: ["final_generating","completed"] },
 ];
 
 function stepState(step: typeof PIPELINE_STEPS[0], status: VideoStatus): "done" | "active" | "pending" {
@@ -147,8 +148,8 @@ function stepState(step: typeof PIPELINE_STEPS[0], status: VideoStatus): "done" 
   return "pending";
 }
 
-const SCENE_TYPE_LABELS: Record<string, string> = {
-  hook: "Hook", problem: "Problema", solution: "Solução", proof: "Prova", cta: "CTA", bridge: "Ponte", transition: "Transição"
+const SCENE_TYPE_LABELS: Record<string, readonly [string, string, string]> = {
+  hook: ["Hook", "Hook", "Hook"], problem: ["Problema", "Problem", "Problema"], solution: ["Solução", "Solution", "Solución"], proof: ["Prova", "Proof", "Prueba"], cta: ["CTA", "CTA", "CTA"], bridge: ["Ponte", "Bridge", "Puente"], transition: ["Transição", "Transition", "Transición"]
 };
 const SCENE_TYPE_COLORS: Record<string, string> = {
   hook: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
@@ -169,6 +170,7 @@ function CreateProjectForm({
   onCreated: (p: VideoProject) => void;
   providerConfigured?: boolean;
 }) {
+  const t = useUiText();
   const [title, setTitle] = useState("");
   const [format, setFormat] = useState("vsl");
   const [hasUserFace, setHasUserFace] = useState(false);
@@ -190,7 +192,7 @@ function CreateProjectForm({
       });
       onCreated(res.project);
     } catch (e: any) {
-      setError(e.message ?? "Erro ao criar projeto");
+      setError(e.message ?? t("Erro ao criar projeto", "Error creating project", "Error al crear el proyecto"));
     } finally {
       setLoading(false);
     }
@@ -199,56 +201,56 @@ function CreateProjectForm({
   return (
     <div className="space-y-5">
       <div>
-        <label className="font-mono text-xs text-muted-foreground mb-1 block">NOME DO VÍDEO</label>
+        <label className="font-mono text-xs text-muted-foreground mb-1 block">{t("NOME DO VÍDEO", "VIDEO NAME", "NOMBRE DEL VÍDEO")}</label>
         <input
           value={title}
           onChange={e => setTitle(e.target.value)}
-          placeholder="Ex: VSL NexOS — Lançamento 2026"
+          placeholder={t("Ex: VSL NexOS — Lançamento 2026", "e.g. NexOS VSL — 2026 Launch", "p. ej., VSL de NexOS — Lanzamiento 2026")}
           className="w-full bg-background border border-border rounded-md px-3 py-2 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-primary"
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="font-mono text-xs text-muted-foreground mb-1 block">FORMATO</label>
+          <label className="font-mono text-xs text-muted-foreground mb-1 block">{t("FORMATO", "FORMAT", "FORMATO")}</label>
           <select value={format} onChange={e => setFormat(e.target.value)} className="w-full bg-background border border-border rounded-md px-3 py-2 font-mono text-xs">
             <option value="vsl">VSL</option>
             <option value="cpl">CPL</option>
-            <option value="live_promo">Promo de Live</option>
+            <option value="live_promo">{t("Promo de Live", "Live Promo", "Promoción de directo")}</option>
             <option value="stories">Stories</option>
             <option value="reels">Reels</option>
             <option value="youtube">YouTube</option>
-            <option value="webinar_promo">Promo de Webinar</option>
-            <option value="testimonial">Depoimento</option>
-            <option value="product_demo">Demo de Produto</option>
+            <option value="webinar_promo">{t("Promo de Webinar", "Webinar Promo", "Promoción de webinar")}</option>
+            <option value="testimonial">{t("Depoimento", "Testimonial", "Testimonio")}</option>
+            <option value="product_demo">{t("Demo de Produto", "Product Demo", "Demostración de producto")}</option>
           </select>
         </div>
         <div>
-          <label className="font-mono text-xs text-muted-foreground mb-1 block">PROPORÇÃO</label>
+          <label className="font-mono text-xs text-muted-foreground mb-1 block">{t("PROPORÇÃO", "ASPECT RATIO", "PROPORCIÓN")}</label>
           <select value={aspectRatio} onChange={e => setAspectRatio(e.target.value)} className="w-full bg-background border border-border rounded-md px-3 py-2 font-mono text-xs">
-            <option value="16:9">16:9 — Horizontal</option>
-            <option value="9:16">9:16 — Vertical</option>
-            <option value="1:1">1:1 — Quadrado</option>
+            <option value="16:9">{t("16:9 — Horizontal", "16:9 — Landscape", "16:9 — Horizontal")}</option>
+            <option value="9:16">{t("9:16 — Vertical", "9:16 — Portrait", "9:16 — Vertical")}</option>
+            <option value="1:1">{t("1:1 — Quadrado", "1:1 — Square", "1:1 — Cuadrado")}</option>
           </select>
         </div>
       </div>
       <div>
-        <label className="font-mono text-xs text-muted-foreground mb-2 block">VOCÊ VAI APARECER NO VÍDEO?</label>
+        <label className="font-mono text-xs text-muted-foreground mb-2 block">{t("VOCÊ VAI APARECER NO VÍDEO?", "WILL YOU APPEAR IN THE VIDEO?", "¿APARECERÁS EN EL VÍDEO?")}</label>
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => { setHasUserFace(false); setVoiceStyle("narrator"); }}
             className={`border rounded-lg p-3 text-left transition-all ${!hasUserFace ? "border-primary bg-primary/5" : "border-border hover:border-border/80"}`}
           >
             <Film className="h-5 w-5 mb-1 text-primary" />
-            <div className="font-mono text-xs font-bold">Não — Vídeo com B-roll</div>
-            <div className="font-mono text-[10px] text-muted-foreground mt-0.5">Agente gera cenas cinematográficas</div>
+            <div className="font-mono text-xs font-bold">{t("Não — Vídeo com B-roll", "No — B-roll Video", "No — Vídeo con B-roll")}</div>
+            <div className="font-mono text-[10px] text-muted-foreground mt-0.5">{t("Agente gera cenas cinematográficas", "Agent generates cinematic scenes", "El agente genera escenas cinematográficas")}</div>
           </button>
           <button
             onClick={() => { setHasUserFace(true); setVoiceStyle("avatar"); }}
             className={`border rounded-lg p-3 text-left transition-all ${hasUserFace ? "border-primary bg-primary/5" : "border-border hover:border-border/80"}`}
           >
             <User className="h-5 w-5 mb-1 text-primary" />
-            <div className="font-mono text-xs font-bold">Sim — Apresentador</div>
-            <div className="font-mono text-[10px] text-muted-foreground mt-0.5">Requer avatar digital configurado</div>
+            <div className="font-mono text-xs font-bold">{t("Sim — Apresentador", "Yes — Presenter", "Sí — Presentador")}</div>
+            <div className="font-mono text-[10px] text-muted-foreground mt-0.5">{t("Requer avatar digital configurado", "Requires a configured digital avatar", "Requiere un avatar digital configurado")}</div>
           </button>
         </div>
         {hasUserFace && (
@@ -258,24 +260,24 @@ function CreateProjectForm({
               className="flex items-center gap-1.5 font-mono text-[10px] text-primary/70 hover:text-primary transition-colors font-bold"
             >
               <Info className="h-3 w-3" />
-              Guia do Diretor — vestuário, cenário, linguagem e roteiro completo
+              {t("Guia do Diretor — vestuário, cenário, linguagem e roteiro completo", "Director's Guide — clothing, setting, language, and full script", "Guía del director: vestuario, escenario, lenguaje y guion completo")}
             </a>
             <a
               href="/video-production/filming-guide"
               className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground/50 hover:text-foreground transition-colors"
             >
               <Info className="h-3 w-3" />
-              Guia técnico de filmagem — setup de câmera, áudio e iluminação
+              {t("Guia técnico de filmagem — setup de câmera, áudio e iluminação", "Technical filming guide — camera, audio, and lighting setup", "Guía técnica de filmación: configuración de cámara, audio e iluminación")}
             </a>
           </div>
         )}
       </div>
       {hasUserFace && (
         <div>
-          <label className="font-mono text-xs text-muted-foreground mb-1 block">VOZ</label>
+          <label className="font-mono text-xs text-muted-foreground mb-1 block">{t("VOZ", "VOICE", "VOZ")}</label>
           <select value={voiceStyle} onChange={e => setVoiceStyle(e.target.value)} className="w-full bg-background border border-border rounded-md px-3 py-2 font-mono text-xs">
-            <option value="avatar">Avatar digital NexOS</option>
-            <option value="voice_clone">Clonar minha voz com IA</option>
+            <option value="avatar">{t("Avatar digital NexOS", "NexOS Digital Avatar", "Avatar digital de NexOS")}</option>
+            <option value="voice_clone">{t("Clonar minha voz com IA", "Clone my voice with AI", "Clonar mi voz con IA")}</option>
           </select>
         </div>
       )}
@@ -285,11 +287,10 @@ function CreateProjectForm({
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
             <div className="min-w-0 flex-1">
               <div className="font-mono text-xs font-bold text-amber-300">
-                Produção 100% IA indisponível neste momento
+                 {t("Produção 100% IA indisponível neste momento", "100% AI production is currently unavailable", "La producción 100 % con IA no está disponible en este momento")}
               </div>
               <p className="mt-1 font-mono text-[11px] leading-relaxed text-muted-foreground">
-                Você ainda pode criar o projeto, gerar roteiro e storyboard. Na etapa de produção,
-                grave o material no modo Híbrido ou abra o NexOS Studio para editar mídias existentes.
+                 {t("Você ainda pode criar o projeto, gerar roteiro e storyboard. Na etapa de produção, grave o material no modo Híbrido ou abra o NexOS Studio para editar mídias existentes.", "You can still create a project and generate a script and storyboard. During production, record your footage in Hybrid mode or open NexOS Studio to edit existing media.", "Aún puedes crear el proyecto y generar el guion y el storyboard. En la etapa de producción, graba el material en modo híbrido o abre NexOS Studio para editar archivos existentes.")}
               </p>
               <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                 <Button
@@ -303,12 +304,12 @@ function CreateProjectForm({
                   }}
                 >
                   <Camera className="mr-1.5 h-3.5 w-3.5" />
-                  Preparar modo Híbrido
+                   {t("Preparar modo Híbrido", "Set up Hybrid mode", "Configurar modo híbrido")}
                 </Button>
                 <Button asChild type="button" variant="outline" size="sm" className="font-mono text-[11px]">
                   <a href="/video-editor/">
                     <Clapperboard className="mr-1.5 h-3.5 w-3.5" />
-                    Abrir NexOS Studio
+                     {t("Abrir NexOS Studio", "Open NexOS Studio", "Abrir NexOS Studio")}
                   </a>
                 </Button>
               </div>
@@ -318,29 +319,29 @@ function CreateProjectForm({
       )}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="font-mono text-xs text-muted-foreground mb-1 block">TOM</label>
+           <label className="font-mono text-xs text-muted-foreground mb-1 block">{t("TOM", "TONE", "TONO")}</label>
           <select value={tone} onChange={e => setTone(e.target.value)} className="w-full bg-background border border-border rounded-md px-3 py-2 font-mono text-xs">
-            <option value="inspirational">Inspiracional</option>
-            <option value="urgent">Urgente</option>
-            <option value="educational">Educativo</option>
-            <option value="conversational">Conversacional</option>
-            <option value="cinematic">Cinematográfico</option>
+             <option value="inspirational">{t("Inspiracional", "Inspirational", "Inspirador")}</option>
+             <option value="urgent">{t("Urgente", "Urgent", "Urgente")}</option>
+             <option value="educational">{t("Educativo", "Educational", "Educativo")}</option>
+             <option value="conversational">{t("Conversacional", "Conversational", "Conversacional")}</option>
+             <option value="cinematic">{t("Cinematográfico", "Cinematic", "Cinematográfico")}</option>
           </select>
         </div>
         <div>
-          <label className="font-mono text-xs text-muted-foreground mb-1 block">RITMO</label>
+           <label className="font-mono text-xs text-muted-foreground mb-1 block">{t("RITMO", "PACE", "RITMO")}</label>
           <select value={rhythm} onChange={e => setRhythm(e.target.value)} className="w-full bg-background border border-border rounded-md px-3 py-2 font-mono text-xs">
-            <option value="slow">Lento</option>
-            <option value="medium">Médio</option>
-            <option value="fast">Rápido</option>
-            <option value="dynamic">Dinâmico</option>
+             <option value="slow">{t("Lento", "Slow", "Lento")}</option>
+             <option value="medium">{t("Médio", "Medium", "Medio")}</option>
+             <option value="fast">{t("Rápido", "Fast", "Rápido")}</option>
+             <option value="dynamic">{t("Dinâmico", "Dynamic", "Dinámico")}</option>
           </select>
         </div>
       </div>
       {error && <p className="font-mono text-xs text-red-400">{error}</p>}
       <Button onClick={submit} disabled={loading || !title.trim()} className="w-full font-mono">
         {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-        Criar Projeto de Vídeo
+         {t("Criar Projeto de Vídeo", "Create Video Project", "Crear proyecto de vídeo")}
       </Button>
     </div>
   );
@@ -349,6 +350,7 @@ function CreateProjectForm({
 // ─── Pipeline Header ──────────────────────────────────────────────────────────
 
 function PipelineBar({ status }: { status: VideoStatus }) {
+  const t = useUiText();
   return (
     <div className="flex items-center gap-2 font-mono text-xs">
       {PIPELINE_STEPS.map((step, i) => {
@@ -363,7 +365,7 @@ function PipelineBar({ status }: { status: VideoStatus }) {
               {state === "done" && <CheckCircle2 className="h-3 w-3" />}
               {state === "active" && <RefreshCw className="h-3 w-3 animate-spin" />}
               {state === "pending" && <Clock className="h-3 w-3" />}
-              {step.label}
+              {t(...step.label)}
             </div>
             {i < PIPELINE_STEPS.length - 1 && <ChevronRight className="h-3 w-3 text-muted-foreground/40" />}
           </div>
@@ -376,6 +378,7 @@ function PipelineBar({ status }: { status: VideoStatus }) {
 // ─── Script View ──────────────────────────────────────────────────────────────
 
 function ScriptPanel({ project, onAction }: { project: VideoProject; onAction: () => void }) {
+  const t = useUiText();
   const [editedScript, setEditedScript] = useState(project.script ?? "");
   const [loading, setLoading] = useState(false);
 
@@ -403,7 +406,7 @@ function ScriptPanel({ project, onAction }: { project: VideoProject; onAction: (
     return (
       <div className="flex flex-col items-center justify-center h-48 gap-3">
         <RefreshCw className="h-8 w-8 text-primary animate-spin" />
-        <p className="font-mono text-sm text-muted-foreground">Roteirista escrevendo o roteiro...</p>
+        <p className="font-mono text-sm text-muted-foreground">{t("Roteirista escrevendo o roteiro...", "Writer is drafting the script...", "El guionista está redactando el guion...")}</p>
       </div>
     );
   }
@@ -411,9 +414,9 @@ function ScriptPanel({ project, onAction }: { project: VideoProject; onAction: (
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Roteiro gerado pelo agente — edite se necessário</div>
+        <div className="font-mono text-xs text-muted-foreground uppercase tracking-widest">{t("Roteiro gerado pelo agente — edite se necessário", "Script generated by the agent — edit if needed", "Guion generado por el agente: edítalo si es necesario")}</div>
         <Button variant="ghost" size="sm" onClick={regenerate} disabled={loading} className="font-mono text-xs">
-          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Regenerar
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />{t("Regenerar", "Regenerate", "Regenerar")}
         </Button>
       </div>
       <Textarea
@@ -427,13 +430,13 @@ function ScriptPanel({ project, onAction }: { project: VideoProject; onAction: (
         <div className="flex gap-3">
           <Button onClick={approveScript} disabled={loading} className="font-mono flex-1">
             {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-            Aprovar Roteiro e Criar Storyboard
+            {t("Aprovar Roteiro e Criar Storyboard", "Approve Script and Create Storyboard", "Aprobar guion y crear storyboard")}
           </Button>
         </div>
       )}
       {project.status === "script_approved" && (
         <div className="flex items-center gap-2 text-primary font-mono text-xs">
-          <CheckCircle2 className="h-4 w-4" /> Roteiro aprovado — storyboard sendo criado
+          <CheckCircle2 className="h-4 w-4" /> {t("Roteiro aprovado — storyboard sendo criado", "Script approved — storyboard is being created", "Guion aprobado: creando storyboard")}
         </div>
       )}
     </div>
@@ -443,6 +446,7 @@ function ScriptPanel({ project, onAction }: { project: VideoProject; onAction: (
 // ─── Storyboard View ──────────────────────────────────────────────────────────
 
 function StoryboardPanel({ project, onAction }: { project: VideoProject; onAction: () => void }) {
+  const t = useUiText();
   const [loading, setLoading] = useState(false);
   const [approvedScenes, setApprovedScenes] = useState<Set<string>>(new Set());
   const meta = project.config.storyboardMeta;
@@ -482,7 +486,7 @@ function StoryboardPanel({ project, onAction }: { project: VideoProject; onActio
     return (
       <div className="flex flex-col items-center justify-center h-48 gap-3">
         <RefreshCw className="h-8 w-8 text-primary animate-spin" />
-        <p className="font-mono text-sm text-muted-foreground">Diretor de Cena criando storyboard cena a cena...</p>
+        <p className="font-mono text-sm text-muted-foreground">{t("Diretor de Cena criando storyboard cena a cena...", "Scene Director is creating the storyboard scene by scene...", "El director de escena está creando el storyboard escena por escena...")}</p>
       </div>
     );
   }
@@ -493,7 +497,7 @@ function StoryboardPanel({ project, onAction }: { project: VideoProject; onActio
         <div className="border border-border/40 rounded-lg p-3 bg-muted/20 space-y-1">
           <div className="font-mono text-xs text-primary font-bold">{meta.phaseSummary}</div>
           <div className="font-mono text-[11px] text-muted-foreground">
-            Duração total: {Math.floor(meta.totalDurationSeconds / 60)}:{String(meta.totalDurationSeconds % 60).padStart(2,"0")} · {project.storyboard.length} cenas
+            {t(`Duração total: ${Math.floor(meta.totalDurationSeconds / 60)}:${String(meta.totalDurationSeconds % 60).padStart(2,"0")} · ${project.storyboard.length} cenas`, `Total duration: ${Math.floor(meta.totalDurationSeconds / 60)}:${String(meta.totalDurationSeconds % 60).padStart(2,"0")} · ${project.storyboard.length} scenes`, `Duración total: ${Math.floor(meta.totalDurationSeconds / 60)}:${String(meta.totalDurationSeconds % 60).padStart(2,"0")} · ${project.storyboard.length} escenas`)}
           </div>
           {meta.directorNotes && <div className="font-mono text-[10px] text-muted-foreground/60 italic">{meta.directorNotes}</div>}
         </div>
@@ -503,19 +507,19 @@ function StoryboardPanel({ project, onAction }: { project: VideoProject; onActio
         <div className="border border-border/40 rounded-lg p-3 bg-muted/10 space-y-2">
           <div className="flex items-center justify-between">
             <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-              Aprovação de frames — {approvedScenes.size}/{totalScenes} cenas
+              {t(`Aprovação de frames — ${approvedScenes.size}/${totalScenes} cenas`, `Frame approval — ${approvedScenes.size}/${totalScenes} scenes`, `Aprobación de fotogramas — ${approvedScenes.size}/${totalScenes} escenas`)}
             </div>
             {!allScenesApproved && (
               <button
                 onClick={approveAllScenes}
                 className="font-mono text-[10px] text-primary hover:underline"
               >
-                Aprovar todas
+                {t("Aprovar todas", "Approve all", "Aprobar todas")}
               </button>
             )}
             {allScenesApproved && (
               <div className="flex items-center gap-1.5 font-mono text-[10px] text-green-400">
-                <CheckCircle2 className="h-3 w-3" /> Todas aprovadas
+                <CheckCircle2 className="h-3 w-3" /> {t("Todas aprovadas", "All approved", "Todas aprobadas")}
               </div>
             )}
           </div>
@@ -527,7 +531,7 @@ function StoryboardPanel({ project, onAction }: { project: VideoProject; onActio
           </div>
           {!allScenesApproved && (
             <p className="font-mono text-[10px] text-muted-foreground/60">
-              Revise cada frame abaixo e marque como aprovado. O render final só libera após todas as cenas confirmadas.
+              {t("Revise cada frame abaixo e marque como aprovado. O render final só libera após todas as cenas confirmadas.", "Review each frame below and mark it as approved. Final rendering becomes available once all scenes are confirmed.", "Revisa cada fotograma y márcalo como aprobado. El renderizado final estará disponible cuando confirmes todas las escenas.")}
             </p>
           )}
         </div>
@@ -547,7 +551,7 @@ function StoryboardPanel({ project, onAction }: { project: VideoProject; onActio
               </div>
               <div className="flex items-center gap-2">
                 <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${SCENE_TYPE_COLORS[scene.sceneType] ?? "bg-muted text-muted-foreground border-border"}`}>
-                  {SCENE_TYPE_LABELS[scene.sceneType] ?? scene.sceneType}
+                  {SCENE_TYPE_LABELS[scene.sceneType] ? t(...SCENE_TYPE_LABELS[scene.sceneType]) : scene.sceneType}
                 </span>
                 <span className="font-mono text-[10px] text-muted-foreground">{scene.durationSeconds}s</span>
                 {project.status === "storyboard_ready" && (
@@ -559,18 +563,18 @@ function StoryboardPanel({ project, onAction }: { project: VideoProject; onActio
                         : "border-border/60 text-muted-foreground hover:border-primary/50 hover:text-primary"
                     }`}
                   >
-                    {isSceneApproved ? "✓ Aprovada" : "Aprovar"}
+                    {isSceneApproved ? `✓ ${t("Aprovada", "Approved", "Aprobada")}` : t("Aprovar", "Approve", "Aprobar")}
                   </button>
                 )}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 text-[11px] font-mono">
               <div>
-                <div className="text-muted-foreground/60 uppercase text-[9px] tracking-widest mb-1">Locução</div>
+                <div className="text-muted-foreground/60 uppercase text-[9px] tracking-widest mb-1">{t("Locução", "Voiceover", "Locución")}</div>
                 <div className="text-foreground/80 leading-relaxed">{scene.voiceoverText}</div>
               </div>
               <div>
-                <div className="text-muted-foreground/60 uppercase text-[9px] tracking-widest mb-1">Cena Visual</div>
+                <div className="text-muted-foreground/60 uppercase text-[9px] tracking-widest mb-1">{t("Cena Visual", "Visual Scene", "Escena visual")}</div>
                 <div className="text-muted-foreground leading-relaxed">{scene.visualDescription}</div>
               </div>
             </div>
@@ -589,16 +593,16 @@ function StoryboardPanel({ project, onAction }: { project: VideoProject; onActio
       {project.status === "storyboard_ready" && (
         <div className="flex gap-3">
           <Button variant="outline" onClick={regenerate} disabled={loading} className="font-mono">
-            <RefreshCw className="h-4 w-4 mr-2" />Regenerar
+            <RefreshCw className="h-4 w-4 mr-2" />{t("Regenerar", "Regenerate", "Regenerar")}
           </Button>
           <Button
             onClick={approve}
             disabled={loading || !allScenesApproved}
             className="font-mono flex-1"
-            title={!allScenesApproved ? `Aprove todas as ${totalScenes} cenas para continuar` : undefined}
+            title={!allScenesApproved ? t(`Aprove todas as ${totalScenes} cenas para continuar`, `Approve all ${totalScenes} scenes to continue`, `Aprueba las ${totalScenes} escenas para continuar`) : undefined}
           >
             {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-            {allScenesApproved ? "Aprovar Storyboard — Gerar Preview" : `Aprove todas as cenas (${approvedScenes.size}/${totalScenes})`}
+            {allScenesApproved ? t("Aprovar Storyboard — Gerar Preview", "Approve Storyboard — Generate Preview", "Aprobar storyboard — Generar vista previa") : t(`Aprove todas as cenas (${approvedScenes.size}/${totalScenes})`, `Approve all scenes (${approvedScenes.size}/${totalScenes})`, `Aprobar todas las escenas (${approvedScenes.size}/${totalScenes})`)}
           </Button>
         </div>
       )}
@@ -609,6 +613,7 @@ function StoryboardPanel({ project, onAction }: { project: VideoProject; onActio
 // ─── Clips View ───────────────────────────────────────────────────────────────
 
 function ClipsPanel({ project, isHd, onAction }: { project: VideoProject; isHd: boolean; onAction: () => void }) {
+  const t = useUiText();
   const [loading, setLoading] = useState(false);
   const isGenerating = project.status === (isHd ? "final_generating" : "preview_generating");
   const isReady = project.status === (isHd ? "completed" : "preview_ready");
@@ -635,10 +640,10 @@ function ClipsPanel({ project, isHd, onAction }: { project: VideoProject; isHd: 
         <div className="flex flex-col items-center justify-center h-32 gap-3 border border-primary/20 rounded-lg bg-primary/5">
           <RefreshCw className="h-7 w-7 text-primary animate-spin" />
           <p className="font-mono text-sm text-muted-foreground">
-            {isHd ? "Gerando clipes HD finais pelo agente..." : "Gerando clipes de preview pelo agente..."}
+            {isHd ? t("Gerando clipes HD finais pelo agente...", "Agent is generating final HD clips...", "El agente está generando los clips HD finales...") : t("Gerando clipes de preview pelo agente...", "Agent is generating preview clips...", "El agente está generando los clips de vista previa...")}
           </p>
           <Button variant="outline" size="sm" onClick={poll} disabled={loading} className="font-mono text-xs">
-            Verificar Status
+            {t("Verificar Status", "Check Status", "Comprobar estado")}
           </Button>
         </div>
       )}
@@ -655,22 +660,22 @@ function ClipsPanel({ project, isHd, onAction }: { project: VideoProject; isHd: 
                 <div className="flex items-center gap-2">
                   {scene.clipStatus === "ready" && url && (
                     <Badge variant="outline" className="font-mono text-[10px] text-green-400 border-green-400/30">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />Pronto
+                      <CheckCircle2 className="h-3 w-3 mr-1" />{t("Pronto", "Ready", "Listo")}
                     </Badge>
                   )}
                   {scene.clipStatus === "generating" && (
                     <Badge variant="outline" className="font-mono text-[10px] text-yellow-400 border-yellow-400/30">
-                      <RefreshCw className="h-3 w-3 mr-1 animate-spin" />Gerando
+                      <RefreshCw className="h-3 w-3 mr-1 animate-spin" />{t("Gerando", "Generating", "Generando")}
                     </Badge>
                   )}
                   {scene.clipStatus === "failed" && (
                     <Badge variant="outline" className="font-mono text-[10px] text-red-400 border-red-400/30">
-                      <AlertCircle className="h-3 w-3 mr-1" />Falhou
+                      <AlertCircle className="h-3 w-3 mr-1" />{t("Falhou", "Failed", "Falló")}
                     </Badge>
                   )}
                   {scene.clipStatus === "pending" && (
                     <Badge variant="outline" className="font-mono text-[10px] text-muted-foreground">
-                      <Clock className="h-3 w-3 mr-1" />Aguardando
+                      <Clock className="h-3 w-3 mr-1" />{t("Aguardando", "Waiting", "Esperando")}
                     </Badge>
                   )}
                 </div>
@@ -679,7 +684,7 @@ function ClipsPanel({ project, isHd, onAction }: { project: VideoProject; isHd: 
                 <div className="mt-2">
                   <video src={url} controls className="w-full rounded-md max-h-48 bg-black" />
                   <a href={url} download className="flex items-center gap-1.5 font-mono text-[10px] text-primary hover:underline mt-1">
-                    <Download className="h-3 w-3" />Baixar clipe
+                    <Download className="h-3 w-3" />{t("Baixar clipe", "Download clip", "Descargar clip")}
                   </a>
                 </div>
               )}
@@ -694,7 +699,7 @@ function ClipsPanel({ project, isHd, onAction }: { project: VideoProject; isHd: 
         <div className="flex gap-3">
           <Button onClick={approve} disabled={loading} className="font-mono flex-1">
             {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-            Aprovar Preview — Gerar Vídeo HD Final
+            {t("Aprovar Preview — Gerar Vídeo HD Final", "Approve Preview — Generate Final HD Video", "Aprobar vista previa — Generar vídeo HD final")}
           </Button>
         </div>
       )}
@@ -707,6 +712,7 @@ function ClipsPanel({ project, isHd, onAction }: { project: VideoProject; isHd: 
 interface StockAvatar { id: string; label: string; gender?: string }
 
 function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProject; onResumed: (p: VideoProject) => void; onDismiss?: () => void }) {
+  const t = useUiText();
   const [voiceCloneId, setVoiceCloneId] = useState<string | null>(null);
   const [avatarReady, setAvatarReady] = useState(false);
   const [avatarMode, setAvatarMode] = useState<"stock" | "record" | "video" | null>(null);
@@ -777,7 +783,7 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
       videoRecorderRef.current = recorder;
       setVideoRecState("recording");
     } catch {
-      setError("Câmera/microfone não disponíveis — verifique as permissões do navegador.");
+      setError(t("Câmera/microfone não disponíveis — verifique as permissões do navegador.", "Camera/microphone unavailable — check your browser permissions.", "Cámara/micrófono no disponibles: comprueba los permisos del navegador."));
     }
   }
 
@@ -799,10 +805,10 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
           if (trainingPollRef.current) clearInterval(trainingPollRef.current);
           setVideoStep("done");
           setAvatarReady(true);
-          toast.success("Avatar de vídeo treinado com sucesso.");
+          toast.success(t("Avatar de vídeo treinado com sucesso.", "Video avatar trained successfully.", "Avatar de vídeo entrenado correctamente."));
         } else if (res.status === "failed") {
           if (trainingPollRef.current) clearInterval(trainingPollRef.current);
-          setError("Treinamento do avatar falhou — tente novamente ou use foto rápida.");
+          setError(t("Treinamento do avatar falhou — tente novamente ou use foto rápida.", "Avatar training failed — try again or use quick photo.", "El entrenamiento del avatar falló: inténtalo de nuevo o usa una foto rápida."));
           setVideoStep("training");
         }
       } catch {
@@ -824,7 +830,7 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
       setAvatarTrainingStatus("pending");
       pollTrainingStatus();
     } catch (e: any) {
-      setError(e.message ?? "Erro ao enviar vídeos para clonagem");
+      setError(e.message ?? t("Erro ao enviar vídeos para clonagem", "Error uploading videos for cloning", "Error al subir vídeos para clonarlos"));
       setVideoStep("consent");
     }
   }
@@ -839,7 +845,7 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
       const res = await customFetch<{ avatars: StockAvatar[] }>("/api/workspaces/me/persona/stock-avatars");
       setStockAvatars(res.avatars ?? []);
     } catch {
-      setError("Não foi possível carregar os avatares padrão.");
+      setError(t("Não foi possível carregar os avatares padrão.", "Could not load stock avatars.", "No se pudieron cargar los avatares predeterminados."));
     } finally {
       setStockLoading(false);
     }
@@ -867,7 +873,7 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
       recorderRef.current = recorder;
       setRecState("recording");
     } catch {
-      setError("Microfone não disponível — verifique as permissões do navegador.");
+      setError(t("Microfone não disponível — verifique as permissões do navegador.", "Microphone unavailable — check your browser permissions.", "Micrófono no disponible: comprueba los permisos del navegador."));
     }
   }
 
@@ -886,9 +892,9 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
       });
       setVoiceCloneId(res.voiceCloneId);
       setRecState("done");
-      toast.success("Voz clonada com sucesso.");
+      toast.success(t("Voz clonada com sucesso.", "Voice cloned successfully.", "Voz clonada correctamente."));
     } catch (e: any) {
-      setError(e.message ?? "Erro ao clonar voz");
+      setError(e.message ?? t("Erro ao clonar voz", "Error cloning voice", "Error al clonar la voz"));
       setRecState("recorded");
     }
   }
@@ -900,7 +906,7 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
       setCamStream(stream);
       setTimeout(() => { if (videoRef.current) videoRef.current.srcObject = stream; }, 50);
     } catch {
-      setError("Câmera não disponível — verifique as permissões do navegador.");
+      setError(t("Câmera não disponível — verifique as permissões do navegador.", "Camera unavailable — check your browser permissions.", "Cámara no disponible: comprueba los permisos del navegador."));
     }
   }
 
@@ -926,9 +932,9 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
         body: JSON.stringify({ imageBase64: frameBase64, mimeType: "image/jpeg" }),
       });
       setAvatarReady(true);
-      toast.success("Avatar criado a partir do seu vídeo.");
+      toast.success(t("Avatar criado a partir do seu vídeo.", "Avatar created from your video.", "Avatar creado a partir de tu vídeo."));
     } catch (e: any) {
-      setError(e.message ?? "Erro ao criar avatar");
+      setError(e.message ?? t("Erro ao criar avatar", "Error creating avatar", "Error al crear el avatar"));
     } finally {
       setAvatarUploading(false);
     }
@@ -943,9 +949,9 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
         body: JSON.stringify({ avatarId }),
       });
       setAvatarReady(true);
-      toast.success("Avatar padrão selecionado.");
+      toast.success(t("Avatar padrão selecionado.", "Stock avatar selected.", "Avatar predeterminado seleccionado."));
     } catch (e: any) {
-      setError(e.message ?? "Erro ao selecionar avatar");
+      setError(e.message ?? t("Erro ao selecionar avatar", "Error selecting avatar", "Error al seleccionar el avatar"));
     } finally {
       setSelectingStockId(null);
     }
@@ -959,7 +965,7 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
       const res = await customFetch<{ project: VideoProject }>(`/api/video-projects/${project.id}/${action}`, { method: "POST", body: "{}" });
       onResumed(res.project);
     } catch (e: any) {
-      setError(e.message ?? "Erro ao retomar geração");
+      setError(e.message ?? t("Erro ao retomar geração", "Error resuming generation", "Error al reanudar la generación"));
     } finally {
       setResuming(false);
     }
@@ -975,16 +981,16 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
             onClick={onDismiss}
             className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
           >
-            ← Pular por agora
+            {t("← Pular por agora", "← Skip for now", "← Omitir por ahora")}
           </button>
         </div>
       )}
       <div>
         <div className="font-mono text-sm font-bold flex items-center gap-2">
-          <User className="h-4 w-4 text-primary" />Este vídeo tem cenas com avatar — precisamos da sua voz e rosto
+          <User className="h-4 w-4 text-primary" />{t("Este vídeo tem cenas com avatar — precisamos da sua voz e rosto", "This video includes avatar scenes — we need your voice and face", "Este vídeo incluye escenas con avatar: necesitamos tu voz y rostro")}
         </div>
         <div className="font-mono text-xs text-muted-foreground mt-1">
-          Você escolheu aparecer nas cenas. Para gerar o vídeo com avatar de IA precisamos clonar sua voz e criar seu avatar (ou você pode usar um avatar padrão).
+          {t("Você escolheu aparecer nas cenas. Para gerar o vídeo com avatar de IA precisamos clonar sua voz e criar seu avatar (ou você pode usar um avatar padrão).", "You chose to appear in the scenes. To generate the video with an AI avatar, we need to clone your voice and create your avatar (or you can use a stock avatar).", "Elegiste aparecer en las escenas. Para generar el vídeo con un avatar de IA, debemos clonar tu voz y crear tu avatar (o puedes usar un avatar predeterminado).")}
         </div>
       </div>
 
@@ -994,26 +1000,26 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
       <div className="border border-border/40 rounded-lg p-4 space-y-3">
         <div className="font-mono text-xs font-bold flex items-center gap-2">
           {voiceCloneId ? <CheckCircle2 className="h-4 w-4 text-green-400" /> : <Mic className="h-4 w-4 text-primary" />}
-          1. Sua voz {voiceCloneId && <span className="text-green-400">— clonada</span>}
+          1. {t("Sua voz", "Your voice", "Tu voz")} {voiceCloneId && <span className="text-green-400">— {t("clonada", "cloned", "clonada")}</span>}
         </div>
         {!voiceCloneId && (
           <div className="space-y-2">
-            <div className="font-mono text-[10px] text-muted-foreground">Grave 20-30s falando naturalmente para clonarmos sua voz.</div>
+            <div className="font-mono text-[10px] text-muted-foreground">{t("Grave 20-30s falando naturalmente para clonarmos sua voz.", "Record 20–30 seconds of natural speech so we can clone your voice.", "Graba entre 20 y 30 segundos hablando con naturalidad para que podamos clonar tu voz.")}</div>
             <div className="flex items-center gap-2">
               {recState === "idle" && (
-                <Button size="sm" onClick={startVoiceRecording} className="font-mono text-xs"><Mic className="h-3.5 w-3.5 mr-1.5" />Gravar</Button>
+                <Button size="sm" onClick={startVoiceRecording} className="font-mono text-xs"><Mic className="h-3.5 w-3.5 mr-1.5" />{t("Gravar", "Record", "Grabar")}</Button>
               )}
               {recState === "recording" && (
-                <Button size="sm" variant="destructive" onClick={stopVoiceRecording} className="font-mono text-xs"><Square className="h-3.5 w-3.5 mr-1.5" />Parar</Button>
+                <Button size="sm" variant="destructive" onClick={stopVoiceRecording} className="font-mono text-xs"><Square className="h-3.5 w-3.5 mr-1.5" />{t("Parar", "Stop", "Detener")}</Button>
               )}
               {(recState === "recorded" || recState === "cloning") && (
                 <>
                   {audioUrl && <audio src={audioUrl} controls className="h-8" />}
                   <Button size="sm" onClick={cloneVoiceNow} disabled={recState === "cloning"} className="font-mono text-xs">
                     {recState === "cloning" ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />}
-                    Clonar Voz
+                    {t("Clonar Voz", "Clone Voice", "Clonar voz")}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => { setRecState("idle"); setAudioUrl(null); setAudioBase64(null); }} className="font-mono text-xs">Regravar</Button>
+                  <Button size="sm" variant="outline" onClick={() => { setRecState("idle"); setAudioUrl(null); setAudioBase64(null); }} className="font-mono text-xs">{t("Regravar", "Re-record", "Volver a grabar")}</Button>
                 </>
               )}
             </div>
@@ -1025,23 +1031,23 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
       <div className="border border-border/40 rounded-lg p-4 space-y-3">
         <div className="font-mono text-xs font-bold flex items-center gap-2">
           {avatarReady ? <CheckCircle2 className="h-4 w-4 text-green-400" /> : <Camera className="h-4 w-4 text-primary" />}
-          2. Seu avatar {avatarReady && <span className="text-green-400">— pronto</span>}
+          2. {t("Seu avatar", "Your avatar", "Tu avatar")} {avatarReady && <span className="text-green-400">— {t("pronto", "ready", "listo")}</span>}
         </div>
         {!avatarReady && (
           <div className="space-y-3">
             {!avatarMode && (
               <div className="grid grid-cols-3 gap-3">
                 <button onClick={() => { setAvatarMode("stock"); void loadStockAvatars(); }} className="p-3 rounded-lg border border-border/40 hover:border-primary/50 text-left transition-colors">
-                  <div className="font-mono text-xs font-bold">Avatar padrão</div>
-                  <div className="font-mono text-[10px] text-muted-foreground">Escolha um avatar pronto da NexOS</div>
+                  <div className="font-mono text-xs font-bold">{t("Avatar padrão", "Stock avatar", "Avatar predeterminado")}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground">{t("Escolha um avatar pronto da NexOS", "Choose a ready-made NexOS avatar", "Elige un avatar predeterminado de NexOS")}</div>
                 </button>
                 <button onClick={() => setAvatarMode("record")} className="p-3 rounded-lg border border-border/40 hover:border-primary/50 text-left transition-colors">
-                  <div className="font-mono text-xs font-bold">Foto rápida</div>
-                  <div className="font-mono text-[10px] text-muted-foreground">Capture um frame da webcam (instantâneo)</div>
+                  <div className="font-mono text-xs font-bold">{t("Foto rápida", "Quick photo", "Foto rápida")}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground">{t("Capture um frame da webcam (instantâneo)", "Capture a webcam frame (instant)", "Captura un fotograma de la cámara web (instantáneo)")}</div>
                 </button>
                 <button onClick={() => setAvatarMode("video")} className="p-3 rounded-lg border border-border/40 hover:border-primary/50 text-left transition-colors">
-                  <div className="font-mono text-xs font-bold">Vídeo (mais realista)</div>
-                  <div className="font-mono text-[10px] text-muted-foreground">Grave 2 vídeos — leva alguns minutos para treinar</div>
+                  <div className="font-mono text-xs font-bold">{t("Vídeo (mais realista)", "Video (more realistic)", "Vídeo (más realista)")}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground">{t("Grave 2 vídeos — leva alguns minutos para treinar", "Record 2 videos — training takes a few minutes", "Graba 2 vídeos; el entrenamiento tarda unos minutos")}</div>
                 </button>
               </div>
             )}
@@ -1051,65 +1057,65 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
                 {videoStep === "training" && (
                   <div className="space-y-2">
                     <div className="font-mono text-[10px] text-muted-foreground">
-                      Passo 1/2 — Grave 20-30s olhando para a câmera, falando naturalmente e movendo levemente a cabeça (isso treina seu avatar em vídeo).
+                      {t("Passo 1/2 — Grave 20-30s olhando para a câmera, falando naturalmente e movendo levemente a cabeça (isso treina seu avatar em vídeo).", "Step 1/2 — Record 20–30 seconds looking at the camera, speaking naturally, and moving your head slightly (this trains your video avatar).", "Paso 1/2: graba entre 20 y 30 segundos mirando a la cámara, hablando con naturalidad y moviendo ligeramente la cabeza (esto entrena tu avatar de vídeo).")}
                     </div>
                     {!videoStreamRef.current && videoRecState === "idle" && !trainingUrl && (
-                      <Button size="sm" onClick={() => startVideoRecording("training")} className="font-mono text-xs"><Camera className="h-3.5 w-3.5 mr-1.5" />Gravar treino</Button>
+                      <Button size="sm" onClick={() => startVideoRecording("training")} className="font-mono text-xs"><Camera className="h-3.5 w-3.5 mr-1.5" />{t("Gravar treino", "Record training", "Grabar entrenamiento")}</Button>
                     )}
                     {videoRecState === "recording" && (
-                      <Button size="sm" variant="destructive" onClick={stopVideoRecording} className="font-mono text-xs"><Square className="h-3.5 w-3.5 mr-1.5" />Parar</Button>
+                      <Button size="sm" variant="destructive" onClick={stopVideoRecording} className="font-mono text-xs"><Square className="h-3.5 w-3.5 mr-1.5" />{t("Parar", "Stop", "Detener")}</Button>
                     )}
                     {trainingUrl && (
                       <div className="space-y-2">
                         <video src={trainingUrl} controls className="w-full max-w-xs rounded-lg" />
                         <div className="flex gap-2">
                           <Button size="sm" onClick={() => { setVideoStep("consent"); setVideoRecState("idle"); }} className="font-mono text-xs">
-                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Próximo passo
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />{t("Próximo passo", "Next step", "Siguiente paso")}
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => retakeVideo("training")} className="font-mono text-xs">Regravar</Button>
+                          <Button size="sm" variant="outline" onClick={() => retakeVideo("training")} className="font-mono text-xs">{t("Regravar", "Re-record", "Volver a grabar")}</Button>
                         </div>
                       </div>
                     )}
-                    <button onClick={() => setAvatarMode(null)} className="font-mono text-[10px] text-muted-foreground hover:underline">← Voltar</button>
+                    <button onClick={() => setAvatarMode(null)} className="font-mono text-[10px] text-muted-foreground hover:underline">{t("← Voltar", "← Back", "← Volver")}</button>
                   </div>
                 )}
 
                 {videoStep === "consent" && (
                   <div className="space-y-2">
                     <div className="font-mono text-[10px] text-muted-foreground">
-                      Passo 2/2 — Grave-se dizendo: <span className="text-foreground">"Eu autorizo o uso da minha imagem e voz para criar um avatar digital meu."</span>
+                      {t("Passo 2/2 — Grave-se dizendo:", "Step 2/2 — Record yourself saying:", "Paso 2/2: grábate diciendo:")} <span className="text-foreground">{t('"Eu autorizo o uso da minha imagem e voz para criar um avatar digital meu."', '"I authorize the use of my image and voice to create my digital avatar."', '"Autorizo el uso de mi imagen y voz para crear mi avatar digital."')}</span>
                     </div>
                     {videoRecState === "idle" && !consentUrl && (
-                      <Button size="sm" onClick={() => startVideoRecording("consent")} className="font-mono text-xs"><Mic className="h-3.5 w-3.5 mr-1.5" />Gravar consentimento</Button>
+                      <Button size="sm" onClick={() => startVideoRecording("consent")} className="font-mono text-xs"><Mic className="h-3.5 w-3.5 mr-1.5" />{t("Gravar consentimento", "Record consent", "Grabar consentimiento")}</Button>
                     )}
                     {videoRecState === "recording" && (
-                      <Button size="sm" variant="destructive" onClick={stopVideoRecording} className="font-mono text-xs"><Square className="h-3.5 w-3.5 mr-1.5" />Parar</Button>
+                      <Button size="sm" variant="destructive" onClick={stopVideoRecording} className="font-mono text-xs"><Square className="h-3.5 w-3.5 mr-1.5" />{t("Parar", "Stop", "Detener")}</Button>
                     )}
                     {consentUrl && (
                       <div className="space-y-2">
                         <video src={consentUrl} controls className="w-full max-w-xs rounded-lg" />
                         <div className="flex gap-2">
                           <Button size="sm" onClick={() => void submitVideoClone()} className="font-mono text-xs">
-                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Enviar para treinamento
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />{t("Enviar para treinamento", "Submit for training", "Enviar para entrenamiento")}
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => retakeVideo("consent")} className="font-mono text-xs">Regravar</Button>
+                          <Button size="sm" variant="outline" onClick={() => retakeVideo("consent")} className="font-mono text-xs">{t("Regravar", "Re-record", "Volver a grabar")}</Button>
                         </div>
                       </div>
                     )}
-                    <button onClick={() => setVideoStep("training")} className="font-mono text-[10px] text-muted-foreground hover:underline">← Voltar</button>
+                    <button onClick={() => setVideoStep("training")} className="font-mono text-[10px] text-muted-foreground hover:underline">{t("← Voltar", "← Back", "← Volver")}</button>
                   </div>
                 )}
 
                 {videoStep === "uploading" && (
                   <div className="font-mono text-xs flex items-center gap-2 text-muted-foreground">
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />Enviando vídeos...
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />{t("Enviando vídeos...", "Uploading videos...", "Subiendo vídeos...")}
                   </div>
                 )}
 
                 {videoStep === "training_pending" && (
                   <div className="font-mono text-xs flex items-center gap-2 text-muted-foreground">
                     <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                    Treinando seu avatar digital ({avatarTrainingStatus ?? "pending"})... isso pode levar alguns minutos, você pode aguardar aqui.
+                    {t(`Treinando seu avatar digital (${avatarTrainingStatus ?? "pending"})... isso pode levar alguns minutos, você pode aguardar aqui.`, `Training your digital avatar (${avatarTrainingStatus ?? "pending"})... this may take a few minutes; you can wait here.`, `Entrenando tu avatar digital (${avatarTrainingStatus ?? "pending"})... puede tardar unos minutos; puedes esperar aquí.`)}
                   </div>
                 )}
               </div>
@@ -1118,7 +1124,7 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
             {avatarMode === "stock" && (
               <div className="space-y-2">
                 {stockLoading ? (
-                  <div className="font-mono text-[10px] text-muted-foreground">Carregando avatares...</div>
+                  <div className="font-mono text-[10px] text-muted-foreground">{t("Carregando avatares...", "Loading avatars...", "Cargando avatares...")}</div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
                     {stockAvatars.map(a => (
@@ -1131,40 +1137,40 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
                         <div className="w-full h-16 rounded mb-1 bg-primary/10 flex items-center justify-center">
                           <User className="h-6 w-6 text-primary/60" />
                         </div>
-                        <div className="font-mono text-[9px]">{selectingStockId === a.id ? "Selecionando..." : a.label}</div>
+                        <div className="font-mono text-[9px]">{selectingStockId === a.id ? t("Selecionando...", "Selecting...", "Seleccionando...") : a.label}</div>
                       </button>
                     ))}
                   </div>
                 )}
-                <button onClick={() => setAvatarMode(null)} className="font-mono text-[10px] text-muted-foreground hover:underline">← Voltar</button>
+                <button onClick={() => setAvatarMode(null)} className="font-mono text-[10px] text-muted-foreground hover:underline">{t("← Voltar", "← Back", "← Volver")}</button>
               </div>
             )}
 
             {avatarMode === "record" && (
               <div className="space-y-2">
                 {!camStream && !frameBase64 && (
-                  <Button size="sm" onClick={startCamera} className="font-mono text-xs"><Camera className="h-3.5 w-3.5 mr-1.5" />Ligar câmera</Button>
+                  <Button size="sm" onClick={startCamera} className="font-mono text-xs"><Camera className="h-3.5 w-3.5 mr-1.5" />{t("Ligar câmera", "Turn on camera", "Activar cámara")}</Button>
                 )}
                 {camStream && (
                   <div className="space-y-2">
                     <video ref={videoRef} autoPlay muted playsInline className="w-full max-w-xs rounded-lg bg-black" />
-                    <Button size="sm" onClick={captureFrame} className="font-mono text-xs"><Camera className="h-3.5 w-3.5 mr-1.5" />Capturar</Button>
+                    <Button size="sm" onClick={captureFrame} className="font-mono text-xs"><Camera className="h-3.5 w-3.5 mr-1.5" />{t("Capturar", "Capture", "Capturar")}</Button>
                   </div>
                 )}
                 {frameBase64 && !avatarReady && (
                   <div className="space-y-2">
-                    <img src={`data:image/jpeg;base64,${frameBase64}`} alt="Frame capturado" className="w-full max-w-xs rounded-lg" />
+                    <img src={`data:image/jpeg;base64,${frameBase64}`} alt={t("Frame capturado", "Captured frame", "Fotograma capturado")} className="w-full max-w-xs rounded-lg" />
                     <div className="flex gap-2">
                       <Button size="sm" onClick={createAvatarFromFrame} disabled={avatarUploading} className="font-mono text-xs">
                         {avatarUploading ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />}
-                        Criar Avatar
+                        {t("Criar Avatar", "Create Avatar", "Crear avatar")}
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => setFrameBase64(null)} className="font-mono text-xs">Refazer</Button>
+                      <Button size="sm" variant="outline" onClick={() => setFrameBase64(null)} className="font-mono text-xs">{t("Refazer", "Retake", "Volver a tomar")}</Button>
                     </div>
                   </div>
                 )}
                 <canvas ref={canvasRef} className="hidden" />
-                <button onClick={() => setAvatarMode(null)} className="font-mono text-[10px] text-muted-foreground hover:underline">← Voltar</button>
+                <button onClick={() => setAvatarMode(null)} className="font-mono text-[10px] text-muted-foreground hover:underline">{t("← Voltar", "← Back", "← Volver")}</button>
               </div>
             )}
           </div>
@@ -1173,7 +1179,7 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
 
       <Button onClick={resumePipeline} disabled={!canResume || resuming} className="font-mono w-full">
         {resuming ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
-        Continuar Geração do Vídeo
+        {t("Continuar Geração do Vídeo", "Continue Video Generation", "Continuar generación del vídeo")}
       </Button>
     </div>
   );
@@ -1182,6 +1188,9 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function VideoProductionPage() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
+  const dateLocale = intlLocale(locale);
   const [, navigate] = useLocation();
   const [projects, setProjects] = useState<VideoProject[]>([]);
   const [selected, setSelected] = useState<VideoProject | null>(null);
@@ -1299,7 +1308,7 @@ export default function VideoProductionPage() {
 
       // 2 — upload raw video blob (streaming)
       const token = localStorage.getItem("accessToken") ?? localStorage.getItem("nexos_token");
-      if (!token) throw new Error("Sua sessão expirou. Entre novamente para enviar o vídeo.");
+      if (!token) throw new Error(t("Sua sessão expirou. Entre novamente para enviar o vídeo.", "Your session expired. Sign in again to upload the video.", "Tu sesión ha caducado. Inicia sesión de nuevo para subir el vídeo."));
       const uploadRes = await fetch(`/api/recordings/${recId}/upload?mode=hybrid`, {
         method: "POST",
         headers: {
@@ -1308,12 +1317,12 @@ export default function VideoProductionPage() {
         },
         body: hybridFile,
       });
-      if (!uploadRes.ok) throw new Error("Upload falhou");
+      if (!uploadRes.ok) throw new Error(t("Upload falhou", "Upload failed", "Falló la carga"));
 
-      toast.success("Gravação enviada! Abrindo editor de vídeo…");
+      toast.success(t("Gravação enviada! Abrindo editor de vídeo…", "Recording uploaded! Opening video editor…", "¡Grabación subida! Abriendo el editor de vídeo…"));
       navigate(`/video-editor?recordingId=${recId}&projectId=${selected.id}`);
     } catch (err) {
-      toast.error("Falha no upload. Tente novamente.");
+      toast.error(t("Falha no upload. Tente novamente.", "Upload failed. Please try again.", "Falló la carga. Inténtalo de nuevo."));
     } finally {
       setHybridUploading(false);
     }
@@ -1342,66 +1351,66 @@ export default function VideoProductionPage() {
   function downloadFilmingBrief() {
     if (!selected?.config.filmingBrief) return;
     const brief = selected.config.filmingBrief;
-    const timestamp = new Date().toLocaleString("pt-BR");
+    const timestamp = new Date().toLocaleString(dateLocale);
     const fingerprint = `${selected.id.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
 
     const lines: string[] = [
       "═══════════════════════════════════════════════════════════",
-      "  DIREÇÃO DE FILMAGEM — ATLAS / NexOS AI",
+      `  ${t("DIREÇÃO DE FILMAGEM", "FILMING DIRECTION", "DIRECCIÓN DE RODAJE")} — ATLAS / NexOS AI`,
       "═══════════════════════════════════════════════════════════",
-      `  Projeto: ${selected.title}`,
-      `  Formato: ${selected.format.replace(/_/g, " ").toUpperCase()}`,
-      `  Gerado em: ${timestamp}`,
-      `  ID de verificação: ${fingerprint}`,
-      "  ⚠ DOCUMENTO CONFIDENCIAL — uso exclusivo do destinatário",
+      `  ${t("Projeto", "Project", "Proyecto")}: ${selected.title}`,
+      `  ${t("Formato", "Format", "Formato")}: ${selected.format.replace(/_/g, " ").toUpperCase()}`,
+      `  ${t("Gerado em", "Generated on", "Generado el")}: ${timestamp}`,
+      `  ${t("ID de verificação", "Verification ID", "ID de verificación")}: ${fingerprint}`,
+      `  ⚠ ${t("DOCUMENTO CONFIDENCIAL — uso exclusivo do destinatário", "CONFIDENTIAL DOCUMENT — for recipient's use only", "DOCUMENTO CONFIDENCIAL — uso exclusivo del destinatario")}`,
       "═══════════════════════════════════════════════════════════",
       "",
-      "▌ VESTUÁRIO",
-      `  Cor: ${brief.vestuario.cor}`,
-      `  Estilo: ${brief.vestuario.estilo}`,
-      `  Evitar: ${brief.vestuario.evitar}`,
-      `  Por quê: ${brief.vestuario.rationale}`,
+      `▌ ${t("VESTUÁRIO", "WARDROBE", "VESTUARIO")}`,
+      `  ${t("Cor", "Color", "Color")}: ${brief.vestuario.cor}`,
+      `  ${t("Estilo", "Style", "Estilo")}: ${brief.vestuario.estilo}`,
+      `  ${t("Evitar", "Avoid", "Evitar")}: ${brief.vestuario.evitar}`,
+      `  ${t("Por quê", "Why", "Por qué")}: ${brief.vestuario.rationale}`,
       "",
-      "▌ CENÁRIO",
-      `  Tipo: ${brief.cenario.tipo}`,
-      `  Fundo: ${brief.cenario.fundo}`,
-      `  Iluminação: ${brief.cenario.iluminacao}`,
-      `  Elementos: ${brief.cenario.elementos.join(" / ")}`,
-      `  Por quê: ${brief.cenario.rationale}`,
+      `▌ ${t("CENÁRIO", "SETTING", "ESCENARIO")}`,
+      `  ${t("Tipo", "Type", "Tipo")}: ${brief.cenario.tipo}`,
+      `  ${t("Fundo", "Background", "Fondo")}: ${brief.cenario.fundo}`,
+      `  ${t("Iluminação", "Lighting", "Iluminación")}: ${brief.cenario.iluminacao}`,
+      `  ${t("Elementos", "Elements", "Elementos")}: ${brief.cenario.elementos.join(" / ")}`,
+      `  ${t("Por quê", "Why", "Por qué")}: ${brief.cenario.rationale}`,
       "",
-      "▌ LINGUAGEM CORPORAL E VOZ",
-      `  Tom: ${brief.linguagem.tom}`,
-      `  Velocidade: ${brief.linguagem.velocidade}`,
-      `  Pausas: ${brief.linguagem.pausas}`,
-      `  Gestos: ${brief.linguagem.gestos}`,
-      `  Olhar: ${brief.linguagem.olhar}`,
+      `▌ ${t("LINGUAGEM CORPORAL E VOZ", "BODY LANGUAGE AND VOICE", "LENGUAJE CORPORAL Y VOZ")}`,
+      `  ${t("Tom", "Tone", "Tono")}: ${brief.linguagem.tom}`,
+      `  ${t("Velocidade", "Pace", "Velocidad")}: ${brief.linguagem.velocidade}`,
+      `  ${t("Pausas", "Pauses", "Pausas")}: ${brief.linguagem.pausas}`,
+      `  ${t("Gestos", "Gestures", "Gestos")}: ${brief.linguagem.gestos}`,
+      `  ${t("Olhar", "Gaze", "Mirada")}: ${brief.linguagem.olhar}`,
       "",
       "═══════════════════════════════════════════════════════════",
-      "  DIREÇÃO CENA A CENA",
+      `  ${t("DIREÇÃO CENA A CENA", "SCENE-BY-SCENE DIRECTION", "DIRECCIÓN ESCENA POR ESCENA")}`,
       "═══════════════════════════════════════════════════════════",
     ];
 
     for (const scene of brief.scenes) {
       lines.push("");
       lines.push(`▌ ${scene.titulo.toUpperCase()} [${scene.sceneType.toUpperCase()}]`);
-      lines.push(`  Entrega emocional: ${scene.entregaEmocional}`);
+      lines.push(`  ${t("Entrega emocional", "Emotional delivery", "Interpretación emocional")}: ${scene.entregaEmocional}`);
       if (scene.voiceoverText) {
-        lines.push(`  Texto: "${scene.voiceoverText.slice(0, 120)}${scene.voiceoverText.length > 120 ? "..." : ""}"`);
+        lines.push(`  ${t("Texto", "Text", "Texto")}: "${scene.voiceoverText.slice(0, 120)}${scene.voiceoverText.length > 120 ? "..." : ""}"`);
       }
       lines.push("");
       for (const take of scene.takes) {
-        lines.push(`  ◆ TAKE ${take.numero} — ${take.energia}`);
-        lines.push(`    Postura: ${take.postura}`);
-        lines.push(`    Instrução: ${take.instrucao}`);
-        if (take.variacao) lines.push(`    Variação: ${take.variacao}`);
+        lines.push(`  ◆ ${t("TAKE", "TAKE", "TOMA")} ${take.numero} — ${take.energia}`);
+        lines.push(`    ${t("Postura", "Posture", "Postura")}: ${take.postura}`);
+        lines.push(`    ${t("Instrução", "Direction", "Instrucción")}: ${take.instrucao}`);
+        if (take.variacao) lines.push(`    ${t("Variação", "Variation", "Variación")}: ${take.variacao}`);
         lines.push("");
       }
-      lines.push(`  💡 Dica do ATLAS: ${scene.dica}`);
+      lines.push(`  💡 ${t("Dica do ATLAS", "ATLAS Tip", "Consejo de ATLAS")}: ${scene.dica}`);
     }
 
     lines.push("");
     lines.push("═══════════════════════════════════════════════════════════");
-    lines.push("  MENSAGEM DO DIRETOR");
+    lines.push(`  ${t("MENSAGEM DO DIRETOR", "DIRECTOR'S MESSAGE", "MENSAJE DEL DIRECTOR")}`);
     lines.push("═══════════════════════════════════════════════════════════");
     lines.push(`  ${brief.mensagemFinal}`);
     lines.push("");
@@ -1437,15 +1446,15 @@ export default function VideoProductionPage() {
               <Film className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <div className="font-mono font-bold text-foreground">Produção de Vídeo</div>
-              <div className="font-mono text-[10px] text-muted-foreground">Roteiro → Storyboard → Preview → Vídeo HD Final</div>
+              <div className="font-mono font-bold text-foreground">{t("Produção de Vídeo", "Video Production", "Producción de vídeo")}</div>
+              <div className="font-mono text-[10px] text-muted-foreground">{t("Roteiro → Storyboard → Preview → Vídeo HD Final", "Script → Storyboard → Preview → Final HD Video", "Guion → Storyboard → Vista previa → Vídeo HD final")}</div>
             </div>
           </div>
           <div className="flex items-center gap-3">
             {provider && !provider.configured && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-yellow-500/30 bg-yellow-500/10">
                 <AlertCircle className="h-3.5 w-3.5 text-yellow-400" />
-                <span className="font-mono text-[10px] text-yellow-400">Provedor não configurado</span>
+                <span className="font-mono text-[10px] text-yellow-400">{t("Provedor não configurado", "Provider not configured", "Proveedor no configurado")}</span>
               </div>
             )}
             {provider?.configured && (
@@ -1455,7 +1464,7 @@ export default function VideoProductionPage() {
               </div>
             )}
             <Button onClick={() => setCreating(true)} size="sm" className="font-mono text-xs">
-              <Plus className="h-3.5 w-3.5 mr-1.5" />Novo Vídeo
+              <Plus className="h-3.5 w-3.5 mr-1.5" />{t("Novo Vídeo", "New Video", "Nuevo vídeo")}
             </Button>
           </div>
         </div>
@@ -1469,9 +1478,9 @@ export default function VideoProductionPage() {
               <User className="h-4 w-4 text-amber-400" />
             </div>
             <div className="flex-1">
-              <p className="font-mono text-sm font-bold text-amber-300">Configurar clone digital para vídeos automáticos</p>
+              <p className="font-mono text-sm font-bold text-amber-300">{t("Configurar clone digital para vídeos automáticos", "Set up your digital clone for automated videos", "Configura tu clon digital para vídeos automáticos")}</p>
               <p className="font-mono text-xs text-amber-300/70 mt-0.5">
-                Para criar vídeos com você na câmera, crie um projeto abaixo, selecione <strong>"Quero aparecer nos vídeos"</strong> e configure seu avatar e voz clonada. Depois os posts de Presença Social usarão você automaticamente.
+                {t('Para criar vídeos com você na câmera, crie um projeto abaixo, selecione "Quero aparecer nos vídeos" e configure seu avatar e voz clonada. Depois os posts de Presença Social usarão você automaticamente.', 'To create videos featuring you on camera, create a project below, select "I want to appear in videos", and set up your avatar and cloned voice. Social Presence posts will then use you automatically.', 'Para crear vídeos en los que aparezcas, crea un proyecto abajo, selecciona "Quiero aparecer en los vídeos" y configura tu avatar y voz clonada. Después, las publicaciones de Presencia Social te usarán automáticamente.')}
               </p>
             </div>
             <Button
@@ -1480,7 +1489,7 @@ export default function VideoProductionPage() {
               variant="outline"
               onClick={() => setCreating(true)}
             >
-              <Plus className="h-3.5 w-3.5 mr-1.5" />Criar projeto
+              <Plus className="h-3.5 w-3.5 mr-1.5" />{t("Criar projeto", "Create project", "Crear proyecto")}
             </Button>
           </div>
         </div>
@@ -1489,15 +1498,15 @@ export default function VideoProductionPage() {
       <div className="max-w-7xl mx-auto px-6 py-6 flex gap-6">
         {/* Left: project list */}
         <div className="w-72 shrink-0">
-          <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mb-3">Projetos</div>
+          <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mb-3">{t("Projetos", "Projects", "Proyectos")}</div>
           <div className="space-y-2">
-            {loading && <div className="font-mono text-xs text-muted-foreground">Carregando...</div>}
+            {loading && <div className="font-mono text-xs text-muted-foreground">{t("Carregando...", "Loading...", "Cargando...")}</div>}
             {!loading && !projects.length && !creating && (
               <div className="border border-border/40 rounded-lg p-4 text-center">
                 <Film className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                <div className="font-mono text-xs text-muted-foreground">Nenhum projeto ainda</div>
+                <div className="font-mono text-xs text-muted-foreground">{t("Nenhum projeto ainda", "No projects yet", "Aún no hay proyectos")}</div>
                 <Button variant="ghost" size="sm" className="font-mono text-xs mt-2" onClick={() => setCreating(true)}>
-                  Criar primeiro vídeo
+                  {t("Criar primeiro vídeo", "Create first video", "Crear el primer vídeo")}
                 </Button>
               </div>
             )}
@@ -1508,8 +1517,8 @@ export default function VideoProductionPage() {
                 className={`w-full text-left border rounded-lg p-3 transition-all ${selected?.id === p.id ? "border-primary bg-primary/5" : "border-border/40 hover:border-border"}`}
               >
                 <div className="font-mono text-xs font-medium truncate">{p.title}</div>
-                <div className="font-mono text-[10px] text-muted-foreground mt-0.5 uppercase">{p.format} · {STATUS_LABELS[p.status]?.split("—")[0]?.trim()}</div>
-                {p.status === "completed" && <div className="font-mono text-[9px] text-green-400 mt-0.5">✓ Concluído</div>}
+                <div className="font-mono text-[10px] text-muted-foreground mt-0.5 uppercase">{p.format} · {t(...STATUS_LABELS[p.status]).split("—")[0]?.trim()}</div>
+                {p.status === "completed" && <div className="font-mono text-[9px] text-green-400 mt-0.5">✓ {t("Concluído", "Completed", "Completado")}</div>}
               </button>
             ))}
           </div>
@@ -1519,7 +1528,7 @@ export default function VideoProductionPage() {
         <div className="flex-1 min-w-0">
           {creating && !selected && (
             <div className="border border-border/40 rounded-xl p-6 bg-background/40">
-              <div className="font-mono text-sm font-bold mb-4">Novo Projeto de Vídeo</div>
+              <div className="font-mono text-sm font-bold mb-4">{t("Novo Projeto de Vídeo", "New Video Project", "Nuevo proyecto de vídeo")}</div>
               <CreateProjectForm onCreated={handleCreated} providerConfigured={provider?.configured} />
             </div>
           )}
@@ -1527,9 +1536,9 @@ export default function VideoProductionPage() {
           {!creating && !selected && (
             <div className="flex flex-col items-center justify-center h-64 gap-3 border border-dashed border-border/40 rounded-xl">
               <Film className="h-10 w-10 text-muted-foreground/30" />
-              <div className="font-mono text-sm text-muted-foreground">Selecione um projeto ou crie um novo</div>
+              <div className="font-mono text-sm text-muted-foreground">{t("Selecione um projeto ou crie um novo", "Select a project or create a new one", "Selecciona un proyecto o crea uno nuevo")}</div>
               <Button onClick={() => setCreating(true)} variant="outline" size="sm" className="font-mono text-xs">
-                <Plus className="h-3.5 w-3.5 mr-1.5" />Novo Vídeo
+                <Plus className="h-3.5 w-3.5 mr-1.5" />{t("Novo Vídeo", "New Video", "Nuevo vídeo")}
               </Button>
             </div>
           )}
@@ -1544,17 +1553,17 @@ export default function VideoProductionPage() {
                     <div className="font-mono text-xs text-muted-foreground mt-0.5">
                       {selected.format.replace(/_/g," ").toUpperCase()} ·{" "}
                       {selected.config.aspectRatio} ·{" "}
-                      {selected.config.hasUserFace ? "Com apresentador" : "B-roll"} ·{" "}
-                      {selected.creditsUsed} cr usados
+                      {selected.config.hasUserFace ? t("Com apresentador", "With presenter", "Con presentador") : "B-roll"} ·{" "}
+                      {t(`${selected.creditsUsed} cr usados`, `${selected.creditsUsed} credits used`, `${selected.creditsUsed} créditos usados`)}
                     </div>
                   </div>
                   <Button variant="ghost" size="sm" onClick={refreshSelected} className="font-mono text-xs">
-                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Atualizar
+                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" />{t("Atualizar", "Refresh", "Actualizar")}
                   </Button>
                 </div>
                 <PipelineBar status={selected.status} />
                 <div className="mt-3 font-mono text-xs text-muted-foreground">
-                  {STATUS_LABELS[selected.status]}
+                  {t(...STATUS_LABELS[selected.status])}
                 </div>
               </div>
 
@@ -1564,17 +1573,16 @@ export default function VideoProductionPage() {
                   <div className="flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="font-mono text-sm font-bold text-amber-500 mb-1">Geração de Vídeo 100% IA Temporariamente Indisponível</div>
+                      <div className="font-mono text-sm font-bold text-amber-500 mb-1">{t("Geração de Vídeo 100% IA Temporariamente Indisponível", "100% AI video generation is temporarily unavailable", "La generación de vídeo 100 % con IA no está disponible temporalmente")}</div>
                       <div className="font-mono text-xs text-muted-foreground mb-3">
-                        Não há um provedor de vídeo configurado ou ativo neste momento para processamento 100% autônomo.
-                        Para dar andamento imediato na produção do seu vídeo:
+                        {t("Não há um provedor de vídeo configurado ou ativo neste momento para processamento 100% autônomo. Para dar andamento imediato na produção do seu vídeo:", "No video provider is configured or active for fully automated processing right now. To continue producing your video immediately:", "Ahora no hay ningún proveedor de vídeo configurado o activo para el procesamiento totalmente automático. Para continuar la producción de tu vídeo de inmediato:")}
                       </div>
                       <ul className="font-mono text-xs text-muted-foreground list-disc ml-5 mb-4 space-y-1">
-                        <li><strong>Modo Híbrido:</strong> Altere para Híbrido, grave com a sua própria câmera, e envie para a IA apenas legendar e cortar.</li>
-                        <li><strong>NexOS Studio:</strong> Utilize o Studio (Editor Completo) para renderizar projetos em <strong>Digital Twin</strong> caso possua motor próprio.</li>
+                        <li><strong>{t("Modo Híbrido", "Hybrid mode", "Modo híbrido")}:</strong> {t("Altere para Híbrido, grave com a sua própria câmera, e envie para a IA apenas legendar e cortar.", "Switch to Hybrid mode, record with your own camera, and let AI handle only captions and cuts.", "Cambia al modo híbrido, graba con tu propia cámara y usa la IA solo para añadir subtítulos y hacer cortes.")}</li>
+                        <li><strong>NexOS Studio:</strong> {t("Utilize o Studio (Editor Completo) para renderizar projetos em", "Use Studio (Full Editor) to render projects in", "Usa Studio (editor completo) para renderizar proyectos en")} <strong>Digital Twin</strong> {t("caso possua motor próprio.", "if you have your own engine.", "si tienes tu propio motor.")}</li>
                       </ul>
                       <div className="font-mono text-[10px] text-muted-foreground italic">
-                        Roteiro e storyboard (ideação) já funcionam perfeitamente para qualquer modo.
+                        {t("Roteiro e storyboard (ideação) já funcionam perfeitamente para qualquer modo.", "Script and storyboard (ideation) already work perfectly in any mode.", "El guion y el storyboard (ideación) ya funcionan perfectamente en cualquier modo.")}
                       </div>
                     </div>
                   </div>
@@ -1584,19 +1592,18 @@ export default function VideoProductionPage() {
               {/* Step actions */}
               {statusIs("intake") && (
                 <div className="border border-border/40 rounded-xl p-5 bg-background/40">
-                  <div className="font-mono text-sm font-bold mb-2">Passo 1 — Gerar Roteiro</div>
+                  <div className="font-mono text-sm font-bold mb-2">{t("Passo 1 — Gerar Roteiro", "Step 1 — Generate Script", "Paso 1: generar guion")}</div>
                   <div className="font-mono text-xs text-muted-foreground mb-4">
-                    O Roteiristo agente vai escrever o roteiro completo do seu {selected.format.replace(/_/g," ")} baseado no perfil da campanha.
-                    Você poderá editar antes de aprovar.
+                    {t(`O agente roteirista vai escrever o roteiro completo do seu ${selected.format.replace(/_/g," ")} baseado no perfil da campanha. Você poderá editar antes de aprovar.`, `The scriptwriter agent will write the complete ${selected.format.replace(/_/g," ")} script based on the campaign profile. You can edit it before approval.`, `El agente guionista redactará el guion completo de ${selected.format.replace(/_/g," ")} según el perfil de la campaña. Podrás editarlo antes de aprobarlo.`)}
                   </div>
                   <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground mb-4">
-                    <span className="flex items-center gap-1"><Sparkles className="h-3.5 w-3.5 text-primary" /> 18 créditos</span>
+                    <span className="flex items-center gap-1"><Sparkles className="h-3.5 w-3.5 text-primary" /> {t("18 créditos", "18 credits", "18 créditos")}</span>
                     <span>·</span>
-                    <span>Agente: Roteirista (GPT-5.5)</span>
+                    <span>{t("Agente:", "Agent:", "Agente:")} {t("Roteirista", "Scriptwriter", "Guionista")} (GPT-5.5)</span>
                   </div>
                   <Button onClick={generateScript} disabled={actionLoading} className="font-mono">
                     {actionLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
-                    Gerar Roteiro
+                    {t("Gerar Roteiro", "Generate Script", "Generar guion")}
                   </Button>
                 </div>
               )}
@@ -1604,7 +1611,7 @@ export default function VideoProductionPage() {
               {/* Script panel */}
               {["script_generating","script_ready","script_approved"].includes(selected.status) && (
                 <div className="border border-border/40 rounded-xl p-5 bg-background/40">
-                  <div className="font-mono text-sm font-bold mb-4">Roteiro</div>
+                  <div className="font-mono text-sm font-bold mb-4">{t("Roteiro", "Script", "Guion")}</div>
                   <ScriptPanel project={selected} onAction={refreshSelected} />
                 </div>
               )}
@@ -1612,18 +1619,18 @@ export default function VideoProductionPage() {
               {/* Generate storyboard CTA */}
               {statusIs("script_approved") && (
                 <div className="border border-border/40 rounded-xl p-5 bg-background/40">
-                  <div className="font-mono text-sm font-bold mb-2">Passo 3 — Criar Storyboard</div>
+                  <div className="font-mono text-sm font-bold mb-2">{t("Passo 3 — Criar Storyboard", "Step 3 — Create Storyboard", "Paso 3: crear storyboard")}</div>
                   <div className="font-mono text-xs text-muted-foreground mb-4">
-                    O Diretor de Cena vai dividir o roteiro em cenas individuais com descrição visual, paleta, transições e tempo.
+                    {t("O Diretor de Cena vai dividir o roteiro em cenas individuais com descrição visual, paleta, transições e tempo.", "The Scene Director will divide the script into individual scenes with visual descriptions, palettes, transitions, and timing.", "El director de escena dividirá el guion en escenas individuales con descripciones visuales, paletas, transiciones y duración.")}
                   </div>
                   <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground mb-4">
-                    <span className="flex items-center gap-1"><Sparkles className="h-3.5 w-3.5 text-primary" /> 12 créditos</span>
+                    <span className="flex items-center gap-1"><Sparkles className="h-3.5 w-3.5 text-primary" /> {t("12 créditos", "12 credits", "12 créditos")}</span>
                     <span>·</span>
-                    <span>Agente: Diretor de Cena (Gemini)</span>
+                    <span>{t("Agente:", "Agent:", "Agente:")} {t("Diretor de Cena", "Scene Director", "Director de escena")} (Gemini)</span>
                   </div>
                   <Button onClick={generateStoryboard} disabled={actionLoading} className="font-mono">
                     {actionLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Film className="h-4 w-4 mr-2" />}
-                    Criar Storyboard
+                    {t("Criar Storyboard", "Create Storyboard", "Crear storyboard")}
                   </Button>
                 </div>
               )}
@@ -1631,7 +1638,7 @@ export default function VideoProductionPage() {
               {/* Storyboard panel */}
               {["storyboard_generating","storyboard_ready","storyboard_approved"].includes(selected.status) && (
                 <div className="border border-border/40 rounded-xl p-5 bg-background/40">
-                  <div className="font-mono text-sm font-bold mb-4">Storyboard — Cenas</div>
+                  <div className="font-mono text-sm font-bold mb-4">{t("Storyboard — Cenas", "Storyboard — Scenes", "Storyboard: escenas")}</div>
                   <StoryboardPanel project={selected} onAction={refreshSelected} />
                 </div>
               )}
@@ -1647,13 +1654,13 @@ export default function VideoProductionPage() {
                       </div>
                       <div>
                         <div className="font-mono font-bold text-sm flex items-center gap-2">
-                          ATLAS — Direção de Filmagem
-                          <Badge variant="outline" className="font-mono text-[9px] text-primary border-primary/40">Diretor de Cena</Badge>
+                           ATLAS — {t("Direção de Filmagem", "Filming Direction", "Dirección de rodaje")}
+                           <Badge variant="outline" className="font-mono text-[9px] text-primary border-primary/40">{t("Diretor de Cena", "Scene Director", "Director de escena")}</Badge>
                         </div>
                         <div className="font-mono text-[11px] text-muted-foreground mt-0.5">
                           {selected.config.filmingBrief
-                            ? `Gerado em ${new Date(selected.config.filmingBriefGeneratedAt!).toLocaleDateString("pt-BR")} · ${selected.config.filmingBrief.scenes.length} cenas · take por take`
-                            : "ATLAS lê o roteiro e gera direção pontual — vestuário, cenário e takes específicos para este vídeo"
+                            ? t(`Gerado em ${new Date(selected.config.filmingBriefGeneratedAt!).toLocaleDateString(dateLocale)} · ${selected.config.filmingBrief.scenes.length} cenas · take por take`, `Generated on ${new Date(selected.config.filmingBriefGeneratedAt!).toLocaleDateString(dateLocale)} · ${selected.config.filmingBrief.scenes.length} scenes · take by take`, `Generado el ${new Date(selected.config.filmingBriefGeneratedAt!).toLocaleDateString(dateLocale)} · ${selected.config.filmingBrief.scenes.length} escenas · toma por toma`)
+                            : t("ATLAS lê o roteiro e gera direção pontual — vestuário, cenário e takes específicos para este vídeo", "ATLAS reads the script and creates tailored direction — wardrobe, setting, and specific takes for this video", "ATLAS lee el guion y genera indicaciones específicas: vestuario, escenario y tomas para este vídeo")
                           }
                         </div>
                       </div>
@@ -1667,7 +1674,7 @@ export default function VideoProductionPage() {
                           className="font-mono text-xs border-primary/30 text-primary hover:bg-primary/10"
                         >
                           <Download className="h-3.5 w-3.5 mr-1.5" />
-                          Baixar Briefing
+                          {t("Baixar Briefing", "Download Brief", "Descargar briefing")}
                         </Button>
                       )}
                       <Button
@@ -1678,10 +1685,10 @@ export default function VideoProductionPage() {
                         variant={selected.config.filmingBrief ? "outline" : "default"}
                       >
                         {briefLoading
-                          ? <><RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />Gerando...</>
+                          ? <><RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />{t("Gerando...", "Generating...", "Generando...")}</>
                           : selected.config.filmingBrief
-                          ? <><RefreshCw className="h-3.5 w-3.5 mr-1.5" />Regerar</>
-                          : <><Camera className="h-3.5 w-3.5 mr-1.5" />Pedir Direção do ATLAS</>
+                          ? <><RefreshCw className="h-3.5 w-3.5 mr-1.5" />{t("Regerar", "Regenerate", "Regenerar")}</>
+                          : <><Camera className="h-3.5 w-3.5 mr-1.5" />{t("Pedir Direção do ATLAS", "Request ATLAS Direction", "Solicitar indicaciones a ATLAS")}</>
                         }
                       </Button>
                     </div>
@@ -1692,9 +1699,9 @@ export default function VideoProductionPage() {
                     <div className="px-5 py-4 flex items-start gap-4">
                       <div className="flex-1 grid grid-cols-3 gap-3">
                         {[
-                          { icon: <Shirt className="h-4 w-4 text-primary" />, label: "Vestuário pontual", desc: "Cor e estilo específicos para este roteiro e tom" },
-                          { icon: <Lightbulb className="h-4 w-4 text-primary" />, label: "Cenário e luz", desc: "Setup do set que reforça a mensagem deste vídeo" },
-                          { icon: <Camera className="h-4 w-4 text-primary" />, label: "Takes cena a cena", desc: "2–3 takes por cena com instrução de energia e postura" },
+                          { icon: <Shirt className="h-4 w-4 text-primary" />, label: t("Vestuário pontual", "Tailored wardrobe", "Vestuario específico"), desc: t("Cor e estilo específicos para este roteiro e tom", "Colors and style tailored to this script and tone", "Colores y estilo específicos para este guion y tono") },
+                          { icon: <Lightbulb className="h-4 w-4 text-primary" />, label: t("Cenário e luz", "Setting and lighting", "Escenario e iluminación"), desc: t("Setup do set que reforça a mensagem deste vídeo", "Set setup that reinforces this video's message", "Configuración del set que refuerza el mensaje de este vídeo") },
+                          { icon: <Camera className="h-4 w-4 text-primary" />, label: t("Takes cena a cena", "Scene-by-scene takes", "Tomas escena por escena"), desc: t("2–3 takes por cena com instrução de energia e postura", "2–3 takes per scene with energy and posture guidance", "2–3 tomas por escena con indicaciones de energía y postura") },
                         ].map(item => (
                           <div key={item.label} className="border border-border/30 rounded-lg p-3 bg-background/30">
                             {item.icon}
@@ -1704,7 +1711,7 @@ export default function VideoProductionPage() {
                         ))}
                       </div>
                       <div className="font-mono text-[10px] text-muted-foreground whitespace-nowrap">
-                        12 créditos
+                        {t("12 créditos", "12 credits", "12 créditos")}
                       </div>
                     </div>
                   )}
@@ -1718,12 +1725,12 @@ export default function VideoProductionPage() {
                         <div className="border border-border/30 rounded-lg p-4 bg-background/30">
                           <div className="flex items-center gap-2 mb-3">
                             <Shirt className="h-3.5 w-3.5 text-primary" />
-                            <div className="font-mono text-xs font-bold text-primary uppercase tracking-wide">Vestuário</div>
+                            <div className="font-mono text-xs font-bold text-primary uppercase tracking-wide">{t("Vestuário", "Wardrobe", "Vestuario")}</div>
                           </div>
                           <div className="space-y-2 font-mono text-[11px]">
-                            <div><span className="text-muted-foreground">Cor:</span> {selected.config.filmingBrief.vestuario.cor}</div>
-                            <div><span className="text-muted-foreground">Estilo:</span> {selected.config.filmingBrief.vestuario.estilo}</div>
-                            <div className="text-orange-400/80">✕ Evitar: {selected.config.filmingBrief.vestuario.evitar}</div>
+                            <div><span className="text-muted-foreground">{t("Cor:", "Color:", "Color:")}</span> {selected.config.filmingBrief.vestuario.cor}</div>
+                            <div><span className="text-muted-foreground">{t("Estilo:", "Style:", "Estilo:")}</span> {selected.config.filmingBrief.vestuario.estilo}</div>
+                            <div className="text-orange-400/80">✕ {t("Evitar:", "Avoid:", "Evitar:")} {selected.config.filmingBrief.vestuario.evitar}</div>
                             <div className="text-muted-foreground/60 text-[10px] mt-2 pt-2 border-t border-border/20">{selected.config.filmingBrief.vestuario.rationale}</div>
                           </div>
                         </div>
@@ -1732,11 +1739,11 @@ export default function VideoProductionPage() {
                         <div className="border border-border/30 rounded-lg p-4 bg-background/30">
                           <div className="flex items-center gap-2 mb-3">
                             <Lightbulb className="h-3.5 w-3.5 text-primary" />
-                            <div className="font-mono text-xs font-bold text-primary uppercase tracking-wide">Cenário & Luz</div>
+                            <div className="font-mono text-xs font-bold text-primary uppercase tracking-wide">{t("Cenário & Luz", "Setting & Lighting", "Escenario e iluminación")}</div>
                           </div>
                           <div className="space-y-2 font-mono text-[11px]">
-                            <div><span className="text-muted-foreground">Fundo:</span> {selected.config.filmingBrief.cenario.fundo}</div>
-                            <div><span className="text-muted-foreground">Luz:</span> {selected.config.filmingBrief.cenario.iluminacao}</div>
+                            <div><span className="text-muted-foreground">{t("Fundo:", "Background:", "Fondo:")}</span> {selected.config.filmingBrief.cenario.fundo}</div>
+                            <div><span className="text-muted-foreground">{t("Luz:", "Lighting:", "Iluminación:")}</span> {selected.config.filmingBrief.cenario.iluminacao}</div>
                             {selected.config.filmingBrief.cenario.elementos.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {selected.config.filmingBrief.cenario.elementos.map((el, i) => (
@@ -1752,13 +1759,13 @@ export default function VideoProductionPage() {
                         <div className="border border-border/30 rounded-lg p-4 bg-background/30">
                           <div className="flex items-center gap-2 mb-3">
                             <Mic className="h-3.5 w-3.5 text-primary" />
-                            <div className="font-mono text-xs font-bold text-primary uppercase tracking-wide">Linguagem</div>
+                            <div className="font-mono text-xs font-bold text-primary uppercase tracking-wide">{t("Linguagem", "Delivery", "Forma de hablar")}</div>
                           </div>
                           <div className="space-y-2 font-mono text-[11px]">
-                            <div><span className="text-muted-foreground">Tom:</span> {selected.config.filmingBrief.linguagem.tom}</div>
-                            <div><span className="text-muted-foreground">Velocidade:</span> {selected.config.filmingBrief.linguagem.velocidade}</div>
-                            <div><span className="text-muted-foreground">Pausas:</span> {selected.config.filmingBrief.linguagem.pausas}</div>
-                            <div><span className="text-muted-foreground">Gestos:</span> {selected.config.filmingBrief.linguagem.gestos}</div>
+                            <div><span className="text-muted-foreground">{t("Tom:", "Tone:", "Tono:")}</span> {selected.config.filmingBrief.linguagem.tom}</div>
+                            <div><span className="text-muted-foreground">{t("Velocidade:", "Pace:", "Velocidad:")}</span> {selected.config.filmingBrief.linguagem.velocidade}</div>
+                            <div><span className="text-muted-foreground">{t("Pausas:", "Pauses:", "Pausas:")}</span> {selected.config.filmingBrief.linguagem.pausas}</div>
+                            <div><span className="text-muted-foreground">{t("Gestos:", "Gestures:", "Gestos:")}</span> {selected.config.filmingBrief.linguagem.gestos}</div>
                           </div>
                         </div>
                       </div>
@@ -1767,7 +1774,7 @@ export default function VideoProductionPage() {
                       <div>
                         <div className="font-mono text-xs font-bold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
                           <Clapperboard className="h-3.5 w-3.5" />
-                          Direção Cena a Cena — {selected.config.filmingBrief.scenes.length} cenas
+                          {t(`Direção Cena a Cena — ${selected.config.filmingBrief.scenes.length} cenas`, `Scene-by-Scene Direction — ${selected.config.filmingBrief.scenes.length} scenes`, `Dirección escena por escena — ${selected.config.filmingBrief.scenes.length} escenas`)}
                         </div>
                         <div className="space-y-2">
                           {selected.config.filmingBrief.scenes.map((scene, idx) => {
@@ -1788,7 +1795,7 @@ export default function VideoProductionPage() {
                                     <div>
                                       <div className="font-mono text-xs font-bold">{scene.titulo}</div>
                                       <div className="font-mono text-[10px] text-muted-foreground mt-0.5">
-                                        {scene.takes.length} takes · {scene.sceneType}
+                                         {t(`${scene.takes.length} takes · ${scene.sceneType}`, `${scene.takes.length} takes · ${scene.sceneType}`, `${scene.takes.length} tomas · ${scene.sceneType}`)}
                                         {scene.entregaEmocional && ` · ${scene.entregaEmocional.slice(0, 50)}${scene.entregaEmocional.length > 50 ? "..." : ""}`}
                                       </div>
                                     </div>
@@ -1842,9 +1849,9 @@ export default function VideoProductionPage() {
 
                       {/* ATLAS final message */}
                       <div className="border border-primary/20 rounded-lg p-4 bg-primary/5 text-center">
-                        <div className="font-mono text-[10px] text-primary/70 mb-2 uppercase tracking-widest">Mensagem do Diretor</div>
+                        <div className="font-mono text-[10px] text-primary/70 mb-2 uppercase tracking-widest">{t("Mensagem do Diretor", "Director's Message", "Mensaje del director")}</div>
                         <div className="font-mono text-sm text-foreground/90 italic">"{selected.config.filmingBrief.mensagemFinal}"</div>
-                        <div className="font-mono text-[9px] text-muted-foreground/50 mt-3">— ATLAS, Diretor de Cena · NexOS AI</div>
+                        <div className="font-mono text-[9px] text-muted-foreground/50 mt-3">— ATLAS, {t("Diretor de Cena", "Scene Director", "Director de escena")} · NexOS AI</div>
                       </div>
                     </div>
                   )}
@@ -1854,7 +1861,7 @@ export default function VideoProductionPage() {
               {/* Generate preview CTA */}
               {statusIs("storyboard_approved") && (
                 <div className="border border-border/40 rounded-xl p-5 bg-background/40 space-y-4">
-                  <div className="font-mono text-sm font-bold">Passo 5 — Escolha o Modo de Produção</div>
+                  <div className="font-mono text-sm font-bold">{t("Passo 5 — Escolha o Modo de Produção", "Step 5 — Choose Production Mode", "Paso 5: elige el modo de producción")}</div>
 
                   {/* Mode selector — only when hasUserFace=true */}
                   {selected.config.hasUserFace && (
@@ -1865,10 +1872,10 @@ export default function VideoProductionPage() {
                       >
                         <div className="flex items-center gap-2 mb-1.5">
                           <Sparkles className="h-4 w-4 text-primary shrink-0" />
-                          <span className="font-mono text-sm font-bold">100% IA</span>
+                          <span className="font-mono text-sm font-bold">{t("100% IA", "100% AI", "100% IA")}</span>
                         </div>
-                        <div className="font-mono text-[10px] text-muted-foreground">Avatar gerado por IA. Zero gravação necessária.</div>
-                        <div className="font-mono text-[10px] text-primary mt-1.5">80 cr/cena</div>
+                          <div className="font-mono text-[10px] text-muted-foreground">{t("Avatar gerado por IA. Zero gravação necessária.", "AI-generated avatar. No recording needed.", "Avatar generado por IA. No hace falta grabar.")}</div>
+                          <div className="font-mono text-[10px] text-primary mt-1.5">{t("80 cr/cena", "80 credits/scene", "80 créditos/escena")}</div>
                       </button>
                       <button
                         onClick={() => setHybridMode("recording")}
@@ -1876,10 +1883,10 @@ export default function VideoProductionPage() {
                       >
                         <div className="flex items-center gap-2 mb-1.5">
                           <Camera className="h-4 w-4 text-primary shrink-0" />
-                          <span className="font-mono text-sm font-bold">Híbrido</span>
+                          <span className="font-mono text-sm font-bold">{t("Híbrido", "Hybrid", "Híbrido")}</span>
                         </div>
-                        <div className="font-mono text-[10px] text-muted-foreground">Você grava, a IA edita. Legendas, trilha e cortes automáticos.</div>
-                        <div className="font-mono text-[10px] text-primary mt-1.5">30 cr/vídeo</div>
+                        <div className="font-mono text-[10px] text-muted-foreground">{t("Você grava, a IA edita. Legendas, trilha e cortes automáticos.", "You record, AI edits. Automatic captions, soundtrack, and cuts.", "Tú grabas y la IA edita. Subtítulos, música y cortes automáticos.")}</div>
+                        <div className="font-mono text-[10px] text-primary mt-1.5">{t("30 cr/vídeo", "30 credits/video", "30 créditos/vídeo")}</div>
                       </button>
                     </div>
                   )}
@@ -1889,13 +1896,13 @@ export default function VideoProductionPage() {
                     <div>
                       <div className="font-mono text-xs text-muted-foreground mb-3">
                         {selected.config.hasUserFace
-                          ? "O agente vai gerar clipes com avatar digital (720p) para cada cena. Você aprova cena a cena."
-                          : "O agente vai gerar clipes de preview (720p) para cada cena do storyboard. Você aprova cena a cena antes do vídeo HD final."}
+                          ? t("O agente vai gerar clipes com avatar digital (720p) para cada cena. Você aprova cena a cena.", "The agent will generate digital-avatar clips (720p) for each scene. You approve them scene by scene.", "El agente generará clips con avatar digital (720p) para cada escena. Los aprobarás uno por uno.")
+                          : t("O agente vai gerar clipes de preview (720p) para cada cena do storyboard. Você aprova cena a cena antes do vídeo HD final.", "The agent will generate preview clips (720p) for each storyboard scene. You approve them scene by scene before the final HD video.", "El agente generará clips de vista previa (720p) para cada escena del storyboard. Los aprobarás uno por uno antes del vídeo HD final.")}
                       </div>
                       <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground mb-3">
                         <span className="flex items-center gap-1">
                           <Sparkles className="h-3.5 w-3.5 text-primary" />
-                          {selected.config.hasUserFace ? "80" : "50"} créditos/cena · {(selected.config.hasUserFace ? 80 : 50) * selected.storyboard.length} total
+                          {t(`${selected.config.hasUserFace ? "80" : "50"} créditos/cena · ${(selected.config.hasUserFace ? 80 : 50) * selected.storyboard.length} total`, `${selected.config.hasUserFace ? "80" : "50"} credits/scene · ${(selected.config.hasUserFace ? 80 : 50) * selected.storyboard.length} total`, `${selected.config.hasUserFace ? "80" : "50"} créditos/escena · ${(selected.config.hasUserFace ? 80 : 50) * selected.storyboard.length} en total`)}
                         </span>
                         <span>·</span>
                         <span>{provider?.videoProvider ?? "Runway ML / Kling"}</span>
@@ -1903,19 +1910,19 @@ export default function VideoProductionPage() {
                       {!provider?.configured && (
                         <div className="border border-amber-500/20 bg-amber-500/5 p-3 rounded-lg mb-4">
                           <div className="font-mono text-xs text-amber-500 font-bold flex items-center gap-1.5 mb-1.5">
-                            <AlertCircle className="h-4 w-4" /> Geração de Vídeo Indisponível
+                            <AlertCircle className="h-4 w-4" /> {t("Geração de Vídeo Indisponível", "Video Generation Unavailable", "Generación de vídeo no disponible")}
                           </div>
                           <div className="font-mono text-[10px] text-muted-foreground leading-relaxed">
-                            Nenhum provedor de vídeo está configurado no momento. Como alternativa, utilize o modo <strong>Híbrido</strong> para gravar seu próprio vídeo e utilizar o editor IA, ou utilize a plataforma de <strong>Studio</strong> avançada.
+                            {t("Nenhum provedor de vídeo está configurado no momento. Como alternativa, utilize o modo", "No video provider is configured at the moment. Alternatively, use", "No hay ningún proveedor de vídeo configurado en este momento. Como alternativa, usa el modo")} <strong>{t("Híbrido", "Hybrid", "Híbrido")}</strong> {t("para gravar seu próprio vídeo e utilizar o editor IA, ou utilize a plataforma de", "to record your own video and use the AI editor, or use the advanced", "para grabar tu propio vídeo y usar el editor con IA, o usa la plataforma")} <strong>Studio</strong> {t("avançada.", "platform.", "avanzada.")}
                           </div>
                           <Button variant="outline" size="sm" className="mt-3 font-mono text-[10px]" onClick={() => setHybridMode("recording")}>
-                            Mudar para modo Híbrido
+                            {t("Mudar para modo Híbrido", "Switch to Hybrid mode", "Cambiar al modo híbrido")}
                           </Button>
                         </div>
                       )}
                       <Button onClick={generatePreview} disabled={actionLoading || !provider?.configured} className="font-mono">
                         {actionLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
-                        Gerar Preview dos Clipes
+                        {t("Gerar Preview dos Clipes", "Generate Clip Preview", "Generar vista previa de los clips")}
                       </Button>
                     </div>
                   )}
@@ -1924,8 +1931,7 @@ export default function VideoProductionPage() {
                   {hybridMode === "recording" && (
                     <div className="space-y-4">
                       <div className="font-mono text-xs text-muted-foreground">
-                        Grave seu vídeo seguindo o roteiro e o guia do diretor. Faça o upload abaixo — a IA vai adicionar legendas,
-                        trilha sonora, títulos e cortes automáticos no editor.
+                        {t("Grave seu vídeo seguindo o roteiro e o guia do diretor. Faça o upload abaixo — a IA vai adicionar legendas, trilha sonora, títulos e cortes automáticos no editor.", "Record your video following the script and director's guide. Upload it below — AI will add captions, a soundtrack, titles, and automatic cuts in the editor.", "Graba tu vídeo siguiendo el guion y la guía del director. Súbelo abajo: la IA añadirá subtítulos, música, títulos y cortes automáticos en el editor.")}
                       </div>
 
                       {/* Upload area */}
@@ -1945,16 +1951,16 @@ export default function VideoProductionPage() {
                             <CheckCircle2 className="h-8 w-8 text-primary mx-auto" />
                             <div className="font-mono text-sm font-bold text-primary">{hybridFile.name}</div>
                             <div className="font-mono text-[10px] text-muted-foreground">
-                              {(hybridFile.size / 1024 / 1024).toFixed(1)} MB · Clique para trocar
+                              {(hybridFile.size / 1024 / 1024).toFixed(1)} MB · {t("Clique para trocar", "Click to replace", "Haz clic para cambiar")}
                             </div>
                           </div>
                         ) : (
                           <div className="space-y-2">
                             <Upload className="h-8 w-8 text-muted-foreground/50 mx-auto group-hover:text-primary transition-colors" />
                             <div className="font-mono text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                              Clique para selecionar seu vídeo
+                              {t("Clique para selecionar seu vídeo", "Click to select your video", "Haz clic para seleccionar tu vídeo")}
                             </div>
-                            <div className="font-mono text-[10px] text-muted-foreground/60">MP4, MOV, WebM — até 2GB</div>
+                            <div className="font-mono text-[10px] text-muted-foreground/60">{t("MP4, MOV, WebM — até 2GB", "MP4, MOV, WebM — up to 2 GB", "MP4, MOV, WebM — hasta 2 GB")}</div>
                           </div>
                         )}
                       </div>
@@ -1967,17 +1973,17 @@ export default function VideoProductionPage() {
                           className="font-mono"
                         >
                           {hybridUploading
-                            ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Enviando…</>
-                            : <><Scissors className="h-4 w-4 mr-2" />Enviar e Editar com IA</>
+                            ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />{t("Enviando…", "Uploading…", "Subiendo…")}</>
+                            : <><Scissors className="h-4 w-4 mr-2" />{t("Enviar e Editar com IA", "Upload and Edit with AI", "Subir y editar con IA")}</>
                           }
                         </Button>
-                        <div className="font-mono text-[10px] text-muted-foreground">30 créditos · Editor de vídeo com IA</div>
+                        <div className="font-mono text-[10px] text-muted-foreground">{t("30 créditos · Editor de vídeo com IA", "30 credits · AI video editor", "30 créditos · Editor de vídeo con IA")}</div>
                       </div>
 
                       {/* Previous recordings list */}
                       {recordings.length > 0 && (
                         <div className="border border-border/30 rounded-lg p-4 space-y-2">
-                          <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Gravações anteriores</div>
+                          <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">{t("Gravações anteriores", "Previous recordings", "Grabaciones anteriores")}</div>
                           {recordings.map(rec => (
                             <div key={rec.id} className="flex items-center justify-between py-1.5 border-b border-border/20 last:border-0">
                               <div className="flex items-center gap-2 min-w-0">
@@ -1985,7 +1991,7 @@ export default function VideoProductionPage() {
                                 <div>
                                   <div className="font-mono text-xs truncate max-w-[200px]">{rec.name}</div>
                                   <div className="font-mono text-[10px] text-muted-foreground">
-                                    {new Date(rec.createdAt).toLocaleDateString("pt-BR")}
+                                    {new Date(rec.createdAt).toLocaleDateString(dateLocale)}
                                     {rec.videoSize ? ` · ${(rec.videoSize / 1024 / 1024).toFixed(1)} MB` : ""}
                                   </div>
                                 </div>
@@ -1997,7 +2003,7 @@ export default function VideoProductionPage() {
                                   className="font-mono text-[10px] h-7 shrink-0"
                                   onClick={() => navigate(`/video-editor?recordingId=${rec.id}&projectId=${selected.id}`)}
                                 >
-                                  Editar
+                                  {t("Editar", "Edit", "Editar")}
                                 </Button>
                               )}
                             </div>
@@ -2025,7 +2031,7 @@ export default function VideoProductionPage() {
               {["preview_generating","preview_ready","preview_approved"].includes(selected.status) && (
                 <div className="border border-border/40 rounded-xl p-5 bg-background/40">
                   <div className="font-mono text-sm font-bold mb-4">
-                    Preview — {selected.storyboard.filter(s => s.clipStatus === "ready").length}/{selected.storyboard.length} cenas prontas
+                    {t(`Preview — ${selected.storyboard.filter(s => s.clipStatus === "ready").length}/${selected.storyboard.length} cenas prontas`, `Preview — ${selected.storyboard.filter(s => s.clipStatus === "ready").length}/${selected.storyboard.length} scenes ready`, `Vista previa — ${selected.storyboard.filter(s => s.clipStatus === "ready").length}/${selected.storyboard.length} escenas listas`)}
                   </div>
                   <ClipsPanel project={selected} isHd={false} onAction={refreshSelected} />
                 </div>
@@ -2034,29 +2040,29 @@ export default function VideoProductionPage() {
               {/* Generate final CTA */}
               {statusIs("preview_approved") && (
                 <div className="border border-border/40 rounded-xl p-5 bg-background/40">
-                  <div className="font-mono text-sm font-bold mb-2">Passo 7 — Gerar Vídeo Final HD</div>
+                  <div className="font-mono text-sm font-bold mb-2">{t("Passo 7 — Gerar Vídeo Final HD", "Step 7 — Generate Final HD Video", "Paso 7: generar vídeo HD final")}</div>
                   <div className="font-mono text-xs text-muted-foreground mb-4">
-                    Preview aprovado. O agente vai regenerar todos os clipes em 1080p HD para entrega final.
+                    {t("Preview aprovado. O agente vai regenerar todos os clipes em 1080p HD para entrega final.", "Preview approved. The agent will regenerate all clips in 1080p HD for final delivery.", "Vista previa aprobada. El agente volverá a generar todos los clips en HD 1080p para la entrega final.")}
                   </div>
                   <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground mb-4">
                     <span className="flex items-center gap-1">
                       <Sparkles className="h-3.5 w-3.5 text-primary" />
-                      {selected.config.hasUserFace ? "80" : "150"} créditos/cena · {(selected.config.hasUserFace ? 80 : 150) * selected.storyboard.length} total
+                      {t(`${selected.config.hasUserFace ? "80" : "150"} créditos/cena · ${(selected.config.hasUserFace ? 80 : 150) * selected.storyboard.length} total`, `${selected.config.hasUserFace ? "80" : "150"} credits/scene · ${(selected.config.hasUserFace ? 80 : 150) * selected.storyboard.length} total`, `${selected.config.hasUserFace ? "80" : "150"} créditos/escena · ${(selected.config.hasUserFace ? 80 : 150) * selected.storyboard.length} en total`)}
                     </span>
                   </div>
                   {!provider?.configured && (
                     <div className="border border-amber-500/20 bg-amber-500/5 p-3 rounded-lg mb-4">
                       <div className="font-mono text-xs text-amber-500 font-bold flex items-center gap-1.5 mb-1.5">
-                        <AlertCircle className="h-4 w-4" /> Geração de Vídeo Indisponível
+                        <AlertCircle className="h-4 w-4" /> {t("Geração de Vídeo Indisponível", "Video Generation Unavailable", "Generación de vídeo no disponible")}
                       </div>
                       <div className="font-mono text-[10px] text-muted-foreground leading-relaxed">
-                        Nenhum provedor de vídeo está configurado no momento. Como alternativa, utilize o modo <strong>Híbrido</strong> para gravar seu próprio vídeo e utilizar o editor IA, ou utilize a plataforma de <strong>Studio</strong> avançada.
+                        {t("Nenhum provedor de vídeo está configurado no momento. Como alternativa, utilize o modo", "No video provider is configured at the moment. Alternatively, use", "No hay ningún proveedor de vídeo configurado en este momento. Como alternativa, usa el modo")} <strong>{t("Híbrido", "Hybrid", "Híbrido")}</strong> {t("para gravar seu próprio vídeo e utilizar o editor IA, ou utilize a plataforma de", "to record your own video and use the AI editor, or use the advanced", "para grabar tu propio vídeo y usar el editor con IA, o usa la plataforma")} <strong>Studio</strong> {t("avançada.", "platform.", "avanzada.")}
                       </div>
                     </div>
                   )}
                   <Button onClick={generateFinal} disabled={actionLoading || !provider?.configured} className="font-mono">
                     {actionLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Video className="h-4 w-4 mr-2" />}
-                    Gerar Vídeo Final HD
+                    {t("Gerar Vídeo Final HD", "Generate Final HD Video", "Generar vídeo HD final")}
                   </Button>
                 </div>
               )}
@@ -2065,7 +2071,7 @@ export default function VideoProductionPage() {
               {["final_generating","completed"].includes(selected.status) && (
                 <div className="border border-border/40 rounded-xl p-5 bg-background/40">
                   <div className="font-mono text-sm font-bold mb-4">
-                    {selected.status === "completed" ? "✓ Vídeo HD Concluído" : "Gerando vídeo HD..."}
+                    {selected.status === "completed" ? t("✓ Vídeo HD Concluído", "✓ HD Video Complete", "✓ Vídeo HD completado") : t("Gerando vídeo HD...", "Generating HD video...", "Generando vídeo HD...")}
                   </div>
                   <ClipsPanel project={selected} isHd={true} onAction={refreshSelected} />
                 </div>

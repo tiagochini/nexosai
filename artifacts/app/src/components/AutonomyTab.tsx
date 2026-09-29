@@ -14,8 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ShieldCheck, Activity, KeyRound, Clock, Loader2, XCircle, FileSignature, OctagonAlert
 } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 function SectionCard({ children, title, icon: Icon }: { children: React.ReactNode; title: string; icon: React.ElementType }) {
   return (
@@ -43,17 +42,9 @@ function FieldRow({ label, sublabel, children }: { label: string; sublabel?: Rea
   );
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  autonomy: "Autonomia do Agente",
-  regulated_activity: "Atividade Regulada",
-  asset_rights: "Direitos de Ativos",
-};
-const PAUSE_LABELS: Record<string, string> = {
-  probable_illegality: "Provável ilegalidade", fraud: "Fraude", rights_violation: "Violação de direitos",
-  severe_account_ban_risk: "Risco grave de banimento", overspend: "Overspend", severe_reputational_crisis: "Crise reputacional grave",
-};
-
 export function AutonomyTab() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const queryClient = useQueryClient();
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokeReason, setRevokeReason] = useState("");
@@ -69,7 +60,7 @@ export function AutonomyTab() {
 
   const handleRevoke = (acceptanceId: string) => {
     if (!revokeReason.trim()) {
-      toast.error("Informe o motivo da revogação.");
+      toast.error(t("Informe o motivo da revogação.", "Enter a reason for revocation.", "Indica el motivo de la revocación."));
       return;
     }
     
@@ -77,30 +68,30 @@ export function AutonomyTab() {
       { acceptanceId, data: { reason: revokeReason } },
       {
         onSuccess: () => {
-          toast.success("Autorização revogada com sucesso.");
+          toast.success(t("Autorização revogada com sucesso.", "Authorization revoked successfully.", "Autorización revocada correctamente."));
           queryClient.invalidateQueries({ queryKey: getGetAutonomyStatusQueryKey() });
           queryClient.invalidateQueries({ queryKey: getListAutonomyEvidenceQueryKey() });
           setRevokingId(null);
           setRevokeReason("");
         },
         onError: () => {
-          toast.error("Erro ao revogar autorização.");
+          toast.error(t("Erro ao revogar autorização.", "Failed to revoke authorization.", "No se pudo revocar la autorización."));
         }
       }
     );
   };
 
   const handleResolvePause = (pauseId: string) => {
-    if (!pauseResolutionReason.trim()) { toast.error("Informe o motivo da resolução."); return; }
+    if (!pauseResolutionReason.trim()) { toast.error(t("Informe o motivo da resolução.", "Enter a reason for resolution.", "Indica el motivo de la resolución.")); return; }
     resolvePauseMutation.mutate({ pauseId, data: { reason: pauseResolutionReason } }, {
       onSuccess: () => {
-        toast.success("Pausa obrigatória resolvida. A campanha não será retomada automaticamente.");
+         toast.success(t("Pausa obrigatória resolvida. A campanha não será retomada automaticamente.", "Mandatory pause resolved. The campaign will not resume automatically.", "Pausa obligatoria resuelta. La campaña no se reanudará automáticamente."));
         queryClient.invalidateQueries({ queryKey: getListMandatoryPausesQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetAutonomyStatusQueryKey() });
         queryClient.invalidateQueries({ queryKey: getListAutonomyEvidenceQueryKey() });
         setResolvingPauseId(null); setPauseResolutionReason("");
       },
-      onError: () => toast.error("Não foi possível resolver a pausa."),
+      onError: () => toast.error(t("Não foi possível resolver a pausa.", "Could not resolve the pause.", "No se pudo resolver la pausa.")),
     });
   };
 
@@ -122,22 +113,22 @@ export function AutonomyTab() {
       <div className="p-4 border border-primary/20 bg-primary/5 flex items-start gap-3">
         <ShieldCheck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
         <div>
-          <h3 className="font-mono text-sm uppercase tracking-widest font-bold text-primary">Autonomia NexOS AI</h3>
+          <h3 className="font-mono text-sm uppercase tracking-widest font-bold text-primary">{t("Autonomia NexOS AI", "NexOS AI Autonomy", "Autonomía de NexOS AI")}</h3>
           <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-            Aqui você gerencia os limites de atuação dos agentes. O NexOS permite que a IA tome decisões estratégicas, publique conteúdo e aloque orçamento de mídia.
-             <strong> A revogação impede novos lançamentos que dependam desses aceites; operações já iniciadas preservam seu histórico e seguem os controles do Masterplan.</strong>
+            {t("Aqui você gerencia os limites de atuação dos agentes. O NexOS permite que a IA tome decisões estratégicas, publique conteúdo e aloque orçamento de mídia.", "Manage the agents' operating limits here. NexOS lets AI make strategic decisions, publish content, and allocate media budgets.", "Aquí puedes gestionar los límites de actuación de los agentes. NexOS permite que la IA tome decisiones estratégicas, publique contenido y asigne presupuestos de medios.")}
+             <strong> {t("A revogação impede novos lançamentos que dependam desses aceites; operações já iniciadas preservam seu histórico e seguem os controles do Masterplan.", "Revocation prevents new launches that depend on these approvals; operations already started retain their history and follow the Masterplan controls.", "La revocación impide nuevos lanzamientos que dependan de estas aceptaciones; las operaciones ya iniciadas conservan su historial y siguen los controles del Masterplan.")}</strong>
           </p>
         </div>
       </div>
 
-      <SectionCard title="Contrato Vigente" icon={FileSignature}>
-        <FieldRow label="Versão e Integridade" sublabel="Hash criptográfico do contrato">
+      <SectionCard title={t("Contrato Vigente", "Current Agreement", "Contrato vigente")} icon={FileSignature}>
+        <FieldRow label={t("Versão e Integridade", "Version and Integrity", "Versión e integridad")} sublabel={t("Hash criptográfico do contrato", "Cryptographic hash of the agreement", "Hash criptográfico del contrato")}>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="rounded-none font-mono text-[10px] bg-muted/20 border-border/50">
                 v{contract?.version || "0.0.0"}
               </Badge>
-              <span className="font-mono text-xs text-muted-foreground">Última atualização do sistema</span>
+              <span className="font-mono text-xs text-muted-foreground">{t("Última atualização do sistema", "Last system update", "Última actualización del sistema")}</span>
             </div>
             <div className="flex items-center gap-2 p-2 bg-muted/10 border border-border/30">
               <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
@@ -146,23 +137,23 @@ export function AutonomyTab() {
           </div>
         </FieldRow>
 
-        <FieldRow label="Status de Aceite Global" sublabel="Requisitos para operação">
+        <FieldRow label={t("Status de Aceite Global", "Global Approval Status", "Estado de aceptación global")} sublabel={t("Requisitos para operação", "Requirements to operate", "Requisitos de operación")}>
           <div className="space-y-3">
             {requiredAcceptanceTypes.length === 0 && (
-              <p className="font-mono text-xs text-muted-foreground">Nenhum requisito aplicável no momento.</p>
+              <p className="font-mono text-xs text-muted-foreground">{t("Nenhum requisito aplicável no momento.", "No applicable requirements at this time.", "No hay requisitos aplicables en este momento.")}</p>
             )}
             {requiredAcceptanceTypes.map((type) => {
               const isAccepted = acceptedAcceptanceTypes.includes(type);
               return (
                 <div key={type} className={`flex items-center justify-between p-3 border ${isAccepted ? 'border-success/30 bg-success/5' : 'border-destructive/30 bg-destructive/5'}`}>
                   <div>
-                    <div className="font-mono text-xs font-bold uppercase">{TYPE_LABELS[type] || type}</div>
+                    <div className="font-mono text-xs font-bold uppercase">{acceptanceTypeLabel(type, t)}</div>
                     <div className="text-[10px] text-muted-foreground mt-0.5">
-                      {isAccepted ? "Autorização ativa." : "Autorização pendente. O lançamento será bloqueado."}
+                      {isAccepted ? t("Autorização ativa.", "Authorization active.", "Autorización activa.") : t("Autorização pendente. O lançamento será bloqueado.", "Authorization pending. Launch will be blocked.", "Autorización pendiente. El lanzamiento se bloqueará.")}
                     </div>
                   </div>
                   <Badge variant="outline" className={`rounded-none font-mono text-[9px] uppercase tracking-widest ${isAccepted ? 'text-success border-success/40' : 'text-destructive border-destructive/40'}`}>
-                    {isAccepted ? 'Aceito' : 'Pendente'}
+                    {isAccepted ? t("Aceito", "Accepted", "Aceptado") : t("Pendente", "Pending", "Pendiente")}
                   </Badge>
                 </div>
               );
@@ -171,34 +162,34 @@ export function AutonomyTab() {
         </FieldRow>
       </SectionCard>
 
-      <SectionCard title="Evidências de Aceite e Revogação" icon={Activity}>
+      <SectionCard title={t("Evidências de Aceite e Revogação", "Approval and Revocation Evidence", "Evidencias de aceptación y revocación")} icon={Activity}>
         <div className="space-y-4">
           {acceptances.length === 0 ? (
-            <p className="font-mono text-xs text-muted-foreground text-center py-4 border border-dashed border-border/40">Nenhum registro de aceite encontrado.</p>
+            <p className="font-mono text-xs text-muted-foreground text-center py-4 border border-dashed border-border/40">{t("Nenhum registro de aceite encontrado.", "No approval records found.", "No se encontraron registros de aceptación.")}</p>
           ) : (
             acceptances.map((acc) => (
               <div key={acc.id} className={`border border-border/40 p-4 ${acc.revokedAt ? 'bg-muted/10 opacity-70' : 'bg-card'}`}>
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <div className="font-mono text-xs font-bold uppercase text-foreground">{TYPE_LABELS[acc.acceptanceType] || acc.acceptanceType}</div>
+                    <div className="font-mono text-xs font-bold uppercase text-foreground">{acceptanceTypeLabel(acc.acceptanceType, t)}</div>
                     <div className="flex items-center gap-2 mt-1">
                       <Clock className="h-3 w-3 text-muted-foreground" />
                       <span className="font-mono text-[10px] text-muted-foreground">
-                        {format(new Date(acc.acceptedAt), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
+                        {new Date(acc.acceptedAt).toLocaleString(intlLocale(locale))}
                       </span>
                     </div>
                   </div>
                   <Badge variant="outline" className={`rounded-none font-mono text-[9px] uppercase tracking-widest ${acc.revokedAt ? 'text-destructive border-destructive/40' : 'text-success border-success/40'}`}>
-                    {acc.revokedAt ? 'Revogado' : 'Ativo'}
+                    {acc.revokedAt ? t("Revogado", "Revoked", "Revocado") : t("Ativo", "Active", "Activo")}
                   </Badge>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 mb-4 font-mono text-[10px] text-muted-foreground">
                   <div>
-                    <span className="opacity-50">Campanha:</span> <span className="text-foreground">{acc.campaignId || "Global (Todas)"}</span>
+                    <span className="opacity-50">{t("Campanha:", "Campaign:", "Campaña:")}</span> <span className="text-foreground">{acc.campaignId || t("Global (Todas)", "Global (All)", "Global (todas)")}</span>
                   </div>
                   <div>
-                    <span className="opacity-50">Contrato:</span> <span className="text-foreground">v{acc.contractVersion}</span>
+                    <span className="opacity-50">{t("Contrato:", "Agreement:", "Contrato:")}</span> <span className="text-foreground">v{acc.contractVersion}</span>
                   </div>
                   <div>
                     <span className="opacity-50">IP:</span> <span className="text-foreground">{acc.ipAddress || "---"}</span>
@@ -207,15 +198,15 @@ export function AutonomyTab() {
 
                 {acc.revokedAt ? (
                   <div className="p-2 border border-destructive/20 bg-destructive/5 font-mono text-[10px] text-destructive">
-                    Revogado em {format(new Date(acc.revokedAt), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}.<br/>
-                    Motivo: {acc.revocationReason}
+                    {t("Revogado em", "Revoked on", "Revocado el")} {new Date(acc.revokedAt).toLocaleString(intlLocale(locale))}.<br/>
+                    {t("Motivo:", "Reason:", "Motivo:")} {acc.revocationReason}
                   </div>
                 ) : (
                   <div className="flex justify-end pt-2 border-t border-border/30">
                     {revokingId === acc.id ? (
                       <div className="w-full flex items-center gap-2">
                         <Input
-                          placeholder="Motivo da revogação..."
+                          placeholder={t("Motivo da revogação...", "Reason for revocation...", "Motivo de la revocación...")}
                           value={revokeReason}
                           onChange={(e) => setRevokeReason(e.target.value)}
                           className="h-8 font-mono text-xs rounded-none bg-background border-border/50 flex-1"
@@ -227,7 +218,7 @@ export function AutonomyTab() {
                           className="h-8 px-3 rounded-none font-mono text-xs hover:bg-muted/20"
                           onClick={() => { setRevokingId(null); setRevokeReason(""); }}
                         >
-                          Cancelar
+                          {t("Cancelar", "Cancel", "Cancelar")}
                         </Button>
                         <Button 
                           variant="destructive" 
@@ -237,7 +228,7 @@ export function AutonomyTab() {
                           disabled={revokeMutation.isPending}
                           data-testid={`button-confirm-revoke-${acc.id}`}
                         >
-                          {revokeMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Confirmar Revogação"}
+                          {revokeMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : t("Confirmar Revogação", "Confirm Revocation", "Confirmar revocación")}
                         </Button>
                       </div>
                     ) : (
@@ -248,7 +239,7 @@ export function AutonomyTab() {
                         onClick={() => setRevokingId(acc.id)}
                         data-testid={`button-revoke-${acc.id}`}
                       >
-                        <XCircle className="h-3 w-3 mr-1.5" /> Revogar Autorização
+                        <XCircle className="h-3 w-3 mr-1.5" /> {t("Revogar Autorização", "Revoke Authorization", "Revocar autorización")}
                       </Button>
                     )}
                   </div>
@@ -258,31 +249,31 @@ export function AutonomyTab() {
           )}
         </div>
       </SectionCard>
-      <SectionCard title="Pausas Obrigatórias" icon={OctagonAlert}>
-        <p className="font-mono text-[10px] text-muted-foreground mb-4">Pausas ativas bloqueiam a próxima ação externa correspondente. Uma resolução não retoma campanhas automaticamente.</p>
+      <SectionCard title={t("Pausas Obrigatórias", "Mandatory Pauses", "Pausas obligatorias")} icon={OctagonAlert}>
+        <p className="font-mono text-[10px] text-muted-foreground mb-4">{t("Pausas ativas bloqueiam a próxima ação externa correspondente. Uma resolução não retoma campanhas automaticamente.", "Active pauses block the corresponding next external action. Resolving a pause does not automatically resume campaigns.", "Las pausas activas bloquean la siguiente acción externa correspondiente. Resolver una pausa no reanuda automáticamente las campañas.")}</p>
         <div className="space-y-3" data-testid="mandatory-pauses-list">
           {pauses.length === 0 ? (
-            <p className="font-mono text-xs text-muted-foreground text-center py-4 border border-dashed border-border/40">Nenhuma pausa obrigatória registrada.</p>
+            <p className="font-mono text-xs text-muted-foreground text-center py-4 border border-dashed border-border/40">{t("Nenhuma pausa obrigatória registrada.", "No mandatory pauses recorded.", "No hay pausas obligatorias registradas.")}</p>
           ) : pauses.map((pause) => (
             <div key={pause.id} className={`border p-4 ${pause.status === "active" ? "border-destructive/40 bg-destructive/5" : "border-border/40 bg-muted/10 opacity-75"}`} data-testid={`mandatory-pause-${pause.id}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="font-mono text-xs font-bold uppercase">{PAUSE_LABELS[pause.pauseClass] || pause.pauseClass}</div>
+                  <div className="font-mono text-xs font-bold uppercase">{pauseClassLabel(pause.pauseClass, t)}</div>
                   <p className="text-xs text-muted-foreground mt-1">{pause.reason}</p>
                 </div>
-                <Badge variant="outline" className={`rounded-none font-mono text-[9px] uppercase ${pause.status === "active" ? "text-destructive border-destructive/40" : "text-success border-success/40"}`}>{pause.status === "active" ? "Ativa" : "Resolvida"}</Badge>
+                <Badge variant="outline" className={`rounded-none font-mono text-[9px] uppercase ${pause.status === "active" ? "text-destructive border-destructive/40" : "text-success border-success/40"}`}>{pause.status === "active" ? t("Ativa", "Active", "Activa") : t("Resolvida", "Resolved", "Resuelta")}</Badge>
               </div>
               <div className="mt-3 font-mono text-[10px] text-muted-foreground">
-                Severidade: <span className="text-foreground">{pause.severity}</span> · Escopo: <span className="text-foreground">{pause.campaignId || "Workspace"}{pause.channel ? ` / ${pause.channel}` : ""}{pause.action ? ` / ${pause.action}` : ""}</span>
-                <br />Evidência segura: {pause.evidenceSummary}
+                {t("Severidade:", "Severity:", "Severidad:")} <span className="text-foreground">{pause.severity}</span> · {t("Escopo:", "Scope:", "Ámbito:")} <span className="text-foreground">{pause.campaignId || "Workspace"}{pause.channel ? ` / ${pause.channel}` : ""}{pause.action ? ` / ${pause.action}` : ""}</span>
+                <br />{t("Evidência segura:", "Safe evidence:", "Evidencia segura:")} {pause.evidenceSummary}
               </div>
-              {pause.status === "resolved" ? <div className="mt-3 text-[10px] font-mono text-success">Resolvida: {pause.resolutionReason}</div> : (
+              {pause.status === "resolved" ? <div className="mt-3 text-[10px] font-mono text-success">{t("Resolvida:", "Resolved:", "Resuelta:")} {pause.resolutionReason}</div> : (
                 <div className="mt-3 pt-3 border-t border-border/30">
                   {resolvingPauseId === pause.id ? <div className="flex gap-2">
-                    <Input value={pauseResolutionReason} onChange={(e) => setPauseResolutionReason(e.target.value)} placeholder="Motivo da resolução..." data-testid={`input-resolve-pause-${pause.id}`} className="h-8 font-mono text-xs rounded-none" />
-                    <Button size="sm" onClick={() => handleResolvePause(pause.id)} disabled={resolvePauseMutation.isPending} data-testid={`button-confirm-resolve-pause-${pause.id}`}>Resolver</Button>
-                    <Button size="sm" variant="ghost" onClick={() => { setResolvingPauseId(null); setPauseResolutionReason(""); }}>Cancelar</Button>
-                  </div> : <Button size="sm" variant="ghost" className="font-mono text-[10px] text-destructive uppercase" onClick={() => setResolvingPauseId(pause.id)} data-testid={`button-resolve-pause-${pause.id}`}>Resolver pausa</Button>}
+                    <Input value={pauseResolutionReason} onChange={(e) => setPauseResolutionReason(e.target.value)} placeholder={t("Motivo da resolução...", "Reason for resolution...", "Motivo de la resolución...")} data-testid={`input-resolve-pause-${pause.id}`} className="h-8 font-mono text-xs rounded-none" />
+                    <Button size="sm" onClick={() => handleResolvePause(pause.id)} disabled={resolvePauseMutation.isPending} data-testid={`button-confirm-resolve-pause-${pause.id}`}>{t("Resolver", "Resolve", "Resolver")}</Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setResolvingPauseId(null); setPauseResolutionReason(""); }}>{t("Cancelar", "Cancel", "Cancelar")}</Button>
+                  </div> : <Button size="sm" variant="ghost" className="font-mono text-[10px] text-destructive uppercase" onClick={() => setResolvingPauseId(pause.id)} data-testid={`button-resolve-pause-${pause.id}`}>{t("Resolver pausa", "Resolve pause", "Resolver pausa")}</Button>}
                 </div>
               )}
             </div>
@@ -291,4 +282,25 @@ export function AutonomyTab() {
       </SectionCard>
     </div>
   );
+}
+
+function acceptanceTypeLabel(type: string, t: ReturnType<typeof useUiText>) {
+  switch (type) {
+    case "autonomy": return t("Autonomia do Agente", "Agent Autonomy", "Autonomía del agente");
+    case "regulated_activity": return t("Atividade Regulada", "Regulated Activity", "Actividad regulada");
+    case "asset_rights": return t("Direitos de Ativos", "Asset Rights", "Derechos de activos");
+    default: return type;
+  }
+}
+
+function pauseClassLabel(type: string, t: ReturnType<typeof useUiText>) {
+  switch (type) {
+    case "probable_illegality": return t("Provável ilegalidade", "Probable illegality", "Probable ilegalidad");
+    case "fraud": return t("Fraude", "Fraud", "Fraude");
+    case "rights_violation": return t("Violação de direitos", "Rights violation", "Infracción de derechos");
+    case "severe_account_ban_risk": return t("Risco grave de banimento", "Severe account ban risk", "Riesgo grave de suspensión de la cuenta");
+    case "overspend": return t("Gasto excessivo", "Overspend", "Gasto excesivo");
+    case "severe_reputational_crisis": return t("Crise reputacional grave", "Severe reputational crisis", "Crisis reputacional grave");
+    default: return type;
+  }
 }

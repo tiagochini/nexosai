@@ -9,6 +9,7 @@ import {
   FileText, ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useUiText } from "@/lib/i18n";
 
 interface ClientProfile {
   id: string;
@@ -47,6 +48,7 @@ function ProfileForm({
   onCancel: () => void;
   saving: boolean;
 }) {
+  const t = useUiText();
   const [form, setForm] = useState(initial);
   const set = (k: keyof typeof EMPTY_FORM) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -57,84 +59,84 @@ function ProfileForm({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Nome do Cliente *</label>
+          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Nome do cliente *", "Client name *", "Nombre del cliente *")}</label>
           <input
             value={form.name}
             onChange={set("name")}
-            placeholder="Ex: João Silva / Studio Criativo"
+            placeholder={t("Ex.: João Silva / Studio Criativo", "E.g. Jane Smith / Creative Studio", "Ej.: Juan Pérez / Estudio Creativo")}
             className="w-full font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none rounded-sm px-3 py-2"
           />
         </div>
         <div className="space-y-1.5">
-          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Segmento / Nicho</label>
+          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Segmento / nicho", "Industry / niche", "Sector / nicho")}</label>
           <input
             value={form.industry}
             onChange={set("industry")}
-            placeholder="Ex: Nutrição, Finanças, SaaS"
+            placeholder={t("Ex.: Nutrição, finanças, SaaS", "E.g. Nutrition, finance, SaaS", "Ej.: Nutrición, finanzas, SaaS")}
             className="w-full font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none rounded-sm px-3 py-2"
           />
         </div>
         <div className="space-y-1.5">
-          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Nome do Produto</label>
+          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Nome do produto", "Product name", "Nombre del producto")}</label>
           <input
             value={form.productName}
             onChange={set("productName")}
-            placeholder="Ex: Método Detox 21 Dias"
+            placeholder={t("Ex.: Método Detox 21 Dias", "E.g. 21-Day Detox Method", "Ej.: Método Detox de 21 días")}
             className="w-full font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none rounded-sm px-3 py-2"
           />
         </div>
         <div className="space-y-1.5">
-          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Website</label>
+          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Site", "Website", "Sitio web")}</label>
           <input
             value={form.website}
             onChange={set("website")}
-            placeholder="https://exemplo.com.br"
+            placeholder={t("https://exemplo.com.br", "https://example.com", "https://ejemplo.com")}
             className="w-full font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none rounded-sm px-3 py-2"
           />
         </div>
         <div className="space-y-1.5 md:col-span-2">
-          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Público-Alvo</label>
+          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Público-alvo", "Target audience", "Público objetivo")}</label>
           <input
             value={form.targetAudience}
             onChange={set("targetAudience")}
-            placeholder="Ex: Mulheres 30-45 que querem emagrecer sem dieta restritiva"
+            placeholder={t("Ex.: Mulheres de 30 a 45 anos que querem emagrecer sem dieta restritiva", "E.g. Women aged 30–45 who want to lose weight without restrictive diets", "Ej.: Mujeres de 30 a 45 años que quieren adelgazar sin dietas restrictivas")}
             className="w-full font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none rounded-sm px-3 py-2"
           />
         </div>
         <div className="space-y-1.5">
-          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Tom de Voz da Marca</label>
+          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Tom de voz da marca", "Brand voice", "Tono de voz de la marca")}</label>
           <input
             value={form.brandVoice}
             onChange={set("brandVoice")}
-            placeholder="Ex: Amigável, direto, com humor leve"
+            placeholder={t("Ex.: Amigável, direto, com humor leve", "E.g. Friendly, direct, with light humor", "Ej.: Amigable, directo y con humor ligero")}
             className="w-full font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none rounded-sm px-3 py-2"
           />
         </div>
         <div className="space-y-1.5">
-          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Dor Principal do Público</label>
+          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Dor principal do público", "Audience's main pain point", "Principal problema del público")}</label>
           <input
             value={form.mainPain}
             onChange={set("mainPain")}
-            placeholder="Ex: Faz dieta mas não consegue manter o resultado"
+            placeholder={t("Ex.: Faz dieta, mas não consegue manter o resultado", "E.g. Can follow a diet but struggles to maintain results", "Ej.: Sigue dietas, pero no logra mantener los resultados")}
             className="w-full font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none rounded-sm px-3 py-2"
           />
         </div>
         <div className="space-y-1.5 md:col-span-2">
-          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Transformação Prometida</label>
+          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Transformação prometida", "Promised transformation", "Transformación prometida")}</label>
           <input
             value={form.transformation}
             onChange={set("transformation")}
-            placeholder="Ex: Perder 8kg em 21 dias sem passar fome"
+            placeholder={t("Ex.: Perder 8 kg em 21 dias sem passar fome", "E.g. Lose 8 kg in 21 days without going hungry", "Ej.: Perder 8 kg en 21 días sin pasar hambre")}
             className="w-full font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none rounded-sm px-3 py-2"
           />
         </div>
         <div className="space-y-1.5 md:col-span-2">
-          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Notas Internas</label>
+          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Notas internas", "Internal notes", "Notas internas")}</label>
           <textarea
             value={form.notes}
             onChange={set("notes")}
             rows={3}
-            placeholder="Observações, histórico do cliente, contexto adicional..."
+            placeholder={t("Observações, histórico do cliente, contexto adicional...", "Observations, client history, additional context...", "Observaciones, historial del cliente, contexto adicional...")}
             className="w-full font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none rounded-sm px-3 py-2 resize-none"
           />
         </div>
@@ -147,7 +149,7 @@ function ProfileForm({
           className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-5 text-xs"
         >
           <Save className="h-3.5 w-3.5" />
-          {saving ? "Salvando..." : "Salvar Perfil"}
+          {saving ? t("Salvando...", "Saving...", "Guardando...") : t("Salvar perfil", "Save profile", "Guardar perfil")}
         </Button>
         <Button
           variant="outline"
@@ -155,7 +157,7 @@ function ProfileForm({
           className="font-mono uppercase tracking-widest rounded-none h-9 px-4 text-xs border-border/50"
         >
           <X className="h-3.5 w-3.5 mr-1" />
-          Cancelar
+          {t("Cancelar", "Cancel", "Cancelar")}
         </Button>
       </div>
     </div>
@@ -171,16 +173,17 @@ function ProfileCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const t = useUiText();
   const [expanded, setExpanded] = useState(false);
 
   const fields = [
-    { icon: Briefcase, label: "Segmento", value: profile.industry },
-    { icon: Target, label: "Produto", value: profile.productName },
-    { icon: Users, label: "Público", value: profile.targetAudience },
-    { icon: Mic, label: "Tom de Voz", value: profile.brandVoice },
-    { icon: Heart, label: "Dor Principal", value: profile.mainPain },
-    { icon: Lightbulb, label: "Transformação", value: profile.transformation },
-    { icon: Globe, label: "Website", value: profile.website },
+    { icon: Briefcase, label: t("Segmento", "Industry", "Sector"), value: profile.industry },
+    { icon: Target, label: t("Produto", "Product", "Producto"), value: profile.productName },
+    { icon: Users, label: t("Público", "Audience", "Público"), value: profile.targetAudience },
+    { icon: Mic, label: t("Tom de voz", "Brand voice", "Tono de voz"), value: profile.brandVoice },
+    { icon: Heart, label: t("Dor principal", "Main pain point", "Problema principal"), value: profile.mainPain },
+    { icon: Lightbulb, label: t("Transformação", "Transformation", "Transformación"), value: profile.transformation },
+    { icon: Globe, label: t("Site", "Website", "Sitio web"), value: profile.website },
   ].filter((f) => f.value);
 
   return (
@@ -242,6 +245,7 @@ function ProfileCard({
 }
 
 export default function AgencyProfilesPage() {
+  const t = useUiText();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -265,9 +269,9 @@ export default function AgencyProfilesPage() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["client-profiles"] });
       setShowForm(false);
-      toast.success("Perfil de cliente criado!");
+      toast.success(t("Perfil de cliente criado!", "Client profile created!", "¡Perfil de cliente creado!"));
     },
-    onError: () => toast.error("Erro ao criar perfil"),
+    onError: () => toast.error(t("Erro ao criar perfil", "Failed to create profile", "Error al crear el perfil")),
   });
 
   const updateMut = useMutation({
@@ -281,9 +285,9 @@ export default function AgencyProfilesPage() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["client-profiles"] });
       setEditingId(null);
-      toast.success("Perfil atualizado!");
+      toast.success(t("Perfil atualizado!", "Profile updated!", "¡Perfil actualizado!"));
     },
-    onError: () => toast.error("Erro ao atualizar perfil"),
+    onError: () => toast.error(t("Erro ao atualizar perfil", "Failed to update profile", "Error al actualizar el perfil")),
   });
 
   const deleteMut = useMutation({
@@ -292,9 +296,9 @@ export default function AgencyProfilesPage() {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["client-profiles"] });
-      toast.success("Perfil removido");
+      toast.success(t("Perfil removido", "Profile removed", "Perfil eliminado"));
     },
-    onError: () => toast.error("Erro ao remover perfil"),
+    onError: () => toast.error(t("Erro ao remover perfil", "Failed to remove profile", "Error al eliminar el perfil")),
   });
 
   const profiles = data?.profiles ?? [];
@@ -306,10 +310,10 @@ export default function AgencyProfilesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-mono font-bold text-xl uppercase tracking-tighter text-foreground">
-            Perfis de Clientes
+            {t("Perfis de clientes", "Client profiles", "Perfiles de clientes")}
           </h1>
           <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mt-0.5">
-            Memória de marca por cliente — a agente usa esse contexto nas campanhas
+            {t("Memória de marca por cliente — os agentes usam esse contexto nas campanhas", "Brand memory for each client — agents use this context in campaigns", "Memoria de marca por cliente — los agentes usan este contexto en las campañas")}
           </p>
         </div>
         <Button
@@ -318,7 +322,7 @@ export default function AgencyProfilesPage() {
           className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-xs"
         >
           <Plus className="h-3.5 w-3.5" />
-          Novo Perfil
+          {t("Novo perfil", "New profile", "Nuevo perfil")}
         </Button>
       </div>
 
@@ -326,8 +330,11 @@ export default function AgencyProfilesPage() {
       <div className="border border-border/30 bg-muted/10 px-4 py-3 flex items-start gap-3">
         <Lightbulb className="h-4 w-4 text-primary shrink-0 mt-0.5" />
         <p className="font-mono text-xs text-muted-foreground leading-relaxed">
-          Cada perfil armazena o contexto de um cliente: produto, público, tom de voz e transformação. 
-          Ao criar uma campanha, selecione o perfil do cliente e todos os agentes agente vão operar com esse contexto automaticamente.
+          {t(
+            "Cada perfil armazena o contexto de um cliente: produto, público, tom de voz e transformação. Ao criar uma campanha, selecione o perfil do cliente para que todos os agentes usem esse contexto automaticamente.",
+            "Each profile stores a client's context: product, audience, brand voice, and transformation. Select the profile when creating a campaign so every agent can use that context.",
+            "Cada perfil guarda el contexto de un cliente: producto, público, tono de voz y transformación. Selecciona el perfil al crear una campaña para que todos los agentes usen ese contexto automáticamente."
+          )}
         </p>
       </div>
 
@@ -353,9 +360,9 @@ export default function AgencyProfilesPage() {
       ) : profiles.length === 0 ? (
         <div className="border border-dashed border-border/40 py-14 text-center">
           <Users className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="font-mono text-sm text-muted-foreground">Nenhum perfil criado ainda</p>
+          <p className="font-mono text-sm text-muted-foreground">{t("Nenhum perfil criado ainda", "No profiles created yet", "Aún no hay perfiles")}</p>
           <p className="font-mono text-[11px] text-muted-foreground/50 uppercase tracking-widest mt-1">
-            Crie um perfil para cada cliente da sua agência
+            {t("Crie um perfil para cada cliente da sua agência", "Create a profile for each agency client", "Crea un perfil para cada cliente de tu agencia")}
           </p>
         </div>
       ) : (
@@ -386,7 +393,7 @@ export default function AgencyProfilesPage() {
                 profile={profile}
                 onEdit={() => { setEditingId(profile.id); setShowForm(false); }}
                 onDelete={() => {
-                  if (confirm(`Remover perfil "${profile.name}"?`)) deleteMut.mutate(profile.id);
+                  if (confirm(t(`Remover perfil "${profile.name}"?`, `Remove profile "${profile.name}"?`, `¿Eliminar el perfil "${profile.name}"?`))) deleteMut.mutate(profile.id);
                 }}
               />
             )
@@ -397,7 +404,7 @@ export default function AgencyProfilesPage() {
       {/* Count */}
       {profiles.length > 0 && (
         <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest text-right">
-          {profiles.length} perfil{profiles.length !== 1 ? "s" : ""} cadastrado{profiles.length !== 1 ? "s" : ""}
+          {profiles.length === 1 ? t("1 perfil cadastrado", "1 profile saved", "1 perfil registrado") : t(`${profiles.length} perfis cadastrados`, `${profiles.length} profiles saved`, `${profiles.length} perfiles registrados`)}
         </p>
       )}
     </div>

@@ -12,6 +12,7 @@ import {
   XCircle, Clock, AlertTriangle, Shield, Zap, BarChart3,
   ChevronRight, Eye, Download, FlaskConical,
 } from "lucide-react";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,25 +57,25 @@ interface AuditSummary {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function statusBadge(status: AuditLogRow["executionStatus"], isDryRun: boolean) {
+function statusBadge(status: AuditLogRow["executionStatus"], isDryRun: boolean, t: ReturnType<typeof useUiText>) {
   if (isDryRun) return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-xs">DRY RUN</Badge>;
   const map: Record<string, { color: string; label: string }> = {
-    completed: { color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", label: "Concluído" },
-    failed:    { color: "bg-red-500/20 text-red-400 border-red-500/30", label: "Falhou" },
-    started:   { color: "bg-blue-500/20 text-blue-400 border-blue-500/30", label: "Em andamento" },
-    skipped:   { color: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30", label: "Ignorado" },
+    completed: { color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", label: t("Concluído", "Completed", "Completado") },
+    failed:    { color: "bg-red-500/20 text-red-400 border-red-500/30", label: t("Falhou", "Failed", "Fallido") },
+    started:   { color: "bg-blue-500/20 text-blue-400 border-blue-500/30", label: t("Em andamento", "In progress", "En curso") },
+    skipped:   { color: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30", label: t("Ignorado", "Skipped", "Omitido") },
     dry_run:   { color: "bg-purple-500/20 text-purple-400 border-purple-500/30", label: "DRY RUN" },
   };
   const s = map[status] ?? { color: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30", label: status };
   return <Badge className={`${s.color} text-xs border`}>{s.label}</Badge>;
 }
 
-function approvalBadge(status: AuditLogRow["approvalStatus"]) {
+function approvalBadge(status: AuditLogRow["approvalStatus"], t: ReturnType<typeof useUiText>) {
   if (status === "not_required") return null;
   const map: Record<string, { color: string; label: string }> = {
-    pending:  { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", label: "Aguardando" },
-    approved: { color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", label: "Aprovado" },
-    rejected: { color: "bg-red-500/20 text-red-400 border-red-500/30", label: "Rejeitado" },
+    pending:  { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", label: t("Pendente", "Pending", "Pendiente") },
+    approved: { color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", label: t("Aprovado", "Approved", "Aprobado") },
+    rejected: { color: "bg-red-500/20 text-red-400 border-red-500/30", label: t("Rejeitado", "Rejected", "Rechazado") },
   };
   const s = map[status] ?? { color: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30", label: status };
   return <Badge className={`${s.color} text-xs border`}>{s.label}</Badge>;
@@ -95,8 +96,8 @@ function durationMs(row: AuditLogRow): string {
   return `${Math.round(ms / 60000)}m`;
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleString("pt-BR", {
+function formatDate(iso: string, locale: string) {
+  return new Date(iso).toLocaleString(locale, {
     day: "2-digit", month: "2-digit", year: "2-digit",
     hour: "2-digit", minute: "2-digit", second: "2-digit",
   });
@@ -105,6 +106,8 @@ function formatDate(iso: string) {
 // ─── Detail Modal ─────────────────────────────────────────────────────────────
 
 function LogDetailModal({ log, onClose }: { log: AuditLogRow; onClose: () => void }) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div className="bg-zinc-900 border border-zinc-700 rounded-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
@@ -112,67 +115,67 @@ function LogDetailModal({ log, onClose }: { log: AuditLogRow; onClose: () => voi
           <div className="flex items-center gap-2">
             <Bot className="w-4 h-4 text-cyan-400" />
             <span className="font-semibold text-white">{log.agentName}</span>
-            {statusBadge(log.executionStatus, log.isDryRun)}
+            {statusBadge(log.executionStatus, log.isDryRun, t)}
           </div>
           <Button variant="ghost" size="icon" onClick={onClose} className="text-zinc-400 hover:text-white">✕</Button>
         </div>
         <div className="p-4 space-y-4">
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <p className="text-zinc-500 text-xs mb-1">Ação</p>
+              <p className="text-zinc-500 text-xs mb-1">{t("Ação", "Action", "Acción")}</p>
               <p className="text-zinc-200 font-mono text-xs">{log.actionType}</p>
             </div>
             <div>
-              <p className="text-zinc-500 text-xs mb-1">Duração</p>
+              <p className="text-zinc-500 text-xs mb-1">{t("Duração", "Duration", "Duración")}</p>
               <p className="text-zinc-200">{durationMs(log)}</p>
             </div>
             <div>
-              <p className="text-zinc-500 text-xs mb-1">Provider / Model</p>
+              <p className="text-zinc-500 text-xs mb-1">{t("Provedor / modelo", "Provider / Model", "Proveedor / modelo")}</p>
               <p className="text-zinc-200">{log.providerUsed ?? "—"} / {log.modelUsed ?? "—"}</p>
             </div>
             <div>
-              <p className="text-zinc-500 text-xs mb-1">Tokens / Custo</p>
+              <p className="text-zinc-500 text-xs mb-1">{t("Tokens / custo", "Tokens / cost", "Tokens / costo")}</p>
               <p className="text-zinc-200">{log.tokensUsed?.toLocaleString("pt-BR") ?? "—"} / ${log.estimatedCostUsd?.toFixed(4) ?? "—"}</p>
             </div>
             <div>
-              <p className="text-zinc-500 text-xs mb-1">Confidence Score</p>
+              <p className="text-zinc-500 text-xs mb-1">{t("Pontuação de confiança", "Confidence score", "Puntuación de confianza")}</p>
               <p className="text-emerald-400">{log.confidenceScore !== null ? `${(log.confidenceScore * (log.confidenceScore <= 1 ? 100 : 1)).toFixed(0)}%` : "—"}</p>
             </div>
             <div>
-              <p className="text-zinc-500 text-xs mb-1">Risk Score</p>
+              <p className="text-zinc-500 text-xs mb-1">{t("Pontuação de risco", "Risk score", "Puntuación de riesgo")}</p>
               <p className={riskColor(log.riskScore)}>{log.riskScore !== null ? `${log.riskScore.toFixed(0)}/100` : "—"}</p>
             </div>
             <div>
-              <p className="text-zinc-500 text-xs mb-1">Aprovação</p>
-              <div>{approvalBadge(log.approvalStatus) ?? <span className="text-zinc-500 text-xs">Não requerida</span>}</div>
+              <p className="text-zinc-500 text-xs mb-1">{t("Aprovação", "Approval", "Aprobación")}</p>
+              <div>{approvalBadge(log.approvalStatus, t) ?? <span className="text-zinc-500 text-xs">{t("Não necessária", "Not required", "No requerida")}</span>}</div>
             </div>
             <div>
-              <p className="text-zinc-500 text-xs mb-1">Campaign ID</p>
+              <p className="text-zinc-500 text-xs mb-1">{t("ID da campanha", "Campaign ID", "ID de campaña")}</p>
               <p className="text-zinc-400 font-mono text-xs">{log.campaignId ?? "—"}</p>
             </div>
           </div>
 
           {log.inputSummary && (
             <div>
-              <p className="text-zinc-500 text-xs mb-1">Input (resumo)</p>
+              <p className="text-zinc-500 text-xs mb-1">{t("Entrada (resumo)", "Input (summary)", "Entrada (resumen)")}</p>
               <pre className="bg-zinc-800 rounded-lg p-3 text-xs text-zinc-300 whitespace-pre-wrap overflow-x-auto">{log.inputSummary}</pre>
             </div>
           )}
           {log.outputSummary && (
             <div>
-              <p className="text-zinc-500 text-xs mb-1">Output (resumo)</p>
+              <p className="text-zinc-500 text-xs mb-1">{t("Saída (resumo)", "Output (summary)", "Salida (resumen)")}</p>
               <pre className="bg-zinc-800 rounded-lg p-3 text-xs text-zinc-300 whitespace-pre-wrap overflow-x-auto">{log.outputSummary}</pre>
             </div>
           )}
           {log.errorMessage && (
             <div>
-              <p className="text-red-400 text-xs mb-1">Erro</p>
+              <p className="text-red-400 text-xs mb-1">{t("Erro", "Error", "Error")}</p>
               <pre className="bg-red-950/40 border border-red-900/50 rounded-lg p-3 text-xs text-red-300 whitespace-pre-wrap">{log.errorMessage}</pre>
             </div>
           )}
           <div className="text-xs text-zinc-600">
-            <p>Iniciado: {formatDate(log.startedAt)}</p>
-            {log.completedAt && <p>Concluído: {formatDate(log.completedAt)}</p>}
+            <p>{t("Iniciado:", "Started:", "Iniciado:")} {formatDate(log.startedAt, intlLocale(locale))}</p>
+            {log.completedAt && <p>{t("Concluído:", "Completed:", "Completado:")} {formatDate(log.completedAt, intlLocale(locale))}</p>}
           </div>
         </div>
       </div>
@@ -184,6 +187,8 @@ function LogDetailModal({ log, onClose }: { log: AuditLogRow; onClose: () => voi
 
 export default function AuditLogsPage() {
   const { user } = useAuth();
+  const t = useUiText();
+  const { locale } = useUiLocale();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -229,7 +234,7 @@ export default function AuditLogsPage() {
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <p className="text-zinc-400">Acesso restrito a administradores.</p>
+        <p className="text-zinc-400">{t("Acesso restrito a administradores.", "Administrator access only.", "Acceso restringido a administradores.")}</p>
       </div>
     );
   }
@@ -250,14 +255,14 @@ export default function AuditLogsPage() {
             <div>
               <h1 className="text-lg font-bold text-white flex items-center gap-2">
                 <Shield className="w-5 h-5 text-cyan-400" />
-                Audit Logs
+                {t("Registros de auditoria", "Audit logs", "Registros de auditoría")}
               </h1>
-              <p className="text-xs text-zinc-500">Registro auditável de todas as execuções de agentes</p>
+              <p className="text-xs text-zinc-500">{t("Registro auditável de todas as execuções dos agentes", "Auditable log of all agent runs", "Registro auditable de todas las ejecuciones de agentes")}</p>
             </div>
           </div>
           <Button variant="ghost" size="sm" onClick={() => void refetch()} className="text-zinc-400 hover:text-white gap-1">
             <RefreshCw className="w-3.5 h-3.5" />
-            Atualizar
+            {t("Atualizar", "Refresh", "Actualizar")}
           </Button>
         </div>
       </div>
@@ -268,11 +273,11 @@ export default function AuditLogsPage() {
         {summary && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
-              { label: "Total execuções", value: summary.totals.total?.toLocaleString("pt-BR") ?? "0", icon: Bot, color: "text-cyan-400" },
-              { label: "Concluídas", value: summary.totals.completed?.toLocaleString("pt-BR") ?? "0", icon: CheckCircle2, color: "text-emerald-400" },
-              { label: "Falhas", value: summary.totals.failed?.toLocaleString("pt-BR") ?? "0", icon: XCircle, color: "text-red-400" },
-              { label: "Aprovação pendente", value: summary.totals.pendingApproval?.toLocaleString("pt-BR") ?? "0", icon: Clock, color: "text-yellow-400" },
-              { label: "DRY RUN", value: summary.totals.dryRun?.toLocaleString("pt-BR") ?? "0", icon: FlaskConical, color: "text-purple-400" },
+              { label: t("Total de execuções", "Total runs", "Total de ejecuciones"), value: summary.totals.total?.toLocaleString(intlLocale(locale)) ?? "0", icon: Bot, color: "text-cyan-400" },
+              { label: t("Concluídas", "Completed", "Completadas"), value: summary.totals.completed?.toLocaleString(intlLocale(locale)) ?? "0", icon: CheckCircle2, color: "text-emerald-400" },
+              { label: t("Falhas", "Failures", "Fallos"), value: summary.totals.failed?.toLocaleString(intlLocale(locale)) ?? "0", icon: XCircle, color: "text-red-400" },
+              { label: t("Aprovações pendentes", "Pending approvals", "Aprobaciones pendientes"), value: summary.totals.pendingApproval?.toLocaleString(intlLocale(locale)) ?? "0", icon: Clock, color: "text-yellow-400" },
+              { label: "DRY RUN", value: summary.totals.dryRun?.toLocaleString(intlLocale(locale)) ?? "0", icon: FlaskConical, color: "text-purple-400" },
             ].map(({ label, value, icon: Icon, color }) => (
               <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -289,10 +294,10 @@ export default function AuditLogsPage() {
         {summary && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label: "Tokens totais", value: summary.totals.totalTokens?.toLocaleString("pt-BR") ?? "0" },
-              { label: "Custo estimado (USD)", value: `$${(summary.totals.totalCostUsd ?? 0).toFixed(4)}` },
-              { label: "Risk Score médio", value: `${(summary.totals.avgRiskScore ?? 0).toFixed(1)}/100` },
-              { label: "Confidence médio", value: `${((summary.totals.avgConfidence ?? 0) * (summary.totals.avgConfidence > 1 ? 1 : 100)).toFixed(1)}%` },
+              { label: t("Total de tokens", "Total tokens", "Total de tokens"), value: summary.totals.totalTokens?.toLocaleString(intlLocale(locale)) ?? "0" },
+              { label: t("Custo estimado (USD)", "Estimated cost (USD)", "Costo estimado (USD)"), value: `$${(summary.totals.totalCostUsd ?? 0).toFixed(4)}` },
+              { label: t("Pontuação média de risco", "Average risk score", "Puntuación media de riesgo"), value: `${(summary.totals.avgRiskScore ?? 0).toFixed(1)}/100` },
+              { label: t("Confiança média", "Average confidence", "Confianza media"), value: `${((summary.totals.avgConfidence ?? 0) * (summary.totals.avgConfidence > 1 ? 1 : 100)).toFixed(1)}%` },
             ].map(({ label, value }) => (
               <div key={label} className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-3">
                 <p className="text-xs text-zinc-500 mb-1">{label}</p>
@@ -306,7 +311,7 @@ export default function AuditLogsPage() {
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
           <div className="flex items-center gap-2 text-sm text-zinc-400 mb-2">
             <Filter className="w-4 h-4" />
-            <span>Filtros</span>
+            <span>{t("Filtros", "Filters", "Filtros")}</span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="relative">
@@ -314,7 +319,7 @@ export default function AuditLogsPage() {
               <Input
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-                placeholder="Agente..."
+                placeholder={t("Agente...", "Agent...", "Agente...")}
                 className="pl-8 bg-zinc-800 border-zinc-700 text-sm h-9"
               />
             </div>
@@ -323,29 +328,29 @@ export default function AuditLogsPage() {
               onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
               className="bg-zinc-800 border border-zinc-700 rounded-md text-sm text-zinc-300 px-3 h-9"
             >
-              <option value="">Todos os status</option>
-              <option value="completed">Concluído</option>
-              <option value="failed">Falhou</option>
-              <option value="started">Em andamento</option>
+              <option value="">{t("Todos os status", "All statuses", "Todos los estados")}</option>
+              <option value="completed">{t("Concluído", "Completed", "Completado")}</option>
+              <option value="failed">{t("Falhou", "Failed", "Fallido")}</option>
+              <option value="started">{t("Em andamento", "In progress", "En curso")}</option>
               <option value="dry_run">DRY RUN</option>
-              <option value="skipped">Ignorado</option>
+              <option value="skipped">{t("Ignorado", "Skipped", "Omitido")}</option>
             </select>
             <select
               value={approvalFilter}
               onChange={(e) => { setApprovalFilter(e.target.value); setPage(0); }}
               className="bg-zinc-800 border border-zinc-700 rounded-md text-sm text-zinc-300 px-3 h-9"
             >
-              <option value="">Todas as aprovações</option>
-              <option value="required">Requer aprovação</option>
+              <option value="">{t("Todas as aprovações", "All approvals", "Todas las aprobaciones")}</option>
+              <option value="required">{t("Requer aprovação", "Requires approval", "Requiere aprobación")}</option>
             </select>
             <select
               value={riskFilter}
               onChange={(e) => { setRiskFilter(e.target.value); setPage(0); }}
               className="bg-zinc-800 border border-zinc-700 rounded-md text-sm text-zinc-300 px-3 h-9"
             >
-              <option value="">Qualquer risco</option>
-              <option value="70">Alto (≥70)</option>
-              <option value="40">Médio+ (≥40)</option>
+              <option value="">{t("Qualquer risco", "Any risk", "Cualquier riesgo")}</option>
+              <option value="70">{t("Alto (≥70)", "High (≥70)", "Alto (≥70)")}</option>
+              <option value="40">{t("Médio+ (≥40)", "Medium+ (≥40)", "Medio+ (≥40)")}</option>
             </select>
             <Input
               type="date"
@@ -364,9 +369,9 @@ export default function AuditLogsPage() {
               onChange={(e) => { setIsDryRunFilter(e.target.value); setPage(0); }}
               className="bg-zinc-800 border border-zinc-700 rounded-md text-sm text-zinc-300 px-3 h-9"
             >
-              <option value="">Real + DRY RUN</option>
-              <option value="true">Apenas DRY RUN</option>
-              <option value="false">Apenas Real</option>
+              <option value="">{t("Real + DRY RUN", "Live + DRY RUN", "Real + DRY RUN")}</option>
+              <option value="true">{t("Apenas DRY RUN", "DRY RUN only", "Solo DRY RUN")}</option>
+              <option value="false">{t("Apenas execuções reais", "Live runs only", "Solo ejecuciones reales")}</option>
             </select>
             <Button
               variant="ghost"
@@ -374,7 +379,7 @@ export default function AuditLogsPage() {
               className="h-9 text-zinc-400 hover:text-white"
               onClick={() => { setSearch(""); setStatusFilter(""); setApprovalFilter(""); setRiskFilter(""); setDateFrom(""); setDateTo(""); setIsDryRunFilter(""); setPage(0); }}
             >
-              Limpar filtros
+              {t("Limpar filtros", "Clear filters", "Borrar filtros")}
             </Button>
           </div>
         </div>
@@ -385,16 +390,16 @@ export default function AuditLogsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-zinc-800 text-zinc-500 text-xs">
-                  <th className="text-left px-4 py-3">Agente</th>
-                  <th className="text-left px-4 py-3">Status</th>
-                  <th className="text-left px-4 py-3">Aprovação</th>
-                  <th className="text-left px-4 py-3">Risk</th>
-                  <th className="text-left px-4 py-3">Confidence</th>
-                  <th className="text-left px-4 py-3">Provider</th>
+                  <th className="text-left px-4 py-3">{t("Agente", "Agent", "Agente")}</th>
+                  <th className="text-left px-4 py-3">{t("Status", "Status", "Estado")}</th>
+                  <th className="text-left px-4 py-3">{t("Aprovação", "Approval", "Aprobación")}</th>
+                  <th className="text-left px-4 py-3">{t("Risco", "Risk", "Riesgo")}</th>
+                  <th className="text-left px-4 py-3">{t("Confiança", "Confidence", "Confianza")}</th>
+                  <th className="text-left px-4 py-3">{t("Provedor", "Provider", "Proveedor")}</th>
                   <th className="text-left px-4 py-3">Tokens</th>
-                  <th className="text-left px-4 py-3">Custo</th>
-                  <th className="text-left px-4 py-3">Duração</th>
-                  <th className="text-left px-4 py-3">Iniciado</th>
+                  <th className="text-left px-4 py-3">{t("Custo", "Cost", "Costo")}</th>
+                  <th className="text-left px-4 py-3">{t("Duração", "Duration", "Duración")}</th>
+                  <th className="text-left px-4 py-3">{t("Iniciado", "Started", "Iniciado")}</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -409,7 +414,7 @@ export default function AuditLogsPage() {
                 {!isLoading && (!logs || logs.length === 0) && (
                   <tr>
                     <td colSpan={11} className="px-4 py-12 text-center text-zinc-500">
-                      Nenhum log encontrado com os filtros aplicados
+                      {t("Nenhum registro encontrado com os filtros aplicados", "No logs found for the selected filters", "No se encontraron registros con los filtros seleccionados")}
                     </td>
                   </tr>
                 )}
@@ -425,9 +430,9 @@ export default function AuditLogsPage() {
                         <span className="font-mono text-xs text-zinc-200">{row.agentName}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">{statusBadge(row.executionStatus, row.isDryRun)}</td>
+                    <td className="px-4 py-3">{statusBadge(row.executionStatus, row.isDryRun, t)}</td>
                     <td className="px-4 py-3">
-                      {approvalBadge(row.approvalStatus) ?? <span className="text-zinc-600 text-xs">—</span>}
+                      {approvalBadge(row.approvalStatus, t) ?? <span className="text-zinc-600 text-xs">—</span>}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`font-mono text-xs ${riskColor(row.riskScore)}`}>
@@ -445,7 +450,7 @@ export default function AuditLogsPage() {
                       <span className="text-xs text-zinc-400">{row.providerUsed ?? "—"}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-xs text-zinc-400">{row.tokensUsed?.toLocaleString("pt-BR") ?? "—"}</span>
+                      <span className="text-xs text-zinc-400">{row.tokensUsed?.toLocaleString(intlLocale(locale)) ?? "—"}</span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-xs text-zinc-400">{row.estimatedCostUsd != null ? `$${row.estimatedCostUsd.toFixed(4)}` : "—"}</span>
@@ -454,7 +459,7 @@ export default function AuditLogsPage() {
                       <span className="text-xs text-zinc-400">{durationMs(row)}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-xs text-zinc-500">{formatDate(row.startedAt)}</span>
+                      <span className="text-xs text-zinc-500">{formatDate(row.startedAt, intlLocale(locale))}</span>
                     </td>
                     <td className="px-4 py-3">
                       <Eye className="w-3.5 h-3.5 text-zinc-600 hover:text-zinc-300" />
@@ -468,11 +473,13 @@ export default function AuditLogsPage() {
           {/* Pagination */}
           <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800">
             <span className="text-xs text-zinc-500">
-              {logs?.length === PAGE_SIZE ? `Mostrando ${page * PAGE_SIZE + 1}–${(page + 1) * PAGE_SIZE}` : `${(logs?.length ?? 0) + page * PAGE_SIZE} resultados`}
+              {logs?.length === PAGE_SIZE
+                ? t(`Mostrando ${page * PAGE_SIZE + 1}–${(page + 1) * PAGE_SIZE}`, `Showing ${page * PAGE_SIZE + 1}–${(page + 1) * PAGE_SIZE}`, `Mostrando ${page * PAGE_SIZE + 1}–${(page + 1) * PAGE_SIZE}`)
+                : t(`${(logs?.length ?? 0) + page * PAGE_SIZE} resultados`, `${(logs?.length ?? 0) + page * PAGE_SIZE} results`, `${(logs?.length ?? 0) + page * PAGE_SIZE} resultados`)}
             </span>
             <div className="flex gap-2">
-              <Button variant="ghost" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)} className="text-zinc-400 h-7 text-xs">Anterior</Button>
-              <Button variant="ghost" size="sm" disabled={(logs?.length ?? 0) < PAGE_SIZE} onClick={() => setPage(p => p + 1)} className="text-zinc-400 h-7 text-xs">Próxima</Button>
+              <Button variant="ghost" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)} className="text-zinc-400 h-7 text-xs">{t("Anterior", "Previous", "Anterior")}</Button>
+              <Button variant="ghost" size="sm" disabled={(logs?.length ?? 0) < PAGE_SIZE} onClick={() => setPage(p => p + 1)} className="text-zinc-400 h-7 text-xs">{t("Próxima", "Next", "Siguiente")}</Button>
             </div>
           </div>
         </div>
@@ -482,17 +489,17 @@ export default function AuditLogsPage() {
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-zinc-800 flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-cyan-400" />
-              <span className="font-semibold text-sm">Execuções por agente</span>
+              <span className="font-semibold text-sm">{t("Execuções por agente", "Runs by agent", "Ejecuciones por agente")}</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-zinc-800 text-zinc-500 text-xs">
-                    <th className="text-left px-4 py-2">Agente</th>
-                    <th className="text-left px-4 py-2">Execuções</th>
-                    <th className="text-left px-4 py-2">Falhas</th>
-                    <th className="text-left px-4 py-2">Taxa de sucesso</th>
-                    <th className="text-left px-4 py-2">Custo médio</th>
+                    <th className="text-left px-4 py-2">{t("Agente", "Agent", "Agente")}</th>
+                    <th className="text-left px-4 py-2">{t("Execuções", "Runs", "Ejecuciones")}</th>
+                    <th className="text-left px-4 py-2">{t("Falhas", "Failures", "Fallos")}</th>
+                    <th className="text-left px-4 py-2">{t("Taxa de sucesso", "Success rate", "Tasa de éxito")}</th>
+                    <th className="text-left px-4 py-2">{t("Custo médio", "Average cost", "Costo promedio")}</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -18,8 +18,10 @@ import { FeatureOnboarding, FeatureOnboardingTrigger } from "@/components/featur
 import { FEATURE_KEYS } from "@/hooks/useFeatureOnboarding";
 import { IntegrationWizard } from "@/components/integration-wizard";
 import { IntegrationChatPanel } from "@/components/integration-chat-panel";
+import { useUiText } from "@/lib/i18n";
 
 export default function IntegracoesPage() {
+  const t = useUiText();
   const queryClient = useQueryClient();
   const [connectModal, setConnectModal] = useState<CatalogEntry | null>(null);
 
@@ -37,11 +39,11 @@ export default function IntegracoesPage() {
       window.history.replaceState({}, "", cleanUrl);
 
       if (connected) {
-        toast.success(`${connected.charAt(0).toUpperCase() + connected.slice(1)} conectado com sucesso!`);
+        toast.success(t(`${connected.charAt(0).toUpperCase() + connected.slice(1)} conectado com sucesso!`, `${connected.charAt(0).toUpperCase() + connected.slice(1)} connected successfully!`, `¡${connected.charAt(0).toUpperCase() + connected.slice(1)} conectado correctamente!`));
         // Refresh the integrations list so the connected status appears
         void queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
       } else if (errMsg) {
-        toast.error(`Falha ao conectar: ${errMsg}`);
+        toast.error(t(`Falha ao conectar: ${errMsg}`, `Connection failed: ${errMsg}`, `Error al conectar: ${errMsg}`));
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -68,7 +70,7 @@ export default function IntegracoesPage() {
     } catch (err) {
       setTestResults(prev => ({
         ...prev,
-        [integrationId]: { valid: false, error: err instanceof Error ? err.message : "Erro ao testar conexão." },
+        [integrationId]: { valid: false, error: err instanceof Error ? err.message : t("Erro ao testar conexão.", "Connection test failed.", "Error al probar la conexión.") },
       }));
     } finally {
       setTesting(null);
@@ -126,7 +128,7 @@ export default function IntegracoesPage() {
       });
     },
     onSuccess: () => {
-      toast.success("Integração conectada com sucesso.");
+      toast.success(t("Integração conectada com sucesso.", "Integration connected successfully.", "Integración conectada correctamente."));
       setConnectModal(null);
       queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
     },
@@ -137,10 +139,10 @@ export default function IntegracoesPage() {
     setDisconnecting(integrationId);
     try {
       await customFetch<unknown>(`/api/social/accounts/${integrationId}`, { method: "DELETE" });
-      toast.success("Integração removida.");
+      toast.success(t("Integração removida.", "Integration removed.", "Integración eliminada."));
       queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
     } catch {
-      toast.error("Erro ao desconectar.");
+      toast.error(t("Erro ao desconectar.", "Failed to disconnect.", "Error al desconectar."));
     } finally {
       setDisconnecting(null);
     }
@@ -156,23 +158,23 @@ export default function IntegracoesPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-mono font-bold uppercase tracking-tighter text-foreground">
-          Integrações
+          {t("Integrações", "Integrations", "Integraciones")}
         </h1>
         <p className="text-sm font-mono text-muted-foreground/60 mt-1">
-          Conecte seus canais para ativar o modo Full Auto — disparos automáticos durante o lançamento.
+          {t("Conecte seus canais para ativar o modo Full Auto — disparos automáticos durante o lançamento.", "Connect your channels to enable Full Auto—automated messages during your launch.", "Conecta tus canales para activar Full Auto: mensajes automáticos durante el lanzamiento.")}
         </p>
       </div>
 
       <FeatureOnboarding
         featureKey={FEATURE_KEYS.INTEGRATIONS}
-        title="INTEGRAÇÕES & FULL AUTO"
-        description="Conecte seus canais para que a NexOS opere de forma autônoma. Sem integrações = operação manual durante o lançamento."
+        title={t("INTEGRAÇÕES & FULL AUTO", "INTEGRATIONS & FULL AUTO", "INTEGRACIONES Y FULL AUTO")}
+        description={t("Conecte seus canais para que a NexOS opere de forma autônoma. Sem integrações, a operação será manual durante o lançamento.", "Connect your channels so NexOS can run autonomously. Without integrations, launch operations remain manual.", "Conecta tus canales para que NexOS opere de forma autónoma. Sin integraciones, la operación del lanzamiento será manual.")}
         variant="banner"
         steps={[
-          "WhatsApp Business ou Telegram — sequências automáticas e respostas dos agentes",
-          "RD Station ou ActiveCampaign — e-mails segmentados por temperatura",
-          "Meta Ads / Google Ads — ROAS e métricas em tempo real",
-          "Hotmart / Kiwify — captura automática de vendas e conversão de leads",
+          t("WhatsApp Business ou Telegram — sequências automáticas e respostas dos agentes", "WhatsApp Business or Telegram—automated sequences and agent replies", "WhatsApp Business o Telegram: secuencias automáticas y respuestas de agentes"),
+          t("RD Station ou ActiveCampaign — e-mails segmentados por temperatura", "RD Station or ActiveCampaign—emails segmented by lead temperature", "RD Station o ActiveCampaign: correos segmentados por temperatura del lead"),
+          t("Meta Ads / Google Ads — ROAS e métricas em tempo real", "Meta Ads / Google Ads—ROAS and real-time metrics", "Meta Ads / Google Ads: ROAS y métricas en tiempo real"),
+          t("Hotmart / Kiwify — captura automática de vendas e conversão de leads", "Hotmart / Kiwify—automatic sales capture and lead conversion", "Hotmart / Kiwify: captura automática de ventas y conversión de leads"),
         ]}
       />
 
@@ -192,12 +194,12 @@ export default function IntegracoesPage() {
             : <WifiOff className="h-5 w-5 text-yellow-400 shrink-0" />}
           <div>
             <div className={`font-mono font-bold uppercase tracking-widest text-sm ${isFullAuto ? "text-success" : "text-yellow-400"}`}>
-              {isFullAuto ? "Full Auto — Pronto para lançar" : "Modo Parcial — Configure para lançar"}
+              {isFullAuto ? t("Full Auto — Pronto para lançar", "Full Auto — Ready to launch", "Full Auto — Listo para lanzar") : t("Modo parcial — Configure para lançar", "Partial mode — Configure to launch", "Modo parcial — Configura para lanzar")}
             </div>
             <div className="text-xs font-mono text-muted-foreground/60 mt-0.5">
               {isFullAuto
-                ? `${connectedCount} integrações ativas. Todos os disparos automáticos ativados.`
-                : `Conecte ${!hasMessaging ? "um canal de Mensagens" : ""}${!hasMessaging && !hasEmail ? " e " : ""}${!hasEmail ? "um canal de E-mail" : ""} para lançar campanhas.`}
+                ? t(`${connectedCount} integrações ativas. Todos os disparos automáticos ativados.`, `${connectedCount} active integrations. All automated messages are enabled.`, `${connectedCount} integraciones activas. Todos los mensajes automáticos están habilitados.`)
+                : t(`Conecte ${!hasMessaging ? "um canal de mensagens" : ""}${!hasMessaging && !hasEmail ? " e " : ""}${!hasEmail ? "um canal de e-mail" : ""} para lançar campanhas.`, `Connect ${!hasMessaging ? "a messaging channel" : ""}${!hasMessaging && !hasEmail ? " and " : ""}${!hasEmail ? "an email channel" : ""} to launch campaigns.`, `Conecta ${!hasMessaging ? "un canal de mensajes" : ""}${!hasMessaging && !hasEmail ? " y " : ""}${!hasEmail ? "un canal de correo" : ""} para lanzar campañas.`)}
             </div>
           </div>
         </div>
@@ -205,12 +207,12 @@ export default function IntegracoesPage() {
           <div className="flex flex-col gap-1.5 shrink-0">
             {!hasMessaging && (
               <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-widest border-yellow-400/40 text-yellow-400 bg-yellow-400/10 rounded-none px-2 py-1 gap-1">
-                <AlertTriangle className="h-2.5 w-2.5" />Mensagens — obrigatório para lançar
+                <AlertTriangle className="h-2.5 w-2.5" />{t("Mensagens — obrigatório para lançar", "Messaging — required to launch", "Mensajería — obligatorio para lanzar")}
               </Badge>
             )}
             {!hasEmail && (
               <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-widest border-yellow-400/40 text-yellow-400 bg-yellow-400/10 rounded-none px-2 py-1 gap-1">
-                <AlertTriangle className="h-2.5 w-2.5" />E-mail — obrigatório para lançar
+                <AlertTriangle className="h-2.5 w-2.5" />{t("E-mail — obrigatório para lançar", "Email — required to launch", "Correo — obligatorio para lanzar")}
               </Badge>
             )}
           </div>
@@ -267,11 +269,11 @@ export default function IntegracoesPage() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-mono font-semibold text-sm">{entry.label}</span>
                               {entry.required && !isConn && (
-                                <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-widest border-yellow-400/40 text-yellow-400 rounded-none px-1.5 py-0">obrigatório</Badge>
+                                <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-widest border-yellow-400/40 text-yellow-400 rounded-none px-1.5 py-0">{t("obrigatório", "required", "obligatorio")}</Badge>
                               )}
                               {isConn && (
                                 <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-widest border-success/40 text-success rounded-none px-1.5 py-0 gap-1">
-                                  <CheckCircle2 className="h-2.5 w-2.5" />conectado
+                                  <CheckCircle2 className="h-2.5 w-2.5" />{t("conectado", "connected", "conectado")}
                                 </Badge>
                               )}
                               {/* Facebook note: shares Instagram connection */}
@@ -359,11 +361,11 @@ export default function IntegracoesPage() {
                                         : <XCircle className="h-3 w-3 shrink-0" />}
                                       <span className="flex-1 truncate">
                                         {tr.valid
-                                          ? (tr.accountName ? `✓ Conta: ${tr.accountName}` : "Conexão verificada")
-                                          : (tr.error ?? "Falha na conexão")}
+                                          ? (tr.accountName ? `✓ ${t("Conta", "Account", "Cuenta")}: ${tr.accountName}` : t("Conexão verificada", "Connection verified", "Conexión verificada"))
+                                          : (tr.error ?? t("Falha na conexão", "Connection failed", "Error de conexión"))}
                                       </span>
                                       {hasRows && (
-                                        <span className="text-[9px] opacity-50 shrink-0">{isExpanded ? "▲" : "▼"} detalhes</span>
+                                        <span className="text-[9px] opacity-50 shrink-0">{isExpanded ? "▲" : "▼"} {t("detalhes", "details", "detalles")}</span>
                                       )}
                                     </button>
 
@@ -419,7 +421,7 @@ export default function IntegracoesPage() {
                                     {testing === integration?.id
                                       ? <Loader2 className="h-3 w-3 animate-spin" />
                                       : <Plug className="h-3 w-3" />}
-                                    {testing === integration?.id ? "Testando..." : "Testar Conexão"}
+                                    {testing === integration?.id ? t("Testando...", "Testing...", "Probando...") : t("Testar conexão", "Test connection", "Probar conexión")}
                                   </button>
                                 )}
                                 {entry.provider !== "facebook" ? (
@@ -431,11 +433,11 @@ export default function IntegracoesPage() {
                                     {disconnecting === integration?.id
                                       ? <Loader2 className="h-3 w-3 animate-spin" />
                                       : <XCircle className="h-3 w-3" />}
-                                    Desconectar
+                                    {t("Desconectar", "Disconnect", "Desconectar")}
                                   </button>
                                 ) : (
                                   <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/30">
-                                    Desconecte pelo Instagram
+                                    {t("Desconecte pelo Instagram", "Disconnect through Instagram", "Desconecta desde Instagram")}
                                   </span>
                                 )}
                               </div>
@@ -451,7 +453,7 @@ export default function IntegracoesPage() {
                               }`}
                             >
                               <Link2 className="h-3 w-3" />
-                              Conectar
+                              {t("Conectar", "Connect", "Conectar")}
                             </Button>
                           )}
                           {!isConn && entry.oauthPlatform && (
@@ -461,7 +463,7 @@ export default function IntegracoesPage() {
                                 : "text-muted-foreground/30"
                             }`}>
                               <span className={`inline-block w-1.5 h-1.5 rounded-full ${oauthProviders[entry.oauthPlatform] ? "bg-success/60" : "bg-muted-foreground/20"}`} />
-                              {oauthProviders[entry.oauthPlatform] ? "OAuth pronto" : "Inserção manual"}
+                              {oauthProviders[entry.oauthPlatform] ? t("OAuth pronto", "OAuth ready", "OAuth listo") : t("Inserção manual", "Manual entry", "Entrada manual")}
                             </span>
                           )}
                         </div>
@@ -485,7 +487,7 @@ export default function IntegracoesPage() {
           onClose={() => setConnectModal(null)}
           onConnect={(provider, fields) => connectMutation.mutate({ provider, fields })}
           onOAuthSuccess={() => {
-            toast.success("Integração conectada com sucesso via OAuth.");
+            toast.success(t("Integração conectada com sucesso via OAuth.", "Integration connected successfully via OAuth.", "Integración conectada correctamente mediante OAuth."));
             setConnectModal(null);
             queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
           }}

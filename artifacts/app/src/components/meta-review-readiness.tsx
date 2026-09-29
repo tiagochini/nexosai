@@ -17,6 +17,7 @@ import {
   Link2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 type MetaReviewReadiness = {
   ready: boolean;
@@ -100,9 +101,10 @@ function DiagnosticSection({
 }
 
 function UrlRow({ label, value }: { label: string; value: string }) {
+  const t = useUiText();
   const handleCopy = () => {
     void navigator.clipboard.writeText(value);
-    toast.success("URL copiada para a área de transferência");
+    toast.success(t("URL copiada para a área de transferência", "URL copied to clipboard", "URL copiada al portapapeles"));
   };
   return (
     <div className="flex items-center justify-between gap-4 py-2 border-b border-border/20 last:border-0">
@@ -116,7 +118,7 @@ function UrlRow({ label, value }: { label: string; value: string }) {
         variant="ghost"
         size="icon"
         onClick={handleCopy}
-        aria-label={`Copiar ${label}`}
+        aria-label={`${t("Copiar", "Copy", "Copiar")} ${label}`}
         className="h-7 w-7 shrink-0 hover:bg-primary/10 hover:text-primary transition-colors rounded-none border border-border/20"
       >
         <Copy className="h-3 w-3" />
@@ -126,6 +128,22 @@ function UrlRow({ label, value }: { label: string; value: string }) {
 }
 
 export function MetaReviewReadinessPanel() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
+  const dateLocale = intlLocale(locale);
+  const statusText = (status: string) => ({
+    pass: t("Aprovado", "Passed", "Aprobado"),
+    warn: t("Aviso", "Warning", "Advertencia"),
+    fail: t("Falhou", "Failed", "Fallido"),
+    required: t("Obrigatória", "Required", "Obligatoria"),
+    conditional: t("Condicional", "Conditional", "Condicional"),
+    connected: t("Conectada", "Connected", "Conectada"),
+    disconnected: t("Desconectada", "Disconnected", "Desconectada"),
+    inbound: t("Entrada", "Inbound", "Entrante"),
+    outbound: t("Saída", "Outbound", "Saliente"),
+    under_30s: t("Abaixo de 30 s", "Under 30 s", "Menos de 30 s"),
+    over_30s: t("Acima de 30 s", "Over 30 s", "Más de 30 s"),
+  } as Record<string, string>)[status] ?? status;
   const { data, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ["/api/social/review-readiness"],
     queryFn: () => customFetch<MetaReviewReadiness>("/api/social/review-readiness"),
@@ -149,10 +167,10 @@ export function MetaReviewReadinessPanel() {
       <div className="p-8 border border-destructive/30 bg-destructive/10 flex flex-col items-center justify-center gap-3">
         <AlertTriangle className="h-8 w-8 text-destructive" />
         <div className="font-mono text-sm text-destructive uppercase tracking-widest font-semibold">
-          Falha de Diagnóstico
+          {t("Falha de Diagnóstico", "Diagnostic Failed", "Error de diagnóstico")}
         </div>
         <p className="font-mono text-xs text-destructive/80 mb-2">
-          Não foi possível carregar os dados de prontidão da API.
+          {t("Não foi possível carregar os dados de prontidão da API.", "Unable to load API readiness data.", "No se pudieron cargar los datos de preparación de la API.")}
         </p>
         <Button
           variant="outline"
@@ -160,7 +178,7 @@ export function MetaReviewReadinessPanel() {
           onClick={() => refetch()}
           className="rounded-none border-destructive/40 hover:bg-destructive/20 hover:text-destructive text-destructive font-mono uppercase text-[10px] tracking-widest"
         >
-          Tentar Novamente
+          {t("Tentar Novamente", "Try Again", "Intentar de nuevo")}
         </Button>
       </div>
     );
@@ -188,19 +206,19 @@ export function MetaReviewReadinessPanel() {
                   : "border-destructive/40 text-destructive bg-destructive/10"
               }`}
             >
-              {data.ready ? "Pronto para Submissão" : "Bloqueios Identificados"}
+              {data.ready ? t("Pronto para Submissão", "Ready to Submit", "Listo para enviar") : t("Bloqueios Identificados", "Blockers Identified", "Bloqueos identificados")}
             </Badge>
           </div>
           <p className="font-mono text-[10px] text-muted-foreground mt-2 uppercase tracking-widest">
-            Diagnóstico gerado em {new Date(data.generatedAt).toLocaleString()}
+            {t("Diagnóstico gerado em", "Diagnostic generated", "Diagnóstico generado")} {new Date(data.generatedAt).toLocaleString(dateLocale)}
           </p>
           <p className="font-mono text-[10px] text-primary/70 mt-1">
-            Token-free evidence: access tokens and secrets are never returned by this screen.
+            {t("Evidências sem tokens: tokens de acesso e segredos nunca são retornados por esta tela.", "Token-free evidence: access tokens and secrets are never returned by this screen.", "Evidencias sin tokens: esta pantalla nunca devuelve tokens de acceso ni secretos.")}
           </p>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px]">
-            <a className="text-primary hover:underline" href={data.legalUrls.privacy} target="_blank" rel="noreferrer">Privacy Policy</a>
-            <a className="text-primary hover:underline" href={data.legalUrls.terms} target="_blank" rel="noreferrer">Terms of Service</a>
-            <a className="text-primary hover:underline" href={data.legalUrls.dataDeletion} target="_blank" rel="noreferrer">Data Deletion</a>
+            <a className="text-primary hover:underline" href={data.legalUrls.privacy} target="_blank" rel="noreferrer">{t("Política de Privacidade", "Privacy Policy", "Política de privacidad")}</a>
+            <a className="text-primary hover:underline" href={data.legalUrls.terms} target="_blank" rel="noreferrer">{t("Termos de Serviço", "Terms of Service", "Términos del servicio")}</a>
+            <a className="text-primary hover:underline" href={data.legalUrls.dataDeletion} target="_blank" rel="noreferrer">{t("Exclusão de dados", "Data Deletion", "Eliminación de datos")}</a>
           </div>
         </div>
         <Button
@@ -213,14 +231,14 @@ export function MetaReviewReadinessPanel() {
           <RefreshCw
             className={`h-3 w-3 mr-2 ${isRefetching ? "animate-spin" : ""}`}
           />
-          Sincronizar
+          {t("Sincronizar", "Sync", "Sincronizar")}
         </Button>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Left Column */}
         <div className="space-y-6 flex flex-col">
-          <DiagnosticSection title="Verificações de Prontidão" icon={ShieldCheck}>
+          <DiagnosticSection title={t("Verificações de Prontidão", "Readiness Checks", "Comprobaciones de preparación")} icon={ShieldCheck}>
             <div className="space-y-3">
               {data.checks.map((check) => (
                 <div
@@ -251,21 +269,21 @@ export function MetaReviewReadinessPanel() {
             </div>
           </DiagnosticSection>
 
-          <DiagnosticSection title="URLs de Configuração (App Dashboard)" icon={Link2}>
+          <DiagnosticSection title={t("URLs de Configuração (App Dashboard)", "Configuration URLs (App Dashboard)", "URLs de configuración (panel de la aplicación)")} icon={Link2}>
             <UrlRow label="Callback URL" value={data.callbackUrl} />
-            <UrlRow label="Privacidade" value={data.legalUrls.privacy} />
-            <UrlRow label="Termos" value={data.legalUrls.terms} />
-            <UrlRow label="Exclusão" value={data.legalUrls.dataDeletion} />
+            <UrlRow label={t("Privacidade", "Privacy", "Privacidad")} value={data.legalUrls.privacy} />
+            <UrlRow label={t("Termos", "Terms", "Términos")} value={data.legalUrls.terms} />
+            <UrlRow label={t("Exclusão", "Deletion", "Eliminación")} value={data.legalUrls.dataDeletion} />
           </DiagnosticSection>
 
-          <DiagnosticSection title="Matriz de Permissões" icon={Key}>
+          <DiagnosticSection title={t("Matriz de Permissões", "Permissions Matrix", "Matriz de permisos")} icon={Key}>
             <div className="overflow-x-auto -mx-4 -mb-4 mt-2 border-t border-border/30">
               <table className="w-full text-left font-mono text-[10px]">
                 <thead className="bg-muted/10 text-muted-foreground uppercase tracking-widest border-b border-border/40">
                   <tr>
-                    <th className="py-2 px-4 font-medium">Scope</th>
-                    <th className="py-2 px-4 font-medium">Use Case / Recording</th>
-                    <th className="py-2 px-4 font-medium">Status</th>
+                    <th className="py-2 px-4 font-medium">{t("Escopo", "Scope", "Permiso")}</th>
+                    <th className="py-2 px-4 font-medium">{t("Caso de uso / Gravação", "Use Case / Recording", "Caso de uso / Grabación")}</th>
+                    <th className="py-2 px-4 font-medium">{t("Status", "Status", "Estado")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/20">
@@ -285,7 +303,7 @@ export function MetaReviewReadinessPanel() {
                           className="text-muted-foreground mt-1 truncate max-w-[240px]"
                           title={perm.recording}
                         >
-                          <span className="opacity-50">Grav:</span>{" "}
+                          <span className="opacity-50">{t("Grav.:", "Rec.:", "Grab.:")}</span>{" "}
                           {perm.recording}
                         </div>
                       </td>
@@ -294,7 +312,7 @@ export function MetaReviewReadinessPanel() {
                           variant="outline"
                           className="text-[9px] py-0 h-5 rounded-none border-border/40 bg-background/50"
                         >
-                          {perm.status}
+                          {statusText(perm.status)}
                         </Badge>
                       </td>
                     </tr>
@@ -307,10 +325,10 @@ export function MetaReviewReadinessPanel() {
 
         {/* Right Column */}
         <div className="space-y-6 flex flex-col">
-          <DiagnosticSection title="Contas de Teste Conectadas" icon={Server}>
+          <DiagnosticSection title={t("Contas de Teste Conectadas", "Connected Test Accounts", "Cuentas de prueba conectadas")} icon={Server}>
             {data.accounts.length === 0 ? (
               <div className="text-center py-6 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-                Nenhuma conta configurada
+                {t("Nenhuma conta configurada", "No accounts configured", "No hay cuentas configuradas")}
               </div>
             ) : (
               <div className="space-y-2 mt-1">
@@ -321,7 +339,7 @@ export function MetaReviewReadinessPanel() {
                   >
                     <div className="flex flex-col">
                       <span className="font-mono text-xs text-foreground font-medium">
-                        {acc.accountName || "Unknown Account"}
+                        {acc.accountName || t("Conta desconhecida", "Unknown Account", "Cuenta desconocida")}
                       </span>
                       <span className="font-mono text-[10px] text-muted-foreground mt-1">
                         {acc.provider.toUpperCase()} &middot;{" "}
@@ -336,7 +354,7 @@ export function MetaReviewReadinessPanel() {
                           : "border-destructive/40 text-destructive bg-destructive/5"
                       }`}
                     >
-                      {acc.status}
+                      {statusText(acc.status)}
                     </Badge>
                   </div>
                 ))}
@@ -344,20 +362,20 @@ export function MetaReviewReadinessPanel() {
             )}
           </DiagnosticSection>
 
-          <DiagnosticSection title="Evidência de Operação (SLA & Latência)" icon={Activity}>
+          <DiagnosticSection title={t("Evidência de Operação (SLA & Latência)", "Operational Evidence (SLA & Latency)", "Evidencia operativa (SLA y latencia)")} icon={Activity}>
             {data.evidence.length === 0 ? (
               <div className="text-center py-6 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-                Sem evidências recentes registradas
+                {t("Sem evidências recentes registradas", "No recent evidence recorded", "No hay evidencia reciente")}
               </div>
             ) : (
               <div className="overflow-x-auto -mx-4 -mb-4 mt-2 border-t border-border/30">
                 <table className="w-full text-left font-mono text-[10px]">
                   <thead className="bg-muted/10 text-muted-foreground uppercase tracking-widest border-b border-border/40">
                     <tr>
-                      <th className="py-2 px-4 font-medium">Event / Action</th>
-                      <th className="py-2 px-4 font-medium">Status / SLA</th>
-                      <th className="py-2 px-4 font-medium">Latência</th>
-                      <th className="py-2 px-4 font-medium">Timestamps</th>
+                      <th className="py-2 px-4 font-medium">{t("Evento / Ação", "Event / Action", "Evento / Acción")}</th>
+                      <th className="py-2 px-4 font-medium">{t("Status / SLA", "Status / SLA", "Estado / SLA")}</th>
+                      <th className="py-2 px-4 font-medium">{t("Latência", "Latency", "Latencia")}</th>
+                      <th className="py-2 px-4 font-medium">{t("Horários", "Timestamps", "Marcas de tiempo")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
@@ -378,7 +396,7 @@ export function MetaReviewReadinessPanel() {
                           </div>
                            {ev.providerMessageId && (
                              <div className="text-muted-foreground mt-1" title={ev.providerMessageId}>
-                               Response ID: {ev.providerMessageId}
+                                {t("ID de resposta:", "Response ID:", "ID de respuesta:")} {ev.providerMessageId}
                              </div>
                            )}
                         </td>
@@ -388,7 +406,7 @@ export function MetaReviewReadinessPanel() {
                               variant="outline"
                               className="text-[9px] py-0 h-4 rounded-none border-border/40"
                             >
-                              {ev.status}
+                               {statusText(ev.status)}
                             </Badge>
                             {ev.slaStatus && (
                               <span
@@ -398,7 +416,7 @@ export function MetaReviewReadinessPanel() {
                                     : "text-destructive"
                                 }
                               >
-                                SLA {ev.slaStatus.toUpperCase()}
+                                SLA {statusText(ev.slaStatus)}
                               </span>
                             )}
                           </div>
@@ -412,13 +430,13 @@ export function MetaReviewReadinessPanel() {
                         </td>
                         <td className="py-3 px-4 text-muted-foreground">
                           <div>
-                            <span className="opacity-50 mr-1">In:</span>
-                            {new Date(ev.receivedAt).toLocaleTimeString()}
+                            <span className="opacity-50 mr-1">{t("Ent.:", "In:", "Ent.:")}</span>
+                            {new Date(ev.receivedAt).toLocaleTimeString(dateLocale)}
                           </div>
                           {ev.sentAt && (
                             <div className="mt-1">
-                              <span className="opacity-50 mr-1">Out:</span>
-                              {new Date(ev.sentAt).toLocaleTimeString()}
+                              <span className="opacity-50 mr-1">{t("Saí.:", "Out:", "Sal.:")}</span>
+                              {new Date(ev.sentAt).toLocaleTimeString(dateLocale)}
                             </div>
                           )}
                         </td>
@@ -430,20 +448,20 @@ export function MetaReviewReadinessPanel() {
             )}
           </DiagnosticSection>
 
-          <DiagnosticSection title="Turnos de Conversação" icon={MessageSquare}>
+          <DiagnosticSection title={t("Turnos de Conversação", "Conversation Turns", "Turnos de conversación")} icon={MessageSquare}>
             {data.conversationTurns.length === 0 ? (
               <div className="text-center py-6 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-                Nenhuma conversa recente registrada
+                {t("Nenhuma conversa recente registrada", "No recent conversations recorded", "No hay conversaciones recientes")}
               </div>
             ) : (
               <div className="overflow-x-auto -mx-4 -mb-4 mt-2 border-t border-border/30">
                 <table className="w-full text-left font-mono text-[10px]">
                   <thead className="bg-muted/10 text-muted-foreground uppercase tracking-widest border-b border-border/40">
                     <tr>
-                      <th className="py-2 px-4 font-medium">Dir / Canal</th>
-                      <th className="py-2 px-4 font-medium">Decisão / Seg.</th>
-                      <th className="py-2 px-4 font-medium">Status Prov.</th>
-                      <th className="py-2 px-4 font-medium">Timing</th>
+                      <th className="py-2 px-4 font-medium">{t("Direção / Canal", "Direction / Channel", "Dirección / Canal")}</th>
+                      <th className="py-2 px-4 font-medium">{t("Decisão / Segurança", "Decision / Safety", "Decisión / Seguridad")}</th>
+                      <th className="py-2 px-4 font-medium">{t("Status do provedor", "Provider Status", "Estado del proveedor")}</th>
+                      <th className="py-2 px-4 font-medium">{t("Horário", "Time", "Hora")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
@@ -460,7 +478,7 @@ export function MetaReviewReadinessPanel() {
                                 : "text-foreground"
                             }`}
                           >
-                            {turn.direction.toUpperCase()}
+                            {statusText(turn.direction)}
                           </div>
                           <div className="text-muted-foreground mt-1">
                             {turn.channel}
@@ -487,12 +505,12 @@ export function MetaReviewReadinessPanel() {
                           <div>{turn.providerStatus || "—"}</div>
                           {turn.providerResponseId && (
                             <div className="mt-1" title={turn.providerResponseId}>
-                              Response ID: {turn.providerResponseId}
+                              {t("ID de resposta:", "Response ID:", "ID de respuesta:")} {turn.providerResponseId}
                             </div>
                           )}
                         </td>
                         <td className="py-3 px-4 text-muted-foreground">
-                          {new Date(turn.receivedAt).toLocaleTimeString()}
+                          {new Date(turn.receivedAt).toLocaleTimeString(dateLocale)}
                         </td>
                       </tr>
                     ))}

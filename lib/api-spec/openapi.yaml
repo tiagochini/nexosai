@@ -1920,6 +1920,9 @@ components:
           type: string
         planSlug:
           type: string
+        locale:
+          type: string
+          enum: [pt-BR, en-US, en-AU, es-LA]
       required: [email, password, name]
 
     RefreshTokenInput:

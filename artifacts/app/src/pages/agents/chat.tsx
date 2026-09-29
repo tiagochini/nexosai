@@ -17,6 +17,7 @@ import {
 import nexosLogo from "/nexos-logo.png";
 import { FeatureOnboarding, FeatureOnboardingTrigger } from "@/components/feature-onboarding";
 import { FEATURE_KEYS } from "@/hooks/useFeatureOnboarding";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 // ── Agent catalog (must match backend) ───────────────────────────────────────
 interface AgentInfo {
@@ -167,6 +168,13 @@ const THINKING_PHASES: ThinkingPhase[] = [
   { icon: Pen,         label: "Redigindo resposta…",        color: "text-green-400" },
   { icon: CheckCircle2,label: "Revisando qualidade…",       color: "text-primary" },
 ];
+const THINKING_TRANSLATIONS: Record<string, [string, string, string]> = {
+  "Analisando contexto…": ["Analisando contexto…", "Analyzing context…", "Analizando el contexto…"],
+  "Buscando referências…": ["Buscando referências…", "Searching for references…", "Buscando referencias…"],
+  "Elaborando estratégia…": ["Elaborando estratégia…", "Developing a strategy…", "Elaborando una estrategia…"],
+  "Redigindo resposta…": ["Redigindo resposta…", "Drafting a response…", "Redactando una respuesta…"],
+  "Revisando qualidade…": ["Revisando qualidade…", "Reviewing quality…", "Revisando la calidad…"],
+};
 
 const ACCENT_CLASSES: Record<string, { border: string; text: string; bg: string }> = {
   primary: { border: "border-primary/40",      text: "text-primary",      bg: "bg-primary/10" },
@@ -221,6 +229,7 @@ function formatBytes(b: number) {
 // ── Thinking indicator component ──────────────────────────────────────────────
 function AgentThinking({ agentName, accent, showAll, onToggleAll }:
   { agentName: string; accent: { border: string; text: string; bg: string }; showAll: boolean; onToggleAll: () => void }) {
+  const t = useUiText();
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [completedPhases, setCompletedPhases] = useState<number[]>([]);
@@ -271,7 +280,7 @@ function AgentThinking({ agentName, accent, showAll, onToggleAll }:
             <div className="flex items-center gap-1.5 flex-1 min-w-0">
               <Loader2 className={`h-3.5 w-3.5 ${accent.text} animate-spin shrink-0`} />
               <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70">
-                {agentName} está trabalhando
+                 {t(`${agentName} está trabalhando`, `${agentName} is working`, `${agentName} está trabajando`)}
               </span>
               <span className="font-mono text-[10px] text-muted-foreground/40 ml-1">
                 {elapsed}s
@@ -285,7 +294,7 @@ function AgentThinking({ agentName, accent, showAll, onToggleAll }:
           {/* Current phase — always visible */}
           <div className={`border-t border-border/30 px-3 py-2 flex items-center gap-2.5 ${accent.bg}/30`}>
             <CurrentIcon className={`h-3.5 w-3.5 ${currentPhase.color} shrink-0`} />
-            <span className={`font-mono text-xs ${currentPhase.color}`}>{currentPhase.label}</span>
+             <span className={`font-mono text-xs ${currentPhase.color}`}>{t(...THINKING_TRANSLATIONS[currentPhase.label])}</span>
             {/* Animated dots */}
             <div className="flex gap-0.5 ml-auto">
               {[0, 150, 300].map(d => (
@@ -307,7 +316,7 @@ function AgentThinking({ agentName, accent, showAll, onToggleAll }:
                   <div key={idx} className="flex items-center gap-2">
                     <CheckCircle2 className="h-3 w-3 text-success/60 shrink-0" />
                     <PhaseIcon className="h-3 w-3 text-muted-foreground/40 shrink-0" />
-                    <span className="font-mono text-[10px] text-muted-foreground/40 line-through">{phase.label}</span>
+                     <span className="font-mono text-[10px] text-muted-foreground/40 line-through">{t(...THINKING_TRANSLATIONS[phase.label])}</span>
                   </div>
                 );
               })}
@@ -322,6 +331,8 @@ function AgentThinking({ agentName, accent, showAll, onToggleAll }:
 // ── Message detail panel (expandable on each AI message) ──────────────────────
 function MessageProcess({ msg, agentName, phaseCount }:
   { msg: ChatMsg; agentName: string; phaseCount: number }) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const [open, setOpen] = useState(false);
   if (!msg.meta) return null;
   const { tokensUsed, creditsCharged, elapsedMs } = msg.meta;
@@ -335,7 +346,7 @@ function MessageProcess({ msg, agentName, phaseCount }:
       >
         <Sparkles className="h-3 w-3 text-muted-foreground/40 shrink-0" />
         <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 flex-1 text-left">
-          Ver processo completo
+          {t("Ver processo completo", "View full process", "Ver proceso completo")}
         </span>
         {open
           ? <ChevronUp className="h-3 w-3 text-muted-foreground/30" />
@@ -352,7 +363,7 @@ function MessageProcess({ msg, agentName, phaseCount }:
                 <div key={idx} className="flex items-center gap-2">
                   <CheckCircle2 className="h-3 w-3 text-success/60 shrink-0" />
                   <PhaseIcon className={`h-3 w-3 shrink-0 ${phase.color} opacity-60`} />
-                  <span className="font-mono text-[10px] text-muted-foreground/50">{phase.label}</span>
+                   <span className="font-mono text-[10px] text-muted-foreground/50">{t(...THINKING_TRANSLATIONS[phase.label])}</span>
                 </div>
               );
             })}
@@ -362,25 +373,25 @@ function MessageProcess({ msg, agentName, phaseCount }:
           <div className="border-t border-border/20 pt-2 grid grid-cols-3 gap-3">
             {elapsedSec && (
               <div>
-                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30">Tempo</div>
+                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30">{t("Tempo", "Time", "Tiempo")}</div>
                 <div className="font-mono text-xs text-muted-foreground/60">{elapsedSec}s</div>
               </div>
             )}
             {tokensUsed != null && (
               <div>
-                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30">Tokens</div>
+                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30">{t("Tokens", "Tokens", "Tokens")}</div>
                 <div className="font-mono text-xs text-muted-foreground/60">{tokensUsed.toLocaleString("pt-BR")}</div>
               </div>
             )}
             {creditsCharged != null && (
               <div>
-                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30">Créditos</div>
+                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30">{t("Créditos", "Credits", "Créditos")}</div>
                 <div className="font-mono text-xs text-muted-foreground/60">{creditsCharged}</div>
               </div>
             )}
           </div>
           <p className="font-mono text-[9px] text-muted-foreground/30">
-            Agente: {agentName} · Resposta gerada em {new Date(msg.timestamp).toLocaleTimeString("pt-BR")}
+             {t("Agente", "Agent", "Agente")}: {agentName} · {t("Resposta gerada em", "Response generated at", "Respuesta generada a las")} {new Date(msg.timestamp).toLocaleTimeString(intlLocale(locale))}
           </p>
         </div>
       )}
@@ -390,6 +401,8 @@ function MessageProcess({ msg, agentName, phaseCount }:
 
 // ── Main chat page ────────────────────────────────────────────────────────────
 export default function AgentChat() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const [, params] = useRoute("/agents/:role");
   const role = params?.role ?? "command";
   const agent = AGENT_INFO[role] ?? AGENT_INFO.command!;
@@ -655,15 +668,15 @@ export default function AgentChat() {
 
             toast.success(
               frames.length > 0
-                ? `Vídeo analisado: ${frames.length} frames extraídos${videoTranscription ? " + transcrição" : ""}`
-                : "Vídeo anexado (sem frames extraídos)",
+                ? t(`Vídeo analisado: ${frames.length} frames extraídos${videoTranscription ? " + transcrição" : ""}`, `Video analyzed: ${frames.length} frames extracted${videoTranscription ? " + transcript" : ""}`, `Video analizado: ${frames.length} fotogramas extraídos${videoTranscription ? " + transcripción" : ""}`)
+                : t("Vídeo anexado (sem frames extraídos)", "Video attached (no frames extracted)", "Vídeo adjuntado (sin fotogramas extraídos)"),
               { duration: 4000 }
             );
           } catch {
             setPendingAttachments(prev =>
               prev.map(a => a.url === att.url ? { ...a, isAnalyzingVideo: false } : a)
             );
-            toast.warning("Não foi possível analisar o vídeo automaticamente");
+            toast.warning(t("Não foi possível analisar o vídeo automaticamente", "Could not analyze the video automatically", "No se pudo analizar el video automáticamente"));
           }
         })();
       }
@@ -795,8 +808,8 @@ export default function AgentChat() {
     const isTimeout = lastError?.name === "AbortError" || lastError?.name === "TimeoutError";
     toast.error(
       isTimeout
-        ? "A agente demorou demais. Sua mensagem foi preservada — tente novamente."
-        : (lastError?.message ?? "Erro de comunicação. Sua mensagem foi preservada."),
+        ? t("A agente demorou demais. Sua mensagem foi preservada — tente novamente.", "The agent took too long. Your message was preserved—please try again.", "El agente tardó demasiado. Tu mensaje se conservó; inténtalo de nuevo.")
+        : (lastError?.message ?? t("Erro de comunicação. Sua mensagem foi preservada.", "Communication error. Your message was preserved.", "Error de comunicación. Tu mensaje se conservó.")),
       { duration: 7000 },
     );
   };
@@ -805,11 +818,11 @@ export default function AgentChat() {
   const toggleVoice = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SpeechRec = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
-    if (!SpeechRec) { toast.error("Seu navegador não suporta reconhecimento de voz. Use Chrome ou Edge."); return; }
+    if (!SpeechRec) { toast.error(t("Seu navegador não suporta reconhecimento de voz. Use Chrome ou Edge.", "Your browser does not support speech recognition. Use Chrome or Edge.", "Tu navegador no admite el reconocimiento de voz. Usa Chrome o Edge.")); return; }
     if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any
     const rec = new SpeechRec() as any;
-    rec.lang = "pt-BR"; rec.continuous = false; rec.interimResults = false;
+    rec.lang = intlLocale(locale); rec.continuous = false; rec.interimResults = false;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rec.onresult = (e: any) => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
@@ -817,11 +830,11 @@ export default function AgentChat() {
       if (transcript) { setInput(prev => prev ? `${prev} ${transcript}` : transcript); setTimeout(() => textareaRef.current?.focus(), 50); }
     };
     rec.onend = () => setIsListening(false);
-    rec.onerror = () => { setIsListening(false); toast.error("Não foi possível capturar o áudio. Verifique as permissões."); };
+    rec.onerror = () => { setIsListening(false); toast.error(t("Não foi possível capturar o áudio. Verifique as permissões.", "Could not capture audio. Check permissions.", "No se pudo capturar el audio. Comprueba los permisos.")); };
     recognitionRef.current = rec;
     rec.start();
     setIsListening(true);
-    toast("Ouvindo… fale agora.", { duration: 2500 });
+    toast(t("Ouvindo… fale agora.", "Listening… speak now.", "Escuchando… habla ahora."), { duration: 2500 });
   };
 
   const clearChat = () => { setMessages([]); localStorage.removeItem(chatStorageKey(role, selectedCampaign)); };
@@ -856,10 +869,10 @@ export default function AgentChat() {
         </div>
         {messages.length > 0 && (
           <div className="flex gap-1 shrink-0">
-            <button onClick={exportChat} title="Exportar conversa" className="h-7 w-7 border border-border/40 bg-muted/10 hover:bg-muted/30 flex items-center justify-center transition-all text-muted-foreground hover:text-foreground">
+            <button onClick={exportChat} title={t("Exportar conversa", "Export chat", "Exportar conversación")} className="h-7 w-7 border border-border/40 bg-muted/10 hover:bg-muted/30 flex items-center justify-center transition-all text-muted-foreground hover:text-foreground">
               <Download className="h-3 w-3" />
             </button>
-            <button onClick={clearChat} title="Limpar histórico" className="h-7 w-7 border border-border/40 bg-muted/10 hover:bg-muted/30 flex items-center justify-center transition-all text-muted-foreground hover:text-foreground">
+            <button onClick={clearChat} title={t("Limpar histórico", "Clear history", "Borrar historial")} className="h-7 w-7 border border-border/40 bg-muted/10 hover:bg-muted/30 flex items-center justify-center transition-all text-muted-foreground hover:text-foreground">
               <RefreshCw className="h-3 w-3" />
             </button>
           </div>
@@ -869,15 +882,15 @@ export default function AgentChat() {
       {/* ── Capabilities onboarding ─────────────────────────────────────────── */}
       <FeatureOnboarding
         featureKey={FEATURE_KEYS.AGENT_CHAT}
-        title="CHAT COM AGENTES"
-        description="Não precisa digitar tudo — você pode falar, enviar áudios, vídeos, prints ou documentos. O agente processa qualquer formato."
+        title={t("CHAT COM AGENTES", "AGENT CHAT", "CHAT CON AGENTES")}
+        description={t("Não precisa digitar tudo — você pode falar, enviar áudios, vídeos, prints ou documentos. O agente processa qualquer formato.", "You don’t have to type everything—you can speak or send audio, videos, screenshots, or documents. The agent can process any format.", "No tienes que escribirlo todo: puedes hablar o enviar audios, videos, capturas o documentos. El agente procesa cualquier formato.")}
         variant="banner"
         steps={[
-          "Texto: escreva normalmente ou use o modo Brainstorm / Estratégia / Revisão",
-          "Voz: clique no microfone — o sistema transcreve em tempo real",
-          "Áudio/Vídeo (MP3, MP4): arraste ou clique no clipe — o Whisper transcreve automaticamente",
-          "Screenshot ou imagem: o agente analisa o visual e responde com base no que vê",
-          "Documento ou código: cole ou faça upload de .txt, .json, .ts, .py e o agente lê tudo",
+          t("Texto: escreva normalmente ou use o modo Brainstorm / Estratégia / Revisão", "Text: type normally or use Brainstorm / Strategy / Review mode", "Texto: escribe con normalidad o usa el modo Lluvia de ideas / Estrategia / Revisión"),
+          t("Voz: clique no microfone — o sistema transcreve em tempo real", "Voice: click the microphone—the system transcribes in real time", "Voz: pulsa el micrófono; el sistema transcribe en tiempo real"),
+          t("Áudio/Vídeo (MP3, MP4): arraste ou clique no clipe — o Whisper transcreve automaticamente", "Audio/video (MP3, MP4): drag or click the clip—the system transcribes automatically", "Audio/video (MP3, MP4): arrastra o pulsa el clip; el sistema transcribe automáticamente"),
+          t("Captura de tela ou imagem: o agente analisa o visual e responde com base no que vê", "Screenshot or image: the agent analyzes the visual and responds based on what it sees", "Captura o imagen: el agente analiza el contenido visual y responde según lo que ve"),
+          t("Documento ou código: cole ou envie .txt, .json, .ts, .py e o agente lê tudo", "Document or code: paste or upload .txt, .json, .ts, .py and the agent reads it", "Documento o código: pega o sube .txt, .json, .ts, .py y el agente lo lee"),
         ]}
       />
 
@@ -892,7 +905,7 @@ export default function AgentChat() {
             </div>
             <div className="text-center">
               <p className="font-mono text-sm text-foreground font-bold uppercase tracking-wide mb-1">{agent.name}</p>
-              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Escolha uma sugestão ou escreva sua pergunta</p>
+              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">{t("Escolha uma sugestão ou escreva sua pergunta", "Choose a suggestion or write your question", "Elige una sugerencia o escribe tu pregunta")}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full max-w-xl">
               {agent.suggestions.map(s => (
@@ -987,7 +1000,7 @@ export default function AgentChat() {
 
                 {/* Timestamp */}
                 <div className="mt-1 px-1 text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">
-                  {msg.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                  {msg.timestamp.toLocaleTimeString(intlLocale(locale), { hour: "2-digit", minute: "2-digit" })}
                 </div>
 
                 {/* "Ver processo completo" — only on AI messages */}
@@ -1017,7 +1030,7 @@ export default function AgentChat() {
           <div className="flex items-center gap-2 px-3 py-2 border border-amber-400/30 bg-amber-400/10">
             <Loader2 className="h-3.5 w-3.5 text-amber-400 animate-spin shrink-0" />
             <span className="font-mono text-[11px] text-amber-400 uppercase tracking-widest">
-              Tentando novamente {retryInfo.attempt}/{retryInfo.max}…
+              {t("Tentando novamente", "Retrying", "Reintentando")} {retryInfo.attempt}/{retryInfo.max}…
             </span>
           </div>
         )}
@@ -1059,12 +1072,12 @@ export default function AgentChat() {
                         {att.isAnalyzingVideo ? (
                           <>
                             <Loader2 className="h-4 w-4 text-cyan-400 animate-spin" />
-                            <span className="font-mono text-[8px] text-cyan-400 mt-0.5 uppercase tracking-widest">Analisando…</span>
+                            <span className="font-mono text-[8px] text-cyan-400 mt-0.5 uppercase tracking-widest">{t("Analisando…", "Analyzing…", "Analizando…")}</span>
                           </>
                         ) : att.videoFrames && att.videoFrames.length > 0 ? (
                           <>
                             <CheckCircle2 className="h-4 w-4 text-cyan-400" />
-                            <span className="font-mono text-[8px] text-cyan-400 mt-0.5 uppercase tracking-widest">{att.videoFrames.length} frames{att.videoTranscription ? " + voz" : ""}</span>
+                            <span className="font-mono text-[8px] text-cyan-400 mt-0.5 uppercase tracking-widest">{att.videoFrames.length} {t("frames", "frames", "fotogramas")}{att.videoTranscription ? ` + ${t("voz", "audio", "audio")}` : ""}</span>
                           </>
                         ) : (
                           <FileVideo className="h-5 w-5 text-cyan-400/80" />
@@ -1090,9 +1103,9 @@ export default function AgentChat() {
                         <div className="text-[11px] font-medium text-foreground truncate leading-tight">{att.name}</div>
                         <div className="text-[10px] text-muted-foreground mt-0.5">
                           {att.isTranscribing ? (
-                            <span className="text-green-400 animate-pulse">Transcrevendo…</span>
+                            <span className="text-green-400 animate-pulse">{t("Transcrevendo…", "Transcribing…", "Transcribiendo…")}</span>
                           ) : att.transcription ? (
-                            <span className="text-green-400">✓ Transcrito</span>
+                            <span className="text-green-400">✓ {t("Transcrito", "Transcribed", "Transcrito")}</span>
                           ) : formatBytes(att.size)}
                         </div>
                       </div>
@@ -1111,7 +1124,7 @@ export default function AgentChat() {
         {isListening && (
           <div className="border-b border-destructive/30 bg-destructive/10 px-3 py-2 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-destructive animate-pulse shrink-0" />
-            <span className="font-mono text-[11px] text-destructive uppercase tracking-widest flex-1">Ouvindo… fale agora</span>
+            <span className="font-mono text-[11px] text-destructive uppercase tracking-widest flex-1">{t("Ouvindo… fale agora", "Listening… speak now", "Escuchando… habla ahora")}</span>
             <button onClick={toggleVoice} className="text-destructive hover:text-destructive/60 transition-colors">
               <X className="h-3.5 w-3.5" />
             </button>
@@ -1132,7 +1145,7 @@ export default function AgentChat() {
                 }
               }
             }}
-            placeholder={`Fale com ${agent.name}…`}
+            placeholder={t(`Fale com ${agent.name}…`, `Chat with ${agent.name}…`, `Habla con ${agent.name}…`)}
             disabled={sending}
             rows={3}
             className="w-full font-mono text-sm bg-transparent border-none focus:outline-none resize-none text-foreground placeholder:text-muted-foreground/40 leading-relaxed min-h-[72px]"
@@ -1148,14 +1161,14 @@ export default function AgentChat() {
               <button key={m} onClick={() => setContextMode(m)}
                 className={`px-2 py-1 text-[10px] font-mono uppercase tracking-widest transition-all
                   ${contextMode === m ? `${accent.bg} ${accent.text} border ${accent.border}` : "text-muted-foreground/50 hover:text-foreground"}`}>
-                {MODE_LABELS[m]}
+                {m === "brainstorm" ? "Brainstorm" : m === "review" ? t("Revisão", "Review", "Revisión") : m === "strategy" ? t("Estratégia", "Strategy", "Estrategia") : m === "question" ? t("Pergunta", "Question", "Pregunta") : t("Otimizar", "Optimize", "Optimizar")}
               </button>
             ))}
           </div>
           {(campaignsData?.campaigns ?? []).length > 0 && (
             <select value={selectedCampaign} onChange={e => setSelectedCampaign(e.target.value)}
               className="text-[10px] font-mono uppercase tracking-widest bg-card/40 border border-border/40 px-2 py-1 text-muted-foreground/60 focus:border-primary/50 focus:outline-none max-w-[160px] truncate">
-              <option value="">Sem campanha</option>
+              <option value="">{t("Sem campanha", "No campaign", "Sin campaña")}</option>
               {(campaignsData?.campaigns ?? []).map(c => (
                 <option key={c.id} value={c.id}>{c.title}</option>
               ))}
@@ -1171,14 +1184,14 @@ export default function AgentChat() {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            title="Anexar arquivo, foto, vídeo ou documento"
+            title={t("Anexar arquivo, foto, vídeo ou documento", "Attach a file, photo, video, or document", "Adjuntar archivo, foto, video o documento")}
             className={`h-8 px-2.5 flex items-center gap-1.5 border transition-all shrink-0
               ${pendingAttachments.length > 0
                 ? "border-primary/50 bg-primary/10 text-primary"
                 : "border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground"}`}
           >
             <Paperclip className="h-4 w-4 shrink-0" />
-            <span className="font-mono text-[10px] uppercase tracking-widest hidden sm:inline">Arquivo</span>
+            <span className="font-mono text-[10px] uppercase tracking-widest hidden sm:inline">{t("Arquivo", "File", "Archivo")}</span>
             {pendingAttachments.length > 0 && (
               <span className="text-[9px] font-bold text-primary bg-primary/20 px-1">{pendingAttachments.length}</span>
             )}
@@ -1194,7 +1207,7 @@ export default function AgentChat() {
                 tmp.onchange = () => { void handleFileSelect({ target: tmp } as React.ChangeEvent<HTMLInputElement>); document.body.removeChild(tmp); };
                 document.body.appendChild(tmp); tmp.click();
               }}
-              title="Tirar foto ou gravar vídeo"
+              title={t("Tirar foto ou gravar vídeo", "Take a photo or record a video", "Tomar foto o grabar video")}
               className="h-8 w-8 flex items-center justify-center border border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-all shrink-0"
             >
               <Camera className="h-4 w-4" />
@@ -1204,7 +1217,7 @@ export default function AgentChat() {
           <button
             type="button"
             onClick={toggleVoice}
-            title={isListening ? "Parar gravação de voz" : "Gravar mensagem por voz"}
+            title={isListening ? t("Parar gravação de voz", "Stop voice recording", "Detener la grabación de voz") : t("Gravar mensagem por voz", "Record a voice message", "Grabar un mensaje de voz")}
             className={`h-8 px-2.5 flex items-center gap-1.5 border transition-all shrink-0
               ${isListening
                 ? "border-destructive bg-destructive/20 text-destructive"
@@ -1220,7 +1233,7 @@ export default function AgentChat() {
 
           {!isMobile && (
             <Button variant="outline" size="sm"
-              title="Inserir nova linha"
+              title={t("Inserir nova linha", "Insert new line", "Insertar nueva línea")}
               onClick={() => { setInput(v => v + "\n"); setTimeout(() => textareaRef.current?.focus(), 0); autoGrow(); }}
               disabled={sending}
               className="font-mono rounded-sm h-8 px-2.5 border-border/50 text-muted-foreground hover:text-foreground hover:border-border shrink-0">
@@ -1232,21 +1245,21 @@ export default function AgentChat() {
             onPointerDown={e => { if (e.pointerType === "touch") e.preventDefault(); }}
             onClick={() => { if (!input.trim() && pendingAttachments.length === 0) { textareaRef.current?.focus(); return; } void sendMessage(); }}
             disabled={sending}
-            title={isMobile ? "Enviar" : "Enviar (Ctrl+Enter)"}
+            title={isMobile ? t("Enviar", "Send", "Enviar") : t("Enviar (Ctrl+Enter)", "Send (Ctrl+Enter)", "Enviar (Ctrl+Enter)")}
             className={`font-mono h-8 px-4 gap-1.5 rounded-sm ${accent.bg} ${accent.border} border hover:brightness-125 shrink-0`}
           >
             {sending
               ? <Loader2 className={`h-4 w-4 ${accent.text} animate-spin`} />
               : <>
                   <Send className={`h-4 w-4 ${accent.text}`} />
-                  <span className={`font-mono text-[11px] uppercase tracking-widest ${accent.text} hidden sm:inline`}>Enviar</span>
+                  <span className={`font-mono text-[11px] uppercase tracking-widest ${accent.text} hidden sm:inline`}>{t("Enviar", "Send", "Enviar")}</span>
                 </>}
           </Button>
         </div>
 
         {/* Input capability hint */}
         <p className="font-mono text-[9px] text-muted-foreground/30 px-3 pb-2 text-right leading-relaxed">
-          Texto · Voz · MP3/MP4 (Whisper) · Screenshot · PDF/Código{isMobile ? "" : " · Ctrl+Enter = enviar"}
+          {t("Texto · Voz · MP3/MP4 (Whisper) · Captura de tela · PDF/Código", "Text · Voice · MP3/MP4 (Whisper) · Screenshot · PDF/Code", "Texto · Voz · MP3/MP4 (Whisper) · Captura · PDF/Código")}{isMobile ? "" : ` · ${t("Ctrl+Enter = enviar", "Ctrl+Enter = send", "Ctrl+Enter = enviar")}`}
         </p>
       </div>
     </div>

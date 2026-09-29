@@ -29,6 +29,7 @@ import type { PreviewPiece } from "@/components/social-post-preview";
 import { ContentCinemaOverlay } from "@/components/campaign-stage-experience";
 import type { CinemaPiece } from "@/components/campaign-stage-experience";
 import { CreativeStudioBlock } from "@/components/CreativeStudioBlock";
+import { useUiText } from "@/lib/i18n";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,7 @@ interface ContentPiece extends PreviewPiece {
   type: PieceType;
   dayIndex: number;
   title: string;
+  staticTitle?: [string, string, string];
   body: string;
   callToAction?: string;
   status: Status;
@@ -87,6 +89,12 @@ const PLATFORM_LABEL: Record<Platform, string> = {
   instagram: "Instagram", facebook: "Facebook", tiktok: "TikTok",
   email: "E-mail", whatsapp: "WhatsApp", landing: "Landing Page", ads: "Ads",
 };
+function localizedPlatformLabel(platform: Platform, t: (pt: string, en: string, es: string) => string): string {
+  if (platform === "email") return t("E-mail", "Email", "Correo electrónico");
+  if (platform === "landing") return t("Landing Page", "Landing Page", "Página de destino");
+  if (platform === "ads") return t("Anúncios", "Ads", "Anuncios");
+  return PLATFORM_LABEL[platform];
+}
 const PLATFORM_COLOR: Record<Platform, string> = {
   instagram: "text-pink-400 border-pink-400/40 bg-pink-400/10",
   facebook: "text-indigo-400 border-indigo-400/40 bg-indigo-400/10",
@@ -96,8 +104,8 @@ const PLATFORM_COLOR: Record<Platform, string> = {
   landing: "text-cyan-400 border-cyan-400/40 bg-cyan-400/10",
   ads: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10",
 };
-const SEGMENT_LABEL: Record<string, string> = {
-  hot: "Quentes", warm: "Mornos", cold: "Frios", all: "Todos",
+const SEGMENT_LABEL: Record<string, [string, string, string]> = {
+  hot: ["Quentes", "Hot", "Calientes"], warm: ["Mornos", "Warm", "Tibios"], cold: ["Frios", "Cold", "Fríos"], all: ["Todos", "All", "Todos"],
 };
 const SEGMENT_COLOR: Record<string, string> = {
   hot: "text-red-400 border-red-400/40 bg-red-400/10",
@@ -111,10 +119,10 @@ const SEGMENT_COLOR: Record<string, string> = {
 
 interface Phase {
   id: string;
-  label: string;
-  dayRange: string;
+  label: [string, string, string];
+  dayRange: [string, string, string];
   days: number[];
-  objective: string;
+  objective: [string, string, string];
   icon: React.ElementType;
   color: string;
   borderColor: string;
@@ -122,17 +130,18 @@ interface Phase {
 }
 
 const PHASES: Phase[] = [
-  { id: "anticipation", label: "Antecipação", dayRange: "Dia 0", days: [0], objective: "Gerar curiosidade e ativar notificações", icon: Sparkles, color: "text-purple-400", borderColor: "border-purple-400/50", bgColor: "bg-purple-400/10" },
-  { id: "authority", label: "Autoridade", dayRange: "Dia 1–2", days: [1, 2], objective: "Construir credibilidade e entregar valor", icon: TrendingUp, color: "text-blue-400", borderColor: "border-blue-400/50", bgColor: "bg-blue-400/10" },
-  { id: "desire", label: "Desejo", dayRange: "Dia 3–4", days: [3, 4], objective: "Ampliar desejo e mostrar transformação", icon: Target, color: "text-orange-400", borderColor: "border-orange-400/50", bgColor: "bg-orange-400/10" },
-  { id: "cart_open", label: "🚀 Abertura", dayRange: "Dia 5", days: [5], objective: "Abrir carrinho — VIPs + retargeting ads", icon: Zap, color: "text-success", borderColor: "border-success/50", bgColor: "bg-success/10" },
-  { id: "midcart", label: "Meio Carrinho", dayRange: "Dia 6", days: [6], objective: "Superar objeções com provas sociais", icon: Activity, color: "text-yellow-400", borderColor: "border-yellow-400/50", bgColor: "bg-yellow-400/10" },
-  { id: "close", label: "⚡ Fechamento", dayRange: "Dia 7", days: [7], objective: "Urgência máxima — últimas horas", icon: Target, color: "text-red-400", borderColor: "border-red-400/50", bgColor: "bg-red-400/10" },
+  { id: "anticipation", label: ["Antecipação", "Anticipation", "Anticipación"], dayRange: ["Dia 0", "Day 0", "Día 0"], days: [0], objective: ["Gerar curiosidade e ativar notificações", "Build curiosity and turn on notifications", "Generar curiosidad y activar las notificaciones"], icon: Sparkles, color: "text-purple-400", borderColor: "border-purple-400/50", bgColor: "bg-purple-400/10" },
+  { id: "authority", label: ["Autoridade", "Authority", "Autoridad"], dayRange: ["Dia 1–2", "Days 1–2", "Días 1–2"], days: [1, 2], objective: ["Construir credibilidade e entregar valor", "Build credibility and deliver value", "Construir credibilidad y aportar valor"], icon: TrendingUp, color: "text-blue-400", borderColor: "border-blue-400/50", bgColor: "bg-blue-400/10" },
+  { id: "desire", label: ["Desejo", "Desire", "Deseo"], dayRange: ["Dia 3–4", "Days 3–4", "Días 3–4"], days: [3, 4], objective: ["Ampliar o desejo e mostrar a transformação", "Build desire and show the transformation", "Aumentar el deseo y mostrar la transformación"], icon: Target, color: "text-orange-400", borderColor: "border-orange-400/50", bgColor: "bg-orange-400/10" },
+  { id: "cart_open", label: ["🚀 Abertura", "🚀 Cart open", "🚀 Apertura"], dayRange: ["Dia 5", "Day 5", "Día 5"], days: [5], objective: ["Abrir o carrinho — VIPs + anúncios de retargeting", "Open the cart — VIPs + retargeting ads", "Abrir el carrito — VIPs + anuncios de retargeting"], icon: Zap, color: "text-success", borderColor: "border-success/50", bgColor: "bg-success/10" },
+  { id: "midcart", label: ["Meio do carrinho", "Mid-cart", "Mitad del carrito"], dayRange: ["Dia 6", "Day 6", "Día 6"], days: [6], objective: ["Superar objeções com prova social", "Overcome objections with social proof", "Superar objeciones con prueba social"], icon: Activity, color: "text-yellow-400", borderColor: "border-yellow-400/50", bgColor: "bg-yellow-400/10" },
+  { id: "close", label: ["⚡ Fechamento", "⚡ Close", "⚡ Cierre"], dayRange: ["Dia 7", "Day 7", "Día 7"], days: [7], objective: ["Urgência máxima — últimas horas", "Maximum urgency — final hours", "Urgencia máxima — últimas horas"], icon: Target, color: "text-red-400", borderColor: "border-red-400/50", bgColor: "bg-red-400/10" },
 ];
 
 // ── Campaign Flowchart Component ───────────────────────────────────────────────
 
 function CampaignFlowchart({ pieces }: { pieces: ContentPiece[] }) {
+  const t = useUiText();
   const totalReach = pieces.reduce((sum, p) => sum + estimatePostMetrics(p).reach, 0);
   const totalLeads = pieces.reduce((sum, p) => sum + estimatePostMetrics(p).leads, 0);
 
@@ -147,10 +156,10 @@ function CampaignFlowchart({ pieces }: { pieces: ContentPiece[] }) {
       {/* Summary KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "Peças de Conteúdo", value: String(pieces.length), color: "text-primary" },
-          { label: "Alcance Total Estimado", value: fmtNum(totalReach), color: "text-cyan-400" },
-          { label: "Leads Esperados", value: fmtNum(totalLeads), color: "text-success" },
-          { label: "Plataformas Ativas", value: String(new Set(pieces.map(p => p.platform)).size), color: "text-purple-400" },
+          { label: t("Peças de conteúdo", "Content pieces", "Piezas de contenido"), value: String(pieces.length), color: "text-primary" },
+          { label: t("Alcance total estimado", "Estimated total reach", "Alcance total estimado"), value: fmtNum(totalReach), color: "text-cyan-400" },
+          { label: t("Leads esperados", "Expected leads", "Leads esperados"), value: fmtNum(totalLeads), color: "text-success" },
+          { label: t("Plataformas ativas", "Active platforms", "Plataformas activas"), value: String(new Set(pieces.map(p => p.platform)).size), color: "text-purple-400" },
         ].map(k => (
           <div key={k.label} className="border border-border/50 bg-card/40 p-3">
             <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">{k.label}</div>
@@ -179,32 +188,32 @@ function CampaignFlowchart({ pieces }: { pieces: ContentPiece[] }) {
                     </div>
                     <div className="min-w-0">
                       <div className={`font-mono text-[11px] font-bold uppercase tracking-widest ${phase.color} leading-tight`}>
-                        {phase.label}
+                         {t(...phase.label)}
                       </div>
-                      <div className="font-mono text-[9px] text-muted-foreground/60 uppercase tracking-widest">{phase.dayRange}</div>
+                       <div className="font-mono text-[9px] text-muted-foreground/60 uppercase tracking-widest">{t(...phase.dayRange)}</div>
                     </div>
                   </div>
 
                   {/* Objective */}
                   <div className="font-mono text-[10px] text-muted-foreground leading-relaxed">
-                    {phase.objective}
+                    {t(...phase.objective)}
                   </div>
 
                   {/* Piece count + metrics */}
                   {phasePieces.length > 0 ? (
                     <div className="space-y-1.5">
                       <div className="font-mono text-[10px] text-foreground/70">
-                        <span className={`font-bold ${phase.color}`}>{phasePieces.length}</span> peça{phasePieces.length !== 1 ? "s" : ""}
+                        <span className={`font-bold ${phase.color}`}>{phasePieces.length}</span> {t("peças", "pieces", "piezas")}
                       </div>
                       <div className="font-mono text-[9px] text-muted-foreground/60">
-                        Alcance: <span className="text-cyan-400">{fmtNum(phaseReach)}</span>
+                        {t("Alcance:", "Reach:", "Alcance:")} <span className="text-cyan-400">{fmtNum(phaseReach)}</span>
                       </div>
                       <div className="font-mono text-[9px] text-muted-foreground/60">
-                        Leads: <span className="text-success">{fmtNum(phaseLeads)}</span>
+                        {t("Leads:", "Leads:", "Leads:")} <span className="text-success">{fmtNum(phaseLeads)}</span>
                       </div>
                     </div>
                   ) : (
-                    <div className="font-mono text-[10px] text-muted-foreground/40 italic">Sem conteúdo</div>
+                    <div className="font-mono text-[10px] text-muted-foreground/40 italic">{t("Sem conteúdo", "No content", "Sin contenido")}</div>
                   )}
 
                   {/* Platform icons */}
@@ -214,7 +223,7 @@ function CampaignFlowchart({ pieces }: { pieces: ContentPiece[] }) {
                         const PIcon = PLATFORM_ICON[platform];
                         const pColor = PLATFORM_COLOR[platform];
                         return (
-                          <div key={platform} className={`w-5 h-5 border flex items-center justify-center ${pColor}`} title={PLATFORM_LABEL[platform]}>
+                          <div key={platform} className={`w-5 h-5 border flex items-center justify-center ${pColor}`} title={localizedPlatformLabel(platform, t)}>
                             <PIcon className="h-2.5 w-2.5" />
                           </div>
                         );
@@ -239,7 +248,7 @@ function CampaignFlowchart({ pieces }: { pieces: ContentPiece[] }) {
       {/* Platform breakdown table */}
       <div className="border border-border/50 bg-card/40">
         <div className="px-4 py-3 border-b border-border/50">
-          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Breakdown por Plataforma</span>
+          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Detalhamento por plataforma", "Platform breakdown", "Desglose por plataforma")}</span>
         </div>
         <div className="divide-y divide-border/30">
           {(["instagram", "facebook", "tiktok", "email", "whatsapp", "ads"] as Platform[]).map(platform => {
@@ -257,10 +266,10 @@ function CampaignFlowchart({ pieces }: { pieces: ContentPiece[] }) {
                 <div className={`w-6 h-6 border flex items-center justify-center shrink-0 ${pColor}`}>
                   <PIcon className="h-3 w-3" />
                 </div>
-                <span className="font-mono text-xs font-bold w-24 shrink-0">{PLATFORM_LABEL[platform]}</span>
-                <span className="font-mono text-[11px] text-muted-foreground/60 w-12">{platformPieces.length} peças</span>
+                <span className="font-mono text-xs font-bold w-24 shrink-0">{localizedPlatformLabel(platform, t)}</span>
+                <span className="font-mono text-[11px] text-muted-foreground/60 w-12">{platformPieces.length} {t("peças", "pieces", "piezas")}</span>
                 <div className="flex-1 flex gap-4 flex-wrap">
-                  <span className="font-mono text-[11px] text-cyan-400">{fmtNum(reach)} alcance</span>
+                  <span className="font-mono text-[11px] text-cyan-400">{fmtNum(reach)} {t("alcance", "reach", "alcance")}</span>
                   <span className="font-mono text-[11px] text-success">{fmtNum(leads)} leads</span>
                   <span className="font-mono text-[11px] text-primary">{avgEng}% eng</span>
                 </div>
@@ -275,28 +284,28 @@ function CampaignFlowchart({ pieces }: { pieces: ContentPiece[] }) {
 
 // ── Master Plan Tab ───────────────────────────────────────────────────────────
 
-const PHASE_NARRATIVES: Record<string, string> = {
-  anticipation: "Antes de revelar qualquer produto, criamos o estado mental de expectativa. Conteúdo que instiga, não que explica. O prospect entra em modo de busca ativa — cada engajamento é um sinal que alimenta o algoritmo e aquece a audiência para o que vem a seguir.",
-  authority: "Você entrega valor real antes de pedir qualquer coisa. O prospect aprende com você, confia em você, começa a te ver como a referência que resolve o problema dele. Esta fase constrói o ativo mais precioso do lançamento: credibilidade que converte.",
-  desire: "Com autoridade estabelecida, ativamos a imaginação. O prospect começa a se ver transformado — não o produto, mas o resultado. Cases reais, provas sociais, antes e depois. O gatilho de desejo está no pico, pronto para a abertura do carrinho.",
-  cart_open: "O carrinho abre apenas para quem esperou. VIPs do grupo têm acesso antecipado. Os anúncios de retargeting fecham o ciclo para quem viu mas não entrou ainda. As primeiras 24 horas concentram 40% das vendas — máxima conversão aqui.",
-  midcart: "Quem ainda não comprou tem uma objeção. Esta fase existe para eliminá-las — com prova social, depoimentos, demonstrações ao vivo. O algoritmo trabalha a favor: você está nos feeds de quem mais está propenso a comprar agora.",
-  close: "Urgência máxima, vagas mínimas. As últimas horas do carrinho geram o segundo maior pico de vendas. A comunicação é direta, intensa. Quem estava na dúvida toma a decisão agora ou perde a oportunidade para sempre.",
+const PHASE_NARRATIVES: Record<string, [string, string, string]> = {
+  anticipation: ["Antes de revelar qualquer produto, criamos o estado mental de expectativa. Conteúdo que instiga, não que explica. O prospect entra em modo de busca ativa — cada engajamento é um sinal que alimenta o algoritmo e aquece a audiência para o que vem a seguir.", "Before revealing a product, we create a sense of anticipation. Content that intrigues rather than explains. Prospects enter active search mode—each engagement feeds the algorithm and warms the audience for what comes next.", "Antes de revelar un producto, creamos un estado de expectativa. Contenido que intriga, no que explica. Los prospectos entran en modo de búsqueda activa: cada interacción alimenta el algoritmo y prepara a la audiencia para lo que viene."],
+  authority: ["Você entrega valor real antes de pedir qualquer coisa. O prospect aprende com você, confia em você, começa a te ver como a referência que resolve o problema dele. Esta fase constrói o ativo mais precioso do lançamento: credibilidade que converte.", "You deliver real value before asking for anything. Prospects learn from you, trust you, and begin to see you as the authority who can solve their problem. This phase builds the launch's most valuable asset: credibility that converts.", "Aportas valor real antes de pedir nada. Los prospectos aprenden de ti, confían en ti y empiezan a verte como la referencia que resuelve su problema. Esta fase construye el activo más valioso del lanzamiento: credibilidad que convierte."],
+  desire: ["Com autoridade estabelecida, ativamos a imaginação. O prospect começa a se ver transformado — não o produto, mas o resultado. Cases reais, provas sociais, antes e depois. O gatilho de desejo está no pico, pronto para a abertura do carrinho.", "With authority established, we activate the imagination. Prospects begin to picture their transformation—not the product, but the outcome. Real case studies, social proof, before and after. Desire peaks, ready for cart opening.", "Con la autoridad establecida, activamos la imaginación. Los prospectos empiezan a visualizar su transformación: no el producto, sino el resultado. Casos reales, prueba social, antes y después. El deseo alcanza su punto máximo, listo para abrir el carrito."],
+  cart_open: ["O carrinho abre apenas para quem esperou. VIPs do grupo têm acesso antecipado. Os anúncios de retargeting fecham o ciclo para quem viu mas não entrou ainda. As primeiras 24 horas concentram 40% das vendas — máxima conversão aqui.", "The cart opens for those who have been waiting. Group VIPs get early access. Retargeting ads close the loop for people who saw the offer but have not joined. The first 24 hours account for 40% of sales—maximize conversion here.", "El carrito se abre para quienes han esperado. Los VIP del grupo obtienen acceso anticipado. Los anuncios de retargeting cierran el ciclo para quienes vieron la oferta pero aún no entraron. Las primeras 24 horas concentran el 40% de las ventas: maximiza la conversión aquí."],
+  midcart: ["Quem ainda não comprou tem uma objeção. Esta fase existe para eliminá-las — com prova social, depoimentos, demonstrações ao vivo. O algoritmo trabalha a favor: você está nos feeds de quem mais está propenso a comprar agora.", "Anyone who has not bought yet has an objection. This phase addresses them with social proof, testimonials, and live demonstrations. The algorithm works in your favor: your content reaches people most likely to buy now.", "Quien todavía no ha comprado tiene una objeción. Esta fase existe para resolverla con prueba social, testimonios y demostraciones en vivo. El algoritmo juega a tu favor: apareces en los feeds de quienes tienen más probabilidades de comprar ahora."],
+  close: ["Urgência máxima, vagas mínimas. As últimas horas do carrinho geram o segundo maior pico de vendas. A comunicação é direta, intensa. Quem estava na dúvida toma a decisão agora ou perde a oportunidade para sempre.", "Maximum urgency, limited availability. The cart's final hours create the second-largest sales peak. Communication is direct and intense. Those who were undecided must act now or lose the opportunity.", "Máxima urgencia, cupos limitados. Las últimas horas del carrito generan el segundo mayor pico de ventas. La comunicación es directa e intensa. Quienes dudaban deciden ahora o pierden la oportunidad para siempre."],
 };
 
-const PHASE_MENTAL_TRIGGERS: Record<string, string[]> = {
-  anticipation: ["Curiosidade", "Antecipação"],
-  authority:    ["Autoridade", "Reciprocidade"],
-  desire:       ["Prova Social", "Transformação"],
-  cart_open:    ["Escassez", "Comunidade VIP"],
-  midcart:      ["Prova Social", "Superação de Objeção"],
-  close:        ["Urgência", "Medo de Perda"],
+const PHASE_MENTAL_TRIGGERS: Record<string, [string, string, string][]> = {
+  anticipation: [["Curiosidade", "Curiosity", "Curiosidad"], ["Antecipação", "Anticipation", "Anticipación"]],
+  authority:    [["Autoridade", "Authority", "Autoridad"], ["Reciprocidade", "Reciprocity", "Reciprocidad"]],
+  desire:       [["Prova social", "Social proof", "Prueba social"], ["Transformação", "Transformation", "Transformación"]],
+  cart_open:    [["Escassez", "Scarcity", "Escasez"], ["Comunidade VIP", "VIP community", "Comunidad VIP"]],
+  midcart:      [["Prova social", "Social proof", "Prueba social"], ["Superação de objeção", "Overcoming objections", "Superación de objeciones"]],
+  close:        [["Urgência", "Urgency", "Urgencia"], ["Medo de perder", "Fear of missing out", "Miedo a perder"]],
 };
 
-const PIECE_TYPE_LABELS_SHORT: Record<string, string> = {
-  post: "post", reel: "reel", story: "story",
-  native_video: "vídeo", email: "e-mail", message: "msg WhatsApp",
-  ad: "anúncio", copy: "copy",
+const PIECE_TYPE_LABELS_SHORT: Record<string, [string, string, string]> = {
+  post: ["post", "post", "publicación"], reel: ["reel", "reel", "reel"], story: ["story", "story", "historia"],
+  native_video: ["vídeo", "video", "video nativo"], email: ["e-mail", "email", "correo electrónico"], message: ["msg WhatsApp", "WhatsApp msg", "mensaje de WhatsApp"],
+  ad: ["anúncio", "ad", "anuncio"], copy: ["copy", "copy", "texto"],
 };
 
 function MasterPlanTab({
@@ -308,6 +317,7 @@ function MasterPlanTab({
   apiPieces: ApiContentPiece[];
   onSwitchToPhase: () => void;
 }) {
+  const t = useUiText();
   const queryClient = useQueryClient();
   function fmtNum(n: number) {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -330,10 +340,10 @@ function MasterPlanTab({
       {/* Hero Banner */}
       <div className="border border-primary/40 bg-gradient-to-br from-primary/10 to-primary/5 px-5 py-5">
         <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-primary/60 mb-2">
-          MASTERPLAN — Plano Mestre do Lançamento
+          {t("MASTERPLAN — Plano mestre do lançamento", "MASTER PLAN — Launch master plan", "PLAN MAESTRO — Plan maestro del lanzamiento")}
         </div>
         <h2 className="font-mono text-xl font-bold uppercase tracking-tight text-foreground leading-tight mb-2">
-          {campaignTitle ?? "Campanha de Lançamento"}
+          {campaignTitle ?? t("Campanha de lançamento", "Launch campaign", "Campaña de lanzamiento")}
         </h2>
         {coreMessage && (
           <p className="font-mono text-[11px] text-muted-foreground/80 leading-relaxed mb-3 max-w-2xl">
@@ -352,10 +362,10 @@ function MasterPlanTab({
       {/* KPI Strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {[
-          { label: "Peças Criadas",        value: String(pieces.length),    color: "text-primary" },
-          { label: "Alcance Total Est.",   value: fmtNum(totalReach),      color: "text-cyan-400" },
-          { label: "Leads Esperados",      value: fmtNum(totalLeads),      color: "text-success" },
-          { label: "Plataformas Ativas",   value: String(totalPlatforms),  color: "text-purple-400" },
+          { label: t("Peças criadas", "Pieces created", "Piezas creadas"), value: String(pieces.length), color: "text-primary" },
+          { label: t("Alcance total estimado", "Estimated total reach", "Alcance total estimado"), value: fmtNum(totalReach), color: "text-cyan-400" },
+          { label: t("Leads esperados", "Expected leads", "Leads esperados"), value: fmtNum(totalLeads), color: "text-success" },
+          { label: t("Plataformas ativas", "Active platforms", "Plataformas activas"), value: String(totalPlatforms), color: "text-purple-400" },
         ].map(k => (
           <div key={k.label} className="border border-border/50 bg-card/40 px-3 py-2.5">
             <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-1">{k.label}</div>
@@ -366,7 +376,7 @@ function MasterPlanTab({
 
       {/* Phase Chapters */}
       <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground/40 px-1">
-        Estratégia por fase — {PHASES.length} fases · {pieces.length} entregáveis totais
+        {t("Estratégia por fase", "Strategy by phase", "Estrategia por fase")} — {PHASES.length} {t("fases", "phases", "fases")} · {pieces.length} {t("entregáveis no total", "total deliverables", "entregables en total")}
       </div>
 
       {PHASES.map((phase, phaseIdx) => {
@@ -375,13 +385,13 @@ function MasterPlanTab({
         const phaseLeads  = phasePieces.reduce((s, p) => s + estimatePostMetrics(p).leads, 0);
         const Icon        = phase.icon;
         const triggers    = PHASE_MENTAL_TRIGGERS[phase.id] ?? [];
-        const narrative   = PHASE_NARRATIVES[phase.id] ?? phase.objective;
+         const narrative   = PHASE_NARRATIVES[phase.id] ? t(...PHASE_NARRATIVES[phase.id]) : t(...phase.objective);
 
-        // Inventory: platform → type → count
+        // Inventory: platform ID → type → count
         const inventory: Record<string, Record<string, number>> = {};
         for (const p of phasePieces) {
-          const plat = PLATFORM_LABEL[p.platform] ?? p.platform;
-          const typ  = PIECE_TYPE_LABELS_SHORT[p.type] ?? p.type;
+          const plat = p.platform;
+          const typ  = PIECE_TYPE_LABELS_SHORT[p.type] ? t(...PIECE_TYPE_LABELS_SHORT[p.type]) : p.type;
           if (!inventory[plat]) inventory[plat] = {};
           inventory[plat][typ] = (inventory[plat][typ] ?? 0) + 1;
         }
@@ -395,17 +405,17 @@ function MasterPlanTab({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={`font-mono text-[11px] font-bold uppercase tracking-widest ${phase.color}`}>{phase.label}</span>
-                  <span className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-widest">{phase.dayRange}</span>
+                  <span className={`font-mono text-[11px] font-bold uppercase tracking-widest ${phase.color}`}>{t(...phase.label)}</span>
+                  <span className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-widest">{t(...phase.dayRange)}</span>
                   {phasePieces.length > 0 && (
                     <span className={`font-mono text-[9px] border px-1.5 py-0 ${phase.borderColor} ${phase.color}`}>
-                      {phasePieces.length} peça{phasePieces.length !== 1 ? "s" : ""}
+                       {phasePieces.length} {t("peças", "pieces", "piezas")}
                     </span>
                   )}
                 </div>
               </div>
               <div className="font-mono text-[9px] text-muted-foreground/30 uppercase tracking-widest shrink-0">
-                Fase {phaseIdx + 1} / {PHASES.length}
+                 {t("Fase", "Phase", "Fase")} {phaseIdx + 1} / {PHASES.length}
               </div>
             </div>
 
@@ -413,43 +423,44 @@ function MasterPlanTab({
             <div className="px-5 py-4 space-y-4">
               {/* Objective + Narrative */}
               <div className="space-y-2">
-                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40">Objetivo estratégico</div>
-                <p className="font-mono text-xs text-foreground/90 font-medium">{phase.objective}</p>
+                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40">{t("Objetivo estratégico", "Strategic objective", "Objetivo estratégico")}</div>
+                <p className="font-mono text-xs text-foreground/90 font-medium">{t(...phase.objective)}</p>
                 <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{narrative}</p>
               </div>
 
               {/* Mental Triggers */}
               {triggers.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 shrink-0">Gatilhos:</span>
-                  {triggers.map(t => (
-                    <span key={t} className={`font-mono text-[10px] border px-2 py-0.5 ${phase.borderColor} ${phase.color}`}>{t}</span>
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 shrink-0">{t("Gatilhos:", "Triggers:", "Disparadores:")}</span>
+                  {triggers.map(trigger => (
+                    <span key={trigger[0]} className={`font-mono text-[10px] border px-2 py-0.5 ${phase.borderColor} ${phase.color}`}>{t(...trigger)}</span>
                   ))}
                 </div>
               )}
 
               {/* Deliverables Inventory */}
               <div className="space-y-2">
-                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40">Entregáveis desta fase</div>
+                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40">{t("Entregáveis desta fase", "Deliverables for this phase", "Entregables de esta fase")}</div>
                 {Object.keys(inventory).length === 0 ? (
                   <div className="font-mono text-[11px] text-muted-foreground/30 italic">
-                    Peças ainda não atribuídas a esta fase — processando…
+                    {t("Peças ainda não atribuídas a esta fase — processando…", "Pieces not assigned to this phase yet — processing…", "Aún hay piezas sin asignar a esta fase — procesando…")}
                   </div>
                 ) : (
                   <div className="space-y-1.5">
-                    {Object.entries(inventory).map(([platformLabel, types]) => {
-                      const platformKey = Object.entries(PLATFORM_LABEL).find(([, v]) => v === platformLabel)?.[0] as Platform | undefined;
-                      const PIcon  = platformKey ? PLATFORM_ICON[platformKey]  : Globe;
-                      const pColor = platformKey ? PLATFORM_COLOR[platformKey] : "text-muted-foreground border-border/40 bg-muted/10";
+                    {Object.entries(inventory).map(([platformId, types]) => {
+                      const platformKey = platformId as Platform;
+                      const platformLabel = localizedPlatformLabel(platformKey, t);
+                      const PIcon  = PLATFORM_ICON[platformKey] ?? Globe;
+                      const pColor = PLATFORM_COLOR[platformKey] ?? "text-muted-foreground border-border/40 bg-muted/10";
                       const typeStr = Object.entries(types)
                         .map(([typ, count]) => `${count} ${typ}${count > 1 && !typ.endsWith("s") ? "s" : ""}`)
                         .join(" · ");
                       return (
-                        <div key={platformLabel} className="flex items-center gap-2">
+                        <div key={platformId} className="flex items-center gap-2">
                           <div className={`w-5 h-5 border flex items-center justify-center shrink-0 ${pColor}`}>
                             <PIcon className="h-2.5 w-2.5" />
                           </div>
-                          <span className="font-mono text-[11px] font-bold text-foreground/70 w-24 shrink-0">{platformLabel}</span>
+                    <span className="font-mono text-[11px] font-bold text-foreground/70 w-24 shrink-0">{platformLabel}</span>
                           <span className={`font-mono text-[11px] ${phase.color}`}>{typeStr}</span>
                         </div>
                       );
@@ -461,8 +472,8 @@ function MasterPlanTab({
               {/* Phase Metrics footer */}
               {phasePieces.length > 0 && (
                 <div className="flex items-center gap-4 pt-2 border-t border-border/20">
-                  <span className="font-mono text-[9px] text-muted-foreground/30 uppercase tracking-widest">Meta estimada desta fase:</span>
-                  <span className="font-mono text-[11px] text-cyan-400">{fmtNum(phaseReach)} alcance</span>
+                  <span className="font-mono text-[9px] text-muted-foreground/30 uppercase tracking-widest">{t("Meta estimada desta fase:", "Estimated target for this phase:", "Meta estimada de esta fase:")}</span>
+                  <span className="font-mono text-[11px] text-cyan-400">{fmtNum(phaseReach)} {t("alcance", "reach", "alcance")}</span>
                   <span className="font-mono text-[11px] text-success">{fmtNum(phaseLeads)} leads</span>
                 </div>
               )}
@@ -476,17 +487,17 @@ function MasterPlanTab({
         <div className="border border-primary/30 bg-primary/5 px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <div className="font-mono text-xs font-bold uppercase tracking-widest mb-0.5">
-              {pieces.length} entregáveis prontos para sua revisão
+              {t(`${pieces.length} entregáveis prontos para sua revisão`, `${pieces.length} deliverables ready for your review`, `${pieces.length} entregables listos para tu revisión`)}
             </div>
             <p className="font-mono text-[11px] text-muted-foreground/60">
-              Analise cada peça, aprove, edite ou peça reescrita com IA — fase por fase, plataforma por plataforma.
+              {t("Analise cada peça, aprove, edite ou peça uma reescrita com IA — fase por fase, plataforma por plataforma.", "Review each piece, approve it, edit it, or request an AI rewrite—phase by phase, platform by platform.", "Revisa cada pieza, apruébala, edítala o solicita una reescritura con IA: fase por fase y plataforma por plataforma.")}
             </p>
           </div>
           <button
             onClick={onSwitchToPhase}
             className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-widest border border-primary text-primary px-4 py-2.5 hover:bg-primary/10 transition-colors shrink-0 btn-weapon-primary"
           >
-            Revisar entregáveis <ArrowRight className="h-3.5 w-3.5" />
+             {t("Revisar entregáveis", "Review deliverables", "Revisar entregables")} <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </div>
       )}
@@ -517,6 +528,7 @@ function PorFaseTab({
   rewriting?: string | null;
   complianceScan?: ComplianceSweepSummary | null;
 }) {
+  const t = useUiText();
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(
     () => new Set(PHASES.map(p => p.id))
   );
@@ -544,10 +556,10 @@ function PorFaseTab({
         const approved    = phasePieces.filter(p => p.status === "approved").length;
         const Icon        = phase.icon;
 
-        // Group by platform label
+        // Group by platform ID so labels can be localized at render time.
         const byPlatform: Record<string, ContentPiece[]> = {};
         for (const p of phasePieces) {
-          const plat = PLATFORM_LABEL[p.platform] ?? p.platform;
+          const plat = p.platform;
           if (!byPlatform[plat]) byPlatform[plat] = [];
           byPlatform[plat].push(p);
         }
@@ -564,15 +576,15 @@ function PorFaseTab({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={`font-mono text-[11px] font-bold uppercase tracking-widest ${phase.color}`}>{phase.label}</span>
-                  <span className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-widest">{phase.dayRange}</span>
+                   <span className={`font-mono text-[11px] font-bold uppercase tracking-widest ${phase.color}`}>{t(...phase.label)}</span>
+                   <span className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-widest">{t(...phase.dayRange)}</span>
                   {phasePieces.length > 0 && (
                     <span className={`font-mono text-[9px] border px-1.5 py-0 ${phase.borderColor} ${approved === phasePieces.length ? "text-success border-success/40 bg-success/10" : phase.color}`}>
-                      {approved}/{phasePieces.length} aprovadas
+                       {approved}/{phasePieces.length} {t("aprovadas", "approved", "aprobadas")}
                     </span>
                   )}
                 </div>
-                <p className="font-mono text-[9px] text-muted-foreground/50 mt-0.5 truncate">{phase.objective}</p>
+                <p className="font-mono text-[9px] text-muted-foreground/50 mt-0.5 truncate">{t(...phase.objective)}</p>
               </div>
               {isExpanded
                 ? <ChevronUp className="h-4 w-4 text-muted-foreground/40 shrink-0" />
@@ -585,19 +597,20 @@ function PorFaseTab({
               <div className="divide-y divide-border/30">
                 {phasePieces.length === 0 ? (
                   <div className="px-5 py-8 text-center font-mono text-[11px] text-muted-foreground/30 uppercase tracking-widest">
-                    Nenhuma peça gerada para esta fase ainda
+                     {t("Nenhuma peça foi gerada para esta fase ainda", "No pieces have been generated for this phase yet", "Todavía no se han generado piezas para esta fase")}
                   </div>
                 ) : (
-                  Object.entries(byPlatform).map(([platformLabel, platPieces]) => {
-                    const platformKey = Object.entries(PLATFORM_LABEL).find(([, v]) => v === platformLabel)?.[0] as Platform | undefined;
-                    const PIcon  = platformKey ? PLATFORM_ICON[platformKey]  : Globe;
-                    const pColor = platformKey ? PLATFORM_COLOR[platformKey] : "text-muted-foreground border-border/40 bg-muted/10";
-                    const platKey    = `${phase.id}:${platformLabel}`;
+                  Object.entries(byPlatform).map(([platformId, platPieces]) => {
+                    const platformKey = platformId as Platform;
+                    const platformLabel = localizedPlatformLabel(platformKey, t);
+                    const PIcon  = PLATFORM_ICON[platformKey] ?? Globe;
+                    const pColor = PLATFORM_COLOR[platformKey] ?? "text-muted-foreground border-border/40 bg-muted/10";
+                    const platKey    = `${phase.id}:${platformId}`;
                     const isCollapsed = collapsedPlatforms.has(platKey);
                     const platApproved = platPieces.filter(p => p.status === "approved").length;
 
                     return (
-                      <div key={platformLabel}>
+                      <div key={platformId}>
                         {/* Platform sub-header */}
                         <button
                           onClick={() => togglePlatform(platKey)}
@@ -610,7 +623,7 @@ function PorFaseTab({
                             {platformLabel}
                           </span>
                           <span className="font-mono text-[10px] text-muted-foreground/40">
-                            · {platPieces.length} peça{platPieces.length !== 1 ? "s" : ""}
+                             · {platPieces.length} {t("peças", "pieces", "piezas")}
                             {platApproved > 0 && (
                               <span className="text-success ml-1">· {platApproved} ✓</span>
                             )}
@@ -659,8 +672,8 @@ function PorFaseTab({
         return (
           <div className="border border-border/50">
             <div className="px-4 py-3 bg-card/30 flex items-center gap-2">
-              <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Outros entregáveis</span>
-              <span className="font-mono text-[10px] text-muted-foreground/40">· {orphans.length} peça{orphans.length !== 1 ? "s" : ""}</span>
+               <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{t("Outros entregáveis", "Other deliverables", "Otros entregables")}</span>
+               <span className="font-mono text-[10px] text-muted-foreground/40">· {orphans.length} {t("peças", "pieces", "piezas")}</span>
             </div>
             <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-2 gap-3">
               {orphans.map(piece => (
@@ -687,6 +700,7 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
   rewriting?: string | null;
   prescanResult?: PieceScanResult | null;
 }) {
+  const t = useUiText();
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -717,7 +731,7 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
       setPublishPreview(preview.preview);
       setPublishModalOpen(true);
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Erro ao verificar integrações");
+      toast.error(err instanceof ApiError ? err.message : t("Erro ao verificar integrações", "Error checking integrations", "Error al verificar las integraciones"));
     } finally {
       setPublishLoading(false);
     }
@@ -733,16 +747,16 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
         { method: "POST", body: JSON.stringify({ confirmed: true, fingerprint: publishPreview.fingerprint }) },
       );
       if ((result.unresolvedCount ?? 0) > 0) {
-        const details = (result.posts ?? []).map((item) => `${item.platform}: ${item.confirmed ? "confirmado" : item.errorCode ?? item.status}`).join(" · ");
-        toast.warning(`Confirmados: ${result.publishedCount ?? 0}; pendentes/falhos: ${result.unresolvedCount}. ${details}`);
+        const details = (result.posts ?? []).map((item) => `${item.platform}: ${item.confirmed ? t("confirmado", "confirmed", "confirmado") : item.errorCode ?? item.status}`).join(" · ");
+        toast.warning(`${t("Confirmados", "Confirmed", "Confirmados")}: ${result.publishedCount ?? 0}; ${t("pendentes/falhos", "pending/failed", "pendientes/fallidos")}: ${result.unresolvedCount}. ${details}`);
       } else {
-        toast.success(`Confirmado em ${(result.posts ?? []).filter((item) => item.confirmed).map((item) => item.platform).join(", ")}!`);
+        toast.success(`${t("Confirmado em", "Published to", "Publicado en")} ${(result.posts ?? []).filter((item) => item.confirmed).map((item) => item.platform).join(", ")}!`);
       }
       await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
       await queryClient.invalidateQueries({ queryKey: ["/api/social/posts"] });
       setPublishModalOpen(false);
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Erro ao publicar");
+      toast.error(err instanceof ApiError ? err.message : t("Erro ao publicar", "Error publishing", "Error al publicar"));
     } finally {
       setPublishConfirming(false);
     }
@@ -760,17 +774,17 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
       );
       setVisualCreativeId(result.creativeId);
       toast.success(
-        `Conceito visual criado — "${result.conceptTitle}". Acesse Criativos para aprovar e gerar a imagem com DALL-E 3.`,
+        `${t("Conceito visual criado", "Visual concept created", "Concepto visual creado")} — "${result.conceptTitle}". ${t("Acesse Criativos para aprovar e gerar a imagem com DALL-E 3.", "Go to Creatives to approve it and generate the image with DALL-E 3.", "Ve a Creativos para aprobarlo y generar la imagen con DALL-E 3.")}`,
         {
           duration: 8000,
           action: {
-            label: "Abrir Criativos",
+            label: t("Abrir Criativos", "Open Creatives", "Abrir Creativos"),
             onClick: () => { window.location.href = `/campaigns/${campaignId}/creatives`; },
           },
         },
       );
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "Erro ao gerar conceito visual";
+      const msg = err instanceof ApiError ? err.message : t("Erro ao gerar conceito visual", "Error generating visual concept", "Error al generar el concepto visual");
       toast.error(msg);
     } finally {
       setGeneratingVisual(false);
@@ -783,6 +797,10 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
   const statusBorder = isRewriting ? "border-primary/40" : piece.status === "approved" ? "border-success/40" : piece.status === "rejected" ? "border-destructive/40" : "border-border/50";
   const isLoading = loading === piece.id;
   const m = estimatePostMetrics(piece);
+  const fallbackNotGeneratedReason = 'IA não conseguiu completar após múltiplas tentativas. Clique em "Reescrever com IA".';
+  const displayBody = piece.notGenerated && piece.body === fallbackNotGeneratedReason
+    ? t('A IA não conseguiu concluir após várias tentativas. Clique em "Reescrever com IA".', 'AI could not complete this after multiple attempts. Click "Rewrite with AI".', 'La IA no pudo completarlo tras varios intentos. Haz clic en "Reescribir con IA".')
+    : piece.body;
 
   return (
     <div className={`border bg-card/40 transition-all relative ${statusBorder}`}>
@@ -795,12 +813,12 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-1.5 py-0 ${platformColor}`}>
-                {PLATFORM_LABEL[piece.platform]}
+                {localizedPlatformLabel(piece.platform, t)}
               </Badge>
-              <span className="font-mono text-[11px] text-muted-foreground/50 uppercase tracking-widest">Dia {piece.dayIndex}</span>
+              <span className="font-mono text-[11px] text-muted-foreground/50 uppercase tracking-widest">{t("Dia", "Day", "Día")} {piece.dayIndex}</span>
               {piece.segment && piece.segment !== "all" && (
                 <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-1.5 py-0 ${SEGMENT_COLOR[piece.segment]}`}>
-                  {SEGMENT_LABEL[piece.segment]}
+                  {SEGMENT_LABEL[piece.segment] ? t(...SEGMENT_LABEL[piece.segment]) : piece.segment}
                 </Badge>
               )}
               {piece.status !== "pending" && (
@@ -809,7 +827,7 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
                   piece.status === "rejected" ? "text-destructive border-destructive/40 bg-destructive/10" :
                   "text-blue-400 border-blue-400/40 bg-blue-400/10"
                 }`}>
-                  {piece.status === "approved" ? "Aprovado" : piece.status === "rejected" ? "Rejeitado" : "Editado"}
+                  {piece.status === "approved" ? t("Aprovado", "Approved", "Aprobado") : piece.status === "rejected" ? t("Rejeitado", "Rejected", "Rechazado") : t("Editado", "Edited", "Editado")}
                 </Badge>
               )}
               {piece.qualityScore != null && (
@@ -825,9 +843,9 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
                 <Badge
                   variant="outline"
                   className="rounded-none font-mono text-[11px] px-1.5 py-0 gap-1 text-amber-400 border-amber-400/40 bg-amber-400/10"
-                  title={`CPL ${piece.degradedCPLs.join(", ")} gerado com roteiro incompleto — recomendamos regenerar esta peça`}
+                  title={t(`CPL ${piece.degradedCPLs.join(", ")} gerado com roteiro incompleto — recomendamos regenerar esta peça`, `CPL ${piece.degradedCPLs.join(", ")} generated with an incomplete script — we recommend regenerating this piece`, `CPL ${piece.degradedCPLs.join(", ")} generado con un guion incompleto — recomendamos regenerar esta pieza`)}
                 >
-                  ⚠ CPL {piece.degradedCPLs.join("/")} incompleto
+                  ⚠ CPL {piece.degradedCPLs.join("/")} {t("incompleto", "incomplete", "incompleto")}
                 </Badge>
               )}
               {prescanResult && !prescanResult.passed && (
@@ -841,20 +859,24 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
                   title={prescanResult.recommendations.slice(0, 2).join(" | ")}
                 >
                   <Shield className="h-2.5 w-2.5" />
-                  {prescanResult.riskLevel === "blocked" ? "Bloqueado" :
-                   prescanResult.riskLevel === "high_risk" ? "Alto Risco" : "Revisar"}
+                  {prescanResult.riskLevel === "blocked" ? t("Bloqueado", "Blocked", "Bloqueado") :
+                   prescanResult.riskLevel === "high_risk" ? t("Alto risco", "High risk", "Alto riesgo") : t("Revisar", "Review", "Revisar")}
                   {prescanResult.violationCount > 0 && ` ·${prescanResult.violationCount}`}
                 </Badge>
               )}
             </div>
-            <h3 className="font-mono font-bold text-sm text-foreground leading-tight">{piece.title}</h3>
+            <h3 className="font-mono font-bold text-sm text-foreground leading-tight">
+              {piece.notGenerated && piece.staticTitle
+                ? `[${t("Não gerada", "Not generated", "No generada")}] ${t(...piece.staticTitle)}`
+                : piece.staticTitle && piece.title === piece.staticTitle[0] ? t(...piece.staticTitle) : piece.title}
+            </h3>
           </div>
         </div>
 
         {/* Hook (TikTok) */}
         {piece.tiktokHook && (
           <div className="mb-2 px-2 py-1 border border-red-400/30 bg-red-400/5">
-            <span className="font-mono text-[10px] text-red-400 uppercase tracking-widest">Hook: </span>
+            <span className="font-mono text-[10px] text-red-400 uppercase tracking-widest">{t("Gancho:", "Hook:", "Gancho:")} </span>
             <span className="font-mono text-[11px] text-foreground/80 italic">"{piece.tiktokHook}"</span>
           </div>
         )}
@@ -866,7 +888,7 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
             <div className="flex items-center gap-1.5">
               <Loader2 className="h-3 w-3 text-amber-400 animate-spin shrink-0" />
               <span className="font-mono text-[11px] text-amber-300/90 leading-relaxed">
-                Correção automática por compliance em andamento — tentativa{" "}
+                {t("Correção automática de conformidade em andamento — tentativa", "Automatic compliance correction in progress — attempt", "Corrección automática de cumplimiento en curso — intento")}{" "}
                 <strong>{piece.complianceRevisionState.attempt}</strong> de 2
               </span>
             </div>
@@ -878,11 +900,11 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
             <div className="flex items-center gap-1.5 mb-1">
               <AlertTriangle className="h-3 w-3 text-orange-400 shrink-0" />
               <span className="font-mono text-[10px] text-orange-400 uppercase tracking-widest font-bold">
-                Decisão necessária
+                {t("Decisão necessária", "Decision required", "Se requiere una decisión")}
               </span>
             </div>
             <span className="font-mono text-[11px] text-orange-300/80 leading-relaxed">
-              2 tentativas de reescrita automática por compliance foram insuficientes. Revise a peça e aprove, edite manualmente, ou force a aprovação.
+              {t("As 2 tentativas de reescrita automática por conformidade foram insuficientes. Revise a peça e aprove, edite manualmente ou force a aprovação.", "The 2 automatic compliance rewrite attempts were insufficient. Review the piece and approve it, edit it manually, or force approval.", "Los 2 intentos de reescritura automática por cumplimiento no fueron suficientes. Revisa la pieza y apruébala, edítala manualmente o fuerza la aprobación.")}
             </span>
           </div>
         )}
@@ -893,7 +915,7 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
             <div className="flex items-center gap-1.5 mb-1">
               <Shield className="h-3 w-3 text-red-400 shrink-0" />
               <span className="font-mono text-[10px] text-red-400 uppercase tracking-widest font-bold">
-                {/conar|cdc|plataforma|política|policy/i.test(piece.rejectionReason) ? "Bloqueio Conformidade" : "Motivo da Rejeição"}
+                {/conar|cdc|plataforma|política|policy/i.test(piece.rejectionReason) ? t("Bloqueio de conformidade", "Compliance block", "Bloqueo de cumplimiento") : t("Motivo da rejeição", "Rejection reason", "Motivo del rechazo")}
               </span>
             </div>
             <span className="font-mono text-[11px] text-red-300/80 leading-relaxed">{piece.rejectionReason}</span>
@@ -906,7 +928,7 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
             <div className="flex items-center gap-1.5">
               <Bot className="h-3 w-3 text-amber-400 shrink-0" />
               <span className="font-mono text-[11px] text-amber-300 leading-relaxed">
-                Não gerada — IA não conseguiu completar após múltiplas tentativas. Clique em <strong>Reescrever com IA</strong> para gerar agora.
+                {t("Não gerada — a IA não conseguiu concluir após várias tentativas. Clique em", "Not generated — AI could not complete it after multiple attempts. Click", "No se generó — la IA no pudo completarla tras varios intentos. Haz clic en")} <strong>{t("Reescrever com IA", "Rewrite with AI", "Reescribir con IA")}</strong> {t("para gerar agora.", "to generate it now.", "para generarla ahora.")}
               </span>
             </div>
           </div>
@@ -918,7 +940,7 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
             <div className="flex items-center gap-1.5">
               <Bot className="h-3 w-3 text-blue-400 shrink-0" />
               <span className="font-mono text-[11px] text-blue-400 leading-relaxed">
-                Conteúdo gerado via fallback — use "Reescrever com IA" para personalizar com os dados do seu produto.
+                {t('Conteúdo gerado por fallback — use "Reescrever com IA" para personalizá-lo com os dados do seu produto.', 'Fallback content — use "Rewrite with AI" to personalize it with your product data.', 'Contenido generado como alternativa — usa "Reescribir con IA" para personalizarlo con los datos de tu producto.')}
               </span>
             </div>
           </div>
@@ -927,17 +949,17 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
         {/* Visual direction */}
         {piece.visualDirection && (
           <div className="mb-2 px-2 py-1 border border-purple-400/30 bg-purple-400/5">
-            <span className="font-mono text-[10px] text-purple-400 uppercase tracking-widest">Visual agente: </span>
+            <span className="font-mono text-[10px] text-purple-400 uppercase tracking-widest">{t("Direção visual:", "Visual direction:", "Dirección visual:")} </span>
             <span className="font-mono text-[11px] text-foreground/70">{piece.visualDirection}</span>
           </div>
         )}
 
         <div className={`font-mono text-xs text-muted-foreground bg-muted/10 border border-border/30 p-3 rounded-sm mb-3 whitespace-pre-line leading-relaxed ${!expanded ? "line-clamp-3" : ""}`}>
-          {piece.body}
+          {displayBody}
         </div>
         {piece.body.length > 120 && (
           <button onClick={() => setExpanded(v => !v)} className="font-mono text-[11px] uppercase tracking-widest text-primary hover:text-primary/80 mb-3 flex items-center gap-1">
-            {expanded ? "Menos" : "Ver tudo"} <ChevronRight className={`h-2.5 w-2.5 transition-transform ${expanded ? "rotate-90" : ""}`} />
+            {expanded ? t("Menos", "Show less", "Ver menos") : t("Ver tudo", "Show all", "Ver todo")} <ChevronRight className={`h-2.5 w-2.5 transition-transform ${expanded ? "rotate-90" : ""}`} />
           </button>
         )}
         {piece.callToAction && (
@@ -949,32 +971,32 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
 
         {/* Metrics row */}
         <div className="flex flex-wrap gap-3 mb-3">
-          <span className="font-mono text-[10px] text-muted-foreground/50">Alcance <span className="text-cyan-400">{m.reach.toLocaleString("pt-BR")}</span></span>
+          <span className="font-mono text-[10px] text-muted-foreground/50">{t("Alcance", "Reach", "Alcance")} <span className="text-cyan-400">{m.reach.toLocaleString("pt-BR")}</span></span>
           <span className="font-mono text-[10px] text-muted-foreground/50">Leads <span className="text-success">~{m.leads}</span></span>
-          <span className="font-mono text-[10px] text-muted-foreground/50">Eng. <span className="text-primary">{m.engagementRate}%</span></span>
-          <span className="font-mono text-[10px] text-muted-foreground/50">Conv. <span className="text-yellow-400">{m.conversionPct}%</span></span>
+          <span className="font-mono text-[10px] text-muted-foreground/50">{t("Eng.", "Eng.", "Inter.")} <span className="text-primary">{m.engagementRate}%</span></span>
+          <span className="font-mono text-[10px] text-muted-foreground/50">{t("Conv.", "Conv.", "Conv.")} <span className="text-yellow-400">{m.conversionPct}%</span></span>
         </div>
 
         {isRewriting ? (
           <div className="flex items-center gap-2 py-1">
             <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
-            <span className="font-mono text-[11px] uppercase tracking-widest text-primary">Agente reescrevendo com base no seu feedback...</span>
+            <span className="font-mono text-[11px] uppercase tracking-widest text-primary">{t("Agente reescrevendo com base no seu feedback...", "Agent rewriting based on your feedback...", "El agente está reescribiendo según tus comentarios...")}</span>
           </div>
         ) : (
           <div className="flex gap-2 flex-wrap">
             {piece.status !== "approved" && (
               <Button size="sm" onClick={() => onApprove(piece.id)} disabled={isLoading} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 bg-success/10 border border-success/40 text-success hover:bg-success/20">
-                {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}Aprovar
+                {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}{t("Aprovar", "Approve", "Aprobar")}
               </Button>
             )}
             <Button size="sm" variant="ghost" onClick={() => onReject(piece.id)} disabled={isLoading} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10">
-              <XCircle className="h-3 w-3" />Rejeitar
+              <XCircle className="h-3 w-3" />{t("Rejeitar", "Reject", "Rechazar")}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => onEdit(piece)} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-muted-foreground hover:text-foreground">
-              <Edit3 className="h-3 w-3" />Editar
+              <Edit3 className="h-3 w-3" />{t("Editar", "Edit", "Editar")}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => onAiRewrite(piece.id)} disabled={isLoading} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-primary hover:text-primary hover:bg-primary/10">
-              <Sparkles className="h-3 w-3" />Reescrever
+              <Sparkles className="h-3 w-3" />{t("Reescrever", "Rewrite", "Reescribir")}
             </Button>
             {/* Gerar Visual — only shown for social platforms that need a real image/video */}
             {needsVisual && piece.status === "approved" && !visualCreativeId && (
@@ -984,10 +1006,10 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
                 onClick={handleGenerateVisual}
                 disabled={generatingVisual}
                 className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-purple-400 hover:text-purple-300 hover:bg-purple-400/10"
-                title="Gera conceito DALL-E para esta peça — aprovação visual necessária antes da publicação"
+                title={t("Gera um conceito DALL-E para esta peça — é necessária aprovação visual antes da publicação", "Generate a DALL-E concept for this piece — visual approval is required before publishing", "Genera un concepto con DALL-E para esta pieza — se requiere aprobación visual antes de publicarla")}
               >
                 {generatingVisual ? <Loader2 className="h-3 w-3 animate-spin" /> : <ImagePlus className="h-3 w-3" />}
-                {generatingVisual ? "Gerando..." : "Gerar Visual"}
+                {generatingVisual ? t("Gerando...", "Generating...", "Generando...") : t("Gerar visual", "Generate visual", "Generar imagen")}
               </Button>
             )}
             {needsVisual && piece.status === "approved" && visualCreativeId && (
@@ -995,7 +1017,7 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
                 href={`/campaigns/${campaignId}/creatives`}
                 className="inline-flex items-center h-7 px-2 gap-1.5 rounded-none font-mono uppercase text-[11px] tracking-widest text-purple-400 border border-purple-400/40 bg-purple-400/10 hover:bg-purple-400/20"
               >
-                <CheckCircle2 className="h-3 w-3" />Visual criado
+                <CheckCircle2 className="h-3 w-3" />{t("Visual criado", "Visual created", "Imagen creada")}
               </a>
             )}
             {/* A1 FIX (Bug #04): Publicar nas Redes — gate explícito, não automático */}
@@ -1006,10 +1028,10 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
                 onClick={handleOpenPublishModal}
                 disabled={publishLoading}
                 className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-400/10"
-                title="Publicar este post nas redes sociais conectadas"
+                title={t("Publicar esta publicação nas redes sociais conectadas", "Publish this post to connected social networks", "Publicar esta publicación en las redes sociales conectadas")}
               >
                 {publishLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Share2 className="h-3 w-3" />}
-                {publishLoading ? "Verificando..." : "Publicar"}
+                {publishLoading ? t("Verificando...", "Checking...", "Verificando...") : t("Publicar", "Publish", "Publicar")}
               </Button>
             )}
             <Button
@@ -1023,10 +1045,10 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
                 });
               }}
               className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-muted-foreground hover:text-foreground ml-auto"
-              title="Copiar texto para área de transferência"
+              title={t("Copiar texto para a área de transferência", "Copy text to clipboard", "Copiar texto al portapapeles")}
             >
               {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
-              {copied ? "Copiado" : "Copiar"}
+              {copied ? t("Copiado", "Copied", "Copiado") : t("Copiar", "Copy", "Copiar")}
             </Button>
             {/* Hidden download fallback — escape hatch for manual posting, not promoted */}
             <a
@@ -1052,7 +1074,7 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
                 URL.revokeObjectURL(url);
               }}
               className="inline-flex items-center h-7 px-1.5 text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors"
-              title="Baixar como .txt (uso manual)"
+               title={t("Baixar como .txt (uso manual)", "Download as .txt (manual use)", "Descargar como .txt (uso manual)")}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             </a>
@@ -1065,10 +1087,10 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
         <DialogContent className="max-w-md rounded-none border border-border/60 bg-card">
           <DialogHeader>
             <DialogTitle className="font-mono uppercase tracking-widest text-sm flex items-center gap-2">
-              <Share2 className="h-4 w-4 text-cyan-400" />Publicar nas Redes
+              <Share2 className="h-4 w-4 text-cyan-400" />{t("Publicar nas redes", "Publish to social media", "Publicar en redes sociales")}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground mt-1">
-              Confirme onde este conteúdo será publicado imediatamente.
+              {t("Confirme onde este conteúdo será publicado imediatamente.", "Confirm where this content will be published immediately.", "Confirma dónde se publicará este contenido de inmediato.")}
             </DialogDescription>
           </DialogHeader>
 
@@ -1076,12 +1098,12 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
             <div className="space-y-3 py-1">
               {publishPreview.platforms.length === 0 ? (
                 <div className="text-sm text-muted-foreground border border-border/40 p-3 rounded-none bg-muted/20">
-                  Nenhuma integração social conectada para este tipo de conteúdo.{" "}
-                  <a href="/integracoes" className="text-primary underline">Conectar em Integrações →</a>
+                  {t("Nenhuma integração social conectada para este tipo de conteúdo.", "No social integration is connected for this content type.", "No hay ninguna integración social conectada para este tipo de contenido.")}{" "}
+                  <a href="/integracoes" className="text-primary underline">{t("Conectar em Integrações →", "Connect in Integrations →", "Conectar en Integraciones →")}</a>
                 </div>
               ) : (
                 <>
-                  <div className="text-xs text-muted-foreground uppercase tracking-widest font-mono">Plataformas</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-widest font-mono">{t("Plataformas", "Platforms", "Plataformas")}</div>
                   <div className="flex gap-2 flex-wrap">
                     {publishPreview.platforms.map((p) => (
                       <Badge key={p.provider} variant="outline" className="rounded-none font-mono text-[10px] px-2 py-0.5 border-cyan-400/40 text-cyan-300 bg-cyan-400/10">
@@ -1091,7 +1113,7 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
                   </div>
                   {publishPreview.caption && (
                     <>
-                      <div className="text-xs text-muted-foreground uppercase tracking-widest font-mono mt-2">Prévia da Caption</div>
+                      <div className="text-xs text-muted-foreground uppercase tracking-widest font-mono mt-2">{t("Prévia da legenda", "Caption preview", "Vista previa del texto")}</div>
                       <div className="text-xs text-foreground/80 bg-muted/30 border border-border/30 p-2 rounded-none line-clamp-4">
                         {publishPreview.caption}
                       </div>
@@ -1104,7 +1126,7 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
 
           <DialogFooter className="gap-2">
             <Button variant="ghost" size="sm" onClick={() => setPublishModalOpen(false)} className="rounded-none font-mono uppercase text-[11px] tracking-widest">
-              Cancelar
+              {t("Cancelar", "Cancel", "Cancelar")}
             </Button>
             {publishPreview && publishPreview.platforms.length > 0 && (
               <Button
@@ -1114,7 +1136,7 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
                 className="rounded-none font-mono uppercase text-[11px] tracking-widest bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 hover:bg-cyan-500/30 gap-1.5"
               >
                 {publishConfirming ? <Loader2 className="h-3 w-3 animate-spin" /> : <Share2 className="h-3 w-3" />}
-                {publishConfirming ? "Publicando..." : "Confirmar e Publicar"}
+                {publishConfirming ? t("Publicando...", "Publishing...", "Publicando...") : t("Confirmar e publicar", "Confirm and publish", "Confirmar y publicar")}
               </Button>
             )}
           </DialogFooter>
@@ -1166,13 +1188,13 @@ interface PieceLevelComplianceResult {
   recommendations: string[];
 }
 
-const CATEGORY_LABEL: Record<string, string> = {
-  scarcity_claim: "Escassez",
-  social_proof: "Prova Social",
-  urgency_language: "Urgência",
-  promise_language: "Promessa",
-  income_claim: "Claim Financeiro",
-  other: "Outro",
+const CATEGORY_LABEL: Record<string, [string, string, string]> = {
+  scarcity_claim: ["Escassez", "Scarcity", "Escasez"],
+  social_proof: ["Prova social", "Social proof", "Prueba social"],
+  urgency_language: ["Urgência", "Urgency", "Urgencia"],
+  promise_language: ["Promessa", "Promise", "Promesa"],
+  income_claim: ["Alegação de renda", "Income claim", "Afirmación de ingresos"],
+  other: ["Outro", "Other", "Otro"],
 };
 
 const SEVERITY_COLOR: Record<string, string> = {
@@ -1182,8 +1204,8 @@ const SEVERITY_COLOR: Record<string, string> = {
   low:      "text-muted-foreground border-border/40 bg-muted/10",
 };
 
-const SEVERITY_LABEL: Record<string, string> = {
-  critical: "CRÍTICO", high: "ALTO", medium: "MÉDIO", low: "BAIXO",
+const SEVERITY_LABEL: Record<string, [string, string, string]> = {
+  critical: ["CRÍTICO", "CRITICAL", "CRÍTICO"], high: ["ALTO", "HIGH", "ALTO"], medium: ["MÉDIO", "MEDIUM", "MEDIO"], low: ["BAIXO", "LOW", "BAJO"],
 };
 
 function ComplianceBlockModal({
@@ -1205,6 +1227,7 @@ function ComplianceBlockModal({
   onRetryApproval: () => void;
   forceLoading: boolean;
 }) {
+  const t = useUiText();
   const [applying, setApplying] = useState<number | null>(null);
   const [applied, setApplied] = useState<Set<number>>(new Set());
   const isBlocked = compliance.riskLevel === "blocked";
@@ -1232,11 +1255,10 @@ function ComplianceBlockModal({
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-mono text-sm font-bold uppercase tracking-widest text-destructive mb-0.5">
-              Bloqueio Compliance — Copy Indefensável
+              {t("Bloqueio de conformidade — alegação indefensável", "Compliance block — indefensible copy", "Bloqueo de cumplimiento — texto indefendible")}
             </div>
             <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">
-              A IA de compliance detectou {compliance.violations.length} violaç{compliance.violations.length === 1 ? "ão" : "ões"} nesta peça
-              antes de aprovar para lançamento.
+              {t(`A IA de conformidade detectou ${compliance.violations.length} violação${compliance.violations.length === 1 ? "" : "ões"} nesta peça antes de aprová-la para o lançamento.`, `The compliance AI detected ${compliance.violations.length} violation${compliance.violations.length === 1 ? "" : "s"} in this piece before launch approval.`, `La IA de cumplimiento detectó ${compliance.violations.length} infracción${compliance.violations.length === 1 ? "" : "es"} en esta pieza antes de aprobarla para el lanzamiento.`)}
             </p>
           </div>
           <button onClick={onClose} className="text-muted-foreground/40 hover:text-muted-foreground shrink-0 ml-2 mt-0.5">
@@ -1261,8 +1283,8 @@ function ComplianceBlockModal({
             isBlocked ? "text-red-400 border-red-400/40 bg-red-400/10" :
             "text-orange-400 border-orange-400/40 bg-orange-400/10"
           }`}>
-            {compliance.riskLevel === "blocked" ? "BLOQUEADO" :
-             compliance.riskLevel === "high_risk" ? "RISCO ALTO" : "RISCO MÉDIO"}
+            {compliance.riskLevel === "blocked" ? t("BLOQUEADO", "BLOCKED", "BLOQUEADO") :
+             compliance.riskLevel === "high_risk" ? t("RISCO ALTO", "HIGH RISK", "ALTO RIESGO") : t("RISCO MÉDIO", "MEDIUM RISK", "RIESGO MEDIO")}
           </span>
           <span className="font-mono text-[10px] text-muted-foreground/50 shrink-0 hidden sm:block">
             {pieceTitle.slice(0, 40)}
@@ -1278,22 +1300,22 @@ function ComplianceBlockModal({
               <div key={i} className={`p-4 space-y-3 transition-colors ${isApplied ? "bg-success/3" : ""}`}>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className={`font-mono text-[10px] border px-1.5 py-0.5 ${SEVERITY_COLOR[v.severity]}`}>
-                    {SEVERITY_LABEL[v.severity]}
+                    {SEVERITY_LABEL[v.severity] ? t(...SEVERITY_LABEL[v.severity]) : v.severity}
                   </span>
                   <span className="font-mono text-[10px] border border-primary/30 bg-primary/5 text-primary px-1.5 py-0.5">
-                    {CATEGORY_LABEL[v.category] ?? v.category}
+                    {CATEGORY_LABEL[v.category] ? t(...CATEGORY_LABEL[v.category]) : v.category}
                   </span>
                   <span className="font-mono text-[10px] text-muted-foreground/40">{v.legalBasis}</span>
                   {isApplied && (
                     <span className="font-mono text-[10px] border border-success/40 bg-success/10 text-success px-1.5 py-0.5 flex items-center gap-1">
-                      <CheckCircle2 className="h-2.5 w-2.5" /> Corrigido
+                      <CheckCircle2 className="h-2.5 w-2.5" /> {t("Corrigido", "Fixed", "Corregido")}
                     </span>
                   )}
                 </div>
 
                 {/* Problem */}
                 <div className="space-y-1">
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Texto problemático</div>
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">{t("Texto problemático", "Problematic text", "Texto problemático")}</div>
                   <div className={`font-mono text-[11px] bg-destructive/5 border border-destructive/20 px-3 py-2 leading-relaxed italic ${isApplied ? "line-through text-muted-foreground/40" : "text-foreground/80"}`}>
                     "{v.originalText}"
                   </div>
@@ -1302,7 +1324,7 @@ function ComplianceBlockModal({
 
                 {/* Fix */}
                 <div className="space-y-1.5">
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Versão defensável</div>
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">{t("Versão defensável", "Defensible version", "Versión defendible")}</div>
                   <div className="font-mono text-[11px] text-success/90 bg-success/5 border border-success/20 px-3 py-2 leading-relaxed">
                     "{v.correctedText}"
                   </div>
@@ -1313,8 +1335,8 @@ function ComplianceBlockModal({
                       className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-success border border-success/30 bg-success/5 hover:bg-success/15 disabled:opacity-50 px-2.5 py-1 transition-colors"
                     >
                       {isApplying
-                        ? <><Loader2 className="h-2.5 w-2.5 animate-spin" />Aplicando...</>
-                        : <><CheckCircle2 className="h-2.5 w-2.5" />Aplicar correção</>
+                        ? <><Loader2 className="h-2.5 w-2.5 animate-spin" />{t("Aplicando...", "Applying...", "Aplicando...")}</>
+                        : <><CheckCircle2 className="h-2.5 w-2.5" />{t("Aplicar correção", "Apply correction", "Aplicar corrección")}</>
                       }
                     </button>
                   )}
@@ -1327,7 +1349,7 @@ function ComplianceBlockModal({
           {compliance.recommendations.length > 0 && (
             <div className="p-4">
               <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">
-                Recomendações do Auditor
+                {t("Recomendações do auditor", "Auditor recommendations", "Recomendaciones del auditor")}
               </div>
               <ul className="space-y-1.5">
                 {compliance.recommendations.map((r, i) => (
@@ -1349,7 +1371,7 @@ function ComplianceBlockModal({
               className="w-full rounded-none font-mono uppercase tracking-widest h-9 gap-1.5 text-xs bg-success/15 border border-success/40 text-success hover:bg-success/25"
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
-              Tentar aprovação novamente ({applied.size} correção{applied.size !== 1 ? "ões" : ""} aplicada{applied.size !== 1 ? "s" : ""})
+              {t(`Tentar aprovação novamente (${applied.size} correção${applied.size !== 1 ? "ões" : ""} aplicada${applied.size !== 1 ? "s" : ""})`, `Retry approval (${applied.size} correction${applied.size !== 1 ? "s" : ""} applied)`, `Volver a intentar la aprobación (${applied.size} corrección${applied.size !== 1 ? "es" : ""} aplicada${applied.size !== 1 ? "s" : ""})`)}
             </Button>
           )}
           <div className="flex flex-col sm:flex-row gap-2">
@@ -1357,7 +1379,7 @@ function ComplianceBlockModal({
               onClick={onRewrite}
               className="flex-1 rounded-none font-mono uppercase tracking-widest h-9 gap-1.5 text-xs bg-primary/10 border border-primary/40 text-primary hover:bg-primary/20"
             >
-              <Sparkles className="h-3.5 w-3.5" />Corrigir tudo com IA
+              <Sparkles className="h-3.5 w-3.5" />{t("Corrigir tudo com IA", "Fix all with AI", "Corregir todo con IA")}
             </Button>
             {!isBlocked && (
               <Button
@@ -1367,7 +1389,7 @@ function ComplianceBlockModal({
                 className="rounded-none font-mono uppercase tracking-widest h-9 gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border/40 hover:border-border/80"
               >
                 {forceLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <AlertTriangle className="h-3.5 w-3.5" />}
-                Aprovar mesmo assim
+                {t("Aprovar mesmo assim", "Approve anyway", "Aprobar de todos modos")}
               </Button>
             )}
             <Button
@@ -1375,7 +1397,7 @@ function ComplianceBlockModal({
               variant="ghost"
               className="rounded-none font-mono uppercase tracking-widest h-9 text-xs text-muted-foreground"
             >
-              Cancelar
+              {t("Cancelar", "Cancel", "Cancelar")}
             </Button>
           </div>
         </div>
@@ -1399,6 +1421,7 @@ function GenerateMoreModal({
   onConfirm: (count: number, instructions: string) => void;
   loading: boolean;
 }) {
+  const t = useUiText();
   const [count, setCount] = useState(3);
   const [instructions, setInstructions] = useState("");
 
@@ -1408,16 +1431,16 @@ function GenerateMoreModal({
         <div className="p-5 border-b border-border/50">
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="h-4 w-4 text-primary" />
-            <span className="font-mono text-sm uppercase tracking-widest font-bold">Gerar mais peças — {platformLabel}</span>
+            <span className="font-mono text-sm uppercase tracking-widest font-bold">{t("Gerar mais peças", "Generate more pieces", "Generar más piezas")} — {platformLabel}</span>
           </div>
-          <p className="font-mono text-xs text-muted-foreground">O Agente Copywriter vai criar novas inserções alinhadas à campanha</p>
+          <p className="font-mono text-xs text-muted-foreground">{t("O agente copywriter criará novas peças alinhadas à campanha.", "The copywriting agent will create new pieces aligned with the campaign.", "El agente de redacción creará nuevas piezas alineadas con la campaña.")}</p>
         </div>
 
         <div className="p-5 space-y-5">
           {/* Count selector */}
           <div>
             <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground block mb-3">
-              Quantas peças a gerar?
+              {t("Quantas peças deseja gerar?", "How many pieces would you like to generate?", "¿Cuántas piezas quieres generar?")}
             </label>
             <div className="flex items-center gap-3">
               <button
@@ -1429,7 +1452,7 @@ function GenerateMoreModal({
               </button>
               <div className="flex-1 text-center">
                 <span className="font-mono text-3xl font-bold text-primary">{count}</span>
-                <span className="font-mono text-xs text-muted-foreground ml-2">peça{count !== 1 ? "s" : ""} de {platformLabel}</span>
+                <span className="font-mono text-xs text-muted-foreground ml-2">{count} {t("peças para", "pieces for", "piezas para")} {platformLabel}</span>
               </div>
               <button
                 onClick={() => setCount(v => Math.min(10, v + 1))}
@@ -1455,10 +1478,10 @@ function GenerateMoreModal({
           {/* Instructions */}
           <div>
             <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground block mb-2">
-              Instruções para o agente (opcional)
+              {t("Instruções para o agente (opcional)", "Instructions for the agent (optional)", "Instrucciones para el agente (opcional)")}
             </label>
             <textarea
-              placeholder={`Ex: "Foque nos dias de fechamento com urgência máxima" ou "Adicione mais gatilho de prova social e depoimentos"`}
+              placeholder={t('Ex.: "Foque nos dias de fechamento com urgência máxima" ou "Adicione mais prova social e depoimentos"', 'E.g., "Focus on the closing days with maximum urgency" or "Add more social proof and testimonials"', 'Ej.: "Enfócate en los días de cierre con máxima urgencia" o "Añade más prueba social y testimonios"')}
               className="w-full bg-muted/10 border border-border/60 text-sm p-3 min-h-[80px] resize-none font-mono placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/50 transition-colors"
               value={instructions}
               onChange={e => setInstructions(e.target.value)}
@@ -1469,7 +1492,7 @@ function GenerateMoreModal({
             <div className="flex items-start gap-2">
               <Zap className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
               <p className="font-mono text-xs text-primary/80 leading-relaxed">
-                O agente vai ler a campanha existente, manter coerência com o plano e gerar {count} nova{count !== 1 ? "s" : ""} peça{count !== 1 ? "s" : ""} prontas para aprovação.
+                {t(`O agente lerá a campanha existente, manterá a coerência com o plano e gerará ${count} peça${count !== 1 ? "s" : ""} pronta${count !== 1 ? "s" : ""} para aprovação.`, `The agent will read the existing campaign, maintain consistency with the plan, and generate ${count} piece${count !== 1 ? "s" : ""} ready for approval.`, `El agente leerá la campaña existente, mantendrá la coherencia con el plan y generará ${count} pieza${count !== 1 ? "s" : ""} lista${count !== 1 ? "s" : ""} para aprobar.`)}
               </p>
             </div>
           </div>
@@ -1477,7 +1500,7 @@ function GenerateMoreModal({
 
         <div className="p-5 border-t border-border/50 flex gap-2 justify-end">
           <Button variant="ghost" onClick={onClose} disabled={loading} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-8">
-            Cancelar
+            {t("Cancelar", "Cancel", "Cancelar")}
           </Button>
           <Button
             onClick={() => onConfirm(count, instructions)}
@@ -1485,7 +1508,7 @@ function GenerateMoreModal({
             className="rounded-none font-mono uppercase text-[11px] tracking-widest h-8 gap-1.5 btn-weapon-primary"
           >
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            Gerar {count} Peça{count !== 1 ? "s" : ""} com o agente
+            {t(`Gerar ${count} peça${count !== 1 ? "s" : ""} com o agente`, `Generate ${count} piece${count !== 1 ? "s" : ""} with the agent`, `Generar ${count} pieza${count !== 1 ? "s" : ""} con el agente`)}
           </Button>
         </div>
       </div>
@@ -1506,6 +1529,7 @@ function RejectModal({
   onConfirm: (reason: string) => void;
   loading: boolean;
 }) {
+  const t = useUiText();
   const [reason, setReason] = useState("");
 
   return (
@@ -1514,7 +1538,7 @@ function RejectModal({
         <div className="p-5 border-b border-border/50">
           <div className="flex items-center gap-2 mb-1">
             <XCircle className="h-4 w-4 text-destructive" />
-            <span className="font-mono text-sm uppercase tracking-widest font-bold">Rejeitar e Corrigir com o agente</span>
+            <span className="font-mono text-sm uppercase tracking-widest font-bold">{t("Rejeitar e corrigir com o agente", "Reject and fix with the agent", "Rechazar y corregir con el agente")}</span>
           </div>
           <p className="font-mono text-xs text-muted-foreground truncate">{piece.title}</p>
         </div>
@@ -1522,11 +1546,11 @@ function RejectModal({
         <div className="p-5 space-y-4">
           <div>
             <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground block mb-2">
-              Por que está rejeitando? O agente vai absorver seu feedback e reescrever.
+              {t("Por que está rejeitando? O agente usará seu feedback para reescrever.", "Why are you rejecting this? The agent will use your feedback to rewrite it.", "¿Por qué lo rechazas? El agente usará tus comentarios para reescribirlo.")}
             </label>
             <textarea
               autoFocus
-              placeholder={'Ex: "O tom está muito formal, precisa ser mais urgente e direto" ou "A headline não conecta com o problema do avatar, refaça focando na dor principal..."'}
+              placeholder={t('Ex.: "O tom está muito formal; precisa ser mais urgente e direto" ou "O título não se conecta ao problema do público; refaça focando na dor principal..."', 'E.g., "The tone is too formal; make it more urgent and direct" or "The headline does not connect with the audience problem; rewrite it to focus on the main pain point..."', 'Ej.: "El tono es demasiado formal; debe ser más urgente y directo" o "El titular no conecta con el problema de la audiencia; reescríbelo centrándote en el dolor principal..."')}
               className="w-full bg-muted/10 border border-border/60 text-sm p-3 min-h-[110px] resize-none font-mono placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/50 transition-colors"
               value={reason}
               onChange={e => setReason(e.target.value)}
@@ -1537,7 +1561,7 @@ function RejectModal({
             <div className="flex items-start gap-2">
               <Sparkles className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
               <p className="font-mono text-xs text-primary/80 leading-relaxed">
-                O Agente Copywriter vai ler seu feedback, entender o que precisa mudar e reescrever a peça automaticamente. Você revisa e aprova — ou rejeita novamente.
+                {t("O agente de redação lerá seu feedback, entenderá o que precisa mudar e reescreverá a peça automaticamente. Revise e aprove — ou rejeite novamente.", "The copywriting agent will read your feedback, understand what needs to change, and rewrite the piece automatically. Review and approve it—or reject it again.", "El agente de redacción leerá tus comentarios, entenderá qué debe cambiar y reescribirá la pieza automáticamente. Revísala y apruébala, o vuelve a rechazarla.")}
               </p>
             </div>
           </div>
@@ -1545,7 +1569,7 @@ function RejectModal({
 
         <div className="p-5 border-t border-border/50 flex gap-2 justify-end">
           <Button variant="ghost" onClick={onClose} disabled={loading} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-8">
-            Cancelar
+            {t("Cancelar", "Cancel", "Cancelar")}
           </Button>
           <Button
             onClick={() => onConfirm(reason)}
@@ -1553,7 +1577,7 @@ function RejectModal({
             className="rounded-none font-mono uppercase text-[11px] tracking-widest h-8 gap-1.5 bg-primary/10 border border-primary/40 text-primary hover:bg-primary/20"
           >
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            Rejeitar e Corrigir com o agente
+            {t("Rejeitar e corrigir com o agente", "Reject and fix with the agent", "Rechazar y corregir con el agente")}
           </Button>
         </div>
       </div>
@@ -1564,6 +1588,7 @@ function RejectModal({
 // ── Edit Modal ─────────────────────────────────────────────────────────────────
 
 function EditModal({ piece, onClose, onSave }: { piece: ContentPiece; onClose: () => void; onSave: (id: string, body: string, cta: string) => void }) {
+  const t = useUiText();
   const [body, setBody] = useState(piece.body);
   const [cta, setCta] = useState(piece.callToAction ?? "");
   return (
@@ -1573,24 +1598,24 @@ function EditModal({ piece, onClose, onSave }: { piece: ContentPiece; onClose: (
         <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-primary" />
         <div className="p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-mono font-bold uppercase tracking-widest text-sm">Editar Peça</h3>
-            <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><XCircle className="h-4 w-4" /></button>
+            <h3 className="font-mono font-bold uppercase tracking-widest text-sm">{t("Editar peça", "Edit piece", "Editar pieza")}</h3>
+            <button onClick={onClose} aria-label={t("Fechar", "Close", "Cerrar")} className="text-muted-foreground hover:text-foreground"><XCircle className="h-4 w-4" /></button>
           </div>
           <div className="space-y-2">
-            <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Conteúdo</label>
+            <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Conteúdo", "Content", "Contenido")}</label>
             <textarea value={body} onChange={e => setBody(e.target.value)} rows={10} className="w-full font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none rounded-sm px-4 py-3 resize-y text-foreground leading-relaxed" />
           </div>
           {piece.callToAction !== undefined && (
             <div className="space-y-2">
-              <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Call to Action</label>
+              <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Chamada para ação", "Call to action", "Llamada a la acción")}</label>
               <input value={cta} onChange={e => setCta(e.target.value)} className="w-full font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none rounded-sm px-4 py-2 text-foreground" />
             </div>
           )}
           <div className="flex gap-2 pt-2">
             <Button onClick={() => onSave(piece.id, body, cta)} className="rounded-none font-mono uppercase tracking-widest gap-2 btn-weapon-primary h-9 text-xs">
-              <CheckCircle2 className="h-3.5 w-3.5" />Salvar e Aprovar
+              <CheckCircle2 className="h-3.5 w-3.5" />{t("Salvar e aprovar", "Save and approve", "Guardar y aprobar")}
             </Button>
-            <Button variant="ghost" onClick={onClose} className="rounded-none font-mono uppercase tracking-widest h-9 text-xs text-muted-foreground">Cancelar</Button>
+            <Button variant="ghost" onClick={onClose} className="rounded-none font-mono uppercase tracking-widest h-9 text-xs text-muted-foreground">{t("Cancelar", "Cancel", "Cancelar")}</Button>
           </div>
         </div>
       </div>
@@ -1719,23 +1744,23 @@ const PHASE_TO_DAY: Record<string, number> = {
   cart_close: 7, fechamento: 7,
 };
 
-const AGGREGATED_TYPE_LABELS: Record<string, string> = {
-  email_sequence: "Sequência de E-mails",
-  creative_direction: "Direção Criativa",
-  landing_page_structure: "Landing Page",
-  cpl_script: "Roteiro CPL",
-  live_script: "Roteiro Live",
-  stories_sequence: "Stories",
-  media_brief: "Brief de Mídia",
-  compliance_report: "Compliance",
-  targeting_plan: "Plano de Tráfego",
-  targeting_config: "Audiências e Tráfego",
-  audience_profile: "Perfil de Audiência",
-  content_calendar: "Calendário Social",
-  ad_copy: "Copy de Anúncios",
-  vsl_script: "Roteiro VSL",
-  webinar_script: "Roteiro Webinar",
-  media_buying_plan: "Plano de Media Buying",
+const AGGREGATED_TYPE_LABELS: Record<string, [string, string, string]> = {
+  email_sequence: ["Sequência de e-mails", "Email sequence", "Secuencia de correos electrónicos"],
+  creative_direction: ["Direção criativa", "Creative direction", "Dirección creativa"],
+  landing_page_structure: ["Landing Page", "Landing Page", "Página de destino"],
+  cpl_script: ["Roteiro CPL", "CPL script", "Guion CPL"],
+  live_script: ["Roteiro de live", "Live script", "Guion de transmisión en vivo"],
+  stories_sequence: ["Stories", "Stories", "Historias"],
+  media_brief: ["Brief de mídia", "Media brief", "Brief de medios"],
+  compliance_report: ["Conformidade", "Compliance", "Cumplimiento"],
+  targeting_plan: ["Plano de tráfego", "Traffic plan", "Plan de tráfico"],
+  targeting_config: ["Audiências e tráfego", "Audiences and traffic", "Audiencias y tráfico"],
+  audience_profile: ["Perfil de audiência", "Audience profile", "Perfil de audiencia"],
+  content_calendar: ["Calendário social", "Social calendar", "Calendario social"],
+  ad_copy: ["Texto de anúncios", "Ad copy", "Texto de anuncios"],
+  vsl_script: ["Roteiro VSL", "VSL script", "Guion VSL"],
+  webinar_script: ["Roteiro de webinar", "Webinar script", "Guion de webinar"],
+  media_buying_plan: ["Plano de compra de mídia", "Media buying plan", "Plan de compra de medios"],
 };
 
 function extractBodyText(content: unknown, type?: string): string {
@@ -1970,7 +1995,8 @@ function expandApiPieces(pieces: ApiContentPiece[], complianceRevision?: Complia
       platform: TYPE_TO_PLATFORM[rawType] ?? "email",
       type: TYPE_TO_PIECE_TYPE[rawType] ?? "copy",
       dayIndex: baseDayIndex,
-      title: AGGREGATED_TYPE_LABELS[rawType] ?? rawType,
+      title: AGGREGATED_TYPE_LABELS[rawType]?.[0] ?? rawType,
+      staticTitle: AGGREGATED_TYPE_LABELS[rawType],
       body: "",
       status,
       segment: "all",
@@ -1988,7 +2014,7 @@ function expandApiPieces(pieces: ApiContentPiece[], complianceRevision?: Complia
     // that shows "Não gerada — clique para regenerar" — no parsing attempted.
     if (pieceNotGenerated) {
       result.push(child("not_generated", {
-        title: `[Não gerada] ${AGGREGATED_TYPE_LABELS[rawType] ?? rawType}`,
+        title: `[Não gerada] ${AGGREGATED_TYPE_LABELS[rawType]?.[0] ?? rawType}`,
         body: String(c["reason"] ?? 'IA não conseguiu completar após múltiplas tentativas. Clique em "Reescrever com IA".'),
       }));
       continue;
@@ -2627,6 +2653,7 @@ interface LandingPageData {
 }
 
 function LandingPageRealRender({ data }: { data: LandingPageData }) {
+  const t = useUiText();
   const sections = data.sections ?? [];
   const colorScheme = data.colorScheme;
   const bg = colorScheme?.background || "#0a0a0f";
@@ -2652,7 +2679,7 @@ function LandingPageRealRender({ data }: { data: LandingPageData }) {
           <span className="w-2.5 h-2.5 rounded-full bg-green-400/60" />
         </div>
         <div className="flex-1 mx-2 font-mono text-[10px] text-muted-foreground/50 bg-background/40 border border-border/30 px-2 py-1 truncate">
-          {data.metaTitle ?? data.pageTitle ?? "pagina-de-vendas"}
+          {data.metaTitle ?? data.pageTitle ?? t("pagina-de-vendas", "sales-page", "pagina-de-ventas")}
         </div>
       </div>
 
@@ -2761,6 +2788,7 @@ function LandingPagePreview({
   isRejected?: boolean;
   loading?: boolean;
 }) {
+  const t = useUiText();
   const [expandedSection, setExpandedSection] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"real" | "structure">("real");
   const sections = data.sections ?? [];
@@ -2774,13 +2802,13 @@ function LandingPagePreview({
       <div className="border border-border/50 bg-card/40 p-4 space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Página de Vendas Gerada pelo agente</p>
-            <h2 className="font-mono font-bold text-base uppercase tracking-wide">{data.pageTitle ?? "Página de Vendas"}</h2>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">{t("Página de vendas gerada pelo agente", "Sales page generated by the agent", "Página de ventas generada por el agente")}</p>
+            <h2 className="font-mono font-bold text-base uppercase tracking-wide">{data.pageTitle ?? t("Página de vendas", "Sales page", "Página de ventas")}</h2>
             <p className="font-mono text-xs text-muted-foreground/60 mt-0.5">{data.metaDescription}</p>
           </div>
           <div className="flex gap-2 shrink-0">
             <Badge variant="outline" className="rounded-none font-mono text-[10px] px-2 border-primary/30 text-primary">{data.pageType ?? "sales_page"}</Badge>
-            <Badge variant="outline" className="rounded-none font-mono text-[10px] px-2 border-border/40 text-muted-foreground">{sections.length} seções</Badge>
+            <Badge variant="outline" className="rounded-none font-mono text-[10px] px-2 border-border/40 text-muted-foreground">{sections.length} {t("seções", "sections", "secciones")}</Badge>
           </div>
         </div>
 
@@ -2790,20 +2818,20 @@ function LandingPagePreview({
             onClick={() => setViewMode("real")}
             className={`font-mono text-[10px] uppercase tracking-widest px-3 py-1.5 border ${viewMode === "real" ? "border-primary/50 bg-primary/15 text-primary" : "border-border/30 text-muted-foreground/50"}`}
           >
-            Página Real (Preview)
+            {t("Prévia da página real", "Live page preview", "Vista previa de la página real")}
           </button>
           <button
             onClick={() => setViewMode("structure")}
             className={`font-mono text-[10px] uppercase tracking-widest px-3 py-1.5 border ${viewMode === "structure" ? "border-primary/50 bg-primary/15 text-primary" : "border-border/30 text-muted-foreground/50"}`}
           >
-            Estrutura / Copy
+            {t("Estrutura / texto", "Structure / copy", "Estructura / texto")}
           </button>
         </div>
 
         {/* Color palette */}
         {colorScheme && (
           <div className="flex items-center gap-2 pt-2 border-t border-border/30">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Paleta:</span>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">{t("Paleta:", "Palette:", "Paleta:")}</span>
             {[colorScheme.primary, colorScheme.secondary, colorScheme.accent, colorScheme.background, colorScheme.text].filter(Boolean).map((color, i) => (
               <div key={i} className="group relative">
                 <div className="w-6 h-6 border border-border/40 cursor-pointer" style={{ backgroundColor: color }} title={color} />
@@ -2824,15 +2852,15 @@ function LandingPagePreview({
             {!isApproved && !isRejected && (
               <>
                 <Button size="sm" onClick={onApprove} disabled={loading} className="font-mono uppercase tracking-widest rounded-none gap-1.5 h-8 px-3 text-xs bg-success/20 text-success border border-success/30 hover:bg-success/30">
-                  <CheckCircle2 className="h-3 w-3" />Aprovar Estrutura
+                  <CheckCircle2 className="h-3 w-3" />{t("Aprovar estrutura", "Approve structure", "Aprobar estructura")}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={onReject} disabled={loading} className="font-mono uppercase tracking-widest rounded-none gap-1.5 h-8 px-3 text-xs text-muted-foreground hover:text-destructive">
-                  <XCircle className="h-3 w-3" />Rejeitar
+                  <XCircle className="h-3 w-3" />{t("Rejeitar", "Reject", "Rechazar")}
                 </Button>
               </>
             )}
-            {isApproved && <span className="font-mono text-xs text-success flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5" />Estrutura aprovada</span>}
-            {isRejected && <span className="font-mono text-xs text-destructive flex items-center gap-1.5"><XCircle className="h-3.5 w-3.5" />Rejeitado</span>}
+            {isApproved && <span className="font-mono text-xs text-success flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5" />{t("Estrutura aprovada", "Structure approved", "Estructura aprobada")}</span>}
+            {isRejected && <span className="font-mono text-xs text-destructive flex items-center gap-1.5"><XCircle className="h-3.5 w-3.5" />{t("Rejeitado", "Rejected", "Rechazado")}</span>}
           </div>
         )}
       </div>
@@ -2845,15 +2873,15 @@ function LandingPagePreview({
         <div className="border border-primary/20 bg-primary/5 p-0 overflow-hidden">
           <div className="bg-primary/10 px-4 py-2 border-b border-primary/20 flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-            <span className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">Above the Fold — Primeira Dobra</span>
+            <span className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">{t("Above the fold — primeira dobra", "Above the fold", "Above the fold — primer pliegue")}</span>
           </div>
           <div className="p-5 space-y-3">
             <div className="border-l-2 pl-4" style={{ borderColor: primary }}>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Headline Principal</p>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">{t("Título principal", "Main headline", "Titular principal")}</p>
               <p className="font-mono text-sm font-bold text-foreground leading-tight">{aboveFold.headline}</p>
             </div>
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Sub-headline</p>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">{t("Subtítulo", "Subheadline", "Subtítulo")}</p>
               <p className="font-mono text-xs text-muted-foreground/80">{aboveFold.subheadline}</p>
             </div>
             <div className="flex items-center gap-3">
@@ -2874,7 +2902,7 @@ function LandingPagePreview({
 
       {/* Sections wireframe */}
       {viewMode === "structure" && <div className="space-y-2">
-        <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">Estrutura da Página — {sections.length} Seções</p>
+        <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">{t("Estrutura da página", "Page structure", "Estructura de la página")} — {sections.length} {t("seções", "sections", "secciones")}</p>
         {sections.map((section, i) => {
           const isExpanded = expandedSection === i;
           const isAboveFold = section.aboveTheFold;
@@ -2909,31 +2937,31 @@ function LandingPagePreview({
                 <div className="px-4 pb-4 space-y-3 border-t border-border/30">
                   {section.subheadline && (
                     <div className="pt-3">
-                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Sub-headline</p>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">{t("Subtítulo", "Subheadline", "Subtítulo")}</p>
                       <p className="font-mono text-xs text-muted-foreground/80 italic">"{section.subheadline}"</p>
                     </div>
                   )}
                   {section.bodyContent && (
                     <div>
-                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Copy do Corpo</p>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">{t("Texto principal", "Body copy", "Texto principal")}</p>
                       <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed whitespace-pre-wrap">{section.bodyContent}</p>
                     </div>
                   )}
                   {section.purpose && (
                     <div>
-                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Objetivo da Seção</p>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">{t("Objetivo da seção", "Section objective", "Objetivo de la sección")}</p>
                       <p className="font-mono text-xs text-muted-foreground/70">{section.purpose}</p>
                     </div>
                   )}
                   {section.conversionPrinciple && (
                     <div>
-                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Princípio de Conversão</p>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">{t("Princípio de conversão", "Conversion principle", "Principio de conversión")}</p>
                       <p className="font-mono text-xs text-primary/80">{section.conversionPrinciple}</p>
                     </div>
                   )}
                   {section.visualElements && section.visualElements.length > 0 && (
                     <div>
-                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Elementos Visuais</p>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">{t("Elementos visuais", "Visual elements", "Elementos visuales")}</p>
                       <div className="flex flex-wrap gap-1.5">
                         {section.visualElements.map((el, j) => (
                           <span key={j} className="font-mono text-[10px] border border-border/30 bg-muted/10 px-2 py-0.5 text-muted-foreground/70">{el}</span>
@@ -2943,16 +2971,16 @@ function LandingPagePreview({
                   )}
                   {section.cta && (
                     <div className="border border-green-400/20 bg-green-400/5 p-3">
-                      <p className="font-mono text-[10px] uppercase tracking-widest text-green-400/70 mb-1.5">CTA desta Seção</p>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-green-400/70 mb-1.5">{t("CTA desta seção", "Section CTA", "CTA de esta sección")}</p>
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs font-bold text-green-400 border border-green-400/40 px-3 py-1.5">{section.cta.text}</span>
-                        {section.cta.placement && <span className="font-mono text-[10px] text-muted-foreground/50">Posição: {section.cta.placement}</span>}
+                        {section.cta.placement && <span className="font-mono text-[10px] text-muted-foreground/50">{t("Posição:", "Placement:", "Ubicación:")} {section.cta.placement}</span>}
                       </div>
                     </div>
                   )}
                   {section.socialProofElement && (
                     <div>
-                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Prova Social</p>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">{t("Prova social", "Social proof", "Prueba social")}</p>
                       <p className="font-mono text-xs text-muted-foreground/70">{section.socialProofElement}</p>
                     </div>
                   )}
@@ -2966,7 +2994,7 @@ function LandingPagePreview({
       {/* Exit Intent */}
       {viewMode === "structure" && data.exitIntentPopup && (
         <div className="border border-border/40 bg-card/30 p-4">
-          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">Pop-up de Saída</p>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">{t("Pop-up de saída", "Exit pop-up", "Ventana emergente de salida")}</p>
           <p className="font-mono text-xs font-bold">{data.exitIntentPopup.headline}</p>
           <p className="font-mono text-xs text-muted-foreground/60 mt-0.5">{data.exitIntentPopup.offer}</p>
           <span className="font-mono text-[10px] text-primary border border-primary/30 px-2 py-0.5 inline-block mt-1.5">{data.exitIntentPopup.cta}</span>
@@ -2976,7 +3004,7 @@ function LandingPagePreview({
       {/* Urgency */}
       {data.urgencyMechanisms && data.urgencyMechanisms.length > 0 && (
         <div className="border border-border/40 bg-card/30 p-4">
-          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">Mecanismos de Urgência</p>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">{t("Mecanismos de urgência", "Urgency mechanisms", "Mecanismos de urgencia")}</p>
           <div className="space-y-2">
             {data.urgencyMechanisms.map((m, i) => (
               <div key={i} className="flex items-start gap-2">
@@ -2991,7 +3019,7 @@ function LandingPagePreview({
       {/* Notes */}
       {data.landingPageNotes && (
         <div className="border border-border/30 bg-muted/5 px-4 py-3">
-          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Notas do Agente de CRO</p>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">{t("Notas do agente de CRO", "CRO agent notes", "Notas del agente de CRO")}</p>
           <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed">{data.landingPageNotes}</p>
         </div>
       )}
@@ -3008,6 +3036,7 @@ function SocialLaunchGate({
   onLaunch: () => void;
   launching: boolean;
 }) {
+  const t = useUiText();
   const { data: integrationsData } = useQuery({
     queryKey: ["/api/workspaces/me/integrations", "gate"],
     queryFn: async () => {
@@ -3038,7 +3067,7 @@ function SocialLaunchGate({
         className="rounded-none font-mono uppercase tracking-widest gap-1.5 btn-weapon-primary h-9 text-xs flex-1 sm:flex-none"
       >
         {launching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-        Lançar<ArrowRight className="h-3 w-3" />
+        {t("Lançar", "Launch", "Lanzar")}<ArrowRight className="h-3 w-3" />
       </Button>
     );
   }
@@ -3050,10 +3079,10 @@ function SocialLaunchGate({
         <Shield className="h-4 w-4 text-primary shrink-0" />
         <div className="flex-1">
           <div className="font-mono text-xs font-bold uppercase tracking-widest text-primary">
-            Conectar Plataformas Antes de Lançar
+             {t("Conecte as plataformas antes de lançar", "Connect platforms before launching", "Conecta las plataformas antes de lanzar")}
           </div>
           <p className="font-mono text-[11px] text-muted-foreground/60 mt-0.5">
-            A NexOS vai postar automaticamente em seu nome. Conecte cada rede social com sua conta para liberar o lançamento.
+             {t("A NexOS publicará automaticamente em seu nome. Conecte cada rede social à sua conta para liberar o lançamento.", "NexOS will post automatically on your behalf. Connect each social network to your account to enable the launch.", "NexOS publicará automáticamente en tu nombre. Conecta cada red social a tu cuenta para habilitar el lanzamiento.")}
           </p>
         </div>
       </div>
@@ -3079,11 +3108,11 @@ function SocialLaunchGate({
                   <div className="font-mono text-sm font-bold">{def.label}</div>
                   {connected && integration?.accountName ? (
                     <div className="font-mono text-[11px] text-success mt-0.5">
-                      Conectado como {integration.accountName}
+                       {t("Conectado como", "Connected as", "Conectado como")} {integration.accountName}
                     </div>
                   ) : (
                     <div className="font-mono text-[11px] text-muted-foreground/50 mt-0.5">
-                      Conecte em Integrações para autorizar a publicação
+                       {t("Conecte em Integrações para autorizar a publicação", "Connect in Integrations to authorize publishing", "Conecta en Integraciones para autorizar la publicación")}
                     </div>
                   )}
                 </div>
@@ -3093,7 +3122,7 @@ function SocialLaunchGate({
               {connected ? (
                 <div className="flex items-center gap-1.5 shrink-0">
                   <CheckCircle2 className="h-4 w-4 text-success" />
-                  <span className="font-mono text-[11px] text-success uppercase tracking-widest">Conectado</span>
+                   <span className="font-mono text-[11px] text-success uppercase tracking-widest">{t("Conectado", "Connected", "Conectado")}</span>
                 </div>
               ) : (
                 <Link
@@ -3101,7 +3130,7 @@ function SocialLaunchGate({
                   className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 h-9 font-mono text-[11px] uppercase tracking-widest border transition-all shrink-0"
                   style={{ borderColor: def.brand.border, color: def.brand.text, background: def.brand.bg }}
                 >
-                  <Link2 className="h-3.5 w-3.5" />Conectar em Integrações
+                   <Link2 className="h-3.5 w-3.5" />{t("Conectar em integrações", "Connect in Integrations", "Conectar en Integraciones")}
                 </Link>
               )}
             </div>
@@ -3118,8 +3147,8 @@ function SocialLaunchGate({
             className="w-full rounded-none font-mono uppercase tracking-widest gap-2 btn-weapon-primary h-11"
           >
             {launching
-              ? <><Loader2 className="h-4 w-4 animate-spin" />Iniciando lançamento...</>
-              : <><Send className="h-4 w-4" />Confirmar e Lançar Campanha<ArrowRight className="h-4 w-4" /></>
+              ? <><Loader2 className="h-4 w-4 animate-spin" />{t("Iniciando lançamento...", "Starting launch...", "Iniciando lanzamiento...")}</>
+              : <><Send className="h-4 w-4" />{t("Confirmar e lançar campanha", "Confirm and launch campaign", "Confirmar y lanzar campaña")}<ArrowRight className="h-4 w-4" /></>
             }
           </Button>
         ) : (
@@ -3127,7 +3156,7 @@ function SocialLaunchGate({
             <div className="flex items-center gap-3 text-muted-foreground/50">
               <div className="flex-1 h-px bg-border/30" />
               <span className="font-mono text-[11px] uppercase tracking-widest">
-                {required.filter(d => !isConnected(d)).length} plataforma{required.filter(d => !isConnected(d)).length !== 1 ? "s" : ""} pendente{required.filter(d => !isConnected(d)).length !== 1 ? "s" : ""}
+                 {required.filter(d => !isConnected(d)).length} {t("plataformas pendentes", "platforms pending", "plataformas pendientes")}
               </span>
               <div className="flex-1 h-px bg-border/30" />
             </div>
@@ -3136,7 +3165,7 @@ function SocialLaunchGate({
                 variant="outline"
                 className="w-full rounded-none font-mono uppercase tracking-widest gap-2 h-10 border-primary/40 text-primary hover:bg-primary/10"
               >
-                <Link2 className="h-4 w-4" />Ir para Integrações<ArrowRight className="h-4 w-4" />
+                 <Link2 className="h-4 w-4" />{t("Ir para integrações", "Go to Integrations", "Ir a Integraciones")}<ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>
@@ -3190,12 +3219,12 @@ interface WarmingOutput {
   warmingNotes?: string;
 }
 
-const CONVICTION_LABELS: Record<string, string> = {
-  authority: "Autoridade",
-  curiosity: "Curiosidade",
-  problem_awareness: "Consciência do Problema",
-  social_proof: "Prova Social",
-  identity: "Identidade",
+const CONVICTION_LABELS: Record<string, [string, string, string]> = {
+  authority: ["Autoridade", "Authority", "Autoridad"],
+  curiosity: ["Curiosidade", "Curiosity", "Curiosidad"],
+  problem_awareness: ["Consciência do problema", "Problem awareness", "Conciencia del problema"],
+  social_proof: ["Prova social", "Social proof", "Prueba social"],
+  identity: ["Identidade", "Identity", "Identidad"],
 };
 const CONVICTION_COLORS: Record<string, string> = {
   authority: "text-blue-400 border-blue-400/40 bg-blue-400/10",
@@ -3206,6 +3235,7 @@ const CONVICTION_COLORS: Record<string, string> = {
 };
 
 function CopyButton({ text, label = "Copiar" }: { text: string; label?: string }) {
+  const t = useUiText();
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -3218,16 +3248,17 @@ function CopyButton({ text, label = "Copiar" }: { text: string; label?: string }
       className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:border-border px-2 h-6 transition-colors shrink-0"
     >
       {copied ? <Check className="h-2.5 w-2.5 text-success" /> : <Copy className="h-2.5 w-2.5" />}
-      {copied ? "Copiado" : label}
+      {copied ? t("Copiado", "Copied", "Copiado") : label === "Copiar roteiro" ? t("Copiar roteiro", "Copy script", "Copiar guion") : t("Copiar", "Copy", "Copiar")}
     </button>
   );
 }
 
 function WarmingDayCard({ day }: { day: WarmingDayOutput }) {
+  const t = useUiText();
   const [expandedPost, setExpandedPost] = useState(false);
   const [expandedEmail, setExpandedEmail] = useState(false);
   const catColor = CONVICTION_COLORS[day.convictionCategory] ?? "text-muted-foreground border-border/40 bg-muted/10";
-  const catLabel = CONVICTION_LABELS[day.convictionCategory] ?? day.convictionCategory;
+  const catLabel = CONVICTION_LABELS[day.convictionCategory] ? t(...CONVICTION_LABELS[day.convictionCategory]) : day.convictionCategory;
 
   return (
     <div className="border border-border/50 bg-card/40">
@@ -3254,7 +3285,7 @@ function WarmingDayCard({ day }: { day: WarmingDayOutput }) {
               <div className="flex items-center gap-2">
                 <Instagram className="h-3.5 w-3.5 text-pink-400 shrink-0" />
                 <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-pink-400">
-                  Post Orgânico — {day.organicPost.platform}
+                  {t("Post orgânico", "Organic post", "Publicación orgánica")} — {day.organicPost.platform}
                 </span>
                 {day.organicPost.postingTime && (
                   <span className="font-mono text-[10px] text-muted-foreground/50 flex items-center gap-0.5">
@@ -3272,7 +3303,7 @@ function WarmingDayCard({ day }: { day: WarmingDayOutput }) {
             </div>
             {/* Hook */}
             <div className="px-3 py-2 border border-pink-400/20 bg-pink-400/5">
-              <span className="font-mono text-[10px] text-pink-400 uppercase tracking-widest">Hook: </span>
+              <span className="font-mono text-[10px] text-pink-400 uppercase tracking-widest">{t("Gancho:", "Hook:", "Gancho:")} </span>
               <span className="font-mono text-[11px] text-foreground/90 italic">"{day.organicPost.hook}"</span>
             </div>
             {/* Caption */}
@@ -3281,7 +3312,7 @@ function WarmingDayCard({ day }: { day: WarmingDayOutput }) {
             </div>
             {day.organicPost.caption.length > 100 && (
               <button onClick={() => setExpandedPost(v => !v)} className="font-mono text-[10px] uppercase tracking-widest text-primary hover:text-primary/80 flex items-center gap-1">
-                {expandedPost ? <><ChevronUp className="h-2.5 w-2.5" />Menos</> : <><ChevronDown className="h-2.5 w-2.5" />Ver tudo</>}
+                {expandedPost ? <><ChevronUp className="h-2.5 w-2.5" />{t("Menos", "Show less", "Ver menos")}</> : <><ChevronDown className="h-2.5 w-2.5" />{t("Ver tudo", "Show all", "Ver todo")}</>}
               </button>
             )}
             {/* CTA + Hashtags */}
@@ -3329,8 +3360,8 @@ function WarmingDayCard({ day }: { day: WarmingDayOutput }) {
                 <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-blue-400">E-mail</span>
               </div>
               <CopyButton text={[
-                `Assunto: ${day.email.subject}`,
-                `Preview: ${day.email.previewText}`,
+                 `${t("Assunto", "Subject", "Asunto")}: ${day.email.subject}`,
+                 `${t("Prévia", "Preview", "Vista previa")}: ${day.email.previewText}`,
                 "",
                 day.email.body,
                 day.email.cta ? `\nCTA: ${day.email.cta}` : "",
@@ -3347,11 +3378,11 @@ function WarmingDayCard({ day }: { day: WarmingDayOutput }) {
               dangerouslySetInnerHTML={{ __html: day.email.body.replace(/<[^>]+>/g, " ").slice(0, expandedEmail ? 99999 : 600) }} />
             {day.email.body.length > 200 && (
               <button onClick={() => setExpandedEmail(v => !v)} className="font-mono text-[10px] uppercase tracking-widest text-primary hover:text-primary/80 flex items-center gap-1">
-                {expandedEmail ? <><ChevronUp className="h-2.5 w-2.5" />Menos</> : <><ChevronDown className="h-2.5 w-2.5" />Ver corpo completo</>}
+                {expandedEmail ? <><ChevronUp className="h-2.5 w-2.5" />{t("Menos", "Show less", "Ver menos")}</> : <><ChevronDown className="h-2.5 w-2.5" />{t("Ver corpo completo", "Show full text", "Ver texto completo")}</>}
               </button>
             )}
             {day.email.cta && (
-              <span className="inline-block font-mono text-[10px] text-blue-400 border border-blue-400/30 bg-blue-400/5 px-2 py-0.5">CTA: {day.email.cta}</span>
+              <span className="inline-block font-mono text-[10px] text-blue-400 border border-blue-400/30 bg-blue-400/5 px-2 py-0.5">{t("CTA:", "CTA:", "CTA:")} {day.email.cta}</span>
             )}
           </div>
         )}
@@ -3361,6 +3392,7 @@ function WarmingDayCard({ day }: { day: WarmingDayOutput }) {
 }
 
 function WarmingTab({ apiPieces }: { apiPieces: ApiContentPiece[] }) {
+  const t = useUiText();
   const warmingPieces = apiPieces.filter(p => {
     try {
       const raw = p.content as unknown;
@@ -3373,7 +3405,7 @@ function WarmingTab({ apiPieces }: { apiPieces: ApiContentPiece[] }) {
   if (warmingPieces.length === 0) {
     return (
       <div className="text-center py-20 font-mono text-sm text-muted-foreground/40 uppercase tracking-widest">
-        Conteúdo de aquecimento ainda não gerado
+        {t("Conteúdo de aquecimento ainda não foi gerado", "Warm-up content has not been generated yet", "El contenido de calentamiento aún no se ha generado")}
       </div>
     );
   }
@@ -3395,17 +3427,17 @@ function WarmingTab({ apiPieces }: { apiPieces: ApiContentPiece[] }) {
               <Flame className="h-4 w-4 text-primary shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <div className="font-mono text-xs font-bold uppercase tracking-widest text-primary mb-0.5">
-                  Sequência de Aquecimento — {warming.warmingDuration ?? warming.days.length} dias
+                   {t("Sequência de aquecimento", "Warm-up sequence", "Secuencia de calentamiento")} — {warming.warmingDuration ?? warming.days.length} {t("dias", "days", "días")}
                 </div>
                 {warming.overallObjective && (
                   <p className="font-mono text-[11px] text-muted-foreground/70">{warming.overallObjective}</p>
                 )}
                 {warming.productionNotes?.toneSummary && (
-                  <p className="font-mono text-[10px] text-muted-foreground/50 mt-1">Tom: {warming.productionNotes.toneSummary}</p>
+                  <p className="font-mono text-[10px] text-muted-foreground/50 mt-1">{t("Tom:", "Tone:", "Tono:")} {warming.productionNotes.toneSummary}</p>
                 )}
               </div>
               <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-1.5 py-0 shrink-0 ${piece.status === "approved" ? "text-success border-success/40 bg-success/10" : "text-muted-foreground border-border/40"}`}>
-                {piece.status === "approved" ? "Aprovado" : "Pendente"}
+                {piece.status === "approved" ? t("Aprovado", "Approved", "Aprobado") : t("Pendente", "Pending", "Pendiente")}
               </Badge>
             </div>
 
@@ -3415,7 +3447,7 @@ function WarmingTab({ apiPieces }: { apiPieces: ApiContentPiece[] }) {
                 {warming.convictionSequence.map((conv, i) => (
                   <div key={i} className="flex items-center gap-1 shrink-0">
                     <div className="border border-border/40 bg-card/30 px-2 py-1">
-                      <span className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-widest">Dia {i + 1}</span>
+                      <span className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-widest">{t("Dia", "Day", "Día")} {i + 1}</span>
                       <p className="font-mono text-[10px] text-foreground/80 max-w-[140px] leading-tight">{conv}</p>
                     </div>
                     {i < warming.convictionSequence!.length - 1 && <ChevronRight className="h-3 w-3 text-muted-foreground/30 shrink-0" />}
@@ -3434,7 +3466,7 @@ function WarmingTab({ apiPieces }: { apiPieces: ApiContentPiece[] }) {
             {/* Production notes */}
             {warming.warmingNotes && (
               <div className="mt-4 border border-yellow-400/20 bg-yellow-400/5 px-4 py-3">
-                <div className="font-mono text-[10px] uppercase tracking-widest text-yellow-400 font-bold mb-1">Observações do Agente</div>
+                <div className="font-mono text-[10px] uppercase tracking-widest text-yellow-400 font-bold mb-1">{t("Observações do agente", "Agent notes", "Notas del agente")}</div>
                 <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{warming.warmingNotes}</p>
               </div>
             )}
@@ -3501,6 +3533,7 @@ function CPLScriptCard({ cpl, piece, onApprove, onReject, loading }: {
   onReject: (id: string) => void;
   loading?: string | null;
 }) {
+  const t = useUiText();
   const [scriptOpen, setScriptOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [waOpen, setWaOpen] = useState(false);
@@ -3533,8 +3566,8 @@ function CPLScriptCard({ cpl, piece, onApprove, onReject, loading }: {
                   <Clock className="h-2.5 w-2.5" />{cpl.liveScript.estimatedDuration}
                 </span>
               )}
-              {isApproved && <Badge variant="outline" className="rounded-none font-mono text-[10px] px-1.5 py-0 text-success border-success/40 bg-success/10">Aprovado</Badge>}
-              {isRejected && <Badge variant="outline" className="rounded-none font-mono text-[10px] px-1.5 py-0 text-destructive border-destructive/40 bg-destructive/10">Rejeitado</Badge>}
+              {isApproved && <Badge variant="outline" className="rounded-none font-mono text-[10px] px-1.5 py-0 text-success border-success/40 bg-success/10">{t("Aprovado", "Approved", "Aprobado")}</Badge>}
+              {isRejected && <Badge variant="outline" className="rounded-none font-mono text-[10px] px-1.5 py-0 text-destructive border-destructive/40 bg-destructive/10">{t("Rejeitado", "Rejected", "Rechazado")}</Badge>}
             </div>
             <h3 className="font-mono font-bold text-sm text-foreground leading-tight">{cpl.title}</h3>
             {cpl.subtitle && <p className="font-mono text-[11px] text-muted-foreground/60 mt-0.5">{cpl.subtitle}</p>}
@@ -3544,11 +3577,11 @@ function CPLScriptCard({ cpl, piece, onApprove, onReject, loading }: {
         {/* Psychological objective */}
         <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div className="border border-border/30 bg-card/30 px-3 py-2">
-            <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">Objetivo Psicológico</div>
+            <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">{t("Objetivo psicológico", "Psychological objective", "Objetivo psicológico")}</div>
             <p className="font-mono text-[11px] text-foreground/80 leading-snug">{cpl.psychologicalObjective}</p>
           </div>
           <div className="border border-border/30 bg-card/30 px-3 py-2">
-            <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">Técnica Dominante</div>
+            <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">{t("Técnica dominante", "Dominant technique", "Técnica dominante")}</div>
             <p className="font-mono text-[11px] text-foreground/80 leading-snug">{cpl.dominantTechnique}</p>
           </div>
         </div>
@@ -3556,7 +3589,7 @@ function CPLScriptCard({ cpl, piece, onApprove, onReject, loading }: {
         {/* Key message */}
         {cpl.keyMessage && (
           <div className="mt-2 border-l-2 border-primary/40 pl-3">
-            <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">Mensagem-chave</div>
+            <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">{t("Mensagem-chave", "Key message", "Mensaje clave")}</div>
             <p className="font-mono text-[11px] text-primary/80 italic">"{cpl.keyMessage}"</p>
           </div>
         )}
@@ -3570,13 +3603,13 @@ function CPLScriptCard({ cpl, piece, onApprove, onReject, loading }: {
         >
           <div className="flex items-center gap-2">
             <Clapperboard className="h-3.5 w-3.5 text-yellow-400" />
-            <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-yellow-400">Roteiro de Live</span>
-            <span className="font-mono text-[10px] text-muted-foreground/50">{cpl.liveScript.mainContentSections.length} seções</span>
+            <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-yellow-400">{t("Roteiro de live", "Live script", "Guion de transmisión en vivo")}</span>
+            <span className="font-mono text-[10px] text-muted-foreground/50">{cpl.liveScript.mainContentSections.length} {t("seções", "sections", "secciones")}</span>
           </div>
           <div className="flex items-center gap-2">
             <CopyButton text={[
               `HOOK: ${cpl.liveScript.hook}`,
-              `\nABERTURA:\n${cpl.liveScript.openingStory}`,
+              `\n${t("ABERTURA", "OPENING", "APERTURA")}:\n${cpl.liveScript.openingStory}`,
               ...cpl.liveScript.mainContentSections.map(s => `\n${s.title.toUpperCase()}:\n${s.script}`),
               `\nCLIFFHANGER: ${cpl.liveScript.cliffhanger}`,
               `\nCTA: ${cpl.liveScript.cta}`,
@@ -3589,14 +3622,14 @@ function CPLScriptCard({ cpl, piece, onApprove, onReject, loading }: {
           <div className="px-4 pb-4 space-y-3">
             {/* Hook */}
             <div className="border border-yellow-400/20 bg-yellow-400/5 px-3 py-2.5">
-              <div className="font-mono text-[9px] uppercase tracking-widest text-yellow-400 font-bold mb-1">Hook (30s)</div>
+              <div className="font-mono text-[9px] uppercase tracking-widest text-yellow-400 font-bold mb-1">{t("Gancho (30s)", "Hook (30s)", "Gancho (30 s)")}</div>
               <p className="font-mono text-[11px] text-foreground/90 italic leading-relaxed">"{cpl.liveScript.hook}"</p>
             </div>
 
             {/* Opening story */}
             {cpl.liveScript.openingStory && (
               <div className="border border-border/30 bg-muted/5 px-3 py-2.5">
-                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 font-bold mb-1">História de Abertura</div>
+                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 font-bold mb-1">{t("História de abertura", "Opening story", "Historia de apertura")}</div>
                 <p className="font-mono text-[11px] text-muted-foreground/80 leading-relaxed line-clamp-4">{cpl.liveScript.openingStory}</p>
               </div>
             )}
@@ -3612,7 +3645,7 @@ function CPLScriptCard({ cpl, piece, onApprove, onReject, loading }: {
                   </div>
                 </div>
                 {section.toneNote && (
-                  <p className="font-mono text-[9px] text-primary/60 italic mb-1">Tom: {section.toneNote}</p>
+                  <p className="font-mono text-[9px] text-primary/60 italic mb-1">{t("Tom:", "Tone:", "Tono:")} {section.toneNote}</p>
                 )}
                 <p className="font-mono text-[11px] text-muted-foreground/80 leading-relaxed line-clamp-5">{section.script}</p>
               </div>
@@ -3629,7 +3662,7 @@ function CPLScriptCard({ cpl, piece, onApprove, onReject, loading }: {
             {/* CTA */}
             {cpl.liveScript.cta && (
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">CTA:</span>
+                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">{t("CTA:", "CTA:", "CTA:")}</span>
                 <span className="font-mono text-xs text-primary border border-primary/30 bg-primary/5 px-2 py-0.5">{cpl.liveScript.cta}</span>
               </div>
             )}
@@ -3645,7 +3678,7 @@ function CPLScriptCard({ cpl, piece, onApprove, onReject, loading }: {
         >
           <div className="flex items-center gap-2">
             <Mail className="h-3.5 w-3.5 text-blue-400" />
-            <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-blue-400">E-mails ({cpl.emails.length})</span>
+            <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-blue-400">{t("E-mails", "Emails", "Correos electrónicos")} ({cpl.emails.length})</span>
           </div>
           {emailOpen ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/50" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/50" />}
         </button>
@@ -3656,14 +3689,14 @@ function CPLScriptCard({ cpl, piece, onApprove, onReject, loading }: {
               <div key={i} className="border border-blue-400/20 bg-blue-400/5 px-3 py-3 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <div className="font-mono text-[9px] uppercase tracking-widest text-blue-400/60 mb-0.5">E-mail {i + 1} — {email.sendTiming}</div>
+                    <div className="font-mono text-[9px] uppercase tracking-widest text-blue-400/60 mb-0.5">{t("E-mail", "Email", "Correo electrónico")} {i + 1} — {email.sendTiming}</div>
                     <div className="font-mono text-[11px] font-bold text-foreground/90">{email.subject}</div>
                     {email.previewText && <div className="font-mono text-[10px] text-muted-foreground/60 italic">{email.previewText}</div>}
                   </div>
                   <CopyButton text={[
-                    `Assunto: ${email.subject}`,
-                    `Preview: ${email.previewText}`,
-                    `Envio: ${email.sendTiming}`,
+                    `${t("Assunto", "Subject", "Asunto")}: ${email.subject}`,
+                    `${t("Prévia", "Preview", "Vista previa")}: ${email.previewText}`,
+                    `${t("Envio", "Send", "Envío")}: ${email.sendTiming}`,
                     "",
                     email.body.replace(/<[^>]+>/g, " "),
                     `\nCTA: ${email.cta}`,
@@ -3672,7 +3705,7 @@ function CPLScriptCard({ cpl, piece, onApprove, onReject, loading }: {
                 <div className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed line-clamp-4"
                   dangerouslySetInnerHTML={{ __html: email.body.replace(/<[^>]+>/g, " ").slice(0, 500) }} />
                 {email.psychologicalObjective && (
-                  <p className="font-mono text-[10px] text-muted-foreground/40 italic">Objetivo: {email.psychologicalObjective}</p>
+                  <p className="font-mono text-[10px] text-muted-foreground/40 italic">{t("Objetivo:", "Objective:", "Objetivo:")} {email.psychologicalObjective}</p>
                 )}
               </div>
             ))}
@@ -3699,13 +3732,13 @@ function CPLScriptCard({ cpl, piece, onApprove, onReject, loading }: {
               <div key={i} className="border border-green-400/20 bg-green-400/5 px-3 py-3 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <div className="font-mono text-[9px] uppercase tracking-widest text-green-400/60">
-                    Broadcast {i + 1} — {wa.sendTiming}
+                    {t("Envio em massa", "Broadcast", "Difusión")} {i + 1} — {wa.sendTiming}
                   </div>
                   <CopyButton text={wa.message} />
                 </div>
                 <div className="font-mono text-[11px] text-muted-foreground/80 leading-relaxed">{wa.message}</div>
                 {wa.psychologicalObjective && (
-                  <p className="font-mono text-[10px] text-muted-foreground/40 italic">Objetivo: {wa.psychologicalObjective}</p>
+                  <p className="font-mono text-[10px] text-muted-foreground/40 italic">{t("Objetivo:", "Objective:", "Objetivo:")} {wa.psychologicalObjective}</p>
                 )}
               </div>
             ))}
@@ -3718,11 +3751,11 @@ function CPLScriptCard({ cpl, piece, onApprove, onReject, loading }: {
         <div className="border-t border-border/30 px-4 py-3 flex gap-2">
           <Button size="sm" onClick={() => onApprove(piece.id)} disabled={isLoading}
             className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 bg-success/10 border border-success/40 text-success hover:bg-success/20">
-            {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}Aprovar CPL {cpl.cplNumber}
+            {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}{t("Aprovar CPL", "Approve CPL", "Aprobar CPL")} {cpl.cplNumber}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => onReject(piece.id)} disabled={isLoading}
             className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10">
-            <XCircle className="h-3 w-3" />Rejeitar
+            <XCircle className="h-3 w-3" />{t("Rejeitar", "Reject", "Rechazar")}
           </Button>
         </div>
       )}
@@ -3736,6 +3769,7 @@ function CPLTab({ apiPieces, onApprove, onReject, loading }: {
   onReject: (id: string) => void;
   loading?: string | null;
 }) {
+  const t = useUiText();
   const cplPieces = apiPieces.filter(p => {
     try {
       const raw = p.content as unknown;
@@ -3753,7 +3787,7 @@ function CPLTab({ apiPieces, onApprove, onReject, loading }: {
   if (cplPieces.length === 0) {
     return (
       <div className="text-center py-20 font-mono text-sm text-muted-foreground/40 uppercase tracking-widest">
-        Roteiros CPL ainda não gerados
+        {t("Os roteiros CPL ainda não foram gerados", "CPL scripts have not been generated yet", "Los guiones CPL aún no se han generado")}
       </div>
     );
   }
@@ -3772,7 +3806,7 @@ function CPLTab({ apiPieces, onApprove, onReject, loading }: {
           const exists = !!piece;
           const approved = piece?.status === "approved";
           const colors = ["text-purple-400 border-purple-400/40 bg-purple-400/10", "text-blue-400 border-blue-400/40 bg-blue-400/10", "text-success border-success/40 bg-success/10"];
-          const labels = ["Quebra de Crença", "Mecanismo Único", "Prova + Pertencimento"];
+          const labels = [t("Quebra de crença", "Belief shift", "Cambio de creencia"), t("Mecanismo único", "Unique mechanism", "Mecanismo único"), t("Prova + pertencimento", "Proof + belonging", "Prueba + pertenencia")];
           return (
             <div key={n} className="flex items-center gap-2 shrink-0">
               <div className={`border px-3 py-2 ${exists ? colors[i] : "text-muted-foreground/30 border-border/20 bg-muted/5"}`}>
@@ -3811,6 +3845,7 @@ type Tab = "masterplan" | "por_fase" | "platform" | "preview" | "flowchart" | "s
 const VISUAL_PLATFORMS: Platform[] = ["instagram", "facebook", "tiktok"];
 
 export default function ContentApproval() {
+  const t = useUiText();
   const params = useParams<{ id: string }>();
   const campaignId = params.id;
   const queryClient = useQueryClient();
@@ -3891,7 +3926,7 @@ export default function ContentApproval() {
         const result = await customFetch<{ pieces: ApiContentPiece[]; total?: number; complianceRevision?: ComplianceRevisionInfo | null }>(`/api/campaigns/${campaignId}/content`);
         return result;
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Erro ao carregar conteúdo";
+        const msg = err instanceof Error ? err.message : t("Erro ao carregar conteúdo", "Error loading content", "Error al cargar el contenido");
         console.error("[content] fetch failed:", msg, err);
         setContentFetchError(msg);
         return null;
@@ -3921,12 +3956,12 @@ export default function ContentApproval() {
       });
     },
     onSuccess: () => {
-      toast.success("Conteúdo aprovado! Complete o checklist de lançamento.");
+      toast.success(t("Conteúdo aprovado! Complete o checklist de lançamento.", "Content approved! Complete the launch checklist.", "¡Contenido aprobado! Completa la lista de verificación del lanzamiento."));
       queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}`] });
       setLocation(`/campaigns/${campaignId}`);
     },
     onError: (err: Error) => {
-      toast.error(err.message ?? "Erro ao aprovar campanha");
+      toast.error(err.message ?? t("Erro ao aprovar campanha", "Error approving campaign", "Error al aprobar la campaña"));
     },
   });
 
@@ -3967,7 +4002,7 @@ export default function ContentApproval() {
         body: JSON.stringify({ feedback: "", force }),
       });
       if (force) setComplianceBlock(null);
-      toast.success("Peça aprovada");
+      toast.success(t("Peça aprovada", "Piece approved", "Pieza aprobada"));
       // Auto-transition: if this was the last pending piece, move campaign to approved
       const stillPending = updatedPieces.filter(p => p.status === "pending").length;
       const nowApproved  = updatedPieces.filter(p => p.status === "approved").length;
@@ -3985,14 +4020,14 @@ export default function ContentApproval() {
           const piece = pieces.find(p => p.id === id);
           setComplianceBlock({
             pieceId: id,
-            pieceTitle: piece?.title ?? "Peça de conteúdo",
+            pieceTitle: piece?.title ?? t("Peça de conteúdo", "Content piece", "Pieza de contenido"),
             compliance: data.compliance,
           });
           return;
         }
       }
 
-      toast.error("Erro ao aprovar peça");
+      toast.error(t("Erro ao aprovar peça", "Error approving piece", "Error al aprobar la pieza"));
     } finally {
       setLoadingPiece(null);
       setForceApproving(false);
@@ -4024,9 +4059,9 @@ export default function ContentApproval() {
       // 3. Refresh from API — piece now has new content + status pending_approval
       setLocalPieces(null);
       await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
-      toast.success("Agente reescreveu com base no seu feedback. Revise e aprove.");
+      toast.success(t("O agente reescreveu com base no seu feedback. Revise e aprove.", "The agent rewrote it based on your feedback. Review and approve it.", "El agente reescribió según tus comentarios. Revísalo y apruébalo."));
     } catch {
-      toast.error("Erro ao processar rejeição e reescrita com o agente.");
+      toast.error(t("Erro ao processar a rejeição e a reescrita com o agente.", "Error processing rejection and agent rewrite.", "Error al procesar el rechazo y la reescritura del agente."));
       setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "pending" } : p));
     } finally {
       setRewritingPiece(null);
@@ -4042,11 +4077,11 @@ export default function ContentApproval() {
         body: "{}",
       });
       // Backend accepted — agent runs in background. Poll until piece status changes.
-      toast.info("Agente iniciado — regenerando a peça, aguarde...");
+      toast.info(t("Agente iniciado — regenerando a peça, aguarde...", "Agent started — regenerating the piece, please wait...", "Agente iniciado — regenerando la pieza, espera..."));
       const deadline = Date.now() + 25 * 60 * 1000; // 25 min max
       const poll = async (): Promise<void> => {
         if (Date.now() > deadline) {
-          toast.error("Tempo limite atingido. Verifique a peça manualmente.");
+          toast.error(t("Tempo limite atingido. Verifique a peça manualmente.", "Timed out. Check the piece manually.", "Se agotó el tiempo. Revisa la pieza manualmente."));
           setRegeneratingPieceId(null);
           return;
         }
@@ -4058,7 +4093,7 @@ export default function ContentApproval() {
           if (updated && updated.status === "pending_approval") {
             setLocalPieces(null);
             await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
-            toast.success("Peça regenerada! Revise e aprove.");
+            toast.success(t("Peça regenerada! Revise e aprove.", "Piece regenerated! Review and approve it.", "¡Pieza regenerada! Revísala y apruébala."));
             setRegeneratingPieceId(null);
             return;
           }
@@ -4069,7 +4104,7 @@ export default function ContentApproval() {
       };
       setTimeout(poll, 10_000);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao regenerar a peça");
+      toast.error(err instanceof Error ? err.message : t("Erro ao regenerar a peça", "Error regenerating piece", "Error al regenerar la pieza"));
       setRegeneratingPieceId(null);
     }
   };
@@ -4085,9 +4120,9 @@ export default function ContentApproval() {
       });
       setLocalPieces(null);
       await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
-      toast.success("Equipe reescreveu. Revise e aprove.");
+      toast.success(t("A equipe reescreveu. Revise e aprove.", "The team rewrote it. Review and approve it.", "El equipo lo reescribió. Revísalo y apruébalo."));
     } catch {
-      toast.error("Erro ao reescrever com o agente");
+      toast.error(t("Erro ao reescrever com o agente", "Error rewriting with the agent", "Error al reescribir con el agente"));
     } finally {
       setRewritingPiece(null);
     }
@@ -4103,9 +4138,10 @@ export default function ContentApproval() {
       setGenerateMoreTarget(null);
       setLocalPieces(null);
       await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
-      toast.success(`${count} nova${count !== 1 ? "s" : ""} peça${count !== 1 ? "s" : ""} de ${PLATFORM_LABEL[platform]} gerada${count !== 1 ? "s" : ""} pelo agente!`);
+      const platformName = localizedPlatformLabel(platform, t);
+      toast.success(t(`${count} nova${count !== 1 ? "s" : ""} peça${count !== 1 ? "s" : ""} de ${platformName} gerada${count !== 1 ? "s" : ""} pelo agente!`, `${count} new ${count === 1 ? "piece" : "pieces"} generated for ${platformName} by the agent!`, `¡El agente generó ${count} pieza${count !== 1 ? "s" : ""} nueva${count !== 1 ? "s" : ""} para ${platformName}!`));
     } catch {
-      toast.error("Erro ao gerar peças. Tente novamente.");
+      toast.error(t("Erro ao gerar peças. Tente novamente.", "Error generating pieces. Try again.", "Error al generar piezas. Inténtalo de nuevo."));
     } finally {
       setGeneratingMore(false);
     }
@@ -4114,7 +4150,7 @@ export default function ContentApproval() {
   const handleSaveEdit = (id: string, body: string, cta: string) => {
     setPieces(prev => prev.map(p => p.id === id ? { ...p, body, callToAction: cta, status: "approved" } : p));
     setEditingPiece(null);
-    toast.success("Peça editada e aprovada");
+    toast.success(t("Peça editada e aprovada", "Piece edited and approved", "Pieza editada y aprobada"));
   };
   const handleApproveAll = async () => {
     const pendingPieces = pieces.filter(p => p.status === "pending");
@@ -4141,7 +4177,7 @@ export default function ContentApproval() {
           if (data?.code === "COMPLIANCE_VIOLATION" && data.compliance && !firstComplianceBlock) {
             firstComplianceBlock = {
               pieceId: piece.id,
-              pieceTitle: piece.title ?? "Peça de conteúdo",
+              pieceTitle: piece.title ?? t("Peça de conteúdo", "Content piece", "Pieza de contenido"),
               compliance: data.compliance,
             };
           }
@@ -4151,10 +4187,10 @@ export default function ContentApproval() {
     }
 
     if (approvedCount > 0) {
-      toast.success(`${approvedCount} peça${approvedCount !== 1 ? "s" : ""} aprovada${approvedCount !== 1 ? "s" : ""}`);
+      toast.success(t(`${approvedCount} peça${approvedCount !== 1 ? "s" : ""} aprovada${approvedCount !== 1 ? "s" : ""}`, `${approvedCount} piece${approvedCount !== 1 ? "s" : ""} approved`, `${approvedCount} pieza${approvedCount !== 1 ? "s" : ""} aprobada${approvedCount !== 1 ? "s" : ""}`));
     }
     if (firstComplianceBlock) {
-      toast.error(`${failedIds.length} peça${failedIds.length !== 1 ? "s" : ""} bloqueada${failedIds.length !== 1 ? "s" : ""} por compliance`);
+      toast.error(t(`${failedIds.length} peça${failedIds.length !== 1 ? "s" : ""} bloqueada${failedIds.length !== 1 ? "s" : ""} por conformidade`, `${failedIds.length} piece${failedIds.length !== 1 ? "s" : ""} blocked by compliance`, `${failedIds.length} pieza${failedIds.length !== 1 ? "s" : ""} bloqueada${failedIds.length !== 1 ? "s" : ""} por cumplimiento`));
       setComplianceBlock(firstComplianceBlock);
     }
     // Only transition campaign if ALL pieces were approved and no compliance failures remain
@@ -4172,11 +4208,11 @@ export default function ContentApproval() {
         headers: { "Content-Type": "application/json" },
         body: "{}",
       });
-      toast.success("Agentes ativados. Novo conteúdo sendo gerado — acompanhe o progresso na campanha.");
+      toast.success(t("Agentes ativados. Novo conteúdo está sendo gerado — acompanhe o progresso na campanha.", "Agents activated. New content is being generated—follow its progress in the campaign.", "Agentes activados. Se está generando contenido nuevo; sigue el progreso en la campaña."));
       await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}`] });
       setLocation(`/campaigns/${campaignId}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao regenerar conteúdo");
+      toast.error(err instanceof Error ? err.message : t("Erro ao regenerar conteúdo", "Error regenerating content", "Error al regenerar el contenido"));
     } finally {
       setRegeneratingContent(false);
     }
@@ -4223,15 +4259,15 @@ export default function ContentApproval() {
           <div className="flex items-center gap-2 mb-3">
             <Link href={`/campaigns/${campaignId}`}>
               <button className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
-                <ChevronLeft className="h-3 w-3" />Campanha
+              <ChevronLeft className="h-3 w-3" />{t("Campanha", "Campaign", "Campaña")}
               </button>
             </Link>
           </div>
           <h1 className="text-xl sm:text-2xl font-mono uppercase tracking-tighter font-bold">
-            Aprovação de Conteúdo
+            {t("Aprovação de conteúdo", "Content approval", "Aprobación de contenido")}
           </h1>
           <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mt-1">
-            {campaign?.title ?? "Campanha"}
+            {campaign?.title ?? t("Campanha", "Campaign", "Campaña")}
           </p>
         </div>
 
@@ -4239,7 +4275,7 @@ export default function ContentApproval() {
           <div className="py-16 text-center border border-dashed border-destructive/30">
             <AlertTriangle className="h-8 w-8 text-destructive/50 mx-auto mb-3" />
             <p className="font-mono text-xs text-destructive uppercase tracking-widest mb-2">
-              Erro ao carregar conteúdo
+              {t("Erro ao carregar conteúdo", "Error loading content", "Error al cargar el contenido")}
             </p>
             <p className="font-mono text-[11px] text-muted-foreground/50 max-w-sm mx-auto mb-4">
               {contentFetchError}
@@ -4249,7 +4285,7 @@ export default function ContentApproval() {
               className="rounded-none font-mono uppercase tracking-widest gap-1.5 h-9 text-xs"
               variant="outline"
             >
-              Tentar Novamente
+              {t("Tentar novamente", "Try again", "Intentar de nuevo")}
             </Button>
           </div>
         ) : isAwaitingApproval ? (
@@ -4258,31 +4294,31 @@ export default function ContentApproval() {
               <Activity className="h-8 w-8 text-primary/40 mx-auto animate-pulse" />
             </div>
             <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">
-              Carregando peças de conteúdo…
+              {t("Carregando peças de conteúdo…", "Loading content pieces…", "Cargando piezas de contenido…")}
             </p>
             <p className="font-mono text-[11px] text-muted-foreground/50 max-w-sm mx-auto mb-4">
-              Os agentes concluíram. Sincronizando peças de conteúdo com o servidor.
+              {t("Os agentes concluíram. Sincronizando as peças de conteúdo com o servidor.", "Agents are done. Syncing content pieces with the server.", "Los agentes terminaron. Sincronizando las piezas de contenido con el servidor.")}
             </p>
             <Button
               onClick={() => void refetchContent()}
               variant="outline"
               className="rounded-none font-mono uppercase tracking-widest gap-1.5 h-9 text-xs"
             >
-              Atualizar Agora
+              {t("Atualizar agora", "Refresh now", "Actualizar ahora")}
             </Button>
           </div>
         ) : (
           <div className="py-16 text-center border border-dashed border-border/30">
             <Activity className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
             <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">
-              Conteúdo ainda não gerado
+              {t("Conteúdo ainda não foi gerado", "Content has not been generated yet", "El contenido aún no se ha generado")}
             </p>
             <p className="font-mono text-[11px] text-muted-foreground/50 max-w-sm mx-auto mb-4">
-              Execute a fase de geração de conteúdo na campanha para que os especialistas criem as peças de copy e visual.
+              {t("Execute a fase de geração de conteúdo na campanha para que os especialistas criem as peças de texto e visuais.", "Run the content generation phase in the campaign so specialists can create copy and visual assets.", "Ejecuta la fase de generación de contenido de la campaña para que los especialistas creen textos y recursos visuales.")}
             </p>
             <Link href={`/campaigns/${campaignId}`}>
               <Button className="rounded-none font-mono uppercase tracking-widest gap-1.5 btn-weapon-primary h-9 text-xs">
-                <ChevronLeft className="h-3.5 w-3.5" />Voltar à Campanha
+                <ChevronLeft className="h-3.5 w-3.5" />{t("Voltar à campanha", "Back to campaign", "Volver a la campaña")}
               </Button>
             </Link>
           </div>
@@ -4315,13 +4351,13 @@ export default function ContentApproval() {
   });
 
   const TABS: { id: Tab; label: string; icon: React.ElementType; badge?: string }[] = [
-    { id: "masterplan",   label: "Masterplan",      icon: Rocket },
-    { id: "por_fase",     label: "Por Fase",        icon: Target, badge: `${pieces.length}` },
-    { id: "preview",      label: "Preview Visual",  icon: Eye },
-    { id: "platform",     label: "Por Plataforma",  icon: Globe },
-    { id: "schedule",     label: "Cronograma",      icon: Calendar },
+    { id: "masterplan",   label: t("Masterplan", "Master plan", "Plan maestro"), icon: Rocket },
+    { id: "por_fase",     label: t("Por fase", "By phase", "Por fase"), icon: Target, badge: `${pieces.length}` },
+    { id: "preview",      label: t("Prévia visual", "Visual preview", "Vista previa visual"), icon: Eye },
+    { id: "platform",     label: t("Por plataforma", "By platform", "Por plataforma"), icon: Globe },
+    { id: "schedule",     label: t("Cronograma", "Schedule", "Cronograma"), icon: Calendar },
     ...(landingPageData ? [{ id: "landing" as Tab, label: "Landing Page", icon: Globe, badge: "LP" }] : []),
-    ...(hasWarmingContent ? [{ id: "aquecimento" as Tab, label: "Aquecimento", icon: Flame, badge: "PRÉ" }] : []),
+    ...(hasWarmingContent ? [{ id: "aquecimento" as Tab, label: t("Aquecimento", "Warm-up", "Calentamiento"), icon: Flame, badge: "PRÉ" }] : []),
     ...(hasCPLContent ? [{ id: "cpl" as Tab, label: "CPL Scripts", icon: Clapperboard, badge: "CPL" }] : []),
   ];
 
@@ -4363,7 +4399,7 @@ export default function ContentApproval() {
       {generateMoreTarget && (
         <GenerateMoreModal
           platform={generateMoreTarget}
-          platformLabel={PLATFORM_LABEL[generateMoreTarget]}
+          platformLabel={localizedPlatformLabel(generateMoreTarget, t)}
           onClose={() => setGenerateMoreTarget(null)}
           onConfirm={(count, instructions) => void handleGenerateMore(generateMoreTarget, count, instructions)}
           loading={generatingMore}
@@ -4408,7 +4444,7 @@ export default function ContentApproval() {
           <div className="flex items-center gap-2 mb-3">
             <Link href={`/campaigns/${campaignId}`}>
               <button className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
-                <ChevronLeft className="h-3 w-3" />Campanha
+                 <ChevronLeft className="h-3 w-3" />{t("Campanha", "Campaign", "Campaña")}
               </button>
             </Link>
           </div>
@@ -4416,10 +4452,10 @@ export default function ContentApproval() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" />
-                <h1 className="text-xl sm:text-2xl font-mono uppercase tracking-tighter font-bold">Aprovação de Conteúdo</h1>
+                <h1 className="text-xl sm:text-2xl font-mono uppercase tracking-tighter font-bold">{t("Aprovação de conteúdo", "Content approval", "Aprobación de contenido")}</h1>
               </div>
               <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest line-clamp-1">
-                {campaign?.title ?? "Campanha"} · {pieces.length} peças · {pct}% aprovadas
+                {campaign?.title ?? t("Campanha", "Campaign", "Campaña")} · {pieces.length} {t("peças", "pieces", "piezas")} · {pct}% {t("aprovadas", "approved", "aprobadas")}
               </p>
             </div>
             <div className="flex flex-wrap gap-2 shrink-0">
@@ -4432,7 +4468,7 @@ export default function ContentApproval() {
                   className="rounded-none font-mono uppercase tracking-widest gap-1.5 border-primary/40 text-primary hover:bg-primary/10 h-9 text-xs flex-1 sm:flex-none"
                 >
                   {regeneratingContent ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                  {regeneratingContent ? "Regenerando..." : "Regenerar Conteúdo"}
+                  {regeneratingContent ? t("Regenerando...", "Regenerating...", "Regenerando...") : t("Regenerar conteúdo", "Regenerate content", "Regenerar contenido")}
                 </Button>
               )}
               {/* When all approved but still awaiting: explicit launch CTA */}
@@ -4443,7 +4479,7 @@ export default function ContentApproval() {
                   className="rounded-none font-mono uppercase tracking-widest gap-1.5 btn-weapon-primary h-9 text-xs flex-1 sm:flex-none"
                 >
                   {approveCampaignMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}
-                  Aprovar e Lançar
+                  {t("Aprovar e lançar", "Approve and launch", "Aprobar y lanzar")}
                 </Button>
               )}
               {pendingCount > 0 && (
@@ -4452,12 +4488,12 @@ export default function ContentApproval() {
                   variant="outline"
                   className="rounded-none font-mono uppercase tracking-widest gap-1.5 border-yellow-400/40 text-yellow-400 hover:bg-yellow-400/10 h-9 text-xs flex-1 sm:flex-none"
                 >
-                  <Eye className="h-3.5 w-3.5" />Cinema Mode ({pendingCount})
+                  <Eye className="h-3.5 w-3.5" />{t("Modo cinema", "Cinema mode", "Modo cine")} ({pendingCount})
                 </Button>
               )}
               {pendingCount > 0 && (
                 <Button onClick={() => void handleApproveAll()} className="rounded-none font-mono uppercase tracking-widest gap-1.5 btn-weapon-primary h-9 text-xs flex-1 sm:flex-none">
-                  <CheckCircle2 className="h-3.5 w-3.5" />Aprovar Tudo ({pendingCount})
+                  <CheckCircle2 className="h-3.5 w-3.5" />{t("Aprovar tudo", "Approve all", "Aprobar todo")} ({pendingCount})
                 </Button>
               )}
             </div>
@@ -4473,15 +4509,15 @@ export default function ContentApproval() {
               )}
             </div>
             <div className="flex gap-4 font-mono text-[10px] text-muted-foreground/50">
-              <span className="text-success">{approvedCount} aprovadas</span>
-              <span>{pendingCount} pendentes</span>
-              {rejectedCount > 0 && <span className="text-destructive">{rejectedCount} rejeitadas</span>}
+              <span className="text-success">{approvedCount} {t("aprovadas", "approved", "aprobadas")}</span>
+              <span>{pendingCount} {t("pendentes", "pending", "pendientes")}</span>
+              {rejectedCount > 0 && <span className="text-destructive">{rejectedCount} {t("rejeitadas", "rejected", "rechazadas")}</span>}
             </div>
           </div>
         </div>
 
         {/* ── Creative Studio: request AI/upload images & video from the deliverables page ── */}
-        <CreativeStudioBlock campaignId={campaignId} campaignTitle={campaign?.title ?? "Campanha"} />
+        <CreativeStudioBlock campaignId={campaignId} campaignTitle={campaign?.title ?? t("Campanha", "Campaign", "Campaña")} />
 
         {/* ── Compliance Pre-Scan Banner ───────────────────────────────────── */}
         {complianceScan && complianceScan.scanned && complianceScan.withViolations > 0 && (
@@ -4506,29 +4542,29 @@ export default function ContentApproval() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-mono text-[10px] uppercase tracking-widest font-bold text-foreground/80 mb-1">
-                Compliance AI — Pré-Scan Concluído
+                {t("IA de conformidade — pré-análise concluída", "Compliance AI — pre-scan complete", "IA de cumplimiento — análisis previo completado")}
               </div>
               <div className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">
-                <span className="text-foreground/90">{complianceScan.withViolations}</span> peça{complianceScan.withViolations !== 1 ? "s" : ""} com possíveis violações detectadas
+                <span className="text-foreground/90">{complianceScan.withViolations}</span> {t("peças com possíveis violações detectadas", "pieces with potential violations detected", "piezas con posibles infracciones detectadas")}
                 {complianceScan.blocked > 0 && (
-                  <span className="text-red-400 ml-2 font-bold">· {complianceScan.blocked} bloqueada{complianceScan.blocked !== 1 ? "s" : ""}</span>
+                  <span className="text-red-400 ml-2 font-bold">· {complianceScan.blocked} {t("bloqueadas", "blocked", "bloqueadas")}</span>
                 )}
                 {complianceScan.highRisk > 0 && (
-                  <span className="text-orange-400 ml-2">· {complianceScan.highRisk} alto risco</span>
+                  <span className="text-orange-400 ml-2">· {complianceScan.highRisk} {t("alto risco", "high risk", "alto riesgo")}</span>
                 )}
                 {complianceScan.mediumRisk > 0 && (
-                  <span className="text-yellow-400 ml-2">· {complianceScan.mediumRisk} médio risco</span>
+                  <span className="text-yellow-400 ml-2">· {complianceScan.mediumRisk} {t("risco médio", "medium risk", "riesgo medio")}</span>
                 )}
-                <span className="text-muted-foreground/50 ml-2">· {complianceScan.passing} ok</span>
+                <span className="text-muted-foreground/50 ml-2">· {complianceScan.passing} {t("aprovadas", "passed", "aprobadas")}</span>
               </div>
               <div className="font-mono text-[10px] text-muted-foreground/40 mt-1">
-                Peças marcadas com <Shield className="h-2.5 w-2.5 inline mb-0.5" /> precisam de revisão antes da aprovação. Clique "Aprovar" para ver detalhes.
+                {t('Peças marcadas com', 'Pieces marked with', 'Las piezas marcadas con')} <Shield className="h-2.5 w-2.5 inline mb-0.5" /> {t('precisam de revisão antes da aprovação. Clique em "Aprovar" para ver detalhes.', 'need review before approval. Click "Approve" to see details.', 'requieren revisión antes de aprobar. Haz clic en "Aprobar" para ver los detalles.')}
               </div>
             </div>
             <button
               onClick={() => void refetchCompliance()}
               className="shrink-0 p-1 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-              title="Atualizar scan"
+               title={t("Atualizar análise", "Refresh scan", "Actualizar análisis")}
             >
               <RefreshCw className="h-3.5 w-3.5" />
             </button>
@@ -4538,7 +4574,7 @@ export default function ContentApproval() {
           <div className="border border-success/30 bg-success/5 flex items-center gap-3 px-4 py-2.5">
             <Shield className="h-3.5 w-3.5 text-success shrink-0" />
             <div className="font-mono text-[11px] text-success/80">
-              Compliance AI — {complianceScan.total} peça{complianceScan.total !== 1 ? "s" : ""} analisada{complianceScan.total !== 1 ? "s" : ""}, nenhuma violação detectada
+              {t(`IA de conformidade — ${complianceScan.total} peça${complianceScan.total !== 1 ? "s" : ""} analisada${complianceScan.total !== 1 ? "s" : ""}, nenhuma violação detectada`, `Compliance AI — ${complianceScan.total} piece${complianceScan.total !== 1 ? "s" : ""} analyzed, no violations detected`, `IA de cumplimiento — ${complianceScan.total} pieza${complianceScan.total !== 1 ? "s" : ""} analizada${complianceScan.total !== 1 ? "s" : ""}, no se detectaron infracciones`)}
             </div>
           </div>
         )}
@@ -4553,21 +4589,21 @@ export default function ContentApproval() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-mono text-[10px] uppercase tracking-widest font-bold text-foreground/80">
-                Estilo de Vídeo (CPL & VSL):{" "}
+                {t("Estilo de vídeo (CPL e VSL):", "Video style (CPL & VSL):", "Estilo de video (CPL y VSL):")}{" "}
                 <span className={videoProductionStyle === "clone" && hasClone ? "text-primary" : "text-muted-foreground"}>
-                  {videoProductionStyle === "clone" && hasClone ? "Com Clone — seu rosto e voz" : "Sem Face — narração + animação"}
+                  {videoProductionStyle === "clone" && hasClone ? t("Com clone — seu rosto e voz", "With clone — your face and voice", "Con clon — tu rostro y voz") : t("Sem rosto — narração + animação", "Faceless — narration + animation", "Sin rostro — narración + animación")}
                 </span>
               </div>
               <div className="font-mono text-[10px] text-muted-foreground/50 mt-0.5">
                 {videoProductionStyle === "clone" && hasClone
-                  ? "Os agentes gerarão os roteiros com instruções para vídeo com aparição do criador"
-                  : "Os roteiros serão gerados para vídeo sem aparição — narração, texto na tela e animações"}
+                  ? t("Os agentes gerarão os roteiros com instruções para vídeo com aparição do criador.", "Agents will generate scripts with instructions for videos featuring the creator.", "Los agentes generarán guiones con instrucciones para videos con la aparición del creador.")
+                  : t("Os roteiros serão gerados para vídeos sem aparição — narração, texto na tela e animações.", "Scripts will be generated for faceless videos—with narration, on-screen text, and animations.", "Los guiones se generarán para videos sin aparición: narración, texto en pantalla y animaciones.")}
               </div>
             </div>
             <Link href="/configuracoes?tab=identidade">
               <button className="flex items-center gap-1 font-mono text-[10px] text-primary hover:underline uppercase tracking-widest shrink-0">
                 <Settings className="h-3 w-3" />
-                Alterar
+                {t("Alterar", "Change", "Cambiar")}
               </button>
             </Link>
           </div>
@@ -4580,10 +4616,10 @@ export default function ContentApproval() {
               <AlertTriangle className="h-4 w-4 text-yellow-400 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className="font-mono text-xs font-bold text-yellow-400 uppercase tracking-widest mb-0.5">
-                  {emptyPieces.length} peça{emptyPieces.length !== 1 ? "s" : ""} sem conteúdo
+                  {t(`${emptyPieces.length} peça${emptyPieces.length !== 1 ? "s" : ""} sem conteúdo`, `${emptyPieces.length} piece${emptyPieces.length !== 1 ? "s" : ""} with no content`, `${emptyPieces.length} pieza${emptyPieces.length !== 1 ? "s" : ""} sin contenido`)}
                 </p>
                 <p className="font-mono text-[11px] text-muted-foreground/70">
-                  Os agentes abaixo geraram o output mas o modelo não conseguiu preencher o conteúdo completo (tokens insuficientes). Clique em Regenerar para rodar o agente novamente com as correções aplicadas.
+                  {t("Os agentes abaixo geraram o resultado, mas o modelo não conseguiu preencher o conteúdo completo (tokens insuficientes). Clique em Regenerar para executá-los novamente com as correções aplicadas.", "The agents below generated an output, but the model could not fill in the complete content (insufficient tokens). Click Regenerate to run the agent again with the fixes applied.", "Los agentes generaron un resultado, pero el modelo no pudo completar todo el contenido (tokens insuficientes). Haz clic en Regenerar para volver a ejecutar el agente con las correcciones aplicadas.")}
                 </p>
               </div>
             </div>
@@ -4593,10 +4629,10 @@ export default function ContentApproval() {
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-1.5 h-1.5 bg-yellow-400/60 rounded-full shrink-0" />
                     <span className="font-mono text-[11px] text-foreground/80 truncate">
-                      {AGGREGATED_TYPE_LABELS[ep.type] ?? ep.type.replace(/_/g, " ")}
+                      {AGGREGATED_TYPE_LABELS[ep.type] ? t(...AGGREGATED_TYPE_LABELS[ep.type]) : ep.type.replace(/_/g, " ")}
                     </span>
                     <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-widest border-yellow-400/30 text-yellow-400/70 px-1.5 py-0 h-4 shrink-0">
-                      vazio
+                      {t("vazio", "empty", "vacío")}
                     </Badge>
                   </div>
                   <Button
@@ -4607,8 +4643,8 @@ export default function ContentApproval() {
                     className="rounded-none font-mono uppercase tracking-widest gap-1.5 border-yellow-400/40 text-yellow-400 hover:bg-yellow-400/10 h-7 text-[10px] shrink-0"
                   >
                     {regeneratingPieceId === ep.id
-                      ? <><Loader2 className="h-3 w-3 animate-spin" />Regenerando...</>
-                      : <><RefreshCw className="h-3 w-3" />Regenerar</>
+                       ? <><Loader2 className="h-3 w-3 animate-spin" />{t("Regenerando...", "Regenerating...", "Regenerando...")}</>
+                       : <><RefreshCw className="h-3 w-3" />{t("Regenerar", "Regenerate", "Regenerar")}</>
                     }
                   </Button>
                 </div>
@@ -4671,8 +4707,8 @@ export default function ContentApproval() {
           <div className="space-y-5">
             {/* Platform filter */}
             <div className="flex gap-2 flex-wrap items-center">
-              <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground shrink-0">Plataforma:</span>
-              {([["all", "Todas", Globe], ["instagram", "Instagram", Instagram], ["facebook", "Facebook", Globe], ["tiktok", "TikTok", Music2]] as [Platform | "all", string, React.ElementType][]).map(([val, label, Icon]) => (
+              <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground shrink-0">{t("Plataforma:", "Platform:", "Plataforma:")}</span>
+              {([[ "all", t("Todas", "All", "Todas"), Globe], ["instagram", "Instagram", Instagram], ["facebook", "Facebook", Globe], ["tiktok", "TikTok", Music2]] as [Platform | "all", string, React.ElementType][]).map(([val, label, Icon]) => (
                 <button key={val} onClick={() => setPreviewFilter(val)}
                   className={`flex items-center gap-1.5 px-3 h-7 font-mono text-[11px] uppercase tracking-widest border transition-all
                     ${previewFilter === val
@@ -4682,14 +4718,14 @@ export default function ContentApproval() {
                 </button>
               ))}
               <span className="font-mono text-[11px] text-muted-foreground/40 ml-2">
-                {previewPieces.length} peça{previewPieces.length !== 1 ? "s" : ""} com preview visual
+                {previewPieces.length} {t("peças com prévia visual", "pieces with visual preview", "piezas con vista previa visual")}
               </span>
             </div>
 
             {/* Preview grid */}
             {previewPieces.length === 0 ? (
               <div className="text-center py-16 font-mono text-sm text-muted-foreground/40 uppercase tracking-widest">
-                Nenhuma peça visual para esta plataforma
+                {t("Nenhuma peça visual para esta plataforma", "No visual pieces for this platform", "No hay piezas visuales para esta plataforma")}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -4712,11 +4748,11 @@ export default function ContentApproval() {
                 <div className="flex items-center gap-2 mb-1">
                   <PlayCircle className="h-3.5 w-3.5 text-muted-foreground/60" />
                   <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60">
-                    E-mail, WhatsApp e Ads
+                     E-mail, WhatsApp {t("e", "and", "y")} Ads
                   </span>
                 </div>
                 <p className="font-mono text-[11px] text-muted-foreground/50">
-                  {pieces.filter(p => !VISUAL_PLATFORMS.includes(p.platform)).length} peças de e-mail, WhatsApp e Ads estão disponíveis na aba "Por Plataforma" com aprovação individual.
+                  {t(`${pieces.filter(p => !VISUAL_PLATFORMS.includes(p.platform)).length} peças de e-mail, WhatsApp e Ads estão disponíveis na aba "Por plataforma" com aprovação individual.`, `${pieces.filter(p => !VISUAL_PLATFORMS.includes(p.platform)).length} email, WhatsApp, and ad pieces are available in the "By platform" tab for individual approval.`, `${pieces.filter(p => !VISUAL_PLATFORMS.includes(p.platform)).length} piezas de correo electrónico, WhatsApp y anuncios están disponibles en la pestaña "Por plataforma" para aprobación individual.`)}
                 </p>
               </div>
             )}
@@ -4739,9 +4775,9 @@ export default function ContentApproval() {
                       <PIcon className="h-4 w-4" />
                     </div>
                     <div className="flex-1">
-                      <span className="font-mono text-sm uppercase tracking-widest font-bold">{PLATFORM_LABEL[platform as Platform]}</span>
+                       <span className="font-mono text-sm uppercase tracking-widest font-bold">{localizedPlatformLabel(platform as Platform, t)}</span>
                       <span className="font-mono text-[11px] text-muted-foreground/50 ml-3">
-                        {approvedCount}/{platformPieces.length} aprovadas
+                         {approvedCount}/{platformPieces.length} {t("aprovadas", "approved", "aprobadas")}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -4750,7 +4786,7 @@ export default function ContentApproval() {
                       onClick={() => setGenerateMoreTarget(platform as Platform)}
                       className="font-mono text-[11px] uppercase tracking-widest border border-primary/30 text-primary px-3 h-7 flex items-center gap-1.5 hover:bg-primary/10 transition-colors"
                     >
-                      <Sparkles className="h-3 w-3" />+ Gerar mais
+                       <Sparkles className="h-3 w-3" />+ {t("Gerar mais", "Generate more", "Generar más")}
                     </button>
                     {/* Approve all for this platform */}
                     {platformPieces.some(p => p.status === "pending") && (
@@ -4764,11 +4800,11 @@ export default function ContentApproval() {
                             }).catch(() => null);
                           }
                           queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
-                          toast.success(`${PLATFORM_LABEL[platform as Platform]}: ${ids.length} peças aprovadas`);
+                           toast.success(t(`${localizedPlatformLabel(platform as Platform, t)}: ${ids.length} peças aprovadas`, `${localizedPlatformLabel(platform as Platform, t)}: ${ids.length} pieces approved`, `${localizedPlatformLabel(platform as Platform, t)}: ${ids.length} piezas aprobadas`));
                         }}
                         className={`font-mono text-[11px] uppercase tracking-widest border px-3 h-7 flex items-center gap-1.5 transition-colors ${pColor} hover:bg-current/10`}
                       >
-                        <CheckCircle2 className="h-3 w-3" />Aprovar tudo
+                         <CheckCircle2 className="h-3 w-3" />{t("Aprovar tudo", "Approve all", "Aprobar todo")}
                       </button>
                     )}
                     </div>
@@ -4789,10 +4825,10 @@ export default function ContentApproval() {
                           {/* Extra actions under each mock */}
                           <div className="flex gap-1.5 flex-wrap">
                             <button onClick={() => setEditingPiece(piece)} className="font-mono text-[11px] uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:border-border px-2 h-6 flex items-center gap-1 transition-colors">
-                              <Edit3 className="h-2.5 w-2.5" />Editar
+                               <Edit3 className="h-2.5 w-2.5" />{t("Editar", "Edit", "Editar")}
                             </button>
                             <button onClick={() => void handleAiRewrite(piece.id)} disabled={loadingPiece === piece.id} className="font-mono text-[11px] uppercase tracking-widest border border-primary/30 text-primary hover:bg-primary/10 px-2 h-6 flex items-center gap-1 transition-colors">
-                              <Sparkles className="h-2.5 w-2.5" />Reescrever
+                               <Sparkles className="h-2.5 w-2.5" />{t("Reescrever", "Rewrite", "Reescribir")}
                             </button>
                           </div>
                         </div>
@@ -4818,13 +4854,13 @@ export default function ContentApproval() {
             {days.map(day => {
               const dayPieces = byDay[day]!;
               const phaseLabel =
-                day === 0 ? "Pré-Lançamento — Antecipação" :
-                day <= 2  ? "Pré-Lançamento — Autoridade" :
-                day <= 4  ? "Pré-Lançamento — Desejo" :
-                day === 5 ? "🚀 Abertura do Carrinho" :
-                day === 6 ? "Meio do Carrinho — Prova Social" :
-                day === 7 ? "⚡ Fechamento — Urgência Máxima" :
-                `Dia ${day}`;
+                day === 0 ? t("Pré-lançamento — antecipação", "Pre-launch — anticipation", "Prelanzamiento — anticipación") :
+                day <= 2  ? t("Pré-lançamento — autoridade", "Pre-launch — authority", "Prelanzamiento — autoridad") :
+                day <= 4  ? t("Pré-lançamento — desejo", "Pre-launch — desire", "Prelanzamiento — deseo") :
+                day === 5 ? t("🚀 Abertura do carrinho", "🚀 Cart opening", "🚀 Apertura del carrito") :
+                day === 6 ? t("Meio do carrinho — prova social", "Mid-cart — social proof", "Mitad del carrito — prueba social") :
+                day === 7 ? t("⚡ Fechamento — urgência máxima", "⚡ Close — maximum urgency", "⚡ Cierre — máxima urgencia") :
+                `${t("Dia", "Day", "Día")} ${day}`;
               const phaseReach = dayPieces.reduce((s, p) => s + estimatePostMetrics(p).reach, 0);
               const phaseLeads = dayPieces.reduce((s, p) => s + estimatePostMetrics(p).leads, 0);
               return (
@@ -4836,8 +4872,8 @@ export default function ContentApproval() {
                     <div className="flex-1 min-w-0">
                       <div className="font-mono text-xs font-bold uppercase tracking-widest">{phaseLabel}</div>
                       <div className="flex gap-3 mt-0.5">
-                        <span className="font-mono text-[11px] text-muted-foreground/50">{dayPieces.length} peça{dayPieces.length !== 1 ? "s" : ""}</span>
-                        <span className="font-mono text-[11px] text-cyan-400/70">~{phaseReach.toLocaleString("pt-BR")} alcance</span>
+                       <span className="font-mono text-[11px] text-muted-foreground/50">{dayPieces.length} {t("peças", "pieces", "piezas")}</span>
+                       <span className="font-mono text-[11px] text-cyan-400/70">~{phaseReach.toLocaleString("pt-BR")} {t("alcance", "reach", "alcance")}</span>
                         <span className="font-mono text-[11px] text-success/70">~{phaseLeads} leads</span>
                       </div>
                     </div>
@@ -4860,9 +4896,9 @@ export default function ContentApproval() {
               <div key={segment}>
                 <div className="flex items-center gap-2 mb-3">
                   <Badge variant="outline" className={`rounded-none font-mono text-xs px-2 py-1 uppercase tracking-widest ${SEGMENT_COLOR[segment] ?? ""}`}>
-                    {SEGMENT_LABEL[segment] ?? segment}
+                    {SEGMENT_LABEL[segment] ? t(...SEGMENT_LABEL[segment]) : segment}
                   </Badge>
-                  <span className="font-mono text-[11px] text-muted-foreground/50">{segPieces.length} peça{segPieces.length !== 1 ? "s" : ""}</span>
+                  <span className="font-mono text-[11px] text-muted-foreground/50">{segPieces.length} {t("peças", "pieces", "piezas")}</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {segPieces.map(piece => (
@@ -4889,8 +4925,8 @@ export default function ContentApproval() {
                       body: JSON.stringify({ reason: "Estrutura rejeitada — gerar nova versão" }),
                     });
                     await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
-                    toast.success("Estrutura da landing page rejeitada.");
-                  } catch { toast.error("Erro ao rejeitar"); }
+                     toast.success(t("Estrutura da landing page rejeitada.", "Landing page structure rejected.", "Estructura de página de destino rechazada."));
+                   } catch { toast.error(t("Erro ao rejeitar", "Error rejecting", "Error al rechazar")); }
                   finally { setLoadingPiece(null); }
                 } : undefined}
                 isApproved={rawLandingPiece?.status === "approved"}
@@ -4899,7 +4935,7 @@ export default function ContentApproval() {
               />
             ) : (
               <div className="text-center py-20 font-mono text-sm text-muted-foreground/40 uppercase tracking-widest">
-                Landing page ainda não gerada
+                {t("A landing page ainda não foi gerada", "Landing page has not been generated yet", "La página de destino aún no se ha generado")}
               </div>
             )}
           </div>

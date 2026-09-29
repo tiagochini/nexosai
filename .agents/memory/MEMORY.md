@@ -104,6 +104,7 @@
 - [Public Evidence Sanitization](public-evidence-sanitization.md) — redact complete values before truncation, strip signed URL parameters and stop traversal at hard collection limits.
 - [Development Checkpoint Checklist](development-checkpoint-checklist.md) — update stage, maturity, proof, risks and next checkpoint after every development unit.
 - [Orval path/query name collision](orval-path-query-collision.md) — operations combining path and query params can collide in the api-zod barrel; keep codegen postprocessing deterministic.
+- [Orval Zod version selection](orval-zod-version-selection.md) — generator peer versions can silently select Zod 4 output for a Zod 3 runtime; pin the output major and verify regenerated contracts.
 - [Preview readiness semantics](preview-readiness-semantics.md) — preview availability must come from substantive source content, not metadata or serialized empty JSON.
 - [Safe version comparison](safe-version-comparison.md) — compare only persisted immutable history; detect differences before redacting previews and declare any bounded comparison incomplete.
 - [Governed Approval SLA](governed-approval-sla.md) — SLA is exact-snapshot operational state; schedule, decision and expiry share locks, and reminders never execute external work.

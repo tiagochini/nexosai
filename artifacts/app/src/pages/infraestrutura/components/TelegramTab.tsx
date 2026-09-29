@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MessageCircle, ExternalLink, CheckCircle2, Loader2, Link2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
+import { useUiText } from "@/lib/i18n";
 
 export function TelegramTab() {
+  const t = useUiText();
   const { data: integrations, isLoading: loadingInts } = useGetWorkspaceIntegrations();
   
   const telegramInt = integrations?.find((i: any) => i.provider === "telegram");
@@ -31,10 +33,10 @@ export function TelegramTab() {
     return (
       <div className="p-8 border border-dashed border-border/50 text-center bg-card/20 flex flex-col items-center">
         <MessageCircle className="h-10 w-10 text-muted-foreground/30 mb-3" />
-        <p className="font-mono text-sm text-foreground">Nenhuma integração Telegram encontrada.</p>
-        <p className="font-mono text-xs text-muted-foreground mt-1 mb-4">Adicione o provedor Telegram na página de Integrações primeiro.</p>
+        <p className="font-mono text-sm text-foreground">{t("Nenhuma integração Telegram encontrada.", "No Telegram integration found.", "No se encontró ninguna integración de Telegram.")}</p>
+        <p className="font-mono text-xs text-muted-foreground mt-1 mb-4">{t("Adicione o provedor Telegram na página de Integrações primeiro.", "Add the Telegram provider on the Integrations page first.", "Primero añade el proveedor de Telegram en la página de Integraciones.")}</p>
         <Button variant="outline" className="btn-weapon-outline rounded-none font-mono text-xs uppercase" asChild>
-          <a href="/integracoes">Ir para Integrações</a>
+          <a href="/integracoes">{t("Ir para Integrações", "Go to Integrations", "Ir a Integraciones")}</a>
         </Button>
       </div>
     );
@@ -44,13 +46,13 @@ export function TelegramTab() {
     checkReadiness.mutate({ integrationId: telegramInt.id, webhookUrl }, {
       onSuccess: (data) => {
         if (data.ready) {
-          toast.success(`Bot @${data.bot?.username} verificado e webhook configurado!`);
+          toast.success(t(`Bot @${data.bot?.username} verificado e webhook configurado!`, `Bot @${data.bot?.username} verified and webhook configured!`, `¡Bot @${data.bot?.username} verificado y webhook configurado!`));
           refetch();
         } else {
-          toast.error("Verificação falhou.");
+          toast.error(t("Verificação falhou.", "Verification failed.", "La verificación falló."));
         }
       },
-      onError: (err: any) => toast.error(err.message || "Erro ao verificar prontidão."),
+      onError: (err: any) => toast.error(err.message || t("Erro ao verificar prontidão.", "Could not check readiness.", "Error al comprobar la disponibilidad.")),
     });
   };
 
@@ -58,16 +60,16 @@ export function TelegramTab() {
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-mono font-bold text-foreground flex items-center gap-2">
-          <MessageCircle className="h-5 w-5 text-primary" /> Telegram Bot & Comunidade
+          <MessageCircle className="h-5 w-5 text-primary" /> {t("Bot do Telegram e comunidade", "Telegram bot & community", "Bot de Telegram y comunidad")}
         </h2>
         <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mt-1">
-          Siga os passos abaixo para configurar o bot e conectá-lo ao grupo.
+          {t("Siga os passos abaixo para configurar o bot e conectá-lo ao grupo.", "Follow the steps below to configure the bot and connect it to the group.", "Sigue los pasos a continuación para configurar el bot y conectarlo al grupo.")}
         </p>
       </div>
 
       <div className="card-weapon p-0">
         <div className="flex items-center justify-between p-4 border-b border-border/40 bg-card/30">
-          <div className="font-mono text-xs uppercase tracking-widest text-foreground font-semibold">Status da Integração</div>
+          <div className="font-mono text-xs uppercase tracking-widest text-foreground font-semibold">{t("Status da integração", "Integration status", "Estado de la integración")}</div>
           <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">ID: {telegramInt.id.split("-")[0]}...</div>
         </div>
         
@@ -78,13 +80,12 @@ export function TelegramTab() {
               <div className="h-6 w-6 rounded-full border border-primary text-primary flex items-center justify-center font-mono text-xs font-bold bg-primary/10">1</div>
             </div>
             <div className="space-y-2 flex-1">
-              <div className="font-mono text-sm font-bold text-foreground">Criar Bot no BotFather</div>
+          <div className="font-mono text-sm font-bold text-foreground">{t("Criar bot no BotFather", "Create a bot with BotFather", "Crear un bot con BotFather")}</div>
               <p className="font-mono text-xs text-muted-foreground">
-                Acesse o <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center">@BotFather <ExternalLink className="h-3 w-3 ml-1" /></a> no Telegram, use o comando <code className="text-primary">/newbot</code> e siga as instruções.
-                Copie o token gerado e configure o secret seguro no gerenciador de variáveis da NexOS.
+                {t("Acesse o", "Open", "Abre")} <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center">@BotFather <ExternalLink className="h-3 w-3 ml-1" /></a> {t("no Telegram, use o comando", "on Telegram, run the", "en Telegram, usa el comando")} <code className="text-primary">/newbot</code> {t("e siga as instruções. Copie o token gerado e configure o secret seguro no gerenciador de variáveis da NexOS.", "command and follow the instructions. Copy the generated token and configure the secure secret in NexOS’s variable manager.", "y sigue las instrucciones. Copia el token generado y configura el secreto seguro en el administrador de variables de NexOS.")}
               </p>
               <div className="p-3 bg-muted/20 border border-border/50 text-[10px] font-mono text-muted-foreground">
-                <ShieldAlert className="inline h-3 w-3 mr-1 text-primary" /> Nunca insira o token raw diretamente em campos de texto. Use a referência segura do secret (ex: <code className="text-primary">sec_telegram_bot_token</code>).
+                <ShieldAlert className="inline h-3 w-3 mr-1 text-primary" /> {t("Nunca insira o token raw diretamente em campos de texto. Use a referência segura do secret (ex:", "Never enter the raw token directly into text fields. Use the secure secret reference (e.g.,", "Nunca introduzcas el token sin cifrar directamente en campos de texto. Usa la referencia segura del secreto (p. ej.,")} <code className="text-primary">sec_telegram_bot_token</code>).
               </div>
             </div>
           </div>
@@ -114,12 +115,12 @@ export function TelegramTab() {
                         className="btn-weapon-primary rounded-none font-mono text-xs uppercase h-9 shrink-0"
                       >
                         {checkReadiness.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Link2 className="h-3 w-3 mr-2" />}
-                        Verificar & Ligar
+                        {t("Verificar e conectar", "Verify & connect", "Verificar y conectar")}
                       </Button>
                     </div>
                     {checkReadiness.isSuccess && checkReadiness.data?.ready && (
                       <div className="text-[10px] font-mono text-success uppercase tracking-widest flex items-center">
-                        <CheckCircle2 className="h-3 w-3 mr-1" /> Bot Verificado e Operacional
+                        <CheckCircle2 className="h-3 w-3 mr-1" /> {t("Bot verificado e operacional", "Bot verified and operational", "Bot verificado y operativo")}
                       </div>
                     )}
                   </div>

@@ -22,6 +22,7 @@ import {
   Gavel, CheckCircle2, AlertTriangle, ShieldCheck, Cpu, RefreshCw, XCircle, ChevronRight, FileText, FileSearch, Anchor
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useUiText } from "@/lib/i18n";
 import {
   Drawer,
   DrawerClose,
@@ -48,6 +49,7 @@ interface MasterplanData {
 }
 
 export function OperationalCouncilPanel({ campaignId, masterplan }: { campaignId: string, masterplan: MasterplanData }) {
+  const t = useUiText();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedCycleId, setSelectedCycleId] = useState<string | null>(null);
   
@@ -98,11 +100,11 @@ export function OperationalCouncilPanel({ campaignId, masterplan }: { campaignId
         <div className="p-3 border-b border-primary/20 flex justify-between items-center bg-primary/5 shrink-0">
           <div className="flex items-center gap-2">
             <Gavel className="h-4 w-4 text-primary" />
-            <h2 className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">M10 Operational Council</h2>
+            <h2 className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">{t("M10 Conselho Operacional", "M10 Operational Council", "M10 Consejo Operativo")}</h2>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap justify-end">
             <div className="px-2 py-0.5 border border-primary/40 bg-primary/10 text-primary font-mono text-[9px] uppercase tracking-wider">
-              {activeCycles.length > 0 ? `${activeCycles.length} ACTIVE` : 'IDLE'}
+              {activeCycles.length > 0 ? t(`${activeCycles.length} ATIVO(S)`, `${activeCycles.length} ACTIVE`, `${activeCycles.length} ACTIVO(S)`) : t("OCIOSO", "IDLE", "INACTIVO")}
             </div>
           </div>
         </div>
@@ -126,14 +128,14 @@ export function OperationalCouncilPanel({ campaignId, masterplan }: { campaignId
                       <div className="flex items-center gap-2 mb-1">
                         <ShieldCheck className={`h-3 w-3 ${cycle.status === 'open' ? 'text-primary' : 'text-muted-foreground'}`} />
                         <span className={`font-mono text-[11px] uppercase tracking-widest font-bold ${cycle.status === 'open' ? 'text-primary' : 'text-muted-foreground'}`}>
-                          Cycle {cycle.id.substring(0, 8)}
+                          {t("Ciclo", "Cycle", "Ciclo")} {cycle.id.substring(0, 8)}
                         </span>
                       </div>
                       <div className="font-sans text-xs text-foreground/80 mb-1.5 line-clamp-1">
-                        Masterplan: {cycle.masterplanVersionId?.substring(0, 8)} | Fingerprint: {cycle.contextFingerprint?.substring(0, 8)}
+                        Masterplan: {cycle.masterplanVersionId?.substring(0, 8)} | {t("Assinatura", "Fingerprint", "Huella")}: {cycle.contextFingerprint?.substring(0, 8)}
                       </div>
                       <div className="flex items-center gap-3 font-mono text-[9px] text-muted-foreground/50 uppercase tracking-wider">
-                        <span className="px-1 border border-border/40 text-muted-foreground bg-black/40">{cycle.status}</span>
+                        <span className="px-1 border border-border/40 text-muted-foreground bg-black/40">{cycle.status === "open" ? t("Aberto", "Open", "Abierto") : cycle.status === "closed" ? t("Encerrado", "Closed", "Cerrado") : cycle.status}</span>
                         <span>{new Date(cycle.createdAt).toLocaleDateString()}</span>
                       </div>
                     </div>
@@ -145,9 +147,9 @@ export function OperationalCouncilPanel({ campaignId, masterplan }: { campaignId
           ) : (
             <div className="p-8 flex flex-col items-center justify-center text-center h-full">
               <Gavel className="h-8 w-8 text-primary/20 mb-3" />
-              <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground font-bold">No Council Cycles</div>
+              <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground font-bold">{t("Nenhum ciclo do conselho", "No Council Cycles", "No hay ciclos del consejo")}</div>
               <div className="font-mono text-[9px] text-muted-foreground/60 mt-1 uppercase tracking-widest leading-relaxed">
-                Nenhum ciclo operacional estabelecido.
+                {t("Nenhum ciclo operacional estabelecido.", "No operational cycles have been established.", "No se han establecido ciclos operativos.")}
               </div>
             </div>
           )}
@@ -158,14 +160,14 @@ export function OperationalCouncilPanel({ campaignId, masterplan }: { campaignId
             type="button"
             disabled={!exactBindingAvailable || createCycle.isPending}
             onClick={handleCreateCycle}
-            title={!exactBindingAvailable ? "Requer um masterplan aprovado para instanciar governança." : "Instanciar ciclo"}
+            title={!exactBindingAvailable ? t("Requer um masterplan aprovado para instanciar governança.", "An approved masterplan is required to establish governance.", "Se requiere un plan maestro aprobado para establecer la gobernanza.") : t("Instanciar ciclo", "Establish cycle", "Crear ciclo")}
             className="w-full font-mono text-[10px] uppercase tracking-widest border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 hover:border-primary/70 hover:text-primary rounded-none h-10 transition-colors"
           >
-            {createCycle.isPending ? "Instanciando..." : "Instanciar Novo Ciclo"}
+            {createCycle.isPending ? t("Instanciando...", "Establishing...", "Creando...") : t("Instanciar Novo Ciclo", "Establish New Cycle", "Crear nuevo ciclo")}
           </Button>
           {!exactBindingAvailable && (
             <div className="mt-2 text-center font-mono text-[8px] text-muted-foreground/80">
-              * Requer Masterplan aprovado na Control Room.
+              * {t("Requer Masterplan aprovado na Control Room.", "Requires an approved masterplan in the Control Room.", "Requiere un plan maestro aprobado en Control Room.")}
             </div>
           )}
         </div>
@@ -191,6 +193,7 @@ export function OperationalCouncilPanel({ campaignId, masterplan }: { campaignId
 // -----------------------------------------------------------------------------
 
 function CycleDetailDrawer({ cycleId, campaignId, open, onOpenChange }: { cycleId: string, campaignId: string, open: boolean, onOpenChange: (o: boolean) => void }) {
+  const t = useUiText();
   const queryClient = useQueryClient();
   const { data, isLoading } = useGetOperationalCouncilCycle(cycleId, {
     query: {
@@ -241,15 +244,15 @@ function CycleDetailDrawer({ cycleId, campaignId, open, onOpenChange }: { cycleI
             <div>
               <DrawerTitle className="font-mono text-sm uppercase tracking-widest text-primary flex items-center gap-2">
                 <Gavel className="h-4 w-4" />
-                Council Cycle {cycleId.substring(0,8)}
+                {t("Ciclo do Conselho", "Council Cycle", "Ciclo del consejo")} {cycleId.substring(0,8)}
               </DrawerTitle>
               <DrawerDescription className="font-mono text-[10px] uppercase tracking-wider mt-1 text-muted-foreground">
-                High-trust operational command surface. Governance & Execution linking.
+                {t("Superfície de comando operacional de alta confiança. Vinculação de governança e execução.", "High-trust operational command surface. Governance & Execution linking.", "Superficie de comando operativo de alta confianza. Vinculación de gobernanza y ejecución.")}
               </DrawerDescription>
             </div>
             <DrawerClose asChild>
               <Button variant="outline" size="sm" className="font-mono text-[9px] uppercase tracking-widest h-8 rounded-none border-border/40 hover:bg-white/5 text-muted-foreground hover:text-white">
-                Fechar
+                {t("Fechar", "Close", "Cerrar")}
               </Button>
             </DrawerClose>
           </DrawerHeader>
@@ -283,24 +286,25 @@ function CycleDetailDrawer({ cycleId, campaignId, open, onOpenChange }: { cycleI
 }
 
 function CycleHeader({ cycle }: { cycle: any }) {
+  const t = useUiText();
   return (
     <div className="border border-border/20 bg-white/5 p-4 flex flex-wrap gap-6 items-center justify-between">
       <div>
-        <h3 className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Binding Hash</h3>
+        <h3 className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mb-1">{t("Hash de vínculo", "Binding Hash", "Hash de vinculación")}</h3>
         <div className="font-mono text-[11px] text-white">{cycle.snapshotHash}</div>
       </div>
       <div>
-        <h3 className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Context Fingerprint</h3>
+        <h3 className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mb-1">{t("Assinatura de contexto", "Context Fingerprint", "Huella de contexto")}</h3>
         <div className="font-mono text-[11px] text-white">{cycle.contextFingerprint}</div>
       </div>
       <div>
-        <h3 className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Status</h3>
+        <h3 className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mb-1">{t("Status", "Status", "Estado")}</h3>
         <div className={`px-2 py-0.5 border font-mono text-[10px] uppercase tracking-wider ${cycle.status === 'open' ? 'border-primary/40 bg-primary/10 text-primary' : 'border-border/40 text-muted-foreground'}`}>
-          {cycle.status}
+          {cycle.status === "open" ? t("Aberto", "Open", "Abierto") : cycle.status === "closed" ? t("Encerrado", "Closed", "Cerrado") : cycle.status}
         </div>
       </div>
       <div>
-        <h3 className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Established</h3>
+        <h3 className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mb-1">{t("Estabelecido", "Established", "Establecido")}</h3>
         <div className="font-mono text-[11px] text-white">{new Date(cycle.createdAt).toLocaleString()}</div>
       </div>
     </div>
@@ -308,6 +312,7 @@ function CycleHeader({ cycle }: { cycle: any }) {
 }
 
 function MinutesSection({ cycleId, cycle, minutes, contracts }: { cycleId: string, cycle: any, minutes: any[], contracts: any[] }) {
+  const t = useUiText();
   const queryClient = useQueryClient();
   const append = useAppendOperationalCouncilMinutes({
     mutation: {
@@ -344,13 +349,13 @@ function MinutesSection({ cycleId, cycle, minutes, contracts }: { cycleId: strin
 
   return (
     <section>
-      <h3 className="font-mono text-[12px] uppercase tracking-widest text-primary border-b border-border/20 pb-2 mb-4 flex items-center gap-2">
-        <FileText className="h-4 w-4" /> Council Minutes
+        <h3 className="font-mono text-[12px] uppercase tracking-widest text-primary border-b border-border/20 pb-2 mb-4 flex items-center gap-2">
+        <FileText className="h-4 w-4" /> {t("Atas do Conselho", "Council Minutes", "Actas del consejo")}
       </h3>
       
       <div className="space-y-4 mb-4">
         {minutes.length === 0 ? (
-          <div className="text-muted-foreground font-mono text-[10px] italic">No minutes recorded.</div>
+          <div className="text-muted-foreground font-mono text-[10px] italic">{t("Nenhuma ata registrada.", "No minutes recorded.", "No hay actas registradas.")}</div>
         ) : (
           minutes.map(m => (
             <div key={m.id} className="border border-border/20 bg-black/40 p-3">
@@ -374,16 +379,16 @@ function MinutesSection({ cycleId, cycle, minutes, contracts }: { cycleId: strin
       </div>
 
       <div className="border border-border/20 bg-white/5 p-3 flex flex-col gap-2">
-        <textarea 
+          <textarea
           className="w-full bg-black/50 border border-border/20 p-2 font-mono text-[11px] text-white focus-visible:outline-none focus-visible:border-primary/30 resize-none h-20"
-          placeholder="Append operational minute..."
+          placeholder={t("Adicionar ata operacional...", "Append operational minute...", "Añadir acta operativa...")}
           value={summary}
           onChange={e => setSummary(e.target.value)}
         />
         
         {contracts.length > 0 && (
           <div className="mt-2">
-            <h4 className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-2">Attach M09 Evidence</h4>
+            <h4 className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-2">{t("Anexar evidências M09", "Attach M09 Evidence", "Adjuntar evidencias M09")}</h4>
             <div className="flex flex-col gap-2 max-h-32 overflow-y-auto hide-scrollbar">
               {contracts.map(c => (
                 <label key={c.id} className="flex items-center gap-2 cursor-pointer font-mono text-[10px] text-white/80 p-2 border border-border/20 bg-black/30 hover:bg-white/5">
@@ -406,7 +411,7 @@ function MinutesSection({ cycleId, cycle, minutes, contracts }: { cycleId: strin
           disabled={!summary.trim() || append.isPending}
           className="mt-2 self-end font-mono text-[9px] uppercase tracking-widest h-7 rounded-none border border-primary/20 bg-primary/10 hover:bg-primary/20 text-primary"
         >
-          {append.isPending ? "Appending..." : "Append"}
+          {append.isPending ? t("Adicionando...", "Appending...", "Añadiendo...") : t("Adicionar", "Append", "Añadir")}
         </Button>
       </div>
     </section>
@@ -414,6 +419,7 @@ function MinutesSection({ cycleId, cycle, minutes, contracts }: { cycleId: strin
 }
 
 function DecisionsSection({ cycleId, cycle, decisions, actions, outcomes, contracts }: { cycleId: string, cycle: any, decisions: any[], actions: any[], outcomes: any[], contracts: any[] }) {
+  const t = useUiText();
   const queryClient = useQueryClient();
   const createDecision = useCreateOperationalCouncilDecision({
     mutation: {
@@ -470,20 +476,20 @@ function DecisionsSection({ cycleId, cycle, decisions, actions, outcomes, contra
 
   return (
     <section>
-      <h3 className="font-mono text-[12px] uppercase tracking-widest text-primary border-b border-border/20 pb-2 mb-4 flex items-center gap-2">
-        <Anchor className="h-4 w-4" /> Binding Decisions
+        <h3 className="font-mono text-[12px] uppercase tracking-widest text-primary border-b border-border/20 pb-2 mb-4 flex items-center gap-2">
+        <Anchor className="h-4 w-4" /> {t("Decisões vinculantes", "Binding Decisions", "Decisiones vinculantes")}
       </h3>
       
       <div className="space-y-4 mb-4">
         {decisions.length === 0 ? (
-          <div className="text-muted-foreground font-mono text-[10px] italic">No decisions established.</div>
+          <div className="text-muted-foreground font-mono text-[10px] italic">{t("Nenhuma decisão estabelecida.", "No decisions established.", "No se han establecido decisiones.")}</div>
         ) : (
           decisions.map(d => {
             const dActions = actions.filter(a => a.decisionId === d.id);
             return (
               <div key={d.id} className="border border-border/20 bg-black/60 p-4 relative overflow-hidden">
                 {d.status === "superseded" && (
-                  <div className="absolute top-0 right-0 px-2 py-1 bg-destructive/20 text-destructive font-mono text-[8px] uppercase">Superseded</div>
+                  <div className="absolute top-0 right-0 px-2 py-1 bg-destructive/20 text-destructive font-mono text-[8px] uppercase">{t("Substituída", "Superseded", "Reemplazada")}</div>
                 )}
                 <div className="flex justify-between items-center mb-3">
                   <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">Decision {d.id.substring(0,8)}</div>
@@ -493,20 +499,20 @@ function DecisionsSection({ cycleId, cycle, decisions, actions, outcomes, contra
                 
                 <div className="grid grid-cols-2 gap-2 mb-3">
                   <div className="border border-border/20 bg-white/5 p-2 font-mono text-[9px]">
-                    <div className="text-muted-foreground mb-1 uppercase">Action Req</div>
+                    <div className="text-muted-foreground mb-1 uppercase">{t("Ação necessária", "Action Required", "Acción requerida")}</div>
                     <div className={d.actionRequired ? 'text-white' : 'text-white/50'}>{d.actionRequired ? 'YES' : 'NO'}</div>
                   </div>
                   <div className="border border-border/20 bg-white/5 p-2 font-mono text-[9px]">
-                    <div className="text-muted-foreground mb-1 uppercase">Target</div>
+                    <div className="text-muted-foreground mb-1 uppercase">{t("Alvo", "Target", "Objetivo")}</div>
                     <div className="text-white truncate">{d.target?.metric}: {d.target?.value}</div>
                   </div>
                   <div className="border border-border/20 bg-white/5 p-2 font-mono text-[9px]">
-                    <div className="text-muted-foreground mb-1 uppercase">Threshold</div>
+                    <div className="text-muted-foreground mb-1 uppercase">{t("Limite", "Threshold", "Umbral")}</div>
                     <div className="text-white truncate">{d.threshold?.operator} {d.threshold?.value}</div>
                   </div>
                   <div className="border border-border/20 bg-white/5 p-2 font-mono text-[9px]">
-                    <div className="text-muted-foreground mb-1 uppercase">Window</div>
-                    <div className="text-white truncate">{d.window?.duration} {d.window?.unit}</div>
+                    <div className="text-muted-foreground mb-1 uppercase">{t("Janela", "Window", "Ventana")}</div>
+                    <div className="text-white truncate">{d.window?.duration} {d.window?.unit === "hours" ? t("horas", "hours", "horas") : d.window?.unit === "days" ? t("dias", "days", "días") : d.window?.unit === "weeks" ? t("semanas", "weeks", "semanas") : d.window?.unit}</div>
                   </div>
                 </div>
 
@@ -522,7 +528,7 @@ function DecisionsSection({ cycleId, cycle, decisions, actions, outcomes, contra
 
                 {dActions.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-border/10 space-y-2">
-                    <div className="font-mono text-[9px] uppercase text-muted-foreground">Linked Actions</div>
+                    <div className="font-mono text-[9px] uppercase text-muted-foreground">{t("Ações vinculadas", "Linked Actions", "Acciones vinculadas")}</div>
                     {dActions.map(act => {
                       const outcome = outcomes.find(o => o.actionId === act.id);
                       return (
@@ -537,7 +543,7 @@ function DecisionsSection({ cycleId, cycle, decisions, actions, outcomes, contra
                             outcome?.status === 'unsupported' ? 'border-destructive/30 text-destructive bg-destructive/10' :
                             'border-border/40 text-muted-foreground'
                           }`}>
-                            {outcome?.status || 'PENDING OUTCOME'}
+                            {outcome?.status === "verified" ? t("Verificado", "Verified", "Verificado") : outcome?.status === "inconclusive" ? t("Inconclusivo", "Inconclusive", "No concluyente") : outcome?.status === "unsupported" ? t("Não suportado", "Unsupported", "No compatible") : outcome?.status ? outcome.status : t("RESULTADO PENDENTE", "PENDING OUTCOME", "RESULTADO PENDIENTE")}
                           </div>
                         </div>
                       )
@@ -551,29 +557,29 @@ function DecisionsSection({ cycleId, cycle, decisions, actions, outcomes, contra
       </div>
 
       <div className="border border-border/20 bg-white/5 p-3 flex flex-col gap-3">
-        <textarea 
+        <textarea
           className="w-full bg-black/50 border border-border/20 p-2 font-mono text-[11px] text-white focus-visible:outline-none focus-visible:border-primary/30 resize-none h-20"
-          placeholder="Establish formal decision rationale..."
+          placeholder={t("Estabeleça a justificativa formal da decisão...", "Establish formal decision rationale...", "Establece la justificación formal de la decisión...")}
           value={rationale}
           onChange={e => setRationale(e.target.value)}
         />
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           <div>
-            <label className="block font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-1">Target Metric</label>
-            <input className="w-full bg-black/50 border border-border/20 p-1.5 font-mono text-[10px] text-white focus-visible:border-primary/40 focus-visible:outline-none" value={targetMetric} onChange={e => setTargetMetric(e.target.value)} placeholder="e.g. ROAS" />
+            <label className="block font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-1">{t("Métrica-alvo", "Target Metric", "Métrica objetivo")}</label>
+            <input className="w-full bg-black/50 border border-border/20 p-1.5 font-mono text-[10px] text-white focus-visible:border-primary/40 focus-visible:outline-none" value={targetMetric} onChange={e => setTargetMetric(e.target.value)} placeholder={t("ex.: ROAS", "e.g. ROAS", "p. ej.: ROAS")} />
           </div>
           <div>
-            <label className="block font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-1">Target Value</label>
-            <input className="w-full bg-black/50 border border-border/20 p-1.5 font-mono text-[10px] text-white focus-visible:border-primary/40 focus-visible:outline-none" value={targetValue} onChange={e => setTargetValue(e.target.value)} placeholder="e.g. 2.5" />
+            <label className="block font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-1">{t("Valor-alvo", "Target Value", "Valor objetivo")}</label>
+            <input className="w-full bg-black/50 border border-border/20 p-1.5 font-mono text-[10px] text-white focus-visible:border-primary/40 focus-visible:outline-none" value={targetValue} onChange={e => setTargetValue(e.target.value)} placeholder={t("ex.: 2.5", "e.g. 2.5", "p. ej.: 2.5")} />
           </div>
           <div>
-            <label className="block font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-1">Baseline Value</label>
-            <input className="w-full bg-black/50 border border-border/20 p-1.5 font-mono text-[10px] text-white focus-visible:border-primary/40 focus-visible:outline-none" value={baselineValue} onChange={e => setBaselineValue(e.target.value)} placeholder="e.g. 1.2" />
+            <label className="block font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-1">{t("Valor de referência", "Baseline Value", "Valor de referencia")}</label>
+            <input className="w-full bg-black/50 border border-border/20 p-1.5 font-mono text-[10px] text-white focus-visible:border-primary/40 focus-visible:outline-none" value={baselineValue} onChange={e => setBaselineValue(e.target.value)} placeholder={t("ex.: 1.2", "e.g. 1.2", "p. ej.: 1.2")} />
           </div>
           <div className="flex gap-1">
             <div className="flex-1">
-              <label className="block font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-1">Threshold</label>
+              <label className="block font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-1">{t("Limite", "Threshold", "Umbral")}</label>
               <div className="flex gap-1">
                 <select className="w-12 bg-black/50 border border-border/20 p-1.5 font-mono text-[10px] text-white focus-visible:border-primary/40 focus-visible:outline-none" value={thresholdOperator} onChange={e => setThresholdOperator(e.target.value)}>
                   <option value=">">&gt;</option>
@@ -582,30 +588,30 @@ function DecisionsSection({ cycleId, cycle, decisions, actions, outcomes, contra
                   <option value="<=">&le;</option>
                   <option value="==">=</option>
                 </select>
-                <input className="flex-1 min-w-0 bg-black/50 border border-border/20 p-1.5 font-mono text-[10px] text-white focus-visible:border-primary/40 focus-visible:outline-none" value={thresholdValue} onChange={e => setThresholdValue(e.target.value)} placeholder="Value" />
+                <input className="flex-1 min-w-0 bg-black/50 border border-border/20 p-1.5 font-mono text-[10px] text-white focus-visible:border-primary/40 focus-visible:outline-none" value={thresholdValue} onChange={e => setThresholdValue(e.target.value)} placeholder={t("Valor", "Value", "Valor")} />
               </div>
             </div>
           </div>
           <div className="col-span-2">
-            <label className="block font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-1">Evaluation Window</label>
+            <label className="block font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-1">{t("Janela de avaliação", "Evaluation Window", "Ventana de evaluación")}</label>
             <div className="flex gap-1">
               <input type="number" className="w-16 bg-black/50 border border-border/20 p-1.5 font-mono text-[10px] text-white focus-visible:border-primary/40 focus-visible:outline-none" value={windowDuration} onChange={e => setWindowDuration(e.target.value)} />
               <select className="flex-1 bg-black/50 border border-border/20 p-1.5 font-mono text-[10px] text-white focus-visible:border-primary/40 focus-visible:outline-none" value={windowUnit} onChange={e => setWindowUnit(e.target.value)}>
-                <option value="hours">Hours</option>
-                <option value="days">Days</option>
-                <option value="weeks">Weeks</option>
+                <option value="hours">{t("Horas", "Hours", "Horas")}</option>
+                <option value="days">{t("Dias", "Days", "Días")}</option>
+                <option value="weeks">{t("Semanas", "Weeks", "Semanas")}</option>
               </select>
             </div>
           </div>
           <div className="col-span-2">
-            <label className="block font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-1">Due At</label>
+            <label className="block font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-1">{t("Prazo", "Due At", "Fecha límite")}</label>
             <input type="datetime-local" className="w-full bg-black/50 border border-border/20 p-1.5 font-mono text-[10px] text-white focus-visible:border-primary/40 focus-visible:outline-none h-[28px]" value={dueAt} onChange={e => setDueAt(e.target.value)} />
           </div>
         </div>
 
         {contracts.length > 0 && (
           <div className="mt-1">
-            <h4 className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-2">Attach M09 Evidence</h4>
+            <h4 className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-2">{t("Anexar evidências M09", "Attach M09 Evidence", "Adjuntar evidencias M09")}</h4>
             <div className="flex flex-col gap-2 max-h-32 overflow-y-auto hide-scrollbar">
               {contracts.map(c => (
                 <label key={c.id} className="flex items-center gap-2 cursor-pointer font-mono text-[10px] text-white/80 p-2 border border-border/20 bg-black/30 hover:bg-white/5">
@@ -625,7 +631,7 @@ function DecisionsSection({ cycleId, cycle, decisions, actions, outcomes, contra
         <div className="flex justify-between items-center mt-2 border-t border-border/10 pt-3">
           <label className="flex items-center gap-2 font-mono text-[10px] text-white cursor-pointer">
             <input type="checkbox" checked={actionReq} onChange={e => setActionReq(e.target.checked)} className="bg-black border-border/20" />
-            Requires Execution Action
+            {t("Requer ação de execução", "Requires Execution Action", "Requiere acción de ejecución")}
           </label>
           <Button 
             type="button" 
@@ -633,7 +639,7 @@ function DecisionsSection({ cycleId, cycle, decisions, actions, outcomes, contra
             disabled={!validDecision || createDecision.isPending}
             className="font-mono text-[9px] uppercase tracking-widest h-7 rounded-none border border-primary/20 bg-primary/10 hover:bg-primary/20 text-primary"
           >
-            {createDecision.isPending ? "Formalizing..." : "Formalize Decision"}
+            {createDecision.isPending ? t("Formalizando...", "Formalizing...", "Formalizando...") : t("Formalizar decisão", "Formalize Decision", "Formalizar decisión")}
           </Button>
         </div>
       </div>
@@ -642,6 +648,7 @@ function DecisionsSection({ cycleId, cycle, decisions, actions, outcomes, contra
 }
 
 function ActionLinkingSection({ cycleId, cycle, campaignId, decisions, actions, outcomes, contracts, nextCycles }: { cycleId: string, cycle: any, campaignId: string, decisions: any[], actions: any[], outcomes: any[], contracts: any[], nextCycles: any[] }) {
+  const t = useUiText();
   const queryClient = useQueryClient();
   const [nextCycleId, setNextCycleId] = useState("");
   
@@ -686,25 +693,25 @@ function ActionLinkingSection({ cycleId, cycle, campaignId, decisions, actions, 
   return (
     <section className="border border-border/20 bg-black/40 p-4">
       <h3 className="font-mono text-[12px] uppercase tracking-widest text-primary border-b border-border/20 pb-2 mb-4 flex items-center gap-2">
-        <Cpu className="h-4 w-4" /> M09 Action Linking & Verification
+       <Cpu className="h-4 w-4" /> {t("M09 Vinculação e verificação de ações", "M09 Action Linking & Verification", "M09 Vinculación y verificación de acciones")}
       </h3>
 
       <div className="space-y-6">
         <div>
-          <h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mb-3">1. Link Actions to Decisions</h4>
+          <h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mb-3">{t("1. Vincular ações às decisões", "1. Link Actions to Decisions", "1. Vincular acciones a decisiones")}</h4>
           {openDecisions.length === 0 ? (
             <div className="font-mono text-[9px] text-muted-foreground/60 italic border border-dashed border-border/20 p-3 text-center">
-              No decisions require execution linking.
+              {t("Nenhuma decisão requer vinculação de execução.", "No decisions require execution linking.", "Ninguna decisión requiere vincular una ejecución.")}
             </div>
           ) : contracts.length === 0 ? (
             <div className="font-mono text-[9px] text-[#FFB000] border border-[#FFB000]/20 bg-[#FFB000]/5 p-3">
-              No active realization contracts in M09 engine. Cannot link execution.
+              {t("Não há contratos de realização ativos no motor M09. Não é possível vincular a execução.", "No active realization contracts in the M09 engine. Execution cannot be linked.", "No hay contratos de realización activos en el motor M09. No se puede vincular la ejecución.")}
             </div>
           ) : (
             <div className="space-y-3">
               {openDecisions.map(d => (
                 <div key={d.id} className="border border-border/20 p-3 bg-white/5">
-                  <div className="font-mono text-[10px] text-white mb-2 line-clamp-1">Decision: {d.rationaleSummary}</div>
+                  <div className="font-mono text-[10px] text-white mb-2 line-clamp-1">{t("Decisão", "Decision", "Decisión")}: {d.rationaleSummary}</div>
                   <select 
                     className="w-full bg-black/80 border border-border/20 p-2 font-mono text-[10px] text-white focus-visible:outline-none focus-visible:border-primary/40"
                     onChange={(e) => {
@@ -716,7 +723,7 @@ function ActionLinkingSection({ cycleId, cycle, campaignId, decisions, actions, 
                     }}
                     disabled={linkAction.isPending}
                   >
-                    <option value="">-- Select M09 Contract to Link --</option>
+                    <option value="">{t("-- Selecione o contrato M09 para vincular --", "-- Select M09 Contract to Link --", "-- Selecciona el contrato M09 para vincular --")}</option>
                     {contracts.filter(c => c.action === "paid_media_pause" || c.action === "paid_media_launch").map(c => (
                       <option key={c.id} value={c.id}>
                         [{c.state}] {c.action} ({c.id.substring(0,8)})
@@ -730,18 +737,18 @@ function ActionLinkingSection({ cycleId, cycle, campaignId, decisions, actions, 
         </div>
 
         <div>
-          <h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mb-3">2. Verify Realization Outcomes</h4>
+          <h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mb-3">{t("2. Verificar resultados da realização", "2. Verify Realization Outcomes", "2. Verificar resultados de realización")}</h4>
           <label className="mb-2 block font-mono text-[9px] text-muted-foreground">
-            Select a later Council cycle with the same approved Master Plan. Its minutes must cite this action's M09 contract.
+            {t("Selecione um ciclo posterior do Conselho com o mesmo plano mestre aprovado. As atas devem citar o contrato M09 desta ação.", "Select a later Council cycle with the same approved Master Plan. Its minutes must cite this action's M09 contract.", "Selecciona un ciclo posterior del Consejo con el mismo plan maestro aprobado. Sus actas deben citar el contrato M09 de esta acción.")}
           </label>
           <select value={nextCycleId} onChange={e => setNextCycleId(e.target.value)}
             className="mb-3 w-full border border-border/30 bg-black p-2 font-mono text-[10px] text-white">
-            <option value="">-- Select next cycle --</option>
+            <option value="">{t("-- Selecione o próximo ciclo --", "-- Select next cycle --", "-- Selecciona el siguiente ciclo --")}</option>
             {nextCycles.map(c => <option key={c.id} value={c.id}>{new Date(c.createdAt).toLocaleString()} · {c.id.slice(0, 8)}</option>)}
           </select>
           {actions.length === 0 ? (
             <div className="font-mono text-[9px] text-muted-foreground/60 italic border border-dashed border-border/20 p-3 text-center">
-              No actions linked for verification.
+              {t("Nenhuma ação vinculada para verificação.", "No actions linked for verification.", "No hay acciones vinculadas para verificar.")}
             </div>
           ) : (
             <div className="space-y-3">
@@ -762,7 +769,7 @@ function ActionLinkingSection({ cycleId, cycle, campaignId, decisions, actions, 
                             latestOutcome.status === 'inconclusive' ? 'border-[#FFB000]/30 text-[#FFB000] bg-[#FFB000]/10' :
                             'border-destructive/30 text-destructive bg-destructive/10'
                           }`}>
-                            {latestOutcome.status}
+                            {latestOutcome.status === "verified" ? t("Verificado", "Verified", "Verificado") : latestOutcome.status === "inconclusive" ? t("Inconclusivo", "Inconclusive", "No concluyente") : latestOutcome.status === "unsupported" ? t("Não suportado", "Unsupported", "No compatible") : latestOutcome.status}
                           </div>
                           {latestOutcome.status === 'inconclusive' && (
                             <Button
@@ -771,7 +778,7 @@ function ActionLinkingSection({ cycleId, cycle, campaignId, decisions, actions, 
                               disabled={verifyOutcome.isPending || !nextCycleId}
                               className="font-mono text-[9px] uppercase tracking-widest h-6 rounded-none border border-primary/20 bg-primary/10 hover:bg-primary/20 text-primary px-2"
                             >
-                              Reverify
+                              {t("Verificar novamente", "Reverify", "Volver a verificar")}
                             </Button>
                           )}
                         </div>
@@ -782,17 +789,17 @@ function ActionLinkingSection({ cycleId, cycle, campaignId, decisions, actions, 
                           disabled={verifyOutcome.isPending || !nextCycleId}
                           className="font-mono text-[9px] uppercase tracking-widest h-6 rounded-none border border-primary/20 bg-primary/10 hover:bg-primary/20 text-primary px-2"
                         >
-                          Verify Outcome
+                          {t("Verificar resultado", "Verify Outcome", "Verificar resultado")}
                         </Button>
                       )}
                     </div>
                     {actionOutcomes.length > 1 && (
                       <div className="mt-2 pt-2 border-t border-border/10 flex flex-col gap-1">
-                        <span className="font-mono text-[8px] uppercase tracking-widest text-muted-foreground mb-1">Outcome History</span>
+                        <span className="font-mono text-[8px] uppercase tracking-widest text-muted-foreground mb-1">{t("Histórico de resultados", "Outcome History", "Historial de resultados")}</span>
                         {actionOutcomes.slice(1).map((o, idx) => (
                            <div key={idx} className="flex justify-between items-center font-mono text-[8px] text-muted-foreground">
                              <span>{new Date(o.createdAt).toLocaleString()}</span>
-                             <span className="uppercase">{o.status}</span>
+                              <span className="uppercase">{o.status === "verified" ? t("Verificado", "Verified", "Verificado") : o.status === "inconclusive" ? t("Inconclusivo", "Inconclusive", "No concluyente") : o.status === "unsupported" ? t("Não suportado", "Unsupported", "No compatible") : o.status}</span>
                            </div>
                         ))}
                       </div>

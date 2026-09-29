@@ -16,6 +16,7 @@ import {
   CheckCircle2, RefreshCw, Layers, FileText, FileDiff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useUiText } from "@/lib/i18n";
 import {
   Drawer,
   DrawerClose,
@@ -34,6 +35,7 @@ export function VersionDiffDrawer({
   onOpenChange: (open: boolean) => void;
   campaignId: string;
 }) {
+  const t = useUiText();
   const [selectedSource, setSelectedSource] = useState<{ id: string; resource: GetCampaignControlRoomVersionDiffResource } | null>(null);
   const [baseId, setBaseId] = useState<string>("");
   const [targetId, setTargetId] = useState<string>("");
@@ -170,7 +172,7 @@ export function VersionDiffDrawer({
       return (
         <div className="flex-1 flex flex-col items-center justify-center min-h-[300px]" aria-live="polite">
           <RefreshCw className="h-6 w-6 text-primary animate-spin mb-3" />
-          <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Carregando catálogo de versões...</div>
+          <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Carregando catálogo de versões...", "Loading version catalog...", "Cargando catálogo de versiones...")}</div>
         </div>
       );
     }
@@ -179,10 +181,10 @@ export function VersionDiffDrawer({
       return (
         <div className="flex-1 flex flex-col items-center justify-center min-h-[300px] text-center p-6" role="alert">
           <AlertTriangle className="h-8 w-8 text-destructive mb-3" />
-          <div className="font-mono text-[11px] uppercase tracking-widest text-destructive font-bold mb-2">Falha ao carregar catálogo</div>
-          <p className="font-mono text-[9px] text-muted-foreground mb-4 max-w-md">{(sourcesError as Error)?.message || "Não foi possível carregar as fontes de versão."}</p>
+          <div className="font-mono text-[11px] uppercase tracking-widest text-destructive font-bold mb-2">{t("Falha ao carregar catálogo", "Failed to load catalog", "No se pudo cargar el catálogo")}</div>
+          <p className="font-mono text-[9px] text-muted-foreground mb-4 max-w-md">{(sourcesError as Error)?.message || t("Não foi possível carregar as fontes de versão.", "Unable to load version sources.", "No se pudieron cargar las fuentes de versiones.")}</p>
           <Button type="button" variant="outline" size="sm" onClick={() => refetchSources()} className="font-mono text-[10px] uppercase tracking-widest">
-            Tentar Novamente
+            {t("Tentar Novamente", "Try Again", "Intentar de nuevo")}
           </Button>
         </div>
       );
@@ -192,8 +194,8 @@ export function VersionDiffDrawer({
       return (
         <div className="flex-1 flex flex-col items-center justify-center min-h-[300px] text-center p-6 border border-dashed border-border/30 bg-black/20 m-4">
           <History className="h-8 w-8 text-muted-foreground/30 mb-3" />
-          <div className="font-mono text-[11px] uppercase tracking-widest text-white/50 font-bold mb-2">Nenhuma Fonte Disponível</div>
-          <p className="font-mono text-[9px] text-muted-foreground max-w-md">Não há histórico de versões persistido para esta campanha.</p>
+          <div className="font-mono text-[11px] uppercase tracking-widest text-white/50 font-bold mb-2">{t("Nenhuma Fonte Disponível", "No Sources Available", "No hay fuentes disponibles")}</div>
+          <p className="font-mono text-[9px] text-muted-foreground max-w-md">{t("Não há histórico de versões persistido para esta campanha.", "No version history has been persisted for this campaign.", "No hay historial de versiones guardado para esta campaña.")}</p>
         </div>
       );
     }
@@ -227,7 +229,7 @@ export function VersionDiffDrawer({
                     <span data-testid={`version-diff-unavailable-${source.id}`}>history_not_persisted</span>
                   </div>
                   <div className="font-mono text-[8px] text-destructive/70 max-w-[250px] leading-tight">
-                    {source.reason || "Esta fonte de dados não suporta ou não possui histórico persistido na arquitetura atual."}
+                    {source.reason || t("Esta fonte de dados não suporta ou não possui histórico persistido na arquitetura atual.", "This data source does not support or have persisted history in the current architecture.", "Esta fuente de datos no admite ni tiene historial guardado en la arquitectura actual.")}
                   </div>
                 </div>
               </div>
@@ -254,7 +256,7 @@ export function VersionDiffDrawer({
                     <span data-testid={`version-diff-unavailable-${source.id}`}>not_comparable</span>
                   </div>
                   <div className="font-mono text-[8px] text-[#FFB000]/70 max-w-[250px] leading-tight">
-                    Histórico existe, mas não possui versões suficientes (mínimo de 2) para comparação.
+                    {t("Histórico existe, mas não possui versões suficientes (mínimo de 2) para comparação.", "History exists, but does not have enough versions (at least 2) to compare.", "Existe un historial, pero no hay suficientes versiones (mínimo 2) para comparar.")}
                   </div>
                 </div>
               </div>
@@ -277,13 +279,13 @@ export function VersionDiffDrawer({
                   <span className="font-mono text-[11px] uppercase tracking-widest text-white font-bold">{source.label || source.kind}</span>
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  <div className="px-2 py-0.5 bg-black/40 border border-border/30 font-mono text-[9px] text-muted-foreground group-hover:text-primary transition-colors">
-                    {source.versionCount} versões
+          <div className="px-2 py-0.5 bg-black/40 border border-border/30 font-mono text-[9px] text-muted-foreground group-hover:text-primary transition-colors">
+                    {t(`${source.versionCount} versões`, `${source.versionCount} versions`, `${source.versionCount} versiones`)}
                   </div>
                   {source.catalogTruncated && (
                     <div className="flex items-center gap-1 text-[#FFB000] font-mono text-[8px] uppercase tracking-widest">
                       <AlertTriangle className="h-2.5 w-2.5" />
-                      truncado
+                      {t("truncado", "truncated", "truncado")}
                     </div>
                   )}
                 </div>
@@ -291,7 +293,7 @@ export function VersionDiffDrawer({
               <div className="font-sans text-xs text-muted-foreground/80">{source.id}</div>
               <div className="mt-2 flex items-center gap-1.5 text-primary font-mono text-[9px] uppercase tracking-widest">
                 <GitCompare className="h-3 w-3" />
-                Comparar Histórico
+                {t("Comparar Histórico", "Compare History", "Comparar historial")}
               </div>
             </button>
           );
@@ -308,13 +310,13 @@ export function VersionDiffDrawer({
       <div className="flex flex-col h-full bg-[#010308]">
         <div className="p-4 border-b border-border/20 bg-black/40 flex flex-col sm:flex-row sm:items-center gap-4 justify-between shrink-0">
           <div className="flex flex-col gap-1">
-            <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">Comparação de Histórico</div>
+            <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">{t("Comparação de Histórico", "History Comparison", "Comparación del historial")}</div>
             <div className="font-mono text-[12px] text-white font-bold">{activeSource.label || activeSource.kind}</div>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 bg-black/60 p-2 border border-border/30">
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <label htmlFor="version-select-base" className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground shrink-0 w-12 text-right">Base:</label>
+              <label htmlFor="version-select-base" className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground shrink-0 w-12 text-right">{t("Base:", "Base:", "Base:")}</label>
               <select
                 id="version-select-base"
                 data-testid="version-select-base"
@@ -323,7 +325,7 @@ export function VersionDiffDrawer({
                 disabled={activeVersions.length < 2}
                 className="w-full sm:w-40 bg-[#0a0a0a] border border-border/40 text-[10px] font-mono p-1.5 text-white focus-visible:outline-none focus-visible:border-primary/60 disabled:opacity-50"
               >
-                <option value="" disabled>Selecione...</option>
+                <option value="" disabled>{t("Selecione...", "Select...", "Selecciona...")}</option>
                 {activeVersions.map(v => (
                   <option key={v.id} value={v.id}>
                     {v.label ? `${v.label} ` : ''}({v.id.substring(0, 6)})
@@ -333,7 +335,7 @@ export function VersionDiffDrawer({
             </div>
             <div className="hidden sm:block text-muted-foreground/30"><GitCompare className="h-3 w-3" /></div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <label htmlFor="version-select-target" className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground shrink-0 w-12 text-right">Target:</label>
+              <label htmlFor="version-select-target" className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground shrink-0 w-12 text-right">{t("Alvo:", "Target:", "Objetivo:")}</label>
               <select
                 id="version-select-target"
                 data-testid="version-select-target"
@@ -342,7 +344,7 @@ export function VersionDiffDrawer({
                 disabled={activeVersions.length < 2}
                 className="w-full sm:w-40 bg-[#0a0a0a] border border-border/40 text-[10px] font-mono p-1.5 text-white focus-visible:outline-none focus-visible:border-primary/60 disabled:opacity-50"
               >
-                <option value="" disabled>Selecione...</option>
+                <option value="" disabled>{t("Selecione...", "Select...", "Selecciona...")}</option>
                 {activeVersions.map(v => (
                   <option key={v.id} value={v.id}>
                     {v.label ? `${v.label} ` : ''}({v.id.substring(0, 6)})
@@ -359,7 +361,7 @@ export function VersionDiffDrawer({
               data-testid="btn-compare-versions"
               className="font-mono text-[9px] uppercase tracking-widest bg-primary/10 text-primary border-primary/30 hover:bg-primary/20 w-full sm:w-auto"
             >
-              Atualizar Diff
+              {t("Atualizar comparação", "Update Diff", "Actualizar comparación")}
             </Button>
           </div>
         </div>
@@ -372,40 +374,40 @@ export function VersionDiffDrawer({
           {activeVersions.length < 2 ? (
             <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-6">
               <History className="h-8 w-8 text-muted-foreground/30 mb-3" />
-              <div className="font-mono text-[11px] uppercase tracking-widest text-white/50 font-bold mb-2">Histórico Insuficiente</div>
-              <p className="font-mono text-[9px] text-muted-foreground max-w-md">Menos de duas versões persistidas. A comparação exige pelo menos duas versões distintas.</p>
+              <div className="font-mono text-[11px] uppercase tracking-widest text-white/50 font-bold mb-2">{t("Histórico Insuficiente", "Insufficient History", "Historial insuficiente")}</div>
+              <p className="font-mono text-[9px] text-muted-foreground max-w-md">{t("Menos de duas versões persistidas. A comparação exige pelo menos duas versões distintas.", "Fewer than two versions have been persisted. Comparison requires at least two distinct versions.", "Hay menos de dos versiones guardadas. La comparación requiere al menos dos versiones distintas.")}</p>
             </div>
           ) : baseId === targetId ? (
             <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-6">
               <GitCompare className="h-8 w-8 text-muted-foreground/30 mb-3" />
-              <div className="font-mono text-[11px] uppercase tracking-widest text-white/50 font-bold mb-2">Versões Idênticas</div>
-              <p className="font-mono text-[9px] text-muted-foreground max-w-md">Selecione duas versões diferentes para comparar.</p>
+              <div className="font-mono text-[11px] uppercase tracking-widest text-white/50 font-bold mb-2">{t("Versões Idênticas", "Identical Versions", "Versiones idénticas")}</div>
+              <p className="font-mono text-[9px] text-muted-foreground max-w-md">{t("Selecione duas versões diferentes para comparar.", "Select two different versions to compare.", "Selecciona dos versiones distintas para comparar.")}</p>
             </div>
           ) : !submittedMatchesSelection ? (
             <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-6">
               <GitCompare className="h-8 w-8 text-muted-foreground/30 mb-3" />
-              <div className="font-mono text-[11px] uppercase tracking-widest text-white/50 font-bold mb-2">Pronto para Comparar</div>
-              <p className="font-mono text-[9px] text-muted-foreground max-w-md">Selecione as versões base e target e clique em Atualizar Diff.</p>
+              <div className="font-mono text-[11px] uppercase tracking-widest text-white/50 font-bold mb-2">{t("Pronto para Comparar", "Ready to Compare", "Listo para comparar")}</div>
+              <p className="font-mono text-[9px] text-muted-foreground max-w-md">{t("Selecione as versões base e alvo e clique em Atualizar comparação.", "Select the base and target versions and click Update Diff.", "Selecciona las versiones base y objetivo y haz clic en Actualizar comparación.")}</p>
             </div>
           ) : isLoadingDiff || isFetchingDiff ? (
             <div className="flex flex-col items-center justify-center min-h-[300px]">
               <RefreshCw className="h-6 w-6 text-primary animate-spin mb-3" />
-              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Calculando diff determinístico...</div>
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Calculando comparação determinística...", "Calculating deterministic diff...", "Calculando comparación determinista...")}</div>
             </div>
           ) : isErrorDiff ? (
             <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-6" role="alert">
               <AlertTriangle className="h-8 w-8 text-destructive mb-3" />
-              <div className="font-mono text-[11px] uppercase tracking-widest text-destructive font-bold mb-2">Falha no Diff</div>
-              <p className="font-mono text-[9px] text-muted-foreground mb-4 max-w-md">{(diffError as Error)?.message || "Não foi possível comparar as versões."}</p>
+              <div className="font-mono text-[11px] uppercase tracking-widest text-destructive font-bold mb-2">{t("Falha na comparação", "Diff Failed", "Error en la comparación")}</div>
+              <p className="font-mono text-[9px] text-muted-foreground mb-4 max-w-md">{(diffError as Error)?.message || t("Não foi possível comparar as versões.", "Unable to compare versions.", "No se pudieron comparar las versiones.")}</p>
               <Button type="button" variant="outline" size="sm" onClick={() => void refetchDiff()} className="font-mono text-[10px] uppercase tracking-widest">
-                Tentar Novamente
+                {t("Tentar Novamente", "Try Again", "Intentar de nuevo")}
               </Button>
             </div>
           ) : !diffResponse || !diffResponse.available ? (
             <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-6">
               <XCircle className="h-8 w-8 text-muted-foreground/30 mb-3" />
-              <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground font-bold mb-2">Diff Indisponível</div>
-              <p className="font-mono text-[9px] text-muted-foreground max-w-md">{diffResponse?.warnings?.[0] || "Não foi possível realizar a comparação determinística."}</p>
+              <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground font-bold mb-2">{t("Comparação Indisponível", "Diff Unavailable", "Comparación no disponible")}</div>
+              <p className="font-mono text-[9px] text-muted-foreground max-w-md">{diffResponse?.warnings?.[0] || t("Não foi possível realizar a comparação determinística.", "Unable to perform the deterministic comparison.", "No se pudo realizar la comparación determinista.")}</p>
             </div>
           ) : (
             <div className="p-4 flex flex-col gap-6">
@@ -428,26 +430,26 @@ export function VersionDiffDrawer({
                     {summary.truncated && (
                       <div className="bg-[#FFB000]/10 border border-[#FFB000]/30 p-3 flex items-center gap-2">
                         <AlertTriangle className="h-4 w-4 text-[#FFB000] shrink-0" />
-                        <span className="font-mono text-[10px] text-[#FFB000] uppercase tracking-widest">Aviso: comparison_incomplete_due_to_limits. O volume de alterações excede os limites de processamento da UI. Algumas modificações podem não estar listadas.</span>
+                        <span className="font-mono text-[10px] text-[#FFB000] uppercase tracking-widest">{t("Aviso: comparison_incomplete_due_to_limits. O volume de alterações excede os limites de processamento da UI. Algumas modificações podem não estar listadas.", "Warning: comparison_incomplete_due_to_limits. The number of changes exceeds the UI processing limit. Some changes may not be listed.", "Aviso: comparison_incomplete_due_to_limits. El volumen de cambios supera el límite de procesamiento de la interfaz. Es posible que no se enumeren algunas modificaciones.")}</span>
                       </div>
                     )}
                     
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <div className="bg-success/10 border border-success/20 p-3 flex flex-col items-center justify-center text-center">
                         <span className="font-mono text-[18px] font-bold text-success" data-testid="diff-summary-added">{summary.added || 0}</span>
-                        <span className="font-mono text-[9px] uppercase tracking-widest text-success/80 mt-1">Adicionados</span>
+                        <span className="font-mono text-[9px] uppercase tracking-widest text-success/80 mt-1">{t("Adicionados", "Added", "Añadidos")}</span>
                       </div>
                       <div className="bg-destructive/10 border border-destructive/20 p-3 flex flex-col items-center justify-center text-center">
                         <span className="font-mono text-[18px] font-bold text-destructive" data-testid="diff-summary-removed">{summary.removed || 0}</span>
-                        <span className="font-mono text-[9px] uppercase tracking-widest text-destructive/80 mt-1">Removidos</span>
+                        <span className="font-mono text-[9px] uppercase tracking-widest text-destructive/80 mt-1">{t("Removidos", "Removed", "Eliminados")}</span>
                       </div>
                       <div className="bg-[#FFB000]/10 border border-[#FFB000]/20 p-3 flex flex-col items-center justify-center text-center">
                         <span className="font-mono text-[18px] font-bold text-[#FFB000]" data-testid="diff-summary-changed">{summary.changed || 0}</span>
-                        <span className="font-mono text-[9px] uppercase tracking-widest text-[#FFB000]/80 mt-1">Alterados</span>
+                        <span className="font-mono text-[9px] uppercase tracking-widest text-[#FFB000]/80 mt-1">{t("Alterados", "Changed", "Modificados")}</span>
                       </div>
                       <div className="bg-white/5 border border-white/10 p-3 flex flex-col items-center justify-center text-center">
                         <span className="font-mono text-[18px] font-bold text-muted-foreground" data-testid="diff-summary-unchanged">{summary.unchanged || 0}</span>
-                        <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/80 mt-1">Inalterados</span>
+                        <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/80 mt-1">{t("Inalterados", "Unchanged", "Sin cambios")}</span>
                       </div>
                     </div>
                   </div>
@@ -464,8 +466,8 @@ export function VersionDiffDrawer({
                     return (
                       <div className="p-8 text-center border border-dashed border-border/30 bg-black/20">
                         <AlertTriangle className="h-8 w-8 text-[#FFB000]/50 mx-auto mb-3" />
-                        <div className="font-mono text-[11px] uppercase tracking-widest text-[#FFB000]/80 font-bold mb-2">Exibição Truncada</div>
-                        <p className="font-mono text-[9px] text-muted-foreground">Existem alterações, mas não puderam ser exibidas devido ao limite de processamento de diff visual.</p>
+                        <div className="font-mono text-[11px] uppercase tracking-widest text-[#FFB000]/80 font-bold mb-2">{t("Exibição Truncada", "Truncated Display", "Visualización truncada")}</div>
+                        <p className="font-mono text-[9px] text-muted-foreground">{t("Existem alterações, mas não puderam ser exibidas devido ao limite de processamento de diff visual.", "Changes exist but could not be displayed because of the visual diff processing limit.", "Hay cambios, pero no se pudieron mostrar debido al límite de procesamiento de la comparación visual.")}</p>
                       </div>
                     );
                   }
@@ -473,15 +475,15 @@ export function VersionDiffDrawer({
                   return (
                     <div className="p-8 text-center border border-dashed border-border/30 bg-black/20">
                       <CheckCircle2 className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
-                      <div className="font-mono text-[11px] uppercase tracking-widest text-white/50 font-bold mb-2">Sem Diferenças Visíveis</div>
-                      <p className="font-mono text-[9px] text-muted-foreground">Nenhuma alteração determinística encontrada entre as duas versões nestas categorias.</p>
+                      <div className="font-mono text-[11px] uppercase tracking-widest text-white/50 font-bold mb-2">{t("Sem Diferenças Visíveis", "No Visible Differences", "Sin diferencias visibles")}</div>
+                      <p className="font-mono text-[9px] text-muted-foreground">{t("Nenhuma alteração determinística encontrada entre as duas versões nestas categorias.", "No deterministic changes were found between the two versions in these categories.", "No se encontraron cambios deterministas entre las dos versiones en estas categorías.")}</p>
                     </div>
                   );
                 }
 
                 return (
                   <div className="flex flex-col gap-4">
-                    <h3 className="font-mono text-[11px] uppercase tracking-widest text-white font-bold border-b border-border/20 pb-2">Entradas Alteradas</h3>
+                    <h3 className="font-mono text-[11px] uppercase tracking-widest text-white font-bold border-b border-border/20 pb-2">{t("Entradas Alteradas", "Changed Entries", "Entradas modificadas")}</h3>
                     <div className="flex flex-col gap-3">
                       {changes.map((change, index) => {
                         const isAdded = change.kind === "added";
@@ -520,14 +522,14 @@ export function VersionDiffDrawer({
                                 )}
                               </div>
                               <div className={`px-1.5 py-0.5 border font-mono text-[8px] uppercase tracking-widest shrink-0 ${badgeClass}`}>
-                                {change.kind}
+                                {change.kind === "added" ? t("Adicionado", "Added", "Añadido") : change.kind === "removed" ? t("Removido", "Removed", "Eliminado") : change.kind === "changed" ? t("Alterado", "Changed", "Modificado") : change.kind}
                               </div>
                             </div>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-border/20 border border-border/20">
                               {(isRemoved || isChanged) && (
                                 <div className="bg-[#1f0f0f] p-2 overflow-x-auto">
-                                  <div className="font-mono text-[8px] uppercase tracking-widest text-destructive/60 mb-1.5">Antes (Base)</div>
+                                  <div className="font-mono text-[8px] uppercase tracking-widest text-destructive/60 mb-1.5">{t("Antes (Base)", "Before (Base)", "Antes (base)")}</div>
                                   <pre className="font-mono text-[10px] text-destructive/90 whitespace-pre-wrap">
                                     {typeof change.before === 'object' ? JSON.stringify(change.before, null, 2) : String(change.before)}
                                   </pre>
@@ -535,7 +537,7 @@ export function VersionDiffDrawer({
                               )}
                               {(isAdded || isChanged) && (
                                 <div className="bg-[#0f1f15] p-2 overflow-x-auto">
-                                  <div className="font-mono text-[8px] uppercase tracking-widest text-success/60 mb-1.5">Depois (Target)</div>
+                                  <div className="font-mono text-[8px] uppercase tracking-widest text-success/60 mb-1.5">{t("Depois (Alvo)", "After (Target)", "Después (objetivo)")}</div>
                                   <pre className="font-mono text-[10px] text-success/90 whitespace-pre-wrap">
                                     {typeof change.after === 'object' ? JSON.stringify(change.after, null, 2) : String(change.after)}
                                   </pre>
@@ -580,7 +582,7 @@ export function VersionDiffDrawer({
                   type="button"
                   onClick={handleBack}
                   className="p-1.5 border border-border/40 bg-black/40 hover:bg-white/5 hover:border-border/80 transition-colors text-muted-foreground hover:text-white shrink-0"
-                  aria-label="Voltar para o catálogo"
+                  aria-label={t("Voltar para o catálogo", "Back to catalog", "Volver al catálogo")}
                   data-testid="btn-back-version-diff"
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -589,13 +591,13 @@ export function VersionDiffDrawer({
               <div>
                 <DrawerTitle className="font-mono text-sm uppercase tracking-widest text-primary flex items-center gap-2">
                   <FileDiff className="h-4 w-4" />
-                  Version Control
+                  {t("Controle de versões", "Version Control", "Control de versiones")}
                 </DrawerTitle>
                 <DrawerDescription className="font-mono text-[10px] uppercase tracking-wider mt-1 text-muted-foreground">
                   {selectedSource ? (
-                    <span>Comparando versões para {selectedSource.id}</span>
+                    <span>{t("Comparando versões para", "Comparing versions for", "Comparando versiones de")} {selectedSource.id}</span>
                   ) : (
-                    <span>Catálogo de fontes versionadas</span>
+                    <span>{t("Catálogo de fontes versionadas", "Versioned Sources Catalog", "Catálogo de fuentes versionadas")}</span>
                   )}
                 </DrawerDescription>
               </div>
@@ -608,7 +610,7 @@ export function VersionDiffDrawer({
                 className="font-mono text-[10px] uppercase tracking-widest border-border/30 hover:bg-white/5"
                 data-testid="btn-close-version-diff"
               >
-                Fechar
+                {t("Fechar", "Close", "Cerrar")}
               </Button>
             </DrawerClose>
           </DrawerHeader>

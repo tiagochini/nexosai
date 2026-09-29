@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useLogin } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
 import { useAppI18n } from "@/lib/i18n";
+import { GuestLanguageSwitcher } from "@/components/guest-language-switcher";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -123,6 +124,9 @@ export default function Login() {
               </span>
             </Link>
           </div>
+        </div>
+        <div className="mt-4">
+          <GuestLanguageSwitcher />
         </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { Target, CheckCircle2, XCircle, AlertTriangle, ExternalLink, Loader2, Ar
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { useUiText } from "@/lib/i18n";
 
 interface WorkspaceIntegration {
   id: string;
@@ -22,6 +23,7 @@ const ADS_PROVIDERS = [
 ];
 
 export function AdsReadinessTab() {
+  const t = useUiText();
   const queryClient = useQueryClient();
 
   const { data: integrationsData, isLoading: loadingIntegrations } = useQuery({
@@ -40,7 +42,7 @@ export function AdsReadinessTab() {
       if (data.url) {
         const popup = window.open(data.url, "oauth_connect", "width=600,height=700,status=no,menubar=no");
         if (!popup) {
-          toast.error("Pop-up bloqueado. Permita pop-ups para autenticar.");
+           toast.error(t("Pop-up bloqueado. Permita pop-ups para autenticar.", "Pop-up blocked. Allow pop-ups to authenticate.", "Ventana emergente bloqueada. Permite las ventanas emergentes para autenticarte."));
           return;
         }
         
@@ -49,10 +51,10 @@ export function AdsReadinessTab() {
           if (resultHandled) return;
           resultHandled = true;
           if (success) {
-            toast.success("Conectado com sucesso!");
+             toast.success(t("Conectado com sucesso!", "Connected successfully!", "¡Conectado correctamente!"));
             queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
           } else {
-            toast.error(error || "A autenticação não foi concluída.");
+             toast.error(error || t("A autenticação não foi concluída.", "Authentication was not completed.", "No se completó la autenticación."));
           }
         };
 
@@ -81,7 +83,7 @@ export function AdsReadinessTab() {
             clearInterval(checkClosed);
             if (!resultHandled) {
               await new Promise(r => setTimeout(r, 400));
-              if (!resultHandled) handleResult(false, "Janela fechada antes de concluir.");
+               if (!resultHandled) handleResult(false, t("Janela fechada antes de concluir.", "Window closed before completion.", "La ventana se cerró antes de completar."));
             }
             window.removeEventListener("message", messageHandler);
             window.removeEventListener("storage", storageHandler);
@@ -89,7 +91,7 @@ export function AdsReadinessTab() {
         }, 500);
       }
     } catch (err: any) {
-      toast.error(err.message || "Falha ao iniciar autenticação OAuth.");
+       toast.error(err.message || t("Falha ao iniciar autenticação OAuth.", "Failed to start OAuth authentication.", "No se pudo iniciar la autenticación OAuth."));
     }
   };
 
@@ -108,8 +110,7 @@ export function AdsReadinessTab() {
     <div className="space-y-6">
       <div className="bg-primary/5 border border-primary/20 p-4 mb-4 max-w-4xl">
         <p className="font-mono text-xs text-muted-foreground leading-relaxed">
-          Verifique o status de conexão OAuth, autorizações do anunciante e prontidão de produção de cada rede de anúncios. 
-          O agente autônomo não publicará campanhas em contas com status "Test" ou que exijam seleção de conta.
+           {t('Verifique o status da conexão OAuth, as autorizações do anunciante e a prontidão de produção de cada rede de anúncios. O agente autônomo não publicará campanhas em contas com status "Test" ou que exijam seleção de conta.', 'Check OAuth connection status, advertiser authorization, and production readiness for each ad network. The autonomous agent will not publish campaigns to accounts with "Test" status or accounts requiring account selection.', 'Comprueba el estado de conexión OAuth, las autorizaciones del anunciante y la preparación para producción de cada red publicitaria. El agente autónomo no publicará campañas en cuentas con estado "Test" ni en cuentas que requieran selección de cuenta.')}
         </p>
       </div>
 
@@ -145,6 +146,7 @@ function ProviderCard({
   isConnected: boolean;
   onConnect: () => void;
 }) {
+  const t = useUiText();
   const { data: statusData, isLoading } = useQuery({
     queryKey: ["/api/paid-media/setup", adsProvider.dbProvider, "status"],
     queryFn: () => customFetch<any>(`/api/paid-media/setup/${adsProvider.dbProvider}/status`),
@@ -161,12 +163,12 @@ function ProviderCard({
         </div>
         {isConnected ? (
           statusData?.productionReady ? (
-            <Badge variant="outline" className="rounded-none border-success/30 text-success bg-success/10 font-mono text-[9px] uppercase">Ready</Badge>
+            <Badge variant="outline" className="rounded-none border-success/30 text-success bg-success/10 font-mono text-[9px] uppercase">{t("Pronto", "Ready", "Listo")}</Badge>
           ) : (
-            <Badge variant="outline" className="rounded-none border-warning/30 text-warning bg-warning/10 font-mono text-[9px] uppercase">Pending</Badge>
+            <Badge variant="outline" className="rounded-none border-warning/30 text-warning bg-warning/10 font-mono text-[9px] uppercase">{t("Pendente", "Pending", "Pendiente")}</Badge>
           )
         ) : (
-          <Badge variant="outline" className="rounded-none border-muted-foreground/30 text-muted-foreground bg-muted/10 font-mono text-[9px] uppercase">Disconnected</Badge>
+          <Badge variant="outline" className="rounded-none border-muted-foreground/30 text-muted-foreground bg-muted/10 font-mono text-[9px] uppercase">{t("Desconectado", "Disconnected", "Desconectado")}</Badge>
         )}
       </div>
 
@@ -174,16 +176,16 @@ function ProviderCard({
         {!isOauthConfigured ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3 py-6">
             <AlertTriangle className="h-6 w-6 text-muted-foreground/50" />
-            <div className="font-mono text-[10px] uppercase text-muted-foreground">App OAuth Não Configurado</div>
+            <div className="font-mono text-[10px] uppercase text-muted-foreground">{t("App OAuth não configurado", "OAuth app not configured", "App OAuth no configurada")}</div>
             <p className="font-mono text-[10px] text-muted-foreground/60 max-w-[200px]">
-              O OAuth exige credenciais do servidor, mas a conexão manual via API já está disponível em Integrações.
+              {t("O OAuth exige credenciais do servidor, mas a conexão manual via API já está disponível em Integrações.", "OAuth requires server credentials, but manual connection via API is available in Integrations.", "OAuth requiere credenciales del servidor, pero la conexión manual mediante API ya está disponible en Integraciones.")}
             </p>
             <Button
               variant="outline"
               className="rounded-none font-mono uppercase text-[10px]"
               onClick={() => { window.location.href = "/integracoes"; }}
             >
-              Conectar via API
+              {t("Conectar via API", "Connect via API", "Conectar mediante API")}
             </Button>
           </div>
         ) : !isConnected ? (
@@ -193,7 +195,7 @@ function ProviderCard({
               className="btn-weapon-primary rounded-none font-mono uppercase text-xs w-full"
               onClick={onConnect}
             >
-              Conectar Conta
+              {t("Conectar conta", "Connect account", "Conectar cuenta")}
             </Button>
           </div>
         ) : isLoading ? (
@@ -204,13 +206,13 @@ function ProviderCard({
           <div className="space-y-4 flex-1">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Status OAuth</span>
+                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Status OAuth", "OAuth status", "Estado OAuth")}</span>
                 <span className="font-mono text-[10px] text-success font-bold flex items-center gap-1">
                   <CheckCircle2 className="h-3 w-3" /> {statusData.oauth}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Autorização Anunciante</span>
+                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Autorização do anunciante", "Advertiser authorization", "Autorización del anunciante")}</span>
                 <span className="font-mono text-[10px] text-success font-bold flex items-center gap-1">
                   <CheckCircle2 className="h-3 w-3" /> {statusData.advertiserAuthorization}
                 </span>
@@ -218,7 +220,7 @@ function ProviderCard({
             </div>
 
             <div className="border-t border-border/30 pt-4 space-y-3">
-              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Contas de Anúncio</div>
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Contas de anúncio", "Ad accounts", "Cuentas publicitarias")}</div>
               {statusData.accounts?.length > 0 ? (
                 <div className="space-y-2">
                   {statusData.accounts.map((acc: any) => (
@@ -232,22 +234,22 @@ function ProviderCard({
                   
                   {statusData.accountSelectionRequired && (
                     <div className="mt-2 text-[10px] font-mono text-warning flex gap-1">
-                      <AlertTriangle className="h-3 w-3" /> Seleção de conta exigida na tela de Integrações.
+                       <AlertTriangle className="h-3 w-3" /> {t("Seleção de conta exigida na tela de Integrações.", "Account selection required on the Integrations page.", "Se requiere seleccionar una cuenta en la página de Integraciones.")}
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="text-[10px] font-mono text-muted-foreground">Nenhuma conta encontrada.</div>
+                <div className="text-[10px] font-mono text-muted-foreground">{t("Nenhuma conta encontrada.", "No accounts found.", "No se encontraron cuentas.")}</div>
               )}
             </div>
             
             <div className="mt-auto pt-4 border-t border-border/30">
               <div className="flex items-center justify-between">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Prontidão de Produção</span>
+                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Prontidão de produção", "Production readiness", "Preparación para producción")}</span>
                 {statusData.productionReady ? (
-                  <span className="font-mono text-[10px] text-success font-bold">SIM</span>
+                  <span className="font-mono text-[10px] text-success font-bold">{t("SIM", "YES", "SÍ")}</span>
                 ) : (
-                  <span className="font-mono text-[10px] text-destructive font-bold">NÃO</span>
+                  <span className="font-mono text-[10px] text-destructive font-bold">{t("NÃO", "NO", "NO")}</span>
                 )}
               </div>
             </div>
@@ -255,16 +257,16 @@ function ProviderCard({
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3 py-6">
             <XCircle className="h-6 w-6 text-destructive/50" />
-            <div className="font-mono text-[10px] uppercase text-destructive">Erro na Validação</div>
+            <div className="font-mono text-[10px] uppercase text-destructive">{t("Erro na validação", "Validation error", "Error de validación")}</div>
             <p className="font-mono text-[10px] text-muted-foreground/60">
-              A conexão parece estar inválida ou o token expirou.
+              {t("A conexão parece estar inválida ou o token expirou.", "The connection appears invalid or the token has expired.", "La conexión parece no ser válida o el token ha caducado.")}
             </p>
             <Button 
               variant="outline"
               className="btn-weapon-outline rounded-none font-mono uppercase text-[10px] mt-2"
               onClick={onConnect}
             >
-              Reconectar
+              {t("Reconectar", "Reconnect", "Volver a conectar")}
             </Button>
           </div>
         )}

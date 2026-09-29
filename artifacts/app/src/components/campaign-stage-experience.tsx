@@ -8,6 +8,7 @@ import {
 import { Link } from "wouter";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import type { CampaignEvent } from "@/lib/socket";
+import { useUiText } from "@/lib/i18n";
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 type AgentConfig = {
@@ -39,15 +40,16 @@ const PROVIDER_COLORS: Record<string, string> = {
 // STAGE 1 — ANALYZING: Agents Activating
 // ══════════════════════════════════════════════════════════════════════════════
 export function AnalyzingDisplay() {
+  const t = useUiText();
   const [activeCount, setActiveCount] = useState(0);
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState(0);
 
   const PHASE_LABELS = [
-    "Conectando ao NEXOS CORE...",
-    "Lendo seu briefing e contexto de mercado...",
-    "Preparando diagnóstico estratégico para revisão...",
-    "Construindo plano de ação — pronto em breve para sua avaliação...",
+    t("Conectando ao NEXOS CORE...", "Connecting to NEXOS CORE...", "Conectando con NEXOS CORE..."),
+    t("Lendo seu briefing e contexto de mercado...", "Reading your brief and market context...", "Leyendo tu briefing y contexto de mercado..."),
+    t("Preparando diagnóstico estratégico para revisão...", "Preparing strategic diagnosis for review...", "Preparando diagnóstico estratégico para revisión..."),
+    t("Construindo plano de ação — pronto em breve para sua avaliação...", "Building action plan — ready for your review soon...", "Construyendo plan de acción — listo pronto para tu evaluación..."),
   ];
 
   useEffect(() => {
@@ -94,7 +96,7 @@ export function AnalyzingDisplay() {
           </div>
           <div>
             <div className="font-mono text-sm font-bold text-primary uppercase tracking-widest">
-              Agentes Trabalhando para Você
+              {t("Agentes Trabalhando para Você", "Agents Working for You", "Agentes Trabajando para Ti")}
             </div>
             <div className="font-mono text-[11px] text-muted-foreground/60 mt-0.5 transition-all duration-500">
               {PHASE_LABELS[phase]}
@@ -103,7 +105,7 @@ export function AnalyzingDisplay() {
         </div>
         <div className="flex items-center gap-2 font-mono text-[11px] text-primary/70 border border-primary/30 bg-primary/5 px-3 py-1.5 shrink-0">
           <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-          EM ANÁLISE
+          {t("EM ANÁLISE", "ANALYZING", "EN ANÁLISIS")}
         </div>
       </div>
 
@@ -133,7 +135,9 @@ export function AnalyzingDisplay() {
                 <div className="flex items-center gap-2">
                   <span className={`font-mono text-xs font-bold uppercase tracking-wide truncate
                     ${isOnline ? "text-success" : isLoading ? "text-primary" : "text-muted-foreground/35"}`}>
-                    {agent.label}
+                    {t(agent.label,
+                      agent.role === "strategy" ? "Strategist" : agent.role === "profile_builder" ? "Profile Builder" : agent.role === "offer" ? "Offer Specialist" : agent.role === "media_buyer" ? "Media Buyer" : agent.role === "copywriter" ? "Copywriter" : agent.role === "content_planner" ? "Content Planner" : agent.role === "email_marketer" ? "Email Marketer" : "Launch Manager",
+                      agent.role === "strategy" ? "Estratega" : agent.role === "profile_builder" ? "Constructor de perfiles" : agent.role === "offer" ? "Especialista en ofertas" : agent.role === "media_buyer" ? "Especialista en medios pagados" : agent.role === "copywriter" ? "Redactor" : agent.role === "content_planner" ? "Planificador de contenido" : agent.role === "email_marketer" ? "Especialista en email" : "Gerente de lanzamiento")}
                   </span>
                   <span className={`font-mono text-[9px] px-1.5 py-0.5 border uppercase tracking-wider shrink-0 ${PROVIDER_COLORS[agent.provider]}`}>
                     {agent.provider}
@@ -141,7 +145,9 @@ export function AnalyzingDisplay() {
                 </div>
                 <div className={`font-mono text-[10px] mt-0.5 truncate
                   ${isOnline ? "text-success/55" : isLoading ? "text-primary/55" : "text-muted-foreground/25"}`}>
-                  {isOnline ? "✓ Online — operacional" : isLoading ? agent.desc : "Aguardando inicialização..."}
+                  {isOnline ? t("✓ Online — operacional", "✓ Online — operational", "✓ En línea — operativo") : isLoading ? t(agent.desc,
+                    agent.role === "strategy" ? "Reading the briefing and analyzing the market..." : agent.role === "profile_builder" ? "Building the target audience profile..." : agent.role === "offer" ? "Distilling the unique value proposition..." : agent.role === "media_buyer" ? "Mapping the paid media landscape..." : agent.role === "copywriter" ? "Preparing conversion copy..." : agent.role === "content_planner" ? "Designing the calendar and sequences..." : agent.role === "email_marketer" ? "Setting up nurture sequences..." : "Calculating timeline and checkpoints...",
+                    agent.role === "strategy" ? "Leyendo el briefing y analizando el mercado..." : agent.role === "profile_builder" ? "Creando el perfil del público objetivo..." : agent.role === "offer" ? "Definiendo la propuesta de valor única..." : agent.role === "media_buyer" ? "Mapeando el panorama de medios pagados..." : agent.role === "copywriter" ? "Preparando textos de conversión..." : agent.role === "content_planner" ? "Diseñando el calendario y las secuencias..." : agent.role === "email_marketer" ? "Configurando secuencias de nutrición..." : "Calculando el cronograma y los puntos de control...") : t("Aguardando inicialização...", "Waiting to initialize...", "Esperando inicialización...")}
                 </div>
               </div>
             </div>
@@ -152,8 +158,8 @@ export function AnalyzingDisplay() {
       {/* Progress bar */}
       <div className="px-4 pb-5 space-y-2">
         <div className="flex justify-between font-mono text-[10px] uppercase tracking-widest text-muted-foreground/45">
-          <span>Diagnóstico em construção</span>
-          <span>{activeCount}/{AGENTS.length} agentes · {Math.round(Math.max(progress, (activeCount / AGENTS.length) * 100))}%</span>
+          <span>{t("Diagnóstico em construção", "Diagnosis in progress", "Diagnóstico en construcción")}</span>
+          <span>{activeCount}/{AGENTS.length} {t("agentes", "agents", "agentes")} · {Math.round(Math.max(progress, (activeCount / AGENTS.length) * 100))}%</span>
         </div>
         <div className="h-1 bg-muted/20 overflow-hidden">
           <div
@@ -162,7 +168,7 @@ export function AnalyzingDisplay() {
           />
         </div>
         <p className="font-mono text-[10px] text-muted-foreground/35 text-center pt-0.5">
-          O plano estratégico será apresentado para sua revisão e aprovação · Tempo estimado: 1–3 minutos
+          {t("O plano estratégico será apresentado para sua revisão e aprovação · Tempo estimado: 1–3 minutos", "The strategic plan will be presented for your review and approval · Estimated time: 1–3 minutes", "El plan estratégico se presentará para tu revisión y aprobación · Tiempo estimado: 1–3 minutos")}
         </p>
       </div>
     </div>
@@ -173,6 +179,7 @@ export function AnalyzingDisplay() {
 // STAGE 2 — STRATEGY READY: Cinematic Reveal Banner
 // ══════════════════════════════════════════════════════════════════════════════
 export function StrategyReadyBanner({ onReview }: { onReview: () => void }) {
+  const t = useUiText();
   const [visible, setVisible] = useState(false);
   const [pulse, setPulse] = useState(true);
 
@@ -200,16 +207,16 @@ export function StrategyReadyBanner({ onReview }: { onReview: () => void }) {
           </div>
           <div>
             <div className="font-mono text-base font-bold text-success uppercase tracking-widest leading-tight">
-              Análise Estratégica Completa
+              {t("Análise Estratégica Completa", "Strategic Analysis Complete", "Análisis Estratégico Completo")}
             </div>
             <div className="font-mono text-[11px] text-muted-foreground/65 mt-1.5">
-              8 agentes especializados concluíram o diagnóstico. Sua estratégia aguarda revisão.
+              {t("8 agentes especializados concluíram o diagnóstico. Sua estratégia aguarda revisão.", "8 specialized agents completed the diagnosis. Your strategy is ready for review.", "8 agentes especializados completaron el diagnóstico. Tu estrategia está lista para revisión.")}
             </div>
             <div className="flex gap-5 mt-2.5">
               {[
-                { label: "Agentes", value: "8" },
-                { label: "Gatilhos", value: "12" },
-                { label: "Plataformas", value: "5" },
+                { label: t("Agentes", "Agents", "Agentes"), value: "8" },
+                { label: t("Gatilhos", "Triggers", "Disparadores"), value: "12" },
+                { label: t("Plataformas", "Platforms", "Plataformas"), value: "5" },
                 { label: "Insights", value: "24+" },
               ].map(s => (
                 <div key={s.label} className="text-center">
@@ -231,7 +238,7 @@ export function StrategyReadyBanner({ onReview }: { onReview: () => void }) {
           onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 0 24px hsl(var(--success) / 0.45), 0 0 4px hsl(var(--success) / 0.3)")}
         >
           <Eye className="h-4 w-4" />
-          Revelar Estratégia
+          {t("Revelar Estratégia", "Reveal Strategy", "Revelar Estrategia")}
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>
@@ -251,14 +258,15 @@ const PLATFORMS_GEN = [
 ];
 
 const COPY_PHRASES = [
-  "Escrevendo hook principal...",
-  "Criando variações de copy...",
-  "Gerando roteiro de vídeo...",
-  "Compondo sequência de e-mail...",
-  "Finalizando CTA...",
+  ["Escrevendo hook principal...", "Writing the main hook...", "Escribiendo el gancho principal..."],
+  ["Criando variações de copy...", "Creating copy variations...", "Creando variaciones de texto..."],
+  ["Gerando roteiro de vídeo...", "Generating video script...", "Generando guion de vídeo..."],
+  ["Compondo sequência de e-mail...", "Composing email sequence...", "Redactando la secuencia de correo..."],
+  ["Finalizando CTA...", "Finalizing CTA...", "Finalizando la llamada a la acción..."],
 ];
 
 export function GeneratingDisplay() {
+  const t = useUiText();
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [phraseIdx, setPhraseIdx] = useState(0);
   const [dot, setDot] = useState(0);
@@ -303,34 +311,34 @@ export function GeneratingDisplay() {
               {"...".slice(0, dot)}
             </div>
             <div className="font-mono text-[11px] text-muted-foreground/60 mt-0.5 transition-all duration-500">
-              {COPY_PHRASES[phraseIdx]}
+              {t(COPY_PHRASES[phraseIdx][0], COPY_PHRASES[phraseIdx][1], COPY_PHRASES[phraseIdx][2])}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2 font-mono text-[11px] text-primary/70 border border-primary/30 bg-primary/5 px-3 py-1.5 shrink-0">
           <Loader2 className="h-3 w-3 animate-spin" />
-          {pct}% GERADO
+          {pct}% {t("GERADO", "GENERATED", "GENERADO")}
         </div>
       </div>
 
       {/* Per-platform bars */}
       <div className="p-4 space-y-3">
-        {PLATFORMS_GEN.map(({ id, label, total: t, color, bar }) => {
+        {PLATFORMS_GEN.map(({ id, label, total, color, bar }) => {
           const cur  = counts[id] ?? 0;
-          const p    = Math.round((cur / t) * 100);
-          const done = cur === t;
+          const p    = Math.round((cur / total) * 100);
+          const done = cur === total;
           return (
             <div key={id}>
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <span className={`font-mono text-[11px] uppercase tracking-widest font-bold ${color}`}>{label}</span>
                   {!done && cur > 0 && (
-                    <span className="font-mono text-[10px] text-muted-foreground/40 animate-pulse">escrevendo...</span>
+                    <span className="font-mono text-[10px] text-muted-foreground/40 animate-pulse">{t("escrevendo...", "writing...", "escribiendo...")}</span>
                   )}
-                  {done && <span className="font-mono text-[10px] text-success">✓ pronto</span>}
+                  {done && <span className="font-mono text-[10px] text-success">{t("✓ pronto", "✓ ready", "✓ listo")}</span>}
                 </div>
                 <span className={`font-mono text-[11px] font-bold ${done ? "text-success" : "text-muted-foreground/55"}`}>
-                  {cur}/{t}
+                  {cur}/{total}
                 </span>
               </div>
               <div className="h-1.5 bg-muted/20 overflow-hidden">
@@ -347,8 +355,8 @@ export function GeneratingDisplay() {
       {/* Overall progress */}
       <div className="px-4 pb-5 space-y-1.5">
         <div className="flex justify-between font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
-          <span>Progresso total</span>
-          <span>{done} de {total} peças</span>
+          <span>{t("Progresso total", "Overall progress", "Progreso total")}</span>
+          <span>{done} {t("de", "of", "de")} {total} {t("peças", "pieces", "piezas")}</span>
         </div>
         <div className="h-2 bg-muted/20 overflow-hidden">
           <div
@@ -357,7 +365,7 @@ export function GeneratingDisplay() {
           />
         </div>
         <p className="font-mono text-[10px] text-muted-foreground/30 text-center pt-0.5">
-          Página atualiza automaticamente quando a geração estiver completa
+          {t("Página atualiza automaticamente quando a geração estiver completa", "The page updates automatically when generation is complete", "La página se actualiza automáticamente cuando termine la generación")}
         </p>
       </div>
     </div>
@@ -374,6 +382,7 @@ export function ContentReadyCinemaPrompt({
   campaignId: string;
   totalPieces: number;
 }) {
+  const t = useUiText();
   const [glow, setGlow] = useState(true);
 
   useEffect(() => {
@@ -407,10 +416,10 @@ export function ContentReadyCinemaPrompt({
           </div>
           <div>
             <div className="font-mono text-base font-bold text-yellow-400 uppercase tracking-widest leading-tight">
-              {totalPieces > 0 ? `${totalPieces} Peças` : "Conteúdo"} Aguardam Sua Aprovação
+              {totalPieces > 0 ? `${totalPieces} ${t("Peças", "Pieces", "Piezas")}` : t("Conteúdo", "Content", "Contenido")} {t("Aguardam Sua Aprovação", "Await Your Approval", "Esperan Tu Aprobación")}
             </div>
             <div className="font-mono text-[11px] text-muted-foreground/65 mt-1.5">
-              A agente gerou copy, criativos e roteiros para todos os canais. Você comanda a aprovação.
+              {t("A agente gerou copy, criativos e roteiros para todos os canais. Você comanda a aprovação.", "The agent created copy, creatives, and scripts for every channel. You control approval.", "El agente creó textos, creatividades y guiones para todos los canales. Tú controlas la aprobación.")}
             </div>
             <div className="flex items-center gap-3 mt-2.5 flex-wrap">
               {PLATFORMS.map(p => (
@@ -433,7 +442,7 @@ export function ContentReadyCinemaPrompt({
             onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 0 24px hsl(60 100% 55% / 0.35), 0 0 4px hsl(60 100% 55% / 0.25)")}
           >
             <Play className="h-4 w-4 fill-current" />
-            Iniciar Revisão
+            {t("Iniciar Revisão", "Start Review", "Iniciar Revisión")}
             <ArrowRight className="h-4 w-4" />
           </button>
         </Link>
@@ -468,6 +477,7 @@ export function ExecutingLiveDisplay({
 }: {
   events: CampaignEvent[];
 }) {
+  const t = useUiText();
   const feedRef  = useRef<HTMLDivElement>(null);
   const [ticker, setTicker] = useState(0);
 
@@ -496,16 +506,16 @@ export function ExecutingLiveDisplay({
           </div>
           <div>
             <div className="font-mono text-sm font-bold text-success uppercase tracking-widest">
-              CAMPANHA EM EXECUÇÃO
+              {t("CAMPANHA EM EXECUÇÃO", "CAMPAIGN RUNNING", "CAMPAÑA EN EJECUCIÓN")}
             </div>
             <div className="font-mono text-[11px] text-muted-foreground/60 mt-0.5">
-              Operando nos canais aprovados · Sob sua supervisão estratégica
+              {t("Operando nos canais aprovados · Sob sua supervisão estratégica", "Operating on approved channels · Under your strategic supervision", "Operando en los canales aprobados · Bajo tu supervisión estratégica")}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2 font-mono text-[11px] text-success/70 border border-success/35 bg-success/5 px-3 py-1.5 shrink-0">
           <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-          AO VIVO
+          {t("AO VIVO", "LIVE", "EN VIVO")}
         </div>
       </div>
 
@@ -605,6 +615,7 @@ function PostStatusBadge({ status }: { status: SocialPostItem["status"] }) {
 }
 
 export function LiveMissionControl({ campaignId }: { campaignId: string }) {
+  const t = useUiText();
   const [pulse, setPulse] = useState(true);
   const [posts, setPosts] = useState<SocialPostItem[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
@@ -649,12 +660,12 @@ export function LiveMissionControl({ campaignId }: { campaignId: string }) {
             <div>
               <div className="flex items-center gap-2.5 mb-1">
                 <div className="w-2.5 h-2.5 rounded-full bg-success animate-pulse" style={{ boxShadow: "0 0 10px hsl(var(--success))" }} />
-                <span className="font-mono text-base font-bold text-success uppercase tracking-widest">CAMPANHA AO VIVO</span>
+                <span className="font-mono text-base font-bold text-success uppercase tracking-widest">{t("CAMPANHA AO VIVO", "CAMPAIGN LIVE", "CAMPAÑA EN VIVO")}</span>
               </div>
               <div className="font-mono text-[11px] text-muted-foreground/60">
                 {published.length > 0
-                  ? `${published.length} post${published.length > 1 ? "s" : ""} publicado${published.length > 1 ? "s" : ""} · ${scheduled.length} agendado${scheduled.length !== 1 ? "s" : ""}`
-                  : "Todos os canais operacionais · Acompanhe resultados em tempo real pelo painel"}
+                  ? t(`${published.length} post${published.length > 1 ? "s" : ""} publicado${published.length > 1 ? "s" : ""} · ${scheduled.length} agendado${scheduled.length !== 1 ? "s" : ""}`, `${published.length} post${published.length !== 1 ? "s" : ""} published · ${scheduled.length} scheduled`, `${published.length} publicación${published.length !== 1 ? "es" : ""} publicada${published.length !== 1 ? "s" : ""} · ${scheduled.length} programada${scheduled.length !== 1 ? "s" : ""}`)
+                  : t("Todos os canais operacionais · Acompanhe resultados em tempo real pelo painel", "All channels operational · Track results in real time on the dashboard", "Todos los canales están operativos · Sigue los resultados en tiempo real desde el panel")}
               </div>
             </div>
           </div>
@@ -664,12 +675,12 @@ export function LiveMissionControl({ campaignId }: { campaignId: string }) {
               className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground border border-border/40 hover:border-border hover:text-foreground px-3 py-2.5 flex items-center gap-2 transition-colors"
             >
               <Calendar className="h-3.5 w-3.5" />
-              {showTimeline ? "Ocultar" : "Ver posts"}
+              {showTimeline ? t("Ocultar", "Hide", "Ocultar") : t("Ver posts", "View posts", "Ver publicaciones")}
             </button>
             <Link href={`/campaigns/${campaignId}/metrics`}>
               <button className="font-mono text-[11px] uppercase tracking-widest text-success border border-success/45 hover:bg-success/12 px-4 py-2.5 flex items-center gap-2 transition-colors">
                 <BarChart3 className="h-3.5 w-3.5" />
-                Métricas ao Vivo
+                {t("Métricas ao Vivo", "Live Metrics", "Métricas en vivo")}
               </button>
             </Link>
           </div>
@@ -682,17 +693,17 @@ export function LiveMissionControl({ campaignId }: { campaignId: string }) {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
             <div className="flex items-center gap-2">
               <Calendar className="h-3.5 w-3.5 text-primary" />
-              <span className="font-mono text-[11px] uppercase tracking-widest font-bold">Timeline de Posts</span>
+              <span className="font-mono text-[11px] uppercase tracking-widest font-bold">{t("Timeline de Posts", "Post Timeline", "Cronograma de publicaciones")}</span>
               {posts.length > 0 && (
                 <span className="font-mono text-[10px] text-muted-foreground/50">
-                  {published.length} publicado{published.length !== 1 ? "s" : ""} · {scheduled.length} agendado{scheduled.length !== 1 ? "s" : ""}
+                  {t(`${published.length} publicado${published.length !== 1 ? "s" : ""} · ${scheduled.length} agendado${scheduled.length !== 1 ? "s" : ""}`, `${published.length} published · ${scheduled.length} scheduled`, `${published.length} publicada${published.length !== 1 ? "s" : ""} · ${scheduled.length} programada${scheduled.length !== 1 ? "s" : ""}`)}
                 </span>
               )}
             </div>
             <button
               onClick={() => void fetchPosts()}
               className="text-muted-foreground hover:text-foreground transition-colors"
-              title="Atualizar"
+              title={t("Atualizar", "Refresh", "Actualizar")}
             >
               <RefreshCw className={`h-3.5 w-3.5 ${postsLoading ? "animate-spin" : ""}`} />
             </button>
@@ -701,14 +712,14 @@ export function LiveMissionControl({ campaignId }: { campaignId: string }) {
           {postsLoading ? (
             <div className="flex items-center justify-center py-8 gap-2">
               <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
-              <span className="font-mono text-[11px] text-muted-foreground/60">Carregando posts...</span>
+              <span className="font-mono text-[11px] text-muted-foreground/60">{t("Carregando posts...", "Loading posts...", "Cargando publicaciones...")}</span>
             </div>
           ) : posts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 gap-2 text-center px-4">
               <Calendar className="h-6 w-6 text-muted-foreground/30" />
               <span className="font-mono text-[11px] text-muted-foreground/50 leading-relaxed">
                 Nenhum post encontrado para esta campanha.<br />
-                Os posts aparecem aqui conforme são publicados ou agendados.
+                {t("Os posts aparecem aqui conforme são publicados ou agendados.", "Posts appear here as they are published or scheduled.", "Las publicaciones aparecen aquí a medida que se publican o programan.")}
               </span>
             </div>
           ) : (
@@ -824,6 +835,7 @@ export function ContentCinemaOverlay({
   onEdit?: (piece: CinemaPiece) => void;
   onAiRewrite?: (id: string) => void;
 }) {
+  const t = useUiText();
   const [idx, setIdx] = useState(0);
   const [decisions, setDecisions] = useState<Record<string, "approved" | "rejected">>({});
   const [animDir, setAnimDir] = useState<"none" | "left" | "right">("none");
@@ -886,7 +898,7 @@ export function ContentCinemaOverlay({
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
           <span className="font-mono text-sm font-bold uppercase tracking-widest text-foreground">
-            Cinema de Aprovação
+            {t("Cinema de Aprovação", "Approval Theater", "Centro de aprobación")}
           </span>
           <span className="font-mono text-[11px] text-muted-foreground/50">
             {done}/{total} revisados · {approved} aprovados
@@ -911,13 +923,13 @@ export function ContentCinemaOverlay({
 
       {/* Keyboard hints */}
       <div className="px-5 py-2 border-b border-border/20 flex flex-wrap items-center gap-3 shrink-0">
-        <span className="font-mono text-[10px] text-muted-foreground/35 uppercase tracking-widest">Atalhos:</span>
+        <span className="font-mono text-[10px] text-muted-foreground/35 uppercase tracking-widest">{t("Atalhos:", "Shortcuts:", "Atajos:")}</span>
         {[
-          { key: "→ Enter", label: "Aprovar" },
-          { key: "← Backspace", label: "Rejeitar" },
-          { key: "E", label: "Editar" },
-          { key: "R", label: "Reescrever IA" },
-          { key: "Esc", label: "Fechar" },
+          { key: "→ Enter", label: t("Aprovar", "Approve", "Aprobar") },
+          { key: "← Backspace", label: t("Rejeitar", "Reject", "Rechazar") },
+          { key: "E", label: t("Editar", "Edit", "Editar") },
+          { key: "R", label: t("Reescrever IA", "Rewrite with AI", "Reescribir con IA") },
+          { key: "Esc", label: t("Fechar", "Close", "Cerrar") },
         ].map(h => (
           <div key={h.key} className="flex items-center gap-1.5">
             <kbd className="font-mono text-[9px] border border-border/40 bg-muted/20 px-1.5 py-0.5 rounded-sm text-muted-foreground/50">{h.key}</kbd>
@@ -930,9 +942,9 @@ export function ContentCinemaOverlay({
       <div className="px-5 py-2 border-b border-border/20 bg-muted/5 shrink-0 flex items-start gap-2">
         <Info className="h-3 w-3 text-muted-foreground/40 mt-0.5 shrink-0" />
         <p className="font-mono text-[10px] text-muted-foreground/45 leading-relaxed">
-          <span className="text-success/70">Aprovar</span> = esta versão será disparada automaticamente na data programada.{" "}
-          <span className="text-destructive/70">Rejeitar</span> = abre campo de feedback — você explica o motivo e o agente reescreve antes de ir ao ar.{" "}
-          <span className="text-primary/70">Editar</span> = você ajusta o texto diretamente. Imagens são geradas separadamente após aprovação do copy.
+          <span className="text-success/70">{t("Aprovar", "Approve", "Aprobar")}</span> = {t("esta versão será disparada automaticamente na data programada.", "this version will be sent automatically on the scheduled date.", "esta versión se enviará automáticamente en la fecha programada.")}{" "}
+          <span className="text-destructive/70">{t("Rejeitar", "Reject", "Rechazar")}</span> = {t("abre campo de feedback — você explica o motivo e o agente reescreve antes de ir ao ar.", "opens a feedback field — explain why and the agent will rewrite it before it goes live.", "abre un campo de comentarios: explica el motivo y el agente lo reescribe antes de publicarlo.")}{" "}
+          <span className="text-primary/70">{t("Editar", "Edit", "Editar")}</span> = {t("você ajusta o texto diretamente. Imagens são geradas separadamente após aprovação do copy.", "edit the text directly. Images are generated separately after copy approval.", "ajustas el texto directamente. Las imágenes se generan por separado tras aprobar el texto.")}
         </p>
       </div>
 
@@ -947,10 +959,10 @@ export function ContentCinemaOverlay({
           </div>
           <div className="text-center">
             <div className="font-mono text-2xl font-bold text-success uppercase tracking-widest mb-2">
-              Revisão Concluída
+              {t("Revisão Concluída", "Review Complete", "Revisión completada")}
             </div>
             <div className="font-mono text-sm text-muted-foreground/60">
-              {approved} aprovados · {total - approved} rejeitados de {total} peças
+              {t(`${approved} aprovados · ${total - approved} rejeitados de ${total} peças`, `${approved} approved · ${total - approved} rejected of ${total} pieces`, `${approved} aprobadas · ${total - approved} rechazadas de ${total} piezas`)}
             </div>
           </div>
           <button
@@ -1002,7 +1014,7 @@ export function ContentCinemaOverlay({
               {/* Headline */}
               {piece.headline && (
                 <div>
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/45 mb-1.5">Headline</div>
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/45 mb-1.5">{t("Headline", "Headline", "Titular")}</div>
                   <p className="font-mono text-sm font-semibold text-foreground leading-snug">{piece.headline}</p>
                 </div>
               )}
@@ -1010,7 +1022,7 @@ export function ContentCinemaOverlay({
               {/* Body */}
               {piece.body && (
                 <div>
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/45 mb-1.5">Copy</div>
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/45 mb-1.5">{t("Copy", "Copy", "Texto")}</div>
                   <p className="font-mono text-xs text-foreground/80 leading-relaxed whitespace-pre-line line-clamp-8">{piece.body}</p>
                 </div>
               )}
@@ -1018,7 +1030,7 @@ export function ContentCinemaOverlay({
               {/* CTA */}
               {piece.cta && (
                 <div className={`border ${meta.bdr} ${meta.bg} px-3 py-2`}>
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/45 mb-1">CTA</div>
+                    <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/45 mb-1">{t("CTA", "CTA", "Llamada a la acción")}</div>
                   <p className={`font-mono text-sm font-bold ${meta.color}`}>{piece.cta}</p>
                 </div>
               )}
@@ -1026,14 +1038,14 @@ export function ContentCinemaOverlay({
               {/* Visual direction */}
               {piece.visualDirection && (
                 <div className="border border-purple-400/20 bg-purple-400/5 px-3 py-2">
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-purple-400/60 mb-1">Direção Visual</div>
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-purple-400/60 mb-1">{t("Direção Visual", "Visual Direction", "Dirección Visual")}</div>
                   <p className="font-mono text-[11px] text-muted-foreground/60 leading-relaxed">{piece.visualDirection}</p>
                 </div>
               )}
 
               {!piece.hook && !piece.headline && !piece.body && !piece.cta && (
                 <div className="py-6 text-center font-mono text-xs text-muted-foreground/40">
-                  Sem prévia disponível para esta peça
+                  {t("Sem prévia disponível para esta peça", "No preview available for this piece", "No hay vista previa disponible para esta pieza")}
                 </div>
               )}
             </div>
@@ -1048,7 +1060,7 @@ export function ContentCinemaOverlay({
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 font-mono text-xs uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:border-border/70 transition-colors"
                 >
                   <Edit3 className="h-3.5 w-3.5" />
-                  Editar texto
+                  {t("Editar texto", "Edit text", "Editar texto")}
                 </button>
               )}
               {onAiRewrite && (
@@ -1058,8 +1070,8 @@ export function ContentCinemaOverlay({
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 font-mono text-xs uppercase tracking-widest border border-primary/30 text-primary/70 hover:text-primary hover:border-primary/60 disabled:opacity-50 transition-colors"
                 >
                   {rewriting === piece.id
-                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Reescrevendo...</>
-                    : <><Sparkles className="h-3.5 w-3.5" />Reescrever com IA</>
+                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t("Reescrevendo...", "Rewriting...", "Reescribiendo...")}</>
+                    : <><Sparkles className="h-3.5 w-3.5" />{t("Reescrever com IA", "Rewrite with AI", "Reescribir con IA")}</>
                   }
                 </button>
               )}
@@ -1071,19 +1083,19 @@ export function ContentCinemaOverlay({
             <button
               onClick={() => decide(piece.id, "rejected")}
               className="flex-1 flex items-center justify-center gap-2 py-4 font-mono text-sm uppercase tracking-widest font-bold border border-destructive/40 text-destructive hover:bg-destructive/10 transition-colors"
-              title="Rejeitar — abre campo de feedback para o agente reescrever"
+              title={t("Rejeitar — abre campo de feedback para o agente reescrever", "Reject — opens a feedback field so the agent can rewrite", "Rechazar — abre un campo de comentarios para que el agente reescriba")}
             >
               <ThumbsDown className="h-4 w-4" />
-              Rejeitar
+              {t("Rejeitar", "Reject", "Rechazar")}
             </button>
             <button
               onClick={() => decide(piece.id, "approved")}
               className="flex-1 flex items-center justify-center gap-2 py-4 font-mono text-sm uppercase tracking-widest font-bold border border-success/40 text-success hover:bg-success/10 transition-colors"
               style={{ boxShadow: "0 0 16px hsl(var(--success)/0.15)" }}
-              title="Aprovar — esta versão será disparada automaticamente na data programada"
+              title={t("Aprovar — esta versão será disparada automaticamente na data programada", "Approve — this version will be sent automatically on the scheduled date", "Aprobar — esta versión se enviará automáticamente en la fecha programada")}
             >
               <ThumbsUp className="h-4 w-4" />
-              Aprovar
+              {t("Aprovar", "Approve", "Aprobar")}
             </button>
           </div>
 

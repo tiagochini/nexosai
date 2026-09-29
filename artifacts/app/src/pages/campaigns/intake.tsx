@@ -29,6 +29,7 @@ import {
 import { toast } from "sonner";
 import nexosLogo from "/nexos-logo.png";
 import { BudgetSimulator } from "@/components/budget-simulator";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 interface ChatFile {
   name: string;
@@ -63,6 +64,14 @@ const INTAKE_AGENTS: Record<string, { name: string; role: string; specialty: str
   jeff:   { name: "Jeff",   role: "Estrategista de Receita",      specialty: "Metas · Orçamento · ROI",             color: "text-yellow-400",  initial: "J" },
   chet:   { name: "Chet",   role: "Diretor de Estratégia",        specialty: "Modelo de Campanha · Funil",           color: "text-violet-400",  initial: "C" },
   walker: { name: "Walker", role: "Especialista em Execução",     specialty: "PLF Avançado · Copy de Lançamento",   color: "text-orange-400",  initial: "W" },
+};
+
+const agentCopy: Record<string, { role: [string, string, string]; specialty: [string, string, string] }> = {
+  erico: { role: ["Estrategista de Produto", "Product Strategist", "Estratega de producto"], specialty: ["PLF · Fórmula de Lançamento", "PLF · Product Launch Formula", "PLF · Fórmula de lanzamiento"] },
+  ryan: { role: ["Especialista em Audiência", "Audience Specialist", "Especialista en audiencia"], specialty: ["Avatar · Psicologia do Comprador", "Avatar · Buyer Psychology", "Avatar · Psicología del comprador"] },
+  jeff: { role: ["Estrategista de Receita", "Revenue Strategist", "Estratega de ingresos"], specialty: ["Metas · Orçamento · ROI", "Goals · Budget · ROI", "Metas · Presupuesto · ROI"] },
+  chet: { role: ["Diretor de Estratégia", "Strategy Director", "Director de estrategia"], specialty: ["Modelo de Campanha · Funil", "Campaign Model · Funnel", "Modelo de campaña · Embudo"] },
+  walker: { role: ["Especialista em Execução", "Execution Specialist", "Especialista en ejecución"], specialty: ["PLF Avançado · Copy de Lançamento", "Advanced PLF · Launch Copy", "PLF avanzado · Copy de lanzamiento"] },
 };
 
 // ── Campaign type/track label maps ─────────────────────────────────────────────
@@ -104,6 +113,9 @@ function AgentAvatar({ agentId, size = "sm" }: { agentId?: string; size?: "sm" |
 }
 
 function ChatBubble({ msg, showAgentLabel }: { msg: ChatMessage; showAgentLabel?: boolean }) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
+  const numberLocale = intlLocale(locale);
   const isUser = msg.role === "user";
   const agent = (!isUser && msg.agentId) ? INTAKE_AGENTS[msg.agentId] : null;
 
@@ -114,7 +126,7 @@ function ChatBubble({ msg, showAgentLabel }: { msg: ChatMessage; showAgentLabel?
         {!isUser && agent && showAgentLabel && (
           <div className="flex items-center gap-2 px-1">
             <span className={`font-mono text-[10px] font-bold uppercase tracking-widest ${agent.color}`}>{agent.name}</span>
-            <span className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-wider">{agent.role}</span>
+            <span className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-wider">{agentCopy[msg.agentId!]?.role ? t(...agentCopy[msg.agentId!].role) : agent.role}</span>
           </div>
         )}
 
@@ -134,7 +146,7 @@ function ChatBubble({ msg, showAgentLabel }: { msg: ChatMessage; showAgentLabel?
             ) : (
               <a key={fi} href={f.url} target="_blank" rel="noreferrer"
                 className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/40 transition-colors px-3 py-2 max-w-[200px]"
-                title={`Abrir ${f.name}`}>
+                title={`${t("Abrir", "Open", "Abrir")} ${f.name}`}>
                 <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
                   style={{ background: f.mimeType === "application/pdf" ? "hsl(0 50% 12%)" : "hsl(220 30% 14%)" }}>
                   <File className={`h-4 w-4 ${f.mimeType === "application/pdf" ? "text-red-400" : "text-blue-400"}`} />
@@ -142,7 +154,7 @@ function ChatBubble({ msg, showAgentLabel }: { msg: ChatMessage; showAgentLabel?
                 <div className="flex flex-col min-w-0">
                   <span className="text-[11px] font-medium text-foreground truncate leading-tight">{f.name}</span>
                   <span className="text-[10px] text-muted-foreground mt-0.5">
-                    {f.size ? (f.size >= 1_000_000 ? `${(f.size / 1_000_000).toFixed(1)} MB` : `${Math.round(f.size / 1_000)} KB`) : "Abrir ↗"}
+                    {f.size ? (f.size >= 1_000_000 ? `${(f.size / 1_000_000).toLocaleString(numberLocale, { maximumFractionDigits: 1 })} MB` : `${new Intl.NumberFormat(numberLocale).format(Math.round(f.size / 1_000))} KB`) : `${t("Abrir", "Open", "Abrir")} ↗`}
                   </span>
                 </div>
               </a>
@@ -181,10 +193,45 @@ function TypeProposalCard({
   onReject: () => void;
   confirming: boolean;
 }) {
+  const t = useUiText();
   const typeInfo = TYPE_LABELS[proposedType];
   const trackInfo = TRACK_LABELS[proposedTrack];
   if (!typeInfo || !trackInfo) return null;
   const Icon = typeInfo.icon;
+  const typeLabels: Record<string, [string, string, string]> = {
+    launch: ["Lançamento", "Launch", "Lanzamiento"],
+    perpetual_launch: ["Perpétuo", "Evergreen", "Perpetuo"],
+    flash_sale: ["Flash Sale", "Flash Sale", "Venta relámpago"],
+    live_sale: ["Live Sale", "Live Sale", "Venta en vivo"],
+    continuous_sales: ["Contínuo", "Ongoing", "Continuo"],
+    subscription_growth: ["Assinatura", "Subscription", "Suscripción"],
+    authority: ["Autoridade", "Authority", "Autoridad"],
+    audience_growth: ["Crescimento", "Growth", "Crecimiento"],
+    affiliate: ["Afiliado", "Affiliate", "Afiliado"],
+  };
+  const typeTags: Record<string, [string, string, string]> = {
+    launch: ["PLF / Fórmula", "PLF / Formula", "PLF / Fórmula"],
+    perpetual_launch: ["Evergreen", "Evergreen", "Evergreen"],
+    flash_sale: ["24h a 72h", "24h to 72h", "24h a 72h"],
+    live_sale: ["Vendas ao vivo", "Live sales", "Ventas en vivo"],
+    continuous_sales: ["Vendas diárias", "Daily sales", "Ventas diarias"],
+    subscription_growth: ["Clube / Membros", "Club / Members", "Club / Miembros"],
+    authority: ["Branding", "Branding", "Marca"],
+    audience_growth: ["Audiência orgânica", "Organic audience", "Audiencia orgánica"],
+    affiliate: ["Produto de terceiros", "Third-party product", "Producto de terceros"],
+  };
+  const trackLabels: Record<string, [string, string, string]> = {
+    six_digits: ["6 Dígitos", "6 Figures", "6 cifras"],
+    eight_digits: ["8 Dígitos", "8 Figures", "8 cifras"],
+    ten_digits: ["10 Dígitos", "10 Figures", "10 cifras"],
+    not_applicable: ["Crescimento", "Growth", "Crecimiento"],
+  };
+  const trackRanges: Record<string, [string, string, string]> = {
+    six_digits: ["R$ 100k – 999k em 7 dias", "R$100k–999k in 7 days", "R$100k–999k en 7 días"],
+    eight_digits: ["R$ 10M – 99M em 7 dias", "R$10M–99M in 7 days", "R$10M–99M en 7 días"],
+    ten_digits: ["R$ 100M+ em 7 dias", "R$100M+ in 7 days", "R$100M+ en 7 días"],
+    not_applicable: ["Sem meta de faturamento concentrado", "No concentrated revenue target", "Sin meta de ingresos concentrados"],
+  };
 
   return (
     <div className="border border-primary/40 bg-primary/5 p-4 rounded-sm animate-in slide-in-from-bottom-3 duration-300 relative">
@@ -194,7 +241,7 @@ function TypeProposalCard({
       <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary/50" />
 
       <div className="font-mono text-[10px] uppercase tracking-widest text-primary/60 mb-3">
-        Modelo Recomendado pelo agente
+        {t("Modelo Recomendado pelo agente", "Model Recommended by Agent", "Modelo recomendado por el agente")}
       </div>
 
       <div className="flex items-start gap-3 mb-3">
@@ -203,14 +250,14 @@ function TypeProposalCard({
         </div>
         <div>
           <div className={`font-mono font-bold text-base uppercase tracking-tighter ${typeInfo.color}`}>
-            {typeInfo.label}
+            {t(...typeLabels[proposedType])}
           </div>
           <div className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest">
-            {typeInfo.tag}
+            {t(...typeTags[proposedType])}
           </div>
           <div className="font-mono text-xs text-muted-foreground/80 mt-1">
-            Trilha: <span className="text-foreground font-bold">{trackInfo.label}</span>
-            <span className="text-muted-foreground/50 ml-1">({trackInfo.range})</span>
+            {t("Trilha:", "Track:", "Ruta:")} <span className="text-foreground font-bold">{t(...trackLabels[proposedTrack])}</span>
+            <span className="text-muted-foreground/50 ml-1">({t(...trackRanges[proposedTrack])})</span>
           </div>
         </div>
       </div>
@@ -228,8 +275,8 @@ function TypeProposalCard({
           className="flex-1 rounded-none font-mono uppercase tracking-widest h-10 gap-2 btn-weapon-primary text-xs"
         >
           {confirming
-            ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Confirmando...</>
-            : <><Check className="h-3.5 w-3.5" />Confirmar esse modelo</>
+            ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t("Confirmando...", "Confirming...", "Confirmando...")}</>
+            : <><Check className="h-3.5 w-3.5" />{t("Confirmar esse modelo", "Confirm this model", "Confirmar este modelo")}</>
           }
         </Button>
         <Button
@@ -238,22 +285,12 @@ function TypeProposalCard({
           variant="outline"
           className="rounded-none font-mono uppercase tracking-widest h-10 px-4 gap-2 text-xs border-border/50"
         >
-          <X className="h-3.5 w-3.5" />Quero outro
+          <X className="h-3.5 w-3.5" />{t("Quero outro", "Choose another", "Quiero otro")}
         </Button>
       </div>
     </div>
   );
 }
-
-// ── Launch model labels ─────────────────────────────────────────────────────
-const MODEL_LABELS: Record<string, string> = {
-  plf: "PLF — Product Launch Formula",
-  formula_de_lancamento: "Fórmula de Lançamento",
-  semente: "Lançamento Semente",
-  afiliado: "Lançamento de Afiliado",
-  perpetual: "Perpétuo / Evergreen",
-  custom: "Personalizado",
-};
 
 const TIMELINE_PHASES = [
   { day: "D-7 → D-5", phase: "Aquecimento",   desc: "Autoridade · Antecipação · Audiência aquecida",  icon: Flame,    color: "text-orange-400" },
@@ -284,9 +321,12 @@ function MasterPlanView({
   onBack: () => void;
   finalizing: boolean;
 }) {
-  const productName   = formData["product.name"]  || formData["product.nome"]  || "Produto";
+  const t = useUiText();
+  const { locale } = useUiLocale();
+  const numberLocale = intlLocale(locale);
+  const productName   = formData["product.name"]  || formData["product.nome"]  || t("Produto", "Product", "Producto");
   const rawPrice      = Number(formData["product.price"] || formData["product.preco"] || 0);
-  const audience      = formData["audience.avatar"] || formData["audience.target"] || formData["audience.primaryPersona"] || "Definido no briefing";
+  const audience      = formData["audience.avatar"] || formData["audience.target"] || formData["audience.primaryPersona"] || t("Definido no briefing", "Defined in the briefing", "Definido en el briefing");
   const rawBudget     = Number(formData["campaign.budget.total"] || formData["campaign.budget"] || 0);
   const rawRevenue    = Number(formData["campaign.revenueTarget"] || 0);
   const launchModel   = formData["campaign.model"] || formData["launch.model"] || formData["campaign.type"] || "plf";
@@ -294,10 +334,36 @@ function MasterPlanView({
   const rawDuration   = Number(formData["launch.duration"] || 7);
   const trackKey      = formData["campaign.track"] || formData["launch.track"] || "six_digits";
   const track         = TRACK_LABELS[trackKey] ?? TRACK_LABELS["six_digits"];
-  const modelLabel    = MODEL_LABELS[launchModel] ?? launchModel;
+  const modelLabel    = ({
+    plf: t("PLF — Product Launch Formula", "PLF — Product Launch Formula", "PLF — Fórmula de lanzamiento"),
+    formula_de_lancamento: t("Fórmula de Lançamento", "Product Launch Formula", "Fórmula de lanzamiento"),
+    semente: t("Lançamento Semente", "Seed Launch", "Lanzamiento semilla"),
+    afiliado: t("Lançamento de Afiliado", "Affiliate Launch", "Lanzamiento de afiliados"),
+    perpetual: t("Perpétuo / Evergreen", "Evergreen", "Perpetuo / Evergreen"),
+    custom: t("Personalizado", "Custom", "Personalizado"),
+    launch: t("Lançamento", "Launch", "Lanzamiento"),
+    perpetual_launch: t("Perpétuo", "Evergreen", "Perpetuo"),
+    flash_sale: t("Flash Sale", "Flash Sale", "Venta relámpago"),
+    live_sale: t("Live Sale", "Live Sale", "Venta en vivo"),
+    continuous_sales: t("Contínuo", "Ongoing", "Continuo"),
+    subscription_growth: t("Assinatura", "Subscription", "Suscripción"),
+    authority: t("Autoridade", "Authority", "Autoridad"),
+    audience_growth: t("Crescimento", "Growth", "Crecimiento"),
+    affiliate: t("Afiliado", "Affiliate", "Afiliado"),
+  } as Record<string, string>)[launchModel] ?? launchModel;
+  const agentCount = new Intl.NumberFormat(numberLocale).format(EXEC_AGENTS.length);
+  const localizedTrack = ({
+    six_digits: [t("6 Dígitos", "6 Figures", "6 cifras"), t("R$ 100k – 999k em 7 dias", "R$100k–999k in 7 days", "R$100k–999k en 7 días")],
+    eight_digits: [t("8 Dígitos", "8 Figures", "8 cifras"), t("R$ 10M – 99M em 7 dias", "R$10M–99M in 7 days", "R$10M–99M en 7 días")],
+    ten_digits: [t("10 Dígitos", "10 Figures", "10 cifras"), t("R$ 100M+ em 7 dias", "R$100M+ in 7 days", "R$100M+ en 7 días")],
+    not_applicable: [t("Crescimento", "Growth", "Crecimiento"), t("Sem meta de faturamento concentrado", "No concentrated revenue target", "Sin meta de ingresos concentrados")],
+  } as Record<string, [string, string]>)[trackKey] ?? [
+    t("6 Dígitos", "6 Figures", "6 cifras"),
+    t("R$ 100k – 999k em 7 dias", "R$100k–999k in 7 days", "R$100k–999k en 7 días"),
+  ];
 
   const fmtBRL = (v: number) =>
-    v > 0 ? `R$${v.toLocaleString("pt-BR")}` : "—";
+    v > 0 ? new Intl.NumberFormat(numberLocale, { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(v) : "—";
 
   // Estimated sales count
   const estSales = rawPrice > 0 && rawRevenue > 0 ? Math.ceil(rawRevenue / rawPrice) : null;
@@ -310,18 +376,18 @@ function MasterPlanView({
           onClick={onBack}
           className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
-          <ArrowLeft className="h-3 w-3" />Voltar ao Briefing
+          <ArrowLeft className="h-3 w-3" />{t("Voltar ao Briefing", "Back to Briefing", "Volver al briefing")}
         </button>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
               <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-black text-foreground">
-                Master Plan do Lançamento
+                {t("Master Plan do Lançamento", "Launch Master Plan", "Plan maestro de lanzamiento")}
               </h1>
             </div>
             <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
-              Revise o plano gerado pela inteligência NexOS · Aprove para iniciar os agentes
+              {t("Revise o plano gerado pela inteligência NexOS · Aprove para iniciar os agentes", "Review the plan generated by NexOS intelligence · Approve to start the agents", "Revisa el plan generado por la inteligencia NexOS · Aprueba para iniciar los agentes")}
             </p>
           </div>
           <Badge
@@ -336,10 +402,10 @@ function MasterPlanView({
       {/* ── Summary grid ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
-          { icon: Target,      label: "Meta de Receita",  value: fmtBRL(rawRevenue),            sub: estSales ? `≈ ${estSales} vendas` : undefined },
-          { icon: DollarSign,  label: "Preço do Produto", value: fmtBRL(rawPrice),               sub: "ticket unitário" },
-          { icon: BarChart3,   label: "Budget de Tráfego",value: rawBudget > 0 ? fmtBRL(rawBudget) : "A definir", sub: rawRevenue > 0 && rawBudget > 0 ? `ROAS alvo: ${(rawRevenue / rawBudget).toFixed(1)}x` : undefined },
-          { icon: Calendar,    label: "Duração",          value: `${rawDuration} dias`,          sub: modelLabel },
+          { icon: Target,      label: t("Meta de Receita", "Revenue Target", "Meta de ingresos"),  value: fmtBRL(rawRevenue),            sub: estSales ? `≈ ${new Intl.NumberFormat(numberLocale).format(estSales)} ${t("vendas", "sales", "ventas")}` : undefined },
+          { icon: DollarSign,  label: t("Preço do Produto", "Product Price", "Precio del producto"), value: fmtBRL(rawPrice),               sub: t("ticket unitário", "unit price", "precio unitario") },
+          { icon: BarChart3,   label: t("Budget de Tráfego", "Ad Budget", "Presupuesto de anuncios"),value: rawBudget > 0 ? fmtBRL(rawBudget) : t("A definir", "To be defined", "Por definir"), sub: rawRevenue > 0 && rawBudget > 0 ? `${t("ROAS alvo:", "Target ROAS:", "ROAS objetivo:")} ${(rawRevenue / rawBudget).toLocaleString(numberLocale, { maximumFractionDigits: 1 })}x` : undefined },
+          { icon: Calendar,    label: t("Duração", "Duration", "Duración"),          value: `${new Intl.NumberFormat(numberLocale).format(rawDuration)} ${t("dias", "days", "días")}`,          sub: modelLabel },
         ].map(({ icon: Icon, label, value, sub }) => (
           <div key={label} className="border border-border/40 bg-card/40 p-4 flex flex-col gap-1.5">
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -357,26 +423,26 @@ function MasterPlanView({
         <div className="border border-border/40 bg-card/40 p-4 space-y-2">
           <div className="flex items-center gap-2 mb-3">
             <Star className="h-3.5 w-3.5 text-primary" />
-            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Produto</span>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Produto", "Product", "Producto")}</span>
           </div>
           <p className="font-mono text-base font-bold text-foreground">{productName}</p>
           {transformation && (
             <p className="font-mono text-xs text-muted-foreground/80 leading-relaxed italic">"{transformation}"</p>
           )}
           <div className="pt-2 border-t border-border/30">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Modelo de Lançamento</span>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Modelo de Lançamento", "Launch Model", "Modelo de lanzamiento")}</span>
             <p className="font-mono text-sm font-semibold text-primary mt-0.5">{modelLabel}</p>
           </div>
         </div>
         <div className="border border-border/40 bg-card/40 p-4 space-y-2">
           <div className="flex items-center gap-2 mb-3">
             <Users className="h-3.5 w-3.5 text-primary" />
-            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Público-Alvo</span>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Público-Alvo", "Target Audience", "Público objetivo")}</span>
           </div>
           <p className="font-mono text-sm text-foreground/90 leading-relaxed">{audience}</p>
           <div className="pt-2 border-t border-border/30">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Track</span>
-            <p className={`font-mono text-sm font-bold mt-0.5 ${track.color.split(" ")[0]}`}>{track.label} · {track.range}</p>
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Trilha", "Track", "Ruta")}</span>
+            <p className={`font-mono text-sm font-bold mt-0.5 ${track.color.split(" ")[0]}`}>{localizedTrack[0]} · {localizedTrack[1]}</p>
           </div>
         </div>
       </div>
@@ -385,17 +451,27 @@ function MasterPlanView({
       <div className="border border-border/40 bg-card/30 p-5 mb-6">
         <div className="flex items-center gap-2 mb-4">
           <Calendar className="h-4 w-4 text-primary" />
-          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Linha do Tempo de Execução</span>
+          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Linha do Tempo de Execução", "Execution Timeline", "Cronograma de ejecución")}</span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {TIMELINE_PHASES.map(({ day, phase, desc, icon: Icon, color }) => (
+          {TIMELINE_PHASES.map(({ day, phase, desc, icon: Icon, color }, index) => (
             <div key={day} className="border border-border/30 bg-background/40 p-3 space-y-1.5">
               <div className="flex items-center gap-1.5">
                 <Icon className={`h-3.5 w-3.5 ${color}`} />
                 <span className={`font-mono text-[10px] font-bold uppercase tracking-widest ${color}`}>{day}</span>
               </div>
-              <p className="font-mono text-xs font-bold text-foreground">{phase}</p>
-              <p className="font-mono text-[10px] text-muted-foreground/70 leading-relaxed">{desc}</p>
+              <p className="font-mono text-xs font-bold text-foreground">{t(...([
+                ["Aquecimento", "Warm-up", "Calentamiento"], ["Valor", "Value", "Valor"], ["Abertura", "Opening", "Apertura"],
+                ["Carrinho Aberto", "Cart Open", "Carrito abierto"], ["Escassez", "Scarcity", "Escasez"], ["Fechamento", "Closing", "Cierre"],
+              ] as [string, string, string][])[index])}</p>
+              <p className="font-mono text-[10px] text-muted-foreground/70 leading-relaxed">{t(...([
+                ["Autoridade · Antecipação · Audiência aquecida", "Authority · Anticipation · Warm audience", "Autoridad · Anticipación · Audiencia preparada"],
+                ["Conteúdo premium · Prova social · Reciprocidade", "Premium content · Social proof · Reciprocity", "Contenido premium · Prueba social · Reciprocidad"],
+                ["Aviso 24h · Email + WhatsApp simultâneos", "24-hour notice · Email + WhatsApp simultaneously", "Aviso 24 h · Email + WhatsApp simultáneos"],
+                ["Depoimentos · Objeções · Urgência crescente", "Testimonials · Objections · Increasing urgency", "Testimonios · Objeciones · Urgencia creciente"],
+                ["Contagem regressiva · Vagas limitadas", "Countdown · Limited spots", "Cuenta regresiva · Lugares limitados"],
+                ["Último aviso · Encerramento · Conversão final", "Final notice · Closing · Final conversion", "Último aviso · Cierre · Conversión final"],
+              ] as [string, string, string][])[index])}</p>
             </div>
           ))}
         </div>
@@ -405,19 +481,29 @@ function MasterPlanView({
       <div className="border border-border/40 bg-card/30 p-5 mb-6">
         <div className="flex items-center gap-2 mb-4">
           <Bot className="h-4 w-4 text-primary" />
-          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Agentes de IA Alocados</span>
+          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Agentes de IA Alocados", "Assigned AI Agents", "Agentes de IA asignados")}</span>
           <Badge variant="outline" className="rounded-none font-mono text-[10px] px-2 py-0 border-primary/30 text-primary">
-            {EXEC_AGENTS.length} agentes
+            {agentCount} {t("agentes", "agents", "agentes")}
           </Badge>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          {EXEC_AGENTS.map(({ role, provider, specialty }) => (
+          {EXEC_AGENTS.map(({ role, provider, specialty }, index) => (
             <div key={role} className="border border-border/30 bg-background/30 p-3 flex flex-col gap-1">
               <div className="flex items-center justify-between">
-                <span className="font-mono text-xs font-bold text-foreground">{role}</span>
+                <span className="font-mono text-xs font-bold text-foreground">{t(...([
+                  ["Comando", "Command", "Comando"], ["Estrategista", "Strategist", "Estratega"], ["Copywriter", "Copywriter", "Copywriter"],
+                  ["Analista de Público", "Audience Analyst", "Analista de audiencia"], ["Gestor de Tráfego", "Traffic Manager", "Gestor de tráfico"], ["Compliance", "Compliance", "Cumplimiento"],
+                ] as [string, string, string][])[index])}</span>
                 <Badge variant="outline" className="rounded-none font-mono text-[9px] px-1.5 py-0 border-primary/20 text-primary/80">{provider}</Badge>
               </div>
-              <span className="font-mono text-[10px] text-muted-foreground/70">{specialty}</span>
+              <span className="font-mono text-[10px] text-muted-foreground/70">{t(...([
+                ["Orquestra toda a execução", "Orchestrates the entire execution", "Orquesta toda la ejecución"],
+                ["Plano de lançamento detalhado", "Detailed launch plan", "Plan de lanzamiento detallado"],
+                ["Textos persuasivos por plataforma", "Persuasive copy for each platform", "Textos persuasivos por plataforma"],
+                ["Segmentação e personas", "Segmentation and personas", "Segmentación y perfiles"],
+                ["Plano de mídia paga", "Paid media plan", "Plan de medios pagados"],
+                ["LGPD · CVM · padrões éticos", "LGPD · CVM · ethical standards", "LGPD · CVM · estándares éticos"],
+              ] as [string, string, string][])[index])}</span>
             </div>
           ))}
         </div>
@@ -427,12 +513,15 @@ function MasterPlanView({
       <div className="border border-border/40 bg-card/30 p-5 mb-8">
         <div className="flex items-center gap-2 mb-4">
           <Shield className="h-4 w-4 text-primary" />
-          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Gatilhos Mentais do Plano</span>
+          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Gatilhos Mentais do Plano", "Plan Persuasion Triggers", "Disparadores mentales del plan")}</span>
         </div>
         <div className="flex flex-wrap gap-2">
-          {["Autoridade", "Prova Social", "Antecipação", "Escassez", "Urgência", "Reciprocidade", "Comunidade", "Transformação"].map((g) => (
+          {["Autoridade", "Prova Social", "Antecipação", "Escassez", "Urgência", "Reciprocidade", "Comunidade", "Transformação"].map((g, index) => (
             <span key={g} className="border border-border/40 bg-muted/20 px-3 py-1.5 font-mono text-[11px] text-foreground/80 uppercase tracking-wide">
-              {g}
+              {t(...([
+                ["Autoridade", "Authority", "Autoridad"], ["Prova Social", "Social Proof", "Prueba social"], ["Antecipação", "Anticipation", "Anticipación"], ["Escassez", "Scarcity", "Escasez"],
+                ["Urgência", "Urgency", "Urgencia"], ["Reciprocidade", "Reciprocity", "Reciprocidad"], ["Comunidade", "Community", "Comunidad"], ["Transformação", "Transformation", "Transformación"],
+              ] as [string, string, string][])[index])}
             </span>
           ))}
         </div>
@@ -442,10 +531,10 @@ function MasterPlanView({
       <div className="border border-primary/30 bg-primary/5 p-6 flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <p className="font-mono text-sm font-bold text-foreground">
-            Plano completo · {EXEC_AGENTS.length} agentes prontos para execução
+            {t("Plano completo", "Complete plan", "Plan completo")} · {agentCount} {t("agentes prontos para execução", "agents ready to execute", "agentes listos para ejecutar")}
           </p>
           <p className="font-mono text-[11px] text-muted-foreground mt-0.5">
-            Ao aprovar, os agentes iniciam imediatamente — estratégia, conteúdo e calendário editorial
+            {t("Ao aprovar, os agentes iniciam imediatamente — estratégia, conteúdo e calendário editorial", "Once approved, the agents start immediately — strategy, content, and editorial calendar", "Al aprobar, los agentes comienzan de inmediato — estrategia, contenido y calendario editorial")}
           </p>
         </div>
         <Button
@@ -454,8 +543,8 @@ function MasterPlanView({
           className="font-mono uppercase tracking-widest rounded-none gap-2 h-14 px-8 text-sm btn-weapon-primary whitespace-nowrap shrink-0"
         >
           {finalizing
-            ? <><Loader2 className="h-5 w-5 animate-spin" />Iniciando Agentes...</>
-            : <><Rocket className="h-5 w-5" />Aprovar e Iniciar Agentes<ChevronRight className="h-5 w-5" /></>
+            ? <><Loader2 className="h-5 w-5 animate-spin" />{t("Iniciando Agentes...", "Starting Agents...", "Iniciando agentes...")}</>
+            : <><Rocket className="h-5 w-5" />{t("Aprovar e Iniciar Agentes", "Approve and Start Agents", "Aprobar e iniciar agentes")}<ChevronRight className="h-5 w-5" /></>
           }
         </Button>
       </div>
@@ -466,6 +555,9 @@ function MasterPlanView({
 }
 
 export default function CampaignIntake() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
+  const numberLocale = intlLocale(locale);
   const [, params] = useRoute("/campaigns/:id/intake");
   const campaignId = params?.id || "";
   const [, setLocation] = useLocation();
@@ -560,9 +652,9 @@ export default function CampaignIntake() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetIntakeQueryKey(campaignId) });
         queryClient.invalidateQueries({ queryKey: getGetIntakeScoreQueryKey(campaignId) });
-        toast.success("Dados salvos.");
+        toast.success(t("Dados salvos.", "Data saved.", "Datos guardados."));
       },
-      onError: () => toast.error("Erro ao salvar."),
+      onError: () => toast.error(t("Erro ao salvar.", "Error saving data.", "Error al guardar los datos.")),
     },
   });
 
@@ -643,7 +735,7 @@ export default function CampaignIntake() {
         setSending(false);
         setMessages(prev => prev.length === 0 ? [{
           role: "assistant" as const,
-          content: "Oi! Aqui é o especialista de briefing do NexOS. 👋\n\nVou fazer algumas perguntas simples sobre o seu produto para montar o plano de lançamento — não precisa ser técnico, pode responder com suas próprias palavras.\n\nPrimeira pergunta: qual é o nome do seu produto e o que ele ensina ou entrega para quem compra?",
+          content: t("Oi! Aqui é o especialista de briefing do NexOS. 👋\n\nVou fazer algumas perguntas simples sobre o seu produto para montar o plano de lançamento — não precisa ser técnico, pode responder com suas próprias palavras.\n\nPrimeira pergunta: qual é o nome do seu produto e o que ele ensina ou entrega para quem compra?", "Hi! I'm the NexOS briefing specialist. 👋\n\nI'll ask a few simple questions about your product to put together the launch plan — no technical details needed; answer in your own words.\n\nFirst question: what is your product called, and what does it teach or deliver to customers?", "¡Hola! Soy el especialista de briefing de NexOS. 👋\n\nTe haré algunas preguntas sencillas sobre tu producto para preparar el plan de lanzamiento. No hace falta usar términos técnicos; responde con tus propias palabras.\n\nPrimera pregunta: ¿cómo se llama tu producto y qué enseña u ofrece a quienes lo compran?"),
         }] : prev);
         setTimeout(() => inputRef.current?.focus(), 200);
       }, 25_000);
@@ -669,7 +761,7 @@ export default function CampaignIntake() {
         clearTimeout(timeoutId);
         setMessages([{
           role: "assistant" as const,
-          content: "Oi! Aqui é o especialista de briefing do NexOS. 👋\n\nVou fazer algumas perguntas simples sobre o seu produto para montar o plano de lançamento — não precisa ser técnico, pode responder com suas próprias palavras.\n\nPrimeira pergunta: qual é o nome do seu produto e o que ele ensina ou entrega para quem compra?",
+          content: t("Oi! Aqui é o especialista de briefing do NexOS. 👋\n\nVou fazer algumas perguntas simples sobre o seu produto para montar o plano de lançamento — não precisa ser técnico, pode responder com suas próprias palavras.\n\nPrimeira pergunta: qual é o nome do seu produto e o que ele ensina ou entrega para quem compra?", "Hi! I'm the NexOS briefing specialist. 👋\n\nI'll ask a few simple questions about your product to put together the launch plan — no technical details needed; answer in your own words.\n\nFirst question: what is your product called, and what does it teach or deliver to customers?", "¡Hola! Soy el especialista de briefing de NexOS. 👋\n\nTe haré algunas preguntas sencillas sobre tu producto para preparar el plan de lanzamiento. No hace falta usar términos técnicos; responde con tus propias palabras.\n\nPrimera pregunta: ¿cómo se llama tu producto y qué enseña u ofrece a quienes lo compran?"),
         }]);
       } finally {
         clearTimeout(timeoutId);
@@ -680,7 +772,7 @@ export default function CampaignIntake() {
     };
 
     void autoTrigger();
-  }, [isLoading, campaignId, data]);
+  }, [isLoading, campaignId, data, t]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -715,7 +807,7 @@ export default function CampaignIntake() {
       if (r1.totalRequired != null) setTotalRequired(r1.totalRequired);
       if (result.isComplete) { setChatComplete(true); try { localStorage.setItem(`nexos:chatComplete:${campaignId}`, "1"); } catch { /* ignore */ } }
     } catch {
-      toast.error("Erro ao confirmar modelo. Tente novamente.");
+      toast.error(t("Erro ao confirmar modelo. Tente novamente.", "Error confirming the model. Please try again.", "Error al confirmar el modelo. Inténtalo de nuevo."));
     } finally {
       sendingRef.current = false;
       setConfirmingType(false);
@@ -739,7 +831,7 @@ export default function CampaignIntake() {
         setPendingProposal({ type: result.proposedType, track: result.proposedTrack, reason: result.proposedReason });
       }
     } catch {
-      toast.error("Erro. Tente novamente.");
+      toast.error(t("Erro. Tente novamente.", "Error. Please try again.", "Error. Inténtalo de nuevo."));
     } finally {
       sendingRef.current = false;
       setSending(false);
@@ -783,7 +875,7 @@ export default function CampaignIntake() {
   const toggleVoice = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SpeechRec = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
-    if (!SpeechRec) { toast.error("Voz não suportada. Use Chrome ou Edge."); return; }
+    if (!SpeechRec) { toast.error(t("Voz não suportada. Use Chrome ou Edge.", "Voice input isn't supported. Use Chrome or Edge.", "La entrada de voz no es compatible. Usa Chrome o Edge.")); return; }
 
     // If already listening → stop + cancel countdown
     if (isListening) {
@@ -832,7 +924,7 @@ export default function CampaignIntake() {
     rec.onerror = () => {
       setIsListening(false);
       stopAutoSendCountdown();
-      toast.error("Erro ao capturar áudio. Verifique as permissões do microfone.");
+      toast.error(t("Erro ao capturar áudio. Verifique as permissões do microfone.", "Couldn't capture audio. Check microphone permissions.", "No se pudo capturar el audio. Revisa los permisos del micrófono."));
     };
 
     recognitionRef.current = rec;
@@ -881,17 +973,17 @@ export default function CampaignIntake() {
     const isAudio = file.type.startsWith("audio/");
     const isVideo = file.type.startsWith("video/");
     if (!isAudio && !isVideo) {
-      toast.error("Use um arquivo de áudio ou vídeo.");
+      toast.error(t("Use um arquivo de áudio ou vídeo.", "Select an audio or video file.", "Selecciona un archivo de audio o video."));
       return;
     }
     if (file.size > 100 * 1024 * 1024) {
-      toast.error("Arquivo muito grande (máx 100 MB).");
+      toast.error(t("Arquivo muito grande (máx 100 MB).", "File is too large (max 100 MB).", "El archivo es demasiado grande (máx. 100 MB)."));
       return;
     }
 
     setIsTranscribing(true);
     const toastId = toast.loading(
-      isAudio ? "Transcrevendo áudio via transcrição…" : "Extraindo e transcrevendo áudio do vídeo…",
+      isAudio ? t("Transcrevendo áudio via transcrição…", "Transcribing audio…", "Transcribiendo audio…") : t("Extraindo e transcrevendo áudio do vídeo…", "Extracting and transcribing audio from video…", "Extrayendo y transcribiendo el audio del video…"),
       { duration: Infinity },
     );
 
@@ -906,20 +998,20 @@ export default function CampaignIntake() {
 
       toast.dismiss(toastId);
       if (!resp.transcript) {
-        toast.error("Nenhuma fala detectada no arquivo. Verifique o áudio e tente novamente.");
+        toast.error(t("Nenhuma fala detectada no arquivo. Verifique o áudio e tente novamente.", "No speech detected in the file. Check the audio and try again.", "No se detectó voz en el archivo. Revisa el audio e inténtalo de nuevo."));
         return;
       }
 
       // Inject transcript into the textarea so user can review before sending
       setInputValue(prev => prev ? `${prev}\n\n${resp.transcript}` : resp.transcript);
       toast.success(
-        `Transcrição concluída — ${resp.transcript.length} caracteres extraídos. Revise e envie.`,
+        t(`Transcrição concluída — ${resp.transcript.length} caracteres extraídos. Revise e envie.`, `Transcription complete — ${new Intl.NumberFormat(numberLocale).format(resp.transcript.length)} characters extracted. Review and send.`, `Transcripción completada: se extrajeron ${new Intl.NumberFormat(numberLocale).format(resp.transcript.length)} caracteres. Revísala y envíala.`),
         { duration: 5000 },
       );
       setTimeout(() => inputRef.current?.focus(), 200);
     } catch (err) {
       toast.dismiss(toastId);
-      const msg = err instanceof Error ? err.message : "Erro ao transcrever arquivo.";
+      const msg = err instanceof Error ? err.message : t("Erro ao transcrever arquivo.", "Error transcribing file.", "Error al transcribir el archivo.");
       toast.error(msg, { duration: 7000 });
     } finally {
       setIsTranscribing(false);
@@ -948,8 +1040,8 @@ export default function CampaignIntake() {
 
     // Build AI message (includes readable file contents)
     const fileContext = filesSnapshot.filter(f => f.content)
-      .map(f => `\n\n--- Arquivo: ${f.name} ---\n${f.content}`).join("");
-    const aiMsg = (userMsg || "(Veja os arquivos abaixo)") + fileContext;
+      .map(f => `\n\n--- ${t("Arquivo", "File", "Archivo")}: ${f.name} ---\n${f.content}`).join("");
+    const aiMsg = (userMsg || `(${t("Veja os arquivos abaixo", "See attached files below", "Consulta los archivos adjuntos")})`) + fileContext;
 
     // Store file metadata with message so they remain clickable in history
     const msgFiles: ChatFile[] = filesSnapshot.map(f => ({
@@ -997,8 +1089,8 @@ export default function CampaignIntake() {
       setInputValue(userMsg);
       toast.error(
         err instanceof ApiError && err.status === 401
-          ? "Sessão expirada. Tente enviar novamente — o token foi renovado automaticamente."
-          : "Erro de comunicação com o agente. Sua mensagem foi preservada. Tente novamente.",
+          ? t("Sessão expirada. Tente enviar novamente — o token foi renovado automaticamente.", "Session expired. Try sending again — the token was automatically refreshed.", "La sesión expiró. Intenta enviar de nuevo; el token se renovó automáticamente.")
+          : t("Erro de comunicação com o agente. Sua mensagem foi preservada. Tente novamente.", "Communication error with the agent. Your message was preserved. Please try again.", "Error de comunicación con el agente. Tu mensaje se conservó. Inténtalo de nuevo."),
         { duration: 6000 },
       );
     } finally {
@@ -1016,18 +1108,18 @@ export default function CampaignIntake() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
-      toast.success("Briefing finalizado! Gerando Masterplan...");
+      toast.success(t("Briefing finalizado! Gerando Masterplan...", "Briefing complete! Generating Master Plan...", "¡Briefing finalizado! Generando el plan maestro..."));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erro ao finalizar";
+      const msg = err instanceof Error ? err.message : t("Erro ao finalizar", "Error finalizing", "Error al finalizar");
       // If intake is "too short", block navigation — otherwise go to campaign regardless
       if (msg.includes("Briefing muito curto")) {
-        toast.error(msg);
+        toast.error(t("Briefing muito curto. Adicione mais detalhes antes de continuar.", "The briefing is too short. Add more details before continuing.", "El briefing es demasiado breve. Añade más detalles antes de continuar."));
         setFinalizing(false);
         return;
       }
       // For any other error (e.g. already finalized), warn but proceed — campaign may
       // already be in analyzing/strategy_ready which is exactly where we want to go.
-      toast.warning("Briefing registrado — abrindo campanha.");
+      toast.warning(t("Briefing registrado — abrindo campanha.", "Briefing saved — opening campaign.", "Briefing registrado; abriendo la campaña."));
     }
     // Auto-trigger strategy pipeline immediately after finalize.
     // Fire-and-forget: we do NOT await this — just kick it off so detail.tsx
@@ -1054,7 +1146,7 @@ export default function CampaignIntake() {
         <Skeleton className="h-8 w-64 bg-muted/20" />
         <div className="flex flex-col items-center justify-center py-16 gap-3">
           <Loader2 className="h-8 w-8 text-primary animate-spin" />
-          <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Inicializando Briefing agente...</p>
+          <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">{t("Inicializando Briefing agente...", "Initializing Agent Briefing...", "Iniciando el briefing del agente...")}</p>
         </div>
       </div>
     );
@@ -1080,7 +1172,7 @@ export default function CampaignIntake() {
       <div className="border-b border-border/50 pb-4">
         <Link href={`/campaigns/${campaignId}`}>
           <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest mb-3 -ml-2 text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-3 w-3 mr-2" />Retornar à Campanha
+            <ArrowLeft className="h-3 w-3 mr-2" />{t("Retornar à Campanha", "Back to Campaign", "Volver a la campaña")}
           </Button>
         </Link>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -1088,24 +1180,24 @@ export default function CampaignIntake() {
             <div className="flex items-center gap-2 mb-1">
               <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
               <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
-                Briefing Estratégico
+                {t("Briefing Estratégico", "Strategic Briefing", "Briefing estratégico")}
               </h1>
             </div>
             <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest">
-              A agente entende seu produto, define o modelo ideal e extrai os dados automaticamente
+              {t("A agente entende seu produto, define o modelo ideal e extrai os dados automaticamente", "The agent learns about your product, defines the ideal model, and extracts the details automatically", "El agente entiende tu producto, define el modelo ideal y extrae los datos automáticamente")}
             </p>
           </div>
           <div className="flex flex-col gap-2 bg-card/30 p-3 border border-border/40 min-w-[220px]">
             <div className="flex justify-between items-center">
-              <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Completude</span>
-              <span className="font-mono text-xs font-bold text-primary">{(chatComplete || isComplete) ? 100 : progress}%</span>
+              <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Completude", "Completion", "Progreso")}</span>
+              <span className="font-mono text-xs font-bold text-primary">{new Intl.NumberFormat(numberLocale).format((chatComplete || isComplete) ? 100 : progress)}%</span>
             </div>
             <Progress value={(chatComplete || isComplete) ? 100 : progress} className="h-1.5 rounded-none bg-muted/30 [&>div]:bg-primary [&>div]:shadow-[0_0_8px_hsl(var(--primary)/0.5)]" />
             {totalRequired > 0 && (
               <div className="flex justify-between items-center pt-0.5">
-                <span className="font-mono text-[10px] text-muted-foreground/60">Obrigatórios</span>
+                <span className="font-mono text-[10px] text-muted-foreground/60">{t("Obrigatórios", "Required", "Obligatorios")}</span>
                 <span className={`font-mono text-[10px] font-semibold ${chatComplete || isComplete || answeredRequired >= totalRequired ? "text-success" : "text-muted-foreground"}`}>
-                  {(chatComplete || isComplete) ? totalRequired : answeredRequired}/{totalRequired}
+                    {new Intl.NumberFormat(numberLocale).format((chatComplete || isComplete) ? totalRequired : answeredRequired)}/{new Intl.NumberFormat(numberLocale).format(totalRequired)}
                 </span>
               </div>
             )}
@@ -1113,7 +1205,7 @@ export default function CampaignIntake() {
               <div className="flex justify-between items-center pt-1 border-t border-border/30">
                 <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Score</span>
                 <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 border-success/30 text-success bg-success/10">
-                  {scoreData.score} · {scoreData.label}
+                  {new Intl.NumberFormat(numberLocale).format(scoreData.score)} · {scoreData.label}
                 </Badge>
               </div>
             )}
@@ -1123,14 +1215,14 @@ export default function CampaignIntake() {
 
       <FeatureOnboarding
         featureKey={FEATURE_KEYS.BRIEFING}
-        title="BRIEFING ESTRATÉGICO"
-        description="Converse com o agente em linguagem natural — ela extrai os dados do seu produto, público e metas, e propõe o modelo de lançamento ideal."
+        title={t("BRIEFING ESTRATÉGICO", "STRATEGIC BRIEFING", "BRIEFING ESTRATÉGICO")}
+        description={t("Converse com o agente em linguagem natural — ela extrai os dados do seu produto, público e metas, e propõe o modelo de lançamento ideal.", "Chat with the agent in natural language — it extracts your product, audience, and goal details, then recommends the ideal launch model.", "Conversa con el agente en lenguaje natural: extrae los datos de tu producto, público y metas, y propone el modelo de lanzamiento ideal.")}
         variant="banner"
         steps={[
-          "Fale sobre seu produto como se estivesse contando para um amigo — sem jargão",
-          "Use voz (microfone), envie um áudio MP3 ou um vídeo de apresentação — o sistema transcreve automaticamente",
-          "A agente propõe o modelo ideal (PLF, Semente, Perpétuo…) com base nas suas respostas",
-          "Quando completude ≥ 80%, o plano completo é gerado em segundos",
+          t("Fale sobre seu produto como se estivesse contando para um amigo — sem jargão", "Describe your product as if telling a friend — no jargon", "Habla de tu producto como si se lo contaras a un amigo, sin tecnicismos"),
+          t("Use voz (microfone), envie um áudio MP3 ou um vídeo de apresentação — o sistema transcreve automaticamente", "Use voice input, upload an MP3 audio file, or send a presentation video — the system transcribes it automatically", "Usa el micrófono, sube un audio MP3 o un video de presentación; el sistema lo transcribe automáticamente"),
+          t("A agente propõe o modelo ideal (PLF, Semente, Perpétuo…) com base nas suas respostas", "The agent recommends the ideal model (PLF, Seed, Evergreen…) based on your answers", "El agente propone el modelo ideal (PLF, Semilla, Perpetuo…) según tus respuestas"),
+          t("Quando completude ≥ 80%, o plano completo é gerado em segundos", "Once completion reaches 80%, the full plan is generated in seconds", "Cuando el progreso alcanza el 80 %, el plan completo se genera en segundos"),
         ]}
       />
 
@@ -1138,8 +1230,8 @@ export default function CampaignIntake() {
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex gap-1 border border-border/50 bg-card/40 p-1 rounded-sm">
           {[
-            { id: "chat" as const, label: "Chat com agente", icon: MessageSquare },
-            { id: "form" as const, label: "Formulário", icon: LayoutList },
+            { id: "chat" as const, label: t("Chat com agente", "Agent Chat", "Chat con el agente"), icon: MessageSquare },
+            { id: "form" as const, label: t("Formulário", "Form", "Formulario"), icon: LayoutList },
           ].map((v) => (
             <button key={v.id} onClick={() => setView(v.id)}
               className={`flex items-center gap-2 px-3 md:px-4 py-2 text-xs md:text-xs font-mono uppercase tracking-widest transition-all rounded-sm
@@ -1164,7 +1256,7 @@ export default function CampaignIntake() {
                     : "border-border/50 bg-card/40 text-muted-foreground hover:text-foreground hover:border-primary/30"}`}
               >
                 <BarChart2 className="h-3.5 w-3.5" />
-                Simulação de Budget
+                {t("Simulação de Budget", "Budget Simulation", "Simulación de presupuesto")}
                 {showSimulator ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
               </button>
             );
@@ -1204,24 +1296,25 @@ export default function CampaignIntake() {
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
                   <span className="font-mono text-[11px] uppercase tracking-widest text-blue-400 font-bold">
-                    Retomando briefing · {progress}% concluído
+                    {t("Retomando briefing", "Resuming briefing", "Retomando el briefing")} · {new Intl.NumberFormat(numberLocale).format(progress)}% {t("concluído", "complete", "completado")}
                   </span>
                 </div>
                 <span className="font-mono text-[11px] text-muted-foreground/60">
-                  {progress < 25 ? "Fase 1 — Produto" :
-                   progress < 50 ? "Fase 2 — Audiência" :
-                   progress < 70 ? "Fase 3 — Metas & Orçamento" :
-                   progress < 90 ? "Fase 4 — Modelo de Campanha" :
-                   "Fase 5 — Perguntas Específicas"}
+                  {progress < 25 ? t("Fase 1 — Produto", "Phase 1 — Product", "Fase 1 — Producto") :
+                   progress < 50 ? t("Fase 2 — Audiência", "Phase 2 — Audience", "Fase 2 — Audiencia") :
+                   progress < 70 ? t("Fase 3 — Metas & Orçamento", "Phase 3 — Goals & Budget", "Fase 3 — Metas y presupuesto") :
+                   progress < 90 ? t("Fase 4 — Modelo de Campanha", "Phase 4 — Campaign Model", "Fase 4 — Modelo de campaña") :
+                   t("Fase 5 — Perguntas Específicas", "Phase 5 — Specific Questions", "Fase 5 — Preguntas específicas")}
                 </span>
               </div>
               {(() => {
                 const highlights: { label: string; value: string }[] = [];
                 const fd = formData;
-                if (fd["product.name"] || fd["product.nome"]) highlights.push({ label: "Produto", value: String(fd["product.name"] ?? fd["product.nome"]) });
-                if (fd["product.price"] || fd["product.preco"]) highlights.push({ label: "Preço", value: `R$${Number(fd["product.price"] ?? fd["product.preco"]).toLocaleString("pt-BR")}` });
-                if (fd["audience.avatar"] || fd["audience.target"]) highlights.push({ label: "Público", value: String(fd["audience.avatar"] ?? fd["audience.target"]).slice(0, 40) + (String(fd["audience.avatar"] ?? fd["audience.target"]).length > 40 ? "…" : "") });
-                if (fd["campaign.budget.total"] || fd["campaign.budget"]) highlights.push({ label: "Budget", value: `R$${Number(fd["campaign.budget.total"] ?? fd["campaign.budget"]).toLocaleString("pt-BR")}` });
+                const formatMoney = (value: unknown) => new Intl.NumberFormat(numberLocale, { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(value));
+                if (fd["product.name"] || fd["product.nome"]) highlights.push({ label: t("Produto", "Product", "Producto"), value: String(fd["product.name"] ?? fd["product.nome"]) });
+                if (fd["product.price"] || fd["product.preco"]) highlights.push({ label: t("Preço", "Price", "Precio"), value: formatMoney(fd["product.price"] ?? fd["product.preco"]) });
+                if (fd["audience.avatar"] || fd["audience.target"]) highlights.push({ label: t("Público", "Audience", "Público"), value: String(fd["audience.avatar"] ?? fd["audience.target"]).slice(0, 40) + (String(fd["audience.avatar"] ?? fd["audience.target"]).length > 40 ? "…" : "") });
+                if (fd["campaign.budget.total"] || fd["campaign.budget"]) highlights.push({ label: t("Orçamento", "Budget", "Presupuesto"), value: formatMoney(fd["campaign.budget.total"] ?? fd["campaign.budget"]) });
                 if (highlights.length === 0) return null;
                 return (
                   <div className="flex flex-wrap gap-x-4 gap-y-1">
@@ -1241,11 +1334,10 @@ export default function CampaignIntake() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-mono text-[11px] text-primary font-bold uppercase tracking-widest mb-0.5">
-                  Como funciona o briefing
+                   {t("Como funciona o briefing", "How the briefing works", "Cómo funciona el briefing")}
                 </div>
                 <span className="text-xs font-mono text-muted-foreground/70 leading-relaxed">
-                  O agente vai fazer perguntas simples sobre seu produto, seu público e seus objetivos.
-                  Responda com suas palavras — não precisa ser técnico. Em ~3 minutos, ela monta tudo.
+                  {t("O agente vai fazer perguntas simples sobre seu produto, seu público e seus objetivos. Responda com suas palavras — não precisa ser técnico. Em ~3 minutos, ela monta tudo.", "The agent will ask simple questions about your product, audience, and goals. Answer in your own words — no technical details needed. It will put everything together in about 3 minutes.", "El agente hará preguntas sencillas sobre tu producto, público y objetivos. Responde con tus propias palabras; no necesitas conocimientos técnicos. En unos 3 minutos, preparará todo.")}
                 </span>
               </div>
             </div>
@@ -1254,7 +1346,7 @@ export default function CampaignIntake() {
           {/* Board of specialists strip */}
           {messages.length === 0 && !sending && (
             <div className="border-x border-b border-border/40 bg-card/20 px-4 py-3 shrink-0">
-              <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-2">Especialistas na sala</div>
+               <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-2">{t("Especialistas na sala", "Specialists in the room", "Especialistas en la sala")}</div>
               <div className="flex gap-3 flex-wrap">
                 {Object.entries(INTAKE_AGENTS).map(([id, ag]) => (
                   <div key={id} className="flex items-center gap-1.5">
@@ -1263,7 +1355,7 @@ export default function CampaignIntake() {
                     </div>
                     <div>
                       <div className={`font-mono text-[10px] font-bold ${ag.color}`}>{ag.name}</div>
-                      <div className="font-mono text-[8px] text-muted-foreground/40 leading-tight">{ag.role}</div>
+                      <div className="font-mono text-[8px] text-muted-foreground/40 leading-tight">{agentCopy[id]?.role ? t(...agentCopy[id].role) : ag.role}</div>
                     </div>
                   </div>
                 ))}
@@ -1285,7 +1377,7 @@ export default function CampaignIntake() {
                       <div key={delay} className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: `${delay}ms` }} />
                     ))}
                   </div>
-                  <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Preparando a sala de briefing...</span>
+                   <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">{t("Preparando a sala de briefing...", "Preparing the briefing room...", "Preparando la sala de briefing...")}</span>
                 </div>
               </div>
             )}
@@ -1345,10 +1437,10 @@ export default function CampaignIntake() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-mono font-bold text-sm uppercase tracking-widest text-success">
-                      Briefing 100% Completo
+                      {t("Briefing 100% Completo", "Briefing 100% Complete", "Briefing 100 % completo")}
                     </div>
                     <p className="font-mono text-[11px] text-muted-foreground/60 mt-0.5">
-                      A agente coletou tudo que precisa para montar o Master Plan de Lançamento
+                      {t("A agente coletou tudo que precisa para montar o Master Plan de Lançamento", "The agent has collected everything needed to create the Launch Master Plan", "El agente recopiló todo lo necesario para preparar el plan maestro de lanzamiento")}
                     </p>
                   </div>
                   <div className="shrink-0 font-mono text-2xl font-black text-success/20 hidden sm:block">
@@ -1364,10 +1456,11 @@ export default function CampaignIntake() {
                   const pPrice = fd["product.price"] ?? fd["product.preco"];
                   const pAudience = fd["audience.avatar"] ?? fd["audience.target"];
                   const pBudget = fd["campaign.budget.total"] ?? fd["campaign.budget"];
-                  if (pName) pills.push({ label: "Produto", value: String(pName) });
-                  if (pPrice) pills.push({ label: "Preço", value: `R$${Number(pPrice).toLocaleString("pt-BR")}` });
-                  if (pAudience) pills.push({ label: "Público", value: String(pAudience).slice(0, 35) + (String(pAudience).length > 35 ? "…" : "") });
-                  if (pBudget) pills.push({ label: "Budget", value: `R$${Number(pBudget).toLocaleString("pt-BR")}` });
+                  const formatMoney = (value: unknown) => new Intl.NumberFormat(numberLocale, { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(value));
+                  if (pName) pills.push({ label: t("Produto", "Product", "Producto"), value: String(pName) });
+                  if (pPrice) pills.push({ label: t("Preço", "Price", "Precio"), value: formatMoney(pPrice) });
+                  if (pAudience) pills.push({ label: t("Público", "Audience", "Público"), value: String(pAudience).slice(0, 35) + (String(pAudience).length > 35 ? "…" : "") });
+                  if (pBudget) pills.push({ label: t("Orçamento", "Budget", "Presupuesto"), value: formatMoney(pBudget) });
                   if (pills.length === 0) return null;
                   return (
                     <div className="flex flex-wrap gap-2">
@@ -1387,11 +1480,11 @@ export default function CampaignIntake() {
                   className="w-full font-mono uppercase tracking-widest rounded-none gap-2 h-14 text-sm btn-weapon-primary"
                   style={{ fontSize: "0.8rem", letterSpacing: "0.12em" }}
                 >
-                  <Rocket className="h-5 w-5" />Ver e Aprovar Master Plan do Lançamento<ChevronRight className="h-5 w-5" />
+                  <Rocket className="h-5 w-5" />{t("Ver e Aprovar Master Plan do Lançamento", "Review and Approve Launch Master Plan", "Ver y aprobar el plan maestro de lanzamiento")}<ChevronRight className="h-5 w-5" />
                 </Button>
 
                 <p className="font-mono text-[10px] text-center text-muted-foreground/40 uppercase tracking-widest -mt-1">
-                  Estratégia · Calendário Editorial · Criativos · Projeções
+                  {t("Estratégia · Calendário Editorial · Criativos · Projeções", "Strategy · Editorial Calendar · Creatives · Projections", "Estrategia · Calendario editorial · Creatividades · Proyecciones")}
                 </p>
               </div>
             </div>
@@ -1425,6 +1518,7 @@ export default function CampaignIntake() {
                           </a>
                           <button
                             onClick={() => removeFile(i)}
+                            aria-label={t(`Remover arquivo ${f.name}`, `Remove file ${f.name}`, `Eliminar archivo ${f.name}`)}
                             className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             <X className="h-2.5 w-2.5" />
@@ -1433,7 +1527,7 @@ export default function CampaignIntake() {
                       ) : (
                         /* Document / audio card — clickable to open, X to remove */
                         <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/30 transition-colors px-3 py-2 pr-2 max-w-[200px]">
-                          <a href={f.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 flex-1 min-w-0" title={`Abrir ${f.name}`}>
+                          <a href={f.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 flex-1 min-w-0" title={`${t("Abrir", "Open", "Abrir")} ${f.name}`}>
                             <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
                               style={{ background: f.isAudioVideo ? "hsl(260 60% 20%)" : f.mimeType === "application/pdf" ? "hsl(0 50% 12%)" : "hsl(220 30% 14%)" }}>
                               {f.isAudioVideo
@@ -1445,12 +1539,13 @@ export default function CampaignIntake() {
                             <div className="flex flex-col min-w-0">
                               <span className="text-[11px] font-medium text-foreground truncate leading-tight">{f.name}</span>
                               <span className="text-[10px] text-muted-foreground mt-0.5">
-                                {f.size ? (f.size >= 1_000_000 ? `${(f.size / 1_000_000).toFixed(1)} MB` : `${Math.round(f.size / 1_000)} KB`) : "Abrir ↗"}
+                                {f.size ? (f.size >= 1_000_000 ? `${(f.size / 1_000_000).toLocaleString(numberLocale, { maximumFractionDigits: 1 })} MB` : `${new Intl.NumberFormat(numberLocale).format(Math.round(f.size / 1_000))} KB`) : `${t("Abrir", "Open", "Abrir")} ↗`}
                               </span>
                             </div>
                           </a>
                           <button
                             onClick={() => removeFile(i)}
+                            aria-label={t(`Remover arquivo ${f.name}`, `Remove file ${f.name}`, `Eliminar archivo ${f.name}`)}
                             className="ml-1 text-muted-foreground hover:text-destructive shrink-0 transition-colors"
                           >
                             <X className="h-3.5 w-3.5" />
@@ -1466,7 +1561,7 @@ export default function CampaignIntake() {
               {isTranscribing && (
                 <div className="flex items-center gap-2 px-3 py-2 border border-violet-500/40 bg-violet-500/10 rounded-sm">
                   <Loader2 className="w-3.5 h-3.5 text-violet-400 animate-spin shrink-0" />
-                  <span className="font-mono text-[11px] text-violet-400 uppercase tracking-widest">Transcrevendo… aguarde</span>
+                  <span className="font-mono text-[11px] text-violet-400 uppercase tracking-widest">{t("Transcrevendo… aguarde", "Transcribing… please wait", "Transcribiendo… espera")}</span>
                 </div>
               )}
 
@@ -1474,9 +1569,9 @@ export default function CampaignIntake() {
               {isListening && !isTranscribing && (
                 <div className="flex items-center gap-2 px-3 py-2 border border-red-500/50 bg-red-500/10 rounded-sm">
                   <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shrink-0" />
-                  <span className="font-mono text-[12px] text-red-400 font-semibold">Ouvindo… fale agora</span>
-                  {voiceMode && <span className="font-mono text-[10px] text-red-400/60 ml-1">— envio automático ao parar</span>}
-                  <button onClick={toggleVoice} aria-label="Parar gravação" className="ml-auto text-red-400 hover:text-red-300 transition-colors">
+                  <span className="font-mono text-[12px] text-red-400 font-semibold">{t("Ouvindo… fale agora", "Listening… speak now", "Escuchando… habla ahora")}</span>
+                  {voiceMode && <span className="font-mono text-[10px] text-red-400/60 ml-1">{t("— envio automático ao parar", "— sends automatically when you stop", "— se envía automáticamente al detenerte")}</span>}
+                  <button onClick={toggleVoice} aria-label={t("Parar gravação", "Stop recording", "Detener grabación")} className="ml-auto text-red-400 hover:text-red-300 transition-colors">
                     <X className="h-4 w-4" />
                   </button>
                 </div>
@@ -1485,8 +1580,8 @@ export default function CampaignIntake() {
               {/* ── Auto-send countdown ── */}
               {autoSendSecsLeft > 0 && !isListening && (
                 <div className="flex items-center gap-3 px-3 py-2 border border-amber-500/50 bg-amber-500/10 rounded-sm">
-                  <span className="font-mono text-[13px] font-bold text-amber-400 tabular-nums w-5 text-center">{autoSendSecsLeft}</span>
-                  <span className="font-mono text-[11px] text-amber-400/80 flex-1">Enviando em {autoSendSecsLeft}s… clique no microfone para cancelar</span>
+                  <span className="font-mono text-[13px] font-bold text-amber-400 tabular-nums w-5 text-center">{new Intl.NumberFormat(numberLocale).format(autoSendSecsLeft)}</span>
+                  <span className="font-mono text-[11px] text-amber-400/80 flex-1">{t(`Enviando em ${new Intl.NumberFormat(numberLocale).format(autoSendSecsLeft)}s… clique no microfone para cancelar`, `Sending in ${new Intl.NumberFormat(numberLocale).format(autoSendSecsLeft)}s… click the microphone to cancel`, `Se enviará en ${new Intl.NumberFormat(numberLocale).format(autoSendSecsLeft)}s… pulsa el micrófono para cancelar`)}</span>
                   <div className="h-1.5 flex-1 max-w-[80px] bg-amber-500/20 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-amber-400 rounded-full transition-all duration-1000"
@@ -1495,10 +1590,10 @@ export default function CampaignIntake() {
                   </div>
                   <button
                     onClick={() => { stopAutoSendCountdown(); }}
-                    aria-label="Cancelar envio automático"
+                    aria-label={t("Cancelar envio automático", "Cancel automatic send", "Cancelar envío automático")}
                     className="shrink-0 font-mono text-[10px] text-amber-400 border border-amber-500/50 px-2 py-0.5 rounded hover:bg-amber-500/20 transition-colors"
                   >
-                    Cancelar
+                    {t("Cancelar", "Cancel", "Cancelar")}
                   </button>
                 </div>
               )}
@@ -1515,7 +1610,7 @@ export default function CampaignIntake() {
                     void handleSend();
                   }
                 }}
-                placeholder={voiceMode ? "Modo voz ativo — clique no microfone para falar, o agente responde e lê a resposta em voz alta" : "Digite sua resposta ou clique no microfone para falar…"}
+                placeholder={voiceMode ? t("Modo voz ativo — clique no microfone para falar, o agente responde e lê a resposta em voz alta", "Voice mode is on — click the microphone to speak; the agent will reply and read its response aloud", "Modo de voz activo: pulsa el micrófono para hablar; el agente responderá y leerá la respuesta en voz alta") : t("Digite sua resposta ou clique no microfone para falar…", "Type your answer or click the microphone to speak…", "Escribe tu respuesta o pulsa el micrófono para hablar…")}
                 disabled={sending || confirmingType}
                 rows={isMobile ? 4 : 6}
                 className="w-full font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-3 resize-y text-foreground placeholder:text-muted-foreground/40 transition-all min-h-[90px]"
@@ -1528,7 +1623,7 @@ export default function CampaignIntake() {
                 <button
                   type="button"
                   onClick={() => handleSetVoiceMode(!voiceMode)}
-                  title={voiceMode ? "Desativar modo voz (auto-envio + leitura em voz alta)" : "Ativar modo voz — fale, o agente responde em voz alta"}
+                  title={voiceMode ? t("Desativar modo voz (auto-envio + leitura em voz alta)", "Turn off voice mode (auto-send + read aloud)", "Desactivar modo de voz (envío automático + lectura en voz alta)") : t("Ativar modo voz — fale, o agente responde em voz alta", "Turn on voice mode — speak and the agent replies aloud", "Activar modo de voz: habla y el agente responderá en voz alta")}
                   className={`h-10 px-3 flex items-center gap-2 border-2 font-mono text-[11px] uppercase tracking-widest font-bold transition-all rounded-sm shrink-0 ${
                     voiceMode
                       ? "border-primary bg-primary/20 text-primary shadow-[0_0_12px_rgba(var(--primary),0.3)]"
@@ -1536,7 +1631,7 @@ export default function CampaignIntake() {
                   }`}
                 >
                   {voiceMode ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-                  <span className="hidden sm:inline">{voiceMode ? "Modo Voz ON" : "Modo Voz"}</span>
+                  <span className="hidden sm:inline">{voiceMode ? t("Modo Voz ON", "Voice Mode ON", "Modo de voz ACTIVADO") : t("Modo Voz", "Voice Mode", "Modo de voz")}</span>
                 </button>
 
                 {/* MIC — gravar fala */}
@@ -1544,7 +1639,8 @@ export default function CampaignIntake() {
                   type="button"
                   onClick={toggleVoice}
                   disabled={sending || confirmingType || isTranscribing}
-                  title={isListening ? "Parar gravação" : "Gravar mensagem por voz (PT-BR)"}
+                  title={isListening ? t("Parar gravação", "Stop recording", "Detener grabación") : t("Gravar mensagem por voz (PT-BR)", "Record a voice message (Brazilian Portuguese)", "Grabar mensaje de voz (portugués brasileño)")}
+                  aria-label={isListening ? t("Parar gravação", "Stop recording", "Detener grabación") : t("Gravar mensagem por voz", "Record a voice message", "Grabar mensaje de voz")}
                   className={`h-10 px-3 flex items-center gap-2 border font-mono text-[11px] uppercase tracking-widest transition-all rounded-sm shrink-0 ${
                     isListening
                       ? "border-red-500 bg-red-500/20 text-red-400 animate-pulse"
@@ -1552,17 +1648,17 @@ export default function CampaignIntake() {
                   }`}
                 >
                   {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                  <span className="hidden sm:inline">{isListening ? "Parar" : "Gravar"}</span>
+                  <span className="hidden sm:inline">{isListening ? t("Parar", "Stop", "Detener") : t("Gravar", "Record", "Grabar")}</span>
                 </button>
 
                 {/* Attach text/image */}
                 <button type="button" onClick={() => fileInputRef.current?.click()}
-                  title="Anexar arquivo ou imagem"
+                  title={t("Anexar arquivo ou imagem", "Attach a file or image", "Adjuntar archivo o imagen")}
                   className="h-10 px-2.5 flex items-center gap-1.5 border border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-all rounded-sm shrink-0">
                   <Paperclip className="h-4 w-4" />
-                  <span className="font-mono text-[10px] uppercase tracking-widest hidden sm:inline">Arquivo</span>
+                  <span className="font-mono text-[10px] uppercase tracking-widest hidden sm:inline">{t("Arquivo", "File", "Archivo")}</span>
                   {pendingFiles.length > 0 && (
-                    <span className="text-[9px] font-bold text-primary bg-primary/20 px-1 rounded-sm">{pendingFiles.length}</span>
+                    <span className="text-[9px] font-bold text-primary bg-primary/20 px-1 rounded-sm">{new Intl.NumberFormat(numberLocale).format(pendingFiles.length)}</span>
                   )}
                 </button>
 
@@ -1570,7 +1666,7 @@ export default function CampaignIntake() {
                 <button type="button"
                   onClick={() => audioInputRef.current?.click()}
                   disabled={isTranscribing || sending}
-                  title="Subir áudio ou vídeo para transcrição automática (MP3, MP4, WAV, WebM…)"
+                  title={t("Subir áudio ou vídeo para transcrição automática (MP3, MP4, WAV, WebM…)", "Upload audio or video for automatic transcription (MP3, MP4, WAV, WebM…)", "Sube audio o video para transcripción automática (MP3, MP4, WAV, WebM…)" )}
                   className={`h-10 px-2.5 flex items-center gap-1.5 border transition-all rounded-sm shrink-0
                     ${isTranscribing
                       ? "border-violet-500/60 bg-violet-500/20 text-violet-400 cursor-not-allowed"
@@ -1579,7 +1675,7 @@ export default function CampaignIntake() {
                     ? <Loader2 className="h-4 w-4 animate-spin" />
                     : <FileAudio className="h-4 w-4" />}
                   <span className="font-mono text-[10px] uppercase tracking-widest hidden sm:inline">
-                    {isTranscribing ? "Transcrevendo…" : "Áudio/Vídeo"}
+                    {isTranscribing ? t("Transcrevendo…", "Transcribing…", "Transcribiendo…") : t("Áudio/Vídeo", "Audio/Video", "Audio/Video")}
                   </span>
                 </button>
 
@@ -1587,7 +1683,7 @@ export default function CampaignIntake() {
 
                 {/* New line (desktop) */}
                 {!isMobile && (
-                  <Button variant="outline" size="sm" title="Nova linha"
+                  <Button variant="outline" size="sm" title={t("Nova linha", "New line", "Nueva línea")}
                     onClick={() => { setInputValue(v => v + "\n"); setTimeout(() => inputRef.current?.focus(), 0); }}
                     disabled={sending || confirmingType}
                     className="font-mono rounded-sm h-10 px-3 border-border/50 text-muted-foreground hover:text-foreground shrink-0">
@@ -1599,16 +1695,16 @@ export default function CampaignIntake() {
                 <Button
                   onClick={() => { stopAutoSendCountdown(); void handleSend(); }}
                   disabled={sending || (inputValue.trim() === "" && pendingFiles.length === 0) || confirmingType}
-                  title="Enviar (Enter)"
+                  title={t("Enviar (Enter)", "Send (Enter)", "Enviar (Enter)")}
                   className="font-mono rounded-sm h-10 px-4 btn-weapon-primary shrink-0 gap-1.5">
-                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4" /><span className="hidden sm:inline text-[11px] uppercase tracking-widest">Enviar</span></>}
+                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4" /><span className="hidden sm:inline text-[11px] uppercase tracking-widest">{t("Enviar", "Send", "Enviar")}</span></>}
                 </Button>
               </div>
 
               <p className="text-[10px] font-mono text-muted-foreground/40 text-right">
                 {voiceMode
-                  ? "Modo voz: clique em Gravar → fale → aguarde 5s → enviado automaticamente · agente responde em voz alta"
-                  : "Enter = enviar · Shift+Enter = nova linha · suporta texto, imagens, PDF, áudio e vídeo"}
+                  ? t("Modo voz: clique em Gravar → fale → aguarde 5s → enviado automaticamente · agente responde em voz alta", "Voice mode: click Record → speak → wait 5s → sent automatically · agent replies aloud", "Modo de voz: pulsa Grabar → habla → espera 5 s → se envía automáticamente · el agente responde en voz alta")
+                  : t("Enter = enviar · Shift+Enter = nova linha · suporta texto, imagens, PDF, áudio e vídeo", "Enter = send · Shift+Enter = new line · supports text, images, PDF, audio, and video", "Enter = enviar · Shift+Enter = nueva línea · admite texto, imágenes, PDF, audio y video")}
               </p>
             </div>
           ))}
@@ -1631,15 +1727,15 @@ export default function CampaignIntake() {
         const sectionEntries = Object.entries(sections);
 
         const sectionLabels: Record<string, string> = {
-          produto: "Produto",
-          audiencia: "Audiência",
-          criador: "Criador",
-          conteudo: "Conteúdo",
-          risco: "Riscos",
-          lancamento: "Lançamento",
-          geral: "Geral",
-          metricas: "Métricas",
-          estrategia: "Estratégia",
+          produto: t("Produto", "Product", "Producto"),
+          audiencia: t("Audiência", "Audience", "Audiencia"),
+          criador: t("Criador", "Creator", "Creador"),
+          conteudo: t("Conteúdo", "Content", "Contenido"),
+          risco: t("Riscos", "Risks", "Riesgos"),
+          lancamento: t("Lançamento", "Launch", "Lanzamiento"),
+          geral: t("Geral", "General", "General"),
+          metricas: t("Métricas", "Metrics", "Métricas"),
+          estrategia: t("Estratégia", "Strategy", "Estrategia"),
         };
 
         return (
@@ -1648,12 +1744,12 @@ export default function CampaignIntake() {
               <Database className="h-3.5 w-3.5 text-primary" />
               <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest flex-1">
                 {isLive
-                  ? "Briefing — modo somente leitura (campanha em execução)"
-                  : "Edite campos individuais — sincronizados com o chat em tempo real"}
+                  ? t("Briefing — modo somente leitura (campanha em execução)", "Briefing — read-only mode (campaign in progress)", "Briefing: solo lectura (campaña en curso)")
+                  : t("Edite campos individuais — sincronizados com o chat em tempo real", "Edit individual fields — synced with chat in real time", "Edita campos individuales; se sincronizan con el chat en tiempo real")}
               </span>
               {isLive && (
                 <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-widest border-yellow-500/40 text-yellow-400">
-                  Read-only
+                          {t("Somente leitura", "Read-only", "Solo lectura")}
                 </Badge>
               )}
             </div>
@@ -1671,14 +1767,14 @@ export default function CampaignIntake() {
               <div className="border border-border/50 bg-card/40 p-8 flex flex-col items-center justify-center text-center gap-3">
                 <Database className="h-8 w-8 text-muted-foreground/30" />
                 <p className="font-mono text-sm text-muted-foreground">
-                  Nenhuma pergunta encontrada para este tipo de campanha.
+                  {t("Nenhuma pergunta encontrada para este tipo de campanha.", "No questions found for this campaign type.", "No se encontraron preguntas para este tipo de campaña.")}
                 </p>
                 <p className="font-mono text-[11px] text-muted-foreground/50">
-                  Use o chat para preencher o briefing com ajuda do agente.
+                  {t("Use o chat para preencher o briefing com ajuda do agente.", "Use the chat to complete the briefing with the agent's help.", "Usa el chat para completar el briefing con ayuda del agente.")}
                 </p>
                 <Button variant="outline" size="sm" onClick={() => setView("chat")}
                   className="font-mono uppercase tracking-widest rounded-none border-border/50 text-xs mt-1">
-                  <MessageSquare className="h-3.5 w-3.5 mr-2" />Abrir Chat
+                  <MessageSquare className="h-3.5 w-3.5 mr-2" />{t("Abrir Chat", "Open Chat", "Abrir chat")}
                 </Button>
               </div>
             ) : (
@@ -1692,7 +1788,7 @@ export default function CampaignIntake() {
                     </div>
                     <div className="p-4 md:p-5 space-y-5">
                       {qs.map((q) => {
-                        const placeholder = (q as unknown as { placeholder?: string }).placeholder ?? "Insira os dados...";
+                        const placeholder = (q as unknown as { placeholder?: string }).placeholder ?? t("Insira os dados...", "Enter details...", "Ingresa los datos...");
                         const desc = (q as unknown as { description?: string }).description;
                         const opts = (q as unknown as { options?: { value: string; label: string }[] }).options;
 
@@ -1746,12 +1842,12 @@ export default function CampaignIntake() {
                   onClick={() => saveMutation.mutate({ campaignId, data: { intakeData: formData } })}
                   disabled={saveMutation.isPending}
                   className="font-mono uppercase tracking-widest rounded-none border-border/50 h-10 text-xs">
-                  {saveMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+                  {saveMutation.isPending ? t("Salvando...", "Saving...", "Guardando...") : t("Salvar Alterações", "Save Changes", "Guardar cambios")}
                 </Button>
                 {isComplete && (
                   <Button onClick={() => setShowMasterPlan(true)}
                     className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10">
-                    <Rocket className="h-4 w-4" />Ver e Aprovar Master Plan
+                    <Rocket className="h-4 w-4" />{t("Ver e Aprovar Master Plan", "Review and Approve Master Plan", "Ver y aprobar el plan maestro")}
                   </Button>
                 )}
               </div>

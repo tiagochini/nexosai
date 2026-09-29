@@ -11,6 +11,7 @@ import {
   ExternalLink, Zap, BarChart3, Gift, ChevronRight,
   ArrowRight, Target, Activity,
 } from "lucide-react";
+import { useUiText } from "@/lib/i18n";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -77,6 +78,7 @@ function StepCard({ num, title, desc }: { num: number; title: string; desc: stri
 
 export default function AffiliatePage() {
   const { user, workspace } = useAuth();
+  const t = useUiText();
   const [copied, setCopied] = useState(false);
   const [joining, setJoining] = useState(false);
 
@@ -99,12 +101,12 @@ export default function AffiliatePage() {
       });
     },
     onSuccess: () => {
-      toast.success("Bem-vindo ao programa de afiliados NexOS!");
+      toast.success(t("Bem-vindo ao programa de afiliados NexOS!", "Welcome to the NexOS affiliate program!", "¡Te damos la bienvenida al programa de afiliados de NexOS!"));
       void refetch();
     },
     onError: () => {
       // In dev: show mock profile
-      toast.success("Cadastro registrado! Seu link foi gerado.");
+      toast.success(t("Cadastro registrado! Seu link foi gerado.", "Registration received! Your link has been generated.", "¡Registro recibido! Se generó tu enlace."));
       void refetch();
     },
   });
@@ -119,7 +121,7 @@ export default function AffiliatePage() {
   const handleCopy = (text: string) => {
     void navigator.clipboard.writeText(text);
     setCopied(true);
-    toast.success("Link copiado!");
+    toast.success(t("Link copiado!", "Link copied!", "¡Enlace copiado!"));
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -142,10 +144,10 @@ export default function AffiliatePage() {
         <div className="border-b border-border/50 pb-5">
           <div className="flex items-center gap-2 mb-1">
             <Star className="h-5 w-5 text-yellow-400" />
-            <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">Programa de Afiliados</h1>
+            <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">{t("Programa de Afiliados", "Affiliate Program", "Programa de afiliados")}</h1>
           </div>
           <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-            Lance o NexOS para o seu público e ganhe comissões por cada indicação
+            {t("Lance o NexOS para o seu público e ganhe comissões por cada indicação", "Launch NexOS to your audience and earn commissions for every referral", "Presenta NexOS a tu audiencia y gana comisiones por cada referido")}
           </p>
         </div>
 
@@ -160,14 +162,14 @@ export default function AffiliatePage() {
             <div className="text-4xl md:text-5xl font-mono font-bold text-yellow-400 mb-2">
               R$ {COMMISSION_BRL.toLocaleString("pt-BR")}
             </div>
-            <div className="font-mono text-sm text-yellow-400/70 uppercase tracking-widest">por conversão ativa</div>
+            <div className="font-mono text-sm text-yellow-400/70 uppercase tracking-widest">{t("por conversão ativa", "per active conversion", "por conversión activa")}</div>
           </div>
 
           <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 text-center">
             {[
-              { label: "Comissão recorrente", value: "Mensal" },
-              { label: "Suporte completo", value: "Incluso" },
-              { label: "Materiais", value: "Prontos" },
+              { label: t("Comissão recorrente", "Recurring commission", "Comisión recurrente"), value: t("Mensal", "Monthly", "Mensual") },
+              { label: t("Suporte completo", "Full support", "Soporte completo"), value: t("Incluso", "Included", "Incluido") },
+              { label: t("Materiais", "Materials", "Materiales"), value: t("Prontos", "Ready", "Listos") },
             ].map(item => (
               <div key={item.label} className="border border-yellow-400/20 bg-yellow-400/5 p-2 sm:p-3">
                 <div className="font-mono font-bold text-sm text-yellow-400">{item.value}</div>
@@ -182,7 +184,7 @@ export default function AffiliatePage() {
             className="w-full rounded-none font-mono uppercase tracking-widest font-bold h-12 text-sm gap-2 bg-yellow-400 hover:bg-yellow-300 text-black border-0"
           >
             <Star className="h-4 w-4" />
-            {joining ? "Processando..." : "Quero Ser Afiliado NexOS"}
+            {joining ? t("Processando...", "Processing...", "Procesando...") : t("Quero ser afiliado NexOS", "Become a NexOS affiliate", "Quiero ser afiliado de NexOS")}
             <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
@@ -190,27 +192,27 @@ export default function AffiliatePage() {
         {/* How it works */}
         <div className="space-y-3">
           <h2 className="font-mono uppercase tracking-widest text-xs text-muted-foreground border-b border-border/30 pb-2">
-            Como funciona
+            {t("Como funciona", "How it works", "Cómo funciona")}
           </h2>
           <StepCard
             num={1}
-            title="Gere seu link único"
-            desc="Ao entrar no programa, você recebe um link personalizado de afiliado que rastreia todos os cliques e conversões do seu público."
+            title={t("Gere seu link único", "Get your unique link", "Genera tu enlace único")}
+            desc={t("Ao entrar no programa, você recebe um link personalizado de afiliado que rastreia todos os cliques e conversões do seu público.", "When you join, you get a personalized affiliate link that tracks all clicks and conversions from your audience.", "Al unirte, recibes un enlace de afiliado personalizado que registra los clics y conversiones de tu audiencia.")}
           />
           <StepCard
             num={2}
-            title="Promova para sua audiência"
-            desc="Use os materiais de marketing prontos (posts, stories, emails, VSL) para apresentar o NexOS para produtores digitais na sua rede."
+            title={t("Promova para sua audiência", "Promote to your audience", "Promociona a tu audiencia")}
+            desc={t("Use os materiais de marketing prontos (posts, stories, emails, VSL) para apresentar o NexOS para produtores digitais na sua rede.", "Use ready-made marketing materials (posts, stories, emails, VSLs) to introduce NexOS to digital creators in your network.", "Usa materiales de marketing listos (publicaciones, historias, correos y VSL) para presentar NexOS a creadores digitales de tu red.")}
           />
           <StepCard
             num={3}
-            title="Receba por cada assinante ativo"
-            desc={`A cada novo usuário que assinar o NexOS pelo seu link, você recebe R$ ${COMMISSION_BRL.toLocaleString("pt-BR")} de comissão enquanto ele permanecer ativo.`}
+            title={t("Receba por cada assinante ativo", "Earn for every active subscriber", "Gana por cada suscriptor activo")}
+            desc={t(`A cada novo usuário que assinar o NexOS pelo seu link, você recebe R$ ${COMMISSION_BRL.toLocaleString("pt-BR")} de comissão enquanto ele permanecer ativo.`, `For every new user who subscribes to NexOS through your link, you receive a R$ ${COMMISSION_BRL.toLocaleString("pt-BR")} commission for as long as they remain active.`, `Por cada nuevo usuario que se suscriba a NexOS desde tu enlace, recibes una comisión de R$ ${COMMISSION_BRL.toLocaleString("pt-BR")} mientras siga activo.`)}
           />
           <StepCard
             num={4}
-            title="Acompanhe tudo no dashboard"
-            desc="Visualize cliques, conversões, comissões pendentes e pagas em tempo real. Relatório semanal automático por email."
+            title={t("Acompanhe tudo no dashboard", "Track everything in your dashboard", "Consulta todo en el panel")}
+            desc={t("Visualize cliques, conversões, comissões pendentes e pagas em tempo real. Relatório semanal automático por email.", "Track clicks, conversions, pending and paid commissions in real time. Get an automatic weekly email report.", "Consulta clics, conversiones y comisiones pendientes y pagadas en tiempo real. Recibe un informe semanal automático por correo.")}
           />
         </div>
 
@@ -219,10 +221,10 @@ export default function AffiliatePage() {
           <Gift className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div>
             <div className="font-mono text-xs font-bold text-primary uppercase tracking-widest mb-1">
-              Programa de 52 Semanas — Em Breve
+              {t("Programa de 52 semanas — Em breve", "52-week program — Coming soon", "Programa de 52 semanas — Próximamente")}
             </div>
             <p className="font-mono text-[11px] text-muted-foreground leading-relaxed">
-              Afiliados ativos vão ter acesso exclusivo ao programa estruturado de 52 semanas — treinamento completo de lançamento + acompanhamento de performance + bônus progressivos por volume de conversões.
+              {t("Afiliados ativos vão ter acesso exclusivo ao programa estruturado de 52 semanas — treinamento completo de lançamento + acompanhamento de performance + bônus progressivos por volume de conversões.", "Active affiliates will get exclusive access to a structured 52-week program — complete launch training, performance coaching, and progressive bonuses based on conversion volume.", "Los afiliados activos tendrán acceso exclusivo a un programa estructurado de 52 semanas: formación completa sobre lanzamientos, seguimiento del rendimiento y bonos progresivos según el volumen de conversiones.")}
             </p>
           </div>
         </div>
@@ -246,13 +248,13 @@ export default function AffiliatePage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Star className="h-5 w-5 text-yellow-400" />
-              <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">Painel de Afiliado</h1>
+               <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">{t("Painel de afiliado", "Affiliate dashboard", "Panel de afiliados")}</h1>
               <Badge variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest px-2 py-0.5 text-success border-success/40 bg-success/10">
-                Ativo
+                 {t("Ativo", "Active", "Activo")}
               </Badge>
             </div>
             <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-              Programa NexOS · R$ {COMMISSION_BRL.toLocaleString("pt-BR")}/conversão
+               {t("Programa NexOS", "NexOS program", "Programa NexOS")} · R$ {COMMISSION_BRL.toLocaleString("pt-BR")}/{t("conversão", "conversion", "conversión")}
             </p>
           </div>
         </div>
@@ -260,7 +262,7 @@ export default function AffiliatePage() {
 
       {/* Referral link */}
       <div className="border border-yellow-400/30 bg-yellow-400/5 p-4 space-y-3">
-        <div className="font-mono text-[11px] uppercase tracking-widest text-yellow-400/70">Seu link exclusivo de afiliado</div>
+         <div className="font-mono text-[11px] uppercase tracking-widest text-yellow-400/70">{t("Seu link exclusivo de afiliado", "Your exclusive affiliate link", "Tu enlace exclusivo de afiliado")}</div>
         <div className="flex gap-2">
           <div className="flex-1 font-mono text-sm bg-background/60 border border-yellow-400/30 px-3 py-2 text-foreground/80 truncate">
             {referralLink}
@@ -270,41 +272,41 @@ export default function AffiliatePage() {
             className="rounded-none font-mono uppercase text-xs tracking-widest gap-2 h-10 px-4 shrink-0 bg-yellow-400/20 border border-yellow-400/40 text-yellow-400 hover:bg-yellow-400/30"
           >
             {copied ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-            {copied ? "Copiado!" : "Copiar"}
+             {copied ? t("Copiado!", "Copied!", "¡Copiado!") : t("Copiar", "Copy", "Copiar")}
           </Button>
         </div>
         <div className="flex items-center gap-2 text-[11px] font-mono text-yellow-400/50 uppercase tracking-widest">
-          <span>Código: {referralCode}</span>
+           <span>{t("Código", "Code", "Código")}: {referralCode}</span>
         </div>
       </div>
 
       {/* KPI grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
-          label="Cliques Totais"
+          label={t("Cliques totais", "Total clicks", "Clics totales")}
           value={(affiliate.totalClicks || 0).toLocaleString("pt-BR")}
-          sub="todos os tempos"
+          sub={t("todos os períodos", "all time", "todo el tiempo")}
           icon={Activity}
           color="cyan"
         />
         <StatCard
-          label="Cadastros"
+          label={t("Cadastros", "Sign-ups", "Registros")}
           value={(affiliate.totalRegistrations || 0).toLocaleString("pt-BR")}
-          sub={`${conversionRate}% de conversão`}
+          sub={`${conversionRate}% ${t("de conversão", "conversion rate", "de conversión")}`}
           icon={Users}
           color="primary"
         />
         <StatCard
-          label="Clientes Ativos"
+          label={t("Clientes ativos", "Active customers", "Clientes activos")}
           value={(affiliate.totalConversions || 0).toLocaleString("pt-BR")}
-          sub="com acesso ativo"
+          sub={t("com acesso ativo", "with active access", "con acceso activo")}
           icon={Target}
           color="success"
         />
         <StatCard
-          label="Comissão Acumulada"
+          label={t("Comissão acumulada", "Total commission", "Comisión acumulada")}
           value={`R$ ${((affiliate.pendingCommission || 0) + (affiliate.paidCommission || 0)).toLocaleString("pt-BR")}`}
-          sub={`R$ ${(affiliate.pendingCommission || 0).toLocaleString("pt-BR")} pendente`}
+          sub={`R$ ${(affiliate.pendingCommission || 0).toLocaleString("pt-BR")} ${t("pendente", "pending", "pendiente")}`}
           icon={DollarSign}
           color="yellow"
         />
@@ -315,19 +317,19 @@ export default function AffiliatePage() {
         <div className="border border-border/50 bg-card/40 p-4 space-y-3">
           <div className="flex items-center gap-2">
             <DollarSign className="h-4 w-4 text-success" />
-            <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Comissões</span>
+             <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("Comissões", "Commissions", "Comisiones")}</span>
           </div>
           <div className="space-y-2">
             <div className="flex justify-between items-center py-2 border-b border-border/20">
-              <span className="font-mono text-[11px] text-muted-foreground">Pendente (a receber)</span>
+               <span className="font-mono text-[11px] text-muted-foreground">{t("Pendente (a receber)", "Pending (to be paid)", "Pendiente (por cobrar)")}</span>
               <span className="font-mono font-bold text-yellow-400">R$ {(affiliate.pendingCommission || 0).toLocaleString("pt-BR")}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-border/20">
-              <span className="font-mono text-[11px] text-muted-foreground">Pago</span>
+               <span className="font-mono text-[11px] text-muted-foreground">{t("Pago", "Paid", "Pagado")}</span>
               <span className="font-mono font-bold text-success">R$ {(affiliate.paidCommission || 0).toLocaleString("pt-BR")}</span>
             </div>
             <div className="flex justify-between items-center py-2">
-              <span className="font-mono text-xs font-bold">Total acumulado</span>
+               <span className="font-mono text-xs font-bold">{t("Total acumulado", "Total earned", "Total acumulado")}</span>
               <span className="font-mono font-bold text-lg text-foreground">
                 R$ {((affiliate.pendingCommission || 0) + (affiliate.paidCommission || 0)).toLocaleString("pt-BR")}
               </span>
@@ -338,13 +340,13 @@ export default function AffiliatePage() {
         <div className="border border-border/50 bg-card/40 p-4 space-y-3">
           <div className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-primary" />
-            <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Performance</span>
+             <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t("Desempenho", "Performance", "Rendimiento")}</span>
           </div>
           <div className="space-y-3">
             {[
-              { label: "Taxa de clique → cadastro", value: affiliate.totalClicks > 0 ? `${((affiliate.totalRegistrations / affiliate.totalClicks) * 100).toFixed(1)}%` : "—" },
-              { label: "Taxa de cadastro → ativo", value: affiliate.totalRegistrations > 0 ? `${((affiliate.totalConversions / affiliate.totalRegistrations) * 100).toFixed(1)}%` : "—" },
-              { label: "Receita por clique (RPC)", value: affiliate.totalClicks > 0 ? `R$ ${((affiliate.totalConversions * COMMISSION_BRL) / affiliate.totalClicks).toFixed(2)}` : "—" },
+              { label: t("Taxa de clique → cadastro", "Click-to-sign-up rate", "Tasa de clic a registro"), value: affiliate.totalClicks > 0 ? `${((affiliate.totalRegistrations / affiliate.totalClicks) * 100).toFixed(1)}%` : "—" },
+              { label: t("Taxa de cadastro → ativo", "Sign-up-to-active rate", "Tasa de registro a cliente activo"), value: affiliate.totalRegistrations > 0 ? `${((affiliate.totalConversions / affiliate.totalRegistrations) * 100).toFixed(1)}%` : "—" },
+              { label: t("Receita por clique (RPC)", "Revenue per click (RPC)", "Ingresos por clic (RPC)"), value: affiliate.totalClicks > 0 ? `R$ ${((affiliate.totalConversions * COMMISSION_BRL) / affiliate.totalClicks).toFixed(2)}` : "—" },
             ].map(item => (
               <div key={item.label} className="flex justify-between items-center">
                 <span className="font-mono text-xs text-muted-foreground">{item.label}</span>
@@ -358,9 +360,9 @@ export default function AffiliatePage() {
       {/* Quick actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {[
-          { icon: Copy, label: "Copiar Link", desc: "Compartilhe nas redes", action: () => handleCopy(referralLink), color: "text-yellow-400 border-yellow-400/20 hover:border-yellow-400/40 hover:bg-yellow-400/5" },
-          { icon: ExternalLink, label: "Ver Materiais", desc: "Posts, emails, VSL prontos", action: () => toast.info("Em breve — materiais de marketing"), color: "text-primary border-primary/20 hover:border-primary/40 hover:bg-primary/5" },
-          { icon: Gift, label: "52 Semanas", desc: "Programa estruturado", action: () => toast.info("Em breve — programa avançado"), color: "text-cyan-400 border-cyan-400/20 hover:border-cyan-400/40 hover:bg-cyan-400/5" },
+          { icon: Copy, label: t("Copiar link", "Copy link", "Copiar enlace"), desc: t("Compartilhe nas redes", "Share on social media", "Compártelo en redes sociales"), action: () => handleCopy(referralLink), color: "text-yellow-400 border-yellow-400/20 hover:border-yellow-400/40 hover:bg-yellow-400/5" },
+          { icon: ExternalLink, label: t("Ver materiais", "View materials", "Ver materiales"), desc: t("Posts, emails, VSL prontos", "Ready-made posts, emails, VSLs", "Publicaciones, correos y VSL listos"), action: () => toast.info(t("Em breve — materiais de marketing", "Coming soon — marketing materials", "Próximamente — materiales de marketing")), color: "text-primary border-primary/20 hover:border-primary/40 hover:bg-primary/5" },
+          { icon: Gift, label: t("52 semanas", "52 weeks", "52 semanas"), desc: t("Programa estruturado", "Structured program", "Programa estructurado"), action: () => toast.info(t("Em breve — programa avançado", "Coming soon — advanced program", "Próximamente — programa avanzado")), color: "text-cyan-400 border-cyan-400/20 hover:border-cyan-400/40 hover:bg-cyan-400/5" },
         ].map(item => {
           const Icon = item.icon;
           return (
@@ -383,15 +385,15 @@ export default function AffiliatePage() {
           <Gift className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div>
             <div className="font-mono text-xs font-bold text-primary uppercase tracking-widest mb-1">
-              Programa de 52 Semanas — Em Breve
+              {t("Programa de 52 semanas — Em breve", "52-week program — Coming soon", "Programa de 52 semanas — Próximamente")}
             </div>
             <p className="font-mono text-[11px] text-muted-foreground">
-              Treinamento completo de lançamento + acompanhamento + bônus progressivos por volume.
+              {t("Treinamento completo de lançamento + acompanhamento + bônus progressivos por volume.", "Complete launch training + coaching + progressive volume bonuses.", "Formación completa sobre lanzamientos + seguimiento + bonos progresivos por volumen.")}
             </p>
           </div>
         </div>
         <Badge variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest px-2 shrink-0 text-primary border-primary/30">
-          Em breve
+           {t("Em breve", "Coming soon", "Próximamente")}
         </Badge>
       </div>
     </div>

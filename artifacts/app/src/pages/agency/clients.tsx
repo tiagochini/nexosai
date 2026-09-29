@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 import {
   Users, Plus, Mail, CheckCircle2, XCircle, Loader2,
   ChevronRight, Clock, AlertTriangle, Copy, Building2,
@@ -44,19 +45,26 @@ const STATUS_COLOR: Record<string, string> = {
   suspended: "text-orange-400 border-orange-400/40 bg-orange-400/10",
   revoked:   "text-destructive border-destructive/40 bg-destructive/10",
 };
-const STATUS_LABEL: Record<string, string> = {
-  active: "Ativo", pending: "Aguardando", suspended: "Suspenso", revoked: "Revogado",
+const PERMISSION_LABELS: Record<string, [string, string, string]> = {
+  canViewCampaigns:    ["Ver campanhas", "View campaigns", "Ver campañas"],
+  canEditCampaigns:    ["Editar campanhas", "Edit campaigns", "Editar campañas"],
+  canViewMetrics:      ["Ver métricas", "View metrics", "Ver métricas"],
+  canViewRevenue:      ["Ver receita", "View revenue", "Ver ingresos"],
+  canExecuteCampaigns: ["Executar campanhas", "Run campaigns", "Ejecutar campañas"],
+  canApproveContent:   ["Aprovar conteúdo", "Approve content", "Aprobar contenido"],
+  canManageSocial:     ["Gerenciar redes sociais", "Manage social media", "Administrar redes sociales"],
 };
 
-const PERMISSION_LABELS: Record<string, string> = {
-  canViewCampaigns:    "Ver Campanhas",
-  canEditCampaigns:    "Editar Campanhas",
-  canViewMetrics:      "Ver Métricas",
-  canViewRevenue:      "Ver Receita",
-  canExecuteCampaigns: "Executar Campanhas",
-  canApproveContent:   "Aprovar Conteúdo",
-  canManageSocial:     "Social Media",
-};
+function statusLabel(status: string, t: ReturnType<typeof useUiText>) {
+  const labels: Record<string, [string, string, string]> = {
+    active: ["Ativo", "Active", "Activo"],
+    pending: ["Pendente", "Pending", "Pendiente"],
+    suspended: ["Suspenso", "Suspended", "Suspendido"],
+    revoked: ["Revogado", "Revoked", "Revocado"],
+  };
+  const labelsForStatus = labels[status];
+  return labelsForStatus ? t(...labelsForStatus) : status;
+}
 
 // ─── Invite Modal ─────────────────────────────────────────────────────────────
 
@@ -64,6 +72,7 @@ function InviteModal({ onClose, onInvite }: {
   onClose: () => void;
   onInvite: (data: { clientEmail: string; clientName?: string; notes?: string; permissions: Record<string, boolean> }) => void;
 }) {
+  const t = useUiText();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
@@ -79,7 +88,7 @@ function InviteModal({ onClose, onInvite }: {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!email.trim() || !email.includes("@")) { toast.error("E-mail inválido"); return; }
+    if (!email.trim() || !email.includes("@")) { toast.error(t("E-mail inválido", "Invalid email", "Correo electrónico no válido")); return; }
     setLoading(true);
     try { onInvite({ clientEmail: email.trim(), clientName: name.trim() || undefined, notes: notes.trim() || undefined, permissions }); }
     finally { setLoading(false); }
@@ -90,48 +99,48 @@ function InviteModal({ onClose, onInvite }: {
       <div className="border border-border/70 bg-card w-full max-w-lg shadow-2xl">
         <div className="border-b border-border/50 px-5 py-4 flex items-center justify-between">
           <div>
-            <h3 className="font-mono font-bold text-sm uppercase tracking-wide">Convidar Cliente</h3>
-            <p className="text-xs font-mono text-muted-foreground/60 uppercase tracking-widest mt-0.5">Enviar convite de acesso à agência</p>
+            <h3 className="font-mono font-bold text-sm uppercase tracking-wide">{t("Convidar cliente", "Invite a client", "Invitar a un cliente")}</h3>
+            <p className="text-xs font-mono text-muted-foreground/60 uppercase tracking-widest mt-0.5">{t("Enviar convite de acesso à agência", "Send an agency access invitation", "Enviar una invitación de acceso a la agencia")}</p>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground font-mono text-lg leading-none">×</button>
+          <button onClick={onClose} aria-label={t("Fechar", "Close", "Cerrar")} className="text-muted-foreground hover:text-foreground font-mono text-lg leading-none">×</button>
         </div>
         <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
           <div className="space-y-1.5">
-            <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">E-mail do Cliente *</label>
-            <input value={email} onChange={e => setEmail(e.target.value)} placeholder="cliente@empresa.com" type="email"
+            <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{t("E-mail do cliente *", "Client email *", "Correo electrónico del cliente *")}</label>
+            <input value={email} onChange={e => setEmail(e.target.value)} placeholder={t("cliente@empresa.com", "client@company.com", "cliente@empresa.com")} type="email"
               className="w-full bg-background border border-border/50 px-3 py-2.5 text-sm font-mono rounded-none focus:outline-none focus:border-primary/60 transition-colors placeholder:text-muted-foreground/30" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">Nome do Cliente</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="João Silva / Empresa X"
+            <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{t("Nome do cliente", "Client name", "Nombre del cliente")}</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder={t("João Silva / Empresa X", "Jane Smith / Company X", "Juan Pérez / Empresa X")}
               className="w-full bg-background border border-border/50 px-3 py-2.5 text-sm font-mono rounded-none focus:outline-none focus:border-primary/60 transition-colors placeholder:text-muted-foreground/30" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">Notas Internas</label>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Contexto sobre este cliente..."
+            <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{t("Notas internas", "Internal notes", "Notas internas")}</label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder={t("Contexto sobre este cliente...", "Context about this client...", "Contexto sobre este cliente...")}
               className="w-full bg-background border border-border/50 px-3 py-2.5 text-sm font-mono rounded-none focus:outline-none focus:border-primary/60 transition-colors placeholder:text-muted-foreground/30 resize-none" />
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">Permissões de Acesso</label>
+            <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{t("Permissões de acesso", "Access permissions", "Permisos de acceso")}</label>
             <div className="space-y-1.5">
-              {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
+              {Object.entries(PERMISSION_LABELS).map(([key, labels]) => (
                 <label key={key} className="flex items-center gap-3 cursor-pointer group">
                   <div
                     onClick={() => setPermissions(p => ({ ...p, [key]: !p[key] }))}
                     className={`w-4 h-4 border flex items-center justify-center transition-all shrink-0 ${permissions[key] ? "border-primary bg-primary/20" : "border-border/50 hover:border-primary/40"}`}>
                     {permissions[key] && <CheckCircle2 className="h-2.5 w-2.5 text-primary" />}
                   </div>
-                  <span className="font-mono text-xs text-muted-foreground group-hover:text-foreground transition-colors">{label}</span>
+                  <span className="font-mono text-xs text-muted-foreground group-hover:text-foreground transition-colors">{t(...labels)}</span>
                 </label>
               ))}
             </div>
           </div>
         </div>
         <div className="border-t border-border/50 px-5 py-4 flex gap-2 justify-end">
-          <Button variant="outline" onClick={onClose} className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline">Cancelar</Button>
+          <Button variant="outline" onClick={onClose} className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline">{t("Cancelar", "Cancel", "Cancelar")}</Button>
           <Button onClick={handleSubmit} disabled={loading} className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2">
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
-            Enviar Convite
+            {t("Enviar convite", "Send invitation", "Enviar invitación")}
           </Button>
         </div>
       </div>
@@ -147,6 +156,8 @@ function ClientCard({ client, onUpdate, onRevoke, onCopyLink }: {
   onRevoke: (id: string) => void;
   onCopyLink: (token: string) => void;
 }) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -162,14 +173,14 @@ function ClientCard({ client, onUpdate, onRevoke, onCopyLink }: {
               <div className="font-mono font-bold text-sm truncate">{client.clientName ?? client.clientEmail}</div>
               {client.clientName && <div className="text-xs font-mono text-muted-foreground/60 truncate">{client.clientEmail}</div>}
               <div className="text-[11px] font-mono text-muted-foreground/40 uppercase tracking-widest mt-0.5">
-                Convidado {new Date(client.createdAt).toLocaleDateString("pt-BR")}
+                {t("Convidado", "Invited", "Invitado")} {new Date(client.createdAt).toLocaleDateString(intlLocale(locale))}
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
             <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${STATUS_COLOR[client.status]}`}>
-              {STATUS_LABEL[client.status]}
+              {statusLabel(client.status, t)}
             </Badge>
             <Button variant="ghost" size="icon" onClick={() => setExpanded(e => !e)}
               className="rounded-sm h-7 w-7 hover:bg-muted/30">
@@ -181,27 +192,27 @@ function ClientCard({ client, onUpdate, onRevoke, onCopyLink }: {
         {/* Actions row */}
         <div className="flex items-center gap-2 mt-3 flex-wrap">
           {client.status === "pending" && client.inviteToken && (
-            <Button size="sm" variant="outline" onClick={() => onCopyLink(client.inviteToken!)}
+              <Button size="sm" variant="outline" onClick={() => onCopyLink(client.inviteToken!)}
               className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 btn-weapon-outline">
-              <Copy className="h-2.5 w-2.5" />Copiar Link Convite
+              <Copy className="h-2.5 w-2.5" />{t("Copiar link do convite", "Copy invitation link", "Copiar enlace de invitación")}
             </Button>
           )}
           {client.status === "active" && (
             <Button size="sm" variant="outline" onClick={() => onUpdate(client.id, { status: "suspended" })}
               className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 border-orange-400/30 text-orange-400 hover:bg-orange-400/10">
-              Suspender
+              {t("Suspender", "Suspend", "Suspender")}
             </Button>
           )}
           {client.status === "suspended" && (
             <Button size="sm" variant="outline" onClick={() => onUpdate(client.id, { status: "active" })}
               className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 border-success/30 text-success hover:bg-success/10">
-              Reativar
+              {t("Reativar", "Reactivate", "Reactivar")}
             </Button>
           )}
           {client.status !== "revoked" && (
             <Button size="sm" variant="ghost" onClick={() => onRevoke(client.id)}
               className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-destructive/60 hover:text-destructive hover:bg-destructive/10 ml-auto">
-              <Trash2 className="h-2.5 w-2.5" />Revogar
+              <Trash2 className="h-2.5 w-2.5" />{t("Revogar", "Revoke", "Revocar")}
             </Button>
           )}
         </div>
@@ -211,16 +222,16 @@ function ClientCard({ client, onUpdate, onRevoke, onCopyLink }: {
           <div className="mt-4 pt-4 border-t border-border/30 space-y-3">
             {client.notes && (
               <div className="bg-muted/10 border border-border/20 p-3">
-                <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-1">Notas</div>
+                <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-1">{t("Notas", "Notes", "Notas")}</div>
                 <p className="font-mono text-xs text-muted-foreground/80">{client.notes}</p>
               </div>
             )}
             <div>
-              <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-2">Permissões</div>
+              <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-2">{t("Permissões", "Permissions", "Permisos")}</div>
               <div className="flex flex-wrap gap-1.5">
-                {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
+                {Object.entries(PERMISSION_LABELS).map(([key, labels]) => (
                   <span key={key} className={`font-mono text-[11px] px-2 py-0.5 border ${client.permissions[key] ? "border-primary/30 text-primary bg-primary/10" : "border-border/30 text-muted-foreground/30"}`}>
-                    {label}
+                    {t(...labels)}
                   </span>
                 ))}
               </div>
@@ -228,7 +239,7 @@ function ClientCard({ client, onUpdate, onRevoke, onCopyLink }: {
             {client.inviteExpiresAt && client.status === "pending" && (
               <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground/50">
                 <Clock className="h-2.5 w-2.5" />
-                Convite expira em {new Date(client.inviteExpiresAt).toLocaleString("pt-BR")}
+                {t("Convite expira em", "Invitation expires", "La invitación vence el")} {new Date(client.inviteExpiresAt).toLocaleString(intlLocale(locale))}
               </div>
             )}
           </div>
@@ -241,6 +252,7 @@ function ClientCard({ client, onUpdate, onRevoke, onCopyLink }: {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AgencyClientsPage() {
+  const t = useUiText();
   const { planSlug } = useAuth();
   const [showInvite, setShowInvite] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -271,7 +283,7 @@ export default function AgencyClientsPage() {
       });
     },
     onSuccess: (data) => {
-      toast.success(`Convite enviado para ${data.client.clientEmail}`);
+      toast.success(t(`Convite enviado para ${data.client.clientEmail}`, `Invitation sent to ${data.client.clientEmail}`, `Invitación enviada a ${data.client.clientEmail}`));
       queryClient.invalidateQueries({ queryKey: ["/api/agency/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/agency/stats"] });
       setShowInvite(false);
@@ -288,10 +300,10 @@ export default function AgencyClientsPage() {
       });
     },
     onSuccess: () => {
-      toast.success("Cliente atualizado.");
+      toast.success(t("Cliente atualizado.", "Client updated.", "Cliente actualizado."));
       queryClient.invalidateQueries({ queryKey: ["/api/agency/clients"] });
     },
-    onError: () => toast.error("Erro ao atualizar cliente"),
+    onError: () => toast.error(t("Erro ao atualizar cliente", "Failed to update client", "Error al actualizar el cliente")),
   });
 
   const revokeMutation = useMutation({
@@ -299,17 +311,17 @@ export default function AgencyClientsPage() {
       await customFetch<unknown>(`/api/agency/clients/${id}`, { method: "DELETE" });
     },
     onSuccess: () => {
-      toast.success("Acesso revogado.");
+      toast.success(t("Acesso revogado.", "Access revoked.", "Acceso revocado."));
       queryClient.invalidateQueries({ queryKey: ["/api/agency/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/agency/stats"] });
     },
-    onError: () => toast.error("Erro ao revogar cliente"),
+    onError: () => toast.error(t("Erro ao revogar cliente", "Failed to revoke client", "Error al revocar el cliente")),
   });
 
   const copyInviteLink = (token: string) => {
     const appUrl = window.location.origin;
     const link = `${appUrl}/api/agency/accept?token=${token}`;
-    navigator.clipboard.writeText(link).then(() => toast.success("Link de convite copiado!"));
+    navigator.clipboard.writeText(link).then(() => toast.success(t("Link de convite copiado!", "Invitation link copied!", "¡Enlace de invitación copiado!")));
   };
 
   const clients = clientsData?.clients ?? [];
@@ -318,17 +330,17 @@ export default function AgencyClientsPage() {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="border-b border-border/50 pb-5">
-          <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">Clientes da Agência</h1>
+          <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">{t("Clientes da agência", "Agency clients", "Clientes de la agencia")}</h1>
         </div>
         <div className="border border-yellow-400/20 bg-yellow-400/5 p-8 text-center">
           <Shield className="h-10 w-10 text-yellow-400 mx-auto mb-4" />
-          <h2 className="font-mono font-bold text-base uppercase tracking-wide text-yellow-400 mb-2">Funcionalidade Exclusiva — Plano Agency</h2>
+          <h2 className="font-mono font-bold text-base uppercase tracking-wide text-yellow-400 mb-2">{t("Funcionalidade exclusiva — Plano Agency", "Exclusive feature — Agency plan", "Función exclusiva — Plan Agency")}</h2>
           <p className="font-mono text-sm text-muted-foreground/70 mb-6 max-w-md mx-auto">
-            Gerencie múltiplos clientes, delegue acesso e acompanhe as campanhas de cada um em um só lugar. Disponível no Plano Agency.
+            {t("Gerencie múltiplos clientes, delegue acesso e acompanhe as campanhas de cada um em um só lugar. Disponível no Plano Agency.", "Manage multiple clients, delegate access, and track each client's campaigns in one place. Available on the Agency plan.", "Administra varios clientes, delega accesos y sigue las campañas de cada uno en un solo lugar. Disponible en el Plan Agency.")}
           </p>
           <Link href="/settings">
             <Button className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2">
-              Ver Planos<ChevronRight className="h-3.5 w-3.5" />
+              {t("Ver planos", "View plans", "Ver planes")}<ChevronRight className="h-3.5 w-3.5" />
             </Button>
           </Link>
         </div>
@@ -351,15 +363,15 @@ export default function AgencyClientsPage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-              <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">Clientes da Agência</h1>
+              <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">{t("Clientes da agência", "Agency clients", "Clientes de la agencia")}</h1>
             </div>
             <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-              Gerencie clientes, delegue acesso e acompanhe campanhas
+              {t("Gerencie clientes, delegue acesso e acompanhe campanhas", "Manage clients, delegate access, and track campaigns", "Administra clientes, delega accesos y supervisa campañas")}
             </p>
           </div>
           <Button onClick={() => setShowInvite(true)}
             className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2 shrink-0">
-            <Plus className="h-3.5 w-3.5" />Convidar Cliente
+            <Plus className="h-3.5 w-3.5" />{t("Convidar cliente", "Invite client", "Invitar a un cliente")}
           </Button>
         </div>
       </div>
@@ -368,10 +380,10 @@ export default function AgencyClientsPage() {
       {statsData && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: "Total Clientes",  value: statsData.totalClients,    icon: Users,    color: "text-primary" },
-            { label: "Ativos",          value: statsData.activeClients,   icon: Activity, color: "text-success" },
-            { label: "Pendentes",       value: statsData.pendingClients,  icon: Clock,    color: "text-yellow-400" },
-            { label: "Campanhas Total", value: statsData.totalCampaigns,  icon: BarChart3, color: "text-cyan-400" },
+            { label: t("Total de clientes", "Total clients", "Total de clientes"), value: statsData.totalClients, icon: Users, color: "text-primary" },
+            { label: t("Ativos", "Active", "Activos"), value: statsData.activeClients, icon: Activity, color: "text-success" },
+            { label: t("Pendentes", "Pending", "Pendientes"), value: statsData.pendingClients, icon: Clock, color: "text-yellow-400" },
+            { label: t("Total de campanhas", "Total campaigns", "Total de campañas"), value: statsData.totalCampaigns, icon: BarChart3, color: "text-cyan-400" },
           ].map(s => {
             const Icon = s.icon;
             return (
@@ -390,10 +402,10 @@ export default function AgencyClientsPage() {
       {/* Filter tabs */}
       <div className="flex gap-1 border-b border-border/40 overflow-x-auto">
         {[
-          { id: "all", label: "Todos" },
-          { id: "active", label: "Ativos" },
-          { id: "pending", label: "Pendentes" },
-          { id: "suspended", label: "Suspensos" },
+          { id: "all", label: t("Todos", "All", "Todos") },
+          { id: "active", label: t("Ativos", "Active", "Activos") },
+          { id: "pending", label: t("Pendentes", "Pending", "Pendientes") },
+          { id: "suspended", label: t("Suspensos", "Suspended", "Suspendidos") },
         ].map(f => (
           <button key={f.id} onClick={() => setFilterStatus(f.id)}
             className={`px-4 py-2.5 text-xs font-mono uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
@@ -410,14 +422,14 @@ export default function AgencyClientsPage() {
         <div className="border border-border/30 bg-card/30 py-16 text-center">
           <Users className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
           <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-1">
-            {filterStatus === "all" ? "Nenhum cliente ainda" : `Nenhum cliente ${STATUS_LABEL[filterStatus] ?? filterStatus}`}
+            {filterStatus === "all" ? t("Nenhum cliente ainda", "No clients yet", "Aún no hay clientes") : t(`Nenhum cliente ${statusLabel(filterStatus, t)}`, `No ${statusLabel(filterStatus, t).toLowerCase()} clients`, `No hay clientes ${statusLabel(filterStatus, t).toLowerCase()}`)}
           </p>
           <p className="font-mono text-xs text-muted-foreground/40 mb-4">
-            Convide clientes para gerenciar suas campanhas com a NexOS
+            {t("Convide clientes para gerenciar suas campanhas com a NexOS", "Invite clients to manage their campaigns with NexOS", "Invita a tus clientes a administrar sus campañas con NexOS")}
           </p>
           <Button onClick={() => setShowInvite(true)}
             className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2">
-            <Plus className="h-3.5 w-3.5" />Convidar Primeiro Cliente
+            <Plus className="h-3.5 w-3.5" />{t("Convidar primeiro cliente", "Invite your first client", "Invitar al primer cliente")}
           </Button>
         </div>
       ) : (

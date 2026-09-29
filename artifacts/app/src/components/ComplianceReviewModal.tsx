@@ -10,6 +10,7 @@ import {
   Shield, AlertTriangle, CheckCircle2, XCircle,
   ChevronDown, ChevronUp, FileWarning, ExternalLink,
 } from "lucide-react";
+import { useUiText } from "@/lib/i18n";
 
 interface ComplianceViolation {
   severity: "critical" | "high" | "medium" | "low";
@@ -38,14 +39,15 @@ interface Props {
   onResolved: () => void;
 }
 
-const SEVERITY_CONFIG = {
-  critical: { label: "Crítico", color: "text-red-400 border-red-400/40 bg-red-400/10" },
-  high:     { label: "Alto",    color: "text-orange-400 border-orange-400/40 bg-orange-400/10" },
-  medium:   { label: "Médio",   color: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10" },
-  low:      { label: "Baixo",   color: "text-blue-400 border-blue-400/40 bg-blue-400/10" },
+const SEVERITY_CONFIG: Record<string, { label: [string, string, string]; color: string }> = {
+  critical: { label: ["Crítico", "Critical", "Crítico"], color: "text-red-400 border-red-400/40 bg-red-400/10" },
+  high:     { label: ["Alto", "High", "Alto"], color: "text-orange-400 border-orange-400/40 bg-orange-400/10" },
+  medium:   { label: ["Médio", "Medium", "Medio"], color: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10" },
+  low:      { label: ["Baixo", "Low", "Bajo"], color: "text-blue-400 border-blue-400/40 bg-blue-400/10" },
 };
 
 export function ComplianceReviewModal({ campaignId, complianceReview, onResolved }: Props) {
+  const t = useUiText();
   const queryClient = useQueryClient();
   const violations = complianceReview.violations ?? [];
   const [expanded, setExpanded] = useState<number | null>(0);
@@ -69,16 +71,16 @@ export function ComplianceReviewModal({ campaignId, complianceReview, onResolved
     onSuccess: (_, vars) => {
       void queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
       if (vars.decision === "override") {
-        toast.success("Publicação autorizada. Decisão registrada no log de auditoria.", { duration: 5000 });
+        toast.success(t("Publicação autorizada. Decisão registrada no log de auditoria.", "Publication authorized. Decision recorded in the audit log.", "Publicación autorizada. Decisión registrada en el registro de auditoría."), { duration: 5000 });
       } else if (vars.decision === "accept_all") {
-        toast.success("Sugestões aceitas! Conteúdo pronto para revisão final.");
+        toast.success(t("Sugestões aceitas! Conteúdo pronto para revisão final.", "Suggestions accepted! Content is ready for final review.", "¡Sugerencias aceptadas! El contenido está listo para la revisión final."));
       } else {
-        toast.success("Correções salvas. Conteúdo pronto para revisão final.");
+        toast.success(t("Correções salvas. Conteúdo pronto para revisão final.", "Corrections saved. Content is ready for final review.", "Correcciones guardadas. El contenido está listo para la revisión final."));
       }
       onResolved();
     },
     onError: () => {
-      toast.error("Erro ao salvar decisão. Tente novamente.");
+      toast.error(t("Erro ao salvar decisão. Tente novamente.", "Error saving decision. Try again.", "Error al guardar la decisión. Inténtalo de nuevo."));
     },
   });
 
@@ -115,10 +117,10 @@ export function ComplianceReviewModal({ campaignId, complianceReview, onResolved
         <div className="p-5 border-b border-red-500/20 bg-red-500/5">
           <div className="flex items-center gap-3 mb-2">
             <Shield className="h-5 w-5 text-red-400 shrink-0" />
-            <span className="font-mono text-sm text-red-400 uppercase tracking-widest">Revisão de Compliance Necessária</span>
+           <span className="font-mono text-sm text-red-400 uppercase tracking-widest">{t("Revisão de conformidade necessária", "Compliance review required", "Se requiere una revisión de cumplimiento")}</span>
           </div>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            O Agente de Compliance encontrou violações que precisam da sua decisão antes de prosseguir.
+            {t("O agente de conformidade encontrou violações que precisam da sua decisão antes de prosseguir.", "The compliance agent found violations that require your decision before you continue.", "El agente de cumplimiento encontró infracciones que requieren tu decisión antes de continuar.")}
           </p>
           <div className="flex items-center gap-4 mt-3">
             <div className="flex items-center gap-2">
@@ -128,12 +130,12 @@ export function ComplianceReviewModal({ campaignId, complianceReview, onResolved
             <div className="flex items-center gap-2">
               {criticalCount > 0 && (
                 <Badge variant="outline" className="text-red-400 border-red-400/40 bg-red-400/10 font-mono text-[10px]">
-                  {criticalCount} crítica{criticalCount !== 1 ? "s" : ""}
+                  {t(`${criticalCount} crítica${criticalCount !== 1 ? "s" : ""}`, `${criticalCount} critical`, `${criticalCount} crítica${criticalCount !== 1 ? "s" : ""}`)}
                 </Badge>
               )}
               {highCount > 0 && (
                 <Badge variant="outline" className="text-orange-400 border-orange-400/40 bg-orange-400/10 font-mono text-[10px]">
-                  {highCount} alta{highCount !== 1 ? "s" : ""}
+                  {t(`${highCount} alta${highCount !== 1 ? "s" : ""}`, `${highCount} high`, `${highCount} alta${highCount !== 1 ? "s" : ""}`)}
                 </Badge>
               )}
             </div>
@@ -154,7 +156,7 @@ export function ComplianceReviewModal({ campaignId, complianceReview, onResolved
                   <AlertTriangle className="h-4 w-4 text-orange-400 shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="outline" className={`font-mono text-[10px] ${cfg.color}`}>{cfg.label}</Badge>
+                       <Badge variant="outline" className={`font-mono text-[10px] ${cfg.color}`}>{t(...cfg.label)}</Badge>
                       <span className="text-xs text-muted-foreground font-mono">{v.category}</span>
                     </div>
                     <p className="text-sm text-foreground/80 truncate">{v.location}</p>
@@ -165,20 +167,20 @@ export function ComplianceReviewModal({ campaignId, complianceReview, onResolved
                 {isOpen && (
                   <div className="mt-3 ml-7 space-y-3">
                     <div className="bg-red-500/5 border border-red-500/20 rounded-sm p-3">
-                      <p className="text-[11px] text-muted-foreground mb-1 font-mono uppercase">Texto original</p>
+                       <p className="text-[11px] text-muted-foreground mb-1 font-mono uppercase">{t("Texto original", "Original text", "Texto original")}</p>
                       <p className="text-sm text-foreground/70 italic">"{v.originalText}"</p>
                     </div>
                     <div className="bg-muted/10 rounded-sm p-3">
-                      <p className="text-[11px] text-muted-foreground mb-1 font-mono uppercase">Problema</p>
+                       <p className="text-[11px] text-muted-foreground mb-1 font-mono uppercase">{t("Problema", "Issue", "Problema")}</p>
                       <p className="text-sm text-foreground/80">{v.issue}</p>
                       <p className="text-[11px] text-muted-foreground mt-1">{v.legalBasis}</p>
                     </div>
                     <div className="bg-green-500/5 border border-green-500/20 rounded-sm p-3">
-                      <p className="text-[11px] text-muted-foreground mb-1 font-mono uppercase">Sugestão do agente</p>
+                       <p className="text-[11px] text-muted-foreground mb-1 font-mono uppercase">{t("Sugestão do agente", "Agent suggestion", "Sugerencia del agente")}</p>
                       <p className="text-sm text-green-300 italic">"{v.correctedText}"</p>
                     </div>
                     <div>
-                      <p className="text-[11px] text-muted-foreground mb-1 font-mono uppercase">Sua versão (opcional — deixe em branco para aceitar a sugestão)</p>
+                       <p className="text-[11px] text-muted-foreground mb-1 font-mono uppercase">{t("Sua versão (opcional — deixe em branco para aceitar a sugestão)", "Your version (optional — leave blank to accept the suggestion)", "Tu versión (opcional: déjala en blanco para aceptar la sugerencia)")}</p>
                       <Textarea
                         value={customTexts[i] ?? ""}
                         onChange={e => setCustomTexts(prev => ({ ...prev, [i]: e.target.value }))}
@@ -198,7 +200,7 @@ export function ComplianceReviewModal({ campaignId, complianceReview, onResolved
           <div className="p-4 border-t border-border/20 bg-muted/5">
             <div className="flex items-center gap-2 mb-2">
               <FileWarning className="h-4 w-4 text-yellow-400" />
-              <span className="text-xs font-mono text-yellow-400 uppercase tracking-widest">Disclaimers Obrigatórios</span>
+               <span className="text-xs font-mono text-yellow-400 uppercase tracking-widest">{t("Avisos obrigatórios", "Required disclaimers", "Avisos obligatorios")}</span>
             </div>
             <ul className="space-y-1">
               {complianceReview.requiredDisclosures.map((d, i) => (
@@ -223,8 +225,8 @@ export function ComplianceReviewModal({ campaignId, complianceReview, onResolved
                   variant="ghost"
                 >
                   <CheckCircle2 className="h-4 w-4" />
-                  <span className="text-xs font-mono">Aceitar Sugestões</span>
-                  <span className="text-[10px] text-muted-foreground">Aplicar correções do agente</span>
+                  <span className="text-xs font-mono">{t("Aceitar sugestões", "Accept suggestions", "Aceptar sugerencias")}</span>
+                  <span className="text-[10px] text-muted-foreground">{t("Aplicar correções do agente", "Apply the agent's corrections", "Aplicar las correcciones del agente")}</span>
                 </Button>
                 <Button
                   onClick={handleCustom}
@@ -233,8 +235,8 @@ export function ComplianceReviewModal({ campaignId, complianceReview, onResolved
                   variant="ghost"
                 >
                   <ExternalLink className="h-4 w-4" />
-                  <span className="text-xs font-mono">Ajustar e Continuar</span>
-                  <span className="text-[10px] text-muted-foreground">Salvar minhas edições</span>
+                  <span className="text-xs font-mono">{t("Ajustar e continuar", "Edit and continue", "Ajustar y continuar")}</span>
+                  <span className="text-[10px] text-muted-foreground">{t("Salvar minhas edições", "Save my edits", "Guardar mis cambios")}</span>
                 </Button>
               </div>
               <Button
@@ -243,7 +245,7 @@ export function ComplianceReviewModal({ campaignId, complianceReview, onResolved
                 variant="ghost"
                 className="w-full border border-border/20 text-muted-foreground hover:text-foreground hover:border-border/40 rounded-sm text-xs font-mono"
               >
-                Publicar Assim Mesmo — Assumir Responsabilidade
+                 {t("Publicar assim mesmo — assumir responsabilidade", "Publish anyway — accept responsibility", "Publicar de todos modos — asumir la responsabilidad")}
               </Button>
             </>
           ) : (
@@ -251,8 +253,8 @@ export function ComplianceReviewModal({ campaignId, complianceReview, onResolved
               <div className="flex items-start gap-2">
                 <XCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
                 <p className="text-sm text-foreground/80">
-                  Ao prosseguir, você confirma que está ciente das violações identificadas e assume a responsabilidade legal e editorial.{" "}
-                  <span className="text-muted-foreground">Essa decisão ficará registrada no log de auditoria da campanha.</span>
+                  {t("Ao prosseguir, você confirma que está ciente das violações identificadas e assume a responsabilidade legal e editorial.", "By continuing, you confirm that you understand the identified violations and accept legal and editorial responsibility.", "Al continuar, confirmas que conoces las infracciones identificadas y asumes la responsabilidad legal y editorial.")}{" "}
+                  <span className="text-muted-foreground">{t("Essa decisão ficará registrada no log de auditoria da campanha.", "This decision will be recorded in the campaign audit log.", "Esta decisión quedará registrada en el historial de auditoría de la campaña.")}</span>
                 </p>
               </div>
               <div className="flex gap-2">
@@ -262,20 +264,20 @@ export function ComplianceReviewModal({ campaignId, complianceReview, onResolved
                   variant="destructive"
                   className="flex-1 rounded-sm font-mono text-xs"
                 >
-                  {resolveMutation.isPending ? "Processando..." : "Confirmar — Publicar Assim Mesmo"}
+                  {resolveMutation.isPending ? t("Processando...", "Processing...", "Procesando...") : t("Confirmar — publicar assim mesmo", "Confirm — publish anyway", "Confirmar — publicar de todos modos")}
                 </Button>
                 <Button
                   onClick={() => setShowOverrideConfirm(false)}
                   variant="ghost"
                   className="border border-border/20 rounded-sm font-mono text-xs"
                 >
-                  Cancelar
+                   {t("Cancelar", "Cancel", "Cancelar")}
                 </Button>
               </div>
             </div>
           )}
           {resolveMutation.isPending && (
-            <p className="text-center text-xs text-muted-foreground animate-pulse font-mono">Salvando decisão e avançando pipeline...</p>
+             <p className="text-center text-xs text-muted-foreground animate-pulse font-mono">{t("Salvando decisão e avançando pipeline...", "Saving decision and moving the workflow forward...", "Guardando la decisión y avanzando el flujo...")}</p>
           )}
         </div>
       </div>

@@ -10,6 +10,7 @@ import {
   Award, Camera, Repeat2, Sparkles, Filter, BookOpen, LineChart,
   Network, Activity, Sliders,
 } from "lucide-react";
+import { useUiText } from "@/lib/i18n";
 
 interface AgentDef {
   role: string;
@@ -526,6 +527,7 @@ const PROVIDER_COLOR: Record<string, string> = {
 };
 
 export default function AgentsHub() {
+  const t = useUiText();
   const newCount = AGENTS.filter(a => a.isNew).length;
   const categoryCounts = AGENTS.reduce((acc, a) => {
     acc[a.category] = (acc[a.category] ?? 0) + 1;
@@ -538,20 +540,20 @@ export default function AgentsHub() {
       {/* Header */}
       <div className="mb-10">
         <p className="font-mono text-[11px] uppercase tracking-widest text-primary/70 mb-2">
-          Time do agente · Framework ReAct
+          {t("Time de agentes · Framework ReAct", "Agent team · ReAct framework", "Equipo de agentes · Marco ReAct")}
         </p>
         <div className="flex items-end gap-4 mb-3">
           <h1 className="text-3xl md:text-4xl font-mono uppercase tracking-tighter font-bold text-foreground leading-tight">
-            Hub de <span className="text-primary">Especialistas</span>
+            {t("Central de", "Specialist", "Centro de")} <span className="text-primary">{t("Especialistas", "Hub", "Especialistas")}</span>
           </h1>
           {newCount > 0 && (
             <Badge className="rounded-none font-mono text-[10px] bg-primary/15 text-primary border border-primary/30 px-2 mb-1">
-              +{newCount} novos
+              +{newCount} {t("novos", "new", "nuevos")}
             </Badge>
           )}
         </div>
         <p className="text-sm text-muted-foreground font-mono max-w-xl">
-          {AGENTS.length} agentes especializados operam em ciclo contínuo — da estratégia à execução, com raciocínio auditável em cada etapa.
+          {t(`${AGENTS.length} agentes especializados operam em ciclo contínuo — da estratégia à execução, com raciocínio auditável em cada etapa.`, `${AGENTS.length} specialist agents work in a continuous cycle—from strategy to execution—with auditable reasoning at every step.`, `${AGENTS.length} agentes especializados trabajan en un ciclo continuo — de la estrategia a la ejecución — con razonamiento auditable en cada etapa.`)}
         </p>
       </div>
 
@@ -563,7 +565,7 @@ export default function AgentsHub() {
             OBSERVE → REASON → ACT → OUTPUT
           </div>
           <div className="font-mono text-[12px] text-muted-foreground leading-relaxed">
-            Além de gerar conteúdo, os agentes emitem diretivas acionáveis — pausar criativos, escalar budget, disparar sequências, alertar humano — com nível de confiança e urgência definidos.
+             {t("Além de gerar conteúdo, os agentes emitem diretivas acionáveis — pausar criativos, aumentar o orçamento, iniciar sequências e alertar pessoas — com níveis definidos de confiança e urgência.", "Agents do more than create content: they issue actionable directives—to pause creative, scale budgets, trigger sequences, and alert people—with defined confidence and urgency levels.", "Además de crear contenido, los agentes emiten directivas prácticas — pausar creatividades, aumentar presupuestos, iniciar secuencias y alertar a personas — con niveles definidos de confianza y urgencia.")}
           </div>
         </div>
       </div>
@@ -573,7 +575,11 @@ export default function AgentsHub() {
         {Object.entries(categoryCounts).map(([cat, n]) => (
           <div key={cat} className="border border-border/30 bg-card/20 py-4 px-3 text-center">
             <div className="font-mono text-xl font-bold text-primary mb-1">{n}</div>
-            <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest leading-tight">{cat}</div>
+            <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest leading-tight">{t(
+              cat,
+              ({ Todos: "All", Estratégia: "Strategy", Conteúdo: "Content", Audiência: "Audience", Vídeo: "Video", Analytics: "Analytics", Automação: "Automation", Mentalidade: "Mindset", Vendas: "Sales", Lançamento: "Launch" } as Record<string, string>)[cat] ?? cat,
+              ({ Todos: "Todos", Estratégia: "Estrategia", Conteúdo: "Contenido", Audiência: "Audiencia", Vídeo: "Vídeo", Analytics: "Analítica", Automação: "Automatización", Mentalidade: "Mentalidad", Vendas: "Ventas", Lançamento: "Lanzamiento" } as Record<string, string>)[cat] ?? cat
+            )}</div>
           </div>
         ))}
       </div>
@@ -587,10 +593,14 @@ export default function AgentsHub() {
               {/* Category header */}
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-1 h-6 bg-primary/60" />
-                <div className="font-mono text-sm uppercase tracking-widest text-foreground/80 font-bold">{category}</div>
+                <div className="font-mono text-sm uppercase tracking-widest text-foreground/80 font-bold">{t(
+                  category,
+                  ({ Estratégia: "Strategy", Conteúdo: "Content", Audiência: "Audience", Vídeo: "Video", Analytics: "Analytics", Automação: "Automation", Mentalidade: "Mindset", Vendas: "Sales", Lançamento: "Launch" } as Record<string, string>)[category] ?? category,
+                  ({ Estratégia: "Estrategia", Conteúdo: "Contenido", Audiência: "Audiencia", Vídeo: "Vídeo", Analytics: "Analítica", Automação: "Automatización", Mentalidade: "Mentalidad", Vendas: "Ventas", Lançamento: "Lanzamiento" } as Record<string, string>)[category] ?? category
+                )}</div>
                 <div className="flex-1 h-px bg-border/20" />
                 <div className="font-mono text-[11px] text-muted-foreground/40 tabular-nums">
-                  {agents.length} {agents.length === 1 ? "agente" : "agentes"}
+                  {agents.length} {agents.length === 1 ? t("agente", "agent", "agente") : t("agentes", "agents", "agentes")}
                 </div>
               </div>
 
@@ -621,7 +631,7 @@ export default function AgentsHub() {
                             </div>
                             <div className="flex flex-col items-end gap-1.5 shrink-0 ml-2">
                               {agent.isNew && (
-                                <span className="font-mono text-[9px] uppercase tracking-widest bg-primary/15 text-primary border border-primary/30 px-1.5 py-0.5">NOVO</span>
+                                <span className="font-mono text-[9px] uppercase tracking-widest bg-primary/15 text-primary border border-primary/30 px-1.5 py-0.5">{t("NOVO", "NEW", "NUEVO")}</span>
                               )}
                               {!agent.isNew && (
                                 <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-1.5 ${PROVIDER_COLOR[agent.provider]}`}>
@@ -653,7 +663,7 @@ export default function AgentsHub() {
                           {/* CTA */}
                           <div className="flex items-center justify-between pt-4 border-t border-border/20">
                             <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40 group-hover:text-primary transition-colors">
-                              Conversar
+                              {t("Conversar", "Chat", "Conversar")}
                             </span>
                             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                           </div>

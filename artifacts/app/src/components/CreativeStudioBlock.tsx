@@ -10,6 +10,7 @@ import {
   CheckCircle2, Clock, Play, Layers, Monitor, User, Camera,
   Mic, Video, Clapperboard, Radio, ExternalLink, Plus,
 } from "lucide-react";
+import { useUiText } from "@/lib/i18n";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -41,51 +42,51 @@ interface VslItem {
 
 type RecordingMode = "no_face" | "partial_pip" | "own_recording" | "avatar_twin";
 
-const RECORDING_MODES: { id: RecordingMode; label: string; desc: string; icon: React.ElementType; badge?: string }[] = [
+const RECORDING_MODES: { id: RecordingMode; label: readonly [string, string, string]; desc: readonly [string, string, string]; icon: React.ElementType; badge?: readonly [string, string, string] }[] = [
   {
     id: "avatar_twin",
     icon: Sparkles,
-    label: "Avatar Twin — Full Auto",
-    desc: "Gera o vídeo completo com o seu avatar digital e voz clonada. Você não aparece — a IA cria tudo automaticamente.",
-    badge: "Avatar IA",
+    label: ["Avatar Twin — Full Auto", "Avatar Twin — Full Auto", "Avatar Twin — Automático"],
+    desc: ["Gera o vídeo completo com o seu avatar digital e voz clonada. Você não aparece — a IA cria tudo automaticamente.", "Generates the complete video with your digital avatar and cloned voice. You don't appear — AI creates everything automatically.", "Genera el vídeo completo con tu avatar digital y voz clonada. No apareces: la IA lo crea todo automáticamente."],
+    badge: ["Avatar IA", "AI Avatar", "Avatar IA"],
   },
   {
     id: "no_face",
     icon: Monitor,
-    label: "Sem Aparição",
-    desc: "IA gera B-roll cinematográfico automaticamente. Agente ATLAS dirige cada cena com paletas, câmera e ritmo.",
-    badge: "Totalmente IA",
+    label: ["Sem Aparição", "Faceless", "Sin aparición"],
+    desc: ["IA gera B-roll cinematográfico automaticamente. Agente ATLAS dirige cada cena com paletas, câmera e ritmo.", "AI automatically generates cinematic B-roll. ATLAS directs each scene's palette, camera, and pacing.", "La IA genera B-roll cinematográfico automáticamente. ATLAS dirige cada escena con paletas, cámara y ritmo."],
+    badge: ["Totalmente IA", "Fully AI", "Totalmente IA"],
   },
   {
     id: "partial_pip",
     icon: Camera,
-    label: "Aparição Parcial",
-    desc: "Sua webcam aparece como PiP sobre o B-roll. GRAVAR captura simultaneamente a tela + a câmera.",
-    badge: "PiP webcam",
+    label: ["Aparição Parcial", "Partial Appearance", "Aparición parcial"],
+    desc: ["Sua webcam aparece como PiP sobre o B-roll. GRAVAR captura simultaneamente a tela + a câmera.", "Your webcam appears as PiP over the B-roll. RECORD captures your screen and camera simultaneously.", "Tu cámara aparece como PiP sobre el B-roll. GRABAR captura la pantalla y la cámara simultáneamente."],
+    badge: ["PiP webcam", "Webcam PiP", "Webcam PiP"],
   },
   {
     id: "own_recording",
     icon: Video,
-    label: "Filmagem Própria",
-    desc: "Você filma o vídeo completo. O Agente Editor (ATLAS) recebe suas cenas brutas e monta com cortes, legendas e música.",
-    badge: "Você dirige",
+    label: ["Filmagem Própria", "Own Recording", "Grabación propia"],
+    desc: ["Você filma o vídeo completo. O Agente Editor (ATLAS) recebe suas cenas brutas e monta com cortes, legendas e música.", "You film the full video. Editor Agent (ATLAS) assembles your raw footage with cuts, captions, and music.", "Filmas el vídeo completo. El agente editor (ATLAS) monta tus tomas con cortes, subtítulos y música."],
+    badge: ["Você dirige", "You direct", "Tú diriges"],
   },
 ];
 
-const VIDEO_STATUS: Record<string, { label: string; color: string }> = {
-  intake: { label: "Configurando", color: "text-muted-foreground" },
-  script_generating: { label: "Roteirizando...", color: "text-yellow-400" },
-  script_ready: { label: "Roteiro pronto", color: "text-primary" },
-  script_approved: { label: "Roteiro aprovado", color: "text-primary" },
-  storyboard_generating: { label: "Storyboard...", color: "text-yellow-400" },
-  storyboard_ready: { label: "Storyboard pronto", color: "text-primary" },
-  storyboard_approved: { label: "Storyboard aprovado", color: "text-primary" },
-  preview_generating: { label: "Gerando preview...", color: "text-yellow-400" },
-  preview_ready: { label: "Preview pronto", color: "text-success/80" },
-  preview_approved: { label: "Preview aprovado", color: "text-success" },
-  final_generating: { label: "Gerando HD...", color: "text-yellow-400" },
-  completed: { label: "Concluído ✓", color: "text-success" },
-  failed: { label: "Falhou", color: "text-destructive" },
+const VIDEO_STATUS: Record<string, { label: readonly [string, string, string]; color: string }> = {
+  intake: { label: ["Configurando", "Setting up", "Configurando"], color: "text-muted-foreground" },
+  script_generating: { label: ["Roteirizando...", "Writing script...", "Redactando guion..."], color: "text-yellow-400" },
+  script_ready: { label: ["Roteiro pronto", "Script ready", "Guion listo"], color: "text-primary" },
+  script_approved: { label: ["Roteiro aprovado", "Script approved", "Guion aprobado"], color: "text-primary" },
+  storyboard_generating: { label: ["Storyboard...", "Creating storyboard...", "Creando storyboard..."], color: "text-yellow-400" },
+  storyboard_ready: { label: ["Storyboard pronto", "Storyboard ready", "Storyboard listo"], color: "text-primary" },
+  storyboard_approved: { label: ["Storyboard aprovado", "Storyboard approved", "Storyboard aprobado"], color: "text-primary" },
+  preview_generating: { label: ["Gerando preview...", "Generating preview...", "Generando vista previa..."], color: "text-yellow-400" },
+  preview_ready: { label: ["Preview pronto", "Preview ready", "Vista previa lista"], color: "text-success/80" },
+  preview_approved: { label: ["Preview aprovado", "Preview approved", "Vista previa aprobada"], color: "text-success" },
+  final_generating: { label: ["Gerando HD...", "Generating HD...", "Generando HD..."], color: "text-yellow-400" },
+  completed: { label: ["Concluído ✓", "Completed ✓", "Completado ✓"], color: "text-success" },
+  failed: { label: ["Falhou", "Failed", "Falló"], color: "text-destructive" },
 };
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -96,6 +97,7 @@ interface Props {
 }
 
 export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
+  const t = useUiText();
   const [, navigate] = useLocation();
   const [mode, setMode] = useState<RecordingMode>("avatar_twin");
   const [creatingVideo, setCreatingVideo] = useState(false);
@@ -151,11 +153,11 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
     onSuccess: (d) => {
       queryClient.invalidateQueries({ queryKey: ["/api/video-projects", campaignId] });
       toast.success(d.project.script
-        ? "Projeto de vídeo criado com o roteiro VSL importado!"
-        : "Projeto de vídeo criado! O agente CYRUS vai gerar o roteiro.");
+        ? t("Projeto de vídeo criado com o roteiro VSL importado!", "Video project created with the VSL script imported!", "¡Proyecto de vídeo creado con el guion VSL importado!")
+        : t("Projeto de vídeo criado! O agente CYRUS vai gerar o roteiro.", "Video project created! CYRUS will generate the script.", "¡Proyecto de vídeo creado! CYRUS generará el guion."));
       navigate(`/video-production?projectId=${d.project.id}`);
     },
-    onError: () => toast.error("Erro ao criar projeto de vídeo"),
+   onError: () => toast.error(t("Erro ao criar projeto de vídeo", "Error creating video project", "Error al crear el proyecto de vídeo")),
   });
 
   const videos = videosData?.projects ?? [];
@@ -175,11 +177,11 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
         <div className="flex items-center gap-2.5">
           <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
           <span className="font-mono text-xs font-bold uppercase tracking-widest text-primary">
-            Estúdio de Criativos — Aprovação Final
+             {t("Estúdio de Criativos — Aprovação Final", "Creative Studio — Final Approval", "Estudio creativo — Aprobación final")}
           </span>
         </div>
         <p className="text-[10px] font-mono text-muted-foreground/60 hidden sm:block">
-          Gere, revise e aprove os materiais reais antes do lançamento
+           {t("Gere, revise e aprove os materiais reais antes do lançamento", "Generate, review, and approve the final assets before launch", "Genera, revisa y aprueba los materiales finales antes del lanzamiento")}
         </p>
       </div>
 
@@ -189,10 +191,10 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
         <div className="p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Image className="h-4 w-4 text-pink-400" />
-            <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-foreground">Banners & Criativos</span>
+             <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-foreground">{t("Banners & Criativos", "Banners & Creatives", "Banners y creatividades")}</span>
           </div>
           <p className="text-[11px] font-mono text-muted-foreground/70">
-            Imagens reais geradas pelo agente — conceito → preview → HD final. Aprovação por etapa.
+             {t("Imagens reais geradas pelo agente — conceito → preview → HD final. Aprovação por etapa.", "Images generated by the agent — concept → preview → final HD. Approval at each stage.", "Imágenes generadas por el agente: concepto → vista previa → HD final. Aprobación en cada etapa.")}
           </p>
 
           {/* Status bar */}
@@ -204,7 +206,7 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
               />
             </div>
             <span className="font-mono text-[10px] text-muted-foreground shrink-0">
-              {approvedCreatives.length}/{creatives.length} aprovados
+               {t(`${approvedCreatives.length}/${creatives.length} aprovados`, `${approvedCreatives.length}/${creatives.length} approved`, `${approvedCreatives.length}/${creatives.length} aprobados`)}
             </span>
           </div>
 
@@ -214,7 +216,7 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
               { key: "feed_square", label: "Feed 1:1" },
               { key: "stories", label: "Stories 9:16" },
               { key: "banner", label: "Banner 16:9" },
-              { key: "carousel_slide", label: "Carrossel" },
+               { key: "carousel_slide", label: t("Carrossel", "Carousel", "Carrusel") },
             ].map(f => {
               const count = creatives.filter(c => c.format === f.key);
               const done = count.filter(c => c.status === "final_approved" || c.status === "approved").length;
@@ -229,14 +231,14 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
           <Link href={`/campaigns/${campaignId}/creatives`}>
             <Button className="w-full font-mono uppercase tracking-widest rounded-none gap-2 h-9 text-xs btn-weapon-primary">
               <Layers className="h-3.5 w-3.5" />
-              {creatives.length === 0 ? "Gerar Criativos com IA" : "Gerenciar Criativos"}
+              {creatives.length === 0 ? t("Gerar Criativos com IA", "Generate Creatives with AI", "Generar creatividades con IA") : t("Gerenciar Criativos", "Manage Creatives", "Gestionar creatividades")}
               <ChevronRight className="h-3.5 w-3.5 ml-auto" />
             </Button>
           </Link>
 
           {pendingCreatives.length > 0 && (
             <p className="text-[10px] font-mono text-yellow-400/80">
-              ⚠ {pendingCreatives.length} criativo(s) aguardando aprovação final
+               ⚠ {t(`${pendingCreatives.length} criativo(s) aguardando aprovação final`, `${pendingCreatives.length} creative(s) awaiting final approval`, `${pendingCreatives.length} creatividad(es) pendientes de aprobación final`)}
             </p>
           )}
         </div>
@@ -245,19 +247,19 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
         <div className="p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Film className="h-4 w-4 text-blue-400" />
-            <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-foreground">Vídeos</span>
+             <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-foreground">{t("Vídeos", "Videos", "Vídeos")}</span>
           </div>
 
           {/* Existing video projects */}
           {videos.length > 0 && (
             <div className="space-y-2">
               {videos.slice(0, 3).map(vp => {
-                const vs = VIDEO_STATUS[vp.status] ?? { label: vp.status, color: "text-muted-foreground" };
+                 const vs = VIDEO_STATUS[vp.status] ?? { label: [vp.status, vp.status, vp.status] as const, color: "text-muted-foreground" };
                 return (
                   <div key={vp.id} className="border border-border/40 bg-card/60 p-2.5 flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <div className="font-mono text-[11px] text-foreground truncate">{vp.title}</div>
-                      <div className={`font-mono text-[10px] ${vs.color}`}>{vs.label}</div>
+                       <div className={`font-mono text-[10px] ${vs.color}`}>{t(...vs.label)}</div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <Badge variant="outline" className="font-mono text-[9px] rounded-none px-1.5 border-border/40 text-muted-foreground uppercase">
@@ -269,14 +271,14 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
                 );
               })}
               {videos.length > 3 && (
-                <p className="text-[10px] font-mono text-muted-foreground/60">+{videos.length - 3} projeto(s) em /video-production</p>
+                 <p className="text-[10px] font-mono text-muted-foreground/60">{t(`+${videos.length - 3} projeto(s) em /video-production`, `+${videos.length - 3} more project(s) in /video-production`, `+${videos.length - 3} proyecto(s) más en /video-production`)}</p>
               )}
             </div>
           )}
 
           {/* Recording mode selector */}
           <div className="space-y-2">
-            <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Modo de Criação</div>
+             <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{t("Modo de Criação", "Creation Mode", "Modo de creación")}</div>
             {RECORDING_MODES.map(rm => (
               <button
                 key={rm.id}
@@ -292,15 +294,15 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
                   <div className="flex items-center gap-2 flex-wrap">
                     <rm.icon className={`h-3 w-3 shrink-0 ${mode === rm.id ? "text-primary" : "text-muted-foreground/60"}`} />
                     <span className={`font-mono text-[11px] font-bold uppercase tracking-wide ${mode === rm.id ? "text-primary" : "text-foreground/80"}`}>
-                      {rm.label}
+                       {t(...rm.label)}
                     </span>
                     {rm.badge && (
                       <Badge variant="outline" className={`font-mono text-[8px] rounded-none px-1 uppercase ${mode === rm.id ? "border-primary/40 text-primary" : "border-border/30 text-muted-foreground"}`}>
-                        {rm.badge}
+                         {t(...rm.badge)}
                       </Badge>
                     )}
                   </div>
-                  <p className="font-mono text-[10px] text-muted-foreground/70 mt-0.5 leading-relaxed">{rm.desc}</p>
+                   <p className="font-mono text-[10px] text-muted-foreground/70 mt-0.5 leading-relaxed">{t(...rm.desc)}</p>
                 </div>
               </button>
             ))}
@@ -312,23 +314,23 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
             className="w-full font-mono uppercase tracking-widest rounded-none gap-2 h-9 text-xs btn-weapon-primary"
           >
             {createVideoMutation.isPending
-              ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Criando...</>
-              : <><Clapperboard className="h-3.5 w-3.5" />Criar Projeto de Vídeo</>}
+               ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t("Criando...", "Creating...", "Creando...")}</>
+               : <><Clapperboard className="h-3.5 w-3.5" />{t("Criar Projeto de Vídeo", "Create Video Project", "Crear proyecto de vídeo")}</>}
           </Button>
 
           {mode === "avatar_twin" && (
             <p className="text-[10px] font-mono text-primary/70">
-              ✦ Seu avatar digital e voz clonada precisam estar configurados em <a href="/clone-digital" className="underline">Clone Digital</a>. Se ainda não configurou, faça isso primeiro.
+               ✦ {t("Seu avatar digital e voz clonada precisam estar configurados em", "Your digital avatar and cloned voice must be configured in", "Tu avatar digital y voz clonada deben estar configurados en")} <a href="/clone-digital" className="underline">{t("Clone Digital", "Digital Clone", "Clon digital")}</a>. {t("Se ainda não configurou, faça isso primeiro.", "If you haven't set them up yet, do that first.", "Si aún no los configuraste, hazlo primero.")}
             </p>
           )}
           {mode === "own_recording" && (
             <p className="text-[10px] font-mono text-primary/70">
-              O botão GRAVAR no topo da tela ficará ativo. Grave suas cenas e o Agente Editor (ATLAS) monta o vídeo final.
+               {t("O botão GRAVAR no topo da tela ficará ativo. Grave suas cenas e o Agente Editor (ATLAS) monta o vídeo final.", "The RECORD button at the top of the screen will be enabled. Record your scenes and Editor Agent (ATLAS) will assemble the final video.", "El botón GRABAR en la parte superior se activará. Graba tus escenas y el agente editor (ATLAS) montará el vídeo final.")}
             </p>
           )}
           {mode === "partial_pip" && (
             <p className="text-[10px] font-mono text-primary/70">
-              GRAVAR no topo ativa o PiP da webcam. Grave a tela + câmera simultaneamente.
+               {t("GRAVAR no topo ativa o PiP da webcam. Grave a tela + câmera simultaneamente.", "RECORD at the top enables webcam PiP. Record your screen and camera simultaneously.", "GRABAR en la parte superior activa el PiP de la webcam. Graba la pantalla y la cámara simultáneamente.")}
             </p>
           )}
         </div>
@@ -337,10 +339,10 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
         <div className="p-4 space-y-3">
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-green-400" />
-            <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-foreground">Roteiros VSL / CPL</span>
+             <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-foreground">{t("Roteiros VSL / CPL", "VSL / CPL Scripts", "Guiones VSL / CPL")}</span>
           </div>
           <p className="text-[11px] font-mono text-muted-foreground/70">
-            Roteiros criados pelos agentes. Importe para o produtor de vídeo com um clique.
+             {t("Roteiros criados pelos agentes. Importe para o produtor de vídeo com um clique.", "Scripts created by agents. Import them into the video producer with one click.", "Guiones creados por los agentes. Impórtalos al productor de vídeo con un clic.")}
           </p>
 
           {campaignVsls.length > 0 ? (
@@ -358,15 +360,15 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
                             {vsl.format}
                           </Badge>
                           {hasScript
-                            ? <span className="font-mono text-[10px] text-success">✓ Roteiro pronto</span>
-                            : <span className="font-mono text-[10px] text-muted-foreground/50">Sem roteiro</span>}
+                             ? <span className="font-mono text-[10px] text-success">✓ {t("Roteiro pronto", "Script ready", "Guion listo")}</span>
+                             : <span className="font-mono text-[10px] text-muted-foreground/50">{t("Sem roteiro", "No script", "Sin guion")}</span>}
                         </div>
                       </div>
                     </div>
                     <div className="flex gap-1.5">
                       <Link href="/vsls">
                         <Button variant="outline" size="sm" className="font-mono uppercase tracking-widest rounded-none gap-1 h-7 px-2 text-[10px] border-border/40">
-                          <ExternalLink className="h-3 w-3" />Ver
+                           <ExternalLink className="h-3 w-3" />{t("Ver", "View", "Ver")}
                         </Button>
                       </Link>
                       {hasScript && !linkedVideo && (
@@ -378,12 +380,12 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
                         >
                           {createVideoMutation.isPending
                             ? <><Loader2 className="h-3 w-3 animate-spin" />...</>
-                            : <><Clapperboard className="h-3 w-3" />Criar Vídeo deste Roteiro</>}
+                             : <><Clapperboard className="h-3 w-3" />{t("Criar Vídeo deste Roteiro", "Create Video from Script", "Crear vídeo desde este guion")}</>}
                         </Button>
                       )}
                       {linkedVideo && (
                         <Badge variant="outline" className="font-mono text-[9px] rounded-none px-1.5 border-success/30 text-success">
-                          ✓ Vídeo criado
+                           ✓ {t("Vídeo criado", "Video created", "Vídeo creado")}
                         </Badge>
                       )}
                     </div>
@@ -394,10 +396,10 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
           ) : (
             <div className="border border-border/30 p-3 text-center space-y-2">
               <FileText className="h-6 w-6 text-muted-foreground/30 mx-auto" />
-              <p className="font-mono text-[11px] text-muted-foreground/60">Nenhum roteiro VSL/CPL ainda</p>
+               <p className="font-mono text-[11px] text-muted-foreground/60">{t("Nenhum roteiro VSL/CPL ainda", "No VSL/CPL scripts yet", "Todavía no hay guiones VSL/CPL")}</p>
               <Link href={`/vsls?campaignId=${campaignId}`}>
                 <Button variant="outline" size="sm" className="font-mono uppercase tracking-widest rounded-none gap-1.5 h-7 px-3 text-[10px] border-primary/40 text-primary">
-                  <Plus className="h-3 w-3" />Criar Roteiro VSL
+                   <Plus className="h-3 w-3" />{t("Criar Roteiro VSL", "Create VSL Script", "Crear guion VSL")}
                 </Button>
               </Link>
             </div>
@@ -405,11 +407,11 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
 
           {/* Creative completion summary */}
           <div className="border-t border-border/30 pt-3 space-y-1.5">
-            <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Status do Pacote</div>
+             <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{t("Status do Pacote", "Package Status", "Estado del paquete")}</div>
             {[
-              { label: "Banners", done: approvedCreatives.length, total: creatives.length, color: "bg-pink-400" },
-              { label: "Vídeos", done: completedVideos.length, total: videos.length, color: "bg-blue-400" },
-              { label: "Roteiros", done: campaignVsls.filter(v => (v.sections ?? []).length > 0).length, total: campaignVsls.length, color: "bg-green-400" },
+               { label: t("Banners", "Banners", "Banners"), done: approvedCreatives.length, total: creatives.length, color: "bg-pink-400" },
+               { label: t("Vídeos", "Videos", "Vídeos"), done: completedVideos.length, total: videos.length, color: "bg-blue-400" },
+               { label: t("Roteiros", "Scripts", "Guiones"), done: campaignVsls.filter(v => (v.sections ?? []).length > 0).length, total: campaignVsls.length, color: "bg-green-400" },
             ].map(item => (
               <div key={item.label} className="flex items-center gap-2">
                 <span className="font-mono text-[10px] text-muted-foreground w-16 shrink-0">{item.label}</span>
@@ -422,7 +424,7 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
             {approvedCreatives.length > 0 && completedVideos.length > 0 && (
               <div className="flex items-center gap-2 mt-2">
                 <CheckCircle2 className="h-3 w-3 text-success" />
-                <span className="font-mono text-[10px] text-success">Pacote criativo pronto para lançamento</span>
+                 <span className="font-mono text-[10px] text-success">{t("Pacote criativo pronto para lançamento", "Creative package ready for launch", "Paquete creativo listo para el lanzamiento")}</span>
               </div>
             )}
           </div>

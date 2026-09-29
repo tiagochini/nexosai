@@ -17,6 +17,7 @@ import {
   AlignLeft, Globe, Layers, Undo2, Redo2, Save, Copy,
   ChevronLeft, ChevronRight, Circle, StopCircle, AlertCircle,
 } from "lucide-react";
+import { useUiText, useUiLocale, intlLocale } from "@/lib/i18n";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -126,6 +127,9 @@ function loadSavedProject(): SavedProject | null {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function VideoEditorPage() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
+  const numberLocale = intlLocale(locale);
   const search = useSearch();
   const params = new URLSearchParams(search);
   const recordingId = params.get("recordingId") ?? "";
@@ -162,7 +166,7 @@ export default function VideoEditorPage() {
   // ── UI ─────────────────────────────────────────────────────────────────────
   const [tab, setTab] = useState<Tab>(() => _saved?.tab ?? "clips");
   const [thumbnailUrl, setThumbnailUrl] = useState<string>("");
-  const [projectTitle, setProjectTitle] = useState(() => _saved?.projectTitle ?? "Meu Vídeo");
+  const [projectTitle, setProjectTitle] = useState(() => _saved?.projectTitle ?? t("Meu Vídeo", "My Video", "Mi vídeo"));
   const [projectDescription, setProjectDescription] = useState(() => _saved?.projectDescription ?? "");
   const [autoSavedAt, setAutoSavedAt] = useState<string | null>(() => _saved?.savedAt ?? null);
 
@@ -247,7 +251,7 @@ export default function VideoEditorPage() {
     setCaptions(snap.captions);
     setCanUndo(historyIdxRef.current > 0);
     setCanRedo(true);
-    toast.info("Ação desfeita");
+      toast.info(t("Ação desfeita", "Action undone", "Acción deshecha"));
   }
 
   function redo() {
@@ -259,7 +263,7 @@ export default function VideoEditorPage() {
     setCaptions(snap.captions);
     setCanUndo(true);
     setCanRedo(historyIdxRef.current < historyRef.current.length - 1);
-    toast.info("Ação refeita");
+      toast.info(t("Ação refeita", "Action redone", "Acción rehecha"));
   }
 
   // ── Refs ───────────────────────────────────────────────────────────────────
@@ -321,29 +325,29 @@ export default function VideoEditorPage() {
       setRecordingError(null);
       try {
         const token = localStorage.getItem("accessToken") ?? localStorage.getItem("nexos_token") ?? "";
-        if (!token) throw new Error("Autenticação necessária para carregar a gravação.");
+        if (!token) throw new Error(t("Autenticação necessária para carregar a gravação.", "Authentication is required to load the recording.", "Se requiere autenticación para cargar la grabación."));
 
         const res = await fetch(`/api/recordings/${recordingId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {
-          if (res.status === 401 || res.status === 403) throw new Error("Acesso não autorizado à gravação.");
-          if (res.status === 404) throw new Error("Gravação não encontrada.");
-          throw new Error(`Falha ao carregar gravação (HTTP ${res.status}).`);
+          if (res.status === 401 || res.status === 403) throw new Error(t("Acesso não autorizado à gravação.", "Unauthorized to access this recording.", "No tienes autorización para acceder a la grabación."));
+          if (res.status === 404) throw new Error(t("Gravação não encontrada.", "Recording not found.", "No se encontró la grabación."));
+          throw new Error(t(`Falha ao carregar gravação (HTTP ${res.status}).`, `Failed to load recording (HTTP ${res.status}).`, `No se pudo cargar la grabación (HTTP ${res.status}).`));
         }
 
         const data = await res.json() as { recording?: { id: string; name: string; hasVideo?: boolean } };
         const rec = data.recording;
-        if (!rec) throw new Error("Dados da gravação inválidos ou vazios.");
+        if (!rec) throw new Error(t("Dados da gravação inválidos ou vazios.", "Recording data is invalid or empty.", "Los datos de la grabación no son válidos o están vacíos."));
 
         if (rec.hasVideo && isMounted) {
           addClipFromUrl(`/api/recordings/${rec.id}/video-stream?token=${encodeURIComponent(token)}`, rec.name);
         } else if (isMounted) {
-          setRecordingError("O arquivo de vídeo desta gravação não está disponível.");
+          setRecordingError(t("O arquivo de vídeo desta gravação não está disponível.", "The video file for this recording is unavailable.", "El archivo de vídeo de esta grabación no está disponible."));
         }
       } catch (err: any) {
         if (isMounted) {
-          setRecordingError(err.message || "Erro desconhecido ao carregar gravação.");
+          setRecordingError(err.message || t("Erro desconhecido ao carregar gravação.", "Unknown error loading recording.", "Error desconocido al cargar la grabación."));
         }
       } finally {
         if (isMounted) setLoadingRecording(false);
@@ -416,9 +420,9 @@ export default function VideoEditorPage() {
     try {
       localStorage.setItem(PROJECT_SAVE_KEY, JSON.stringify(state));
       setAutoSavedAt(state.savedAt);
-      toast.success("Projeto salvo");
+      toast.success(t("Projeto salvo", "Project saved", "Proyecto guardado"));
     } catch {
-      toast.error("Erro ao salvar projeto");
+      toast.error(t("Erro ao salvar projeto", "Error saving project", "Error al guardar el proyecto"));
     }
   }
 
@@ -428,7 +432,7 @@ export default function VideoEditorPage() {
     setActiveClipId(null);
     setOverlays([]);
     setCaptions([]);
-    setProjectTitle("Meu Vídeo");
+    setProjectTitle(t("Meu Vídeo", "My Video", "Mi vídeo"));
     setProjectDescription("");
     setNarrationVolume(0.9);
     setNarrationDelay(0);
@@ -436,7 +440,7 @@ export default function VideoEditorPage() {
     setAmbientVolume(0.2);
     setTab("clips");
     setAutoSavedAt(null);
-    toast.success("Projeto limpo");
+    toast.success(t("Projeto limpo", "Project cleared", "Proyecto vaciado"));
   }
 
   function downloadProjectFile() {
@@ -459,7 +463,7 @@ export default function VideoEditorPage() {
     a.download = `${projectTitle.replace(/[^a-z0-9]/gi, "_") || "projeto"}.nexos.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 3000);
-    toast.success("Projeto exportado como arquivo");
+    toast.success(t("Projeto exportado como arquivo", "Project exported as a file", "Proyecto exportado como archivo"));
   }
 
   // ── Clip management ────────────────────────────────────────────────────────
@@ -663,12 +667,12 @@ export default function VideoEditorPage() {
         setIsRecordingNarration(false);
         narrationStreamRef.current?.getTracks().forEach(t => t.stop());
         narrationStreamRef.current = null;
-        toast.success("Narração gravada e anexada ao vídeo");
+        toast.success(t("Narração gravada e anexada ao vídeo", "Narration recorded and added to the video", "Narración grabada y añadida al vídeo"));
       };
       mr.start(100);
       setIsRecordingNarration(true);
     } catch {
-      toast.error("Não foi possível acessar o microfone. Verifique as permissões.");
+      toast.error(t("Não foi possível acessar o microfone. Verifique as permissões.", "Could not access the microphone. Check permissions.", "No se pudo acceder al micrófono. Comprueba los permisos."));
     }
   }
 
@@ -697,7 +701,7 @@ export default function VideoEditorPage() {
     c.getContext("2d")?.drawImage(v, 0, 0);
     const url = c.toDataURL("image/jpeg", 0.85);
     setThumbnailUrl(url);
-    toast.success("Thumbnail capturada do frame atual");
+    toast.success(t("Thumbnail capturada do frame atual", "Thumbnail captured from current frame", "Miniatura capturada del fotograma actual"));
   };
 
   const handleThumbUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -714,13 +718,13 @@ export default function VideoEditorPage() {
     await new Promise(r => setTimeout(r, 2000));
     const d = activeClip.duration;
     const suggestions = [
-      { start: d * 0.1, end: d * 0.2, reason: "Abertura forte — alta atividade de movimento detectada" },
-      { start: d * 0.35, end: d * 0.5, reason: "Pico de engajamento — cena mais dinâmica do vídeo" },
-      { start: d * 0.75, end: d * 0.9, reason: "CTA potencial — ideal para encerramento ou clipe viral" },
+      { start: d * 0.1, end: d * 0.2, reason: t("Abertura forte — alta atividade de movimento detectada", "Strong opening — high motion activity detected", "Inicio potente: se detectó mucha actividad de movimiento") },
+      { start: d * 0.35, end: d * 0.5, reason: t("Pico de engajamento — cena mais dinâmica do vídeo", "Engagement peak — most dynamic scene in the video", "Pico de interacción: escena más dinámica del vídeo") },
+      { start: d * 0.75, end: d * 0.9, reason: t("CTA potencial — ideal para encerramento ou clipe viral", "Potential CTA — ideal for the ending or a viral clip", "Posible CTA: ideal para el cierre o un clip viral") },
     ].map(s => ({ start: Math.round(s.start * 10) / 10, end: Math.round(s.end * 10) / 10, reason: s.reason }));
     setHighlightSuggestions(suggestions);
     setAnalyzingHighlights(false);
-    toast.success("Agente identificou 3 trechos de destaque");
+    toast.success(t("Agente identificou 3 trechos de destaque", "Agent identified 3 highlight moments", "El agente identificó 3 momentos destacados"));
   };
 
   const applyHighlight = (h: { start: number; end: number }) => {
@@ -730,7 +734,7 @@ export default function VideoEditorPage() {
       c.id === activeClipId ? { ...c, inPoint: h.start, outPoint: h.end } : c
     ));
     seek(h.start);
-    toast.success(`Trecho ${fmtTime(h.start)} → ${fmtTime(h.end)} aplicado`);
+    toast.success(t(`Trecho ${fmtTime(h.start)} → ${fmtTime(h.end)} aplicado`, `Segment ${fmtTime(h.start)} → ${fmtTime(h.end)} applied`, `Fragmento ${fmtTime(h.start)} → ${fmtTime(h.end)} aplicado`));
   };
 
   // ── Auto-captions ──────────────────────────────────────────────────────────
@@ -755,7 +759,7 @@ export default function VideoEditorPage() {
     pushHistory(clips, overlays, lines);
     setCaptions(lines);
     setGeneratingCaptions(false);
-    toast.success(`${lines.length} legendas geradas`);
+    toast.success(t(`${lines.length} legendas geradas`, `${lines.length} captions generated`, `${lines.length} textos generados`));
   };
 
   const currentCaption = captions.find(c => currentTime >= c.start && currentTime < c.end);
@@ -801,7 +805,7 @@ export default function VideoEditorPage() {
         src2.connect(gain2);
         gain2.connect(dest);
         src2.start(audioCtx.currentTime + delayS);
-      } catch { toast.warning(`Erro ao decodificar áudio: ${file.name}`); }
+      } catch { toast.warning(t(`Erro ao decodificar áudio: ${file.name}`, `Error decoding audio: ${file.name}`, `Error al decodificar el audio: ${file.name}`)); }
     };
 
     await loadAndSchedule(bgMusicFile, bgMusicVolume);
@@ -832,7 +836,7 @@ export default function VideoEditorPage() {
       setExportDuration(trimLen);
       setExporting(false);
       setExportProgress(100);
-      toast.success("Exportação concluída!");
+      toast.success(t("Exportação concluída!", "Export complete!", "¡Exportación completada!"));
     };
 
     mr.start(1000);
@@ -897,7 +901,7 @@ export default function VideoEditorPage() {
     a.download = `${name}.webm`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
-    toast.success("Download iniciado");
+    toast.success(t("Download iniciado", "Download started", "Descarga iniciada"));
   };
 
   // ── Add overlay ────────────────────────────────────────────────────────────
@@ -912,7 +916,7 @@ export default function VideoEditorPage() {
     pushHistory(clips, next, captions);
     setOverlays(next);
     setNewOverlayText("");
-    toast.success("Texto adicionado");
+    toast.success(t("Texto adicionado", "Text added", "Texto añadido"));
   };
 
   const removeOverlay = (id: string) => {
@@ -923,11 +927,11 @@ export default function VideoEditorPage() {
 
   // ── Tabs ───────────────────────────────────────────────────────────────────
   const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "clips", label: "Clipes", icon: <Film className="h-3.5 w-3.5" /> },
-    { id: "text", label: "Textos", icon: <Type className="h-3.5 w-3.5" /> },
-    { id: "audio", label: "Áudio", icon: <Music className="h-3.5 w-3.5" /> },
-    { id: "captions", label: "Legendas", icon: <AlignLeft className="h-3.5 w-3.5" /> },
-    { id: "export", label: "Exportar", icon: <Download className="h-3.5 w-3.5" /> },
+    { id: "clips", label: t("Clipes", "Clips", "Clips"), icon: <Film className="h-3.5 w-3.5" /> },
+    { id: "text", label: t("Textos", "Text", "Texto"), icon: <Type className="h-3.5 w-3.5" /> },
+    { id: "audio", label: t("Áudio", "Audio", "Audio"), icon: <Music className="h-3.5 w-3.5" /> },
+    { id: "captions", label: t("Legendas", "Captions", "Subtítulos"), icon: <AlignLeft className="h-3.5 w-3.5" /> },
+    { id: "export", label: t("Exportar", "Export", "Exportar"), icon: <Download className="h-3.5 w-3.5" /> },
   ];
 
   const handleBack = () => {
@@ -953,11 +957,11 @@ export default function VideoEditorPage() {
         const raw = event.target?.result as string;
         const parsed = JSON.parse(raw) as Partial<SavedProject>;
         if (parsed.version !== 2) {
-          toast.error("Formato de projeto inválido ou incompatível com esta versão do editor leve.");
+          toast.error(t("Formato de projeto inválido ou incompatível com esta versão do editor leve.", "Project format is invalid or incompatible with this lightweight editor version.", "El formato del proyecto no es válido o no es compatible con esta versión del editor ligero."));
           return;
         }
 
-        setProjectTitle(parsed.projectTitle || "Meu Vídeo");
+        setProjectTitle(parsed.projectTitle || t("Meu Vídeo", "My Video", "Mi vídeo"));
         setProjectDescription(parsed.projectDescription || "");
         setClips(parsed.clips?.map(c => ({
           id: c.id,
@@ -974,9 +978,9 @@ export default function VideoEditorPage() {
         setNarrationDelay(parsed.narrationDelay ?? 0);
         setBgMusicVolume(parsed.bgMusicVolume ?? 0.3);
         setAmbientVolume(parsed.ambientVolume ?? 0.2);
-        toast.success("Projeto leve importado com sucesso.");
+      toast.success(t("Projeto leve importado com sucesso.", "Lightweight project imported successfully.", "Proyecto ligero importado correctamente."));
       } catch (err) {
-        toast.error("Falha ao ler o arquivo. Tem certeza que é um projeto .nexos.json válido?");
+        toast.error(t("Falha ao ler o arquivo. Tem certeza que é um projeto .nexos.json válido?", "Failed to read file. Are you sure it is a valid .nexos.json project?", "No se pudo leer el archivo. ¿Seguro que es un proyecto .nexos.json válido?"));
       }
     };
     reader.readAsText(file);
@@ -995,7 +999,7 @@ export default function VideoEditorPage() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
             <Button onClick={handleBack} variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-3 w-3 mr-2" />Voltar
+              <ArrowLeft className="h-3 w-3 mr-2" />{t("Voltar", "Back", "Volver")}
             </Button>
             <div className="w-px h-4 bg-border" />
             <div className="flex items-center gap-2">
@@ -1003,9 +1007,9 @@ export default function VideoEditorPage() {
                 <Scissors className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <h1 className="font-mono font-black text-lg uppercase tracking-wide leading-none">Editor Leve</h1>
+                <h1 className="font-mono font-black text-lg uppercase tracking-wide leading-none">{t("Editor Leve", "Lightweight Editor", "Editor ligero")}</h1>
                 <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-                  NexOS · Edição Rápida (.nexos.json)
+                  {t("NexOS · Edição Rápida (.nexos.json)", "NexOS · Quick Edit (.nexos.json)", "NexOS · Edición rápida (.nexos.json)")}
                 </p>
               </div>
             </div>
@@ -1015,45 +1019,45 @@ export default function VideoEditorPage() {
           <div className="flex items-center gap-1.5 flex-wrap">
             <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo}
               className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2 gap-1">
-              <Undo2 className="h-3.5 w-3.5" />Desfazer
+              <Undo2 className="h-3.5 w-3.5" />{t("Desfazer", "Undo", "Deshacer")}
             </Button>
             <Button variant="ghost" size="sm" onClick={redo} disabled={!canRedo}
               className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2 gap-1">
-              <Redo2 className="h-3.5 w-3.5" />Refazer
+              <Redo2 className="h-3.5 w-3.5" />{t("Refazer", "Redo", "Rehacer")}
             </Button>
             <div className="w-px h-4 bg-border mx-1" />
             <Button variant="ghost" size="sm" onClick={saveProject}
               className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2 gap-1">
-              <Save className="h-3.5 w-3.5" />Salvar
+              <Save className="h-3.5 w-3.5" />{t("Salvar", "Save", "Guardar")}
             </Button>
 
             {/* Import/Export buttons */}
             <Button variant="ghost" size="sm" onClick={() => importFileRef.current?.click()}
               className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2 gap-1"
-              title="Importar projeto legado leve (.nexos.json)">
-              <Upload className="h-3.5 w-3.5" />Importar Leve
+              title={t("Importar projeto legado leve (.nexos.json)", "Import legacy lightweight project (.nexos.json)", "Importar proyecto ligero anterior (.nexos.json)")}>
+              <Upload className="h-3.5 w-3.5" />{t("Importar Leve", "Import Lightweight", "Importar ligero")}
             </Button>
             <input type="file" accept=".nexos.json,application/json" ref={importFileRef} className="hidden" onChange={handleImportLegacyProject} />
 
             <Button variant="ghost" size="sm" onClick={downloadProjectFile}
               className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2 gap-1"
-              title="Exportar projeto leve. Para edição completa, use o Studio (.nexosvideo)">
-              <Copy className="h-3.5 w-3.5" />Exportar Leve
+              title={t("Exportar projeto leve. Para edição completa, use o Studio (.nexosvideo)", "Export lightweight project. For full editing, use Studio (.nexosvideo)", "Exportar proyecto ligero. Para edición completa, usa Studio (.nexosvideo)")}>
+              <Copy className="h-3.5 w-3.5" />{t("Exportar Leve", "Export Lightweight", "Exportar ligero")}
             </Button>
             {clips.length > 0 && (
               <Button variant="ghost" size="sm" onClick={() => {
-                if (confirm("Limpar projeto e começar do zero?")) clearSavedProject();
-              }} className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2 gap-1 text-muted-foreground hover:text-destructive" aria-label="Novo projeto">
-                <Trash2 className="h-3.5 w-3.5" />Novo
+                if (confirm(t("Limpar projeto e começar do zero?", "Clear the project and start from scratch?", "¿Vaciar el proyecto y empezar desde cero?"))) clearSavedProject();
+              }} className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2 gap-1 text-muted-foreground hover:text-destructive" aria-label={t("Novo projeto", "New project", "Nuevo proyecto")}>
+                <Trash2 className="h-3.5 w-3.5" />{t("Novo", "New", "Nuevo")}
               </Button>
             )}
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="font-mono text-[10px] rounded-none border-primary/40 text-primary hidden md:flex">
-                {clips.length} clipe{clips.length !== 1 ? "s" : ""} · {fmtTime(totalDuration)}
+                {t(`${clips.length} clipe${clips.length !== 1 ? "s" : ""}`, `${clips.length} clip${clips.length !== 1 ? "s" : ""}`, `${clips.length} clip${clips.length !== 1 ? "s" : ""}`)} · {fmtTime(totalDuration)}
               </Badge>
               {autoSavedAt && (
                 <span className="font-mono text-[9px] text-muted-foreground/50 hidden md:block">
-                  ✓ auto-salvo {new Date(autoSavedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                  ✓ {t("auto-salvo", "autosaved", "guardado automáticamente")} {new Date(autoSavedAt).toLocaleTimeString(numberLocale, { hour: "2-digit", minute: "2-digit" })}
                 </span>
               )}
             </div>
@@ -1070,13 +1074,13 @@ export default function VideoEditorPage() {
               <input
                 value={projectTitle}
                 onChange={e => setProjectTitle(e.target.value)}
-                placeholder="Título do vídeo..."
+                placeholder={t("Título do vídeo...", "Video title...", "Título del vídeo...")}
                 className="border border-border/50 bg-card/40 px-3 py-2 text-sm font-mono focus:border-primary/50 focus:outline-none"
               />
               <input
                 value={projectDescription}
                 onChange={e => setProjectDescription(e.target.value)}
-                placeholder="Descrição / legenda..."
+                placeholder={t("Descrição / legenda...", "Description / caption...", "Descripción / texto...")}
                 className="border border-border/50 bg-card/40 px-3 py-2 text-sm font-mono focus:border-primary/50 focus:outline-none"
               />
             </div>
@@ -1086,26 +1090,26 @@ export default function VideoEditorPage() {
               {loadingRecording ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
                   <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
-                  <p className="font-mono text-xs uppercase tracking-widest text-primary/70">Carregando Gravação...</p>
+                  <p className="font-mono text-xs uppercase tracking-widest text-primary/70">{t("Carregando Gravação...", "Loading recording...", "Cargando grabación...")}</p>
                 </div>
               ) : recordingError ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-destructive p-6 text-center">
                   <AlertCircle className="h-10 w-10 opacity-80" />
                   <p className="font-mono text-sm uppercase tracking-wider">{recordingError}</p>
                   <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="mt-2 font-mono text-xs uppercase">
-                    Tentar Novamente
+                    {t("Tentar Novamente", "Try Again", "Reintentar")}
                   </Button>
                 </div>
               ) : !activeClip ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
                   <Film className="h-12 w-12 opacity-20" />
-                  <p className="font-mono text-xs uppercase tracking-widest opacity-50">Nenhum vídeo carregado</p>
+                  <p className="font-mono text-xs uppercase tracking-widest opacity-50">{t("Nenhum vídeo carregado", "No video loaded", "No hay ningún vídeo cargado")}</p>
                   <Button
                     variant="outline" size="sm"
                     onClick={() => localFileRef.current?.click()}
                     className="rounded-none font-mono text-[11px] uppercase tracking-widest"
                   >
-                    <Upload className="h-3 w-3 mr-2" />Carregar vídeo
+                    <Upload className="h-3 w-3 mr-2" />{t("Carregar vídeo", "Load video", "Cargar vídeo")}
                   </Button>
                 </div>
               ) : (
@@ -1149,7 +1153,7 @@ export default function VideoEditorPage() {
                   {isRecordingNarration && (
                     <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/70 px-2 py-1 rounded">
                       <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                      <span className="font-mono text-[10px] text-red-400 uppercase tracking-widest">Gravando narração</span>
+                      <span className="font-mono text-[10px] text-red-400 uppercase tracking-widest">{t("Gravando narração", "Recording narration", "Grabando narración")}</span>
                     </div>
                   )}
                 </>
@@ -1168,7 +1172,7 @@ export default function VideoEditorPage() {
                   onMouseMove={onTimelineMouseMove}
                   onMouseLeave={() => setHoverTime(null)}
                   className="relative h-10 bg-card/40 border border-border/40 cursor-crosshair select-none overflow-visible"
-                  title="Clique para navegar · Arraste para selecionar range · Arraste o marcador branco para scrub frame-a-frame"
+                  title={t("Clique para navegar · Arraste para selecionar range · Arraste o marcador branco para scrub frame-a-frame", "Click to navigate · Drag to select a range · Drag the white marker to scrub frame-by-frame", "Haz clic para navegar · Arrastra para seleccionar un rango · Arrastra el marcador blanco para avanzar fotograma a fotograma")}
                 >
                   {/* In/Out region */}
                   <div
@@ -1208,7 +1212,7 @@ export default function VideoEditorPage() {
                   <div
                     className="absolute top-0 bottom-0 w-2 bg-primary cursor-ew-resize z-10"
                     style={{ left: pct(activeClip.inPoint) }}
-                    title="Arraste para ajustar ponto de entrada (IN)"
+                    title={t("Arraste para ajustar ponto de entrada (IN)", "Drag to adjust the in point (IN)", "Arrastra para ajustar el punto de entrada (IN)")}
                     onMouseDown={e => {
                       e.stopPropagation();
                       const startX = e.clientX;
@@ -1235,7 +1239,7 @@ export default function VideoEditorPage() {
                   <div
                     className="absolute top-0 bottom-0 w-2 bg-primary cursor-ew-resize z-10"
                     style={{ left: pct(activeClip.outPoint) }}
-                    title="Arraste para ajustar ponto de saída (OUT)"
+                    title={t("Arraste para ajustar ponto de saída (OUT)", "Drag to adjust the out point (OUT)", "Arrastra para ajustar el punto de salida (OUT)")}
                     onMouseDown={e => {
                       e.stopPropagation();
                       const startX = e.clientX;
@@ -1303,12 +1307,12 @@ export default function VideoEditorPage() {
 
                 {/* Controls row */}
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <Button variant="ghost" size="sm" onClick={() => seek(activeClip.inPoint)} className="p-2" title="Ir ao início (IN)">
+                  <Button variant="ghost" size="sm" onClick={() => seek(activeClip.inPoint)} className="p-2" title={t("Ir ao início (IN)", "Go to start (IN)", "Ir al inicio (IN)")}>
                     <SkipBack className="h-3.5 w-3.5" />
                   </Button>
 
                   {/* Frame back */}
-                  <Button variant="ghost" size="sm" onClick={() => stepFrame(-1)} className="p-2 font-mono text-[10px]" title="Frame anterior (←)">
+                  <Button variant="ghost" size="sm" onClick={() => stepFrame(-1)} className="p-2 font-mono text-[10px]" title={t("Frame anterior (←)", "Previous frame (←)", "Fotograma anterior (←)")}>
                     <ChevronLeft className="h-3.5 w-3.5" />
                   </Button>
 
@@ -1320,24 +1324,24 @@ export default function VideoEditorPage() {
                         ? "border-red-500 bg-red-500/15 text-red-400"
                         : ""
                     }`}
-                    title={narrationMode === "record" ? "Play + Gravar narração" : "Play/Pause (Espaço)"}
+                    title={narrationMode === "record" ? t("Play + Gravar narração", "Play + Record narration", "Reproducir + Grabar narración") : t("Play/Pause (Espaço)", "Play/Pause (Space)", "Reproducir/Pausar (Espacio)")}
                   >
                     {isRecordingNarration
-                      ? <><StopCircle className="h-3.5 w-3.5 mr-1.5 text-red-400" />Parar</>
+                      ? <><StopCircle className="h-3.5 w-3.5 mr-1.5 text-red-400" />{t("Parar", "Stop", "Detener")}</>
                       : isPlaying
                       ? <Pause className="h-3.5 w-3.5" />
                       : narrationMode === "record"
-                      ? <><Circle className="h-3 w-3 mr-1.5 fill-red-500 text-red-500" />Gravar</>
+                      ? <><Circle className="h-3 w-3 mr-1.5 fill-red-500 text-red-500" />{t("Gravar", "Record", "Grabar")}</>
                       : <Play className="h-3.5 w-3.5" />
                     }
                   </Button>
 
                   {/* Frame forward */}
-                  <Button variant="ghost" size="sm" onClick={() => stepFrame(1)} className="p-2 font-mono text-[10px]" title="Próximo frame (→)">
+                  <Button variant="ghost" size="sm" onClick={() => stepFrame(1)} className="p-2 font-mono text-[10px]" title={t("Próximo frame (→)", "Next frame (→)", "Fotograma siguiente (→)")}>
                     <ChevronRight className="h-3.5 w-3.5" />
                   </Button>
 
-                  <Button variant="ghost" size="sm" onClick={() => seek(activeClip.outPoint)} className="p-2" title="Ir ao fim (OUT)">
+                  <Button variant="ghost" size="sm" onClick={() => seek(activeClip.outPoint)} className="p-2" title={t("Ir ao fim (OUT)", "Go to end (OUT)", "Ir al final (OUT)")}>
                     <SkipForward className="h-3.5 w-3.5" />
                   </Button>
 
@@ -1357,12 +1361,12 @@ export default function VideoEditorPage() {
                   <div className="flex items-center gap-1 ml-auto">
                     <Button variant="outline" size="sm" onClick={setIn}
                       className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2 border-primary/40 text-primary"
-                      title="Marcar ponto de entrada no frame atual">
+                      title={t("Marcar ponto de entrada no frame atual", "Set in point at current frame", "Marcar punto de entrada en el fotograma actual")}>
                       <Scissors className="h-3 w-3 mr-1" />IN
                     </Button>
                     <Button variant="outline" size="sm" onClick={setOut}
                       className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2 border-primary/40 text-primary"
-                      title="Marcar ponto de saída no frame atual">
+                      title={t("Marcar ponto de saída no frame atual", "Set out point at current frame", "Marcar punto de salida en el fotograma actual")}>
                       OUT<Scissors className="h-3 w-3 ml-1" />
                     </Button>
                     {rangeStart !== null && rangeEnd !== null && (
@@ -1378,23 +1382,23 @@ export default function VideoEditorPage() {
                               ? { ...c, inPoint: Math.max(0, rs), outPoint: Math.min(c.duration, re) } : c));
                             pushHistory(clips, overlays, captions);
                             setRangeStart(null); setRangeEnd(null);
-                            toast.success("IN/OUT ajustados ao range");
+                            toast.success(t("IN/OUT ajustados ao range", "IN/OUT adjusted to range", "IN/OUT ajustados al rango"));
                           }}
                           className="rounded-none font-mono text-[9px] uppercase tracking-widest px-2 h-7 border border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10"
-                          title="Usar range selecionado como IN/OUT">
+                          title={t("Usar range selecionado como IN/OUT", "Use selected range as IN/OUT", "Usar rango seleccionado como IN/OUT")}>
                           IN↔OUT
                         </Button>
                         <button
                           onClick={() => { setRangeStart(null); setRangeEnd(null); }}
                           className="font-mono text-[10px] px-1.5 text-muted-foreground hover:text-foreground transition-colors"
-                          title="Limpar seleção">
+                          title={t("Limpar seleção", "Clear selection", "Borrar selección")}>
                           ✕
                         </button>
                       </div>
                     )}
                     <Button variant="ghost" size="sm" onClick={captureThumbnail}
                       className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2">
-                      <ImageIcon className="h-3 w-3 mr-1" />Thumb
+                      <ImageIcon className="h-3 w-3 mr-1" />{t("Miniatura", "Thumbnail", "Miniatura")}
                     </Button>
                   </div>
                 </div>
@@ -1404,12 +1408,12 @@ export default function VideoEditorPage() {
                   <div className="flex items-center gap-2">
                     <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <p className="font-mono text-[11px] text-muted-foreground">
-                      Trecho: <span className="text-foreground font-bold">{fmtTime(activeClip.inPoint)} → {fmtTime(activeClip.outPoint)}</span>
+                      {t("Trecho:", "Segment:", "Fragmento:")} <span className="text-foreground font-bold">{fmtTime(activeClip.inPoint)} → {fmtTime(activeClip.outPoint)}</span>
                       {" "}· <span className="text-foreground font-bold">{fmtTime(activeClip.outPoint - activeClip.inPoint)}</span>
                     </p>
                   </div>
                   <p className="font-mono text-[9px] text-muted-foreground/50 hidden md:block">
-                    ← → frame · Espaço play · Ctrl+Z desfazer
+                    {t("← → frame · Espaço reproduzir · Ctrl+Z desfazer", "← → frame · Space play · Ctrl+Z undo", "← → fotograma · Espacio reproducir · Ctrl+Z deshacer")}
                   </p>
                 </div>
               </div>
@@ -1447,10 +1451,10 @@ export default function VideoEditorPage() {
             {tab === "clips" && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Clipes ({clips.length})</p>
+                  <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Clipes", "Clips", "Clips")} ({clips.length})</p>
                   <Button variant="outline" size="sm" onClick={() => localFileRef.current?.click()}
                     className="rounded-none font-mono text-[10px] uppercase tracking-widest">
-                    <Plus className="h-3 w-3 mr-1" />Adicionar
+                    <Plus className="h-3 w-3 mr-1" />{t("Adicionar", "Add", "Añadir")}
                   </Button>
                 </div>
 
@@ -1459,9 +1463,9 @@ export default function VideoEditorPage() {
                     className="w-full border-2 border-dashed border-border/50 hover:border-primary/40 p-8 text-center transition-all group">
                     <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40 group-hover:text-primary/60 transition-colors" />
                     <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
-                      Arraste ou clique para adicionar vídeos
+                      {t("Arraste ou clique para adicionar vídeos", "Drag or click to add videos", "Arrastra o haz clic para añadir vídeos")}
                     </p>
-                    <p className="font-mono text-[10px] text-muted-foreground/50 mt-1">.mp4 · .webm · .mov · múltiplos arquivos</p>
+                    <p className="font-mono text-[10px] text-muted-foreground/50 mt-1">{t(".mp4 · .webm · .mov · múltiplos arquivos", ".mp4 · .webm · .mov · multiple files", ".mp4 · .webm · .mov · varios archivos")}</p>
                   </button>
                 )}
 
@@ -1488,7 +1492,7 @@ export default function VideoEditorPage() {
                           <p className="font-mono text-[11px] text-foreground truncate">{clip.name}</p>
                           {isLost ? (
                             <p className="font-mono text-[10px] text-amber-400/70">
-                              arquivo local — re-adicione para editar
+                              {t("arquivo local — re-adicione para editar", "local file — re-add to edit", "archivo local: vuelve a añadirlo para editar")}
                             </p>
                           ) : (
                             <p className="font-mono text-[10px] text-muted-foreground">
@@ -1500,11 +1504,11 @@ export default function VideoEditorPage() {
                         {isLost && (
                           <button onClick={e => { e.stopPropagation(); localFileRef.current?.click(); }}
                             className="text-[10px] font-mono text-amber-400/70 hover:text-amber-400 transition-colors border border-amber-500/30 px-1.5 py-0.5 shrink-0">
-                            + ADD
+                            + {t("Adicionar", "Add", "Añadir")}
                           </button>
                         )}
                         <button onClick={e => { e.stopPropagation(); removeClip(clip.id); }}
-                          className="text-muted-foreground hover:text-destructive transition-colors shrink-0" aria-label="Remover clipe">
+                          className="text-muted-foreground hover:text-destructive transition-colors shrink-0" aria-label={t("Remover clipe", "Remove clip", "Eliminar clip")}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
@@ -1515,13 +1519,13 @@ export default function VideoEditorPage() {
                 {/* Thumbnail */}
                 <div className="border border-border/40 bg-card/20 p-3 space-y-2">
                   <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                    <ImageIcon className="h-3.5 w-3.5" />Thumbnail / Capa
+                    <ImageIcon className="h-3.5 w-3.5" />{t("Thumbnail / Capa", "Thumbnail / Cover", "Miniatura / Portada")}
                   </p>
                   {thumbnailUrl ? (
                     <div className="relative">
                       <img src={thumbnailUrl} className="w-full aspect-video object-cover border border-border/40" alt="thumb" />
                       <button onClick={() => setThumbnailUrl("")}
-                        className="absolute top-1 right-1 bg-black/60 text-white p-1 hover:bg-destructive/80 transition-colors">
+                        className="absolute top-1 right-1 bg-black/60 text-white p-1 hover:bg-destructive/80 transition-colors" aria-label={t("Remover miniatura", "Remove thumbnail", "Eliminar miniatura")}>
                         <Trash2 className="h-3 w-3" />
                       </button>
                     </div>
@@ -1529,11 +1533,11 @@ export default function VideoEditorPage() {
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={captureThumbnail}
                         className="rounded-none font-mono text-[10px] uppercase tracking-widest flex-1">
-                        <Eye className="h-3 w-3 mr-1" />Capturar frame
+                        <Eye className="h-3 w-3 mr-1" />{t("Capturar frame", "Capture frame", "Capturar fotograma")}
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => thumbRef.current?.click()}
                         className="rounded-none font-mono text-[10px] uppercase tracking-widest flex-1">
-                        <Upload className="h-3 w-3 mr-1" />Upload
+                        <Upload className="h-3 w-3 mr-1" />{t("Fazer upload", "Upload", "Subir")}
                       </Button>
                     </div>
                   )}
@@ -1542,14 +1546,14 @@ export default function VideoEditorPage() {
                 {/* AI Highlights */}
                 <div className="border border-border/40 bg-card/20 p-3 space-y-2">
                   <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                    <Sparkles className="h-3.5 w-3.5 text-primary" />Agente · Highlights
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />{t("Agente · Destaques", "Agent · Highlights", "Agente · Momentos destacados")}
                   </p>
                   <Button variant="outline" size="sm" onClick={analyzeHighlights}
                     disabled={!activeClip || analyzingHighlights}
                     className="rounded-none font-mono text-[10px] uppercase tracking-widest w-full">
                     {analyzingHighlights
-                      ? <><Loader2 className="h-3 w-3 mr-1.5 animate-spin" />Analisando…</>
-                      : <><Sparkles className="h-3 w-3 mr-1.5" />Detectar melhores trechos</>
+                      ? <><Loader2 className="h-3 w-3 mr-1.5 animate-spin" />{t("Analisando…", "Analyzing…", "Analizando…")}</>
+                      : <><Sparkles className="h-3 w-3 mr-1.5" />{t("Detectar melhores trechos", "Find best moments", "Detectar mejores momentos")}</>
                     }
                   </Button>
                   {highlightSuggestions.map((h, i) => (
@@ -1560,7 +1564,7 @@ export default function VideoEditorPage() {
                       <p className="font-mono text-[10px] text-muted-foreground">{h.reason}</p>
                       <Button variant="ghost" size="sm" onClick={() => applyHighlight(h)}
                         className="font-mono text-[10px] uppercase tracking-widest h-6 px-2">
-                        Usar este trecho
+                        {t("Usar este trecho", "Use this segment", "Usar este fragmento")}
                       </Button>
                     </div>
                   ))}
@@ -1571,38 +1575,38 @@ export default function VideoEditorPage() {
             {/* ── Tab: Texts ──────────────────────────────────────────────── */}
             {tab === "text" && (
               <div className="space-y-3">
-                <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Adicionar texto / título</p>
+                <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Adicionar texto / título", "Add text / title", "Añadir texto / título")}</p>
                 <textarea value={newOverlayText} onChange={e => setNewOverlayText(e.target.value)}
-                  placeholder="Digite o texto..." rows={2}
+                  placeholder={t("Digite o texto...", "Enter text...", "Escribe el texto...")} rows={2}
                   className="w-full border border-border/50 bg-card/40 px-3 py-2 text-sm font-mono focus:border-primary/50 focus:outline-none resize-none"
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">Posição</label>
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">{t("Posição", "Position", "Posición")}</label>
                     <select value={newOverlayPos} onChange={e => setNewOverlayPos(e.target.value as TextOverlay["position"])}
                       className="w-full border border-border/50 bg-card/40 px-2 py-1.5 text-xs font-mono focus:outline-none">
-                      <option value="top">Topo</option>
-                      <option value="center">Centro</option>
-                      <option value="bottom">Rodapé</option>
+                      <option value="top">{t("Topo", "Top", "Arriba")}</option>
+                      <option value="center">{t("Centro", "Center", "Centro")}</option>
+                      <option value="bottom">{t("Rodapé", "Bottom", "Abajo")}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">Estilo</label>
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">{t("Estilo", "Style", "Estilo")}</label>
                     <select value={newOverlayStyle} onChange={e => setNewOverlayStyle(e.target.value as TextOverlay["style"])}
                       className="w-full border border-border/50 bg-card/40 px-2 py-1.5 text-xs font-mono focus:outline-none">
-                      <option value="title">Título</option>
-                      <option value="subtitle">Subtítulo</option>
-                      <option value="caption">Legenda</option>
+                      <option value="title">{t("Título", "Title", "Título")}</option>
+                      <option value="subtitle">{t("Subtítulo", "Subtitle", "Subtítulo")}</option>
+                      <option value="caption">{t("Legenda", "Caption", "Texto")}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">Início (s)</label>
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">{t("Início (s)", "Start (s)", "Inicio (s)")}</label>
                     <input type="number" min={0} step={0.5} value={newOverlayStart}
                       onChange={e => setNewOverlayStart(+e.target.value)}
                       className="w-full border border-border/50 bg-card/40 px-2 py-1.5 text-xs font-mono focus:outline-none" />
                   </div>
                   <div>
-                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">Fim (s)</label>
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">{t("Fim (s)", "End (s)", "Fin (s)")}</label>
                     <input type="number" min={0} step={0.5} value={newOverlayEnd}
                       onChange={e => setNewOverlayEnd(+e.target.value)}
                       className="w-full border border-border/50 bg-card/40 px-2 py-1.5 text-xs font-mono focus:outline-none" />
@@ -1615,7 +1619,7 @@ export default function VideoEditorPage() {
 
                 {overlays.length > 0 && (
                   <div className="space-y-1.5">
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Textos adicionados</p>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Textos adicionados", "Added text", "Textos añadidos")}</p>
                     {overlays.map(o => (
                       <div key={o.id} className="flex items-center gap-2 border border-border/30 bg-card/20 p-2">
                         <div className="flex-1 min-w-0">
@@ -1642,15 +1646,15 @@ export default function VideoEditorPage() {
                 {/* Música de fundo */}
                 <div className="border border-border/40 bg-card/20 p-3 space-y-2">
                   <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                    <Music className="h-3.5 w-3.5" />Música de fundo
+                    <Music className="h-3.5 w-3.5" />{t("Música de fundo", "Background Music", "Música de fondo")}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={() => bgMusicRef.current?.click()}
                       className="rounded-none font-mono text-[10px] uppercase tracking-widest flex-1">
                       <Upload className="h-3 w-3 mr-1.5" />
-                      {bgMusicFile ? bgMusicFile.name.slice(0, 20) + "…" : "Carregar"}
+                    {bgMusicFile ? bgMusicFile.name.slice(0, 20) + "…" : t("Carregar", "Load", "Cargar")}
                     </Button>
-                    {bgMusicFile && <button onClick={() => setBgMusicFile(null)} className="text-muted-foreground hover:text-destructive transition-colors" aria-label="Remover música"><Trash2 className="h-3.5 w-3.5" /></button>}
+                    {bgMusicFile && <button onClick={() => setBgMusicFile(null)} className="text-muted-foreground hover:text-destructive transition-colors" aria-label={t("Remover música", "Remove music", "Eliminar música")}><Trash2 className="h-3.5 w-3.5" /></button>}
                   </div>
                   {bgMusicFile && (
                     <div className="flex items-center gap-2">
@@ -1665,15 +1669,15 @@ export default function VideoEditorPage() {
                 {/* Som ambiente */}
                 <div className="border border-border/40 bg-card/20 p-3 space-y-2">
                   <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                    <Wind className="h-3.5 w-3.5" />Som ambiente
+                    <Wind className="h-3.5 w-3.5" />{t("Som ambiente", "Ambient Sound", "Sonido ambiente")}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={() => ambientRef.current?.click()}
                       className="rounded-none font-mono text-[10px] uppercase tracking-widest flex-1">
                       <Upload className="h-3 w-3 mr-1.5" />
-                      {ambientFile ? ambientFile.name.slice(0, 20) + "…" : "Carregar"}
+                    {ambientFile ? ambientFile.name.slice(0, 20) + "…" : t("Carregar", "Load", "Cargar")}
                     </Button>
-                    {ambientFile && <button onClick={() => setAmbientFile(null)} className="text-muted-foreground hover:text-destructive transition-colors" aria-label="Remover ambiente"><Trash2 className="h-3.5 w-3.5" /></button>}
+                    {ambientFile && <button onClick={() => setAmbientFile(null)} className="text-muted-foreground hover:text-destructive transition-colors" aria-label={t("Remover ambiente", "Remove ambience", "Eliminar ambiente")}><Trash2 className="h-3.5 w-3.5" /></button>}
                   </div>
                   {ambientFile && (
                     <div className="flex items-center gap-2">
@@ -1692,7 +1696,7 @@ export default function VideoEditorPage() {
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                       <Mic className={`h-3.5 w-3.5 ${narrationMode === "record" ? "text-red-400" : ""}`} />
-                      Narração / Voz
+                      {t("Narração / Voz", "Narration / Voice", "Narración / Voz")}
                     </p>
                     {/* Mode toggle */}
                     <div className="flex border border-border/40 overflow-hidden">
@@ -1702,7 +1706,7 @@ export default function VideoEditorPage() {
                           narrationMode === "upload" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        Upload
+                        {t("Upload", "Upload", "Subir")}
                       </button>
                       <button
                         onClick={() => setNarrationMode("record")}
@@ -1710,7 +1714,7 @@ export default function VideoEditorPage() {
                           narrationMode === "record" ? "bg-red-500 text-white" : "text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        <Circle className="h-2 w-2 fill-current" />Gravar
+                        <Circle className="h-2 w-2 fill-current" />{t("Gravar", "Record", "Grabar")}
                       </button>
                     </div>
                   </div>
@@ -1722,9 +1726,9 @@ export default function VideoEditorPage() {
                         <Button variant="outline" size="sm" onClick={() => narrationRef.current?.click()}
                           className="rounded-none font-mono text-[10px] uppercase tracking-widest flex-1">
                           <Upload className="h-3 w-3 mr-1.5" />
-                          {narrationFile ? narrationFile.name.slice(0, 20) + "…" : "Carregar áudio"}
+                        {narrationFile ? narrationFile.name.slice(0, 20) + "…" : t("Carregar áudio", "Load audio", "Cargar audio")}
                         </Button>
-                        {narrationFile && <button onClick={() => setNarrationFile(null)} className="text-muted-foreground hover:text-destructive transition-colors" aria-label="Remover narração"><Trash2 className="h-3.5 w-3.5" /></button>}
+                        {narrationFile && <button onClick={() => setNarrationFile(null)} className="text-muted-foreground hover:text-destructive transition-colors" aria-label={t("Remover narração", "Remove narration", "Eliminar narración")}><Trash2 className="h-3.5 w-3.5" /></button>}
                       </div>
                       {narrationFile && (
                         <>
@@ -1735,7 +1739,7 @@ export default function VideoEditorPage() {
                             <span className="font-mono text-[10px] text-muted-foreground w-8 text-right">{Math.round(narrationVolume * 100)}%</span>
                           </div>
                           <div>
-                            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">Atraso (s)</label>
+                            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">{t("Atraso (s)", "Delay (s)", "Retraso (s)")}</label>
                             <input type="number" min={0} step={0.5} value={narrationDelay}
                               onChange={e => setNarrationDelay(+e.target.value)}
                               className="w-full border border-border/50 bg-card/40 px-2 py-1.5 text-xs font-mono focus:outline-none" />
@@ -1751,16 +1755,16 @@ export default function VideoEditorPage() {
                           <Circle className={`h-3 w-3 mt-0.5 shrink-0 fill-current ${isRecordingNarration ? "text-red-500 animate-pulse" : "text-red-400/60"}`} />
                           <div>
                             <p className="font-mono text-[11px] text-foreground font-bold">
-                              {isRecordingNarration ? "Gravando microfone…" : narrationRecordBlob ? "Narração gravada ✓" : "Modo de gravação ao vivo"}
+                              {isRecordingNarration ? t("Gravando microfone…", "Recording microphone…", "Grabando con el micrófono…") : narrationRecordBlob ? t("Narração gravada ✓", "Narration recorded ✓", "Narración grabada ✓") : t("Modo de gravação ao vivo", "Live recording mode", "Modo de grabación en directo")}
                             </p>
                             <p className="font-mono text-[10px] text-muted-foreground mt-0.5">
                               {isRecordingNarration
-                                ? "Pause ou pare o vídeo para finalizar a gravação"
+                                ? t("Pause ou pare o vídeo para finalizar a gravação", "Pause or stop the video to finish recording", "Pausa o detén el vídeo para finalizar la grabación")
                                 : narrationRecordBlob
-                                ? "Narração anexada. Pressione Play para regravar."
+                                ? t("Narração anexada. Pressione Play para regravar.", "Narration attached. Press Play to re-record.", "Narración adjunta. Pulsa Reproducir para volver a grabar.")
                                 : rangeStart !== null && rangeEnd !== null
-                                ? `Segmento ${fmtTime(Math.min(rangeStart, rangeEnd))}→${fmtTime(Math.max(rangeStart, rangeEnd))} selecionado. Play para gravar este trecho.`
-                                : "Pressione Play para gravar narração. Arraste na timeline para selecionar um segmento específico."}
+                                ? t(`Segmento ${fmtTime(Math.min(rangeStart, rangeEnd))}→${fmtTime(Math.max(rangeStart, rangeEnd))} selecionado. Play para gravar este trecho.`, `Segment ${fmtTime(Math.min(rangeStart, rangeEnd))}→${fmtTime(Math.max(rangeStart, rangeEnd))} selected. Press Play to record this segment.`, `Fragmento ${fmtTime(Math.min(rangeStart, rangeEnd))}→${fmtTime(Math.max(rangeStart, rangeEnd))} seleccionado. Pulsa Reproducir para grabarlo.`)
+                                : t("Pressione Play para gravar narração. Arraste na timeline para selecionar um segmento específico.", "Press Play to record narration. Drag on the timeline to select a specific segment.", "Pulsa Reproducir para grabar la narración. Arrastra en la línea de tiempo para seleccionar un fragmento concreto.")}
                             </p>
                             {!isRecordingNarration && !narrationRecordBlob && rangeStart !== null && rangeEnd !== null && (
                               <div className="flex items-center gap-1.5 mt-1.5 px-2 py-1 border border-yellow-500/30 bg-yellow-500/5">
@@ -1801,10 +1805,10 @@ export default function VideoEditorPage() {
             {tab === "captions" && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Legendas automáticas</p>
+                  <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Legendas automáticas", "Auto captions", "Subtítulos automáticos")}</p>
                   <button onClick={() => setShowCaptions(s => !s)}
                     className={`font-mono text-[10px] uppercase tracking-widest transition-colors ${showCaptions ? "text-primary" : "text-muted-foreground"}`}>
-                    <Eye className="h-3.5 w-3.5 inline mr-1" />{showCaptions ? "Visível" : "Oculto"}
+                    <Eye className="h-3.5 w-3.5 inline mr-1" />{showCaptions ? t("Visível", "Visible", "Visible") : t("Oculto", "Hidden", "Oculto")}
                   </button>
                 </div>
 
@@ -1817,7 +1821,7 @@ export default function VideoEditorPage() {
                   </select>
                   <Button onClick={generateCaptions} disabled={!activeClip || generatingCaptions} size="sm"
                     className="rounded-none font-mono text-[10px] uppercase tracking-widest">
-                    {generatingCaptions ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Globe className="h-3 w-3 mr-1" />Gerar</>}
+                    {generatingCaptions ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Globe className="h-3 w-3 mr-1" />{t("Gerar", "Generate", "Generar")}</>}
                   </Button>
                 </div>
 
@@ -1842,9 +1846,9 @@ export default function VideoEditorPage() {
                 {captions.length === 0 && (
                   <div className="border border-border/30 bg-card/10 p-4 text-center">
                     <AlignLeft className="h-6 w-6 mx-auto mb-2 text-muted-foreground/30" />
-                    <p className="font-mono text-[11px] text-muted-foreground">Nenhuma legenda gerada</p>
+                    <p className="font-mono text-[11px] text-muted-foreground">{t("Nenhuma legenda gerada", "No captions generated", "No se generaron subtítulos")}</p>
                     <p className="font-mono text-[10px] text-muted-foreground/60 mt-1">
-                      Selecione o idioma e clique em "Gerar"
+                      {t('Selecione o idioma e clique em "Gerar"', 'Select a language and click "Generate"', 'Selecciona el idioma y haz clic en "Generar"')}
                     </p>
                   </div>
                 )}
@@ -1856,38 +1860,38 @@ export default function VideoEditorPage() {
               <div className="space-y-3">
                 {thumbnailUrl && (
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Thumbnail</p>
-                    <img src={thumbnailUrl} className="w-full aspect-video object-cover border border-border/40" alt="thumb" />
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">{t("Thumbnail", "Thumbnail", "Miniatura")}</p>
+                    <img src={thumbnailUrl} className="w-full aspect-video object-cover border border-border/40" alt={t("Miniatura", "Thumbnail", "Miniatura")} />
                   </div>
                 )}
 
                 <div className="border border-border/40 bg-card/20 p-3 space-y-2">
-                  <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Resumo do projeto</p>
+                  <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Resumo do projeto", "Project Summary", "Resumen del proyecto")}</p>
                   <div className="space-y-1 font-mono text-[11px]">
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Título</span><span className="text-foreground truncate max-w-[160px]">{projectTitle}</span>
+                      <span>{t("Título", "Title", "Título")}</span><span className="text-foreground truncate max-w-[160px]">{projectTitle}</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Clipes</span><span className="text-foreground">{clips.length}</span>
+                      <span>{t("Clipes", "Clips", "Clips")}</span><span className="text-foreground">{clips.length}</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Duração total</span><span className="text-foreground">{fmtTime(totalDuration)}</span>
+                      <span>{t("Duração total", "Total duration", "Duración total")}</span><span className="text-foreground">{fmtTime(totalDuration)}</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Legendas</span><span className="text-foreground">{captions.length} linhas</span>
+                      <span>{t("Legendas", "Captions", "Subtítulos")}</span><span className="text-foreground">{t(`${captions.length} linhas`, `${captions.length} lines`, `${captions.length} líneas`)}</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Textos</span><span className="text-foreground">{overlays.length} overlays</span>
+                      <span>{t("Textos", "Text", "Texto")}</span><span className="text-foreground">{t(`${overlays.length} overlays`, `${overlays.length} overlays`, `${overlays.length} textos superpuestos`)}</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Narração</span>
+                      <span>{t("Narração", "Narration", "Narración")}</span>
                       <span className={narrationFile ? "text-emerald-400" : "text-foreground"}>
-                        {narrationFile ? (narrationRecordBlob ? "Gravada ao vivo" : narrationFile.name.slice(0, 16) + "…") : "Nenhuma"}
+                        {narrationFile ? (narrationRecordBlob ? t("Gravada ao vivo", "Recorded live", "Grabada en directo") : narrationFile.name.slice(0, 16) + "…") : t("Nenhuma", "None", "Ninguna")}
                       </span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Outros áudios</span><span className="text-foreground">
-                        {[bgMusicFile, ambientFile].filter(Boolean).length} faixas
+                      <span>{t("Outros áudios", "Other audio", "Otros audios")}</span><span className="text-foreground">
+                        {t(`${[bgMusicFile, ambientFile].filter(Boolean).length} faixas`, `${[bgMusicFile, ambientFile].filter(Boolean).length} tracks`, `${[bgMusicFile, ambientFile].filter(Boolean).length} pistas`)}
                       </span>
                     </div>
                   </div>
@@ -1897,16 +1901,16 @@ export default function VideoEditorPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <Button variant="outline" size="sm" onClick={saveProject}
                     className="rounded-none font-mono text-[10px] uppercase tracking-widest">
-                    <Save className="h-3 w-3 mr-1" />Salvar projeto
+                    <Save className="h-3 w-3 mr-1" />{t("Salvar projeto", "Save project", "Guardar proyecto")}
                   </Button>
                   <Button variant="outline" size="sm" onClick={downloadProjectFile}
                     className="rounded-none font-mono text-[10px] uppercase tracking-widest">
-                    <Copy className="h-3 w-3 mr-1" />Cópia (.json)
+                    <Copy className="h-3 w-3 mr-1" />{t("Cópia (.json)", "Copy (.json)", "Copia (.json)")}
                   </Button>
                 </div>
 
                 <div className="border border-border/40 bg-card/20 p-3 space-y-2">
-                  <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Formato de exportação</p>
+                  <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Formato de exportação", "Export Format", "Formato de exportación")}</p>
                   <div className="flex gap-2">
                     {(["webm", "mp4"] as const).map(f => (
                       <button key={f} onClick={() => setExportFormat(f)}
@@ -1919,8 +1923,7 @@ export default function VideoEditorPage() {
                     ))}
                   </div>
                   <p className="font-mono text-[10px] text-muted-foreground/70">
-                    .webm — exportação nativa, alta qualidade.
-                    .mp4 — compatível com todas as plataformas.
+                    {t(".webm — exportação nativa, alta qualidade. .mp4 — compatível com todas as plataformas.", ".webm — native export, high quality. .mp4 — compatible with all platforms.", ".webm: exportación nativa de alta calidad. .mp4: compatible con todas las plataformas.")}
                   </p>
                 </div>
 
@@ -1928,7 +1931,7 @@ export default function VideoEditorPage() {
                   <Button onClick={startExport} disabled={!activeClip}
                     className="rounded-none font-mono uppercase tracking-widest text-xs w-full">
                     <Download className="h-3.5 w-3.5 mr-2" />
-                    Exportar ({activeClip ? fmtTime(activeClip.outPoint - activeClip.inPoint) : "0:00"})
+                    {t("Exportar", "Export", "Exportar")} ({activeClip ? fmtTime(activeClip.outPoint - activeClip.inPoint) : "0:00"})
                   </Button>
                 )}
 
@@ -1937,11 +1940,11 @@ export default function VideoEditorPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
                         <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                        Exportando… {exportProgress}%
+                        {t("Exportando…", "Exporting…", "Exportando…")} {exportProgress}%
                       </div>
                       <Button variant="ghost" size="sm" onClick={cancelExport}
                         className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-                        <Square className="h-3 w-3 mr-1" />Cancelar
+                        <Square className="h-3 w-3 mr-1" />{t("Cancelar", "Cancel", "Cancelar")}
                       </Button>
                     </div>
                     <div className="h-1.5 bg-border/30 w-full">
@@ -1955,17 +1958,17 @@ export default function VideoEditorPage() {
                     <div className="flex items-center gap-2 px-3 py-2 border border-emerald-500/30 bg-emerald-500/5">
                       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
                       <span className="font-mono text-[11px] text-emerald-400 font-bold">
-                        Pronto · {fmtTime(exportDuration)} · {fmtBytes(exportBlob.size)}
+                         {t("Pronto", "Ready", "Listo")} · {fmtTime(exportDuration)} · {fmtBytes(exportBlob.size)}
                       </span>
                     </div>
                     <div className="flex gap-2">
                       <Button onClick={downloadExport}
                         className="rounded-none font-mono uppercase tracking-widest text-xs flex-1">
-                        <Download className="h-3.5 w-3.5 mr-2" />Baixar
+                        <Download className="h-3.5 w-3.5 mr-2" />{t("Baixar", "Download", "Descargar")}
                       </Button>
                       <Button variant="outline" onClick={() => setExportBlob(null)}
                         className="rounded-none font-mono uppercase tracking-widest text-xs">
-                        Nova exportação
+                        {t("Nova exportação", "New export", "Nueva exportación")}
                       </Button>
                     </div>
                   </div>

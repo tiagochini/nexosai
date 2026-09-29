@@ -11,8 +11,9 @@ import {
   BarChart3, Image, Film, Radio, Plus, Loader2,
 } from "lucide-react";
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,11 +60,11 @@ interface AccountAnalytics {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmt(n: number | null | undefined): string {
+function fmt(n: number | null | undefined, locale: string): string {
   if (n == null) return "—";
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString("pt-BR");
+  return n.toLocaleString(locale);
 }
 
 function providerLabel(provider: string): string {
@@ -90,15 +91,15 @@ function providerColors(provider: string): string {
   return "text-muted-foreground border-border/40 bg-muted/10";
 }
 
-function relativeTime(iso?: string): string {
+function relativeTime(iso: string | undefined, t: ReturnType<typeof useUiText>): string {
   if (!iso) return "";
   const ms = Date.now() - new Date(iso).getTime();
   const days = Math.floor(ms / 86400_000);
-  if (days === 0) return "hoje";
-  if (days === 1) return "ontem";
-  if (days < 30) return `${days}d atrás`;
-  if (days < 365) return `${Math.floor(days / 30)}m atrás`;
-  return `${Math.floor(days / 365)}a atrás`;
+  if (days === 0) return t("hoje", "today", "hoy");
+  if (days === 1) return t("ontem", "yesterday", "ayer");
+  if (days < 30) return t(`${days}d atrás`, `${days}d ago`, `hace ${days} d`);
+  if (days < 365) return t(`${Math.floor(days / 30)}m atrás`, `${Math.floor(days / 30)}mo ago`, `hace ${Math.floor(days / 30)} mes`);
+  return t(`${Math.floor(days / 365)}a atrás`, `${Math.floor(days / 365)}y ago`, `hace ${Math.floor(days / 365)} a`);
 }
 
 // ─── Stat chip ────────────────────────────────────────────────────────────────
@@ -118,11 +119,13 @@ function StatChip({ icon: Icon, label, value, color }: { icon: React.ElementType
 
 type ChartMetric = "reach" | "impressions" | "followers";
 
-const METRIC_LABELS: Record<ChartMetric, string> = {
-  reach: "Alcance",
-  impressions: "Impressões",
-  followers: "Seguidores",
-};
+function metricLabel(metric: ChartMetric, t: ReturnType<typeof useUiText>): string {
+  switch (metric) {
+    case "reach": return t("Alcance", "Reach", "Alcance");
+    case "impressions": return t("Impressões", "Impressions", "Impresiones");
+    case "followers": return t("Seguidores", "Followers", "Seguidores");
+  }
+}
 
 const METRIC_COLORS: Record<ChartMetric, string> = {
   reach: "#a78bfa",
@@ -130,24 +133,22 @@ const METRIC_COLORS: Record<ChartMetric, string> = {
   followers: "#34d399",
 };
 
-function fmtShort(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
+function fmtShort(n: number, locale: string): string {
+  const formatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
+  if (n >= 1_000_000) return `${formatter.format(n / 1_000_000)}M`;
+  if (n >= 1_000) return `${formatter.format(n / 1_000)}K`;
+  return formatter.format(n);
 }
 
 function AccountTrendChart({ dailyMetrics, provider }: { dailyMetrics: DailyMetricPoint[]; provider: string }) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const availableMetrics: ChartMetric[] = (["reach", "impressions", "followers"] as ChartMetric[]).filter(
     m => dailyMetrics.some(d => d[m] != null && d[m]! > 0)
   );
   const [activeMetrics, setActiveMetrics] = useState<Set<ChartMetric>>(new Set(availableMetrics));
 
   if (availableMetrics.length === 0) return null;
-
-  const providerColor =
-    provider === "instagram" ? "#f472b6"
-    : provider === "facebook" || provider === "meta_ads" ? "#60a5fa"
-    : "#22d3ee";
 
   const toggleMetric = (m: ChartMetric) => {
     setActiveMetrics(prev => {
@@ -181,7 +182,7 @@ function AccountTrendChart({ dailyMetrics, provider }: { dailyMetrics: DailyMetr
             }`}
             style={activeMetrics.has(m) ? { borderColor: METRIC_COLORS[m], color: METRIC_COLORS[m] } : {}}
           >
-            {METRIC_LABELS[m]}
+            {metricLabel(m, t)}
           </button>
         ))}
       </div>
@@ -201,7 +202,7 @@ function AccountTrendChart({ dailyMetrics, provider }: { dailyMetrics: DailyMetr
             tick={{ fontSize: 9, fontFamily: "monospace", fill: "rgba(255,255,255,0.35)" }}
             tickLine={false}
             axisLine={false}
-            tickFormatter={fmtShort}
+            tickFormatter={(value: number) => fmtShort(value, intlLocale(locale))}
             width={36}
           />
           <Tooltip
@@ -214,8 +215,8 @@ function AccountTrendChart({ dailyMetrics, provider }: { dailyMetrics: DailyMetr
               color: "hsl(var(--foreground))",
             }}
             formatter={(value: number, name: string) => [
-              fmtShort(value),
-              METRIC_LABELS[name as ChartMetric] ?? name,
+              fmtShort(value, intlLocale(locale)),
+              metricLabel(name as ChartMetric, t),
             ]}
             labelStyle={{ color: "rgba(255,255,255,0.5)", marginBottom: 4 }}
           />
@@ -236,7 +237,7 @@ function AccountTrendChart({ dailyMetrics, provider }: { dailyMetrics: DailyMetr
 
       {provider === "tiktok_ads" && (
         <p className="text-[10px] font-mono text-muted-foreground/40 italic">
-          * Dados de alcance via posts publicados nos últimos 30 dias (TikTok não expõe histórico de seguidores)
+          {t("* Dados de alcance via publicações dos últimos 30 dias (o TikTok não disponibiliza histórico de seguidores)", "* Reach data is based on posts published in the last 30 days (TikTok does not provide follower history)", "* Datos de alcance basados en publicaciones de los últimos 30 días (TikTok no ofrece historial de seguidores)")}
         </p>
       )}
     </div>
@@ -246,6 +247,8 @@ function AccountTrendChart({ dailyMetrics, provider }: { dailyMetrics: DailyMetr
 // ─── Detail Drawer ─────────────────────────────────────────────────────────────
 
 function AccountDrawer({ account, onClose }: { account: AccountAnalytics; onClose: () => void }) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const colors = providerColors(account.provider);
   const textColor = colors.split(" ")[0];
 
@@ -267,7 +270,7 @@ function AccountDrawer({ account, onClose }: { account: AccountAnalytics; onClos
               {providerLabel(account.provider)} · {account.accountId ?? "—"}
             </div>
           </div>
-          <button onClick={onClose} aria-label="Fechar" className="text-muted-foreground hover:text-foreground transition-colors p-1">
+          <button onClick={onClose} aria-label={t("Fechar", "Close", "Cerrar")} className="text-muted-foreground hover:text-foreground transition-colors p-1">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -301,17 +304,17 @@ function AccountDrawer({ account, onClose }: { account: AccountAnalytics; onClos
 
           {/* Key metrics */}
           <div className="px-5 py-4 border-b border-border/30">
-            <div className="text-[11px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-3">Métricas da Conta</div>
+            <div className="text-[11px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-3">{t("Métricas da Conta", "Account Metrics", "Métricas de la cuenta")}</div>
             <div className="grid grid-cols-2 gap-4">
-              <StatChip icon={Users} label="Seguidores" value={fmt(account.followers)} color={textColor} />
-              <StatChip icon={Users} label="Seguindo" value={fmt(account.following)} />
-              <StatChip icon={Image} label="Publicações" value={fmt(account.mediaCount)} />
-              <StatChip icon={Heart} label="Eng. Médio / Post" value={fmt(account.avgEngagement)} />
+              <StatChip icon={Users} label={t("Seguidores", "Followers", "Seguidores")} value={fmt(account.followers, intlLocale(locale))} color={textColor} />
+              <StatChip icon={Users} label={t("Seguindo", "Following", "Siguiendo")} value={fmt(account.following, intlLocale(locale))} />
+              <StatChip icon={Image} label={t("Publicações", "Posts", "Publicaciones")} value={fmt(account.mediaCount, intlLocale(locale))} />
+              <StatChip icon={Heart} label={t("Eng. Médio / Post", "Avg. Engagement / Post", "Interacción media / publicación")} value={fmt(account.avgEngagement, intlLocale(locale))} />
               {account.totalReach30d != null && (
-                <StatChip icon={Eye} label="Alcance 30 dias" value={fmt(account.totalReach30d)} />
+                <StatChip icon={Eye} label={t("Alcance 30 dias", "30-day Reach", "Alcance de 30 días")} value={fmt(account.totalReach30d, intlLocale(locale))} />
               )}
               {account.totalImpressions30d != null && (
-                <StatChip icon={BarChart3} label="Impressões 30 dias" value={fmt(account.totalImpressions30d)} />
+                <StatChip icon={BarChart3} label={t("Impressões 30 dias", "30-day Impressions", "Impresiones de 30 días")} value={fmt(account.totalImpressions30d, intlLocale(locale))} />
               )}
             </div>
           </div>
@@ -319,7 +322,7 @@ function AccountDrawer({ account, onClose }: { account: AccountAnalytics; onClos
           {/* 30-day trend chart */}
           {account.dailyMetrics && account.dailyMetrics.length > 1 && (
             <div className="px-5 py-4 border-b border-border/30">
-              <div className="text-[11px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-3">Evolução 30 dias</div>
+              <div className="text-[11px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-3">{t("Evolução 30 dias", "30-day Trend", "Evolución de 30 días")}</div>
               <AccountTrendChart dailyMetrics={account.dailyMetrics} provider={account.provider} />
             </div>
           )}
@@ -327,7 +330,7 @@ function AccountDrawer({ account, onClose }: { account: AccountAnalytics; onClos
           {/* Recent posts */}
           {account.recentPosts.length > 0 && (
             <div className="px-5 py-4">
-              <div className="text-[11px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-3">Top Posts por Engajamento</div>
+              <div className="text-[11px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-3">{t("Principais publicações por interação", "Top Posts by Engagement", "Publicaciones principales por interacción")}</div>
               <div className="space-y-2">
                 {[...account.recentPosts]
                   .sort((a, b) => (b.likes + b.comments) - (a.likes + a.comments))
@@ -335,9 +338,9 @@ function AccountDrawer({ account, onClose }: { account: AccountAnalytics; onClos
                   .map(post => (
                     <div key={post.id} className="border border-border/40 bg-background/40 p-3 flex gap-3 items-start">
                       {(post.thumbnailUrl || post.mediaUrl) ? (
-                        <img
+                          <img
                           src={post.thumbnailUrl ?? post.mediaUrl}
-                          alt="post"
+                          alt={t("Publicação", "Post", "Publicación")}
                           className="w-14 h-14 object-cover border border-border/30 shrink-0"
                         />
                       ) : (
@@ -350,10 +353,10 @@ function AccountDrawer({ account, onClose }: { account: AccountAnalytics; onClos
                           <p className="text-xs font-mono text-foreground/70 leading-relaxed line-clamp-2 mb-1.5">{post.caption}</p>
                         )}
                         <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-muted-foreground/60">
-                          <span className="flex items-center gap-1"><Heart className="h-2.5 w-2.5 text-pink-400" />{fmt(post.likes)}</span>
-                          <span className="flex items-center gap-1"><MessageCircle className="h-2.5 w-2.5 text-blue-400" />{fmt(post.comments)}</span>
-                          {post.reach > 0 && <span className="flex items-center gap-1"><Eye className="h-2.5 w-2.5" />{fmt(post.reach)}</span>}
-                          {post.timestamp && <span className="ml-auto">{relativeTime(post.timestamp)}</span>}
+                          <span className="flex items-center gap-1"><Heart className="h-2.5 w-2.5 text-pink-400" />{fmt(post.likes, intlLocale(locale))}</span>
+                          <span className="flex items-center gap-1"><MessageCircle className="h-2.5 w-2.5 text-blue-400" />{fmt(post.comments, intlLocale(locale))}</span>
+                          {post.reach > 0 && <span className="flex items-center gap-1"><Eye className="h-2.5 w-2.5" />{fmt(post.reach, intlLocale(locale))}</span>}
+                          {post.timestamp && <span className="ml-auto">{relativeTime(post.timestamp, t)}</span>}
                         </div>
                       </div>
                     </div>
@@ -379,6 +382,8 @@ function AccountDrawer({ account, onClose }: { account: AccountAnalytics; onClos
 // ─── Account Card ─────────────────────────────────────────────────────────────
 
 function AccountCard({ account, onClick }: { account: AccountAnalytics; onClick: () => void }) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const colors = providerColors(account.provider);
   const textColor = colors.split(" ")[0];
   const hasError = Boolean(account.error) && !account.followers;
@@ -427,16 +432,16 @@ function AccountCard({ account, onClick }: { account: AccountAnalytics; onClick:
         ) : (
           <div className="grid grid-cols-3 gap-3">
             <div className="text-center">
-              <div className={`font-mono font-bold text-lg ${textColor}`}>{fmt(account.followers)}</div>
-              <div className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest">Seguidores</div>
+              <div className={`font-mono font-bold text-lg ${textColor}`}>{fmt(account.followers, intlLocale(locale))}</div>
+              <div className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest">{t("Seguidores", "Followers", "Seguidores")}</div>
             </div>
             <div className="text-center">
-              <div className="font-mono font-bold text-lg text-foreground">{fmt(account.mediaCount)}</div>
-              <div className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest">Posts</div>
+              <div className="font-mono font-bold text-lg text-foreground">{fmt(account.mediaCount, intlLocale(locale))}</div>
+              <div className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest">{t("Publicações", "Posts", "Publicaciones")}</div>
             </div>
             <div className="text-center">
-              <div className="font-mono font-bold text-lg text-foreground">{fmt(account.avgEngagement)}</div>
-              <div className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest">Eng. Médio</div>
+              <div className="font-mono font-bold text-lg text-foreground">{fmt(account.avgEngagement, intlLocale(locale))}</div>
+              <div className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest">{t("Eng. Médio", "Avg. Engagement", "Interacción media")}</div>
             </div>
           </div>
         )}
@@ -452,6 +457,8 @@ function AccountCard({ account, onClick }: { account: AccountAnalytics; onClick:
 // ─── Analytics Tab ────────────────────────────────────────────────────────────
 
 export function SocialAnalyticsTab() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const [selectedAccount, setSelectedAccount] = useState<AccountAnalytics | null>(null);
   const [addingMeta, setAddingMeta] = useState(false);
 
@@ -472,7 +479,7 @@ export function SocialAnalyticsTab() {
       const { url } = await customFetch<{ url: string }>("/api/social/connect/meta");
       window.location.href = url;
     } catch {
-      toast.error("Erro ao iniciar conexão OAuth. Verifique a configuração do app Meta.");
+      toast.error(t("Erro ao iniciar conexão OAuth. Verifique a configuração do app Meta.", "Could not start OAuth connection. Check the Meta app configuration.", "No se pudo iniciar la conexión OAuth. Revisa la configuración de la aplicación Meta."));
       setAddingMeta(false);
     }
   };
@@ -487,10 +494,10 @@ export function SocialAnalyticsTab() {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <div className="text-xs font-mono uppercase tracking-widest font-bold text-muted-foreground">
-            {analytics.length} conta{analytics.length !== 1 ? "s" : ""} conectada{analytics.length !== 1 ? "s" : ""}
+            {analytics.length} {t("conta", "account", "cuenta")}{analytics.length !== 1 ? t("s", "s", "s") : ""} {t("conectada", "connected", "conectada")}{analytics.length !== 1 ? t("s", "s", "s") : ""}
           </div>
           <div className="text-[11px] font-mono text-muted-foreground/40 mt-0.5">
-            Clique em um card para ver análise completa · Dados em tempo real das APIs
+            {t("Clique em um cartão para ver a análise completa · Dados em tempo real das APIs", "Click a card to view the full analysis · Real-time data from APIs", "Haz clic en una tarjeta para ver el análisis completo · Datos en tiempo real de las API")}
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -503,7 +510,7 @@ export function SocialAnalyticsTab() {
               className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2 h-8"
             >
               {addingMeta ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-              Adicionar conta
+              {t("Adicionar conta", "Add Account", "Añadir cuenta")}
             </Button>
           )}
           <Button
@@ -514,7 +521,7 @@ export function SocialAnalyticsTab() {
             className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2 h-8"
           >
             <RefreshCw className={`h-3 w-3 ${isFetching ? "animate-spin" : ""}`} />
-            Atualizar
+            {t("Atualizar", "Refresh", "Actualizar")}
           </Button>
         </div>
       </div>
@@ -552,15 +559,15 @@ export function SocialAnalyticsTab() {
             </div>
           </div>
           <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-1">
-            Nenhuma conta social conectada
+            {t("Nenhuma conta social conectada", "No social accounts connected", "No hay cuentas de redes sociales conectadas")}
           </p>
           <p className="font-mono text-xs text-muted-foreground/40 mb-5">
-            Conecte Instagram, Facebook ou TikTok em Configurações → Integrações
+            {t("Conecte Instagram, Facebook ou TikTok em Configurações → Integrações", "Connect Instagram, Facebook, or TikTok in Settings → Integrations", "Conecta Instagram, Facebook o TikTok en Configuración → Integraciones")}
           </p>
           <a href="/settings?tab=integracoes">
             <Button size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2">
               <TrendingUp className="h-3.5 w-3.5" />
-              Conectar Conta Social
+              {t("Conectar Conta Social", "Connect Social Account", "Conectar cuenta social")}
             </Button>
           </a>
         </div>
@@ -570,30 +577,30 @@ export function SocialAnalyticsTab() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
               {
-                label: "Total de Seguidores",
+                label: t("Total de Seguidores", "Total Followers", "Seguidores totales"),
                 icon: Users,
-                value: fmt(analytics.reduce((s, a) => s + (a.followers ?? 0), 0)),
+                value: fmt(analytics.reduce((s, a) => s + (a.followers ?? 0), 0), intlLocale(locale)),
                 color: "text-primary",
               },
               {
-                label: "Total de Posts",
+                label: t("Total de Publicações", "Total Posts", "Publicaciones totales"),
                 icon: Image,
-                value: fmt(analytics.reduce((s, a) => s + (a.mediaCount ?? 0), 0)),
+                value: fmt(analytics.reduce((s, a) => s + (a.mediaCount ?? 0), 0), intlLocale(locale)),
                 color: "text-foreground",
               },
               {
-                label: "Alcance 30d",
+                label: t("Alcance 30d", "30-day Reach", "Alcance de 30 días"),
                 icon: Eye,
-                value: fmt(analytics.reduce((s, a) => s + (a.totalReach30d ?? 0), 0)) === "0" ? "—" : fmt(analytics.reduce((s, a) => s + (a.totalReach30d ?? 0), 0)),
+                value: fmt(analytics.reduce((s, a) => s + (a.totalReach30d ?? 0), 0), intlLocale(locale)) === "0" ? "—" : fmt(analytics.reduce((s, a) => s + (a.totalReach30d ?? 0), 0), intlLocale(locale)),
                 color: "text-foreground",
               },
               {
-                label: "Eng. Médio Geral",
+                label: t("Eng. Médio Geral", "Avg. Engagement Overall", "Interacción media general"),
                 icon: Heart,
                 value: (() => {
                   const withEng = analytics.filter(a => a.avgEngagement != null);
                   if (!withEng.length) return "—";
-                  return fmt(Math.round(withEng.reduce((s, a) => s + (a.avgEngagement ?? 0), 0) / withEng.length));
+                  return fmt(Math.round(withEng.reduce((s, a) => s + (a.avgEngagement ?? 0), 0) / withEng.length), intlLocale(locale));
                 })(),
                 color: "text-foreground",
               },

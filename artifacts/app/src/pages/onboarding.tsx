@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import nexosLogo from "/nexos-logo.png";
 import { CloneStudioPanel } from "@/components/CloneStudioPanel";
 import { CloneWowMoment } from "@/components/CloneWowMoment";
+import { useUiText } from "@/lib/i18n";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type OnboardingPath = "has_product" | "building_product" | "affiliate_nexos" | "has_audience";
@@ -183,6 +184,75 @@ const INTEGRATION_CATALOG: IntegrationItem[] = [
   },
 ];
 
+const INTEGRATION_COPY: Record<string, {
+  description: [string, string];
+  benefits: Record<OnboardingPath, [string, string]>;
+}> = {
+  whatsapp_business: {
+    description: ["Automated segmented messages to hot, warm, and cold leads.", "Envío automático de mensajes segmentados a leads interesados, templados y fríos."],
+    benefits: {
+      has_product: ["WhatsApp sequences with mental triggers sent at the right launch times", "Secuencias de WhatsApp con disparadores mentales enviadas en los momentos clave del lanzamiento"],
+      building_product: ["Launch notifications and nurturing directly on your audience's WhatsApp", "Notificaciones de lanzamiento y nutrición directamente en el WhatsApp de tu audiencia"],
+      affiliate_nexos: ["Automatically distribute content and affiliate links to your contacts", "Distribución automática de contenido y enlaces de afiliado a tus contactos"],
+      has_audience: ["Cart-opening messages sent to your most engaged fans first", "Mensajes de apertura del carrito enviados primero a tus seguidores más activos"],
+    },
+  },
+  rd_station: {
+    description: ["Email marketing and lead automation fully integrated with your launch.", "Marketing por correo y automatización de leads integrados con el lanzamiento."],
+    benefits: {
+      has_product: ["23 launch emails sent automatically — capture, nurture, and scarcity", "23 correos de lanzamiento enviados automáticamente: captación, nutrición y escasez"],
+      building_product: ["Email sequence to validate your product idea with your audience", "Secuencia de correos para validar tu idea de producto con tu audiencia"],
+      affiliate_nexos: ["Email automation to warm up and convert affiliates", "Automatización de correo para preparar y convertir afiliados"],
+      has_audience: ["Pre-launch emails to monetize your existing list", "Correos previos al lanzamiento para monetizar tu lista actual"],
+    },
+  },
+  activecampaign: {
+    description: ["CRM and advanced email automation with behavioral segmentation.", "CRM y automatización avanzada de correo con segmentación por comportamiento."],
+    benefits: {
+      has_product: ["Behavior-based email automation (opened, clicked, purchased)", "Automatizaciones de correo basadas en el comportamiento (abrió, hizo clic, compró)"],
+      building_product: ["Integrated CRM to track leads as they discover your product", "CRM integrado para seguir a los leads durante el descubrimiento del producto"],
+      affiliate_nexos: ["Automatic engagement tags to prioritize your hottest affiliates", "Etiquetas automáticas de interacción para priorizar a los afiliados más interesados"],
+      has_audience: ["Behavior-based audience segmentation for maximum conversion", "Segmentación de audiencia por comportamiento para maximizar conversiones"],
+    },
+  },
+  hotmart: {
+    description: ["Digital product platform — purchases automatically convert contacts into customers.", "Plataforma de productos digitales: las compras convierten automáticamente los contactos en clientes."],
+    benefits: {
+      has_product: ["When someone buys on Hotmart, NexOS automatically moves them to the converted segment", "Cuando alguien compra en Hotmart, NexOS lo pasa automáticamente al segmento de conversiones"],
+      building_product: ["Launch your new product on Hotmart with checkout already integrated", "Lanza tu nuevo producto en Hotmart con el pago ya integrado"],
+      affiliate_nexos: ["Automatic affiliate sales tracking with commissions recorded", "Seguimiento automático de ventas de afiliados con registro de comisiones"],
+      has_audience: ["Sell your micro-launch product on Hotmart with a fully automated funnel", "Vende tu producto de microlanzamiento en Hotmart con un embudo totalmente automatizado"],
+    },
+  },
+  kiwify: {
+    description: ["Checkout and digital product management with automatic lead conversion.", "Pago y gestión de productos digitales con conversión automática de leads."],
+    benefits: {
+      has_product: ["Kiwify purchases trigger NexOS post-sale automations instantly", "Las compras en Kiwify activan al instante las automatizaciones posventa de NexOS"],
+      building_product: ["Fast checkout for your new product with an agent-configured upsell", "Pago rápido para tu nuevo producto con upsell configurado por el agente"],
+      affiliate_nexos: ["Track affiliate sales with real-time segment updates", "Seguimiento de ventas de afiliados con actualización de segmentos en tiempo real"],
+      has_audience: ["High-conversion cart for your micro-launch with automated post-sale flow", "Carrito de alta conversión para tu microlanzamiento con posventa automatizada"],
+    },
+  },
+  meta_ads: {
+    description: ["Facebook and Instagram Ads — automatic remarketing for leads who haven't converted.", "Anuncios de Facebook e Instagram: remarketing automático para leads que aún no han convertido."],
+    benefits: {
+      has_product: ["Automatic remarketing for leads who didn't open emails or click links", "Remarketing automático para leads que no abrieron correos ni hicieron clic en enlaces"],
+      building_product: ["Interest-based audiences to validate your product idea before building", "Audiencias por intereses para validar tu idea de producto antes de crearla"],
+      affiliate_nexos: ["Affiliate ads automatically optimized by the Media Buyer agent", "Anuncios de afiliados optimizados automáticamente por el agente de compra de medios"],
+      has_audience: ["Amplify organic content with paid traffic synced to your launch calendar", "Amplía el alcance del contenido orgánico con tráfico pagado sincronizado con el calendario de lanzamiento"],
+    },
+  },
+  tiktok: {
+    description: ["Auto-post videos and reels on TikTok, synced with your launch calendar.", "Publicación automática de videos y reels en TikTok, sincronizada con el calendario de lanzamiento."],
+    benefits: {
+      has_product: ["Launch videos automatically posted on TikTok at peak-reach times", "Videos de lanzamiento publicados automáticamente en TikTok en los horarios de mayor alcance"],
+      building_product: ["Product validation content published on TikTok to attract early buyers", "Contenido de validación del producto publicado en TikTok para atraer a los primeros compradores"],
+      affiliate_nexos: ["Affiliate videos created by the agent and posted on TikTok with tracking links", "Videos de afiliados creados por el agente y publicados en TikTok con enlaces de seguimiento"],
+      has_audience: ["Pre-launch reels automatically published to engage your TikTok audience", "Reels previos al lanzamiento publicados automáticamente para atraer a tu audiencia de TikTok"],
+    },
+  },
+};
+
 const PATH_INTEGRATIONS: Record<OnboardingPath, string[]> = {
   has_product:      ["whatsapp_business", "rd_station", "activecampaign", "hotmart", "kiwify", "tiktok"],
   building_product: ["whatsapp_business", "rd_station", "tiktok"],
@@ -258,6 +328,7 @@ function ChatBubble({ message }: { message: ChatMessage }) {
 
 // ── Product proposal card ─────────────────────────────────────────────────────
 function ProposalCard({ proposal, onSelect }: { proposal: ProductProposal; onSelect: (p: ProductProposal) => void }) {
+  const t = useUiText();
   return (
     <div
       className="border border-border/50 bg-card/60 p-4 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group relative overflow-hidden rounded-sm"
@@ -274,9 +345,9 @@ function ProposalCard({ proposal, onSelect }: { proposal: ProductProposal; onSel
       </div>
 
       <div className="space-y-1.5 text-[11px] font-mono text-muted-foreground">
-        <p><span className="text-foreground/70">Formato:</span> {proposal.format}</p>
-        <p><span className="text-foreground/70">Público:</span> {proposal.targetAudience}</p>
-        <p><span className="text-foreground/70">Transformação:</span> {proposal.transformation}</p>
+        <p><span className="text-foreground/70">{t("Formato:", "Format:", "Formato:")}</span> {proposal.format}</p>
+        <p><span className="text-foreground/70">{t("Público:", "Audience:", "Público:")}</span> {proposal.targetAudience}</p>
+        <p><span className="text-foreground/70">{t("Transformação:", "Transformation:", "Transformación:")}</span> {proposal.transformation}</p>
       </div>
 
       <div className="mt-3 pt-3 border-t border-border/30 flex items-center justify-between">
@@ -337,6 +408,7 @@ function loadSimulatorData(): SimulatorData | null {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function Onboarding() {
+  const t = useUiText();
   const { user } = useAuth();
   const { setMode } = useMode();
   const [, setLocation] = useLocation();
@@ -437,7 +509,7 @@ export default function Onboarding() {
         messages: restoredMessages,
         conversationComplete: false,
       });
-      toast.info("Retomamos sua campanha em andamento de onde você parou.");
+      toast.info(t("Retomamos sua campanha em andamento de onde você parou.", "We resumed your in-progress campaign where you left off.", "Retomamos tu campaña en curso desde donde la dejaste."));
       setResumeCheck("resolved");
     } catch {
       // Could not confirm whether a campaign exists — do NOT silently start
@@ -475,9 +547,9 @@ export default function Onboarding() {
       setStep("conversation");
 
       const greetings: Record<OnboardingPath, string> = {
-        has_product: `Olá${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Vou te ajudar a preparar tudo para o lançamento do seu produto.\n\nComeça me contando: qual é o nome do seu produto e o que ele entrega para o cliente?`,
-        building_product: `Olá${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Vai ser um prazer ajudar você a encontrar o produto ideal.\n\nVamos começar do seu perfil. Qual é a sua área de atuação ou especialidade principal? (ex: nutrição, finanças, tecnologia, fitness, educação...)`,
-        affiliate_nexos: `Olá${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Bem-vindo ao programa de afiliados NexOS.\n\nComo afiliado, você vai lançar a plataforma para o seu público e ganhar comissões recorrentes por cada assinante ativo.\n\nPara montar sua estratégia, me conta: qual é o seu público atual? Tem seguidores, lista de email, grupo ou comunidade?`,
+        has_product: t(`Olá${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Vou te ajudar a preparar tudo para o lançamento do seu produto.\n\nComeça me contando: qual é o nome do seu produto e o que ele entrega para o cliente?`, `Hi${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! I'll help you get everything ready to launch your product.\n\nLet's start with this: what's your product called, and what does it deliver for the customer?`, `¡Hola${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Te ayudaré a preparar todo para el lanzamiento de tu producto.\n\nEmpecemos: ¿cómo se llama tu producto y qué ofrece al cliente?`),
+        building_product: t(`Olá${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Vai ser um prazer ajudar você a encontrar o produto ideal.\n\nVamos começar do seu perfil. Qual é a sua área de atuação ou especialidade principal? (ex: nutrição, finanças, tecnologia, fitness, educação...)`, `Hi${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! I'll be glad to help you find the right product.\n\nLet's start with your background. What's your field or main area of expertise? (e.g. nutrition, finance, technology, fitness, education...)`, `¡Hola${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Será un placer ayudarte a encontrar el producto ideal.\n\nEmpecemos por tu perfil. ¿A qué te dedicas o cuál es tu especialidad principal? (por ejemplo: nutrición, finanzas, tecnología, fitness, educación...)`),
+        affiliate_nexos: t(`Olá${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Bem-vindo ao programa de afiliados NexOS.\n\nComo afiliado, você vai lançar a plataforma para o seu público e ganhar comissões recorrentes por cada assinante ativo.\n\nPara montar sua estratégia, me conta: qual é o seu público atual? Tem seguidores, lista de email, grupo ou comunidade?`, `Hi${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Welcome to the NexOS affiliate program.\n\nAs an affiliate, you'll promote the platform to your audience and earn recurring commissions for each active subscriber.\n\nTo build your strategy, tell me: who is your current audience? Do you have followers, an email list, a group, or a community?`, `¡Hola${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Te damos la bienvenida al programa de afiliados de NexOS.\n\nComo afiliado, promocionarás la plataforma a tu público y ganarás comisiones recurrentes por cada suscriptor activo.\n\nPara crear tu estrategia, cuéntame: ¿quién es tu público actual? ¿Tienes seguidores, una lista de correo, un grupo o una comunidad?`),
         has_audience: "",
       };
       const initMsgs = [{ role: "assistant" as const, content: greetings[selectedPath] }];
@@ -485,9 +557,9 @@ export default function Onboarding() {
       saveOnboardingState({ path: selectedPath, campaignId: cid, step: "conversation", messages: initMsgs, conversationComplete: false });
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
-        toast.error("Limite de campanhas atingido. Acesse sua campanha existente ou faça upgrade do plano.", { duration: 6000 });
+        toast.error(t("Limite de campanhas atingido. Acesse sua campanha existente ou faça upgrade do plano.", "Campaign limit reached. Open an existing campaign or upgrade your plan.", "Has alcanzado el límite de campañas. Accede a una campaña existente o mejora tu plan."), { duration: 6000 });
       } else {
-        toast.error("Erro ao iniciar. Tente novamente.");
+        toast.error(t("Erro ao iniciar. Tente novamente.", "Couldn't get started. Please try again.", "No se pudo iniciar. Inténtalo de nuevo."));
       }
     } finally {
       setStarting(false);
@@ -510,9 +582,9 @@ export default function Onboarding() {
 
       const firstName = user?.name ? `, ${user.name.split(" ")[0]}` : "";
       const subPathGreetings: Record<AudienceSubPath, string> = {
-        micro_launch: `Olá${firstName}! Excelente escolha — micro-lançamento é a forma mais rápida de monetizar uma audiência existente.\n\nPrimeira pergunta: em qual plataforma você está mais ativo? (YouTube, Instagram, TikTok, Kwai, Telegram, outros?)`,
-        members_area: `Olá${firstName}! Área de membros é o modelo de renda recorrente mais poderoso para creators.\n\nMe conta: em qual plataforma você publica seu conteúdo hoje e quantos seguidores ou inscritos você tem aproximadamente?`,
-        product_from_audience: `Olá${firstName}! Transformar audiência em produto é o jeito mais inteligente de monetizar — você já tem a lista quente.\n\nPrimeira pergunta: qual plataforma é o seu principal canal e qual é o nicho do seu conteúdo?`,
+        micro_launch: t(`Olá${firstName}! Excelente escolha — micro-lançamento é a forma mais rápida de monetizar uma audiência existente.\n\nPrimeira pergunta: em qual plataforma você está mais ativo? (YouTube, Instagram, TikTok, Kwai, Telegram, outros?)`, `Hi${firstName}! Great choice — a micro-launch is the fastest way to monetize an existing audience.\n\nFirst question: which platform are you most active on? (YouTube, Instagram, TikTok, Kwai, Telegram, or another?)`, `¡Hola${firstName}! Excelente elección: un microlanzamiento es la forma más rápida de monetizar una audiencia existente.\n\nPrimera pregunta: ¿en qué plataforma tienes más actividad? (YouTube, Instagram, TikTok, Kwai, Telegram u otra)`),
+        members_area: t(`Olá${firstName}! Área de membros é o modelo de renda recorrente mais poderoso para creators.\n\nMe conta: em qual plataforma você publica seu conteúdo hoje e quantos seguidores ou inscritos você tem aproximadamente?`, `Hi${firstName}! A membership site is one of the most powerful recurring-revenue models for creators.\n\nTell me: which platform do you publish on today, and roughly how many followers or subscribers do you have?`, `¡Hola${firstName}! Una membresía es uno de los modelos más potentes de ingresos recurrentes para creadores.\n\nCuéntame: ¿en qué plataforma publicas y cuántos seguidores o suscriptores tienes aproximadamente?`),
+        product_from_audience: t(`Olá${firstName}! Transformar audiência em produto é o jeito mais inteligente de monetizar — você já tem a lista quente.\n\nPrimeira pergunta: qual plataforma é o seu principal canal e qual é o nicho do seu conteúdo?`, `Hi${firstName}! Turning your audience into a product is a smart way to monetize — you already have a warm list.\n\nFirst question: what's your main platform, and what niche is your content in?`, `¡Hola${firstName}! Convertir tu audiencia en un producto es una forma inteligente de monetizar: ya tienes una lista interesada.\n\nPrimera pregunta: ¿cuál es tu plataforma principal y cuál es el nicho de tu contenido?`),
       };
 
       const initMsgs = [{ role: "assistant" as const, content: subPathGreetings[subPath] }];
@@ -520,9 +592,9 @@ export default function Onboarding() {
       saveOnboardingState({ path: "has_audience", campaignId: cid, step: "conversation", messages: initMsgs, conversationComplete: false, audienceSubPath: subPath });
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
-        toast.error("Limite de campanhas atingido. Acesse sua campanha existente ou faça upgrade do plano.", { duration: 6000 });
+        toast.error(t("Limite de campanhas atingido. Acesse sua campanha existente ou faça upgrade do plano.", "Campaign limit reached. Open an existing campaign or upgrade your plan.", "Has alcanzado el límite de campañas. Accede a una campaña existente o mejora tu plan."), { duration: 6000 });
       } else {
-        toast.error("Erro ao iniciar. Tente novamente.");
+        toast.error(t("Erro ao iniciar. Tente novamente.", "Couldn't get started. Please try again.", "No se pudo iniciar. Inténtalo de nuevo."));
       }
     } finally {
       setStarting(false);
@@ -591,7 +663,7 @@ export default function Onboarding() {
       // Revert the optimistic user message and restore the typed text
       setMessages(messages);
       setInputValue(userMsg);
-      toast.error("Erro de comunicação com o agente. Sua mensagem foi preservada. Tente novamente.", { duration: 6000 });
+      toast.error(t("Erro de comunicação com o agente. Sua mensagem foi preservada. Tente novamente.", "Couldn't reach the agent. Your message was preserved. Please try again.", "Error de comunicación con el agente. Tu mensaje se conservó. Inténtalo de nuevo."), { duration: 6000 });
     } finally {
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 100);
@@ -654,9 +726,9 @@ export default function Onboarding() {
     const oLeads = budget > 0 ? Math.round(budget / 5) : 600;
     const oConv = 3.5;
     return [
-      { label: "Conservador", key: "conservador", leads: cLeads, convRate: cConv, revenue: cRevenue, color: "border-muted-foreground/30 text-muted-foreground", active: false },
-      { label: "Realista", key: "realista", leads: rLeads, convRate: rConv, revenue: rRevenue, color: "border-primary/50 text-primary", active: true },
-      { label: "Otimista", key: "otimista", leads: oLeads, convRate: oConv, revenue: oRevenue, color: "border-success/40 text-success", active: false },
+      { label: t("Conservador", "Conservative", "Conservador"), key: "conservador", leads: cLeads, convRate: cConv, revenue: cRevenue, color: "border-muted-foreground/30 text-muted-foreground", active: false },
+      { label: t("Realista", "Realistic", "Realista"), key: "realista", leads: rLeads, convRate: rConv, revenue: rRevenue, color: "border-primary/50 text-primary", active: true },
+      { label: t("Otimista", "Optimistic", "Optimista"), key: "otimista", leads: oLeads, convRate: oConv, revenue: oRevenue, color: "border-success/40 text-success", active: false },
     ];
   };
 
@@ -713,7 +785,7 @@ export default function Onboarding() {
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
           <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground/60">
-            Verificando se você já tem uma campanha em andamento...
+            {t("Verificando se você já tem uma campanha em andamento...", "Checking whether you already have a campaign in progress...", "Comprobando si ya tienes una campaña en curso...")}
           </p>
         </div>
       </div>
@@ -726,12 +798,10 @@ export default function Onboarding() {
         <div className="w-full max-w-md text-center border border-destructive/30 bg-destructive/5 p-8">
           <WifiOff className="h-6 w-6 text-destructive mx-auto mb-4" />
           <h2 className="font-mono font-black text-sm uppercase tracking-widest text-foreground mb-3">
-            Não conseguimos verificar sua campanha
+            {t("Não conseguimos verificar sua campanha", "We couldn't check your campaign", "No pudimos comprobar tu campaña")}
           </h2>
           <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed mb-6">
-            Antes de continuar, precisamos confirmar se você já tem uma campanha em
-            andamento — isso evita que você perca seu progresso ou crie uma duplicada.
-            Não foi possível falar com o servidor agora.
+            {t("Antes de continuar, precisamos confirmar se você já tem uma campanha em andamento — isso evita que você perca seu progresso ou crie uma duplicada. Não foi possível falar com o servidor agora.", "Before continuing, we need to confirm whether you already have a campaign in progress — this prevents lost progress or a duplicate campaign. We couldn't reach the server right now.", "Antes de continuar, debemos confirmar si ya tienes una campaña en curso para evitar que pierdas tu progreso o crees otra. No pudimos conectar con el servidor en este momento.")}
           </p>
           <div className="flex flex-col gap-2">
             <Button
@@ -739,7 +809,7 @@ export default function Onboarding() {
               className="rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary"
             >
               <RefreshCw className="h-4 w-4" />
-              Tentar novamente
+              {t("Tentar novamente", "Try again", "Intentar de nuevo")}
             </Button>
           </div>
         </div>
@@ -751,13 +821,13 @@ export default function Onboarding() {
   if (step === "welcome") {
     const firstName = user?.name?.split(" ")[0] ?? "você";
     const BRIEFING_AGENTS = [
-      { name: "Business Discovery",  desc: "Entende seu negócio e produto" },
-      { name: "Market Psychology",   desc: "Analisa seu mercado e concorrência" },
-      { name: "Avatar Intelligence", desc: "Mapeia seu público ideal" },
-      { name: "Product Development", desc: "Valida e estrutura sua oferta" },
-      { name: "Monetization Agent",  desc: "Define modelo e precificação" },
-      { name: "Positioning Agent",   desc: "Encontra seu diferencial único" },
-      { name: "NEXOS Prime",         desc: "Orquestra toda a operação" },
+      { name: "Business Discovery",  desc: t("Entende seu negócio e produto", "Understands your business and product", "Comprende tu negocio y producto") },
+      { name: "Market Psychology",   desc: t("Analisa seu mercado e concorrência", "Analyzes your market and competitors", "Analiza tu mercado y competencia") },
+      { name: "Avatar Intelligence", desc: t("Mapeia seu público ideal", "Maps your ideal audience", "Define tu público ideal") },
+      { name: "Product Development", desc: t("Valida e estrutura sua oferta", "Validates and structures your offer", "Valida y estructura tu oferta") },
+      { name: "Monetization Agent",  desc: t("Define modelo e precificação", "Defines your model and pricing", "Define el modelo y los precios") },
+      { name: "Positioning Agent",   desc: t("Encontra seu diferencial único", "Finds your unique differentiator", "Encuentra tu diferenciador único") },
+      { name: "NEXOS Prime",         desc: t("Orquestra toda a operação", "Orchestrates the entire operation", "Orquesta toda la operación") },
     ];
 
     return (
@@ -774,24 +844,22 @@ export default function Onboarding() {
             <div className="flex items-center justify-center gap-2 mb-4">
               <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
               <span className="font-mono text-[11px] uppercase tracking-widest text-success font-bold">
-                Time de Briefing NEXOS · ativo
+                {t("Time de briefing NEXOS · ativo", "NEXOS Briefing Team · active", "Equipo de briefing NEXOS · activo")}
               </span>
             </div>
             <h1 className="font-mono font-black text-2xl md:text-3xl uppercase tracking-tight text-foreground mb-4">
-              Olá, <span className="text-primary">{firstName}</span>.<br />
-              Sua equipe está pronta para você.
+              {t("Olá, ", "Hello, ", "Hola, ")}<span className="text-primary">{firstName}</span>.<br />
+              {t("Sua equipe está pronta para você.", "Your team is ready for you.", "Tu equipo está listo para ayudarte.")}
             </h1>
             <p className="font-mono text-sm text-muted-foreground/70 leading-relaxed max-w-lg mx-auto">
-              Antes de montar sua campanha, vamos conversar. Um time de especialistas vai
-              entender seu negócio, seu público e sua oferta — e transformar tudo em um
-              plano estratégico personalizado.
+              {t("Antes de montar sua campanha, vamos conversar. Um time de especialistas vai entender seu negócio, seu público e sua oferta — e transformar tudo em um plano estratégico personalizado.", "Before building your campaign, let's talk. A team of specialists will learn about your business, audience, and offer — and turn it all into a personalized strategic plan.", "Antes de crear tu campaña, conversemos. Un equipo de especialistas conocerá tu negocio, público y oferta, y lo convertirá todo en un plan estratégico personalizado.")}
             </p>
           </div>
 
           {/* Time de agentes */}
           <div className="border border-border/30 bg-card/20 p-5 mb-6">
             <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-4 text-center">
-              Especialistas escalados para o seu briefing
+              {t("Especialistas escalados para o seu briefing", "Specialists assigned to your briefing", "Especialistas asignados a tu briefing")}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {BRIEFING_AGENTS.map((agent) => (
@@ -813,11 +881,11 @@ export default function Onboarding() {
               className="rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-13 px-10 text-sm"
             >
               <Bot className="h-4 w-4" />
-              Vamos entender meu negócio
+              {t("Vamos entender meu negócio", "Let's understand my business", "Conozcamos mi negocio")}
               <ChevronRight className="h-4 w-4" />
             </Button>
             <p className="font-mono text-[11px] text-muted-foreground/30 mt-3">
-              Leva menos de 5 minutos · Você pode salvar e continuar depois
+              {t("Leva menos de 5 minutos · Você pode salvar e continuar depois", "Takes less than 5 minutes · You can save and continue later", "Toma menos de 5 minutos · Puedes guardar y continuar después")}
             </p>
           </div>
         </div>
@@ -830,26 +898,26 @@ export default function Onboarding() {
       {
         id: "micro_launch",
         icon: Rocket,
-        title: "Micro-lançamento por conteúdo",
-        subtitle: "0 a 7 dias do zero ao faturamento",
-        desc: "Crie um produto de entrada (R$97–R$497) baseado no conteúdo que você já publica. O agente monta a oferta, escreve o copy e conduz o lançamento pelo seu canal.",
-        badge: "Mais rápido",
+        title: t("Micro-lançamento por conteúdo", "Content-led micro-launch", "Microlanzamiento con contenido"),
+        subtitle: t("0 a 7 dias do zero ao faturamento", "From zero to revenue in 0–7 days", "De cero a ingresos en 0–7 días"),
+        desc: t("Crie um produto de entrada (R$97–R$497) baseado no conteúdo que você já publica. O agente monta a oferta, escreve o copy e conduz o lançamento pelo seu canal.", "Create an entry-level product (R$97–R$497) based on content you already publish. The agent builds the offer, writes the copy, and runs the launch through your channel.", "Crea un producto inicial (R$97–R$497) basado en el contenido que ya publicas. El agente prepara la oferta, redacta los textos y dirige el lanzamiento en tu canal."),
+        badge: t("Mais rápido", "Fastest", "Más rápido"),
       },
       {
         id: "members_area",
         icon: Users,
-        title: "Área de membros perpétua",
-        subtitle: "Renda recorrente todo mês",
-        desc: "Transforme sua audiência engajada em assinantes pagantes. Conteúdo exclusivo, comunidade fechada e renda previsível mês a mês.",
-        badge: "Recorrência",
+        title: t("Área de membros perpétua", "Evergreen membership", "Membresía continua"),
+        subtitle: t("Renda recorrente todo mês", "Recurring monthly revenue", "Ingresos recurrentes cada mes"),
+        desc: t("Transforme sua audiência engajada em assinantes pagantes. Conteúdo exclusivo, comunidade fechada e renda previsível mês a mês.", "Turn your engaged audience into paying subscribers. Exclusive content, a private community, and predictable monthly income.", "Convierte a tu audiencia activa en suscriptores de pago. Contenido exclusivo, comunidad privada e ingresos mensuales previsibles."),
+        badge: t("Recorrência", "Recurring", "Recurrente"),
       },
       {
         id: "product_from_audience",
         icon: BarChart2,
-        title: "Produto derivado da audiência",
-        subtitle: "Lançamento PLF completo",
-        desc: "Sua audiência já é sua lista quente. O agente analisa o público, cria o produto ideal, monta a sequência de lançamento completa e executa automaticamente.",
-        badge: "Lançamento completo",
+        title: t("Produto derivado da audiência", "Audience-led product", "Producto derivado de la audiencia"),
+        subtitle: t("Lançamento PLF completo", "Full PLF launch", "Lanzamiento PLF completo"),
+        desc: t("Sua audiência já é sua lista quente. O agente analisa o público, cria o produto ideal, monta a sequência de lançamento completa e executa automaticamente.", "Your audience is already a warm list. The agent analyzes it, creates the right product, builds the complete launch sequence, and runs it automatically.", "Tu audiencia ya es una lista interesada. El agente la analiza, crea el producto ideal, prepara toda la secuencia de lanzamiento y la ejecuta automáticamente."),
+        badge: t("Lançamento completo", "Full launch", "Lanzamiento completo"),
       },
     ];
 
@@ -861,16 +929,16 @@ export default function Onboarding() {
               onClick={() => { setStep("path_select"); setPath(null); }}
               className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-widest hover:text-foreground transition-colors mb-6 flex items-center gap-1.5 mx-auto"
             >
-              <ChevronRight className="h-3 w-3 rotate-180" /> Voltar
+              <ChevronRight className="h-3 w-3 rotate-180" /> {t("Voltar", "Back", "Volver")}
             </button>
             <Badge variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest px-3 py-1 border-emerald-400/40 text-emerald-400 bg-emerald-400/10 mb-4">
-              Creator Economy
+              {t("Creator Economy", "Creator Economy", "Economía de creadores")}
             </Badge>
             <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground mb-3">
-              Como quer monetizar sua audiência?
+              {t("Como quer monetizar sua audiência?", "How would you like to monetize your audience?", "¿Cómo quieres monetizar tu audiencia?")}
             </h1>
             <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-              Escolha o modelo — o agente executa tudo a partir daqui
+              {t("Escolha o modelo — o agente executa tudo a partir daqui", "Choose a model — the agent takes it from here", "Elige un modelo: el agente se encargará de todo a partir de aquí")}
             </p>
           </div>
 
@@ -927,10 +995,10 @@ export default function Onboarding() {
               </div>
             </div>
             <h1 className="text-3xl md:text-4xl font-mono uppercase tracking-tighter font-bold text-foreground mb-3">
-              Bem-vindo ao NexOS
+              {t("Bem-vindo ao NexOS", "Welcome to NexOS", "Te damos la bienvenida a NexOS")}
             </h1>
             <p className="text-sm font-mono text-muted-foreground uppercase tracking-widest">
-              O agente monta toda a estratégia a partir do seu briefing
+              {t("O agente monta toda a estratégia a partir do seu briefing", "The agent builds your entire strategy from your briefing", "El agente crea toda la estrategia a partir de tu briefing")}
             </p>
           </div>
 
@@ -942,12 +1010,12 @@ export default function Onboarding() {
               <div className="flex items-start gap-3">
                 <Rocket className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-1">Simulação detectada</div>
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-1">{t("Simulação detectada", "Simulation detected", "Simulación detectada")}</div>
                   <p className="font-mono text-xs text-foreground leading-relaxed">
-                    Você simulou o lançamento de <strong>{simulatorBanner.productName}</strong> antes de criar sua conta. O agente vai usar esses dados automaticamente no briefing.
+                    {t("Você simulou o lançamento de ", "You simulated the launch of ", "Simulaste el lanzamiento de ")}<strong>{simulatorBanner.productName}</strong>{t(" antes de criar sua conta. O agente vai usar esses dados automaticamente no briefing.", " before creating your account. The agent will automatically use this data in your briefing.", " antes de crear tu cuenta. El agente usará estos datos automáticamente en tu briefing.")}
                   </p>
                 </div>
-                <button onClick={() => { localStorage.removeItem("nexos_simulator_data"); setSimulatorBanner(null); }} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors shrink-0">✕</button>
+                <button aria-label={t("Fechar aviso", "Dismiss notice", "Cerrar aviso")} onClick={() => { localStorage.removeItem("nexos_simulator_data"); setSimulatorBanner(null); }} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors shrink-0">✕</button>
               </div>
             </div>
           )}
@@ -957,12 +1025,12 @@ export default function Onboarding() {
             <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary" />
             <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary" />
             <div className="border border-primary/40 bg-primary/5 p-6 md:p-8 text-center">
-              <p className="font-mono text-xs uppercase tracking-widest text-primary/70 mb-2">Recomendado</p>
+              <p className="font-mono text-xs uppercase tracking-widest text-primary/70 mb-2">{t("Recomendado", "Recommended", "Recomendado")}</p>
               <h2 className="font-mono font-black text-xl md:text-2xl uppercase tracking-tighter text-foreground mb-2">
-                Iniciar briefing agora
+                {t("Iniciar briefing agora", "Start briefing now", "Iniciar briefing ahora")}
               </h2>
               <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-6 leading-relaxed">
-                Responda as perguntas do time do agente — ela descobre o melhor caminho para você
+                {t("Responda às perguntas do time de agentes — eles descobrirão o melhor caminho para você", "Answer the agent team's questions — they'll find the best path for you", "Responde las preguntas del equipo de agentes: descubrirán el mejor camino para ti")}
               </p>
               <button
                 onClick={() => handlePathSelect("has_product")}
@@ -973,7 +1041,7 @@ export default function Onboarding() {
                   ? <Loader2 className="h-5 w-5 animate-spin" />
                   : <Rocket className="h-5 w-5" />
                 }
-                Começar briefing
+                {t("Começar briefing", "Start briefing", "Comenzar briefing")}
               </button>
             </div>
           </div>
@@ -981,7 +1049,7 @@ export default function Onboarding() {
           {/* ── SECONDARY — specific paths ──────────────────────────────── */}
           <div className="mb-4">
             <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 text-center mb-4">
-              Ou escolha um cenário específico
+              {t("Ou escolha um cenário específico", "Or choose a specific scenario", "O elige un escenario específico")}
             </p>
             <div className="grid grid-cols-1 gap-3">
               {PATHS.map((p) => {
@@ -1005,14 +1073,14 @@ export default function Onboarding() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono font-bold text-sm text-foreground group-hover:text-primary transition-colors">
-                            {p.title}
+              <span className="font-mono font-bold text-sm text-foreground group-hover:text-primary transition-colors">
+                            {t(p.title, p.id === "has_product" ? "I have a product" : p.id === "building_product" ? "I have expertise but no product" : p.id === "affiliate_nexos" ? "I want to launch NexOS" : "I have an audience and want to monetize", p.id === "has_product" ? "Tengo un producto" : p.id === "building_product" ? "Tengo experiencia, pero no producto" : p.id === "affiliate_nexos" ? "Quiero lanzar NexOS" : "Tengo audiencia y quiero monetizar")}
                           </span>
                           <Badge variant="outline" className={`rounded-none font-mono text-[10px] uppercase tracking-widest px-1.5 py-0 ${p.badgeColor}`}>
-                            {p.badge}
+                            {t(p.badge, p.id === "has_product" ? "Most common" : p.id === "building_product" ? "Agent + You" : p.id === "affiliate_nexos" ? "Affiliate" : "Creator", p.id === "has_product" ? "Más común" : p.id === "building_product" ? "Agente + tú" : p.id === "affiliate_nexos" ? "Afiliado" : "Creador")}
                           </Badge>
                         </div>
-                        <p className="text-[11px] font-mono text-muted-foreground/60 mt-0.5 line-clamp-1">{p.subtitle}</p>
+                        <p className="text-[11px] font-mono text-muted-foreground/60 mt-0.5 line-clamp-1">{t(p.subtitle, p.id === "has_product" ? "Ready or in progress" : p.id === "building_product" ? "Let's build it together" : p.id === "affiliate_nexos" ? "Affiliate program" : "Creator economy · micro-launch · memberships", p.id === "has_product" ? "Listo o en desarrollo" : p.id === "building_product" ? "Vamos a crearlo juntos" : p.id === "affiliate_nexos" ? "Programa de afiliados" : "Economía de creadores · microlanzamiento · membresías")}</p>
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0" />
                     </div>
@@ -1038,15 +1106,15 @@ export default function Onboarding() {
               <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
               <div>
                 <h2 className="font-mono font-bold text-sm text-foreground uppercase tracking-widest">
-                  {path === "has_product" ? "Briefing Estratégico" : path === "building_product" ? "Product Discovery" : path === "has_audience" ? "Creator Monetization" : "Estratégia de Afiliado"}
+                  {path === "has_product" ? t("Briefing estratégico", "Strategic briefing", "Briefing estratégico") : path === "building_product" ? t("Descoberta de produto", "Product discovery", "Descubrimiento de producto") : path === "has_audience" ? t("Monetização de criadores", "Creator monetization", "Monetización de creadores") : t("Estratégia de afiliado", "Affiliate strategy", "Estrategia de afiliados")}
                 </h2>
                 <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-                  {pathMeta.subtitle}
+                  {t(pathMeta.subtitle, path === "has_product" ? "Ready or in progress" : path === "building_product" ? "Let's build it together" : path === "affiliate_nexos" ? "Affiliate program" : "Creator economy · micro-launch · memberships", path === "has_product" ? "Listo o en desarrollo" : path === "building_product" ? "Vamos a crearlo juntos" : path === "affiliate_nexos" ? "Programa de afiliados" : "Economía de creadores · microlanzamiento · membresías")}
                 </p>
               </div>
             </div>
             <Badge variant="outline" className={`rounded-none font-mono text-[11px] uppercase tracking-widest px-2 py-1 ${pathMeta.badgeColor}`}>
-              {pathMeta.badge}
+              {t(pathMeta.badge, path === "has_product" ? "Most common" : path === "building_product" ? "Agent + You" : path === "affiliate_nexos" ? "Affiliate" : "Creator", path === "has_product" ? "Más común" : path === "building_product" ? "Agente + tú" : path === "affiliate_nexos" ? "Afiliado" : "Creador")}
             </Badge>
           </div>
           {!conversationComplete && (
@@ -1054,7 +1122,7 @@ export default function Onboarding() {
               onClick={() => { clearOnboardingState(); setStep("path_select"); setPath(null); setMessages([]); setCampaignId(null); setProposals(null); setAffiliateStrategy(null); setAudienceMonetizationPlan(null); setAudienceSubPath(null); }}
               className="mt-2.5 flex items-center gap-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 hover:text-muted-foreground transition-colors"
             >
-              <ChevronRight className="h-3 w-3 rotate-180" /> Mudar caminho
+              <ChevronRight className="h-3 w-3 rotate-180" /> {t("Mudar caminho", "Change path", "Cambiar de opción")}
             </button>
           )}
         </div>
@@ -1069,7 +1137,7 @@ export default function Onboarding() {
           {proposals && proposals.length > 0 && (
             <div className="space-y-3">
               <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground px-1">
-                Selecione a proposta que mais combina com você:
+                {t("Selecione a proposta que mais combina com você:", "Choose the proposal that fits you best:", "Selecciona la propuesta que mejor encaje contigo:")}
               </p>
               {proposals.map((p) => (
                 <ProposalCard key={p.id} proposal={p} onSelect={handleProposalSelect} />
@@ -1082,16 +1150,16 @@ export default function Onboarding() {
             <div className="border border-yellow-400/30 bg-yellow-400/5 p-4 rounded-sm space-y-3">
               <div className="flex items-center gap-2">
                 <Star className="h-4 w-4 text-yellow-400" />
-                <span className="font-mono font-bold text-xs uppercase tracking-widest text-yellow-400">Sua Estratégia de Afiliado</span>
+                <span className="font-mono font-bold text-xs uppercase tracking-widest text-yellow-400">{t("Sua estratégia de afiliado", "Your affiliate strategy", "Tu estrategia de afiliados")}</span>
               </div>
               <div className="grid grid-cols-2 gap-3 text-[11px] font-mono">
-                <div><span className="text-muted-foreground">Público: </span>{affiliateStrategy.audienceSize}</div>
-                <div><span className="text-muted-foreground">Canal: </span>{affiliateStrategy.mainChannel}</div>
-                <div className="col-span-2"><span className="text-muted-foreground">Projeção: </span><span className="text-success">{affiliateStrategy.revenueProjection}</span></div>
+                <div><span className="text-muted-foreground">{t("Público:", "Audience:", "Público:")} </span>{affiliateStrategy.audienceSize}</div>
+                <div><span className="text-muted-foreground">{t("Canal:", "Channel:", "Canal:")} </span>{affiliateStrategy.mainChannel}</div>
+                <div className="col-span-2"><span className="text-muted-foreground">{t("Projeção:", "Projection:", "Proyección:")} </span><span className="text-success">{affiliateStrategy.revenueProjection}</span></div>
               </div>
               {affiliateStrategy.firstSteps.length > 0 && (
                 <div>
-                  <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-2">Primeiros passos:</p>
+                  <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-2">{t("Primeiros passos:", "First steps:", "Primeros pasos:")}</p>
                   <ul className="space-y-1">
                     {affiliateStrategy.firstSteps.map((step, i) => (
                       <li key={i} className="flex items-start gap-2 text-[11px] font-mono">
@@ -1113,15 +1181,15 @@ export default function Onboarding() {
                 <span className="font-mono font-bold text-xs uppercase tracking-widest text-emerald-400">{audienceMonetizationPlan.approachTitle}</span>
               </div>
               <div className="grid grid-cols-2 gap-2.5 text-[11px] font-mono">
-                <div><span className="text-muted-foreground">Plataforma: </span>{audienceMonetizationPlan.platformFocus}</div>
-                <div><span className="text-muted-foreground">Produto: </span>{audienceMonetizationPlan.suggestedProductName}</div>
-                <div><span className="text-muted-foreground">Preço: </span>{audienceMonetizationPlan.priceRange}</div>
-                <div><span className="text-muted-foreground">Prazo: </span>{audienceMonetizationPlan.launchTimeline}</div>
-                <div className="col-span-2"><span className="text-muted-foreground">Projeção: </span><span className="text-emerald-400">{audienceMonetizationPlan.revenueProjection}</span></div>
+                <div><span className="text-muted-foreground">{t("Plataforma:", "Platform:", "Plataforma:")} </span>{audienceMonetizationPlan.platformFocus}</div>
+                <div><span className="text-muted-foreground">{t("Produto:", "Product:", "Producto:")} </span>{audienceMonetizationPlan.suggestedProductName}</div>
+                <div><span className="text-muted-foreground">{t("Preço:", "Price:", "Precio:")} </span>{audienceMonetizationPlan.priceRange}</div>
+                <div><span className="text-muted-foreground">{t("Prazo:", "Timeline:", "Plazo:")} </span>{audienceMonetizationPlan.launchTimeline}</div>
+                <div className="col-span-2"><span className="text-muted-foreground">{t("Projeção:", "Projection:", "Proyección:")} </span><span className="text-emerald-400">{audienceMonetizationPlan.revenueProjection}</span></div>
               </div>
               {audienceMonetizationPlan.firstSteps.length > 0 && (
                 <div>
-                  <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-2">Primeiros passos:</p>
+                  <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-2">{t("Primeiros passos:", "First steps:", "Primeros pasos:")}</p>
                   <ul className="space-y-1">
                     {audienceMonetizationPlan.firstSteps.map((s, i) => (
                       <li key={i} className="flex items-start gap-2 text-[11px] font-mono">
@@ -1142,7 +1210,7 @@ export default function Onboarding() {
               <div className="flex items-center gap-2 mb-3">
                 <CheckCircle2 className="h-4 w-4 text-success" />
                 <span className="font-mono font-bold text-xs uppercase tracking-widest text-success">
-                  {path === "has_product" ? "Briefing concluído!" : path === "building_product" ? "Produto definido!" : path === "has_audience" ? "Estratégia de monetização pronta!" : "Estratégia pronta!"}
+                   {path === "has_product" ? t("Briefing concluído!", "Briefing complete!", "¡Briefing completado!") : path === "building_product" ? t("Produto definido!", "Product defined!", "¡Producto definido!") : path === "has_audience" ? t("Estratégia de monetização pronta!", "Monetization strategy ready!", "¡Estrategia de monetización lista!") : t("Estratégia pronta!", "Strategy ready!", "¡Estrategia lista!")}
                 </span>
               </div>
               <Button
@@ -1150,7 +1218,7 @@ export default function Onboarding() {
                 className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11"
               >
                 <ArrowRight className="h-4 w-4" />
-                {path === "has_product" ? "Acessar Intake Completo" : "Ir para Minha Campanha"}
+                {path === "has_product" ? t("Acessar intake completo", "Open full intake", "Acceder al formulario completo") : t("Ir para minha campanha", "Go to my campaign", "Ir a mi campaña")}
               </Button>
             </div>
           )}
@@ -1187,7 +1255,8 @@ export default function Onboarding() {
                   }
                   // plain Enter = new line (default textarea behavior)
                 }}
-                placeholder="Digite sua resposta…"
+                aria-label={t("Sua resposta", "Your response", "Tu respuesta")}
+                placeholder={t("Digite sua resposta…", "Type your answer…", "Escribe tu respuesta…")}
                 disabled={sending}
                 rows={4}
                 className="flex-1 font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-4 py-3 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[140px]"
@@ -1196,12 +1265,13 @@ export default function Onboarding() {
                 <Button
                   onClick={() => void handleSend()}
                   disabled={sending || !inputValue.trim()}
-                  title="Enviar (Ctrl+Enter)"
+                  title={t("Enviar (Ctrl+Enter)", "Send (Ctrl+Enter)", "Enviar (Ctrl+Enter)")}
+                  aria-label={t("Enviar", "Send", "Enviar")}
                   className="font-mono rounded-none h-10 px-4 btn-weapon-primary"
                 >
                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>
-                <Button variant="outline" size="sm" title="Nova linha (Enter)"
+                <Button variant="outline" size="sm" title={t("Nova linha (Enter)", "New line (Enter)", "Nueva línea (Enter)")} aria-label={t("Inserir nova linha", "Insert new line", "Insertar nueva línea")}
                   onClick={() => {
                     setInputValue(v => v + "\n");
                     setTimeout(() => inputRef.current?.focus(), 0);
@@ -1214,7 +1284,7 @@ export default function Onboarding() {
               </div>
             </div>
             <p className="text-[11px] font-mono text-muted-foreground/40 uppercase tracking-widest mt-2 text-right">
-              Enter = nova linha · Ctrl+Enter = enviar
+              {t("Enter = nova linha · Ctrl+Enter = enviar", "Enter = new line · Ctrl+Enter = send", "Enter = nueva línea · Ctrl+Enter = enviar")}
             </p>
           </div>
         )}
@@ -1250,10 +1320,10 @@ export default function Onboarding() {
     ).length;
 
     const categoryLabels: Record<string, string> = {
-      mensagens: "Mensagens",
-      email: "E-mail Marketing",
-      pagamento: "Gateway de Pagamento",
-      social: "Mídia Paga",
+      mensagens: t("Mensagens", "Messaging", "Mensajería"),
+      email: t("E-mail Marketing", "Email marketing", "Marketing por correo"),
+      pagamento: t("Gateway de Pagamento", "Payment gateway", "Pasarela de pago"),
+      social: t("Mídia Paga", "Paid media", "Medios pagados"),
     };
 
     const categoriesInUse = [...new Set(relevantIntegrations.map((i) => i.category))];
@@ -1264,13 +1334,13 @@ export default function Onboarding() {
         <div className="text-center">
           <div className="inline-flex items-center gap-2 border border-primary/40 bg-primary/10 px-3 py-1.5 mb-4">
             <Link2 className="h-3.5 w-3.5 text-primary" />
-            <span className="font-mono text-xs uppercase tracking-widest text-primary">Passo 1 de 2 — Conectar Integrações</span>
+            <span className="font-mono text-xs uppercase tracking-widest text-primary">{t("Passo 1 de 2 — Conectar integrações", "Step 1 of 2 — Connect integrations", "Paso 1 de 2 — Conectar integraciones")}</span>
           </div>
           <h2 className="text-2xl md:text-3xl font-mono font-bold uppercase tracking-tighter text-foreground mb-2">
-            Conecta em 23 minutos
+            {t("Conecta em 23 minutos", "Connect in 23 minutes", "Conecta en 23 minutos")}
           </h2>
           <p className="text-xs font-mono text-muted-foreground max-w-xl mx-auto">
-            Integre as ferramentas que você já usa — o NexOS vai operar nelas automaticamente durante o lançamento. Você pode conectar agora ou depois em Configurações.
+            {t("Integre as ferramentas que você já usa — o NexOS vai operar nelas automaticamente durante o lançamento. Você pode conectar agora ou depois em Configurações.", "Connect the tools you already use — NexOS will operate them automatically during your launch. You can connect them now or later in Settings.", "Integra las herramientas que ya usas: NexOS las operará automáticamente durante el lanzamiento. Puedes conectarlas ahora o más adelante en Configuración.")}
           </p>
         </div>
 
@@ -1285,13 +1355,14 @@ export default function Onboarding() {
             ))}
           </div>
           <span className="font-mono text-[11px] text-muted-foreground">
-            {loadingIntegrations ? "Verificando..." : `${totalConnected} de ${relevantIntegrations.length} conectadas`}
+            {loadingIntegrations ? t("Verificando...", "Checking...", "Comprobando...") : t(`${totalConnected} de ${relevantIntegrations.length} conectadas`, `${totalConnected} of ${relevantIntegrations.length} connected`, `${totalConnected} de ${relevantIntegrations.length} conectadas`)}
           </span>
           <button
             onClick={() => void fetchConnectedIntegrations(true)}
             disabled={refreshingIntegrations}
             className="ml-auto text-muted-foreground/50 hover:text-primary transition-colors disabled:opacity-40"
-            title="Verificar novamente"
+            title={t("Verificar novamente", "Check again", "Volver a comprobar")}
+            aria-label={t("Verificar integrações novamente", "Check integrations again", "Volver a comprobar las integraciones")}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${refreshingIntegrations ? "animate-spin" : ""}`} />
           </button>
@@ -1317,6 +1388,8 @@ export default function Onboarding() {
                     {items.map((integration) => {
                       const Icon = integration.icon;
                       const isConnected = connectedIntegrations.includes(integration.provider);
+                      const copy = INTEGRATION_COPY[integration.provider];
+                      const selectedPath = path ?? "has_product";
                       return (
                         <div
                           key={integration.provider}
@@ -1341,21 +1414,21 @@ export default function Onboarding() {
                               </span>
                               {integration.required && (
                                 <Badge variant="outline" className="rounded-none font-mono text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/5">
-                                  Recomendada
+                                  {t("Recomendada", "Recommended", "Recomendada")}
                                 </Badge>
                               )}
                               {isConnected && (
                                 <div className="flex items-center gap-1">
                                   <Wifi className="h-3 w-3 text-green-400" />
-                                  <span className="font-mono text-[10px] uppercase tracking-widest text-green-400">Conectada</span>
+                                    <span className="font-mono text-[10px] uppercase tracking-widest text-green-400">{t("Conectada", "Connected", "Conectada")}</span>
                                 </div>
                               )}
                             </div>
                             <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed mb-1">
-                              {integration.description}
+                              {copy ? t(integration.description, copy.description[0], copy.description[1]) : integration.description}
                             </p>
                             <p className="font-mono text-[11px] text-primary/70 italic leading-relaxed">
-                              → {integration.benefit[path ?? "has_product"]}
+                              → {copy ? t(integration.benefit[selectedPath], ...copy.benefits[selectedPath]) : integration.benefit[selectedPath]}
                             </p>
                           </div>
 
@@ -1364,7 +1437,7 @@ export default function Onboarding() {
                             {isConnected ? (
                               <div className="flex items-center gap-1.5 border border-green-400/30 bg-green-400/5 px-3 py-1.5">
                                 <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />
-                                <span className="font-mono text-[11px] text-green-400 uppercase tracking-widest">Ativo</span>
+                                <span className="font-mono text-[11px] text-green-400 uppercase tracking-widest">{t("Ativo", "Active", "Activo")}</span>
                               </div>
                             ) : (
                               <Button
@@ -1374,7 +1447,7 @@ export default function Onboarding() {
                                 onClick={() => window.open("/configuracoes?tab=integracoes", "_blank")}
                               >
                                 <ExternalLink className="h-3 w-3" />
-                                Conectar
+                                {t("Conectar", "Connect", "Conectar")}
                               </Button>
                             )}
                           </div>
@@ -1392,12 +1465,12 @@ export default function Onboarding() {
         <div className="border border-border/30 bg-card/20 px-4 py-3 flex items-start gap-3">
           <WifiOff className="h-4 w-4 text-muted-foreground/40 shrink-0 mt-0.5" />
           <p className="font-mono text-[11px] text-muted-foreground/60 leading-relaxed">
-            Sem integração conectada o NexOS ainda funciona — gera toda a estratégia e copy, mas o disparo automático fica desativado. Você pode conectar depois em{" "}
+            {t("Sem integração conectada o NexOS ainda funciona — gera toda a estratégia e copy, mas o disparo automático fica desativado. Você pode conectar depois em ", "NexOS still works without a connected integration — it generates your strategy and copy, but automatic sending is disabled. You can connect one later in ", "NexOS sigue funcionando sin integraciones: genera la estrategia y los textos, pero los envíos automáticos quedan desactivados. Puedes conectar una más adelante en ")}
             <span
               className="text-primary cursor-pointer underline underline-offset-2"
               onClick={() => window.open("/configuracoes?tab=integracoes", "_blank")}
             >
-              Configurações → Integrações
+              {t("Configurações → Integrações", "Settings → Integrations", "Configuración → Integraciones")}
             </span>.
           </p>
         </div>
@@ -1405,7 +1478,7 @@ export default function Onboarding() {
         {/* ── Mode selection — Fundador vs Arquiteto ── */}
         <div className="space-y-3">
           <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-            Como você quer trabalhar com o NexOS?
+            {t("Como você quer trabalhar com o NexOS?", "How do you want to work with NexOS?", "¿Cómo quieres trabajar con NexOS?")}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -1413,24 +1486,24 @@ export default function Onboarding() {
               className="border border-primary/30 hover:border-primary/60 bg-primary/5 hover:bg-primary/10 p-4 text-left transition-colors group"
             >
               <div className="font-mono text-xs font-bold text-primary uppercase tracking-widest mb-1.5">
-                🚀 Modo Fundador
+                🚀 {t("Modo Fundador", "Founder mode", "Modo fundador")}
               </div>
               <div className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">
-                Guiado, passo a passo. O agente conduz tudo — você decide nos pontos certos.
+                {t("Guiado, passo a passo. O agente conduz tudo — você decide nos pontos certos.", "Guided, step by step. The agent handles everything — you decide at the right moments.", "Guiado, paso a paso. El agente se encarga de todo; tú decides en los momentos clave.")}
               </div>
-              <div className="font-mono text-[10px] text-primary/50 mt-2">Recomendado para primeiros lançamentos</div>
+              <div className="font-mono text-[10px] text-primary/50 mt-2">{t("Recomendado para primeiros lançamentos", "Recommended for first launches", "Recomendado para los primeros lanzamientos")}</div>
             </button>
             <button
               onClick={() => setMode("arquiteto")}
               className="border border-border/40 hover:border-border/80 bg-muted/10 hover:bg-muted/20 p-4 text-left transition-colors group"
             >
               <div className="font-mono text-xs font-bold text-foreground uppercase tracking-widest mb-1.5">
-                ⚙️ Modo Arquiteto
+                ⚙️ {t("Modo Arquiteto", "Architect mode", "Modo arquitecto")}
               </div>
               <div className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">
-                Controle total. Visualize cada decisão dos agentes, edite e itere em tempo real.
+                {t("Controle total. Visualize cada decisão dos agentes, edite e itere em tempo real.", "Full control. Review every agent decision, edit, and iterate in real time.", "Control total. Revisa cada decisión de los agentes, edita e itera en tiempo real.")}
               </div>
-              <div className="font-mono text-[10px] text-muted-foreground/40 mt-2">Para usuários avançados</div>
+              <div className="font-mono text-[10px] text-muted-foreground/40 mt-2">{t("Para usuários avançados", "For advanced users", "Para usuarios avanzados")}</div>
             </button>
           </div>
         </div>
@@ -1444,18 +1517,18 @@ export default function Onboarding() {
           <div className="text-center space-y-3">
             <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
               {requiredConnected
-                ? "Integrações essenciais conectadas — pronto para lançar"
-                : "Você pode conectar agora ou continuar e configurar depois"}
+                ? t("Integrações essenciais conectadas — pronto para lançar", "Essential integrations connected — ready to launch", "Integraciones esenciales conectadas: listo para lanzar")
+                : t("Você pode conectar agora ou continuar e configurar depois", "You can connect now or continue and set them up later", "Puedes conectar ahora o continuar y configurarlas después")}
             </div>
             <Button
               onClick={handleLaunch}
               className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-12 text-sm"
             >
               <Rocket className="h-4 w-4" />
-              {path === "has_product" ? "Iniciar Briefing Estratégico" : "Ir para Minha Campanha"}
+              {path === "has_product" ? t("Iniciar briefing estratégico", "Start strategic briefing", "Iniciar briefing estratégico") : t("Ir para minha campanha", "Go to my campaign", "Ir a mi campaña")}
             </Button>
             <p className="font-mono text-[11px] text-muted-foreground/50">
-              Você pode conectar integrações a qualquer momento em Configurações
+              {t("Você pode conectar integrações a qualquer momento em Configurações", "You can connect integrations anytime in Settings", "Puedes conectar integraciones cuando quieras desde Configuración")}
             </p>
           </div>
         </div>
@@ -1466,38 +1539,38 @@ export default function Onboarding() {
   // ── PLAN PREVIEW ─────────────────────────────────────────────────────────────
   if (step === "plan_preview") {
     const DAY_PLAN = [
-      { day: 1, phase: "Pré-lançamento", activity: "Aquecimento de audiência + conteúdo de antecipação publicado", icon: Target, color: "border-primary/40 bg-primary/10 text-primary" },
-      { day: 2, phase: "Pré-lançamento", activity: "Lista de espera ativada + sequência de email iniciada", icon: Mail, color: "border-primary/40 bg-primary/10 text-primary" },
-      { day: 3, phase: "Abertura", activity: "Carrinho aberto + VSL publicado + email blast para lista", icon: Rocket, color: "border-success/40 bg-success/10 text-success" },
-      { day: 4, phase: "Abertura", activity: "Nurturing automático + WhatsApp ativo para leads quentes", icon: MessageSquare, color: "border-success/40 bg-success/10 text-success" },
-      { day: 5, phase: "Urgência", activity: "Email de bônus + social proof + remarketing ativado", icon: TrendingUp, color: "border-yellow-400/40 bg-yellow-400/10 text-yellow-400" },
-      { day: 6, phase: "Urgência", activity: "Escassez real + último aviso para indecisos", icon: Shield, color: "border-yellow-400/40 bg-yellow-400/10 text-yellow-400" },
-      { day: 7, phase: "Fechamento", activity: "Carrinho fecha às 23:59 + sequência de última hora", icon: CheckCircle2, color: "border-orange-400/40 bg-orange-400/10 text-orange-400" },
+      { day: 1, phase: t("Pré-lançamento", "Pre-launch", "Prelanzamiento"), activity: t("Aquecimento de audiência + conteúdo de antecipação publicado", "Audience warm-up + teaser content published", "Calentamiento de audiencia + contenido de anticipación publicado"), icon: Target, color: "border-primary/40 bg-primary/10 text-primary" },
+      { day: 2, phase: t("Pré-lançamento", "Pre-launch", "Prelanzamiento"), activity: t("Lista de espera ativada + sequência de email iniciada", "Waitlist activated + email sequence started", "Lista de espera activada + secuencia de correo iniciada"), icon: Mail, color: "border-primary/40 bg-primary/10 text-primary" },
+      { day: 3, phase: t("Abertura", "Opening", "Apertura"), activity: t("Carrinho aberto + VSL publicado + email blast para lista", "Cart opens + VSL published + email blast to list", "Carrito abierto + VSL publicado + envío masivo a la lista"), icon: Rocket, color: "border-success/40 bg-success/10 text-success" },
+      { day: 4, phase: t("Abertura", "Opening", "Apertura"), activity: t("Nurturing automático + WhatsApp ativo para leads quentes", "Automated nurturing + WhatsApp active for hot leads", "Nutrición automática + WhatsApp activo para leads interesados"), icon: MessageSquare, color: "border-success/40 bg-success/10 text-success" },
+      { day: 5, phase: t("Urgência", "Urgency", "Urgencia"), activity: t("Email de bônus + social proof + remarketing ativado", "Bonus email + social proof + remarketing activated", "Correo con bono + prueba social + remarketing activado"), icon: TrendingUp, color: "border-yellow-400/40 bg-yellow-400/10 text-yellow-400" },
+      { day: 6, phase: t("Urgência", "Urgency", "Urgencia"), activity: t("Escassez real + último aviso para indecisos", "Real scarcity + final reminder for undecided leads", "Escasez real + último aviso para indecisos"), icon: Shield, color: "border-yellow-400/40 bg-yellow-400/10 text-yellow-400" },
+      { day: 7, phase: t("Fechamento", "Closing", "Cierre"), activity: t("Carrinho fecha às 23:59 + sequência de última hora", "Cart closes at 11:59 p.m. + final-hour sequence", "El carrito cierra a las 23:59 + secuencia de última hora"), icon: CheckCircle2, color: "border-orange-400/40 bg-orange-400/10 text-orange-400" },
     ];
 
     const CHAT_AGENTS = [
-      { label: "Comandante",          color: "text-primary",     cat: "Estratégia" },
-      { label: "Estrategista",           color: "text-primary",     cat: "Estratégia" },
-      { label: "Gerente de Lançamento",  color: "text-primary",     cat: "Estratégia" },
-      { label: "Especialista em Oferta", color: "text-primary",     cat: "Estratégia" },
-      { label: "Product Builder",        color: "text-primary",     cat: "Estratégia" },
-      { label: "Copywriter",             color: "text-cyan-400",    cat: "Conteúdo" },
-      { label: "Diretor Criativo",       color: "text-cyan-400",    cat: "Conteúdo" },
-      { label: "Landing Page Expert",    color: "text-cyan-400",    cat: "Conteúdo" },
-      { label: "Targeting Expert",       color: "text-yellow-400",  cat: "Audiência" },
-      { label: "Media Buyer",            color: "text-yellow-400",  cat: "Audiência" },
-      { label: "Especialista Afiliados", color: "text-yellow-400",  cat: "Audiência" },
-      { label: "Analista de Performance",color: "text-success",     cat: "Performance" },
-      { label: "Otimizador",              color: "text-success",     cat: "Performance" },
-      { label: "Estrategista de Vídeo",  color: "text-success",     cat: "Performance" },
-      { label: "Creator Growth",         color: "text-success",     cat: "Performance" },
-      { label: "Compliance Officer",     color: "text-orange-400",  cat: "Qualidade" },
+      { label: t("Comandante", "Commander", "Comandante"), color: "text-primary", cat: t("Estratégia", "Strategy", "Estrategia") },
+      { label: t("Estrategista", "Strategist", "Estratega"), color: "text-primary", cat: t("Estratégia", "Strategy", "Estrategia") },
+      { label: t("Gerente de Lançamento", "Launch Manager", "Gerente de lanzamientos"), color: "text-primary", cat: t("Estratégia", "Strategy", "Estrategia") },
+      { label: t("Especialista em Oferta", "Offer Specialist", "Especialista en ofertas"), color: "text-primary", cat: t("Estratégia", "Strategy", "Estrategia") },
+      { label: "Product Builder", color: "text-primary", cat: t("Estratégia", "Strategy", "Estrategia") },
+      { label: "Copywriter", color: "text-cyan-400", cat: t("Conteúdo", "Content", "Contenido") },
+      { label: t("Diretor Criativo", "Creative Director", "Director creativo"), color: "text-cyan-400", cat: t("Conteúdo", "Content", "Contenido") },
+      { label: "Landing Page Expert", color: "text-cyan-400", cat: t("Conteúdo", "Content", "Contenido") },
+      { label: "Targeting Expert", color: "text-yellow-400", cat: t("Audiência", "Audience", "Audiencia") },
+      { label: "Media Buyer", color: "text-yellow-400", cat: t("Audiência", "Audience", "Audiencia") },
+      { label: t("Especialista em afiliados", "Affiliate specialist", "Especialista en afiliados"), color: "text-yellow-400", cat: t("Audiência", "Audience", "Audiencia") },
+      { label: t("Analista de performance", "Performance analyst", "Analista de rendimiento"), color: "text-success", cat: "Performance" },
+      { label: t("Otimizador", "Optimizer", "Optimizador"), color: "text-success", cat: "Performance" },
+      { label: t("Estrategista de vídeo", "Video strategist", "Estratega de video"), color: "text-success", cat: "Performance" },
+      { label: "Creator Growth", color: "text-success", cat: "Performance" },
+      { label: "Compliance Officer", color: "text-orange-400", cat: t("Qualidade", "Quality", "Calidad") },
     ];
     const AUTO_AGENTS = [
-      "VSL Script", "Roteiro Webinar", "Roteiro Live", "Copy de Anúncios",
-      "Script CPL", "Sequência Stories", "Brief de Mídia", "Profile Builder",
-      "Projetor Financeiro", "Builder de Sequências", "Social Media",
-      "Auto-Resposta WhatsApp", "Lançamento Perpétuo",
+      "VSL Script", t("Roteiro de webinar", "Webinar script", "Guion de webinar"), t("Roteiro de live", "Live script", "Guion de directo"), t("Texto de anúncios", "Ad copy", "Textos publicitarios"),
+      "CPL Script", t("Sequência de stories", "Stories sequence", "Secuencia de stories"), t("Brief de mídia", "Media brief", "Brief de medios"), "Profile Builder",
+      t("Projeção financeira", "Financial projection", "Proyección financiera"), t("Criador de sequências", "Sequence builder", "Creador de secuencias"), "Social Media",
+      t("Resposta automática no WhatsApp", "WhatsApp auto-reply", "Respuesta automática de WhatsApp"), t("Lançamento perpétuo", "Evergreen launch", "Lanzamiento evergreen"),
     ];
 
     return (
@@ -1506,13 +1579,13 @@ export default function Onboarding() {
         <div className="text-center">
           <div className="inline-flex items-center gap-2 border border-success/40 bg-success/10 px-3 py-1.5 mb-4">
             <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-            <span className="font-mono text-xs uppercase tracking-widest text-success">Plano Gerado pelo agente</span>
+            <span className="font-mono text-xs uppercase tracking-widest text-success">{t("Plano gerado pelo agente", "Plan generated by the agent", "Plan generado por el agente")}</span>
           </div>
           <h2 className="text-2xl md:text-3xl font-mono font-bold uppercase tracking-tighter text-foreground mb-2">
-            Seu Lançamento em 7 Dias
+            {t("Seu lançamento em 7 dias", "Your launch in 7 days", "Tu lanzamiento en 7 días")}
           </h2>
           <p className="text-xs font-mono text-muted-foreground">
-            NexOS executa cada fase automaticamente — você só aprova
+            {t("NexOS executa cada fase automaticamente — você só aprova", "NexOS runs each phase automatically — you just approve", "NexOS ejecuta cada fase automáticamente; tú solo tienes que aprobar")}
           </p>
         </div>
 
@@ -1522,7 +1595,7 @@ export default function Onboarding() {
             const Icon = d.icon;
             return (
               <div key={d.day} className={`border p-2 text-center ${d.color}`}>
-                <div className="font-mono text-[11px] uppercase tracking-widest opacity-60 mb-1.5">D{d.day}</div>
+                <div className="font-mono text-[11px] uppercase tracking-widest opacity-60 mb-1.5">{t("D", "Day ", "D")}{d.day}</div>
                 <Icon className="h-3.5 w-3.5 mx-auto mb-1.5" />
                 <div className="font-mono text-[11px] font-bold uppercase leading-tight hidden sm:block">{d.phase}</div>
               </div>
@@ -1551,15 +1624,15 @@ export default function Onboarding() {
             <div className="flex items-center gap-2">
               <Bot className="h-3.5 w-3.5 text-primary" />
               <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-                Sistema de 29 Agentes agente
+                {t("Sistema de 29 agentes NexOS", "29-agent NexOS system", "Sistema de 29 agentes de NexOS")}
               </span>
             </div>
             <div className="flex items-center gap-3">
               <span className="font-mono text-[11px] uppercase tracking-widest text-primary border border-primary/30 bg-primary/10 px-2 py-0.5">
-                16 chat direto
+                {t("16 chat direto", "16 direct chat", "16 de chat directo")}
               </span>
               <span className="font-mono text-[11px] uppercase tracking-widest text-cyan-400 border border-cyan-400/30 bg-cyan-400/10 px-2 py-0.5">
-                13 autônomos
+                {t("13 autônomos", "13 autonomous", "13 autónomos")}
               </span>
             </div>
           </div>
@@ -1567,7 +1640,7 @@ export default function Onboarding() {
           {/* Direct-chat agents by category */}
           <div>
             <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-2">
-              Disponíveis para consulta direta
+              {t("Disponíveis para consulta direta", "Available for direct chat", "Disponibles para consultas directas")}
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
               {CHAT_AGENTS.map((agent) => (
@@ -1582,7 +1655,7 @@ export default function Onboarding() {
           {/* Autonomous agents */}
           <div>
             <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-2">
-              Executados automaticamente durante campanhas
+              {t("Executados automaticamente durante campanhas", "Run automatically during campaigns", "Se ejecutan automáticamente durante las campañas")}
             </p>
             <div className="flex flex-wrap gap-1">
               {AUTO_AGENTS.map((name) => (
@@ -1599,7 +1672,7 @@ export default function Onboarding() {
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <BarChart2 className="h-3.5 w-3.5 text-primary" />
-              <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Projeção Financeira · 7 dias</span>
+              <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Projeção financeira · 7 dias", "Financial projection · 7 days", "Proyección financiera · 7 días")}</span>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {financialScenarios.map(sc => (
@@ -1607,7 +1680,7 @@ export default function Onboarding() {
                   {sc.active && (
                     <div className="absolute -top-2 left-1/2 -translate-x-1/2">
                       <Badge variant="outline" className="rounded-none font-mono text-[11px] px-1.5 border-primary/40 text-primary bg-background">
-                        Mais provável
+                        {t("Mais provável", "Most likely", "Más probable")}
                       </Badge>
                     </div>
                   )}
@@ -1619,27 +1692,27 @@ export default function Onboarding() {
               ))}
             </div>
             <p className="font-mono text-[10px] text-muted-foreground/50">
-              Estimativa baseada nos dados do briefing · será refinada pelo Agente de Projeção Financeira durante a estratégia
+              {t("Estimativa baseada nos dados do briefing · será refinada pelo Agente de Projeção Financeira durante a estratégia", "Estimate based on your briefing · refined by the Financial Projection Agent during strategy development", "Estimación basada en tu briefing · el agente de proyección financiera la ajustará durante la estrategia")}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-2">
             {[
-              { label: "6 Dígitos", value: "R$ 100k–999k", color: "border-primary/40 text-primary", active: path !== "affiliate_nexos" },
-              { label: "8 Dígitos", value: "R$ 10M–99M", color: "border-cyan-400/40 text-cyan-400", active: false },
-              { label: "10 Dígitos", value: "R$ 100M+", color: "border-yellow-400/40 text-yellow-400", active: false },
+              { label: t("6 Dígitos", "6 Figures", "6 cifras"), value: "R$ 100k–999k", color: "border-primary/40 text-primary", active: path !== "affiliate_nexos" },
+              { label: t("8 Dígitos", "8 Figures", "8 cifras"), value: "R$ 10M–99M", color: "border-cyan-400/40 text-cyan-400", active: false },
+              { label: t("10 Dígitos", "10 Figures", "10 cifras"), value: "R$ 100M+", color: "border-yellow-400/40 text-yellow-400", active: false },
             ].map(track => (
               <div key={track.label} className={`border px-3 py-2.5 text-center relative ${track.color} ${track.active ? "bg-primary/5" : "opacity-40"}`}>
                 {track.active && (
                   <div className="absolute -top-2 left-1/2 -translate-x-1/2">
                     <Badge variant="outline" className="rounded-none font-mono text-[11px] px-1.5 border-primary/40 text-primary bg-background">
-                      Seu track
+                      {t("Seu track", "Your track", "Tu nivel")}
                     </Badge>
                   </div>
                 )}
                 <div className="font-mono text-[11px] uppercase tracking-widest opacity-60 mb-1">{track.label}</div>
                 <div className="font-mono text-xs font-bold">{track.value}</div>
-                <div className="font-mono text-[11px] text-muted-foreground">em 7 dias</div>
+                <div className="font-mono text-[11px] text-muted-foreground">{t("em 7 dias", "in 7 days", "en 7 días")}</div>
               </div>
             ))}
           </div>
@@ -1655,10 +1728,10 @@ export default function Onboarding() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-0.5">
-                Clone Studio · Opcional · 5 min
+                 {t("Clone Studio · Opcional · 5 min", "Clone Studio · Optional · 5 min", "Clone Studio · Opcional · 5 min")}
               </div>
               <p className="font-mono text-[11px] text-muted-foreground leading-relaxed">
-                Enquanto os agentes trabalham, crie seu clone de voz. Ele vai gerar vídeos de campanha com sua voz e jeito de falar.
+                {t("Enquanto os agentes trabalham, crie seu clone de voz. Ele vai gerar vídeos de campanha com sua voz e jeito de falar.", "While the agents work, create your voice clone. It will generate campaign videos in your voice and speaking style.", "Mientras trabajan los agentes, crea tu clon de voz. Generará videos de campaña con tu voz y tu forma de hablar.")}
               </p>
             </div>
             <ChevronRight className="h-4 w-4 text-primary shrink-0 group-hover:translate-x-0.5 transition-transform" />
@@ -1671,7 +1744,7 @@ export default function Onboarding() {
             onComplete={(sessionId) => {
               setCloneSessionId(sessionId);
               setShowCloneStudio(false);
-              toast.success("Clone capturado! Seu clone está sendo processado.");
+              toast.success(t("Clone capturado! Seu clone está sendo processado.", "Clone captured! Your clone is being processed.", "¡Clon capturado! Se está procesando."));
             }}
             onSkip={() => setShowCloneStudio(false)}
           />
@@ -1681,8 +1754,8 @@ export default function Onboarding() {
           <div className="border border-success/30 bg-success/5 px-4 py-3 flex items-center gap-3">
             <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
             <div className="flex-1">
-              <div className="font-mono text-[11px] font-bold text-success uppercase tracking-widest">Clone capturado com sucesso</div>
-              <div className="font-mono text-[10px] text-muted-foreground mt-0.5">Voz e expressões em processamento · disponível em breve para geração de vídeo</div>
+              <div className="font-mono text-[11px] font-bold text-success uppercase tracking-widest">{t("Clone capturado com sucesso", "Clone captured successfully", "Clon capturado correctamente")}</div>
+              <div className="font-mono text-[10px] text-muted-foreground mt-0.5">{t("Voz e expressões em processamento · disponível em breve para geração de vídeo", "Voice and expressions are processing · available soon for video generation", "Voz y expresiones en proceso · pronto para generar videos próximamente")}</div>
             </div>
           </div>
         )}
@@ -1695,7 +1768,7 @@ export default function Onboarding() {
           <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary" />
           <div className="text-center space-y-3">
             <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-              Confirme o que entendemos antes de escalar o time
+              {t("Confirme o que entendemos antes de escalar o time", "Confirm what we've learned before scaling up the team", "Confirma lo que entendimos antes de ampliar el equipo")}
             </div>
             <Button
               onClick={() => {
@@ -1708,16 +1781,16 @@ export default function Onboarding() {
               className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-12 text-sm"
             >
               {cloneSessionId ? (
-                <><Sparkles className="h-4 w-4" /> Ver apresentação do seu clone</>
+                <><Sparkles className="h-4 w-4" /> {t("Ver apresentação do seu clone", "View your clone's introduction", "Ver la presentación de tu clon")}</>
               ) : (
-                <><CheckCircle2 className="h-4 w-4" /> Está correto — avançar</>
+                <><CheckCircle2 className="h-4 w-4" /> {t("Está correto — avançar", "That's correct — continue", "Es correcto — continuar")}</>
               )}
             </Button>
             <button
               onClick={handleLaunch}
               className="font-mono text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors uppercase tracking-widest underline underline-offset-2"
             >
-              Pular por agora e ir para a campanha
+              {t("Pular por agora e ir para a campanha", "Skip for now and go to the campaign", "Omitir por ahora e ir a la campaña")}
             </button>
           </div>
         </div>
@@ -1737,7 +1810,7 @@ export default function Onboarding() {
           className="absolute top-4 left-4 z-10 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 hover:text-muted-foreground transition-colors"
         >
           <ChevronRight className="h-3 w-3 rotate-180" />
-          Voltar ao plano
+          {t("Voltar ao plano", "Back to plan", "Volver al plan")}
         </button>
         <CloneWowMoment
           userName={user?.name ?? "Usuário"}
@@ -1753,25 +1826,25 @@ export default function Onboarding() {
   if (step === "diagnosis_approval") {
     const approvalItems = proposals
       ? [
-          { label: "Produto identificado", value: proposals[0]?.name ?? "—" },
-          { label: "Público-alvo", value: proposals[0]?.targetAudience ?? "—" },
-          { label: "Dor principal", value: proposals[0]?.mainPain ?? "—" },
-          { label: "Transformação", value: proposals[0]?.transformation ?? "—" },
-          { label: "Track recomendado", value: proposals[0]?.suggestedTrack ?? "—" },
+           { label: t("Produto identificado", "Product identified", "Producto identificado"), value: proposals[0]?.name ?? "—" },
+           { label: t("Público-alvo", "Target audience", "Público objetivo"), value: proposals[0]?.targetAudience ?? "—" },
+           { label: t("Dor principal", "Main pain point", "Problema principal"), value: proposals[0]?.mainPain ?? "—" },
+           { label: t("Transformação", "Transformation", "Transformación"), value: proposals[0]?.transformation ?? "—" },
+           { label: t("Track recomendado", "Recommended track", "Nivel recomendado"), value: proposals[0]?.suggestedTrack ?? "—" },
         ]
       : affiliateStrategy
       ? [
-          { label: "Canal principal", value: affiliateStrategy.mainChannel },
-          { label: "Tamanho da audiência", value: affiliateStrategy.audienceSize },
-          { label: "Abordagem sugerida", value: affiliateStrategy.suggestedApproach },
-          { label: "Projeção de receita", value: affiliateStrategy.revenueProjection },
+           { label: t("Canal principal", "Main channel", "Canal principal"), value: affiliateStrategy.mainChannel },
+           { label: t("Tamanho da audiência", "Audience size", "Tamaño de la audiencia"), value: affiliateStrategy.audienceSize },
+           { label: t("Abordagem sugerida", "Suggested approach", "Enfoque sugerido"), value: affiliateStrategy.suggestedApproach },
+           { label: t("Projeção de receita", "Revenue projection", "Proyección de ingresos"), value: affiliateStrategy.revenueProjection },
         ]
       : audienceMonetizationPlan
       ? [
-          { label: "Modelo de monetização", value: audienceMonetizationPlan.approachTitle },
-          { label: "Produto sugerido", value: audienceMonetizationPlan.suggestedProductName },
-          { label: "Faixa de preço", value: audienceMonetizationPlan.priceRange },
-          { label: "Timeline de lançamento", value: audienceMonetizationPlan.launchTimeline },
+           { label: t("Modelo de monetização", "Monetization model", "Modelo de monetización"), value: audienceMonetizationPlan.approachTitle },
+           { label: t("Produto sugerido", "Suggested product", "Producto sugerido"), value: audienceMonetizationPlan.suggestedProductName },
+           { label: t("Faixa de preço", "Price range", "Rango de precios"), value: audienceMonetizationPlan.priceRange },
+           { label: t("Timeline de lançamento", "Launch timeline", "Calendario de lanzamiento"), value: audienceMonetizationPlan.launchTimeline },
         ]
       : [];
 
@@ -1784,14 +1857,14 @@ export default function Onboarding() {
             <div className="flex items-center justify-center gap-2 mb-4">
               <CheckCircle2 className="h-5 w-5 text-success" />
               <span className="font-mono text-[11px] uppercase tracking-widest text-success font-bold">
-                Diagnóstico Concluído
+                 {t("Diagnóstico concluído", "Diagnosis complete", "Diagnóstico completado")}
               </span>
             </div>
             <h2 className="font-mono font-black text-2xl uppercase tracking-tight text-foreground mb-2">
-              O que entendemos sobre você
+               {t("O que entendemos sobre você", "What we've learned about you", "Lo que entendimos sobre ti")}
             </h2>
             <p className="font-mono text-sm text-muted-foreground/60 leading-relaxed">
-              Revise o que o time identificou antes de escalarmos os especialistas de campanha.
+               {t("Revise o que o time identificou antes de escalarmos os especialistas de campanha.", "Review what the team identified before we scale up the campaign specialists.", "Revisa lo que el equipo identificó antes de ampliar el equipo de especialistas de campaña.")}
             </p>
           </div>
 
@@ -1814,7 +1887,7 @@ export default function Onboarding() {
           {/* Pergunta de confirmação */}
           <div className="border border-primary/20 bg-primary/5 p-5 text-center">
             <p className="font-mono text-sm text-foreground/80 mb-1">
-              Faltou algo importante ou podemos escalar o time de especialistas para planejar sua campanha?
+              {t("Faltou algo importante ou podemos escalar o time de especialistas para planejar sua campanha?", "Is anything important missing, or can we scale up the specialists to plan your campaign?", "¿Falta algo importante o podemos ampliar el equipo de especialistas para planificar tu campaña?")}
             </p>
           </div>
 
@@ -1825,7 +1898,7 @@ export default function Onboarding() {
               className="w-full rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-12 text-sm"
             >
               <CheckCircle2 className="h-4 w-4" />
-              Está correto, avançar
+              {t("Está correto, avançar", "That's correct, continue", "Es correcto, continuar")}
               <ChevronRight className="h-4 w-4" />
             </Button>
             <Button
@@ -1833,13 +1906,13 @@ export default function Onboarding() {
               onClick={() => setStep("plan_preview")}
               className="w-full rounded-none font-mono uppercase tracking-widest h-11 text-sm border-border/50 hover:border-primary/40"
             >
-              Quero ajustar informações
+              {t("Quero ajustar informações", "I want to edit the information", "Quiero ajustar la información")}
             </Button>
             <button
               onClick={handleLaunch}
               className="font-mono text-[11px] text-muted-foreground/40 hover:text-muted-foreground/60 transition-colors uppercase tracking-widest underline underline-offset-2 text-center"
             >
-              Adicionar algo e ir para a campanha
+              {t("Adicionar algo e ir para a campanha", "Add something and go to the campaign", "Añadir algo e ir a la campaña")}
             </button>
           </div>
         </div>

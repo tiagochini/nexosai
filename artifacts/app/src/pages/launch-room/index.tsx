@@ -10,6 +10,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
+import { useUiText } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import {
   Rocket, Radio, Wifi, WifiOff, ArrowLeft,
@@ -106,6 +107,7 @@ function StatCard({ label, value, sub, icon: Icon, highlight = false }: {
 }
 
 export default function LaunchRoom() {
+  const t = useUiText();
   const { id: campaignId } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const [visible, setVisible] = useState(false);
@@ -184,7 +186,7 @@ export default function LaunchRoom() {
         <div className="flex items-center gap-3">
           <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
           <span className="font-mono text-[11px] uppercase tracking-widest text-success font-bold">
-            Sala de Lançamento · Ao Vivo
+            {t("Sala de Lançamento · Ao Vivo", "Launch Room · Live", "Sala de Lanzamiento · En Vivo")}
           </span>
         </div>
 
@@ -202,26 +204,26 @@ export default function LaunchRoom() {
         {/* ── Headline ── */}
         <div className="text-center">
           <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40 mb-3">
-            {campaignId ? `Campanha · ${campaignId.slice(0, 8).toUpperCase()}` : "Lançamento Global"}
+            {campaignId ? `${t("Campanha", "Campaign", "Campaña")} · ${campaignId.slice(0, 8).toUpperCase()}` : t("Lançamento Global", "Global Launch", "Lanzamiento Global")}
           </p>
           <h1 className="font-mono font-black text-3xl md:text-5xl uppercase tracking-tight text-foreground">
             {allSystemsGo ? (
-              <>Todos os sistemas <span className="text-success">prontos</span></>
+              <>{t("Todos os sistemas", "All systems", "Todos los sistemas")} <span className="text-success">{t("prontos", "ready", "listos")}</span></>
             ) : (
-              <>Aguardando <span className="text-warning">conexões</span></>
+              <>{t("Aguardando", "Waiting for", "Esperando")} <span className="text-warning">{t("conexões", "connections", "conexiones")}</span></>
             )}
           </h1>
           <p className="font-mono text-sm text-muted-foreground/50 mt-3">
             {allSystemsGo
-              ? "A operação está totalmente conectada. Você pode iniciar o lançamento."
-              : `${missingRequired.length} plataforma(s) obrigatória(s) ainda não conectada(s).`}
+              ? t("A operação está totalmente conectada. Você pode iniciar o lançamento.", "The operation is fully connected. You can start the launch.", "La operación está totalmente conectada. Puedes iniciar el lanzamiento.")
+              : t(`${missingRequired.length} plataforma(s) obrigatória(s) ainda não conectada(s).`, `${missingRequired.length} required platform(s) still need to be connected.`, `Aún faltan conectar ${missingRequired.length} plataforma(s) obligatoria(s).`)}
           </p>
         </div>
 
         {/* ── Platform Connection Cycle ── */}
         <div>
           <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 text-center mb-6">
-            Status das plataformas
+            {t("Status das plataformas", "Platform status", "Estado de las plataformas")}
           </p>
           <div className="flex items-center justify-center gap-6 md:gap-10">
             {PLATFORMS.map((p, i) => (
@@ -240,7 +242,7 @@ export default function LaunchRoom() {
                 <div key={p.id} className="flex items-center gap-2 text-warning">
                   <AlertTriangle className="h-3.5 w-3.5" />
                   <span className="font-mono text-[11px]">
-                    {p.name} não conectado — obrigatório para lançamento
+                    {t(`${p.name} não conectado — obrigatório para lançamento`, `${p.name} not connected — required for launch`, `${p.name} no conectado — obligatorio para el lanzamiento`)}
                   </span>
                 </div>
               ))}
@@ -249,7 +251,7 @@ export default function LaunchRoom() {
                 className="rounded-none font-mono uppercase tracking-widest text-xs mt-3 border-warning/40 text-warning hover:bg-warning/10"
                 onClick={() => setLocation("/integracoes")}
               >
-                Conectar plataformas
+                {t("Conectar plataformas", "Connect platforms", "Conectar plataformas")}
               </Button>
             </div>
           )}
@@ -259,32 +261,32 @@ export default function LaunchRoom() {
         {campaignId && (
           <div>
             <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 mb-4">
-              Métricas ao vivo
+              {t("Métricas ao vivo", "Live metrics", "Métricas en vivo")}
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <StatCard
-                label="Leads total"
+                label={t("Leads total", "Total leads", "Total de prospectos")}
                 value={liveStats?.totalLeads ?? "—"}
-                sub={`+${liveStats?.leadsLastHour ?? 0} na última hora`}
+                sub={t(`+${liveStats?.leadsLastHour ?? 0} na última hora`, `+${liveStats?.leadsLastHour ?? 0} in the last hour`, `+${liveStats?.leadsLastHour ?? 0} en la última hora`)}
                 icon={Users}
               />
               <StatCard
-                label="Leads 24h"
+                label={t("Leads 24h", "Leads 24h", "Prospectos 24 h")}
                 value={liveStats?.leadsLast24h ?? "—"}
-                sub="Últimas 24 horas"
+                sub={t("Últimas 24 horas", "Last 24 hours", "Últimas 24 horas")}
                 icon={TrendingUp}
                 highlight
               />
               <StatCard
-                label="Vendas"
+                label={t("Vendas", "Sales", "Ventas")}
                 value={liveStats?.totalSales ?? "—"}
-                sub="Total de conversões"
+                sub={t("Total de conversões", "Total conversions", "Total de conversiones")}
                 icon={ShoppingCart}
               />
               <StatCard
-                label="Receita"
+                label={t("Receita", "Revenue", "Ingresos")}
                 value={liveStats ? fmtBrl(liveStats.totalRevenueBrl) : "—"}
-                sub={liveStats ? `+${fmtBrl(liveStats.revenueBrlLast24h)} hoje` : ""}
+                sub={liveStats ? t(`+${fmtBrl(liveStats.revenueBrlLast24h)} hoje`, `+${fmtBrl(liveStats.revenueBrlLast24h)} today`, `+${fmtBrl(liveStats.revenueBrlLast24h)} hoy`) : ""}
                 icon={Activity}
                 highlight
               />
@@ -302,11 +304,11 @@ export default function LaunchRoom() {
                 <Clock className="h-4 w-4 text-muted-foreground/40" />
               )}
               <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">
-                Automação
+                 {t("Automação", "Automation", "Automatización")}
               </span>
             </div>
             <p className="font-mono text-xs text-foreground/60 mt-1">
-              {allSystemsGo ? "Sequências prontas para disparar" : "Aguardando conexões obrigatórias"}
+              {allSystemsGo ? t("Sequências prontas para disparar", "Sequences ready to send", "Secuencias listas para enviar") : t("Aguardando conexões obrigatórias", "Waiting for required connections", "Esperando las conexiones obligatorias")}
             </p>
           </div>
 
@@ -314,11 +316,11 @@ export default function LaunchRoom() {
             <div className="flex items-center gap-2 mb-1">
               <Zap className="h-4 w-4 text-primary/60" />
               <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">
-                Agentes IA
+                 {t("Agentes IA", "AI agents", "Agentes de IA")}
               </span>
             </div>
             <p className="font-mono text-xs text-foreground/60 mt-1">
-              64 agentes ativos · Monitorando em tempo real
+              {t("64 agentes ativos · Monitorando em tempo real", "64 active agents · Monitoring in real time", "64 agentes activos · Supervisión en tiempo real")}
             </p>
           </div>
 
@@ -330,7 +332,7 @@ export default function LaunchRoom() {
               </span>
             </div>
             <p className="font-mono text-xs text-foreground/60 mt-1">
-              WebSocket conectado · Eventos em tempo real
+              {t("WebSocket conectado · Eventos em tempo real", "WebSocket connected · Real-time events", "WebSocket conectado · Eventos en tiempo real")}
             </p>
           </div>
         </div>
@@ -344,10 +346,10 @@ export default function LaunchRoom() {
                 onClick={() => campaignId && setLocation(`/campaigns/${campaignId}`)}
               >
                 <Rocket className="h-4 w-4" />
-                Central de campanha
+                {t("Central de campanha", "Campaign hub", "Centro de campaña")}
               </Button>
               <p className="font-mono text-[10px] text-muted-foreground/30 text-center">
-                Todos os sistemas conectados · Pronto para lançar
+                {t("Todos os sistemas conectados · Pronto para lançar", "All systems connected · Ready to launch", "Todos los sistemas conectados · Listo para lanzar")}
               </p>
             </>
           ) : (
@@ -357,10 +359,10 @@ export default function LaunchRoom() {
                 className="rounded-none font-mono uppercase tracking-widest font-black gap-3 h-14 px-12 text-sm border-border/40"
                 onClick={() => setLocation("/integracoes")}
               >
-                Conectar plataformas faltantes
+                {t("Conectar plataformas faltantes", "Connect missing platforms", "Conectar plataformas faltantes")}
               </Button>
               <p className="font-mono text-[10px] text-muted-foreground/30 text-center">
-                Conecte as plataformas obrigatórias para liberar o lançamento
+                {t("Conecte as plataformas obrigatórias para liberar o lançamento", "Connect the required platforms to enable launch", "Conecta las plataformas obligatorias para habilitar el lanzamiento")}
               </p>
             </>
           )}

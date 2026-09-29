@@ -9,21 +9,22 @@ import {
   ArrowLeft, Rocket, Brain, Zap, ChevronRight,
   TrendingUp, Users, RefreshCw, CheckCircle2,
 } from "lucide-react";
+import { useUiText } from "@/lib/i18n";
 
 interface GoalOption {
   id: string;
   icon: React.ElementType;
-  title: string;
-  desc: string;
-  badge: string;
+  title: [string, string, string];
+  desc: [string, string, string];
+  badge: [string, string, string];
   badgeTextColor: string;
   badgeBorderColor: string;
   badgeBgColor: string;
-  targetLabel: string;
-  ideal: string;
+  targetLabel: [string, string, string];
+  ideal: [string, string, string];
   type: CampaignInputType;
   track: CampaignInputTrack;
-  nameSuggestion: string;
+  nameSuggestion: [string, string, string];
   accentLine: string;
 }
 
@@ -31,86 +32,87 @@ const GOAL_OPTIONS: GoalOption[] = [
   {
     id: "launch",
     icon: Rocket,
-    title: "Quero faturar alto num lançamento de carrinho aberto",
-    desc: "O agente monta a estratégia completa para R$100k+ em 7 dias. Mesmo sem copywriter, sem agência e mesmo que você nunca tenha lançado antes.",
-    badge: "6 Dígitos",
+    title: ["Quero faturar alto num lançamento de carrinho aberto", "I want to generate high revenue from an open-cart launch", "Quiero generar altos ingresos con un lanzamiento de carrito abierto"],
+    desc: ["O agente monta a estratégia completa para R$100k+ em 7 dias. Mesmo sem copywriter, sem agência e mesmo que você nunca tenha lançado antes.", "The agent builds a complete strategy to reach R$100k+ in 7 days—even without a copywriter, an agency, or prior launch experience.", "El agente prepara una estrategia completa para alcanzar R$100 mil o más en 7 días, incluso sin copywriter, agencia ni experiencia previa."],
+    badge: ["6 dígitos", "6 digits", "6 dígitos"],
     badgeTextColor: "text-primary",
     badgeBorderColor: "border-primary/40",
     badgeBgColor: "bg-primary/10",
-    targetLabel: "R$100k – R$999k em 7 dias",
-    ideal: "Mesmo sem lista grande · Mesmo sem experiência",
+    targetLabel: ["R$100k – R$999k em 7 dias", "R$100k–R$999k in 7 days", "R$100 mil–R$999 mil en 7 días"],
+    ideal: ["Mesmo sem lista grande · Mesmo sem experiência", "Even without a large list · Even without experience", "Incluso sin una lista grande · Incluso sin experiencia"],
     type: "launch" as CampaignInputType,
     track: "six_digits" as CampaignInputTrack,
-    nameSuggestion: "Meu Lançamento",
+    nameSuggestion: ["Meu lançamento", "My launch", "Mi lanzamiento"],
     accentLine: "bg-primary",
   },
   {
     id: "perpetual",
     icon: RefreshCw,
-    title: "Quero vendas todos os dias sem abrir e fechar carrinho",
-    desc: "Funil perpétuo automatizado — o produto vende enquanto você dorme, sem depender de datas, energia ou novos lançamentos.",
-    badge: "Perpétuo",
+    title: ["Quero vendas todos os dias sem abrir e fechar carrinho", "I want daily sales without opening and closing a cart", "Quiero ventas diarias sin abrir y cerrar el carrito"],
+    desc: ["Funil perpétuo automatizado — o produto vende enquanto você dorme, sem depender de datas, energia ou novos lançamentos.", "An automated evergreen funnel—the product sells while you sleep, without relying on dates, launches, or constant effort.", "Un embudo automatizado que vende mientras duermes, sin depender de fechas, lanzamientos ni esfuerzo constante."],
+    badge: ["Perpétuo", "Evergreen", "Evergreen"],
     badgeTextColor: "text-emerald-400",
     badgeBorderColor: "border-emerald-400/40",
     badgeBgColor: "bg-emerald-400/10",
-    targetLabel: "Renda automática todos os dias",
-    ideal: "Mesmo sem time · Mesmo sem rotina de lançamento",
+    targetLabel: ["Renda automática todos os dias", "Automated revenue every day", "Ingresos automatizados todos los días"],
+    ideal: ["Mesmo sem time · Mesmo sem rotina de lançamento", "Even without a team · Even without a launch routine", "Incluso sin equipo · Incluso sin una rutina de lanzamiento"],
     type: "perpetual_launch" as CampaignInputType,
     track: "not_applicable" as CampaignInputTrack,
-    nameSuggestion: "Funil Perpétuo",
+    nameSuggestion: ["Funil perpétuo", "Evergreen funnel", "Embudo evergreen"],
     accentLine: "bg-emerald-400",
   },
   {
     id: "flash",
     icon: Zap,
-    title: "Quero gerar caixa rápido com uma promoção de 48-72h",
-    desc: "Flash Sale para sua lista atual. Resultado em dias, não semanas. Sem estrutura pesada, sem tráfego pago obrigatório.",
-    badge: "Flash Sale",
+    title: ["Quero gerar caixa rápido com uma promoção de 48-72h", "I want to generate cash quickly with a 48–72 hour promotion", "Quiero generar ingresos rápidamente con una promoción de 48 a 72 horas"],
+    desc: ["Flash Sale para sua lista atual. Resultado em dias, não semanas. Sem estrutura pesada, sem tráfego pago obrigatório.", "A flash sale for your existing list. Results in days, not weeks. No heavy setup or required paid traffic.", "Una oferta relámpago para tu lista actual. Resultados en días, no semanas, sin una infraestructura compleja ni tráfico pagado obligatorio."],
+    badge: ["Flash Sale", "Flash Sale", "Oferta relámpago"],
     badgeTextColor: "text-yellow-400",
     badgeBorderColor: "border-yellow-400/40",
     badgeBgColor: "bg-yellow-400/10",
-    targetLabel: "Resultado em até 72 horas",
-    ideal: "Mesmo com lista pequena · Mesmo sem anúncios",
+    targetLabel: ["Resultado em até 72 horas", "Results in up to 72 hours", "Resultados en hasta 72 horas"],
+    ideal: ["Mesmo com lista pequena · Mesmo sem anúncios", "Even with a small list · Even without ads", "Incluso con una lista pequeña · Incluso sin anuncios"],
     type: "flash_sale" as CampaignInputType,
     track: "not_applicable" as CampaignInputTrack,
-    nameSuggestion: "Flash Sale",
+    nameSuggestion: ["Flash Sale", "Flash sale", "Oferta relámpago"],
     accentLine: "bg-yellow-400",
   },
   {
     id: "audience",
     icon: Users,
-    title: "Quero construir minha base antes de lançar",
-    desc: "Estratégia de captação orgânica e paga para encher a lista antes do grande lançamento. Sem produto pronto ainda? Começa aqui.",
-    badge: "Crescimento",
+    title: ["Quero construir minha base antes de lançar", "I want to build my audience before launching", "Quiero crear mi audiencia antes del lanzamiento"],
+    desc: ["Estratégia de captação orgânica e paga para encher a lista antes do grande lançamento. Sem produto pronto ainda? Começa aqui.", "An organic and paid acquisition strategy to grow your list before the big launch. Don't have a finished product yet? Start here.", "Una estrategia de captación orgánica y pagada para hacer crecer tu lista antes del gran lanzamiento. ¿Aún no tienes el producto listo? Empieza aquí."],
+    badge: ["Crescimento", "Growth", "Crecimiento"],
     badgeTextColor: "text-cyan-400",
     badgeBorderColor: "border-cyan-400/40",
     badgeBgColor: "bg-cyan-400/10",
-    targetLabel: "Leads, seguidores e base qualificada",
-    ideal: "Mesmo do zero · Mesmo sem produto finalizado",
+    targetLabel: ["Leads, seguidores e base qualificada", "Leads, followers, and qualified audience", "Contactos, seguidores y audiencia cualificada"],
+    ideal: ["Mesmo do zero · Mesmo sem produto finalizado", "Even from scratch · Even without a finished product", "Incluso desde cero · Incluso sin un producto terminado"],
     type: "audience_growth" as CampaignInputType,
     track: "not_applicable" as CampaignInputTrack,
-    nameSuggestion: "Crescimento de Audiência",
+    nameSuggestion: ["Crescimento de audiência", "Audience growth", "Crecimiento de audiencia"],
     accentLine: "bg-cyan-400",
   },
   {
     id: "semente",
     icon: Brain,
-    title: "Quero validar e vender antes de criar o produto",
-    desc: "Lançamento Semente — vende antes de existir, valida com dinheiro real, e constrói o produto junto com os primeiros alunos. O agente monta a PLC, oferta de fundador e lives de venda.",
-    badge: "Semente",
+    title: ["Quero validar e vender antes de criar o produto", "I want to validate and sell before creating the product", "Quiero validar y vender antes de crear el producto"],
+    desc: ["Lançamento Semente — vende antes de existir, valida com dinheiro real, e constrói o produto junto com os primeiros alunos. O agente monta a PLC, oferta de fundador e lives de venda.", "Seed launch—sell before it exists, validate with real money, and build the product alongside the first students. The agent prepares the pre-launch content, founding offer, and live sales.", "Lanzamiento semilla: vende antes de crear el producto, valida con dinero real y constrúyelo junto con tus primeros alumnos. El agente prepara el contenido previo, la oferta fundadora y las ventas en directo."],
+     badge: ["Semente", "Seed", "Semilla"],
     badgeTextColor: "text-orange-400",
     badgeBorderColor: "border-orange-400/40",
     badgeBgColor: "bg-orange-400/10",
-    targetLabel: "Validação + primeiros alunos",
-    ideal: "Mesmo sem produto · Mesmo sem audiência grande",
+    targetLabel: ["Validação + primeiros alunos", "Validation + first students", "Validación + primeros alumnos"],
+    ideal: ["Mesmo sem produto · Mesmo sem audiência grande", "Even without a product · Even without a large audience", "Incluso sin producto · Incluso sin una audiencia grande"],
     type: "semente_launch" as CampaignInputType,
     track: "not_applicable" as CampaignInputTrack,
-    nameSuggestion: "Lançamento Semente",
+    nameSuggestion: ["Lançamento semente", "Seed launch", "Lanzamiento semilla"],
     accentLine: "bg-orange-400",
   },
 ];
 
 export default function NewCampaign() {
+  const t = useUiText();
   const [, setLocation] = useLocation();
   const [step, setStep]           = useState<1 | 2>(1);
   const [selectedGoal, setSelectedGoal] = useState<GoalOption | null>(null);
@@ -121,22 +123,22 @@ export default function NewCampaign() {
   const createMutation = useCreateCampaign({
     mutation: {
       onSuccess: (data) => {
-        toast.success("Perfeito! A agente está pronta para o seu briefing.");
+         toast.success(t("Perfeito! A agente está pronta para o seu briefing.", "Perfect! Your agent is ready for your briefing.", "¡Perfecto! Tu agente está listo para el briefing."));
         setLocation(`/campaigns/${data.campaign.id}/intake`);
       },
       onError: (err: unknown) => {
         const apiErr = err as { status?: number; data?: { error?: string } };
         if (apiErr?.status === 403 || (err instanceof ApiError && err.status === 403)) {
-          toast.error("Limite de campanhas atingido", {
-            description: "Conclua ou arquive uma campanha existente para criar uma nova.",
+           toast.error(t("Limite de campanhas atingido", "Campaign limit reached", "Se alcanzó el límite de campañas"), {
+             description: t("Conclua ou arquive uma campanha existente para criar uma nova.", "Complete or archive an existing campaign to create a new one.", "Completa o archiva una campaña existente para crear una nueva."),
             duration: 10000,
             action: {
-              label: "Gerenciar campanhas",
+               label: t("Gerenciar campanhas", "Manage campaigns", "Administrar campañas"),
               onClick: () => setLocation("/campaigns"),
             },
           });
         } else {
-          toast.error("Erro ao criar. Tente novamente.");
+           toast.error(t("Erro ao criar. Tente novamente.", "Error creating campaign. Please try again.", "Error al crear la campaña. Inténtalo de nuevo."));
         }
       },
     },
@@ -145,14 +147,14 @@ export default function NewCampaign() {
   const handleSelectGoal = (goal: GoalOption) => {
     setSelectedGoal(goal);
     setDirectMode(false);
-    if (!title.trim()) setTitle(goal.nameSuggestion);
+     if (!title.trim()) setTitle(t(...goal.nameSuggestion));
     setStep(2);
   };
 
   const handleDirectStart = () => {
     setDirectMode(true);
     setSelectedGoal(null);
-    if (!title.trim()) setTitle("Meu Lançamento");
+     if (!title.trim()) setTitle(t("Meu lançamento", "My launch", "Mi lanzamiento"));
     setStep(2);
   };
 
@@ -172,34 +174,34 @@ export default function NewCampaign() {
       <div className="mb-10">
         <Link href="/campaigns">
           <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest mb-6 -ml-2 text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-3 w-3 mr-2" />Voltar
+             <ArrowLeft className="h-3 w-3 mr-2" />{t("Voltar", "Back", "Volver")}
           </Button>
         </Link>
 
         {step === 1 ? (
           <div>
             <p className="font-mono text-[11px] uppercase tracking-widest text-primary/70 mb-2">
-              Nova Campanha
+               {t("Nova campanha", "New campaign", "Nueva campaña")}
             </p>
             <h1 className="text-3xl md:text-4xl font-mono uppercase tracking-tighter font-bold text-foreground leading-tight">
-              Vamos criar sua<br />
-              <span className="text-primary">próxima campanha</span>
+               {t("Vamos criar sua", "Let's create your", "Vamos a crear tu")}<br />
+               <span className="text-primary">{t("próxima campanha", "next campaign", "próxima campaña")}</span>
             </h1>
             <p className="text-sm text-muted-foreground font-mono mt-3 max-w-lg">
-              O agente faz as perguntas certas e monta tudo por você. Não precisa escolher nada agora.
+               {t("A agente faz as perguntas certas e monta tudo para você. Não precisa escolher nada agora.", "The agent asks the right questions and builds everything for you. You don't need to choose anything now.", "El agente hace las preguntas adecuadas y lo prepara todo por ti. No tienes que elegir nada todavía.")}
             </p>
           </div>
         ) : (
           <div>
             <p className="font-mono text-[11px] uppercase tracking-widest text-primary/70 mb-2">
-              Nova Campanha · Último passo
+               {t("Nova campanha · Último passo", "New campaign · Last step", "Nueva campaña · Último paso")}
             </p>
             <h1 className="text-3xl md:text-4xl font-mono uppercase tracking-tighter font-bold text-foreground">
-              Como vai chamar<br />
-              <span className="text-primary">este lançamento?</span>
+               {t("Como vai se chamar", "What should we call", "¿Cómo llamaremos")}<br />
+               <span className="text-primary">{t("este lançamento?", "this launch?", "a este lanzamiento?")}</span>
             </h1>
             <p className="text-sm text-muted-foreground font-mono mt-3">
-              Qualquer nome serve — você pode mudar depois.
+               {t("Qualquer nome serve — você pode mudar depois.", "Any name will do—you can change it later.", "Cualquier nombre sirve; puedes cambiarlo después.")}
             </p>
           </div>
         )}
@@ -219,12 +221,12 @@ export default function NewCampaign() {
                   <Brain className="h-6 w-6 text-primary" />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-primary/60 mb-1">Recomendado</p>
+                   <p className="font-mono text-[10px] uppercase tracking-widest text-primary/60 mb-1">{t("Recomendado", "Recommended", "Recomendado")}</p>
                   <h3 className="font-mono font-bold text-lg text-foreground group-hover:text-primary transition-colors leading-tight">
-                    Iniciar briefing agora
+                     {t("Iniciar briefing agora", "Start briefing now", "Iniciar briefing ahora")}
                   </h3>
                   <p className="font-mono text-[12px] text-muted-foreground/60 mt-1">
-                    O agente descobre o melhor cenário para você durante a conversa — sem escolhas manuais.
+                     {t("A agente descobre o melhor cenário para você durante a conversa — sem escolhas manuais.", "The agent discovers the best scenario for you during the conversation—no manual choices needed.", "El agente encuentra el mejor escenario para ti durante la conversación, sin que tengas que elegirlo manualmente.")}
                   </p>
                 </div>
               </div>
@@ -240,7 +242,7 @@ export default function NewCampaign() {
           <div className="flex items-center gap-4 my-6">
             <div className="flex-1 h-px bg-border/30" />
             <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40">
-              Ou escolha um cenário específico
+               {t("Ou escolha um cenário específico", "Or choose a specific scenario", "O elige un escenario específico")}
             </span>
             <div className="flex-1 h-px bg-border/30" />
           </div>
@@ -268,29 +270,29 @@ export default function NewCampaign() {
                       <Icon className={`h-5 w-5 ${goal.badgeTextColor}`} />
                     </div>
                     <span className={`font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 border ${goal.badgeTextColor} ${goal.badgeBorderColor} ${goal.badgeBgColor}`}>
-                      {goal.badge}
+                       {t(...goal.badge)}
                     </span>
                   </div>
 
                   {/* Title */}
                   <h3 className="font-mono font-bold text-base text-foreground group-hover:text-primary transition-colors leading-snug mb-3">
-                    {goal.title}
+                     {t(...goal.title)}
                   </h3>
 
                   {/* Description */}
                   <p className="font-mono text-[12px] text-muted-foreground/60 leading-relaxed mb-4 flex-1">
-                    {goal.desc}
+                     {t(...goal.desc)}
                   </p>
 
                   {/* Ideal for */}
                   <p className="font-mono text-[10px] text-muted-foreground/40 italic mb-5">
-                    {goal.ideal}
+                     {t(...goal.ideal)}
                   </p>
 
                   {/* Footer */}
                   <div className="flex items-center justify-between pt-4 border-t border-border/20">
                     <span className={`font-mono text-[11px] font-bold ${goal.badgeTextColor} uppercase tracking-widest`}>
-                      {goal.targetLabel}
+                       {t(...goal.targetLabel)}
                     </span>
                     <ChevronRight className={`h-4 w-4 ${goal.badgeTextColor} opacity-0 group-hover:opacity-100 transition-all translate-x-0 group-hover:translate-x-1 duration-200`} />
                   </div>
@@ -310,28 +312,28 @@ export default function NewCampaign() {
             <div className={`flex items-center gap-4 border p-4 ${selectedGoal.badgeBorderColor} ${selectedGoal.badgeBgColor}`}>
               <CheckCircle2 className={`h-5 w-5 shrink-0 ${selectedGoal.badgeTextColor}`} />
               <div className="flex-1 min-w-0">
-                <div className="font-mono text-sm font-bold text-foreground leading-snug">{selectedGoal.title}</div>
-                <div className={`font-mono text-[11px] uppercase tracking-widest mt-1 ${selectedGoal.badgeTextColor}`}>{selectedGoal.targetLabel}</div>
+                 <div className="font-mono text-sm font-bold text-foreground leading-snug">{t(...selectedGoal.title)}</div>
+                 <div className={`font-mono text-[11px] uppercase tracking-widest mt-1 ${selectedGoal.badgeTextColor}`}>{t(...selectedGoal.targetLabel)}</div>
               </div>
               <button
                 onClick={() => setStep(1)}
                 className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 hover:text-foreground transition-colors shrink-0 px-3 py-1.5 border border-border/30 hover:border-border/60"
               >
-                Alterar
+                 {t("Alterar", "Change", "Cambiar")}
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-4 border p-4 border-primary/30 bg-primary/5">
               <Brain className="h-5 w-5 shrink-0 text-primary" />
               <div className="flex-1 min-w-0">
-                <div className="font-mono text-sm font-bold text-foreground leading-snug">Briefing guiado pelo agente</div>
-                <div className="font-mono text-[11px] uppercase tracking-widest mt-1 text-primary/70">O agente define o cenário durante a conversa</div>
+                 <div className="font-mono text-sm font-bold text-foreground leading-snug">{t("Briefing guiado pelo agente", "Agent-guided briefing", "Briefing guiado por el agente")}</div>
+                 <div className="font-mono text-[11px] uppercase tracking-widest mt-1 text-primary/70">{t("O agente define o cenário durante a conversa", "The agent determines the scenario during the conversation", "El agente define el escenario durante la conversación")}</div>
               </div>
               <button
                 onClick={() => setStep(1)}
                 className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 hover:text-foreground transition-colors shrink-0 px-3 py-1.5 border border-border/30 hover:border-border/60"
               >
-                Alterar
+                 {t("Alterar", "Change", "Cambiar")}
               </button>
             </div>
           )}
@@ -346,7 +348,7 @@ export default function NewCampaign() {
 
               <label className="font-mono text-[11px] uppercase tracking-widest text-primary flex items-center gap-2 mb-3">
                 <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-                Nome do Lançamento
+                 {t("Nome do lançamento", "Launch name", "Nombre del lanzamiento")}
               </label>
               <Input
                 required
@@ -354,19 +356,19 @@ export default function NewCampaign() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="font-mono bg-background/60 border-border/50 focus-visible:ring-primary focus-visible:border-primary h-13 text-base rounded-none px-4 mb-3"
-                placeholder="Ex: Curso de Marketing Digital"
+                 placeholder={t("Ex.: Curso de marketing digital", "E.g., Digital Marketing Course", "Ej.: Curso de marketing digital")}
               />
               <p className="font-mono text-[11px] text-muted-foreground/40">
-                Só para você se organizar internamente. O agente vai entender tudo durante o briefing.
+                 {t("Só para você se organizar internamente. A agente vai entender tudo durante o briefing.", "This is just for your own organization. The agent will understand everything during the briefing.", "Es solo para que te organices. El agente entenderá todo durante el briefing.")}
               </p>
             </div>
 
             {/* What happens next */}
             <div className="grid grid-cols-3 gap-4">
               {[
-                { num: "01", title: "Briefing rápido", desc: "~3 min de conversa com o agente sobre seu produto" },
-                { num: "02", title: "Plano completo", desc: "Estratégia, cronograma e canais definidos pelo agente" },
-                { num: "03", title: "Conteúdo + Execução", desc: "Você aprova e a campanha vai ao ar" },
+                 { num: "01", title: t("Briefing rápido", "Quick briefing", "Briefing rápido"), desc: t("~3 min de conversa com a agente sobre seu produto", "~3 min talking with your agent about your product", "~3 min hablando con el agente sobre tu producto") },
+                 { num: "02", title: t("Plano completo", "Complete plan", "Plan completo"), desc: t("Estratégia, cronograma e canais definidos pela agente", "Strategy, timeline, and channels defined by the agent", "Estrategia, cronograma y canales definidos por el agente") },
+                 { num: "03", title: t("Conteúdo + Execução", "Content + Execution", "Contenido + Ejecución"), desc: t("Você aprova e a campanha vai ao ar", "You approve, and the campaign goes live", "Tú apruebas y la campaña se publica") },
               ].map(s => (
                 <div key={s.num} className="flex flex-col gap-2 p-5 border border-border/20 bg-card/20">
                   <span className="font-mono text-[10px] text-primary/50 tracking-widest">{s.num}</span>
@@ -383,7 +385,7 @@ export default function NewCampaign() {
                 onClick={() => setStep(1)}
                 className="rounded-none font-mono uppercase tracking-widest h-12 px-6 border-border/50"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />Voltar
+                 <ArrowLeft className="h-4 w-4 mr-2" />{t("Voltar", "Back", "Volver")}
               </Button>
               <Button
                 type="submit"
@@ -391,8 +393,8 @@ export default function NewCampaign() {
                 className="flex-1 rounded-none font-mono uppercase tracking-widest font-bold h-12 px-8 btn-weapon-primary gap-2"
               >
                 {createMutation.isPending
-                  ? <span className="animate-pulse font-mono">Iniciando...</span>
-                  : <><Brain className="h-4 w-4" />Iniciar Briefing com o agente<ChevronRight className="h-4 w-4" /></>
+                   ? <span className="animate-pulse font-mono">{t("Iniciando...", "Starting...", "Iniciando...")}</span>
+                   : <><Brain className="h-4 w-4" />{t("Iniciar briefing com o agente", "Start briefing with the agent", "Iniciar briefing con el agente")}<ChevronRight className="h-4 w-4" /></>
                 }
               </Button>
             </div>

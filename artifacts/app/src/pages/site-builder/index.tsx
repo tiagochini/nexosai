@@ -19,6 +19,7 @@ import {
   Lock, Unlock, Info, Loader2, CheckCircle2, Trash2,
   Sparkles, ImageIcon, X,
 } from "lucide-react";
+import { useUiText } from "@/lib/i18n";
 
 // ── Feature gate ──────────────────────────────────────────────────────────────
 
@@ -44,6 +45,7 @@ interface GeneratedSite {
 
 export default function SiteBuilderPage() {
   const { isAdmin, planSlug } = useAuth();
+  const t = useUiText();
 
   const [enabled, setEnabled] = useState(() => isFeatureEnabled(isAdmin, planSlug));
   const [prompt, setPrompt]   = useState("");
@@ -60,13 +62,15 @@ export default function SiteBuilderPage() {
     const next = !enabled;
     setEnabled(next);
     localStorage.setItem(FEATURE_KEY, next ? "1" : "0");
-    toast.success(next ? "Construtor de Sites habilitado." : "Construtor de Sites desabilitado.");
+    toast.success(next
+      ? t("Construtor de sites habilitado.", "Site builder enabled.", "Constructor de sitios habilitado.")
+      : t("Construtor de sites desabilitado.", "Site builder disabled.", "Constructor de sitios deshabilitado."));
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error("Logo deve ter menos de 5 MB."); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error(t("A logo deve ter menos de 5 MB.", "The logo must be under 5 MB.", "El logotipo debe pesar menos de 5 MB.")); return; }
     setLogoFile(file);
     const reader = new FileReader();
     reader.onload = ev => setLogoPreview(ev.target?.result as string);
@@ -76,7 +80,7 @@ export default function SiteBuilderPage() {
   const removeLogo = () => { setLogoFile(null); setLogoPreview(null); };
 
   const generateSite = async () => {
-    if (!prompt.trim()) { toast.error("Descreva o site que deseja criar."); return; }
+    if (!prompt.trim()) { toast.error(t("Descreva o site que deseja criar.", "Describe the website you want to create.", "Describe el sitio que quieres crear.")); return; }
     setGenerating(true);
     setSite(null);
 
@@ -144,9 +148,9 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
       }
 
       setSite(parsed);
-      toast.success("Site gerado com sucesso!");
+      toast.success(t("Site gerado com sucesso!", "Website generated successfully!", "¡Sitio generado correctamente!"));
     } catch (err) {
-      toast.error((err as Error).message || "Erro ao gerar o site. Tente novamente.");
+      toast.error((err as Error).message || t("Erro ao gerar o site. Tente novamente.", "Could not generate the website. Try again.", "No se pudo generar el sitio. Inténtalo de nuevo."));
     } finally {
       setGenerating(false);
     }
@@ -159,7 +163,7 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
     const a = document.createElement("a");
     a.href = url; a.download = "landing-page-nexos.html"; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 3000);
-    toast.success("Download iniciado — arquivo index.html salvo.");
+    toast.success(t("Download iniciado — arquivo index.html salvo.", "Download started — index.html saved.", "Descarga iniciada — archivo index.html guardado."));
   };
 
   // ── Locked state ───────────────────────────────────────────────────────────
@@ -171,20 +175,20 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
         </div>
         <div>
           <h1 className="font-mono font-black text-2xl uppercase tracking-wide text-foreground mb-2">
-            Construtor de Sites agente
+            {t("Construtor de sites com agente", "AI site builder", "Creador de sitios con IA")}
           </h1>
           <p className="font-mono text-sm text-muted-foreground max-w-md leading-relaxed">
-            Esta funcionalidade está desabilitada. Descreva o que quer e o agente gera sua landing page completa.
+            {t("Esta funcionalidade está desabilitada. Descreva o que você precisa e o agente criará uma página de destino completa.", "This feature is disabled. Describe what you need and the agent will build a complete landing page.", "Esta función está deshabilitada. Describe lo que necesitas y el agente creará una página de destino completa.")}
           </p>
         </div>
         {isAdmin && (
           <Button onClick={toggleFeature} variant="outline" className="rounded-none font-mono uppercase tracking-widest text-xs">
-            <Unlock className="h-3.5 w-3.5 mr-2" />Habilitar (Admin)
+            <Unlock className="h-3.5 w-3.5 mr-2" />{t("Habilitar (admin)", "Enable (admin)", "Habilitar (admin)")}
           </Button>
         )}
         {!isAdmin && (
           <p className="font-mono text-xs text-muted-foreground/60">
-            Disponível no plano Agency ou quando habilitado pelo administrador.
+            {t("Disponível no plano Agency ou quando habilitado por um administrador.", "Available on the Agency plan or when enabled by an administrator.", "Disponible en el plan Agency o cuando lo habilita un administrador.")}
           </p>
         )}
       </div>
@@ -202,20 +206,20 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
             <Globe className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="font-mono font-black text-2xl uppercase tracking-wide">Construtor de Sites</h1>
+            <h1 className="font-mono font-black text-2xl uppercase tracking-wide">{t("Construtor de sites", "Site builder", "Creador de sitios")}</h1>
             <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
-              Prompt → Logo → Análise → Site Gerado
+              {t("Descrição → Logo → Análise → Site gerado", "Prompt → Logo → Review → Generated website", "Descripción → Logotipo → Análisis → Sitio generado")}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="font-mono text-[10px] rounded-none border-emerald-500/40 text-emerald-400">
-            <Sparkles className="h-2.5 w-2.5 mr-1" />Ativo
+            <Sparkles className="h-2.5 w-2.5 mr-1" />{t("Ativo", "Active", "Activo")}
           </Badge>
           {isAdmin && (
             <button onClick={toggleFeature}
               className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1">
-              <Lock className="h-3 w-3" />Desabilitar
+              <Lock className="h-3 w-3" />{t("Desabilitar", "Disable", "Deshabilitar")}
             </button>
           )}
         </div>
@@ -229,13 +233,17 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
             <div className="border border-border/50 bg-card/40 p-5 space-y-4">
               <div>
                 <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground block mb-2">
-                  Descreva seu site / produto
+                  {t("Descreva seu site ou produto", "Describe your website or product", "Describe tu sitio o producto")}
                 </label>
                 <textarea
                   value={prompt}
                   onChange={e => setPrompt(e.target.value)}
                   rows={8}
-                  placeholder={`Exemplo: Quero uma landing page de vendas para meu curso "Investimentos do Zero" voltado para iniciantes que querem começar a investir com R$100/mês. O produto custa R$997, inclui 40 aulas, 3 bônus e garantia de 7 dias. Tom: confiante, educativo, sem jargão financeiro. Público: homens e mulheres 25-45 anos.`}
+                  placeholder={t(
+                    `Exemplo: Quero uma landing page de vendas para meu curso "Investimentos do Zero" voltado para iniciantes que querem começar a investir com R$100/mês. O produto custa R$997, inclui 40 aulas, 3 bônus e garantia de 7 dias. Tom: confiante, educativo, sem jargão financeiro. Público: homens e mulheres 25-45 anos.`,
+                    `Example: Create a sales landing page for my "Investing from Scratch" course for beginners who want to start investing with $100/month. The product costs $997, includes 40 lessons, 3 bonuses, and a 7-day guarantee. Tone: confident, educational, no financial jargon. Audience: men and women aged 25–45.`,
+                    `Ejemplo: Quiero una página de ventas para mi curso "Inversiones desde Cero", dirigido a principiantes que quieren empezar a invertir con $100 al mes. El producto cuesta $997, incluye 40 lecciones, 3 bonos y una garantía de 7 días. Tono: seguro, educativo y sin jerga financiera. Público: hombres y mujeres de 25 a 45 años.`
+                  )}
                   className="w-full border border-border/50 bg-background/60 px-4 py-3 text-sm font-mono
                     text-foreground placeholder:text-muted-foreground/40 focus:border-primary/50 focus:outline-none resize-none leading-relaxed"
                 />
@@ -244,16 +252,16 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
               <div className="flex items-start gap-2 px-3 py-2 border border-primary/20 bg-primary/5">
                 <Info className="h-3.5 w-3.5 text-primary/70 shrink-0 mt-0.5" />
                 <p className="font-mono text-[11px] text-muted-foreground leading-relaxed">
-                  Quanto mais detalhes, melhor o resultado: nicho, avatar, preço, benefícios, garantia, objeções, tom de voz.
+                  {t("Quanto mais detalhes, melhor o resultado: nicho, público, preço, benefícios, garantia, objeções e tom de voz.", "More detail leads to better results: niche, audience, price, benefits, guarantee, objections, and brand voice.", "Cuantos más detalles incluyas, mejor será el resultado: nicho, público, precio, beneficios, garantía, objeciones y tono de voz.")}
                 </p>
               </div>
 
               <Button onClick={generateSite} disabled={generating || !prompt.trim()}
                 className="w-full rounded-none font-mono uppercase tracking-widest text-xs">
                 {generating ? (
-                  <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />Gerando site…</>
+                  <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />{t("Gerando site…", "Generating website…", "Generando sitio…")}</>
                 ) : (
-                  <><Wand2 className="h-3.5 w-3.5 mr-2" />Gerar Landing Page</>
+                  <><Wand2 className="h-3.5 w-3.5 mr-2" />{t("Gerar página de destino", "Generate landing page", "Generar página de destino")}</>
                 )}
               </Button>
             </div>
@@ -263,7 +271,7 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
           <div className="space-y-4">
             <div className="border border-border/50 bg-card/40 p-5 space-y-3">
               <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-                Logo / Marca (opcional)
+                {t("Logo / marca (opcional)", "Logo / brand (optional)", "Logotipo / marca (opcional)")}
               </p>
 
               {!logoPreview ? (
@@ -271,9 +279,9 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
                   className="w-full border-2 border-dashed border-border/50 hover:border-primary/40 p-8 text-center transition-all group">
                   <ImageIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
                   <p className="font-mono text-xs text-muted-foreground group-hover:text-foreground transition-colors">
-                    Clique para subir
+                    {t("Clique para enviar", "Click to upload", "Haz clic para subir")}
                   </p>
-                  <p className="font-mono text-[10px] text-muted-foreground/60 mt-1">PNG · SVG · JPG · até 5MB</p>
+                  <p className="font-mono text-[10px] text-muted-foreground/60 mt-1">PNG · SVG · JPG · {t("até 5 MB", "up to 5 MB", "hasta 5 MB")}</p>
                 </button>
               ) : (
                 <div className="relative">
@@ -288,19 +296,19 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
               <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
 
               <p className="font-mono text-[10px] text-muted-foreground/60 leading-relaxed">
-                O agente analisará sua logo para definir paleta de cores e identidade visual do site.
+                {t("O agente analisará sua logo para definir a paleta de cores e a identidade visual do site.", "The agent will review your logo to define the website's color palette and visual identity.", "El agente analizará tu logotipo para definir la paleta de colores y la identidad visual del sitio.")}
               </p>
             </div>
 
             {/* Tips */}
             <div className="border border-border/30 bg-card/20 p-4 space-y-2">
-              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Dicas rápidas</p>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Dicas rápidas", "Quick tips", "Consejos rápidos")}</p>
               {[
-                "Inclua o preço e forma de pagamento",
-                "Mencione o público-alvo específico",
-                "Liste os 3 principais benefícios",
-                "Fale o que está incluído no produto",
-                "Especifique o tom: formal, informal, urgente",
+                t("Inclua o preço e as formas de pagamento", "Include the price and payment methods", "Incluye el precio y las formas de pago"),
+                t("Mencione o público-alvo específico", "Describe your target audience", "Describe el público objetivo específico"),
+                t("Liste os três principais benefícios", "List the three main benefits", "Enumera los tres beneficios principales"),
+                t("Explique o que está incluído no produto", "Explain what the product includes", "Explica qué incluye el producto"),
+                t("Especifique o tom: formal, informal ou urgente", "Specify the tone: formal, casual, or urgent", "Indica el tono: formal, informal o urgente"),
               ].map((tip, i) => (
                 <p key={i} className="font-mono text-[10px] text-muted-foreground flex gap-1.5">
                   <span className="text-primary/60">·</span>{tip}
@@ -322,10 +330,10 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
           </div>
           <div>
             <p className="font-mono text-sm font-bold text-foreground uppercase tracking-wide">
-              agente gerando sua landing page…
+              {t("Agente criando sua página de destino…", "Agent is building your landing page…", "El agente está creando tu página de destino…")}
             </p>
             <p className="font-mono text-xs text-muted-foreground mt-1">
-              Analisando prompt · Definindo estrutura · Escrevendo copy · Gerando HTML
+              {t("Analisando a descrição · Definindo a estrutura · Escrevendo o texto · Gerando HTML", "Reviewing prompt · Planning structure · Writing copy · Generating HTML", "Analizando la descripción · Definiendo la estructura · Escribiendo el texto · Generando HTML")}
             </p>
           </div>
           <div className="flex justify-center gap-1">
@@ -351,15 +359,15 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={generateSite}
                 className="rounded-none font-mono text-[11px] uppercase tracking-widest">
-                <RefreshCw className="h-3 w-3 mr-1.5" />Regenerar
+                <RefreshCw className="h-3 w-3 mr-1.5" />{t("Gerar novamente", "Regenerate", "Generar de nuevo")}
               </Button>
               <Button size="sm" onClick={downloadHtml}
                 className="rounded-none font-mono text-[11px] uppercase tracking-widest">
-                <Download className="h-3 w-3 mr-1.5" />Baixar HTML
+                <Download className="h-3 w-3 mr-1.5" />{t("Baixar HTML", "Download HTML", "Descargar HTML")}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setSite(null)}
                 className="rounded-none font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-                <Trash2 className="h-3 w-3 mr-1.5" />Novo
+                <Trash2 className="h-3 w-3 mr-1.5" />{t("Novo", "New", "Nuevo")}
               </Button>
             </div>
           </div>
@@ -377,8 +385,8 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
           <div className="flex gap-0 border-b border-border/50">
             {([
               { id: "preview" as const, label: "Preview", icon: Eye },
-              { id: "code"    as const, label: "Código HTML", icon: Code2 },
-              { id: "seo"     as const, label: "SEO Tips", icon: Globe },
+              { id: "code"    as const, label: t("Código HTML", "HTML code", "Código HTML"), icon: Code2 },
+              { id: "seo"     as const, label: t("Dicas de SEO", "SEO tips", "Consejos de SEO"), icon: Globe },
             ] as const).map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-1.5 px-4 py-2.5 font-mono text-[11px] uppercase tracking-widest border-b-2 transition-all
@@ -402,7 +410,7 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
               <iframe
                 ref={el => setPreviewFrame(el)}
                 srcDoc={site.html}
-                title="Preview da Landing Page"
+                title={t("Prévia da página de destino", "Landing page preview", "Vista previa de la página de destino")}
                 className="w-full border-0"
                 style={{ height: "70vh" }}
                 sandbox="allow-scripts"
@@ -417,7 +425,7 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
                 {site.html}
               </pre>
               <button
-                onClick={() => { void navigator.clipboard.writeText(site.html); toast.success("Código copiado!"); }}
+                onClick={() => { void navigator.clipboard.writeText(site.html); toast.success(t("Código copiado!", "Code copied!", "¡Código copiado!")); }}
                 className="absolute top-3 right-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground border border-border/40 px-2 py-1 bg-background/80 transition-colors">
                 Copiar
               </button>
@@ -436,7 +444,7 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
                 </div>
               ))}
               <div className="mt-4 pt-4 border-t border-border/30 space-y-2">
-                <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Meta tags geradas</p>
+              <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Meta tags geradas", "Generated meta tags", "Etiquetas meta generadas")}</p>
                 <code className="block text-[10px] font-mono text-emerald-300/70 bg-black/30 p-3 leading-relaxed">
                   {`<title>${site.title}</title>\n<meta name="description" content="${site.description}" />`}
                 </code>

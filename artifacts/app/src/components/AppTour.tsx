@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, X } from "lucide-react";
+import { useUiText } from "@/lib/i18n";
 
 const TOUR_DONE_KEY = "nexos_tour_done_v2";
 
@@ -32,44 +33,6 @@ interface TourStep {
   emoji: string;
 }
 
-const STEPS: TourStep[] = [
-  {
-    id: "campaigns",
-    title: "Campanhas",
-    desc: "É aqui que tudo começa. Você cria a campanha, conversa com o agente, aprova a estratégia e lança. Todo o ciclo de lançamento passa por aqui.",
-    anchor: "campaigns",
-    emoji: "🚀",
-  },
-  {
-    id: "agents",
-    title: "Agentes IA",
-    desc: "64 especialistas: estrategista, copywriter, mídia, video, compliance, vendas e mais. Você pode conversar com qualquer um individualmente a qualquer hora.",
-    anchor: "agents",
-    emoji: "🤖",
-  },
-  {
-    id: "sequences",
-    title: "Sequências de Lançamento",
-    desc: "O motor de automação. Email + WhatsApp disparando automaticamente para leads quentes, mornos e frios — segmentados e no horário certo.",
-    anchor: "sequences",
-    emoji: "⚡",
-  },
-  {
-    id: "integracoes",
-    title: "Integrações",
-    desc: "Conecte WhatsApp, Instagram, plataformas de email e Ads. Sem isso, a automação não funciona. Faça isso antes do primeiro lançamento.",
-    anchor: "integracoes",
-    emoji: "🔗",
-  },
-  {
-    id: "revenue",
-    title: "Receita",
-    desc: "Acompanhe faturamento, ROAS, CPL e saúde geral do lançamento. Com Hotmart/Kiwify conectado, os dados aparecem aqui em tempo real.",
-    anchor: "revenue",
-    emoji: "💰",
-  },
-];
-
 interface TooltipPos {
   top: number;
   left: number;
@@ -80,6 +43,14 @@ export function AppTour({ onDone }: { onDone?: () => void }) {
   const [step, setStep] = useState(0);
   const [pos, setPos] = useState<TooltipPos | null>(null);
   const [visible, setVisible] = useState(true);
+  const t = useUiText();
+  const STEPS: TourStep[] = [
+    { id: "campaigns", title: t("Campanhas", "Campaigns", "Campañas"), desc: t("É aqui que tudo começa. Você cria a campanha, conversa com o agente, aprova a estratégia e lança. Todo o ciclo de lançamento passa por aqui.", "This is where it all starts. Create a campaign, work with the agent, approve the strategy, and launch. The entire launch cycle happens here.", "Aquí comienza todo. Crea una campaña, conversa con el agente, aprueba la estrategia y lánzala. Todo el ciclo de lanzamiento pasa por aquí."), anchor: "campaigns", emoji: "🚀" },
+    { id: "agents", title: t("Agentes IA", "AI Agents", "Agentes de IA"), desc: t("64 especialistas: estrategista, copywriter, mídia, vídeo, compliance, vendas e mais. Converse com qualquer um individualmente a qualquer hora.", "64 specialists: strategist, copywriter, media, video, compliance, sales, and more. Chat with any specialist individually at any time.", "64 especialistas: estrategia, redacción, medios, video, cumplimiento, ventas y más. Habla con cualquier especialista cuando quieras."), anchor: "agents", emoji: "🤖" },
+    { id: "sequences", title: t("Sequências de Lançamento", "Launch Sequences", "Secuencias de lanzamiento"), desc: t("O motor de automação. E-mail e WhatsApp são enviados automaticamente a leads quentes, mornos e frios, no momento certo.", "The automation engine. Email and WhatsApp messages are automatically sent to hot, warm, and cold leads at the right time.", "El motor de automatización. Los correos y mensajes de WhatsApp se envían automáticamente a prospectos calientes, tibios y fríos en el momento adecuado."), anchor: "sequences", emoji: "⚡" },
+    { id: "integracoes", title: t("Integrações", "Integrations", "Integraciones"), desc: t("Conecte WhatsApp, Instagram, plataformas de e-mail e anúncios. Isso é essencial para a automação — faça antes do primeiro lançamento.", "Connect WhatsApp, Instagram, email platforms, and ads. These connections are essential for automation — set them up before your first launch.", "Conecta WhatsApp, Instagram, plataformas de correo y anuncios. Son esenciales para la automatización; configúralas antes de tu primer lanzamiento."), anchor: "integracoes", emoji: "🔗" },
+    { id: "revenue", title: t("Receita", "Revenue", "Ingresos"), desc: t("Acompanhe faturamento, ROAS, CPL e a saúde geral do lançamento. Com Hotmart ou Kiwify conectado, os dados aparecem aqui em tempo real.", "Track revenue, ROAS, CPL, and overall launch health. Connect Hotmart or Kiwify to see data here in real time.", "Consulta los ingresos, el ROAS, el CPL y el estado general del lanzamiento. Con Hotmart o Kiwify conectado, verás los datos aquí en tiempo real."), anchor: "revenue", emoji: "💰" },
+  ];
 
   const current = STEPS[step]!;
 
@@ -154,7 +125,7 @@ export function AppTour({ onDone }: { onDone?: () => void }) {
               <span className="text-lg">{current.emoji}</span>
               <span className="font-mono text-xs font-bold uppercase tracking-widest text-primary">{current.title}</span>
             </div>
-            <button onClick={finish} className="text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors">
+            <button onClick={finish} aria-label={t("Fechar tour", "Close tour", "Cerrar recorrido")} className="text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors">
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -176,14 +147,14 @@ export function AppTour({ onDone }: { onDone?: () => void }) {
                 onClick={finish}
                 className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors"
               >
-                Pular
+                {t("Pular", "Skip", "Omitir")}
               </button>
               <Button
                 size="sm"
                 onClick={next}
                 className="rounded-none font-mono text-[10px] uppercase tracking-widest h-6 px-3 gap-1 btn-weapon-primary"
               >
-                {step < STEPS.length - 1 ? "Próximo" : "Começar"}
+                {step < STEPS.length - 1 ? t("Próximo", "Next", "Siguiente") : t("Começar", "Get started", "Comenzar")}
                 <ChevronRight className="h-3 w-3" />
               </Button>
             </div>

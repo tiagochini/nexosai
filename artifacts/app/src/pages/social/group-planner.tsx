@@ -11,6 +11,7 @@ import {
   Users, ExternalLink, ArrowRight, MessageSquare, Phone, Clock,
   Zap, AlertTriangle, ChevronRight, RefreshCw, Lock,
 } from "lucide-react";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -128,6 +129,61 @@ const PHASE_DEFS = [
   },
 ];
 
+function phaseLabel(index: number, t: ReturnType<typeof useUiText>) {
+  const labels = [
+    t("Pré-Lançamento", "Pre-launch", "Prelanzamiento"),
+    t("Aquecimento Intenso", "Intense Warm-up", "Calentamiento intenso"),
+    t("Abertura do Carrinho", "Cart Opens", "Apertura del carrito"),
+    t("Urgência & Conversão", "Urgency & Conversion", "Urgencia y conversión"),
+    t("Encerramento do Grupo", "Group Closure", "Cierre del grupo"),
+  ];
+  return labels[index] ?? "";
+}
+function phaseDescription(index: number, t: ReturnType<typeof useUiText>) {
+  const values = [
+    t("Aquecimento inicial — construção de autoridade, antecipação e engajamento", "Initial warm-up — building authority, anticipation, and engagement", "Calentamiento inicial: construir autoridad, anticipación e interacción"),
+    t("Antecipação máxima — build-up emocional e preparação para abertura", "Maximum anticipation — emotional build-up and preparation for launch", "Máxima anticipación: crear expectativa emocional y preparar la apertura"),
+    t("Abertura oficial — anúncio com link, condições e urgência inicial", "Official opening — announcement with link, terms, and initial urgency", "Apertura oficial: anuncio con enlace, condiciones y urgencia inicial"),
+    t("Fase de conversão intensa — objeções, provas sociais e escassez crescente", "Intense conversion phase — objections, social proof, and increasing scarcity", "Fase de conversión intensa: objeciones, prueba social y escasez creciente"),
+    t("Encerramento honrado — agradecimento, entrega do link e fechamento do grupo", "Thoughtful closure — thanks, access link delivery, and group closure", "Cierre con gratitud: agradecimiento, entrega del enlace y cierre del grupo"),
+  ];
+  return values[index] ?? "";
+}
+function phaseObjective(index: number, t: ReturnType<typeof useUiText>) {
+  const values = [
+    t("Engajar membros, gerar expectativa e posicionar a autoridade do especialista", "Engage members, build anticipation, and establish the expert's authority", "Involucrar a los miembros, generar expectativa y posicionar la autoridad del experto"),
+    t("Criar máxima antecipação, revelar detalhes do produto e eliminar objeções antecipadas", "Build maximum anticipation, reveal product details, and address objections early", "Crear máxima anticipación, revelar detalles del producto y resolver objeciones por adelantado"),
+    t("Converter os mais quentes primeiro, estabelecer escassez e urgência real", "Convert the warmest leads first and establish genuine scarcity and urgency", "Convertir primero a los prospectos más interesados y establecer escasez y urgencia reales"),
+    t("Converter indecisos com prova social, quebra de objeções e gatilhos de escassez", "Convert undecided leads with social proof, objection handling, and scarcity", "Convertir a los indecisos con prueba social, resolución de objeciones y escasez"),
+    t("Honrar quem comprou, dar última chance e encerrar o grupo com gratidão", "Recognize buyers, offer one last chance, and close the group with gratitude", "Reconocer a quienes compraron, ofrecer una última oportunidad y cerrar el grupo con gratitud"),
+  ];
+  return values[index] ?? "";
+}
+function messageLabel(label: string, t: ReturnType<typeof useUiText>) {
+  const translations: Record<string, [string, string]> = {
+    "Boas-vindas ao Grupo": ["Welcome to the Group", "Bienvenida al grupo"],
+    "Conteúdo de Valor — Dia 1": ["Valuable Content — Day 1", "Contenido de valor — Día 1"],
+    "Conteúdo de Valor — Dia 2": ["Valuable Content — Day 2", "Contenido de valor — Día 2"],
+    "Antecipação — Bastidores": ["Anticipation — Behind the Scenes", "Anticipación — Entre bastidores"],
+    "Revelação Parcial do Produto": ["Partial Product Reveal", "Revelación parcial del producto"],
+    "Contagem Regressiva (D-1 manhã)": ["Countdown (D-1 morning)", "Cuenta atrás (D-1 por la mañana)"],
+    "Lembrete Final (D-1 noite)": ["Final Reminder (D-1 night)", "Último recordatorio (D-1 por la noche)"],
+    "Anúncio de Abertura + Link": ["Launch Announcement + Link", "Anuncio de apertura + enlace"],
+    "Confirmação — Primeiros Compradores": ["Celebrating the First Buyers", "Celebración de las primeras compras"],
+    "Lembrete Noturno": ["Evening Reminder", "Recordatorio nocturno"],
+    "Depoimento de Transformação (D+1)": ["Transformation Testimonial (D+1)", "Testimonio de transformación (D+1)"],
+    "Quebra de Objeção Principal (D+2)": ["Address the Main Objection (D+2)", "Resolver la objeción principal (D+2)"],
+    "Aviso de Vagas Limitadas (D+3)": ["Limited Spots Notice (D+3)", "Aviso de plazas limitadas (D+3)"],
+    "Contagem Regressiva 48h (D+5)": ["48-hour Countdown (D+5)", "Cuenta atrás de 48 h (D+5)"],
+    "Último Aviso — 24h (D+6)": ["Last Notice — 24h (D+6)", "Último aviso — 24 h (D+6)"],
+    "Aviso de Encerramento (manhã)": ["Closing Notice (morning)", "Aviso de cierre (mañana)"],
+    "Último Link Disponível (tarde)": ["Last Link Available (afternoon)", "Último enlace disponible (tarde)"],
+    "🎯 Agradecimento Final + Link de Acesso": ["🎯 Final Thanks + Access Link", "🎯 Agradecimiento final + enlace de acceso"],
+  };
+  const translated = translations[label];
+  return translated ? t(label, translated[0], translated[1]) : label;
+}
+
 // ─── Hook: group storage ──────────────────────────────────────────────────────
 
 function useGroup(groupId: string, workspaceId: string) {
@@ -197,6 +253,8 @@ function MessageCard({
   onMarkDispatched: (phaseIdx: number, msgId: string) => void;
   generating: boolean;
 }) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
 
@@ -204,7 +262,7 @@ function MessageCard({
     if (!message?.content) return;
     navigator.clipboard.writeText(message.content).then(() => {
       setCopied(true);
-      toast.success("Mensagem copiada!");
+      toast.success(t("Mensagem copiada!", "Message copied!", "¡Mensaje copiado!"));
       setTimeout(() => setCopied(false), 2000);
     });
   };
@@ -217,12 +275,12 @@ function MessageCard({
         <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${message?.dispatchedAt ? "bg-success" : message?.content ? phaseDef.color.replace("text", "bg") : "bg-muted/50"}`} />
         <div className="flex-1 min-w-0">
           <span className={`font-mono text-xs font-bold uppercase tracking-wide ${isLast ? phaseDef.color : "text-foreground/80"}`}>
-            {isLast && "🎯 "}{msgDef.label}
+            {isLast && "🎯 "}{messageLabel(msgDef.label, t)}
           </span>
         </div>
         {message?.dispatchedAt && (
           <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 text-success border-success/40 bg-success/10 shrink-0">
-            <CheckCircle2 className="h-2.5 w-2.5 mr-1" />Disparado
+            <CheckCircle2 className="h-2.5 w-2.5 mr-1" />{t("Disparado", "Sent", "Enviado")}
           </Badge>
         )}
       </div>
@@ -235,7 +293,7 @@ function MessageCard({
         ) : (
           <div className="bg-muted/10 border border-dashed border-border/30 p-4 text-center">
             <Sparkles className={`h-5 w-5 mx-auto mb-1.5 ${phaseDef.color}`} />
-            <p className="font-mono text-xs text-muted-foreground/50">Mensagem não gerada ainda</p>
+            <p className="font-mono text-xs text-muted-foreground/50">{t("Mensagem não gerada ainda", "Message not generated yet", "El mensaje aún no se ha generado")}</p>
           </div>
         )}
 
@@ -244,7 +302,7 @@ function MessageCard({
             disabled={generating}
             className={`rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 border-current/30 hover:bg-current/10 ${phaseDef.color}`}>
             {generating ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Sparkles className="h-2.5 w-2.5" />}
-            {generating ? "Gerando..." : message?.content ? "Regenerar" : "Gerar com o agente"}
+            {generating ? t("Gerando...", "Generating...", "Generando...") : message?.content ? t("Regenerar", "Regenerate", "Regenerar") : t("Gerar com o agente", "Generate with agent", "Generar con el agente")}
           </Button>
 
           {message?.content && (
@@ -252,13 +310,13 @@ function MessageCard({
               <Button size="sm" variant="outline" onClick={copyMsg}
                 className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 btn-weapon-outline">
                 {copied ? <CheckCircle2 className="h-2.5 w-2.5 text-success" /> : <Copy className="h-2.5 w-2.5" />}
-                {copied ? "Copiado!" : "Copiar"}
+                {copied ? t("Copiado!", "Copied!", "¡Copiado!") : t("Copiar", "Copy", "Copiar")}
               </Button>
 
               {!message.dispatchedAt && (
                 <Button size="sm" variant="outline" onClick={() => onMarkDispatched(phaseIdx, msgDef.id)}
                   className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 border-success/30 text-success hover:bg-success/10">
-                  <CheckCircle2 className="h-2.5 w-2.5" />Marcar Disparado
+                  <CheckCircle2 className="h-2.5 w-2.5" />{t("Marcar Disparado", "Mark as Sent", "Marcar como enviado")}
                 </Button>
               )}
             </>
@@ -267,8 +325,8 @@ function MessageCard({
 
         {message?.generatedAt && (
           <div className="text-[11px] font-mono text-muted-foreground/30 uppercase tracking-widest">
-            Gerado em {new Date(message.generatedAt).toLocaleString("pt-BR")}
-            {message.dispatchedAt && ` · Disparado em ${new Date(message.dispatchedAt).toLocaleString("pt-BR")}`}
+            {t("Gerado em", "Generated", "Generado el")} {new Date(message.generatedAt).toLocaleString(intlLocale(locale))}
+            {message.dispatchedAt && ` · ${t("Disparado em", "Sent", "Enviado el")} ${new Date(message.dispatchedAt).toLocaleString(intlLocale(locale))}`}
           </div>
         )}
       </div>
@@ -281,6 +339,8 @@ function MessageCard({
 export default function GroupPlannerPage() {
   const params = useParams<{ id: string }>();
   const groupId = params.id ?? "";
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const { workspace } = useAuth();
   const workspaceId = workspace?.id ?? "local";
   const { group, updatePhaseMessage, markDispatched, advancePhase } = useGroup(groupId, workspaceId);
@@ -307,9 +367,9 @@ export default function GroupPlannerPage() {
     },
     onSuccess: ({ phaseIdx, msgId, content }) => {
       updatePhaseMessage(phaseIdx, msgId, content);
-      toast.success("Mensagem gerada com sucesso!");
+      toast.success(t("Mensagem gerada com sucesso!", "Message generated successfully!", "¡Mensaje generado correctamente!"));
     },
-    onError: () => toast.error("Erro ao gerar mensagem. Verifique seus créditos do agente."),
+    onError: () => toast.error(t("Erro ao gerar mensagem. Verifique seus créditos do agente.", "Could not generate the message. Check your agent credits.", "No se pudo generar el mensaje. Revisa los créditos del agente.")),
     onSettled: () => setGeneratingKey(null),
   });
 
@@ -319,17 +379,17 @@ export default function GroupPlannerPage() {
         <div className="flex items-center gap-3">
           <Link href="/social">
             <Button variant="ghost" size="sm" className="rounded-none font-mono text-xs uppercase tracking-widest gap-2 text-muted-foreground">
-              <ChevronLeft className="h-3.5 w-3.5" />Voltar
+              <ChevronLeft className="h-3.5 w-3.5" />{t("Voltar", "Back", "Volver")}
             </Button>
           </Link>
         </div>
         <div className="border border-border/50 bg-card/40 py-16 text-center">
           <AlertTriangle className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
-          <p className="font-mono text-sm text-muted-foreground uppercase tracking-widest mb-1">Grupo não encontrado</p>
-          <p className="font-mono text-xs text-muted-foreground/50 mb-4">Este grupo pode ter sido removido ou o link está incorreto</p>
+          <p className="font-mono text-sm text-muted-foreground uppercase tracking-widest mb-1">{t("Grupo não encontrado", "Group not found", "Grupo no encontrado")}</p>
+          <p className="font-mono text-xs text-muted-foreground/50 mb-4">{t("Este grupo pode ter sido removido ou o link está incorreto", "This group may have been removed or the link is incorrect", "Es posible que se haya eliminado el grupo o que el enlace sea incorrecto")}</p>
           <Link href="/social">
             <Button className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline" variant="outline">
-              Ver Todos os Grupos
+              {t("Ver Todos os Grupos", "View All Groups", "Ver todos los grupos")}
             </Button>
           </Link>
         </div>
@@ -353,7 +413,7 @@ export default function GroupPlannerPage() {
       <div>
         <Link href="/social">
           <Button variant="ghost" size="sm" className="rounded-none font-mono text-xs uppercase tracking-widest gap-2 text-muted-foreground mb-4 -ml-2">
-            <ChevronLeft className="h-3.5 w-3.5" />Social Launch Hub
+            <ChevronLeft className="h-3.5 w-3.5" />{t("Social Launch Hub", "Social Launch Hub", "Centro de lanzamientos sociales")}
           </Button>
         </Link>
         <div className="border-b border-border/50 pb-5">
@@ -365,20 +425,20 @@ export default function GroupPlannerPage() {
                 </Badge>
                 {group.memberCount && (
                   <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 text-muted-foreground border-border/40">
-                    <Users className="h-2.5 w-2.5 mr-1" />{group.memberCount.toLocaleString("pt-BR")} membros
+                    <Users className="h-2.5 w-2.5 mr-1" />{group.memberCount.toLocaleString(intlLocale(locale))} {t("membros", "members", "miembros")}
                   </Badge>
                 )}
               </div>
               <h1 className="text-xl md:text-2xl font-mono uppercase tracking-tighter font-bold">{group.name}</h1>
               <p className="text-xs font-mono text-muted-foreground/60 uppercase tracking-widest mt-0.5">
-                Fase atual: {PHASE_DEFS[group.currentPhase]?.emoji} {PHASE_DEFS[group.currentPhase]?.label} · {PHASE_DEFS[group.currentPhase]?.days}
+                {t("Fase atual:", "Current phase:", "Fase actual:")} {PHASE_DEFS[group.currentPhase]?.emoji} {phaseLabel(group.currentPhase, t)} · {PHASE_DEFS[group.currentPhase]?.days}
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {group.link && (
                 <Button size="sm" variant="outline" onClick={() => window.open(group.link, "_blank")}
                   className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2 h-8">
-                  <ExternalLink className="h-3 w-3" />Abrir Grupo
+                  <ExternalLink className="h-3 w-3" />{t("Abrir Grupo", "Open Group", "Abrir grupo")}
                 </Button>
               )}
             </div>
@@ -406,7 +466,7 @@ export default function GroupPlannerPage() {
                   {isDone && <CheckCircle2 className="h-3 w-3 text-success" />}
                 </div>
                 <div className={`font-mono text-[11px] font-bold uppercase tracking-widest truncate ${isActive ? p.color : isDone ? "text-success" : "text-muted-foreground/60"}`}>
-                  {p.label}
+                  {phaseLabel(i, t)}
                 </div>
                 <div className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest">{p.days}</div>
                 <div className="mt-1.5 flex gap-0.5">
@@ -431,21 +491,21 @@ export default function GroupPlannerPage() {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="text-xl">{currentPhaseDef.emoji}</span>
-                <h2 className={`font-mono font-bold text-base uppercase tracking-wider ${currentPhaseDef.color}`}>{currentPhaseDef.label}</h2>
+                <h2 className={`font-mono font-bold text-base uppercase tracking-wider ${currentPhaseDef.color}`}>{phaseLabel(activePhase, t)}</h2>
                 <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${currentPhaseDef.color} ${currentPhaseDef.borderColor}`}>
                   {currentPhaseDef.days}
                 </Badge>
               </div>
-              <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed">{currentPhaseDef.description}</p>
+              <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed">{phaseDescription(activePhase, t)}</p>
               <div className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground/50">
                 <Zap className="h-2.5 w-2.5" />
-                <span className="uppercase tracking-widest">{currentPhaseDef.objective}</span>
+                <span className="uppercase tracking-widest">{phaseObjective(activePhase, t)}</span>
               </div>
             </div>
             <div className="text-right space-y-1 shrink-0">
               <div className={`font-mono text-lg font-bold ${currentPhaseDef.color}`}>{generatedCount}/{totalMessages}</div>
-              <div className="font-mono text-[11px] text-muted-foreground/50 uppercase tracking-widest">mensagens geradas</div>
-              <div className="font-mono text-[11px] text-success uppercase tracking-widest">{dispatchedCount} disparadas</div>
+              <div className="font-mono text-[11px] text-muted-foreground/50 uppercase tracking-widest">{t("mensagens geradas", "messages generated", "mensajes generados")}</div>
+              <div className="font-mono text-[11px] text-success uppercase tracking-widest">{dispatchedCount} {t("disparadas", "sent", "enviados")}</div>
             </div>
           </div>
         </div>
@@ -474,25 +534,25 @@ export default function GroupPlannerPage() {
         <div className="border border-border/30 bg-card/20 p-4 flex items-center justify-between gap-4 flex-wrap">
           <div className="space-y-1">
             <div className="font-mono text-xs font-bold text-foreground/70 uppercase tracking-wide">
-              {isCurrentPhase ? "Fase Atual" : activePhase < group.currentPhase ? "Fase Concluída" : "Próxima Fase"}
+              {isCurrentPhase ? t("Fase Atual", "Current Phase", "Fase actual") : activePhase < group.currentPhase ? t("Fase Concluída", "Phase Completed", "Fase completada") : t("Próxima Fase", "Next Phase", "Fase siguiente")}
             </div>
             <div className="font-mono text-xs text-muted-foreground/50">
-              {isCurrentPhase && !isLastPhase && "Gere e dispare todas as mensagens antes de avançar para a próxima fase"}
-              {isCurrentPhase && isLastPhase && "Esta é a fase final — após o encerramento, o grupo deve ser fechado"}
-              {!isCurrentPhase && activePhase < group.currentPhase && "Esta fase já foi concluída e avançada"}
-              {!isCurrentPhase && activePhase > group.currentPhase && "Conclua as fases anteriores antes de avançar até aqui"}
+              {isCurrentPhase && !isLastPhase && t("Gere e dispare todas as mensagens antes de avançar para a próxima fase", "Generate and send all messages before advancing to the next phase", "Genera y envía todos los mensajes antes de pasar a la siguiente fase")}
+              {isCurrentPhase && isLastPhase && t("Esta é a fase final — após o encerramento, o grupo deve ser fechado", "This is the final phase — the group should be closed after it ends", "Esta es la fase final; al terminar, se debe cerrar el grupo")}
+              {!isCurrentPhase && activePhase < group.currentPhase && t("Esta fase já foi concluída e avançada", "This phase has been completed and advanced", "Esta fase ya se completó y se avanzó")}
+              {!isCurrentPhase && activePhase > group.currentPhase && t("Conclua as fases anteriores antes de avançar até aqui", "Complete earlier phases before advancing to this one", "Completa las fases anteriores antes de avanzar hasta aquí")}
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
             {isCurrentPhase && !isLastPhase && (
               <Button onClick={advancePhase}
                 className={`rounded-none font-mono uppercase text-xs tracking-widest gap-2 h-9 btn-weapon-primary`}>
-                <ArrowRight className="h-3.5 w-3.5" />Avançar para {PHASE_DEFS[activePhase + 1]?.label}
+                <ArrowRight className="h-3.5 w-3.5" />{t("Avançar para", "Advance to", "Avanzar a")} {phaseLabel(activePhase + 1, t)}
               </Button>
             )}
             {isCurrentPhase && isLastPhase && (
               <div className={`border ${currentPhaseDef.borderColor} ${currentPhaseDef.bgColor} px-4 py-2 font-mono text-xs ${currentPhaseDef.color} uppercase tracking-widest flex items-center gap-2`}>
-                <Lock className="h-3.5 w-3.5" />Grupo Encerrado após esta fase
+                <Lock className="h-3.5 w-3.5" />{t("Grupo Encerrado após esta fase", "Group Closes after this Phase", "El grupo se cierra después de esta fase")}
               </div>
             )}
           </div>

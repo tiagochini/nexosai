@@ -12,12 +12,13 @@ import {
   Plus, Rocket, ChevronRight, Clock, CheckCircle2,
   Loader2, Play, Search, Zap, TrendingUp, BarChart3, Archive,
 } from "lucide-react";
+import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Rascunho", intake: "Intake", analyzing: "Analisando",
-  strategy_ready: "Estratégia Pronta", generating: "Gerando",
-  awaiting_approval: "Aprovação", approved: "Aprovado",
-  executing: "Em Execução", live: "Ao Vivo", completed: "Concluído",
+const STATUS_LABEL: Record<string, [string, string, string]> = {
+  draft: ["Rascunho", "Draft", "Borrador"], intake: ["Briefing", "Intake", "Briefing"], analyzing: ["Analisando", "Analyzing", "Analizando"],
+  strategy_ready: ["Estratégia pronta", "Strategy ready", "Estrategia lista"], generating: ["Gerando", "Generating", "Generando"],
+  awaiting_approval: ["Aguardando aprovação", "Awaiting approval", "Pendiente de aprobación"], approved: ["Aprovado", "Approved", "Aprobado"],
+  executing: ["Em execução", "Executing", "En ejecución"], live: ["Ao vivo", "Live", "En directo"], completed: ["Concluído", "Completed", "Completado"],
 };
 const STATUS_COLOR: Record<string, string> = {
   live:              "text-success border-success/40 bg-success/10",
@@ -36,18 +37,18 @@ const STATUS_ICON: Record<string, React.ElementType> = {
   awaiting_approval: Clock, approved: CheckCircle2, strategy_ready: CheckCircle2,
   completed: CheckCircle2, draft: Clock, intake: Loader2,
 };
-const TYPE_LABEL: Record<string, string> = {
-  launch: "Lançamento", perpetual_launch: "Perpétuo", flash_sale: "Flash Sale",
-  live_sale: "Live Sale", continuous_sales: "Contínuo", subscription_growth: "Assinatura",
-  authority: "Autoridade", audience_growth: "Crescimento", affiliate: "Afiliado",
-  branding: "Branding", upsell: "Upsell", remarketing: "Remarketing", scale: "Escala",
-  regional_dominance: "Reg. Local", semente_launch: "Semente",
+const TYPE_LABEL: Record<string, [string, string, string]> = {
+  launch: ["Lançamento", "Launch", "Lanzamiento"], perpetual_launch: ["Perpétuo", "Evergreen", "Perpetuo"], flash_sale: ["Flash Sale", "Flash Sale", "Oferta relámpago"],
+  live_sale: ["Live Sale", "Live Sale", "Venta en directo"], continuous_sales: ["Vendas contínuas", "Continuous sales", "Ventas continuas"], subscription_growth: ["Assinatura", "Subscription", "Suscripción"],
+  authority: ["Autoridade", "Authority", "Autoridad"], audience_growth: ["Crescimento de audiência", "Audience growth", "Crecimiento de audiencia"], affiliate: ["Afiliados", "Affiliate", "Afiliados"],
+  branding: ["Branding", "Branding", "Marca"], upsell: ["Upsell", "Upsell", "Venta adicional"], remarketing: ["Remarketing", "Remarketing", "Remarketing"], scale: ["Escala", "Scale", "Escala"],
+  regional_dominance: ["Domínio regional", "Regional dominance", "Dominio regional"], semente_launch: ["Lançamento semente", "Seed launch", "Lanzamiento semilla"],
 };
-const TRACK_META: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  six_digits:    { label: "6 Díg",  color: "text-blue-400 border-blue-400/30 bg-blue-400/8",   icon: Rocket    },
-  eight_digits:  { label: "8 Díg",  color: "text-purple-400 border-purple-400/30 bg-purple-400/8", icon: TrendingUp },
-  ten_digits:    { label: "10 Díg", color: "text-red-400 border-red-400/30 bg-red-400/8",     icon: BarChart3 },
-  not_applicable:{ label: "—",      color: "text-muted-foreground border-border/30 bg-muted/10", icon: Rocket  },
+const TRACK_META: Record<string, { label: [string, string, string]; color: string; icon: React.ElementType }> = {
+  six_digits:    { label: ["6 dígitos", "6 digits", "6 dígitos"],  color: "text-blue-400 border-blue-400/30 bg-blue-400/8",   icon: Rocket    },
+  eight_digits:  { label: ["8 dígitos", "8 digits", "8 dígitos"],  color: "text-purple-400 border-purple-400/30 bg-purple-400/8", icon: TrendingUp },
+  ten_digits:    { label: ["10 dígitos", "10 digits", "10 dígitos"], color: "text-red-400 border-red-400/30 bg-red-400/8",     icon: BarChart3 },
+  not_applicable:{ label: ["—", "—", "—"],      color: "text-muted-foreground border-border/30 bg-muted/10", icon: Rocket  },
 };
 
 // Pipeline steps used for progress visualization
@@ -89,6 +90,8 @@ const ARCHIVABLE = ["draft", "intake", "strategy_ready", "awaiting_approval", "a
 type FilterStatus = "all" | "active" | "completed";
 
 export default function CampaignsList() {
+  const t = useUiText();
+  const { locale } = useUiLocale();
   const [search, setSearch]     = useState("");
   const [filter, setFilter]     = useState<FilterStatus>("all");
   const [archivingId, setArchivingId] = useState<string | null>(null);
@@ -108,12 +111,12 @@ export default function CampaignsList() {
         method: "PATCH",
         body: JSON.stringify({ status: "cancelled" }),
       });
-      toast.success(`"${title}" arquivada`, {
-        description: "Slot liberado — você pode criar uma nova campanha.",
+      toast.success(t(`"${title}" arquivada`, `"${title}" archived`, `"${title}" archivada`), {
+        description: t("Espaço liberado — você pode criar uma nova campanha.", "Slot freed — you can create a new campaign.", "Espacio liberado: ya puedes crear una nueva campaña."),
       });
       queryClient.invalidateQueries({ queryKey: getListCampaignsQueryKey() });
     } catch {
-      toast.error("Não foi possível arquivar. Tente novamente.");
+      toast.error(t("Não foi possível arquivar. Tente novamente.", "Could not archive. Please try again.", "No se pudo archivar. Inténtalo de nuevo."));
     } finally {
       setArchivingId(null);
     }
@@ -139,28 +142,28 @@ export default function CampaignsList() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border/50 pb-5">
         <div>
           <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
-            Missões
+             {t("Missões", "Missions", "Misiones")}
           </h1>
           <div className="flex items-center gap-3 mt-1">
             <span className="text-xs text-muted-foreground font-mono uppercase tracking-widest">
-              {allCampaigns.length} total
+              {allCampaigns.length} {t("no total", "total", "en total")}
             </span>
             {active > 0 && (
               <span className="flex items-center gap-1.5 text-xs font-mono text-success uppercase tracking-widest">
                 <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" style={{ boxShadow: "0 0 5px hsl(var(--success))" }} />
-                {active} ao vivo
+                {active} {t("ao vivo", "live", "en directo")}
               </span>
             )}
             {inProcess > 0 && (
               <span className="text-xs font-mono text-primary uppercase tracking-widest">
-                {inProcess} em processo
+                {inProcess} {t("em andamento", "in progress", "en curso")}
               </span>
             )}
           </div>
         </div>
         <Link href="/campaigns/new">
           <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10 px-5 text-xs shrink-0">
-            <Plus className="h-3.5 w-3.5" />Nova Campanha
+            <Plus className="h-3.5 w-3.5" />{t("Nova campanha", "New campaign", "Nueva campaña")}
           </Button>
         </Link>
       </div>
@@ -172,7 +175,7 @@ export default function CampaignsList() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar missões..."
+            placeholder={t("Buscar missões...", "Search missions...", "Buscar misiones...")}
             className="font-mono text-sm rounded-none border-border/50 bg-background/60 focus-visible:ring-primary focus-visible:border-primary h-9 pl-9"
           />
         </div>
@@ -187,7 +190,7 @@ export default function CampaignsList() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {f === "all" ? "Todas" : f === "active" ? "Ativas" : "Concluídas"}
+              {f === "all" ? t("Todas", "All", "Todas") : f === "active" ? t("Ativas", "Active", "Activas") : t("Concluídas", "Completed", "Completadas")}
             </button>
           ))}
         </div>
@@ -206,7 +209,7 @@ export default function CampaignsList() {
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <Rocket className="h-8 w-8 text-muted-foreground/20" />
             <p className="font-mono text-sm text-muted-foreground uppercase tracking-widest">
-              Nenhum resultado para &ldquo;{search}&rdquo;
+               {t("Nenhum resultado para", "No results for", "No hay resultados para")} &ldquo;{search}&rdquo;
             </p>
           </div>
         ) : (
@@ -222,20 +225,20 @@ export default function CampaignsList() {
               <div className="flex-1 space-y-4">
                 <div className="flex items-center gap-2">
                   <Rocket className="h-4 w-4 text-primary" />
-                  <span className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">Pronto para começar</span>
+                   <span className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">{t("Pronto para começar", "Ready to get started", "Listo para empezar")}</span>
                 </div>
                 <h2 className="font-mono font-black text-xl md:text-2xl uppercase tracking-tight text-foreground leading-tight">
-                  Nenhum lançamento ainda.
+                   {t("Nenhum lançamento ainda.", "No launches yet.", "Aún no hay lanzamientos.")}
                   <br />
-                  <span className="text-primary">A agente está esperando por você.</span>
+                   <span className="text-primary">{t("A agente está esperando por você.", "Your agent is waiting for you.", "Tu agente te está esperando.")}</span>
                 </h2>
                 <p className="font-mono text-sm text-muted-foreground/70 leading-relaxed max-w-md">
-                  Em menos de 3 minutos de briefing, o agente monta o plano completo do seu lançamento — estratégia, copy, cronograma e execução automatizada.
+                   {t("Em menos de 3 minutos de briefing, o agente monta o plano completo do seu lançamento — estratégia, textos, cronograma e execução automatizada.", "In less than 3 minutes of briefing, the agent builds your complete launch plan — strategy, copy, timeline, and automated execution.", "En menos de 3 minutos de briefing, el agente prepara el plan completo de tu lanzamiento: estrategia, textos, cronograma y ejecución automatizada.")}
                 </p>
                 <Link href="/campaigns/new">
                   <Button className="rounded-none font-mono uppercase tracking-widest font-bold gap-2 btn-weapon-primary h-11 px-7 mt-2 text-sm">
                     <Plus className="h-4 w-4" />
-                    Criar meu primeiro lançamento
+                     {t("Criar meu primeiro lançamento", "Create my first launch", "Crear mi primer lanzamiento")}
                     <TrendingUp className="h-3.5 w-3.5 ml-1" />
                   </Button>
                 </Link>
@@ -243,13 +246,13 @@ export default function CampaignsList() {
 
               {/* Right: what happens */}
               <div className="shrink-0 w-full md:w-56 space-y-2.5">
-                <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40 mb-3">O que acontece agora:</p>
+                 <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40 mb-3">{t("O que acontece agora:", "What happens next:", "¿Qué pasa ahora?")}</p>
                 {[
-                  { num: "01", text: "Você escolhe seu objetivo" },
-                  { num: "02", text: "O agente faz um briefing rápido" },
-                  { num: "03", text: "Plano estratégico gerado" },
-                  { num: "04", text: "Conteúdo pronto para aprovar" },
-                  { num: "05", text: "Campanha vai ao ar" },
+                   { num: "01", text: t("Você escolhe seu objetivo", "Choose your goal", "Elige tu objetivo") },
+                   { num: "02", text: t("O agente faz um briefing rápido", "The agent runs a quick briefing", "El agente realiza un briefing rápido") },
+                   { num: "03", text: t("Plano estratégico gerado", "Strategic plan generated", "Plan estratégico generado") },
+                   { num: "04", text: t("Conteúdo pronto para aprovar", "Content ready for approval", "Contenido listo para aprobar") },
+                   { num: "05", text: t("Campanha vai ao ar", "Campaign goes live", "La campaña se publica") },
                 ].map(item => (
                   <div key={item.num} className="flex items-center gap-3">
                     <span className="font-mono text-[10px] text-primary/40 tracking-widest w-5 shrink-0 font-bold">{item.num}</span>
@@ -301,12 +304,12 @@ export default function CampaignsList() {
                           {campaign.title}
                         </span>
                         <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 border shrink-0 ${STATUS_COLOR[campaign.status] ?? ""}`}>
-                          {STATUS_LABEL[campaign.status] ?? campaign.status}
+                           {STATUS_LABEL[campaign.status] ? t(...STATUS_LABEL[campaign.status]) : campaign.status}
                         </Badge>
                         {isLive && (
                           <span className="flex items-center gap-1 font-mono text-[11px] text-success uppercase tracking-widest">
                             <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                            Live
+                             {t("Ao vivo", "Live", "En directo")}
                           </span>
                         )}
                       </div>
@@ -315,18 +318,18 @@ export default function CampaignsList() {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={`font-mono text-[11px] px-2 py-0.5 border ${trackMeta.color} flex items-center gap-1`}>
                           <TrackIcon className="h-2.5 w-2.5" />
-                          {trackMeta.label}
+                           {t(...trackMeta.label)}
                         </span>
                         <span className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-widest">
-                          {TYPE_LABEL[campaign.type] ?? campaign.type}
+                           {TYPE_LABEL[campaign.type] ? t(...TYPE_LABEL[campaign.type]) : campaign.type}
                         </span>
                         {campaign.revenueTarget && (
                           <span className="font-mono text-[11px] text-success/80">
-                            Meta R$ {Number(campaign.revenueTarget).toLocaleString("pt-BR")}
+                             {t("Meta", "Target", "Meta")} R$ {Number(campaign.revenueTarget).toLocaleString(intlLocale(locale))}
                           </span>
                         )}
                         <span className="font-mono text-[11px] text-muted-foreground/40">
-                          {campaign.createdAt ? new Date(campaign.createdAt).toLocaleDateString("pt-BR") : "—"}
+                           {campaign.createdAt ? new Date(campaign.createdAt).toLocaleDateString(intlLocale(locale)) : "—"}
                         </span>
                       </div>
 
@@ -342,26 +345,26 @@ export default function CampaignsList() {
                           onClick={(e) => handleArchive(e, campaign.id, campaign.title)}
                           disabled={archivingId === campaign.id}
                           className="hidden md:flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/20 hover:text-orange-400/70 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
-                          title="Arquivar campanha (libera slot)"
+                          title={t("Arquivar campanha (libera espaço)", "Archive campaign (free slot)", "Archivar campaña (liberar espacio)")}
                         >
                           {archivingId === campaign.id
                             ? <Loader2 className="h-3 w-3 animate-spin" />
                             : <Archive className="h-3 w-3" />}
-                          Arquivar
+                           {t("Arquivar", "Archive", "Archivar")}
                         </button>
                       )}
                       <div className="hidden md:flex items-center gap-2">
                         <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground/40 group-hover:text-primary/60 transition-colors">
-                          {(campaign.status === "draft" || campaign.status === "intake") ? "Continuar Briefing →" :
-                           campaign.status === "analyzing" ? "Criando Estratégia..." :
-                           campaign.status === "strategy_ready" ? "Revisar Masterplan →" :
-                           campaign.status === "generating" ? "Produção em Andamento..." :
-                           campaign.status === "awaiting_approval" ? "Aprovar Conteúdo →" :
-                           campaign.status === "approved" ? "Checklist de Lançamento →" :
-                           campaign.status === "executing" ? "Lançamento em Progresso..." :
-                           campaign.status === "live" ? "Ver Resultados →" :
-                           campaign.status === "paused" ? "Retomar Campanha →" :
-                           "Ver Campanha →"}
+                          {(campaign.status === "draft" || campaign.status === "intake") ? t("Continuar briefing →", "Continue briefing →", "Continuar briefing →") :
+                           campaign.status === "analyzing" ? t("Criando estratégia...", "Building strategy...", "Creando estrategia...") :
+                           campaign.status === "strategy_ready" ? t("Revisar masterplan →", "Review master plan →", "Revisar el plan maestro →") :
+                           campaign.status === "generating" ? t("Produção em andamento...", "Production in progress...", "Producción en curso...") :
+                           campaign.status === "awaiting_approval" ? t("Aprovar conteúdo →", "Approve content →", "Aprobar contenido →") :
+                           campaign.status === "approved" ? t("Checklist de lançamento →", "Launch checklist →", "Lista de lanzamiento →") :
+                           campaign.status === "executing" ? t("Lançamento em andamento...", "Launch in progress...", "Lanzamiento en curso...") :
+                           campaign.status === "live" ? t("Ver resultados →", "View results →", "Ver resultados →") :
+                           campaign.status === "paused" ? t("Retomar campanha →", "Resume campaign →", "Reanudar campaña →") :
+                           t("Ver campanha →", "View campaign →", "Ver campaña →")}
                         </div>
                         <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
                       </div>
@@ -379,7 +382,7 @@ export default function CampaignsList() {
         <div className="flex justify-center pt-2">
           <Link href="/campaigns/new">
             <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2">
-              <Plus className="h-3 w-3" />Iniciar Nova Missão
+              <Plus className="h-3 w-3" />{t("Iniciar nova missão", "Start new mission", "Iniciar nueva misión")}
             </Button>
           </Link>
         </div>
