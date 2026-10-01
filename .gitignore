@@ -43,6 +43,7 @@ testem.log
 # System Files
 .DS_Store
 Thumbs.db
+attached_assets/
 
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
