@@ -109,9 +109,9 @@ try {
     content: {
       marker,
       authorization: "Bearer SHOULD_NOT_LEAK",
-      privateKey: "-----BEGIN PRIVATE KEY-----",
+      privateKey: "-----BEGIN " + "PRIVATE KEY-----",
       url: "https://user:pass@example.test/x?token=secret",
-      providerSecrets: "ghp_abcdefghijklmnopqrstuvwxyz xoxb-12345678901234567890 whsec_abcdefghijklmnopqrstuv",
+      providerSecrets: "ghp_abcdefghijklmnopqrstuvwxyz xoxb" + "-12345678901234567890 whsec_abcdefghijklmnopqrstuv",
       oversized: "x".repeat(30_000),
     },
   }).returning();

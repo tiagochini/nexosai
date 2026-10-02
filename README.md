@@ -78,6 +78,9 @@ banco, diagnóstico e solução de problemas.
 | `pnpm run typecheck:libs` | Compila os projetos TypeScript compartilhados |
 | `pnpm run typecheck` | Valida todos os pacotes e artefatos |
 | `pnpm run build` | Typecheck e build do workspace |
+| `pnpm run security:scan` | Bloqueia arquivos sensíveis e padrões conhecidos de credenciais |
+| `pnpm run security:audit-history` | Lista caminhos sensíveis ainda alcançáveis no histórico |
+| `pnpm --filter @workspace/app run check:bundle` | Confere o limite de 500 KiB do JavaScript inicial |
 | `pnpm --filter @workspace/db run push` | Sincroniza o schema em banco de desenvolvimento |
 | `pnpm --filter @workspace/db run migrate:tracked` | Aplica migrations SQL já rastreadas |
 | `pnpm --filter @workspace/db run bootstrap:check` | Confirma que o schema público está vazio |

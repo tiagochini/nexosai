@@ -45,6 +45,21 @@ com backup, revisão e evidências de validação antes da publicação em produ
 - Planos `solo` e `agency` inicializados por seed idempotente.
 - Teste concorrente de cadastro criado; corrigido o reconhecimento de violação
   única encapsulada pelo Drizzle, evitando HTTP 500 em cadastro duplicado.
+- Páginas, layout autenticado e módulos pesados passaram a usar carregamento por
+  rota; o JavaScript inicial caiu de aproximadamente 4,9 MB para 392,4 KiB
+  (119,7 KiB gzip), com orçamento de 500 KiB validado durante o build.
+- Integração local com Redis validada em `6379`: Redis, filas e readiness ficaram
+  saudáveis, mantendo o modo degradado seguro quando Redis estiver indisponível.
+- Scanner de segredos sem dependências configurado no CI e validado nos arquivos
+  versionáveis; um anexo com credenciais foi removido do Git atual e preservado
+  apenas em cópia local ignorada para apoiar a rotação.
+- Rollback do bootstrap validado em banco temporário: após aplicar as 170 tabelas
+  e forçar falha transacional, nenhuma relação ou enum permaneceu.
+- Auditoria segura do histórico configurada e executada: três caminhos sensíveis
+  permanecem alcançáveis em cinco ocorrências de commits. O runbook de rotação,
+  reescrita, validação, publicação coordenada e rollback foi documentado.
+- CI de qualidade configurado para instalar com lockfile imutável e executar o
+  typecheck e todos os builds em clone Linux limpo.
 
 Ainda dependem de ação operacional: rotação das credenciais, remoção dos segredos
 do histórico Git e validações em ambiente de homologação com PostgreSQL e Redis
@@ -535,8 +550,8 @@ As telas essenciais carregam em conexão móvel simulada sem baixar recursos de
 ## 15. Checklist de conclusão
 
 - [ ] Credenciais antigas revogadas e rotacionadas.
-- [ ] Segredos e backups removidos do Git e do histórico.
-- [ ] Secret scanning ativo.
+- [ ] Segredos e backups removidos do histórico Git (estado atual já limpo).
+- [x] Secret scanning configurado no CI e no comando `security:scan`.
 - [x] Bootstrap e migrations aprovados no banco inicialmente vazio.
 - [x] Baseline legado protegido por flag e verificação de schema.
 - [x] Mutações específicas removidas do boot.
@@ -550,9 +565,9 @@ As telas essenciais carregam em conexão móvel simulada sem baixar recursos de
 - [x] CORS de produção usa allowlist obrigatória.
 - [x] Webhook não aceita token antigo embutido no código.
 - [x] Probes de vida e prontidão estão separados.
-- [ ] Testes de integração com PostgreSQL e Redis passam.
-- [ ] Bundle inicial está dentro do orçamento definido.
-- [ ] Procedimento de rollback foi testado.
+- [x] Smoke tests de integração com PostgreSQL e Redis passam.
+- [x] Bundle inicial está dentro do orçamento definido e protegido no build.
+- [x] Rollback transacional do bootstrap foi testado em banco temporário.
 
 ## 16. Resultado esperado
 

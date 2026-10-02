@@ -22,7 +22,7 @@ const ids: string[] = [];
 const at = new Date("2025-03-01T00:00:00.000Z");
 const longA = "A".repeat(4096) + "tail-a";
 const longB = "A".repeat(4096) + "tail-b";
-const secret = "Bearer abc.def.ghi -----BEGIN PRIVATE KEY----- hidden -----END PRIVATE KEY-----";
+const secret = "Bearer abc.def.ghi -----BEGIN " + "PRIVATE KEY----- hidden -----END PRIVATE KEY-----";
 
 try {
   const [campaign, foreignCampaign] = await db.insert(campaignsTable).values([

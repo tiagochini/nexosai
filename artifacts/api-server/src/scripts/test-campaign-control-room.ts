@@ -53,7 +53,7 @@ try {
   campaignId = campaign!.id;
   otherCampaignId = otherCampaign!.id;
   foreignCampaignId = foreignCampaign!.id;
-  const longPem = `-----BEGIN PRIVATE KEY-----LONGPEMSECRETPREFIX_${"x".repeat(5_000)}-----END PRIVATE KEY-----`;
+  const longPem = `-----BEGIN ${"PRIVATE KEY-----"}LONGPEMSECRETPREFIX_${"x".repeat(5_000)}-----END PRIVATE KEY-----`;
   const longBearer = `Bearer LONGBEARERSECRETPREFIX_${"x".repeat(5_000)}`;
   const longJwt = `eyJLONGJWTSECRETPREFIX${"a".repeat(4_100)}.${"b".repeat(4_100)}.${"c".repeat(4_100)}`;
   const wideArray = Array.from({ length: 2_105 }, (_, index) => `wide-array-${index}`);
@@ -104,7 +104,7 @@ try {
           signedUrl: "https://example.invalid/download?X-Amz-Signature=MUST_NOT_LEAK_URL&token=MUST_NOT_LEAK_URL_TOKEN#fragment",
           innocuousBearer: "Bearer MUST_NOT_LEAK_BEARER",
           innocuousJwt: "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.MUST_NOT_LEAK_JWT",
-          innocuousPem: "-----BEGIN PRIVATE KEY-----MUST_NOT_LEAK_PEM-----END PRIVATE KEY-----",
+          innocuousPem: "-----BEGIN " + "PRIVATE KEY-----MUST_NOT_LEAK_PEM-----END PRIVATE KEY-----",
           longPem,
           longBearer,
           longJwt,

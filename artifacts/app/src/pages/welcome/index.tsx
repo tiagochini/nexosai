@@ -17,18 +17,7 @@ import {
 import nexosLogo from "/nexos-logo.png";
 import { hasDoneTour } from "@/components/AppTour";
 import { useUiText } from "@/lib/i18n";
-
-const WELCOME_SEEN_KEY = "nexos_welcome_seen";
-
-// Local fallback flag — the source of truth is user.hasSeenOnboarding (DB),
-// this just avoids a flash of the flow while /me is loading right after signup.
-export function hasSeenWelcome(): boolean {
-  try { return !!localStorage.getItem(WELCOME_SEEN_KEY); } catch { return false; }
-}
-
-export function markWelcomeSeen() {
-  try { localStorage.setItem(WELCOME_SEEN_KEY, "1"); } catch {}
-}
+import { markWelcomeSeen } from "@/lib/welcome-state";
 
 const getTeam = (t: ReturnType<typeof useUiText>) => [
   {

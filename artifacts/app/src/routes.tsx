@@ -2,16 +2,24 @@ import { Switch, Route, Redirect } from "wouter";
 import { lazy, Suspense } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
-import { AppLayout } from "@/components/layout/app-layout";
 import { useAuth } from "@/lib/auth";
-import { AccessWall } from "@/components/access-wall";
-import { hasSeenWelcome } from "@/pages/welcome/index";
-import Login from "@/pages/login";
-import Register from "@/pages/register";
-import NotFound from "@/pages/not-found";
-import InstitucionalPage from "@/pages/institucional/index";
+import { hasSeenWelcome } from "@/lib/welcome-state";
 import { ErrorBoundary } from "@/components/error-boundary";
 
+const AppLayout = lazy(() =>
+  import("@/components/layout/app-layout").then((module) => ({
+    default: module.AppLayout,
+  })),
+);
+const AccessWall = lazy(() =>
+  import("@/components/access-wall").then((module) => ({
+    default: module.AccessWall,
+  })),
+);
+const Login = lazy(() => import("@/pages/login"));
+const Register = lazy(() => import("@/pages/register"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+const InstitucionalPage = lazy(() => import("@/pages/institucional/index"));
 const Welcome = lazy(() => import("@/pages/welcome/index"));
 const WarRoom = lazy(() => import("@/pages/war-room/index"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
