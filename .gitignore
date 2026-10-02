@@ -5,6 +5,8 @@ dist
 tmp
 out-tsc
 *.tsbuildinfo
+__pycache__/
+*.py[cod]
 .expo
 .expo-shared
 
@@ -29,7 +31,13 @@ node_modules
 !.vscode/extensions.json
 
 # misc
+/.env
 /.env.local
+/.env.exemple
+/backup.sql
+/*.local.sql
+*.sql.gz
+*.dump
 /.sass-cache
 /connect.lock
 /coverage

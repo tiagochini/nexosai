@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
+    "preinstall": "node scripts/enforce-pnpm.mjs",
     "dev:local": "node scripts/dev-local.mjs",
     "dev:local:meta-test": "node scripts/dev-local.mjs --meta-e2e",
     "dev:meta-gateway": "node scripts/meta-webhook-gateway.mjs",
@@ -13,6 +13,7 @@
   },
   "private": true,
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "typescript": "~5.9.2",
     "prettier": "^3.8.1"
   }

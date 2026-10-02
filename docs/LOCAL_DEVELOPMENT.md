@@ -1,12 +1,12 @@
 # Desenvolvimento local
 
-Este guia descreve o ambiente local criado a partir do backup do Replit.
+Este guia descreve o ambiente local com banco novo ou restaurado.
 
 ## 1. Serviços necessários
 
 ### PostgreSQL
 
-Crie o banco e restaure o backup antes de iniciar a aplicação. Exemplo de URL:
+Crie o banco e configure a conexão. Exemplo de URL:
 
 ```dotenv
 DATABASE_URL=postgresql://USUARIO:SENHA_URL_ENCODED@127.0.0.1:5432/nexosAi
@@ -15,8 +15,18 @@ DATABASE_URL=postgresql://USUARIO:SENHA_URL_ENCODED@127.0.0.1:5432/nexosAi
 Caracteres especiais da senha precisam estar codificados para URL. Por exemplo,
 `@` dentro da senha não pode ser usado literalmente na URI.
 
-Para o banco restaurado, não execute `pnpm --filter @workspace/db run push`
-antes de comparar o schema. O comando pode alterar tabelas existentes.
+Para um banco totalmente vazio, inicialize e valide o schema:
+
+```powershell
+pnpm --filter @workspace/db run bootstrap:check
+pnpm --filter @workspace/db run bootstrap:empty
+pnpm --filter @workspace/db run seed:plans
+pnpm --filter @workspace/db run verify
+```
+
+O bootstrap recusa qualquer schema público que já contenha tabelas, views,
+sequences ou enums. Para um banco restaurado, não execute `push` nem o bootstrap
+antes de comparar o schema e preservar um backup verificável.
 
 ### Redis
 
@@ -39,7 +49,7 @@ compatibilidade.
 O launcher `scripts/dev-local.mjs` aplica esta precedência:
 
 1. variáveis do processo;
-2. `.env.exemple`, importado do Replit;
+2. `.env`, arquivo local ignorado pelo Git;
 3. `.env.local`, com os valores locais prevalecendo.
 
 Configuração local mínima recomendada:
@@ -53,8 +63,8 @@ DRY_RUN_MODE=true
 META_WEBHOOK_AUTO_SUBSCRIBE=false
 ```
 
-`.env.local` é ignorado pelo Git. Não copie novos secrets para `.env.example`.
-O arquivo `.env.exemple` contém valores migrados e deve ser tratado como secret.
+`.env` e `.env.local` são ignorados pelo Git. Não copie secrets para
+`.env.example`, que deve conter somente placeholders.
 
 ## 3. Inicialização
 
@@ -74,9 +84,12 @@ Verificação rápida:
 
 ```powershell
 Invoke-WebRequest http://127.0.0.1:8081/api/healthz -UseBasicParsing
+Invoke-WebRequest http://127.0.0.1:8081/api/livez -UseBasicParsing
+Invoke-WebRequest http://127.0.0.1:8081/api/readyz -UseBasicParsing
 ```
 
-O status esperado é `200` e os checks devem indicar PostgreSQL e Redis ativos.
+O status esperado é `200`. Sem Redis, `/healthz` pode indicar `degraded`, pois a
+API possui fallbacks para parte das operações; `/readyz` exige o PostgreSQL.
 
 ## 4. Modos de segurança
 

@@ -34,6 +34,10 @@ export async function isRedisAvailable(): Promise<boolean> {
       enableReadyCheck: true,
       lazyConnect: false,
     });
+    // ioredis prints an "Unhandled error event" directly to stderr when a
+    // connection probe has no listener, even though the rejected PING is caught
+    // below. Keep expected probe failures inside the structured health result.
+    probe.on("error", () => undefined);
     const reply = await Promise.race([
       probe.ping(),
       new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), 2000)),

@@ -13,6 +13,8 @@ na porta `8080` e aplicação React/Vite na porta `8081`.
 - aplicação: `http://localhost:8081`;
 - API: `http://localhost:8080/api`;
 - health check pelo frontend: `http://localhost:8081/api/healthz`;
+- liveness: `http://localhost:8080/api/livez`;
+- readiness: `http://localhost:8080/api/readyz`;
 - PostgreSQL: banco local configurado por `DATABASE_URL`;
 - Redis: configurado por `REDIS_URL`;
 - proxy Vite: `/api` encaminha para a API na porta `8080`;
@@ -40,9 +42,9 @@ Laragon/serviços locais.
    pnpm install
    ```
 
-2. Crie ou ajuste `.env.local`. O launcher local lê primeiro `.env.exemple` e
-   depois `.env.local`; valores locais substituem os valores importados do
-   Replit.
+2. Crie ou ajuste `.env.local`. O launcher local lê primeiro o `.env` local e
+   depois `.env.local`; valores locais substituem os valores anteriores. Esses
+   dois arquivos são ignorados pelo Git. Use `.env.example` como referência.
 
    ```dotenv
    DATABASE_URL=postgresql://USUARIO:SENHA_URL_ENCODED@127.0.0.1:5432/nexosAi
@@ -77,9 +79,22 @@ banco, diagnóstico e solução de problemas.
 | `pnpm run typecheck` | Valida todos os pacotes e artefatos |
 | `pnpm run build` | Typecheck e build do workspace |
 | `pnpm --filter @workspace/db run push` | Sincroniza o schema em banco de desenvolvimento |
+| `pnpm --filter @workspace/db run migrate:tracked` | Aplica migrations SQL já rastreadas |
+| `pnpm --filter @workspace/db run bootstrap:check` | Confirma que o schema público está vazio |
+| `pnpm --filter @workspace/db run bootstrap:empty` | Cria o schema atual em um banco totalmente vazio |
+| `pnpm --filter @workspace/db run seed:plans` | Cria ou atualiza os planos essenciais |
+| `pnpm --filter @workspace/db run verify` | Verifica schema, checksums, constraints e planos |
 
 Não execute `db push` automaticamente sobre um banco restaurado ou de produção.
 Primeiro compare o schema e preserve o backup.
+
+Em um banco novo, execute `bootstrap:check`, `bootstrap:empty`, `seed:plans` e
+`verify`, nessa ordem. O bootstrap só aceita um schema público totalmente vazio,
+é transacional e registra o snapshot e as migrations incrementais com checksum.
+
+O primeiro baseline de um banco legado exige backup, verificação das tabelas
+canônicas e `MIGRATION_BASELINE_EXISTING_SCHEMA=true`. O executor recusa fazer
+baseline em banco vazio; para esse caso use exclusivamente o bootstrap.
 
 ## Arquitetura resumida
 
@@ -103,9 +118,11 @@ são agregadas em `artifacts/api-server/src/routes/index.ts` e publicadas sob
 ## Segurança no desenvolvimento
 
 - `.env.local` é ignorado pelo Git.
-- `.env.exemple` veio do backup do Replit e contém credenciais reais; trate-o
-  como arquivo sensível, não o compartilhe e faça a rotação dos secrets antes
-  de qualquer publicação do repositório.
+- `.env` e `.env.local` podem conter credenciais reais, são ignorados pelo Git e
+  não devem ser compartilhados. Credenciais que já apareceram no histórico do
+  repositório precisam ser rotacionadas antes de qualquer publicação.
+- Backups locais devem usar nomes como `backup.local.sql` e permanecer fora do
+  Git. Armazene a cópia definitiva em local criptografado e com acesso restrito.
 - `LOCAL_SAFE_MODE` impede schedulers e recuperações automáticas, mas não torna
   toda ação manual inofensiva.
 - Para testar callbacks Meta sem enviar respostas reais, use

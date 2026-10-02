@@ -4,80 +4,81 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:conditional-execution-db": "NODE_ENV=test tsx src/scripts/test-conditional-execution-db.ts",
-    "test:realization-contract-db": "NODE_ENV=test tsx src/scripts/test-realization-contract-db.ts",
-    "test:operational-council-db": "NODE_ENV=test tsx src/scripts/test-operational-council-db.ts",
-    "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
+    "test:conditional-execution-db": "cross-env NODE_ENV=test tsx src/scripts/test-conditional-execution-db.ts",
+    "test:realization-contract-db": "cross-env NODE_ENV=test tsx src/scripts/test-realization-contract-db.ts",
+    "test:operational-council-db": "cross-env NODE_ENV=test tsx src/scripts/test-operational-council-db.ts",
+    "dev": "cross-env NODE_ENV=development pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:capability-certification": "NODE_ENV=test tsx src/scripts/test-capability-certification.ts",
-    "test:product-asaas-sandbox-e2e": "NODE_ENV=test ASAAS_SANDBOX=true tsx src/scripts/test-product-asaas-sandbox-e2e.ts",
-    "test:product-asaas-sandbox-unit": "NODE_ENV=test tsx src/scripts/test-product-asaas-sandbox-unit.ts",
+    "test:capability-certification": "cross-env NODE_ENV=test tsx src/scripts/test-capability-certification.ts",
+    "test:product-asaas-sandbox-e2e": "cross-env NODE_ENV=test ASAAS_SANDBOX=true tsx src/scripts/test-product-asaas-sandbox-e2e.ts",
+    "test:product-asaas-sandbox-unit": "cross-env NODE_ENV=test tsx src/scripts/test-product-asaas-sandbox-unit.ts",
     "test:psychology": "tsx src/scripts/test-psychology-pipeline.ts",
     "test:credit-concurrency": "tsx src/scripts/test-credit-concurrency.ts",
-    "test:lead-capture-http": "LEAD_CAPTURE_HTTP_TESTS=true NODE_ENV=test tsx src/scripts/test-lead-capture-http.ts",
+    "test:lead-capture-http": "cross-env LEAD_CAPTURE_HTTP_TESTS=true NODE_ENV=test tsx src/scripts/test-lead-capture-http.ts",
     "test:workspace-entitlements": "tsx src/scripts/test-workspace-entitlements.ts",
     "test:commercial-entitlements": "tsx src/scripts/test-commercial-entitlements.ts",
     "test:orchestration-fallback-race": "tsx src/scripts/test-orchestration-fallback-race.ts",
-    "test:content-coherence-idor": "NODE_ENV=test tsx src/scripts/test-content-coherence-idor.ts",
+    "test:content-coherence-idor": "cross-env NODE_ENV=test tsx src/scripts/test-content-coherence-idor.ts",
     "test:paid-media": "tsx src/scripts/test-paid-media.ts",
-    "test:paid-media-launch": "NODE_ENV=test tsx src/scripts/test-paid-media-launch.ts",
-    "test:meta-app-review": "NODE_ENV=test META_WEBHOOK_ALLOW_UNSIGNED_TESTS=false tsx src/scripts/test-meta-app-review.ts",
-    "test:meta-webhook-routing": "NODE_ENV=test tsx src/scripts/test-meta-webhook-routing.ts",
-    "test:contextual-conversation": "NODE_ENV=test tsx src/scripts/test-contextual-conversation-contract.ts",
-    "test:meta-e2e-harness": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-meta-e2e-harness.ts",
-    "test:meta-webhook-retry": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-meta-webhook-retry.ts",
-    "test:social-post-ownership": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-social-post-ownership.ts",
-    "test:social-autopost-routing": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-social-autopost-routing.ts",
-    "test:social-natural-key": "NODE_ENV=test tsx src/scripts/test-social-natural-key.ts",
-    "test:social-publish-boundary": "NODE_ENV=test tsx src/scripts/test-social-publish-boundary.ts",
-    "test:social-publication-governance": "NODE_ENV=test META_E2E_TEST_MODE=true META_E2E_READBACK_SIMULATION=true tsx src/scripts/test-social-publication-governance.ts",
-    "test:presence-carousel": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-presence-carousel.ts",
-    "test:e2e-seed": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/e2e-seed.ts",
-    "test:e2e-cleanup": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/e2e-cleanup.ts",
-    "test:e2e-fixtures": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-e2e-fixtures.ts",
-    "test:integration-cleanup": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-integration-cleanup.ts",
+    "test:paid-media-launch": "cross-env NODE_ENV=test tsx src/scripts/test-paid-media-launch.ts",
+    "test:meta-app-review": "cross-env NODE_ENV=test META_WEBHOOK_ALLOW_UNSIGNED_TESTS=false tsx src/scripts/test-meta-app-review.ts",
+    "test:meta-webhook-routing": "cross-env NODE_ENV=test tsx src/scripts/test-meta-webhook-routing.ts",
+    "test:contextual-conversation": "cross-env NODE_ENV=test tsx src/scripts/test-contextual-conversation-contract.ts",
+    "test:meta-e2e-harness": "cross-env NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-meta-e2e-harness.ts",
+    "test:meta-webhook-retry": "cross-env NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-meta-webhook-retry.ts",
+    "test:social-post-ownership": "cross-env NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-social-post-ownership.ts",
+    "test:social-autopost-routing": "cross-env NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-social-autopost-routing.ts",
+    "test:social-natural-key": "cross-env NODE_ENV=test tsx src/scripts/test-social-natural-key.ts",
+    "test:social-publish-boundary": "cross-env NODE_ENV=test tsx src/scripts/test-social-publish-boundary.ts",
+    "test:social-publication-governance": "cross-env NODE_ENV=test META_E2E_TEST_MODE=true META_E2E_READBACK_SIMULATION=true tsx src/scripts/test-social-publication-governance.ts",
+    "test:presence-carousel": "cross-env NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-presence-carousel.ts",
+    "test:e2e-seed": "cross-env NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/e2e-seed.ts",
+    "test:e2e-cleanup": "cross-env NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/e2e-cleanup.ts",
+    "test:e2e-fixtures": "cross-env NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-e2e-fixtures.ts",
+    "test:integration-cleanup": "cross-env NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-integration-cleanup.ts",
     "test:boot-recovery-safety": "tsx src/scripts/test-boot-recovery-safety.ts",
+    "test:auth-registration-db": "cross-env NODE_ENV=test tsx src/scripts/test-auth-registration-db.ts",
     "test:operational-health": "tsx src/scripts/test-operational-health.ts",
     "test:operational-status": "tsx src/scripts/test-operational-status.ts",
-    "test:content-checkpoint-resume": "NODE_ENV=test tsx src/scripts/test-content-checkpoint-resume.ts",
+    "test:content-checkpoint-resume": "cross-env NODE_ENV=test tsx src/scripts/test-content-checkpoint-resume.ts",
     "test:orchestration-dead-letter": "tsx src/scripts/test-orchestration-dead-letter.ts"
-    ,"test:lifecycle-reconciliation-db": "LIFECYCLE_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-lifecycle-reconciliation-db.ts"
+    ,"test:lifecycle-reconciliation-db": "cross-env LIFECYCLE_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-lifecycle-reconciliation-db.ts"
     ,"test:timeline-render-compiler": "tsx src/scripts/test-timeline-render-compiler.ts"
-    ,"test:native-media-control-plane": "NODE_ENV=test tsx src/scripts/test-native-media-control-plane.ts"
-    ,"test:native-media-worker-self-test": "python3 ../../services/native-media-worker/test_worker_self_test.py"
-    ,"test:native-media-e2e": "pnpm run test:native-media-control-plane && NODE_ENV=test tsx src/scripts/test-native-media-http.ts && pnpm run test:timeline-render-compiler && pnpm run test:native-media-worker-self-test"
-    ,"test:ephemeral-video-e2e": "NODE_ENV=test tsx src/scripts/test-ephemeral-video-e2e.ts",
+    ,"test:native-media-control-plane": "cross-env NODE_ENV=test tsx src/scripts/test-native-media-control-plane.ts"
+    ,"test:native-media-worker-self-test": "node ../../scripts/run-python.mjs ../../services/native-media-worker/test_worker_self_test.py"
+    ,"test:native-media-e2e": "pnpm run test:native-media-control-plane && cross-env NODE_ENV=test tsx src/scripts/test-native-media-http.ts && pnpm run test:timeline-render-compiler && pnpm run test:native-media-worker-self-test"
+    ,"test:ephemeral-video-e2e": "cross-env NODE_ENV=test tsx src/scripts/test-ephemeral-video-e2e.ts",
     "test:workspace-folder": "tsx ../video-editor/src/lib/workspace-folder.test.ts",
     "test:recording-folders": "tsx src/scripts/test-recording-folders.ts",
     "test:masterplan-unit": "tsx src/scripts/test-masterplan-unit.ts",
-    "test:lifecycle-operations-db": "LIFECYCLE_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-lifecycle-operations-db.ts"
-    ,"test:audited-context-hardening": "NODE_ENV=test tsx src/scripts/test-audited-context-hardening.ts"
-    ,"test:masterplan-db": "MASTERPLAN_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-masterplan-db.ts"
+    "test:lifecycle-operations-db": "cross-env LIFECYCLE_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-lifecycle-operations-db.ts"
+    ,"test:audited-context-hardening": "cross-env NODE_ENV=test tsx src/scripts/test-audited-context-hardening.ts"
+    ,"test:masterplan-db": "cross-env MASTERPLAN_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-masterplan-db.ts"
     ,"test:regional-audience-unit": "tsx src/scripts/test-regional-audience-scoring.ts"
     ,"test:regional-intelligence-unit": "tsx src/scripts/test-regional-intelligence-unit.ts"
-    ,"test:regional-intelligence-db": "REGIONAL_INTEL_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-regional-intelligence-db.ts"
-    ,"test:interaction-governance-unit": "NODE_ENV=test tsx src/scripts/test-interaction-governance-unit.ts"
-    ,"test:community-unit": "NODE_ENV=test tsx src/scripts/test-community-unit.ts"
-    ,"test:interaction-governance-db": "INTERACTION_GOVERNANCE_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-interaction-governance-db.ts"
-    ,"test:radar-entitlements-db": "RADAR_ENTITLEMENT_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-radar-entitlements-db.ts"
+    ,"test:regional-intelligence-db": "cross-env REGIONAL_INTEL_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-regional-intelligence-db.ts"
+    ,"test:interaction-governance-unit": "cross-env NODE_ENV=test tsx src/scripts/test-interaction-governance-unit.ts"
+    ,"test:community-unit": "cross-env NODE_ENV=test tsx src/scripts/test-community-unit.ts"
+    ,"test:interaction-governance-db": "cross-env INTERACTION_GOVERNANCE_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-interaction-governance-db.ts"
+    ,"test:radar-entitlements-db": "cross-env RADAR_ENTITLEMENT_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-radar-entitlements-db.ts"
     ,"test:radar-checkout-unit": "tsx src/scripts/test-radar-checkout-unit.ts"
-    ,"test:lifecycle-db": "LIFECYCLE_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-lifecycle-db.ts"
+    ,"test:lifecycle-db": "cross-env LIFECYCLE_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-lifecycle-db.ts"
     ,"test:canonical-completion-chain": "tsx src/scripts/test-canonical-completion-chain.ts"
     ,"test:waitlist-launch-capacity": "tsx src/scripts/test-waitlist-launch-capacity.ts"
-    ,"test:domains-landing-foundations": "DOMAINS_LANDING_DB_TESTS=true tsx src/scripts/test-domains-landing-foundations.ts",
+    ,"test:domains-landing-foundations": "cross-env DOMAINS_LANDING_DB_TESTS=true tsx src/scripts/test-domains-landing-foundations.ts",
     "test:product-intake-contract": "tsx src/scripts/test-product-intake-contract.ts",
-    "test:first-touch-boundary": "NODE_ENV=test tsx src/scripts/test-first-touch-boundary.ts"
-    ,"test:first-touch-db": "FIRST_TOUCH_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-first-touch-db.ts",
-    "test:campaign-control-room": "NODE_ENV=test tsx src/scripts/test-campaign-control-room.ts",
-    "test:campaign-control-room-evidence": "NODE_ENV=test tsx src/scripts/test-campaign-control-room-evidence.ts",
-    "test:campaign-control-room-previews": "NODE_ENV=test tsx src/scripts/test-campaign-control-room-previews.ts"
+    "test:first-touch-boundary": "cross-env NODE_ENV=test tsx src/scripts/test-first-touch-boundary.ts"
+    ,"test:first-touch-db": "cross-env FIRST_TOUCH_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-first-touch-db.ts",
+    "test:campaign-control-room": "cross-env NODE_ENV=test tsx src/scripts/test-campaign-control-room.ts",
+    "test:campaign-control-room-evidence": "cross-env NODE_ENV=test tsx src/scripts/test-campaign-control-room-evidence.ts",
+    "test:campaign-control-room-previews": "cross-env NODE_ENV=test tsx src/scripts/test-campaign-control-room-previews.ts"
     ,"test:m11-social-intelligence": "tsx src/scripts/test-m11-social-intelligence.ts"
     ,"test:m11-social-intelligence-db": "M11_SOCIAL_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-m11-social-intelligence-db.ts"
-     ,"test:campaign-control-room-version-diff": "NODE_ENV=test tsx src/scripts/test-campaign-control-room-version-diff.ts",
-     "test:approval-center-db": "NODE_ENV=test tsx src/scripts/test-approval-center-db.ts",
-     "test:approval-sla-db": "NODE_ENV=test tsx src/scripts/test-approval-sla-db.ts"
+     ,"test:campaign-control-room-version-diff": "cross-env NODE_ENV=test tsx src/scripts/test-campaign-control-room-version-diff.ts",
+     "test:approval-center-db": "cross-env NODE_ENV=test tsx src/scripts/test-approval-center-db.ts",
+     "test:approval-sla-db": "cross-env NODE_ENV=test tsx src/scripts/test-approval-sla-db.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

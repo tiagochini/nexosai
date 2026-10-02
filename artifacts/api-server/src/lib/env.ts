@@ -3,8 +3,13 @@ export const env = {
   NODE_ENV: process.env["NODE_ENV"] ?? "development",
   DATABASE_URL: process.env["DATABASE_URL"] ?? "",
   SESSION_SECRET: process.env["SESSION_SECRET"] ?? "nexos-dev-secret",
-  JWT_SECRET: process.env["JWT_SECRET"] ?? process.env["SESSION_SECRET"] ?? "nexos-dev-secret",
-  JWT_REFRESH_SECRET: process.env["JWT_REFRESH_SECRET"] ?? (process.env["SESSION_SECRET"] ?? "nexos-refresh-secret") + "-refresh",
+  JWT_SECRET:
+    process.env["JWT_SECRET"] ??
+    process.env["SESSION_SECRET"] ??
+    "nexos-dev-secret",
+  JWT_REFRESH_SECRET:
+    process.env["JWT_REFRESH_SECRET"] ??
+    (process.env["SESSION_SECRET"] ?? "nexos-refresh-secret") + "-refresh",
   JWT_EXPIRES_IN: process.env["JWT_EXPIRES_IN"] ?? "8h",
   JWT_REFRESH_EXPIRES_IN: process.env["JWT_REFRESH_EXPIRES_IN"] ?? "90d",
   REDIS_URL: process.env["REDIS_URL"] ?? "redis://localhost:6379",
@@ -12,24 +17,37 @@ export const env = {
   OPENAI_API_KEY: process.env["OPENAI_API_KEY"] ?? "",
   NEXOS_OPENAI: process.env["NEXOS_OPENAI"] ?? "",
   GEMINI_API_KEY: process.env["GEMINI_API_KEY"] ?? "",
-  AI_INTEGRATIONS_ANTHROPIC_BASE_URL: process.env["AI_INTEGRATIONS_ANTHROPIC_BASE_URL"] ?? "",
-  AI_INTEGRATIONS_ANTHROPIC_API_KEY: process.env["AI_INTEGRATIONS_ANTHROPIC_API_KEY"] ?? "",
-  AI_INTEGRATIONS_OPENAI_BASE_URL: process.env["AI_INTEGRATIONS_OPENAI_BASE_URL"] ?? "",
-  AI_INTEGRATIONS_OPENAI_API_KEY: process.env["AI_INTEGRATIONS_OPENAI_API_KEY"] ?? "",
-  AI_INTEGRATIONS_GEMINI_BASE_URL: process.env["AI_INTEGRATIONS_GEMINI_BASE_URL"] ?? "",
-  AI_INTEGRATIONS_GEMINI_API_KEY: process.env["AI_INTEGRATIONS_GEMINI_API_KEY"] ?? "",
+  AI_INTEGRATIONS_ANTHROPIC_BASE_URL:
+    process.env["AI_INTEGRATIONS_ANTHROPIC_BASE_URL"] ?? "",
+  AI_INTEGRATIONS_ANTHROPIC_API_KEY:
+    process.env["AI_INTEGRATIONS_ANTHROPIC_API_KEY"] ?? "",
+  AI_INTEGRATIONS_OPENAI_BASE_URL:
+    process.env["AI_INTEGRATIONS_OPENAI_BASE_URL"] ?? "",
+  AI_INTEGRATIONS_OPENAI_API_KEY:
+    process.env["AI_INTEGRATIONS_OPENAI_API_KEY"] ?? "",
+  AI_INTEGRATIONS_GEMINI_BASE_URL:
+    process.env["AI_INTEGRATIONS_GEMINI_BASE_URL"] ?? "",
+  AI_INTEGRATIONS_GEMINI_API_KEY:
+    process.env["AI_INTEGRATIONS_GEMINI_API_KEY"] ?? "",
   RESEND_API_KEY: process.env["RESEND_API_KEY"] ?? "",
-  RESEND_FROM_EMAIL: process.env["RESEND_FROM_EMAIL"] ?? "lancamento@agencianexos.vip",
+  RESEND_FROM_EMAIL:
+    process.env["RESEND_FROM_EMAIL"] ?? "lancamento@agencianexos.vip",
   NEXOS_BASE_DOMAIN: process.env["NEXOS_BASE_DOMAIN"] ?? "agencianexos.vip",
-  CREDIT_MARGIN_MULTIPLIER: parseFloat(process.env["CREDIT_MARGIN_MULTIPLIER"] ?? "1.5"),
-  APP_URL: process.env["APP_URL"] ?? `https://${process.env["REPLIT_DEV_DOMAIN"] ?? "localhost"}`,
+  CREDIT_MARGIN_MULTIPLIER: parseFloat(
+    process.env["CREDIT_MARGIN_MULTIPLIER"] ?? "1.5",
+  ),
+  APP_URL:
+    process.env["APP_URL"] ??
+    `https://${process.env["REPLIT_DEV_DOMAIN"] ?? "localhost"}`,
   META_APP_ID: process.env["META_APP_ID"] ?? "",
   META_APP_SECRET: process.env["META_APP_SECRET"] ?? "",
   // Provider-state mutations are opt-in. This prevents a restored production
   // database from subscribing every real account when a developer boots it.
-  META_WEBHOOK_AUTO_SUBSCRIBE: process.env["META_WEBHOOK_AUTO_SUBSCRIBE"] === "true",
+  META_WEBHOOK_AUTO_SUBSCRIBE:
+    process.env["META_WEBHOOK_AUTO_SUBSCRIBE"] === "true",
   // Public HTTPS tunnel/domain used only when displaying the callback URL.
-  META_WEBHOOK_PUBLIC_BASE_URL: process.env["META_WEBHOOK_PUBLIC_BASE_URL"] ?? "",
+  META_WEBHOOK_PUBLIC_BASE_URL:
+    process.env["META_WEBHOOK_PUBLIC_BASE_URL"] ?? "",
   TIKTOK_CLIENT_KEY: process.env["TIKTOK_CLIENT_KEY"] ?? "",
   TIKTOK_CLIENT_SECRET: process.env["TIKTOK_CLIENT_SECRET"] ?? "",
   GOOGLE_CLIENT_ID: process.env["GOOGLE_CLIENT_ID"] ?? "",
@@ -43,7 +61,8 @@ export const env = {
   LINKEDIN_CLIENT_SECRET: process.env["LINKEDIN_CLIENT_SECRET"] ?? "",
   ALLOWED_ORIGINS: process.env["ALLOWED_ORIGINS"] ?? "",
   // ISO date string (e.g. "2025-06-01T20:00:00-03:00") — set to start the launch countdown
-  WHATSAPP_WEBHOOK_VERIFY_TOKEN: process.env["WHATSAPP_WEBHOOK_VERIFY_TOKEN"] ?? "nexos-whatsapp-2026",
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN:
+    process.env["WHATSAPP_WEBHOOK_VERIFY_TOKEN"] ?? "nexos-whatsapp-2026",
   ASAAS_API_KEY: process.env["ASAAS_API_KEY"] ?? "",
   // Sandbox credentials are deliberately separate from live credentials.
   ASAAS_SANDBOX: process.env["ASAAS_SANDBOX"] ?? "false",
@@ -55,7 +74,8 @@ export const env = {
   GMAIL_APP_PASSWORD: process.env["GMAIL_APP_PASSWORD"] ?? "",
   LAUNCH_CAMPAIGN_DATE: process.env["LAUNCH_CAMPAIGN_DATE"] ?? "",
   // Admin alert destination — receives email + WhatsApp when a new lead joins the waitlist
-  ADMIN_NOTIFY_EMAIL: process.env["ADMIN_NOTIFY_EMAIL"] ?? "bruceallan04@gmail.com",
+  ADMIN_NOTIFY_EMAIL:
+    process.env["ADMIN_NOTIFY_EMAIL"] ?? "bruceallan04@gmail.com",
   ADMIN_NOTIFY_PHONE: process.env["ADMIN_NOTIFY_PHONE"] ?? "", // E.164 format, e.g. 5511999999999
   // Simulator / lead funnel config
   SIMULATOR_CART_OPEN: process.env["SIMULATOR_CART_OPEN"] === "true",
@@ -66,7 +86,9 @@ export const env = {
   // All agent executions are simulated and logged with is_dry_run=true.
   DRY_RUN_MODE: process.env["DRY_RUN_MODE"] === "true",
   // Explicitly guarded below. This is only for running-server E2E harnesses.
-  META_E2E_TEST_MODE: process.env["NODE_ENV"] !== "production" && process.env["META_E2E_TEST_MODE"] === "true",
+  META_E2E_TEST_MODE:
+    process.env["NODE_ENV"] !== "production" &&
+    process.env["META_E2E_TEST_MODE"] === "true",
   // CART_OPEN: when "true", the register gate shows purchase options for public products.
   // Set to "false" during pre-launch (carrinho fechado) — only invite codes / waitlist work.
   CART_OPEN: process.env["CART_OPEN"] === "true",
@@ -84,7 +106,8 @@ export const env = {
   REGISTRAR_API_URL: process.env["REGISTRAR_API_URL"] ?? "",
   REGISTRAR_API_KEY: process.env["REGISTRAR_API_KEY"] ?? "",
   REGISTRAR_PROVIDER: process.env["REGISTRAR_PROVIDER"] ?? "",
-  CLOUDFLARE_API_URL: process.env["CLOUDFLARE_API_URL"] ?? "https://api.cloudflare.com/client/v4",
+  CLOUDFLARE_API_URL:
+    process.env["CLOUDFLARE_API_URL"] ?? "https://api.cloudflare.com/client/v4",
   CLOUDFLARE_API_TOKEN: process.env["CLOUDFLARE_API_TOKEN"] ?? "",
   CLOUDFLARE_ACCOUNT_ID: process.env["CLOUDFLARE_ACCOUNT_ID"] ?? "",
   HOSTINGER_API_URL: process.env["HOSTINGER_API_URL"] ?? "",
@@ -98,7 +121,8 @@ export const env = {
   // does NOT publish without video). The manual "Gerar vídeo" button is unaffected.
   // Set to "true" before deploying C1 to avoid burning HeyGen credits on 28+ posts.
   // Remove (or set to "false") after validating one post manually. [C0.9 TEMP]
-  DISABLE_SCHEDULED_VIDEO_GENERATION: process.env["DISABLE_SCHEDULED_VIDEO_GENERATION"] === "true",
+  DISABLE_SCHEDULED_VIDEO_GENERATION:
+    process.env["DISABLE_SCHEDULED_VIDEO_GENERATION"] === "true",
 } as const;
 
 // ─── Production guard ──────────────────────────────────────────────────────────
@@ -110,10 +134,19 @@ if (env.NODE_ENV === "production") {
   const required: Array<keyof typeof env> = ["DATABASE_URL", "SESSION_SECRET"];
   const missing = required.filter((k) => !env[k]);
   if (missing.length > 0) {
-    throw new Error(`Missing required environment variables for production: ${missing.join(", ")}`);
+    throw new Error(
+      `Missing required environment variables for production: ${missing.join(", ")}`,
+    );
   }
 
   if (env.JWT_SECRET === "nexos-dev-secret") {
-    throw new Error("JWT_SECRET must be set to a secure value in production (SESSION_SECRET will be used as fallback)");
+    throw new Error(
+      "JWT_SECRET must be set to a secure value in production (SESSION_SECRET will be used as fallback)",
+    );
+  }
+  if (!env.ALLOWED_ORIGINS.trim()) {
+    throw new Error(
+      "ALLOWED_ORIGINS must contain an explicit origin allowlist in production",
+    );
   }
 }

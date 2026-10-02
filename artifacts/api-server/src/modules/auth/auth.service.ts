@@ -13,10 +13,29 @@ import type { Logger } from "pino";
 
 function generateReferralCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  return Array.from(
+    { length: 6 },
+    () => chars[Math.floor(Math.random() * chars.length)],
+  ).join("");
 }
 
 const REFERRAL_BONUS_CREDITS = 50;
+
+function isUniqueViolation(error: unknown): boolean {
+  // Drizzle may expose the PostgreSQL error directly or wrap it in `cause`.
+  // Walk the short cause chain so concurrent registrations consistently map
+  // the database constraint violation to HTTP 409 instead of leaking a 500.
+  let current: unknown = error;
+  const visited = new Set<object>();
+  while (typeof current === "object" && current !== null && !visited.has(current)) {
+    visited.add(current);
+    if ("code" in current && (current as { code?: unknown }).code === "23505") {
+      return true;
+    }
+    current = "cause" in current ? (current as { cause?: unknown }).cause : undefined;
+  }
+  return false;
+}
 
 export interface TokenPayload {
   userId: string;
@@ -51,14 +70,23 @@ export function signAccess(payload: TokenPayload): string {
   });
 }
 
-function signRefresh(payload: Pick<TokenPayload, "userId" | "workspaceId">): string {
+function signRefresh(
+  payload: Pick<TokenPayload, "userId" | "workspaceId">,
+): string {
   return jwt.sign(payload, env.JWT_REFRESH_SECRET, {
     expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions["expiresIn"],
   });
 }
 
-export function issueTokens(user: { id: string; email: string }, workspaceId: string): AuthTokens {
-  const payload: TokenPayload = { userId: user.id, workspaceId, email: user.email };
+export function issueTokens(
+  user: { id: string; email: string },
+  workspaceId: string,
+): AuthTokens {
+  const payload: TokenPayload = {
+    userId: user.id,
+    workspaceId,
+    email: user.email,
+  };
   return {
     accessToken: signAccess(payload),
     refreshToken: signRefresh({ userId: user.id, workspaceId }),
@@ -70,62 +98,88 @@ export async function registerUser(
   input: RegisterInput,
   log: Logger,
 ): Promise<AuthTokens> {
-  const existing = await db
-    .select({ id: usersTable.id })
-    .from(usersTable)
-    .where(eq(usersTable.email, input.email.toLowerCase()))
-    .limit(1);
-
-  if (existing.length > 0) {
-    throw new ConflictError("Email already registered");
-  }
-
-  const requestedSlug = input.planSlug === "agency" ? "agency" : "solo";
-  const requestedPlan = await db
-    .select()
-    .from(plansTable)
-    .where(eq(plansTable.slug, requestedSlug))
-    .limit(1);
-
-  const selectedPlan = requestedPlan.length > 0
-    ? requestedPlan
-    : await db.select().from(plansTable).where(eq(plansTable.slug, "solo")).limit(1);
-
-  if (selectedPlan.length === 0) {
-    throw new NotFoundError("Default plan");
-  }
-
+  const normalizedEmail = input.email.toLowerCase();
   const passwordHash = await bcrypt.hash(input.password, 12);
 
-  const [user] = await db
-    .insert(usersTable)
-    .values({
-      email: input.email.toLowerCase(),
-      passwordHash,
-      name: input.name,
-      phone: input.phone ?? null,
-      locale: input.locale ?? "pt-BR",
-    })
-    .returning();
+  // User and workspace are one aggregate for authentication purposes. Keeping
+  // both inserts in the same transaction prevents an email from becoming
+  // permanently unusable when workspace creation fails midway through signup.
+  let registration: Awaited<ReturnType<typeof createRegistration>>;
+  try {
+    registration = await createRegistration();
+  } catch (error) {
+    // The pre-check gives a friendly fast path, while the unique constraint is
+    // still authoritative for concurrent requests with the same email.
+    if (isUniqueViolation(error)) {
+      throw new ConflictError("Email already registered");
+    }
+    throw error;
+  }
+  const { user, workspace } = registration;
 
-  const slug = `${input.name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
-  const myReferralCode = generateReferralCode();
+  async function createRegistration() {
+    return db.transaction(async (tx) => {
+      const existing = await tx
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.email, normalizedEmail))
+        .limit(1);
 
-  const [workspace] = await db
-    .insert(workspacesTable)
-    .values({
-      ownerId: user.id,
-      planId: selectedPlan[0].id,
-      name: `${input.name}'s Workspace`,
-      slug,
-      creditsBalance: selectedPlan[0].creditsMonthly,
-      settings: {
-        referralCode: myReferralCode,
-        referralCount: 0,
-        ...(input.referralCode ? { referredBy: input.referralCode } : {}),
-      },
-    })
-    .returning();
+      if (existing.length > 0) {
+        throw new ConflictError("Email already registered");
+      }
+
+      const requestedSlug = input.planSlug === "agency" ? "agency" : "solo";
+      const requestedPlan = await tx
+        .select()
+        .from(plansTable)
+        .where(eq(plansTable.slug, requestedSlug))
+        .limit(1);
+      const selectedPlan =
+        requestedPlan.length > 0
+          ? requestedPlan
+          : await tx
+              .select()
+              .from(plansTable)
+              .where(eq(plansTable.slug, "solo"))
+              .limit(1);
+
+      if (selectedPlan.length === 0) {
+        throw new NotFoundError("Default plan");
+      }
+
+      const [createdUser] = await tx
+        .insert(usersTable)
+        .values({
+          email: normalizedEmail,
+          passwordHash,
+          name: input.name,
+          phone: input.phone ?? null,
+          locale: input.locale ?? "pt-BR",
+        })
+        .returning();
+
+      const slug = `${input.name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
+      const myReferralCode = generateReferralCode();
+      const [createdWorkspace] = await tx
+        .insert(workspacesTable)
+        .values({
+          ownerId: createdUser.id,
+          planId: selectedPlan[0].id,
+          name: `${input.name}'s Workspace`,
+          slug,
+          creditsBalance: selectedPlan[0].creditsMonthly,
+          settings: {
+            referralCode: myReferralCode,
+            referralCount: 0,
+            ...(input.referralCode ? { referredBy: input.referralCode } : {}),
+          },
+        })
+        .returning();
+
+      return { user: createdUser, workspace: createdWorkspace };
+    });
+  }
 
   log.info({ userId: user.id, workspaceId: workspace.id }, "User registered");
 
@@ -134,17 +188,28 @@ export async function registerUser(
     setImmediate(async () => {
       try {
         const [referrer] = await db
-          .select({ id: workspacesTable.id, settings: workspacesTable.settings })
+          .select({
+            id: workspacesTable.id,
+            settings: workspacesTable.settings,
+          })
           .from(workspacesTable)
-          .where(sql`${workspacesTable.settings}->>'referralCode' = ${input.referralCode}`)
+          .where(
+            sql`${workspacesTable.settings}->>'referralCode' = ${input.referralCode}`,
+          )
           .limit(1);
 
         if (referrer) {
-          const prevSettings = (referrer.settings as Record<string, unknown>) ?? {};
-          const prevCount = typeof prevSettings.referralCount === "number" ? prevSettings.referralCount : 0;
+          const prevSettings =
+            (referrer.settings as Record<string, unknown>) ?? {};
+          const prevCount =
+            typeof prevSettings.referralCount === "number"
+              ? prevSettings.referralCount
+              : 0;
           await db
             .update(workspacesTable)
-            .set({ settings: { ...prevSettings, referralCount: prevCount + 1 } })
+            .set({
+              settings: { ...prevSettings, referralCount: prevCount + 1 },
+            })
             .where(eq(workspacesTable.id, referrer.id));
 
           await grantCredits(
@@ -155,7 +220,10 @@ export async function registerUser(
             `Bônus de indicação: ${input.name} se cadastrou com seu código`,
           );
 
-          log.info({ referrerId: referrer.id, newUserId: user.id }, "Referral bonus granted");
+          log.info(
+            { referrerId: referrer.id, newUserId: user.id },
+            "Referral bonus granted",
+          );
         }
       } catch (err) {
         log.warn({ err }, "Failed to process referral bonus — non-blocking");
@@ -188,7 +256,12 @@ export async function loginUser(
   const [workspace] = await db
     .select()
     .from(workspacesTable)
-    .where(and(eq(workspacesTable.ownerId, user.id), eq(workspacesTable.status, "active")))
+    .where(
+      and(
+        eq(workspacesTable.ownerId, user.id),
+        eq(workspacesTable.status, "active"),
+      ),
+    )
     .orderBy(asc(workspacesTable.createdAt), asc(workspacesTable.id))
     .limit(1);
 
@@ -200,18 +273,35 @@ export async function loginUser(
 
   // Auto-guarantee unlimited credits for founder/admin accounts on every login (idempotent).
   // This is the authoritative gate — does not depend on frontend effects.
-  const ADMIN_EMAILS = new Set(["admin@nexos.ai", "founder@nexos.ai", "admin@agencianexos.vip", "founder@agencianexos.vip"]);
+  const ADMIN_EMAILS = new Set([
+    "admin@nexos.ai",
+    "founder@nexos.ai",
+    "admin@agencianexos.vip",
+    "founder@agencianexos.vip",
+  ]);
   if (ADMIN_EMAILS.has(user.email)) {
-    const currentSettings = (workspace.settings ?? {}) as Record<string, unknown>;
+    const currentSettings = (workspace.settings ?? {}) as Record<
+      string,
+      unknown
+    >;
     if (!currentSettings["unlimitedCredits"]) {
       setImmediate(async () => {
         try {
-          await db.update(workspacesTable)
-            .set({ settings: { ...currentSettings, unlimitedCredits: true } as any })
+          await db
+            .update(workspacesTable)
+            .set({
+              settings: { ...currentSettings, unlimitedCredits: true } as any,
+            })
             .where(eq(workspacesTable.id, workspace.id));
-          log.info({ userId: user.id, workspaceId: workspace.id }, "Unlimited credits auto-set for admin on login");
+          log.info(
+            { userId: user.id, workspaceId: workspace.id },
+            "Unlimited credits auto-set for admin on login",
+          );
         } catch (e) {
-          log.warn({ err: e }, "Failed to auto-set unlimited credits for admin");
+          log.warn(
+            { err: e },
+            "Failed to auto-set unlimited credits for admin",
+          );
         }
       });
     }
@@ -227,7 +317,8 @@ export async function refreshTokens(
   let decoded: { userId: string; workspaceId?: string };
   try {
     decoded = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as {
-      userId: string; workspaceId?: string;
+      userId: string;
+      workspaceId?: string;
     };
   } catch {
     throw new UnauthorizedError("Invalid refresh token");
@@ -246,7 +337,12 @@ export async function refreshTokens(
   const ownedWorkspaces = await db
     .select()
     .from(workspacesTable)
-    .where(and(eq(workspacesTable.ownerId, user.id), eq(workspacesTable.status, "active")))
+    .where(
+      and(
+        eq(workspacesTable.ownerId, user.id),
+        eq(workspacesTable.status, "active"),
+      ),
+    )
     .orderBy(asc(workspacesTable.createdAt), asc(workspacesTable.id));
   // Legacy refresh tokens had no workspace claim. Their deterministic fallback
   // is the oldest active owned workspace. Scoped tokens never silently move.

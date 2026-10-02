@@ -18,7 +18,11 @@ import { academyLeadsTable, academyFunnelEmailsTable } from "@workspace/db";
 import { env } from "../../lib/env.js";
 import { logger } from "../../lib/logger.js";
 
-async function sendViaGmailFunnel(opts: { to: string; subject: string; html: string }): Promise<boolean> {
+async function sendViaGmailFunnel(opts: {
+  to: string;
+  subject: string;
+  html: string;
+}): Promise<boolean> {
   if (!env.GMAIL_USER || !env.GMAIL_APP_PASSWORD) return false;
   try {
     const transport = nodemailer.createTransport({
@@ -39,12 +43,36 @@ async function sendViaGmailFunnel(opts: { to: string; subject: string; html: str
 }
 
 // Day offset for each step (from enrolledAt)
-export const FUNNEL_STEPS: { step: number; dayOffset: number; subject: string }[] = [
-  { step: 0, dayOffset: 0,  subject: "Seu guia chegou 🎁 — e uma coisa importante" },
-  { step: 1, dayOffset: 2,  subject: "O erro que destrói 90% dos lançamentos antes de começar" },
-  { step: 2, dayOffset: 4,  subject: "Como gerar R$100k em 7 dias (mesmo sem lista)" },
-  { step: 3, dayOffset: 7,  subject: "A Metodologia NexOS — aberta para você hoje" },
-  { step: 4, dayOffset: 10, subject: "Último aviso — esta oferta fecha à meia-noite" },
+export const FUNNEL_STEPS: {
+  step: number;
+  dayOffset: number;
+  subject: string;
+}[] = [
+  {
+    step: 0,
+    dayOffset: 0,
+    subject: "Seu guia chegou 🎁 — e uma coisa importante",
+  },
+  {
+    step: 1,
+    dayOffset: 2,
+    subject: "O erro que destrói 90% dos lançamentos antes de começar",
+  },
+  {
+    step: 2,
+    dayOffset: 4,
+    subject: "Como gerar R$100k em 7 dias (mesmo sem lista)",
+  },
+  {
+    step: 3,
+    dayOffset: 7,
+    subject: "A Metodologia NexOS — aberta para você hoje",
+  },
+  {
+    step: 4,
+    dayOffset: 10,
+    subject: "Último aviso — esta oferta fecha à meia-noite",
+  },
 ];
 
 const PORTAL_URL = `${env.APP_URL}/nexos-academy/`;
@@ -158,21 +186,30 @@ function buildEmailHtml(step: number, firstName: string): string {
 
 // ─── Enroll a lead in the funnel ─────────────────────────────────────────────
 
-export async function enrollLeadInFunnel(leadId: string, enrolledAt: Date = new Date()): Promise<void> {
+export async function enrollLeadInFunnel(
+  leadId: string,
+  enrolledAt: Date = new Date(),
+): Promise<void> {
   // Mark lead as enrolled
-  await db.update(academyLeadsTable)
+  await db
+    .update(academyLeadsTable)
     .set({ funnelEnrolledAt: enrolledAt, funnelStep: 0 })
     .where(eq(academyLeadsTable.id, leadId));
 
   // Schedule all 5 emails
   const inserts = FUNNEL_STEPS.map(({ step, dayOffset }) => {
-    const scheduledAt = new Date(enrolledAt.getTime() + dayOffset * 24 * 60 * 60 * 1000);
+    const scheduledAt = new Date(
+      enrolledAt.getTime() + dayOffset * 24 * 60 * 60 * 1000,
+    );
     return { leadId, step, scheduledAt, status: "scheduled" as const };
   });
 
   await db.insert(academyFunnelEmailsTable).values(inserts);
 
-  logger.info({ leadId, steps: inserts.length }, "academy-funnel: lead enrolled");
+  logger.info(
+    { leadId, steps: inserts.length },
+    "academy-funnel: lead enrolled",
+  );
 }
 
 // ─── Send a single funnel email via Resend ───────────────────────────────────
@@ -183,7 +220,7 @@ async function sendFunnelEmail(opts: {
   step: number;
   funnelEmailId: string;
 }): Promise<void> {
-  const stepMeta = FUNNEL_STEPS.find(s => s.step === opts.step);
+  const stepMeta = FUNNEL_STEPS.find((s) => s.step === opts.step);
   if (!stepMeta) return;
 
   const firstName = (opts.name ?? "").split(" ")[0] || "";
@@ -196,9 +233,10 @@ async function sendFunnelEmail(opts: {
   if (!useResend && !useGmail) {
     logger.info(
       { email: opts.email, step: opts.step, subject: stepMeta.subject },
-      "academy-funnel: [NO EMAIL PROVIDER] would send email — configure RESEND_API_KEY or GMAIL_USER+GMAIL_APP_PASSWORD"
+      "academy-funnel: [NO EMAIL PROVIDER] would send email — configure RESEND_API_KEY or GMAIL_USER+GMAIL_APP_PASSWORD",
     );
-    await db.update(academyFunnelEmailsTable)
+    await db
+      .update(academyFunnelEmailsTable)
       .set({ status: "sent", sentAt: new Date(), resendId: "dev-no-provider" })
       .where(eq(academyFunnelEmailsTable.id, opts.funnelEmailId));
     return;
@@ -211,7 +249,7 @@ async function sendFunnelEmail(opts: {
       const resp = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+          Authorization: `Bearer ${env.RESEND_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -227,19 +265,32 @@ async function sendFunnelEmail(opts: {
         throw new Error(`Resend error ${resp.status}: ${text}`);
       }
 
-      const data = await resp.json() as { id?: string };
-      await db.update(academyFunnelEmailsTable)
+      const data = (await resp.json()) as { id?: string };
+      await db
+        .update(academyFunnelEmailsTable)
         .set({ status: "sent", sentAt: new Date(), resendId: data.id ?? null })
         .where(eq(academyFunnelEmailsTable.id, opts.funnelEmailId));
-      logger.info({ email: opts.email, step: opts.step, resendId: data.id, via: "resend" }, "academy-funnel: email sent via Resend");
+      logger.info(
+        {
+          email: opts.email,
+          step: opts.step,
+          resendId: data.id,
+          via: "resend",
+        },
+        "academy-funnel: email sent via Resend",
+      );
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    await db.update(academyFunnelEmailsTable)
+    await db
+      .update(academyFunnelEmailsTable)
       .set({ status: "failed", errorMessage: msg })
       .where(eq(academyFunnelEmailsTable.id, opts.funnelEmailId));
 
-    logger.error({ email: opts.email, step: opts.step, err: msg }, "academy-funnel: email send failed");
+    logger.error(
+      { email: opts.email, step: opts.step, err: msg },
+      "academy-funnel: email send failed",
+    );
   }
 }
 
@@ -259,8 +310,8 @@ export async function sendWelcomeEmailNow(leadId: string): Promise<void> {
       and(
         eq(academyFunnelEmailsTable.leadId, leadId),
         eq(academyFunnelEmailsTable.step, 0),
-        ne(academyFunnelEmailsTable.status, "sent")
-      )
+        ne(academyFunnelEmailsTable.status, "sent"),
+      ),
     )
     .limit(1);
 
@@ -274,7 +325,8 @@ export async function sendWelcomeEmailNow(leadId: string): Promise<void> {
     funnelEmailId: row.id,
   });
 
-  await db.update(academyLeadsTable)
+  await db
+    .update(academyLeadsTable)
     .set({ funnelStep: 0 })
     .where(eq(academyLeadsTable.id, leadId));
 }
@@ -296,23 +348,30 @@ export async function runFunnelSchedulerTick(): Promise<void> {
       convertedAt: academyLeadsTable.convertedAt,
     })
     .from(academyFunnelEmailsTable)
-    .innerJoin(academyLeadsTable, eq(academyFunnelEmailsTable.leadId, academyLeadsTable.id))
+    .innerJoin(
+      academyLeadsTable,
+      eq(academyFunnelEmailsTable.leadId, academyLeadsTable.id),
+    )
     .where(
       and(
         eq(academyFunnelEmailsTable.status, "scheduled"),
-        lte(academyFunnelEmailsTable.scheduledAt, now)
-      )
+        lte(academyFunnelEmailsTable.scheduledAt, now),
+      ),
     )
     .limit(50);
 
   if (due.length === 0) return;
 
-  logger.info({ count: due.length }, "academy-funnel: scheduler tick — processing due emails");
+  logger.info(
+    { count: due.length },
+    "academy-funnel: scheduler tick — processing due emails",
+  );
 
   for (const row of due) {
     // Skip unsubscribed leads
     if (row.unsubscribedAt) {
-      await db.update(academyFunnelEmailsTable)
+      await db
+        .update(academyFunnelEmailsTable)
         .set({ status: "skipped", errorMessage: "unsubscribed" })
         .where(eq(academyFunnelEmailsTable.id, row.funnelEmailId));
       continue;
@@ -320,7 +379,8 @@ export async function runFunnelSchedulerTick(): Promise<void> {
 
     // Skip converted leads for sales emails (steps 3+)
     if (row.convertedAt && row.step >= 3) {
-      await db.update(academyFunnelEmailsTable)
+      await db
+        .update(academyFunnelEmailsTable)
         .set({ status: "skipped", errorMessage: "already_converted" })
         .where(eq(academyFunnelEmailsTable.id, row.funnelEmailId));
       continue;
@@ -334,7 +394,8 @@ export async function runFunnelSchedulerTick(): Promise<void> {
     });
 
     // Update lead's current funnel step
-    await db.update(academyLeadsTable)
+    await db
+      .update(academyLeadsTable)
       .set({ funnelStep: row.step })
       .where(eq(academyLeadsTable.id, row.leadId));
   }
@@ -343,26 +404,28 @@ export async function runFunnelSchedulerTick(): Promise<void> {
 // ─── Mark a lead as converted (purchased) ────────────────────────────────────
 
 export async function markLeadConverted(email: string): Promise<void> {
-  await db.update(academyLeadsTable)
+  await db
+    .update(academyLeadsTable)
     .set({ convertedAt: new Date() })
     .where(
       and(
         eq(academyLeadsTable.email, email.toLowerCase()),
-        isNull(academyLeadsTable.convertedAt)
-      )
+        isNull(academyLeadsTable.convertedAt),
+      ),
     );
 }
 
 // ─── Mark a lead as unsubscribed ─────────────────────────────────────────────
 
 export async function markLeadUnsubscribed(email: string): Promise<void> {
-  await db.update(academyLeadsTable)
+  await db
+    .update(academyLeadsTable)
     .set({ unsubscribedAt: new Date() })
     .where(
       and(
         eq(academyLeadsTable.email, email.toLowerCase()),
-        isNull(academyLeadsTable.unsubscribedAt)
-      )
+        isNull(academyLeadsTable.unsubscribedAt),
+      ),
     );
 }
 
@@ -372,33 +435,45 @@ export async function getFunnelStats(): Promise<{
   totalEnrolled: number;
   totalConverted: number;
   totalUnsubscribed: number;
-  byStep: { step: number; subject: string; dayOffset: number; sent: number; failed: number; scheduled: number; skipped: number }[];
+  byStep: {
+    step: number;
+    subject: string;
+    dayOffset: number;
+    sent: number;
+    failed: number;
+    scheduled: number;
+    skipped: number;
+  }[];
 }> {
   // Leads counts
-  const leads = await db.select({
-    id: academyLeadsTable.id,
-    convertedAt: academyLeadsTable.convertedAt,
-    unsubscribedAt: academyLeadsTable.unsubscribedAt,
-    funnelEnrolledAt: academyLeadsTable.funnelEnrolledAt,
-  }).from(academyLeadsTable);
+  const leads = await db
+    .select({
+      id: academyLeadsTable.id,
+      convertedAt: academyLeadsTable.convertedAt,
+      unsubscribedAt: academyLeadsTable.unsubscribedAt,
+      funnelEnrolledAt: academyLeadsTable.funnelEnrolledAt,
+    })
+    .from(academyLeadsTable);
 
-  const totalEnrolled = leads.filter(l => l.funnelEnrolledAt !== null).length;
-  const totalConverted = leads.filter(l => l.convertedAt !== null).length;
-  const totalUnsubscribed = leads.filter(l => l.unsubscribedAt !== null).length;
+  const totalEnrolled = leads.filter((l) => l.funnelEnrolledAt !== null).length;
+  const totalConverted = leads.filter((l) => l.convertedAt !== null).length;
+  const totalUnsubscribed = leads.filter(
+    (l) => l.unsubscribedAt !== null,
+  ).length;
 
   // Emails per step
   const emails = await db.select().from(academyFunnelEmailsTable);
 
   const byStep = FUNNEL_STEPS.map(({ step, dayOffset, subject }) => {
-    const stepEmails = emails.filter(e => e.step === step);
+    const stepEmails = emails.filter((e) => e.step === step);
     return {
       step,
       subject,
       dayOffset,
-      sent: stepEmails.filter(e => e.status === "sent").length,
-      failed: stepEmails.filter(e => e.status === "failed").length,
-      scheduled: stepEmails.filter(e => e.status === "scheduled").length,
-      skipped: stepEmails.filter(e => e.status === "skipped").length,
+      sent: stepEmails.filter((e) => e.status === "sent").length,
+      failed: stepEmails.filter((e) => e.status === "failed").length,
+      scheduled: stepEmails.filter((e) => e.status === "scheduled").length,
+      skipped: stepEmails.filter((e) => e.status === "skipped").length,
     };
   });
 
@@ -408,6 +483,7 @@ export async function getFunnelStats(): Promise<{
 // ─── Start the funnel scheduler (called once on server boot) ─────────────────
 
 let schedulerStarted = false;
+let schedulerTimer: NodeJS.Timeout | null = null;
 
 export function startFunnelScheduler(): void {
   if (schedulerStarted) return;
@@ -415,13 +491,21 @@ export function startFunnelScheduler(): void {
 
   // Run immediately on boot, then every hour
   const tick = () => {
-    runFunnelSchedulerTick().catch(err => {
+    runFunnelSchedulerTick().catch((err) => {
       logger.error({ err }, "academy-funnel: scheduler tick error");
     });
   };
 
   tick();
-  setInterval(tick, 60 * 60 * 1000); // every hour
+  schedulerTimer = setInterval(tick, 60 * 60 * 1000); // every hour
 
   logger.info("academy-funnel: scheduler started (hourly tick)");
+}
+
+export function stopFunnelScheduler(): void {
+  if (schedulerTimer) {
+    clearInterval(schedulerTimer);
+    schedulerTimer = null;
+  }
+  schedulerStarted = false;
 }

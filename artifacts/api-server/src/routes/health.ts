@@ -134,6 +134,20 @@ export async function collectOperationalHealth() {
   };
 }
 
+router.get("/livez", (_req, res): void => {
+  res.status(200).json({
+    status: "alive",
+    startedAt,
+    uptime: Math.floor(process.uptime()),
+  });
+});
+
+router.get("/readyz", async (_req, res): Promise<void> => {
+  const health = await collectOperationalHealth();
+  const ready = health.statusCode < 500;
+  res.status(ready ? 200 : 503).json({ status: ready ? "ready" : "not_ready" });
+});
+
 router.get("/healthz", async (_req, res): Promise<void> => {
   const health = await collectOperationalHealth();
   const { statusCode, ...body } = health;

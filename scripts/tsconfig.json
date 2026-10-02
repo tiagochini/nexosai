@@ -2,11 +2,9 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
+    "moduleDetection": "force",
     "types": ["node"]
   },
   "include": ["src"],
-  "references": [
-    { "path": "../lib/db" }
-  ]
+  "references": [{ "path": "../lib/db" }]
 }

@@ -11,8 +11,12 @@
     "push": "drizzle-kit push --config ./drizzle.config.ts",
     "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
     "migrate:tracked": "node scripts/apply-migrations.mjs",
-    "seed:plans": "/home/runner/workspace/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/cli.mjs src/seed-plans.ts",
-    "seed:launches": "/home/runner/workspace/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/cli.mjs src/seed-public-launches.ts"
+    "bootstrap:check": "node scripts/bootstrap-empty-database.mjs",
+    "bootstrap:empty": "node scripts/bootstrap-empty-database.mjs --execute",
+    "verify": "node scripts/verify-database.mjs",
+    "test:migration-policy": "node --test scripts/migration-policy.test.mjs",
+    "seed:plans": "tsx src/seed-plans.ts",
+    "seed:launches": "tsx src/seed-public-launches.ts"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",
@@ -23,6 +27,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/pg": "^8.18.0",
-    "drizzle-kit": "^0.31.9"
+    "drizzle-kit": "^0.31.9",
+    "tsx": "catalog:"
   }
 }

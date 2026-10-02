@@ -7,11 +7,11 @@ import json, shutil, subprocess, sys
 from pathlib import Path
 
 def run(args):
-    if not shutil.which("ffmpeg"):
-        raise RuntimeError("FFmpeg is unavailable")
     operation, source, target = args.operation, Path(args.source), Path(args.target)
     if operation not in ("upscale", "qc_extract", "timeline_render"):
         raise RuntimeError("operation is not deterministic/local")
+    if not shutil.which("ffmpeg"):
+        raise RuntimeError("FFmpeg is unavailable")
     if not source.is_file(): raise RuntimeError("source object was not mounted locally")
     target.parent.mkdir(parents=True, exist_ok=True)
     if operation == "upscale":

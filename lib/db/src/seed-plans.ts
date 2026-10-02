@@ -106,6 +106,8 @@ async function seed() {
           priceOnboarding: sql`excluded.price_onboarding`,
           creditsMonthly: sql`excluded.credits_monthly`,
           maxCampaigns: sql`excluded.max_campaigns`,
+          maxVideosPerCampaign: sql`excluded.max_videos_per_campaign`,
+          maxDomains: sql`excluded.max_domains`,
           maxWorkspaces: sql`excluded.max_workspaces`,
           allowedSocialNetworks: sql`excluded.allowed_social_networks`,
           maxAccountsPerNetwork: sql`excluded.max_accounts_per_network`,

@@ -14,7 +14,7 @@ function readEnv(name) {
 
 const sharedEnv = {
   ...process.env,
-  ...readEnv(".env.exemple"),
+  ...readEnv(".env"),
   ...readEnv(".env.local"),
 };
 

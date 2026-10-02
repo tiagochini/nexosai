@@ -28,7 +28,7 @@ pnpm run dev:meta-gateway
 ## Túnel HTTPS
 
 O ngrok está instalado, mas exige uma conta e um authtoken local. Cadastre o
-token no perfil do ngrok, nunca em `.env`, `.env.exemple` ou no Git:
+token no perfil do ngrok, nunca em arquivos de ambiente do projeto ou no Git:
 
 ```powershell
 ngrok config add-authtoken SEU_TOKEN

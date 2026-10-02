@@ -1,82 +1,91 @@
 import { Switch, Route, Redirect } from "wouter";
+import { lazy, Suspense } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { AppLayout } from "@/components/layout/app-layout";
 import { useAuth } from "@/lib/auth";
 import { AccessWall } from "@/components/access-wall";
 import { hasSeenWelcome } from "@/pages/welcome/index";
-import Welcome from "@/pages/welcome/index";
-import WarRoom from "@/pages/war-room/index";
-import Dashboard from "@/pages/dashboard";
-import NewCampaign from "@/pages/campaigns/new";
-import CampaignDetail from "@/pages/campaigns/detail";
-import CampaignIntake from "@/pages/campaigns/intake";
-import ControlRoom from "@/pages/campaigns/control-room";
-import SequencesList from "@/pages/sequences/index";
-import NewSequence from "@/pages/sequences/new";
-import SequenceDetail from "@/pages/sequences/detail";
-import SequenceCalendar from "@/pages/sequences/calendar";
-import SequenceToday from "@/pages/sequences/today";
-import SequenceCopyStudio from "@/pages/sequences/copy";
-import SequenceAnalytics from "@/pages/sequences/analytics";
-import SequenceContacts from "@/pages/sequences/contacts";
-import Onboarding from "@/pages/onboarding";
-import CampaignsList from "@/pages/campaigns/list";
-import AgentsHub from "@/pages/agents/index";
-import AgentChat from "@/pages/agents/chat";
-import SocialPage from "@/pages/social/index";
-import GroupPlannerPage from "@/pages/social/group-planner";
-import SocialModerationPage from "@/pages/social/moderation";
-import AgencyClientsPage from "@/pages/agency/clients";
-import AgencyProfilesPage from "@/pages/agency/profiles";
-import AdminPage from "@/pages/admin/index";
-import AuditLogsPage from "@/pages/admin/audit-logs";
-import OperationsPage from "@/pages/admin/operations";
-import NexosLaunchRoom from "@/pages/admin/nexos-launch";
-import VslsPage from "@/pages/vsls/index";
-import RevenuePage from "@/pages/revenue/index";
-import ContentApproval from "@/pages/campaigns/content";
-import CreativesPage from "@/pages/campaigns/creatives";
-import CampaignStrategyPage from "@/pages/campaigns/strategy";
-import AffiliatePage from "@/pages/affiliate/index";
-import SelfProofPage from "@/pages/self-proof/index";
-import CompliancePage from "@/pages/compliance/index";
-import SettingsPage from "@/pages/settings";
-import CreditsPage from "@/pages/credits";
-import BillingPage from "@/pages/billing/index";
-import MemoryPage from "@/pages/memory/index";
-import PreparacaoPage from "@/pages/preparacao";
-import AberturaPage from "@/pages/abertura";
-import ConversaoPage from "@/pages/conversao";
-import CheckoutPage from "@/pages/checkout";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
-
-import IntegracoesPage from "@/pages/integracoes/index";
-import PipelinePage from "@/pages/pipeline/index";
-import ProdutosPage from "@/pages/produtos/index";
-import ComprarPage from "@/pages/comprar/index";
-import VideoEditorPage from "@/pages/video-editor/index";
-import SiteBuilderPage from "@/pages/site-builder/index";
-import AtendimentoPage from "@/pages/atendimento/index";
-import MarketIntelPage from "@/pages/market-intel/index";
-import PresencePage from "@/pages/presence/index";
-import IntakeHub from "@/pages/intake/index";
-import CloneDigitalPage from "@/pages/clone-digital/index";
-import VideoProductionPage from "@/pages/video-production/index";
-import FilmingGuide from "@/pages/video-production/filming-guide";
-import DirectorGuide from "@/pages/video-production/director-guide";
-import LaunchRoom from "@/pages/launch-room/index";
-import LauncherDashboard from "@/pages/launcher/index";
-import RecordingsPage from "@/pages/recordings/index";
-import LeadCapturePage from "@/pages/c/index";
-import PaidMediaPage from "@/pages/paid-media/index";
-import InfraestruturaPage from "@/pages/infraestrutura/index";
-import LifecyclePage from "@/pages/lifecycle/index";
 import NotFound from "@/pages/not-found";
 import InstitucionalPage from "@/pages/institucional/index";
-import VideoDiarioPage from "@/pages/video-diario/index";
 import { ErrorBoundary } from "@/components/error-boundary";
+
+const Welcome = lazy(() => import("@/pages/welcome/index"));
+const WarRoom = lazy(() => import("@/pages/war-room/index"));
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const NewCampaign = lazy(() => import("@/pages/campaigns/new"));
+const CampaignDetail = lazy(() => import("@/pages/campaigns/detail"));
+const CampaignIntake = lazy(() => import("@/pages/campaigns/intake"));
+const ControlRoom = lazy(() => import("@/pages/campaigns/control-room"));
+const SequencesList = lazy(() => import("@/pages/sequences/index"));
+const NewSequence = lazy(() => import("@/pages/sequences/new"));
+const SequenceDetail = lazy(() => import("@/pages/sequences/detail"));
+const SequenceCalendar = lazy(() => import("@/pages/sequences/calendar"));
+const SequenceToday = lazy(() => import("@/pages/sequences/today"));
+const SequenceCopyStudio = lazy(() => import("@/pages/sequences/copy"));
+const SequenceAnalytics = lazy(() => import("@/pages/sequences/analytics"));
+const SequenceContacts = lazy(() => import("@/pages/sequences/contacts"));
+const Onboarding = lazy(() => import("@/pages/onboarding"));
+const CampaignsList = lazy(() => import("@/pages/campaigns/list"));
+const AgentsHub = lazy(() => import("@/pages/agents/index"));
+const AgentChat = lazy(() => import("@/pages/agents/chat"));
+const SocialPage = lazy(() => import("@/pages/social/index"));
+const GroupPlannerPage = lazy(() => import("@/pages/social/group-planner"));
+const SocialModerationPage = lazy(() => import("@/pages/social/moderation"));
+const AgencyClientsPage = lazy(() => import("@/pages/agency/clients"));
+const AgencyProfilesPage = lazy(() => import("@/pages/agency/profiles"));
+const AdminPage = lazy(() => import("@/pages/admin/index"));
+const AuditLogsPage = lazy(() => import("@/pages/admin/audit-logs"));
+const OperationsPage = lazy(() => import("@/pages/admin/operations"));
+const NexosLaunchRoom = lazy(() => import("@/pages/admin/nexos-launch"));
+const VslsPage = lazy(() => import("@/pages/vsls/index"));
+const RevenuePage = lazy(() => import("@/pages/revenue/index"));
+const ContentApproval = lazy(() => import("@/pages/campaigns/content"));
+const CreativesPage = lazy(() => import("@/pages/campaigns/creatives"));
+const CampaignStrategyPage = lazy(() => import("@/pages/campaigns/strategy"));
+const AffiliatePage = lazy(() => import("@/pages/affiliate/index"));
+const SelfProofPage = lazy(() => import("@/pages/self-proof/index"));
+const CompliancePage = lazy(() => import("@/pages/compliance/index"));
+const SettingsPage = lazy(() => import("@/pages/settings"));
+const CreditsPage = lazy(() => import("@/pages/credits"));
+const BillingPage = lazy(() => import("@/pages/billing/index"));
+const MemoryPage = lazy(() => import("@/pages/memory/index"));
+const PreparacaoPage = lazy(() => import("@/pages/preparacao"));
+const AberturaPage = lazy(() => import("@/pages/abertura"));
+const ConversaoPage = lazy(() => import("@/pages/conversao"));
+const CheckoutPage = lazy(() => import("@/pages/checkout"));
+const IntegracoesPage = lazy(() => import("@/pages/integracoes/index"));
+const PipelinePage = lazy(() => import("@/pages/pipeline/index"));
+const ProdutosPage = lazy(() => import("@/pages/produtos/index"));
+const ComprarPage = lazy(() => import("@/pages/comprar/index"));
+const VideoEditorPage = lazy(() => import("@/pages/video-editor/index"));
+const SiteBuilderPage = lazy(() => import("@/pages/site-builder/index"));
+const AtendimentoPage = lazy(() => import("@/pages/atendimento/index"));
+const MarketIntelPage = lazy(() => import("@/pages/market-intel/index"));
+const PresencePage = lazy(() => import("@/pages/presence/index"));
+const IntakeHub = lazy(() => import("@/pages/intake/index"));
+const CloneDigitalPage = lazy(() => import("@/pages/clone-digital/index"));
+const VideoProductionPage = lazy(() => import("@/pages/video-production/index"));
+const FilmingGuide = lazy(() => import("@/pages/video-production/filming-guide"));
+const DirectorGuide = lazy(() => import("@/pages/video-production/director-guide"));
+const LaunchRoom = lazy(() => import("@/pages/launch-room/index"));
+const LauncherDashboard = lazy(() => import("@/pages/launcher/index"));
+const RecordingsPage = lazy(() => import("@/pages/recordings/index"));
+const LeadCapturePage = lazy(() => import("@/pages/c/index"));
+const PaidMediaPage = lazy(() => import("@/pages/paid-media/index"));
+const InfraestruturaPage = lazy(() => import("@/pages/infraestrutura/index"));
+const LifecyclePage = lazy(() => import("@/pages/lifecycle/index"));
+const VideoDiarioPage = lazy(() => import("@/pages/video-diario/index"));
+
+function RouteFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token, isAdmin } = useAuth();
@@ -143,6 +152,7 @@ function WelcomeRoute() {
 export default function AppRoutes() {
   return (
     <ErrorBoundary>
+    <Suspense fallback={<RouteFallback />}>
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
@@ -436,6 +446,7 @@ export default function AppRoutes() {
 
       <Route component={NotFound} />
     </Switch>
+    </Suspense>
     </ErrorBoundary>
   );
 }
