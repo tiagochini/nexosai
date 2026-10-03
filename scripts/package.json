@@ -37,7 +37,6 @@
     "@types/pdfkit": "^0.17.6",
     "@workspace/db": "workspace:*",
     "drizzle-orm": "catalog:",
-    "html-pdf-node": "^1.0.8",
     "pdfkit": "^0.18.0",
     "pdfmake": "^0.3.11",
     "playwright-core": "^1.61.0",

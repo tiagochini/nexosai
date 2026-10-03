@@ -27,7 +27,7 @@ const UPLOAD_DIR = path.join(VIDEO_EDITOR_TEMP_DIR, "uploads");
 const OUTPUT_DIR = path.join(VIDEO_EDITOR_TEMP_DIR, "outputs");
 const packageUpload = multer({
   storage: multer.diskStorage({ destination: UPLOAD_DIR, filename: (_req, file, cb) => cb(null, `${uuidv4()}${path.extname(file.originalname)}`) }),
-  limits: { fileSize: 2 * 1024 * 1024 * 1024, files: 1 },
+  limits: { fileSize: 2 * 1024 * 1024 * 1024, files: 1, fieldArrayIndexLimit: 100 },
 });
 
 const projectIdSchema = z.string().uuid();
@@ -373,7 +373,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   // 2GB — comfortably covers a 30min 1080p take; duration (not just size) is validated below.
-  limits: { fileSize: 2 * 1024 * 1024 * 1024 },
+  limits: { fileSize: 2 * 1024 * 1024 * 1024, fieldArrayIndexLimit: 100 },
   fileFilter: (_req, file, cb) => {
     if (file.mimetype.startsWith("video/") || file.mimetype.startsWith("audio/")) {
       cb(null, true);

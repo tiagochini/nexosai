@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:dependency-runtime": "tsx src/scripts/test-dependency-runtime.ts",
     "test:auth-sessions-http": "cross-env NODE_ENV=test tsx src/scripts/test-auth-sessions-http.ts",
     "test:auth-cookie-security": "cross-env NODE_ENV=test tsx src/scripts/test-auth-cookie-security.ts",
     "test:conditional-execution-db": "cross-env NODE_ENV=test tsx src/scripts/test-conditional-execution-db.ts",
@@ -101,8 +102,8 @@
     "helmet": "^8.1.0",
     "ioredis": "^5.10.1",
     "jsonwebtoken": "^9.0.3",
-    "multer": "^2.1.1",
-    "nodemailer": "^8.0.7",
+    "multer": "^2.4.0",
+    "nodemailer": "^10.0.11",
     "openai": "^6.37.0",
     "pino": "^9",
     "pino-http": "^10",

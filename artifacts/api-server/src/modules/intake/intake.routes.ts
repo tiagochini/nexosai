@@ -40,7 +40,7 @@ const ALLOWED_AUDIO_VIDEO_MIMES = [
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 100 * 1024 * 1024 },
+  limits: { fileSize: 100 * 1024 * 1024, fieldArrayIndexLimit: 100 },
   fileFilter: (_req, file, cb) => {
     if (
       ALLOWED_AUDIO_VIDEO_MIMES.includes(file.mimetype) ||

@@ -25,6 +25,10 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Audit runtime dependencies (fail on any known severity)
+        run: pnpm run security:audit-dependencies
+      - name: Dependency runtime regression tests
+        run: pnpm --filter @workspace/api-server run test:dependency-runtime
       - name: Credential security regression tests
         run: |
           pnpm --filter @workspace/db run test:token-encryption

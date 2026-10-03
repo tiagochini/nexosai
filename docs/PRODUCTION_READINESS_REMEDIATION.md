@@ -14,8 +14,9 @@ recuperação, concorrência e qualidade de IA.
 - Cadastro transacional, cadastro concorrente, créditos concorrentes, fallback de
   orquestração, checkpoint/retomada e saúde operacional aprovados localmente.
 - As 22 capacidades GLP22 permanecem em 20 `PARTIAL`, 2 `BLOCKED` e 0 `HEALTHY`.
-- A auditoria de dependências encontrou 75 vulnerabilidades no grafo de runtime:
-  39 altas, 31 moderadas e 5 baixas.
+- A auditoria inicial encontrou 75 vulnerabilidades no grafo de runtime:
+  39 altas, 31 moderadas e 5 baixas. Após a correção de dependências,
+  `pnpm audit --prod` não encontrou vulnerabilidades conhecidas em 03/10/2026.
 
 ## 2. Critério de prontidão
 
@@ -50,9 +51,10 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 
 ### P1 — Dependências e CI
 
-- [ ] Atualizar dependências diretas vulneráveis da API.
-- [ ] Substituir ou isolar a cadeia antiga `html-pdf-node`/Puppeteer.
-- [ ] Adicionar `pnpm audit --prod` ao CI com política de severidade.
+- [x] Atualizar dependências diretas vulneráveis da API e transitivas corrigidas.
+- [x] Remover a cadeia antiga `html-pdf-node`/Puppeteer não utilizada.
+- [x] Adicionar `pnpm audit --prod` ao CI, bloqueando qualquer severidade.
+  Evidência: [DEPENDENCY_SECURITY_REMEDIATION.md](./DEPENDENCY_SECURITY_REMEDIATION.md).
 - [ ] Executar testes críticos no CI com PostgreSQL e Redis descartáveis.
 - [x] Executar testes de autenticação, concorrência de cadastro e criptografia
   no CI com PostgreSQL descartável. Redis e demais fluxos continuam pendentes.

@@ -16,8 +16,9 @@ security, recovery, concurrency, and AI quality.
   locally.
 - The 22 GLP22 capabilities remain at 20 `PARTIAL`, 2 `BLOCKED`, and 0
   `HEALTHY`.
-- The dependency audit found 75 vulnerabilities in the runtime graph: 39 high,
-  31 moderate, and 5 low.
+- The initial dependency audit found 75 vulnerabilities in the runtime graph:
+  39 high, 31 moderate, and 5 low. After dependency remediation,
+  `pnpm audit --prod` found no known vulnerabilities on October 3, 2026.
 
 ## 2. Readiness criteria
 
@@ -50,9 +51,10 @@ The system should only be considered ready for open production when:
 
 ### P1 — Dependencies and CI
 
-- [ ] Upgrade vulnerable direct API dependencies.
-- [ ] Replace or isolate the legacy `html-pdf-node`/Puppeteer dependency chain.
-- [ ] Add `pnpm audit --prod` to CI with a severity policy.
+- [x] Upgrade vulnerable direct API dependencies and patched transitives.
+- [x] Remove the unused legacy `html-pdf-node`/Puppeteer dependency chain.
+- [x] Add `pnpm audit --prod` to CI, blocking every severity.
+  Evidence: [DEPENDENCY_SECURITY_REMEDIATION.en.md](./DEPENDENCY_SECURITY_REMEDIATION.en.md).
 - [ ] Run critical tests in CI with disposable PostgreSQL and Redis.
 - [x] Run authentication, concurrent registration, and encryption tests in CI
   with disposable PostgreSQL. Redis and remaining flows are still pending.
