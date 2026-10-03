@@ -37,6 +37,8 @@ node_modules
 /backup.sql
 /*.local.sql
 /attached_assets/secrets.local.txt
+/.tmp/
+/.local-recovery/
 *.sql.gz
 *.dump
 /.sass-cache

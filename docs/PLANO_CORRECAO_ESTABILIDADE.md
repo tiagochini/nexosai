@@ -60,6 +60,15 @@ com backup, revisão e evidências de validação antes da publicação em produ
   reescrita, validação, publicação coordenada e rollback foi documentado.
 - CI de qualidade configurado para instalar com lockfile imutável e executar o
   typecheck e todos os builds em clone Linux limpo.
+- Reescrita de histórico validada em mirror novo do GitHub: 21 commits foram
+  reescritos, dois commits vazios podados, nenhum caminho sensível permaneceu e
+  a árvore não sensível ficou idêntica. Nenhum force-push foi realizado.
+- `git fsck` identificou corrupção em um pack do checkout local; a limpeza final
+  deverá obrigatoriamente partir de clone novo, preservando antes o commit local
+  ainda não publicado sem transportar os blobs sensíveis.
+- Ensaio final reaplicou o commit local em clone novo e reescreveu os 1.455
+  commits alcançáveis; scanner, auditoria histórica e `git fsck` passaram, e o
+  hash da árvore permaneceu exatamente igual antes e depois da limpeza.
 
 Ainda dependem de ação operacional: rotação das credenciais, remoção dos segredos
 do histórico Git e validações em ambiente de homologação com PostgreSQL e Redis

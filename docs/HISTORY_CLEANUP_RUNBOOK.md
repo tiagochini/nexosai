@@ -13,6 +13,8 @@ atual, sem tratar a reescrita como substituta da rotação das credenciais.
 4. Avisar todos os colaboradores de que os clones atuais serão descartados.
 5. Criar um mirror privado e criptografado para recuperação emergencial.
 6. Instalar `git-filter-repo` em uma máquina administrativa isolada.
+7. Executar `git fsck --full --strict`; se houver corrupção, abandonar esse
+   clone e partir de um mirror novo do remoto.
 
 ## Auditoria antes da limpeza
 
@@ -42,6 +44,10 @@ git filter-repo --sensitive-data-removal --invert-paths `
 
 Não adicione `--force` até confirmar que o clone é descartável, está sem mudanças
 locais e possui um mirror de recuperação verificado.
+
+Uma execução isolada deste procedimento foi validada em 02/10/2026. Consulte
+`docs/HISTORY_REWRITE_VALIDATION.md` para as evidências e a ressalva de corrupção
+encontrada no checkout local.
 
 ## Validação antes do push
 
