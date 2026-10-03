@@ -11,6 +11,11 @@ import { AppError } from "../../lib/errors.js";
 import { eq } from "drizzle-orm";
 import { db, workspacesTable, auditLogsTable } from "@workspace/db";
 import { INTEGRATIONS_SPECIALIST_PROMPT } from "../integrations/integrations-specialist.prompt.js";
+import {
+  containsLikelyIntegrationCredential,
+  INTEGRATION_CREDENTIAL_BLOCK_MESSAGE,
+  redactIntegrationCredentials,
+} from "../integrations/integration-credential-safety.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -877,6 +882,17 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
   }
 
   const hasImages = Array.isArray(images) && images.length > 0;
+  const isIntegrationSpecialist = agentRole === "integrations_specialist";
+  if (
+    isIntegrationSpecialist &&
+    (hasImages || containsLikelyIntegrationCredential(message))
+  ) {
+    res.status(422).json({
+      error: INTEGRATION_CREDENTIAL_BLOCK_MESSAGE,
+      code: "CREDENTIAL_INPUT_BLOCKED",
+    });
+    return;
+  }
   const isVideoAnalysis = hasImages && images!.length >= 4;
   const creditCost = isVideoAnalysis ? 8 : hasImages ? 5 : 3;
 
@@ -904,7 +920,12 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
     const basePrompt = AGENT_SYSTEM_PROMPTS[agentRole] ?? "Você é um especialista em marketing digital. Responda em PT-BR.";
     const systemPrompt = basePrompt + modeNote + videoNote;
 
-    const historyMessages = history.map(h => ({ role: h.role as "user" | "assistant", content: h.content }));
+    const historyMessages = history.map(h => ({
+      role: h.role as "user" | "assistant",
+      content: isIntegrationSpecialist
+        ? redactIntegrationCredentials(h.content)
+        : h.content,
+    }));
     const userContent = message || (hasImages ? "Analise este(s) arquivo(s) anexado(s)." : "");
 
     let result;
@@ -951,7 +972,9 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
     });
 
     res.json({
-      response: result.content,
+      response: isIntegrationSpecialist
+        ? redactIntegrationCredentials(result.content)
+        : result.content,
       agentRole,
       tokensUsed: result.inputTokens + result.outputTokens,
       creditsCharged: creditCost,

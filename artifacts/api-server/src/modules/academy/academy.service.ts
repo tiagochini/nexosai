@@ -158,7 +158,10 @@ export async function sendAccessEmail(opts: {
   const useGmail = !!(env.GMAIL_USER && env.GMAIL_APP_PASSWORD);
 
   if (!useResend && !useGmail) {
-    logger.info({ email: opts.email, token: opts.token }, "academy: access token generated (no email provider configured — log only)");
+    logger.info(
+      { recipientConfigured: Boolean(opts.email) },
+      "academy: access email skipped because no provider is configured",
+    );
     return;
   }
 

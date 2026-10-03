@@ -24,8 +24,7 @@ interface PendingImage {
   dataUrl: string;
 }
 
-interface DetectedCredentials {
-  accessToken?: string;
+interface DetectedPublicData {
   accountId?: string;
   accountName?: string;
 }
@@ -33,16 +32,14 @@ interface DetectedCredentials {
 const MAX_IMAGES = 5;
 const MAX_IMAGE_BYTES = 10_000_000;
 
-function parseCredentialsBlock(text: string): { clean: string; detected: DetectedCredentials | null } {
-  const match = text.match(/CREDENCIAIS_DETECTADAS([\s\S]*?)(?:```|$)/);
+function parsePublicDataBlock(text: string): { clean: string; detected: DetectedPublicData | null } {
+  const match = text.match(/DADOS_PUBLICOS_DETECTADOS([\s\S]*?)(?:```|$)/);
   if (!match) return { clean: text, detected: null };
 
   const block = match[1] ?? "";
-  const detected: DetectedCredentials = {};
-  const accessToken = block.match(/accessToken:\s*(.+)/i)?.[1]?.trim();
+  const detected: DetectedPublicData = {};
   const accountId = block.match(/accountId:\s*(.+)/i)?.[1]?.trim();
   const accountName = block.match(/accountName:\s*(.+)/i)?.[1]?.trim();
-  if (accessToken) detected.accessToken = accessToken;
   if (accountId) detected.accountId = accountId;
   if (accountName) detected.accountName = accountName;
 
@@ -227,7 +224,7 @@ export function IntegrationChatPanel() {
       ) : (
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0">
           {messages.map((m) => {
-            const { clean, detected } = m.role === "assistant" ? parseCredentialsBlock(m.content) : { clean: m.content, detected: null };
+            const { clean, detected } = m.role === "assistant" ? parsePublicDataBlock(m.content) : { clean: m.content, detected: null };
             return (
               <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div className="max-w-[88%] space-y-2">
@@ -247,7 +244,7 @@ export function IntegrationChatPanel() {
                   )}
                   {detected && (
                     <div className="border border-primary/30 bg-primary/5 p-2 space-y-1">
-                      <p className="font-mono text-[9px] uppercase tracking-widest text-primary/80">{t("Credenciais detectadas", "Credentials detected", "Credenciales detectadas")}</p>
+                      <p className="font-mono text-[9px] uppercase tracking-widest text-primary/80">{t("Dados públicos detectados", "Public data detected", "Datos públicos detectados")}</p>
                       {Object.entries(detected).map(([key, value]) => (
                         <button
                           key={key}
@@ -312,8 +309,8 @@ export function IntegrationChatPanel() {
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            disabled={pendingImages.length >= MAX_IMAGES || !conversation}
-            title={t("Enviar print ou foto", "Send screenshot or photo", "Enviar captura o foto")}
+            disabled
+            title={t("Imagens desativadas para proteger credenciais", "Images are disabled to protect credentials", "Las imágenes están desactivadas para proteger credenciales")}
             className="border border-border/50 p-2 text-muted-foreground/60 hover:text-primary hover:border-primary/40 transition-colors disabled:opacity-40"
           >
             <Paperclip className="h-4 w-4" />
@@ -322,7 +319,7 @@ export function IntegrationChatPanel() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-            placeholder={t("Digite sua resposta ou anexe um print…", "Type your reply or attach a screenshot…", "Escribe tu respuesta o adjunta una captura…")}
+            placeholder={t("Digite sua resposta…", "Type your reply…", "Escribe tu respuesta…")}
             rows={1}
             disabled={!conversation}
             className="flex-1 bg-background border border-border/50 px-3 py-2 text-[12px] font-mono focus:outline-none focus:border-primary/50 resize-none max-h-20 disabled:opacity-50"
@@ -332,7 +329,7 @@ export function IntegrationChatPanel() {
           </Button>
         </div>
         <p className="font-mono text-[9px] text-muted-foreground/40 flex items-center gap-1">
-          <ImageIcon className="h-2.5 w-2.5" /> {t("Aceita fotos e prints de tela", "Photos and screenshots are supported", "Se aceptan fotos y capturas")}
+          <ImageIcon className="h-2.5 w-2.5" /> {t("Não envie tokens, chaves, senhas ou prints. Use o formulário protegido ou OAuth.", "Do not send tokens, keys, passwords, or screenshots. Use the protected form or OAuth.", "No envíes tokens, claves, contraseñas ni capturas. Usa el formulario protegido u OAuth.")}
         </p>
       </div>
     </div>

@@ -18,8 +18,7 @@ interface PendingImage {
   dataUrl: string;
 }
 
-interface DetectedCredentials {
-  accessToken?: string;
+interface DetectedPublicData {
   accountId?: string;
   accountName?: string;
 }
@@ -27,16 +26,14 @@ interface DetectedCredentials {
 const MAX_IMAGES = 5;
 const MAX_IMAGE_BYTES = 10_000_000;
 
-function parseCredentialsBlock(text: string): { clean: string; detected: DetectedCredentials | null } {
-  const match = text.match(/CREDENCIAIS_DETECTADAS([\s\S]*?)(?:```|$)/);
+function parsePublicDataBlock(text: string): { clean: string; detected: DetectedPublicData | null } {
+  const match = text.match(/DADOS_PUBLICOS_DETECTADOS([\s\S]*?)(?:```|$)/);
   if (!match) return { clean: text, detected: null };
 
   const block = match[1] ?? "";
-  const detected: DetectedCredentials = {};
-  const accessToken = block.match(/accessToken:\s*(.+)/i)?.[1]?.trim();
+  const detected: DetectedPublicData = {};
   const accountId = block.match(/accountId:\s*(.+)/i)?.[1]?.trim();
   const accountName = block.match(/accountName:\s*(.+)/i)?.[1]?.trim();
-  if (accessToken) detected.accessToken = accessToken;
   if (accountId) detected.accountId = accountId;
   if (accountName) detected.accountName = accountName;
 
@@ -121,10 +118,10 @@ export function IntegrationAssistantChat({
           }),
         },
       );
-      const { clean, detected } = parseCredentialsBlock(res.response);
+      const { clean, detected } = parsePublicDataBlock(res.response);
       setMessages(prev => {
         const next = [...prev, { role: "assistant" as const, content: clean || res.response }];
-        if (detected) (next[next.length - 1] as ChatMessage & { detected?: DetectedCredentials }).detected = detected;
+        if (detected) (next[next.length - 1] as ChatMessage & { detected?: DetectedPublicData }).detected = detected;
         return next;
       });
     } catch (err) {
@@ -156,7 +153,7 @@ export function IntegrationAssistantChat({
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-4 min-h-[280px] max-h-[46vh]">
         {messages.map((m, i) => {
-          const detected = (m as ChatMessage & { detected?: DetectedCredentials }).detected;
+          const detected = (m as ChatMessage & { detected?: DetectedPublicData }).detected;
           return (
             <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[85%] space-y-2`}>
@@ -238,8 +235,8 @@ export function IntegrationAssistantChat({
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            disabled={pendingImages.length >= MAX_IMAGES}
-            title={t("Enviar print ou foto", "Send screenshot or photo", "Enviar captura o foto")}
+            disabled
+            title={t("Imagens desativadas para proteger credenciais", "Images are disabled to protect credentials", "Las imágenes están desactivadas para proteger credenciales")}
             className="border border-border/50 p-2.5 text-muted-foreground/60 hover:text-primary hover:border-primary/40 transition-colors disabled:opacity-40"
           >
             <Paperclip className="h-4 w-4" />
@@ -248,7 +245,7 @@ export function IntegrationAssistantChat({
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-            placeholder={t("Descreva onde você travou ou anexe um print…", "Describe where you got stuck or attach a screenshot…", "Describe dónde te atascaste o adjunta una captura…")}
+            placeholder={t("Descreva onde você travou…", "Describe where you got stuck…", "Describe dónde te atascaste…")}
             rows={1}
             className="flex-1 bg-background border border-border/50 px-3 py-2.5 text-[12px] font-mono focus:outline-none focus:border-primary/50 resize-none max-h-24"
           />
@@ -257,7 +254,7 @@ export function IntegrationAssistantChat({
           </Button>
         </div>
         <p className="font-mono text-[9px] text-muted-foreground/40 flex items-center gap-1">
-          <ImageIcon className="h-2.5 w-2.5" /> {t("Aceita fotos e prints de tela · vídeos ainda não são suportados, use um print do momento", "Photos and screenshots are supported · videos aren’t supported yet; send a screenshot instead", "Se aceptan fotos y capturas · aún no se admiten videos; envía una captura")}
+          <ImageIcon className="h-2.5 w-2.5" /> {t("Não envie tokens, chaves, senhas ou prints. Use o formulário protegido ou OAuth.", "Do not send tokens, keys, passwords, or screenshots. Use the protected form or OAuth.", "No envíes tokens, claves, contraseñas ni capturas. Usa el formulario protegido u OAuth.")}
         </p>
       </div>
     </div>

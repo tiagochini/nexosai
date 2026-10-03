@@ -6,6 +6,11 @@ import { AppError } from "../../lib/errors.js";
 import { completeWithAgent, callVisionChat } from "../ai-gateway/ai-gateway.service.js";
 import { INTEGRATIONS_SPECIALIST_PROMPT } from "./integrations-specialist.prompt.js";
 import {
+  containsLikelyIntegrationCredential,
+  INTEGRATION_CREDENTIAL_BLOCK_MESSAGE,
+  redactIntegrationCredentials,
+} from "./integration-credential-safety.js";
+import {
   db,
   workspacesTable,
   auditLogsTable,
@@ -87,7 +92,14 @@ router.get("/active", async (req, res): Promise<void> => {
     }
   }
 
-  res.json({ conversation, messages });
+  res.json({
+    conversation,
+    messages: messages.map((item) => ({
+      ...item,
+      content: redactIntegrationCredentials(item.content),
+      imageUrl: null,
+    })),
+  });
 });
 
 const sendMessageSchema = z.object({
@@ -108,6 +120,13 @@ router.post("/:conversationId/messages", async (req, res): Promise<void> => {
   const hasImages = Array.isArray(images) && images.length > 0;
   if (!message.trim() && !hasImages) {
     res.status(400).json({ error: "Mensagem vazia", code: "VALIDATION_ERROR" });
+    return;
+  }
+  if (hasImages || containsLikelyIntegrationCredential(message)) {
+    res.status(422).json({
+      error: INTEGRATION_CREDENTIAL_BLOCK_MESSAGE,
+      code: "CREDENTIAL_INPUT_BLOCKED",
+    });
     return;
   }
 
@@ -158,7 +177,7 @@ router.post("/:conversationId/messages", async (req, res): Promise<void> => {
 
     const history = priorMessages.map(m => ({
       role: m.role as "user" | "assistant",
-      content: m.content,
+      content: redactIntegrationCredentials(m.content),
     }));
 
     const userContent = message || "Analise esta imagem que enviei.";
@@ -192,9 +211,10 @@ router.post("/:conversationId/messages", async (req, res): Promise<void> => {
       );
     }
 
+    const safeAssistantContent = redactIntegrationCredentials(result.content);
     const [assistantMsg] = await db
       .insert(integrationChatMessagesTable)
-      .values({ conversationId, role: "assistant", content: result.content })
+      .values({ conversationId, role: "assistant", content: safeAssistantContent })
       .returning();
 
     await db

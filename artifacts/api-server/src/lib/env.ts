@@ -62,7 +62,7 @@ export const env = {
   ALLOWED_ORIGINS: process.env["ALLOWED_ORIGINS"] ?? "",
   // ISO date string (e.g. "2025-06-01T20:00:00-03:00") — set to start the launch countdown
   WHATSAPP_WEBHOOK_VERIFY_TOKEN:
-    process.env["WHATSAPP_WEBHOOK_VERIFY_TOKEN"] ?? "nexos-whatsapp-2026",
+    process.env["WHATSAPP_WEBHOOK_VERIFY_TOKEN"] ?? "",
   ASAAS_API_KEY: process.env["ASAAS_API_KEY"] ?? "",
   // Sandbox credentials are deliberately separate from live credentials.
   ASAAS_SANDBOX: process.env["ASAAS_SANDBOX"] ?? "false",
@@ -131,7 +131,12 @@ if (env.NODE_ENV === "production") {
   if (process.env["META_E2E_TEST_MODE"] === "true") {
     throw new Error("META_E2E_TEST_MODE must never be enabled in production");
   }
-  const required: Array<keyof typeof env> = ["DATABASE_URL", "SESSION_SECRET"];
+  const required: Array<keyof typeof env> = [
+    "DATABASE_URL",
+    "SESSION_SECRET",
+    "META_APP_SECRET",
+    "WHATSAPP_WEBHOOK_VERIFY_TOKEN",
+  ];
   const missing = required.filter((k) => !env[k]);
   if (missing.length > 0) {
     throw new Error(

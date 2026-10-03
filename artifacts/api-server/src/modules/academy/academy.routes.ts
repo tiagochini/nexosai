@@ -177,7 +177,7 @@ router.post("/webhook", async (req, res): Promise<void> => {
     .set({ status: "confirmed", confirmedAt: new Date(), asaasPaymentId: payment.id ?? purchase.asaasPaymentId })
     .where(eq(academyPurchasesTable.id, purchase.id));
 
-  logger.info({ purchaseId, token: purchase.accessToken, email: purchase.customerEmail }, "academy: purchase confirmed");
+  logger.info({ purchaseId }, "academy: purchase confirmed");
 
   // Send access email non-blocking
   const productInfo = ACADEMY_PRODUCTS[purchase.productId];

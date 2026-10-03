@@ -10,6 +10,10 @@ import {
   getWhatsAppDispatch,
   handleWhatsAppWebhook,
 } from "./whatsapp.service.js";
+import {
+  constantTimeTokenMatches,
+  verifyWhatsAppWebhookSignature,
+} from "./whatsapp-webhook.security.js";
 
 const router = Router();
 
@@ -62,7 +66,10 @@ router.get("/webhook", (req, res): void => {
   const mode = q["hub.mode"];
   const token = q["hub.verify_token"];
   const challenge = q["hub.challenge"];
-  if (mode === "subscribe" && token === env.WHATSAPP_WEBHOOK_VERIFY_TOKEN) {
+  if (
+    mode === "subscribe" &&
+    constantTimeTokenMatches(token ?? "", env.WHATSAPP_WEBHOOK_VERIFY_TOKEN)
+  ) {
     res.send(challenge ?? "ok");
     return;
   }
@@ -70,6 +77,22 @@ router.get("/webhook", (req, res): void => {
 });
 
 router.post("/webhook", async (req, res): Promise<void> => {
+  const allowUnsignedTest =
+    env.NODE_ENV === "test" &&
+    process.env["WHATSAPP_WEBHOOK_ALLOW_UNSIGNED_TESTS"] === "true";
+  const rawBody = (req as typeof req & { rawBody?: Buffer }).rawBody;
+  const signature = req.header("x-hub-signature-256");
+  if (
+    !allowUnsignedTest &&
+    (!rawBody ||
+      !verifyWhatsAppWebhookSignature(rawBody, signature, env.META_APP_SECRET))
+  ) {
+    res.status(401).json({
+      error: "WhatsApp webhook signature is required",
+      code: "INVALID_WEBHOOK_SIGNATURE",
+    });
+    return;
+  }
   const result = await handleWhatsAppWebhook(req.body);
   res.json(result);
 });
