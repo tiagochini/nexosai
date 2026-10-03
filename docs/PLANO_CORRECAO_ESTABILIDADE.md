@@ -69,6 +69,8 @@ com backup, revisão e evidências de validação antes da publicação em produ
 - Ensaio final reaplicou o commit local em clone novo e reescreveu os 1.455
   commits alcançáveis; scanner, auditoria histórica e `git fsck` passaram, e o
   hash da árvore permaneceu exatamente igual antes e depois da limpeza.
+- Credenciais confirmadas como rotacionadas pelo responsável e histórico limpo
+  publicado em `origin/main` em 03/10/2026 usando force-with-lease explícito.
 
 Ainda dependem de ação operacional: rotação das credenciais, remoção dos segredos
 do histórico Git e validações em ambiente de homologação com PostgreSQL e Redis
@@ -558,8 +560,8 @@ As telas essenciais carregam em conexão móvel simulada sem baixar recursos de
 
 ## 15. Checklist de conclusão
 
-- [ ] Credenciais antigas revogadas e rotacionadas.
-- [ ] Segredos e backups removidos do histórico Git (estado atual já limpo).
+- [x] Credenciais antigas revogadas e rotacionadas (confirmação do responsável).
+- [x] Segredos e backups removidos do histórico Git publicado.
 - [x] Secret scanning configurado no CI e no comando `security:scan`.
 - [x] Bootstrap e migrations aprovados no banco inicialmente vazio.
 - [x] Baseline legado protegido por flag e verificação de schema.

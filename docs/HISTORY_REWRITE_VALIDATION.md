@@ -59,4 +59,13 @@ explícito e as demais alterações foram aplicadas diretamente no índice.
 - `git fsck --full --strict`: aprovado.
 - Hash da árvore após reescrita: idêntico ao hash anterior.
 - Commit candidato temporário após reescrita: `b1a4e89f`.
-- Push remoto: não realizado.
+- Force-push publicado em 03/10/2026 com lease explícito sobre
+  `cd0b8f8d170e25f01d2eec8ee14f774b01cde5cd`.
+- Primeiro tip remoto limpo publicado: `f07b2f8321d8a21c761339ae283f50fd61578877`.
+
+## Publicação
+
+Antes do push, o SHA de `origin/main` foi consultado novamente e permaneceu
+idêntico ao usado na preparação. A atualização forçada foi limitada à branch
+`main`; nenhuma tag ou branch adicional existia no remoto. O push terminou com
+sucesso e sem sobrescrever alterações concorrentes.
