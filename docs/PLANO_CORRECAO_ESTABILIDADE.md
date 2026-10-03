@@ -55,26 +55,24 @@ com backup, revisão e evidências de validação antes da publicação em produ
   apenas em cópia local ignorada para apoiar a rotação.
 - Rollback do bootstrap validado em banco temporário: após aplicar as 170 tabelas
   e forçar falha transacional, nenhuma relação ou enum permaneceu.
-- Auditoria segura do histórico configurada e executada: três caminhos sensíveis
-  permanecem alcançáveis em cinco ocorrências de commits. O runbook de rotação,
+- Auditoria segura do histórico configurada e executada; o runbook de rotação,
   reescrita, validação, publicação coordenada e rollback foi documentado.
 - CI de qualidade configurado para instalar com lockfile imutável e executar o
   typecheck e todos os builds em clone Linux limpo.
-- Reescrita de histórico validada em mirror novo do GitHub: 21 commits foram
-  reescritos, dois commits vazios podados, nenhum caminho sensível permaneceu e
-  a árvore não sensível ficou idêntica. Nenhum force-push foi realizado.
-- `git fsck` identificou corrupção em um pack do checkout local; a limpeza final
-  deverá obrigatoriamente partir de clone novo, preservando antes o commit local
-  ainda não publicado sem transportar os blobs sensíveis.
-- Ensaio final reaplicou o commit local em clone novo e reescreveu os 1.455
-  commits alcançáveis; scanner, auditoria histórica e `git fsck` passaram, e o
-  hash da árvore permaneceu exatamente igual antes e depois da limpeza.
-- Credenciais confirmadas como rotacionadas pelo responsável e histórico limpo
-  publicado em `origin/main` em 03/10/2026 usando force-with-lease explícito.
+- Reescrita de histórico publicada no GitHub após validação em clone novo:
+  nenhum caminho sensível permaneceu, a árvore não sensível ficou idêntica e os
+  workflows de segurança e qualidade passaram no histórico limpo.
+- `git fsck` identificou corrupção em um pack do checkout original. Um checkout
+  íntegro foi criado em `C:\laragon\www\nexosai-recovered`, com arquivos locais
+  ignorados copiados e conferidos por SHA-256, sem transportar blobs sensíveis.
+- Credenciais antigas foram confirmadas como revogadas e rotacionadas pelo
+  responsável do sistema.
+- Checksums SQL foram normalizados entre LF e CRLF, mantendo compatibilidade
+  controlada com registros legados; verificação do banco e executor de
+  migrations passaram no Windows e o CI Linux permaneceu aprovado.
 
-Ainda dependem de ação operacional: rotação das credenciais, remoção dos segredos
-do histórico Git e validações em ambiente de homologação com PostgreSQL e Redis
-descartáveis.
+Ainda dependem de ação operacional as validações e a implantação gradual em
+ambiente de homologação e produção, seguindo a estratégia da seção 14.
 
 ## 2. Regras para executar o plano
 
@@ -560,8 +558,8 @@ As telas essenciais carregam em conexão móvel simulada sem baixar recursos de
 
 ## 15. Checklist de conclusão
 
-- [x] Credenciais antigas revogadas e rotacionadas (confirmação do responsável).
-- [x] Segredos e backups removidos do histórico Git publicado.
+- [x] Credenciais antigas revogadas e rotacionadas.
+- [x] Segredos e backups removidos do histórico Git.
 - [x] Secret scanning configurado no CI e no comando `security:scan`.
 - [x] Bootstrap e migrations aprovados no banco inicialmente vazio.
 - [x] Baseline legado protegido por flag e verificação de schema.
@@ -579,6 +577,8 @@ As telas essenciais carregam em conexão móvel simulada sem baixar recursos de
 - [x] Smoke tests de integração com PostgreSQL e Redis passam.
 - [x] Bundle inicial está dentro do orçamento definido e protegido no build.
 - [x] Rollback transacional do bootstrap foi testado em banco temporário.
+- [x] Checksums de migrations são estáveis entre Windows e Linux e aceitam os
+  registros legados LF/CRLF sem aceitar alterações no conteúdo SQL.
 
 ## 16. Resultado esperado
 
