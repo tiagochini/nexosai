@@ -14,6 +14,7 @@
     "bootstrap:check": "node scripts/bootstrap-empty-database.mjs",
     "bootstrap:empty": "node scripts/bootstrap-empty-database.mjs --execute",
     "verify": "node scripts/verify-database.mjs",
+    "test:checksum": "node --test scripts/sql-checksum.test.mjs",
     "test:migration-policy": "node --test scripts/migration-policy.test.mjs",
     "test:bootstrap-rollback": "node scripts/test-bootstrap-rollback.mjs",
     "seed:plans": "tsx src/seed-plans.ts",
