@@ -1,5 +1,7 @@
 # Método GLP22 — Matriz Interna de Saúde e Certificação de Capacidades
 
+**Idiomas:** Português | [English](./GLP22_CAPABILITY_HEALTH.en.md)
+
 **Natureza:** verdade operacional interna; não é copy de landing nem declaração
 comercial.  
 **Versão:** 0.1  

@@ -1,4 +1,7 @@
 # NEXOS AI — Pipeline Efficacy Audit Report
+
+**Languages:** English | [Português](./NEXOS_AUDIT_REPORT.pt-BR.md)
+
 **Date:** 2026-06-23  
 **Scope:** Full E2E pipeline from campaign creation → delivered content  
 **Methodology:** Code traceability review + dry-run audit test (13/14 PASS)  
