@@ -5,9 +5,13 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./token-crypto": "./src/integration-token-crypto.ts",
     "./schema": "./src/schema/index.ts"
   },
   "scripts": {
+    "tokens:check": "tsx scripts/migrate-integration-tokens.ts",
+    "tokens:migrate": "tsx scripts/migrate-integration-tokens.ts --execute",
+    "test:token-encryption": "tsx scripts/test-integration-token-crypto.ts",
     "push": "drizzle-kit push --config ./drizzle.config.ts",
     "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
     "migrate:tracked": "node scripts/apply-migrations.mjs",

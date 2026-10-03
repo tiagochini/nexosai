@@ -7,10 +7,20 @@ import {
   jsonb,
   boolean,
   uniqueIndex,
+  customType,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { workspacesTable } from "./workspaces";
+import { decryptIntegrationToken, encryptIntegrationToken } from "../integration-token-crypto";
+
+// Encrypt at the persistence boundary so OAuth, manual setup, token refresh,
+// and every existing provider consumer use the same authenticated encryption.
+const encryptedToken = customType<{ data: string; driverData: string }>({
+  dataType: () => "text",
+  toDriver: encryptIntegrationToken,
+  fromDriver: decryptIntegrationToken,
+});
 
 export const integrationProviderEnum = pgEnum("integration_provider", [
   // Messaging
@@ -65,8 +75,8 @@ export const workspaceIntegrationsTable = pgTable("workspace_integrations", {
     .references(() => workspacesTable.id, { onDelete: "cascade" }),
   provider: integrationProviderEnum("provider").notNull(),
   status: integrationStatusEnum("status").notNull().default("disconnected"),
-  accessToken: text("access_token"),
-  refreshToken: text("refresh_token"),
+  accessToken: encryptedToken("access_token"),
+  refreshToken: encryptedToken("refresh_token"),
   tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
   accountId: text("account_id"),
   accountName: text("account_name"),
@@ -87,6 +97,7 @@ export const workspaceIntegrationsTable = pgTable("workspace_integrations", {
 
 export const insertWorkspaceIntegrationSchema = createInsertSchema(
   workspaceIntegrationsTable,
+  { accessToken: z.string().nullable().optional(), refreshToken: z.string().nullable().optional() },
 ).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type InsertWorkspaceIntegration = z.infer<

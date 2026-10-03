@@ -42,7 +42,8 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 - [ ] Concluir auditoria de dados sensíveis nos logs dos demais módulos.
 - [x] Remover segredo padrão do webhook WhatsApp.
 - [x] Validar assinatura HMAC do webhook WhatsApp.
-- [ ] Criptografar tokens de integrações em repouso com chave externa ao banco.
+- [x] Criptografar tokens de integrações em repouso com chave externa ao banco.
+  Procedimento: [INTEGRATION_TOKEN_ENCRYPTION.md](./INTEGRATION_TOKEN_ENCRYPTION.md).
 - [ ] Migrar refresh token do `localStorage` para cookie `HttpOnly`, `Secure` e
   `SameSite`, com rotação e revogação.
 

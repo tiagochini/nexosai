@@ -42,7 +42,8 @@ The system should only be considered ready for open production when:
 - [ ] Complete the sensitive-data audit for logs in the remaining modules.
 - [x] Remove the default WhatsApp webhook secret.
 - [x] Validate the WhatsApp webhook HMAC signature.
-- [ ] Encrypt integration tokens at rest with a key stored outside the database.
+- [x] Encrypt integration tokens at rest with a key stored outside the database.
+  Procedure: [INTEGRATION_TOKEN_ENCRYPTION.en.md](./INTEGRATION_TOKEN_ENCRYPTION.en.md).
 - [ ] Move refresh tokens out of `localStorage` into `HttpOnly`, `Secure`, and
   `SameSite` cookies, with rotation and revocation.
 

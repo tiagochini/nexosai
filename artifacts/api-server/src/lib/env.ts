@@ -1,3 +1,5 @@
+import { validateIntegrationEncryptionConfig } from "@workspace/db/token-crypto";
+
 export const env = {
   PORT: process.env["PORT"] ?? "5000",
   NODE_ENV: process.env["NODE_ENV"] ?? "development",
@@ -128,6 +130,7 @@ export const env = {
 // ─── Production guard ──────────────────────────────────────────────────────────
 
 if (env.NODE_ENV === "production") {
+  validateIntegrationEncryptionConfig();
   if (process.env["META_E2E_TEST_MODE"] === "true") {
     throw new Error("META_E2E_TEST_MODE must never be enabled in production");
   }
