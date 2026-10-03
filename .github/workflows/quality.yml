@@ -29,4 +29,50 @@ jobs:
         run: |
           pnpm --filter @workspace/db run test:token-encryption
           pnpm --filter @workspace/api-server run test:integration-security
+          pnpm --filter @workspace/api-server run test:auth-cookie-security
       - run: pnpm run build
+
+  auth-database-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nexos_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nexos_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/nexos_ci
+      SESSION_SECRET: ci-only-session-signing-fixture
+      APP_URL: http://localhost:8081
+      ALLOWED_ORIGINS: http://localhost:8081
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Bootstrap a disposable database and verify migrations
+        run: |
+          pnpm --filter @workspace/db run bootstrap:empty
+          pnpm --filter @workspace/db run seed:plans
+          pnpm --filter @workspace/db run verify
+          pnpm --filter @workspace/db run migrate:tracked
+      - name: Authentication and encrypted credential database tests
+        run: |
+          pnpm --filter @workspace/db run test:token-encryption -- --database
+          pnpm --filter @workspace/api-server run test:auth-registration-db
+          pnpm --filter @workspace/api-server run test:auth-sessions-http
+          pnpm --filter @workspace/db run verify

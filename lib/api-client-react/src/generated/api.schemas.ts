@@ -665,9 +665,10 @@ export interface RegisterInput {
   locale?: RegisterInputLocale;
 }
 
-export interface RefreshTokenInput {
-  refreshToken: string;
-}
+/**
+ * Empty body; the browser supplies the HttpOnly refresh cookie.
+ */
+export interface RefreshTokenInput { [key: string]: unknown }
 
 export type UserLocale = typeof UserLocale[keyof typeof UserLocale];
 
@@ -699,9 +700,8 @@ export interface Workspace {
 
 export interface AuthResponse {
   accessToken: string;
-  refreshToken: string;
-  user: User;
-  workspace: Workspace;
+  user?: User;
+  workspace?: Workspace;
 }
 
 export interface MeResponse {

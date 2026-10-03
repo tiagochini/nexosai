@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { z } from "zod/v4";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
 import { db, usersTable, workspacesTable, plansTable } from "@workspace/db";
 import { env } from "../../lib/env.js";
 import { logger } from "../../lib/logger.js";
+import { issueTokens } from "../auth/auth.service.js";
+import { requireTrustedSessionOrigin, sendSessionTokens } from "../auth/auth-session-cookie.js";
 
 const router = Router();
 
@@ -34,18 +35,6 @@ const initiateSchema = z.object({
   creditPackId: z.string().optional(),
   creditPackCredits: z.number().int().min(0).optional(),
 });
-
-function signAccess(payload: { userId: string; workspaceId: string; email: string }): string {
-  return jwt.sign(payload, env.JWT_SECRET, {
-    expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
-  });
-}
-
-function signRefresh(payload: { userId: string; workspaceId: string }): string {
-  return jwt.sign(payload, env.JWT_REFRESH_SECRET, {
-    expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions["expiresIn"],
-  });
-}
 
 // ─── Asaas PIX helper (for new-user checkout, before workspace exists) ─────────
 
@@ -228,7 +217,7 @@ async function ensureUserAndWorkspace(opts: {
 // POST /api/checkout/simulate
 // Test-mode purchase — creates or logs in account, ignores email verification,
 // payment data is fully simulated. Returns JWT for immediate access.
-router.post("/simulate", async (req, res): Promise<void> => {
+router.post("/simulate", requireTrustedSessionOrigin, async (req, res): Promise<void> => {
   let parsed;
   try {
     parsed = simulateSchema.parse(req.body);
@@ -249,9 +238,7 @@ router.post("/simulate", async (req, res): Promise<void> => {
 
     res.json({
       success: true,
-      accessToken: signAccess(payload),
-      refreshToken: signRefresh({ userId, workspaceId }),
-      expiresIn: 15 * 60,
+      ...sendSessionTokens(res, await issueTokens({ id: userId, email: payload.email }, workspaceId)),
       isNewUser,
       startingCredits,
     });
@@ -265,7 +252,7 @@ router.post("/simulate", async (req, res): Promise<void> => {
 // Real Asaas PIX checkout — creates account + initiates PIX payment.
 // Returns JWT for immediate access + PIX QR code data.
 // If ASAAS_API_KEY not set, falls back to simulate behavior.
-router.post("/initiate", async (req, res): Promise<void> => {
+router.post("/initiate", requireTrustedSessionOrigin, async (req, res): Promise<void> => {
   let parsed;
   try {
     parsed = initiateSchema.parse(req.body);
@@ -300,9 +287,7 @@ router.post("/initiate", async (req, res): Promise<void> => {
 
     res.json({
       success: true,
-      accessToken: signAccess(payload),
-      refreshToken: signRefresh({ userId, workspaceId }),
-      expiresIn: 15 * 60,
+      ...sendSessionTokens(res, await issueTokens({ id: userId, email: payload.email }, workspaceId)),
       isNewUser,
       startingCredits,
       plan,

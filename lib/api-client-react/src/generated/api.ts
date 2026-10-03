@@ -578,9 +578,9 @@ export const getRefreshTokenUrl = () => {
 }
 
 /**
- * @summary Refresh access token
+ * @summary Rotate the HttpOnly refresh session and issue an access token
  */
-export const refreshToken = async (refreshTokenInput: RefreshTokenInput, options?: Parameters<typeof customFetch>[1]): Promise<RefreshToken200> => {
+export const refreshToken = async (refreshTokenInput?: RefreshTokenInput, options?: Parameters<typeof customFetch>[1]): Promise<RefreshToken200> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -639,12 +639,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type RefreshTokenMutationResult = NonNullable<Awaited<ReturnType<typeof refreshToken>>>
-    export type RefreshTokenMutationBody = BodyType<RefreshTokenInput>
+    export type RefreshTokenMutationBody = BodyType<RefreshTokenInput> | undefined
     export type RefreshTokenMutationError = ErrorType<unknown>
-    export type RefreshTokenMutationVariables = {data: BodyType<RefreshTokenInput>}
+    export type RefreshTokenMutationVariables = {data?: BodyType<RefreshTokenInput>}
 
     /**
- * @summary Refresh access token
+ * @summary Rotate the HttpOnly refresh session and issue an access token
  */
 export const useRefreshToken = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshToken>>, TError,RefreshTokenMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -655,6 +655,80 @@ export const useRefreshToken = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getRefreshTokenMutationOptions(options));
+    }
+
+export const getLogoutUrl = () => {
+
+
+
+
+  return `/api/auth/logout`
+}
+
+/**
+ * @summary Revoke the browser refresh session and clear its cookie
+ */
+export const logout = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getLogoutUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getLogoutMutationKey = () => ['logout'] as const;
+
+export const getLogoutMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext> => {
+
+const mutationKey = getLogoutMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logout>>, void> = () => {
+
+
+          return  logout(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogoutMutationResult = NonNullable<Awaited<ReturnType<typeof logout>>>
+
+    export type LogoutMutationError = ErrorType<unknown>
+
+
+    /**
+ * @summary Revoke the browser refresh session and clear its cookie
+ */
+export const useLogout = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof logout>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLogoutMutationOptions(options));
     }
 
 export const getListCampaignsUrl = () => {

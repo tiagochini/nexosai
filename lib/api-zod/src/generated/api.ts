@@ -26,7 +26,6 @@ export const LoginBody = zod.object({
 
 export const LoginResponse = zod.object({
   "accessToken": zod.string(),
-  "refreshToken": zod.string(),
   "user": zod.object({
   "id": zod.string(),
   "email": zod.string(),
@@ -34,7 +33,7 @@ export const LoginResponse = zod.object({
   "role": zod.string().optional(),
   "locale": zod.enum(['pt-BR', 'en-US', 'en-AU', 'es-LA']).optional(),
   "hasSeenOnboarding": zod.boolean().optional()
-}),
+}).optional(),
   "workspace": zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -42,7 +41,7 @@ export const LoginResponse = zod.object({
   "creditsBalance": zod.number().int().optional(),
   "campaignsUsed": zod.number().int().optional(),
   "campaignsLimit": zod.number().int().optional()
-})
+}).optional()
 })
 
 
@@ -59,7 +58,6 @@ export const RegisterBody = zod.object({
 
 export const RegisterResponse = zod.object({
   "accessToken": zod.string(),
-  "refreshToken": zod.string(),
   "user": zod.object({
   "id": zod.string(),
   "email": zod.string(),
@@ -67,7 +65,7 @@ export const RegisterResponse = zod.object({
   "role": zod.string().optional(),
   "locale": zod.enum(['pt-BR', 'en-US', 'en-AU', 'es-LA']).optional(),
   "hasSeenOnboarding": zod.boolean().optional()
-}),
+}).optional(),
   "workspace": zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -75,7 +73,7 @@ export const RegisterResponse = zod.object({
   "creditsBalance": zod.number().int().optional(),
   "campaignsUsed": zod.number().int().optional(),
   "campaignsLimit": zod.number().int().optional()
-})
+}).optional()
 })
 
 
@@ -111,15 +109,21 @@ export const MarkOnboardingSeenResponse = zod.object({
 
 
 /**
- * @summary Refresh access token
+ * @summary Rotate the HttpOnly refresh session and issue an access token
  */
 export const RefreshTokenBody = zod.object({
-  "refreshToken": zod.string()
-})
+
+}).describe('Empty body; the browser supplies the HttpOnly refresh cookie.')
 
 export const RefreshTokenResponse = zod.object({
   "accessToken": zod.string().optional()
 })
+
+
+/**
+ * @summary Revoke the browser refresh session and clear its cookie
+ */
+export const LogoutResponse = zod.void()
 
 
 /**

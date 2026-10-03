@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
-import { useAuth } from "@/lib/auth";
+import { useAuth, waitForPendingLogout } from "@/lib/auth";
 import nexosLogo from "/nexos-logo.png";
 import {
   CheckCircle2, ArrowRight, Shield, Zap,
@@ -185,7 +185,7 @@ function CheckoutForm({
   onPix,
 }: {
   initialPlan: PlanId;
-  onSuccess: (accessToken: string, refreshToken: string, isNew: boolean) => void;
+  onSuccess: (accessToken: string, isNew: boolean) => void;
   onPix: (data: { qrCode: string; copiaECola: string; expiresAt: string; planLabel: string; amount: number }) => void;
 }) {
   const { locale } = useUiLocale();
@@ -207,6 +207,7 @@ function CheckoutForm({
     if (password.length < 6) { setError(t("A senha deve ter ao menos 6 caracteres.", "Password must be at least 6 characters.", "La contraseña debe tener al menos 6 caracteres.")); return; }
     setLoading(true);
     try {
+      await waitForPendingLogout();
       const res = await fetch("/api/checkout/initiate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -223,7 +224,6 @@ function CheckoutForm({
       const data = await res.json() as {
         success?: boolean;
         accessToken?: string;
-        refreshToken?: string;
         isNewUser?: boolean;
         startingCredits?: number;
         plan?: string;
@@ -236,7 +236,7 @@ function CheckoutForm({
         return;
       }
       // Log in user immediately
-      onSuccess(data.accessToken!, data.refreshToken ?? "", data.isNewUser ?? true);
+      onSuccess(data.accessToken!, data.isNewUser ?? true);
       // Show PIX if available
       if (data.pix?.qrCode) {
         onPix({
@@ -408,8 +408,7 @@ export default function CheckoutPage() {
   const planParam = new URLSearchParams(search).get("plan");
   const initialPlan: PlanId = planParam === "agency" ? "agency" : "solo";
 
-  const handleSuccess = (accessToken: string, refreshToken: string, newUser: boolean) => {
-    if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+  const handleSuccess = (accessToken: string, newUser: boolean) => {
     setIsNew(newUser);
     setDone(true);
     localStorage.setItem("accessToken", accessToken);

@@ -10,6 +10,7 @@ import {
 } from "../../lib/errors.js";
 import { grantCredits } from "../credits/credits.service.js";
 import type { Logger } from "pino";
+import { createRefreshSession, readRefreshSession, rotateRefreshSession } from "./refresh-session.service.js";
 
 function generateReferralCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -46,6 +47,7 @@ export interface TokenPayload {
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
+  refreshExpiresAt: Date;
   expiresIn: number;
 }
 
@@ -70,18 +72,10 @@ export function signAccess(payload: TokenPayload): string {
   });
 }
 
-function signRefresh(
-  payload: Pick<TokenPayload, "userId" | "workspaceId">,
-): string {
-  return jwt.sign(payload, env.JWT_REFRESH_SECRET, {
-    expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions["expiresIn"],
-  });
-}
-
-export function issueTokens(
+export async function issueTokens(
   user: { id: string; email: string },
   workspaceId: string,
-): AuthTokens {
+): Promise<AuthTokens> {
   const payload: TokenPayload = {
     userId: user.id,
     workspaceId,
@@ -89,9 +83,14 @@ export function issueTokens(
   };
   return {
     accessToken: signAccess(payload),
-    refreshToken: signRefresh({ userId: user.id, workspaceId }),
-    expiresIn: 8 * 60 * 60,
+    ...await createRefreshSession(user.id, workspaceId),
+    expiresIn: accessTokenLifetime(payload),
   };
+}
+
+function accessTokenLifetime(payload: TokenPayload): number {
+  const decoded = jwt.decode(signAccess(payload)) as { exp: number; iat: number };
+  return decoded.exp - decoded.iat;
 }
 
 export async function registerUser(
@@ -314,15 +313,7 @@ export async function refreshTokens(
   refreshToken: string,
   log: Logger,
 ): Promise<AuthTokens> {
-  let decoded: { userId: string; workspaceId?: string };
-  try {
-    decoded = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as {
-      userId: string;
-      workspaceId?: string;
-    };
-  } catch {
-    throw new UnauthorizedError("Invalid refresh token");
-  }
+  const decoded = await readRefreshSession(refreshToken);
 
   const [user] = await db
     .select()
@@ -344,17 +335,18 @@ export async function refreshTokens(
       ),
     )
     .orderBy(asc(workspacesTable.createdAt), asc(workspacesTable.id));
-  // Legacy refresh tokens had no workspace claim. Their deterministic fallback
-  // is the oldest active owned workspace. Scoped tokens never silently move.
-  const workspace = decoded.workspaceId
-    ? ownedWorkspaces.find((candidate) => candidate.id === decoded.workspaceId)
-    : ownedWorkspaces[0];
+  const workspace = ownedWorkspaces.find((candidate) => candidate.id === decoded.workspaceId);
 
   if (!workspace) {
     throw new UnauthorizedError("Selected workspace is no longer available");
   }
 
-  return issueTokens(user, workspace.id);
+  const payload = { userId: user.id, email: user.email, workspaceId: workspace.id };
+  return {
+    accessToken: signAccess(payload),
+    expiresIn: accessTokenLifetime(payload),
+    ...await rotateRefreshSession(refreshToken),
+  };
 }
 
 export function verifyAccessToken(token: string): TokenPayload {

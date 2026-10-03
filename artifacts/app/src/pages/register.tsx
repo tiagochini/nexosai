@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useRegister } from "@workspace/api-client-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
-import { useAuth } from "@/lib/auth";
+import { useAuth, waitForPendingLogout } from "@/lib/auth";
 import { useAppI18n, useUiLocale, useUiText } from "@/lib/i18n";
 import { GuestLanguageSwitcher } from "@/components/guest-language-switcher";
 import { Button } from "@/components/ui/button";
@@ -123,8 +123,7 @@ export default function Register() {
   const registerMutation = useRegister({
     mutation: {
       onSuccess: (data) => {
-        const raw = data as typeof data & { refreshToken?: string };
-        setToken(data.accessToken, raw.refreshToken);
+        setToken(data.accessToken);
         toast.success(t.success);
         setLocation("/welcome");
       },
@@ -140,9 +139,10 @@ export default function Register() {
     },
   });
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
+    await waitForPendingLogout();
     registerMutation.mutate({
       data: {
         name: name.trim(),

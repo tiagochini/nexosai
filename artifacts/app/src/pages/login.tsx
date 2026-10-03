@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useLogin } from "@workspace/api-client-react";
-import { useAuth } from "@/lib/auth";
+import { useAuth, waitForPendingLogout } from "@/lib/auth";
 import { useAppI18n } from "@/lib/i18n";
 import { GuestLanguageSwitcher } from "@/components/guest-language-switcher";
 import { Button } from "@/components/ui/button";
@@ -23,8 +23,7 @@ export default function Login() {
   const loginMutation = useLogin({
     mutation: {
       onSuccess: (data) => {
-        const raw = data as typeof data & { refreshToken?: string };
-        setToken(data.accessToken, raw.refreshToken);
+        setToken(data.accessToken);
         toast.success(t.success);
         setLocation("/");
       },
@@ -34,8 +33,9 @@ export default function Login() {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    await waitForPendingLogout();
     loginMutation.mutate({ data: { email, password } });
   };
 

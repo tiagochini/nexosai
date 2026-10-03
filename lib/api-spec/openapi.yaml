@@ -108,9 +108,9 @@ paths:
     post:
       operationId: refreshToken
       tags: [auth]
-      summary: Refresh access token
+      summary: Rotate the HttpOnly refresh session and issue an access token
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
@@ -125,6 +125,15 @@ paths:
                 properties:
                   accessToken:
                     type: string
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Revoke the browser refresh session and clear its cookie
+      responses:
+        "204":
+          description: Session revoked
 
   # ─── Campaigns ─────────────────────────────────────────────────────────────
   /campaigns:
@@ -1927,23 +1936,19 @@ components:
 
     RefreshTokenInput:
       type: object
-      properties:
-        refreshToken:
-          type: string
-      required: [refreshToken]
+      description: Empty body; the browser supplies the HttpOnly refresh cookie.
+      additionalProperties: false
 
     AuthResponse:
       type: object
       properties:
         accessToken:
           type: string
-        refreshToken:
-          type: string
         user:
           $ref: "#/components/schemas/User"
         workspace:
           $ref: "#/components/schemas/Workspace"
-      required: [accessToken, refreshToken, user, workspace]
+      required: [accessToken]
 
     MeResponse:
       type: object

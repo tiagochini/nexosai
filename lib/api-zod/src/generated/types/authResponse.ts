@@ -10,7 +10,6 @@ import type { Workspace } from './workspace';
 
 export interface AuthResponse {
   accessToken: string;
-  refreshToken: string;
-  user: User;
-  workspace: Workspace;
+  user?: User;
+  workspace?: Workspace;
 }

@@ -9,6 +9,9 @@ import { customFetch } from "@workspace/api-client-react/custom-fetch";
 // ── Synchronous module-level init — ensures token is sent even on the very
 // first request before AuthProvider's useEffect has had a chance to run.
 setAuthTokenGetter(() => localStorage.getItem("accessToken"));
+// Remove credentials persisted by earlier versions. New refresh sessions are
+// supplied only by the browser through the HttpOnly cookie.
+localStorage.removeItem("refreshToken");
 
 export interface Plan {
   id: string;
@@ -60,7 +63,7 @@ export interface WorkspacesResponse {
 
 interface AuthContextType {
   token: string | null;
-  setToken: (token: string | null, refreshToken?: string | null) => void;
+  setToken: (token: string | null) => void;
   user: User | null;
   workspace: Workspace | null;
   plan: Plan | null;
@@ -77,9 +80,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 // ── Token storage helpers ─────────────────────────────────────────────────────
-function saveTokens(access: string, refresh?: string | null) {
+function saveTokens(access: string) {
   localStorage.setItem("accessToken", access);
-  if (refresh) localStorage.setItem("refreshToken", refresh);
+  localStorage.removeItem("refreshToken");
 }
 
 function clearTokens() {
@@ -90,6 +93,8 @@ function clearTokens() {
 // ── Silent refresh (module-level so custom-fetch can call it) ─────────────────
 type RefreshFn = () => Promise<boolean>;
 let _globalRefresh: RefreshFn | null = null;
+let pendingLogout: Promise<void> | null = null;
+export async function waitForPendingLogout(): Promise<void> { await pendingLogout; }
 export function setGlobalRefresh(fn: RefreshFn | null) { _globalRefresh = fn; }
 export async function globalSilentRefresh(): Promise<boolean> {
   return _globalRefresh ? _globalRefresh() : false;
@@ -105,26 +110,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [, setLocation] = useLocation();
   const refreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const queryClient = useQueryClient();
+  const refreshInFlight = useRef<Promise<boolean> | null>(null);
+  const sessionVersion = useRef(0);
 
   // ── Silent refresh implementation ─────────────────────────────────────────
   const silentRefresh = async (): Promise<boolean> => {
-    const rt = localStorage.getItem("refreshToken");
-    if (!rt) return false;
-    try {
-      const res = await fetch("/api/auth/refresh", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken: rt }),
-      });
-      if (!res.ok) return false;
-      const data = (await res.json()) as { accessToken?: string; refreshToken?: string };
-      if (!data.accessToken) return false;
-      saveTokens(data.accessToken, data.refreshToken ?? rt);
-      setTokenState(data.accessToken);
-      return true;
-    } catch {
-      return false;
-    }
+    if (!localStorage.getItem("accessToken")) return false;
+    if (refreshInFlight.current) return refreshInFlight.current;
+    const version = sessionVersion.current;
+    const performRefresh = async () => {
+      try {
+        if (version !== sessionVersion.current) return false;
+        const res = await fetch("/api/auth/refresh", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+        if (!res.ok) return false;
+        const data = (await res.json()) as { accessToken?: string };
+        if (!data.accessToken || version !== sessionVersion.current) return false;
+        saveTokens(data.accessToken);
+        setTokenState(data.accessToken);
+        return true;
+      } catch { return false; }
+    };
+    // Serialize across tabs when Web Locks is available, as rotating a token
+    // intentionally allows only one concurrent request to consume it.
+    const operation = (async () => {
+      if (navigator.locks) return await navigator.locks.request("nexos-session-refresh", performRefresh);
+      return performRefresh();
+    })();
+    const pending = operation.finally(() => { refreshInFlight.current = null; });
+    refreshInFlight.current = pending;
+    return pending;
   };
 
   // Register global refresh so intake / other pages can call it without prop drilling
@@ -140,17 +159,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => setUnauthorizedHandler(null);
   }, []);
 
-  // ── Proactive refresh every 12 min while logged in ────────────────────────
+  // ── Proactive refresh while logged in ─────────────────────────────────────
   useEffect(() => {
     if (!token) return;
     refreshTimer.current = setInterval(() => { void silentRefresh(); }, REFRESH_INTERVAL_MS);
     return () => { if (refreshTimer.current) clearInterval(refreshTimer.current); };
   }, [!!token]);
 
-  // ── setToken — call with optional refreshToken ────────────────────────────
-  const setToken = (newToken: string | null, refreshToken?: string | null) => {
+  const setToken = (newToken: string | null) => {
+    sessionVersion.current++;
     if (newToken) {
-      saveTokens(newToken, refreshToken);
+      saveTokens(newToken);
       setTokenState(newToken);
     } else {
       clearTokens();
@@ -159,9 +178,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
+    const pendingRefresh = refreshInFlight.current;
     setToken(null);
     queryClient.clear();
     setLocation("/login");
+    pendingLogout = (async () => {
+      // Let a pending rotation finish before revoking the resulting cookie.
+      if (pendingRefresh) await pendingRefresh;
+      const revoke = async () => {
+        await fetch("/api/auth/logout", {
+          method: "POST", credentials: "same-origin",
+          headers: { "Content-Type": "application/json" }, body: "{}",
+          signal: AbortSignal.timeout(10000),
+        });
+      };
+      if (navigator.locks) await navigator.locks.request("nexos-session-refresh", revoke);
+      else await revoke();
+    })().catch(() => { /* Local sign-out already completed; network may be offline. */ });
   };
 
   const { data: meData, isError } = useGetMe({
@@ -180,10 +213,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   const switchWorkspace = async (workspaceId: string) => {
-    const res = await customFetch<{ accessToken: string; refreshToken: string }>(`/api/auth/workspaces/${workspaceId}/switch`, {
+    if (refreshInFlight.current) await refreshInFlight.current;
+    const res = await customFetch<{ accessToken: string }>(`/api/auth/workspaces/${workspaceId}/switch`, {
       method: "POST"
     });
-    setToken(res.accessToken, res.refreshToken);
+    setToken(res.accessToken);
     // Clear user-scoped cache
     queryClient.clear();
     await queryClient.invalidateQueries();
@@ -191,12 +225,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const createWorkspace = async (name: string) => {
-    const res = await customFetch<{ workspace: WorkspaceDetail; accessToken: string; refreshToken: string }>("/api/auth/workspaces", {
+    if (refreshInFlight.current) await refreshInFlight.current;
+    const res = await customFetch<{ workspace: WorkspaceDetail; accessToken: string }>("/api/auth/workspaces", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
     });
-    setToken(res.accessToken, res.refreshToken);
+    setToken(res.accessToken);
     queryClient.clear();
     await queryClient.invalidateQueries();
     setLocation("/");

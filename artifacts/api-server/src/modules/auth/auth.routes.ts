@@ -6,6 +6,8 @@ import { requireAuth } from "./auth.middleware.js";
 import { db, usersTable, workspacesTable, plansTable, inviteCodesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { AppError } from "../../lib/errors.js";
+import { clearRefreshCookie, readRefreshCookie, requireTrustedSessionOrigin, sendSessionTokens } from "./auth-session-cookie.js";
+import { revokeRefreshSession } from "./refresh-session.service.js";
 
 const router = Router();
 
@@ -25,9 +27,6 @@ const loginSchema = z.object({
   password: z.string(),
 });
 
-const refreshSchema = z.object({
-  refreshToken: z.string(),
-});
 const createWorkspaceSchema = z.object({
   name: z.string().trim().min(2).max(120),
 });
@@ -39,7 +38,7 @@ router.get("/platform-status", (_req, res): void => {
   res.json({ platformOpen, cartOpen });
 });
 
-router.post("/register", async (req, res): Promise<void> => {
+router.post("/register", requireTrustedSessionOrigin, async (req, res): Promise<void> => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
@@ -105,7 +104,7 @@ router.post("/register", async (req, res): Promise<void> => {
       }
     }
 
-    res.status(201).json(tokens);
+    res.status(201).json(sendSessionTokens(res, tokens));
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });
@@ -115,7 +114,7 @@ router.post("/register", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/login", async (req, res): Promise<void> => {
+router.post("/login", requireTrustedSessionOrigin, async (req, res): Promise<void> => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
@@ -124,7 +123,9 @@ router.post("/login", async (req, res): Promise<void> => {
 
   try {
     const tokens = await loginUser(parsed.data, req.log);
-    res.json(tokens);
+    const previous = readRefreshCookie(req);
+    if (previous) await revokeRefreshSession(previous);
+    res.json(sendSessionTokens(res, tokens));
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });
@@ -134,16 +135,16 @@ router.post("/login", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/refresh", async (req, res): Promise<void> => {
-  const parsed = refreshSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "refreshToken is required", code: "VALIDATION_ERROR" });
+router.post("/refresh", requireTrustedSessionOrigin, async (req, res): Promise<void> => {
+  const token = readRefreshCookie(req);
+  if (!token) {
+    res.status(401).json({ error: "Refresh session cookie is required", code: "UNAUTHORIZED" });
     return;
   }
 
   try {
-    const tokens = await refreshTokens(parsed.data.refreshToken, req.log);
-    res.json(tokens);
+    const tokens = await refreshTokens(token, req.log);
+    res.json(sendSessionTokens(res, tokens));
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });
@@ -151,6 +152,14 @@ router.post("/refresh", async (req, res): Promise<void> => {
     }
     throw err;
   }
+});
+
+router.post("/logout", requireTrustedSessionOrigin, async (req, res): Promise<void> => {
+  const token = readRefreshCookie(req);
+  if (token) await revokeRefreshSession(token);
+  clearRefreshCookie(res);
+  res.setHeader("Cache-Control", "no-store");
+  res.status(204).end();
 });
 
 // Owner-only workspace foundation. Membership is intentionally not modeled.
@@ -166,7 +175,7 @@ router.get("/workspaces", requireAuth, async (req, res): Promise<void> => {
   }
 });
 
-router.post("/workspaces", requireAuth, async (req, res): Promise<void> => {
+router.post("/workspaces", requireTrustedSessionOrigin, requireAuth, async (req, res): Promise<void> => {
   const parsed = createWorkspaceSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
@@ -174,9 +183,11 @@ router.post("/workspaces", requireAuth, async (req, res): Promise<void> => {
   }
   try {
     const workspace = await createOwnedWorkspace(req.auth.userId, req.auth.workspaceId, parsed.data.name);
-    const tokens = issueTokens({ id: req.auth.userId, email: req.auth.email }, workspace.id);
+    const tokens = await issueTokens({ id: req.auth.userId, email: req.auth.email }, workspace.id);
+    const previous = readRefreshCookie(req);
+    if (previous) await revokeRefreshSession(previous);
     req.log.info({ userId: req.auth.userId, workspaceId: workspace.id }, "Owner workspace created");
-    res.status(201).json({ workspace, ...tokens });
+    res.status(201).json({ workspace, ...sendSessionTokens(res, tokens) });
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });
@@ -186,12 +197,14 @@ router.post("/workspaces", requireAuth, async (req, res): Promise<void> => {
   }
 });
 
-router.post("/workspaces/:id/switch", requireAuth, async (req, res): Promise<void> => {
+router.post("/workspaces/:id/switch", requireTrustedSessionOrigin, requireAuth, async (req, res): Promise<void> => {
   try {
     const overview = await getWorkspaceOverview(req.auth.userId, req.params["id"] as string);
-    const tokens = issueTokens({ id: req.auth.userId, email: req.auth.email }, overview.activeWorkspaceId);
+    const tokens = await issueTokens({ id: req.auth.userId, email: req.auth.email }, overview.activeWorkspaceId);
+    const previous = readRefreshCookie(req);
+    if (previous) await revokeRefreshSession(previous);
     req.log.info({ userId: req.auth.userId, workspaceId: overview.activeWorkspaceId }, "Owner workspace switched");
-    res.json(tokens);
+    res.json(sendSessionTokens(res, tokens));
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });

@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:auth-sessions-http": "cross-env NODE_ENV=test tsx src/scripts/test-auth-sessions-http.ts",
+    "test:auth-cookie-security": "cross-env NODE_ENV=test tsx src/scripts/test-auth-cookie-security.ts",
     "test:conditional-execution-db": "cross-env NODE_ENV=test tsx src/scripts/test-conditional-execution-db.ts",
     "test:realization-contract-db": "cross-env NODE_ENV=test tsx src/scripts/test-realization-contract-db.ts",
     "test:operational-council-db": "cross-env NODE_ENV=test tsx src/scripts/test-operational-council-db.ts",

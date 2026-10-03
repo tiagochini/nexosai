@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface RefreshTokenInput {
-  refreshToken: string;
-}
+/**
+ * Empty body; the browser supplies the HttpOnly refresh cookie.
+ */
+export interface RefreshTokenInput { [key: string]: unknown }

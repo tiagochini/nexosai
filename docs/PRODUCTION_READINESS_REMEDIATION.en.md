@@ -10,7 +10,7 @@ security, recovery, concurrency, and AI quality.
 
 - Linux CI build and typecheck pass.
 - Secret scanning and Git history audit pass.
-- PostgreSQL was verified with 171 tables and 68 schema entries.
+- PostgreSQL was verified with 172 tables and 69 schema entries.
 - Transactional and concurrent registration, concurrent credits,
   orchestration fallback, checkpoint/resume, and operational health passed
   locally.
@@ -44,8 +44,9 @@ The system should only be considered ready for open production when:
 - [x] Validate the WhatsApp webhook HMAC signature.
 - [x] Encrypt integration tokens at rest with a key stored outside the database.
   Procedure: [INTEGRATION_TOKEN_ENCRYPTION.en.md](./INTEGRATION_TOKEN_ENCRYPTION.en.md).
-- [ ] Move refresh tokens out of `localStorage` into `HttpOnly`, `Secure`, and
+- [x] Move refresh tokens out of `localStorage` into `HttpOnly`, `Secure`, and
   `SameSite` cookies, with rotation and revocation.
+  Procedure: [AUTH_SESSION_SECURITY.en.md](./AUTH_SESSION_SECURITY.en.md).
 
 ### P1 — Dependencies and CI
 
@@ -53,6 +54,8 @@ The system should only be considered ready for open production when:
 - [ ] Replace or isolate the legacy `html-pdf-node`/Puppeteer dependency chain.
 - [ ] Add `pnpm audit --prod` to CI with a severity policy.
 - [ ] Run critical tests in CI with disposable PostgreSQL and Redis.
+- [x] Run authentication, concurrent registration, and encryption tests in CI
+  with disposable PostgreSQL. Redis and remaining flows are still pending.
 - [ ] Run empty-database bootstrap, verification, and rollback in CI.
 - [ ] Run a full Git history audit in the security workflow.
 

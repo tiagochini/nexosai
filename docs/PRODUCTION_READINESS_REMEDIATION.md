@@ -10,7 +10,7 @@ recuperação, concorrência e qualidade de IA.
 
 - Build e typecheck aprovados no CI Linux.
 - Scanner de segredos e auditoria do histórico aprovados.
-- PostgreSQL verificado com 171 tabelas e 68 entradas de schema.
+- PostgreSQL verificado com 172 tabelas e 69 entradas de schema.
 - Cadastro transacional, cadastro concorrente, créditos concorrentes, fallback de
   orquestração, checkpoint/retomada e saúde operacional aprovados localmente.
 - As 22 capacidades GLP22 permanecem em 20 `PARTIAL`, 2 `BLOCKED` e 0 `HEALTHY`.
@@ -44,8 +44,9 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 - [x] Validar assinatura HMAC do webhook WhatsApp.
 - [x] Criptografar tokens de integrações em repouso com chave externa ao banco.
   Procedimento: [INTEGRATION_TOKEN_ENCRYPTION.md](./INTEGRATION_TOKEN_ENCRYPTION.md).
-- [ ] Migrar refresh token do `localStorage` para cookie `HttpOnly`, `Secure` e
+- [x] Migrar refresh token do `localStorage` para cookie `HttpOnly`, `Secure` e
   `SameSite`, com rotação e revogação.
+  Procedimento: [AUTH_SESSION_SECURITY.md](./AUTH_SESSION_SECURITY.md).
 
 ### P1 — Dependências e CI
 
@@ -53,6 +54,8 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 - [ ] Substituir ou isolar a cadeia antiga `html-pdf-node`/Puppeteer.
 - [ ] Adicionar `pnpm audit --prod` ao CI com política de severidade.
 - [ ] Executar testes críticos no CI com PostgreSQL e Redis descartáveis.
+- [x] Executar testes de autenticação, concorrência de cadastro e criptografia
+  no CI com PostgreSQL descartável. Redis e demais fluxos continuam pendentes.
 - [ ] Executar bootstrap de banco vazio, verificação e rollback no CI.
 - [ ] Executar auditoria completa do histórico no workflow de segurança.
 
