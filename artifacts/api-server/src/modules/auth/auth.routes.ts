@@ -99,7 +99,7 @@ router.post("/register", requireTrustedSessionOrigin, async (req, res): Promise<
             })
             .where(eq(inviteCodesTable.code, code));
 
-          req.log.info({ code, email: parsed.data.email }, "Invite code marked used (access gate only, plan unaffected)");
+          req.log.info({ workspaceId: workspace.id }, "Invite code marked used (access gate only, plan unaffected)");
         }
       }
     }

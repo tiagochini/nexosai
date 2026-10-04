@@ -6,6 +6,7 @@
  * assembling this context themselves.
  */
 import { createHash } from "node:crypto";
+import { logger } from "../../lib/logger.js";
 import { and, eq, desc } from "drizzle-orm";
 import { db, campaignsTable, agentClarificationRequestsTable, marketIntelReportsTable } from "@workspace/db";
 import type { AgentRole } from "../ai-gateway/ai-gateway.service.js";
@@ -134,7 +135,7 @@ export async function buildCampaignActionContext(
 
   if (!campaign) {
     // Intentionally no unscoped lookup: this is both missing and cross-tenant safe.
-    console.warn({ campaignId, workspaceId, agentRole }, "SECURITY_CAMPAIGN_CONTEXT_MISMATCH");
+    logger.warn({ campaignId, workspaceId, agentRole }, "SECURITY_CAMPAIGN_CONTEXT_MISMATCH");
     return unavailable("A campanha não existe neste workspace ou não está disponível.");
   }
 

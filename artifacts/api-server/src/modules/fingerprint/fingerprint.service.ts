@@ -32,7 +32,7 @@ export async function registerFingerprint(input: RegisterFingerprintInput): Prom
       userAgent: input.userAgent ?? null,
     }).onConflictDoNothing();
   } catch (err) {
-    logger.warn({ err, fingerprint: input.fingerprint }, "Failed to register fingerprint");
+    logger.warn({ err }, "Failed to register fingerprint");
   }
 }
 

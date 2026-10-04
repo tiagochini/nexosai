@@ -327,7 +327,7 @@ export async function sendWhatsAppDispatch(workspaceId: string, dispatchId: stri
         const transportAmbiguity = classifyWhatsAppTransportError(err);
         if (transportAmbiguity) throw transportAmbiguity;
         failedCount.count++;
-        logger.warn({ phone, err }, "WhatsApp send failed for recipient");
+        logger.warn({ err }, "WhatsApp send failed for recipient");
       }
     }
 

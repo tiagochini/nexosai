@@ -204,7 +204,7 @@ router.post("/workspaces/:workspaceId/grant-plan", requireAuth, async (req, res)
     })
     .where(eq(workspacesTable.id, workspaceId));
 
-  req.log.info({ workspaceId, planSlug, grantedBy: req.auth.email, note: note ?? null }, "admin grant-plan");
+  req.log.info({ workspaceId, planSlug, grantedByUserId: req.auth.userId }, "admin grant-plan");
   res.json({ ok: true, planName: plan.name, creditsGranted: plan.creditsMonthly });
 });
 
@@ -417,7 +417,7 @@ router.post("/workspaces/:workspaceId/add-credits", requireAuth, async (req, res
     note ?? `Recarga admin por ${req.auth.email}`,
   );
 
-  req.log.info({ workspaceId, amount, grantedBy: req.auth.email, balanceAfter: tx.balanceAfter }, "admin add-credits");
+  req.log.info({ workspaceId, amount, grantedByUserId: req.auth.userId, balanceAfter: tx.balanceAfter }, "admin add-credits");
   res.json({ ok: true, workspaceName: workspace.name, credited: amount, newBalance: tx.balanceAfter });
 });
 
@@ -460,14 +460,14 @@ router.post("/campaigns/:campaignId/force-retry", requireAuth, async (req, res):
       .set({ status: "intake" as any, updatedAt: new Date(), brainData: clearedBrain as any })
       .where(eq(campaignsTable.id, campaignId));
     const result = await triggerStrategyPhase(campaignId, campaign.workspaceId, req.log);
-    req.log.info({ campaignId, adminBy: req.auth.email }, "[ADMIN FORCE-RETRY] analyzing → strategy re-enqueued");
+    req.log.info({ campaignId, adminUserId: req.auth.userId }, "[ADMIN FORCE-RETRY] analyzing → strategy re-enqueued");
     res.status(202).json({ retried: true, phase: "strategy", queued: result.queued });
   } else {
     await db.update(campaignsTable)
       .set({ status: "strategy_ready" as any, updatedAt: new Date(), brainData: clearedBrain as any })
       .where(eq(campaignsTable.id, campaignId));
     const result = await triggerContentPhase(campaignId, campaign.workspaceId, req.log);
-    req.log.info({ campaignId, adminBy: req.auth.email }, "[ADMIN FORCE-RETRY] generating → content re-enqueued");
+    req.log.info({ campaignId, adminUserId: req.auth.userId }, "[ADMIN FORCE-RETRY] generating → content re-enqueued");
     res.status(202).json({ retried: true, phase: "content", queued: result.queued });
   }
 });

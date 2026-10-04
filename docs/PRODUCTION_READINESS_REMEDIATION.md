@@ -41,6 +41,9 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 - [x] Impedir envio de tokens, chaves e screenshots ao assistente de integrações.
 - [x] Remover tokens de logs da Academy.
 - [ ] Concluir auditoria de dados sensíveis nos logs dos demais módulos.
+- [x] Proteger logger central/HTTP, erros e bindings filhos contra campos
+  sensíveis; remover dados desnecessários nos pontos revisados.
+  Escopo e limites: [LOG_SECURITY.md](./LOG_SECURITY.md).
 - [x] Restringir salas de campanhas em tempo real ao workspace autenticado,
   validar origem de WebSocket/polling e desconectar ao expirar o token.
   Evidência: [REALTIME_SECURITY.md](./REALTIME_SECURITY.md).

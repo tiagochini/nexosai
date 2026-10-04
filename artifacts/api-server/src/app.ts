@@ -10,6 +10,7 @@ import { rateLimit } from "express-rate-limit";
 import pinoHttp from "pino-http";
 import router from "./routes/index.js";
 import { logger } from "./lib/logger.js";
+import { safeHttpRequest } from "./lib/log-security.js";
 import { AppError } from "./lib/errors.js";
 import { env } from "./lib/env.js";
 
@@ -129,13 +130,10 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(
   pinoHttp({
     logger,
+    wrapSerializers: false,
     serializers: {
       req(req) {
-        return {
-          id: req.id,
-          method: req.method,
-          url: req.url?.split("?")[0],
-        };
+        return safeHttpRequest(req);
       },
       res(res) {
         return { statusCode: res.statusCode };

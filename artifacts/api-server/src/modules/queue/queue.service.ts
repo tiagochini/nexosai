@@ -55,7 +55,7 @@ export async function isRedisAvailable(): Promise<boolean> {
     // fall back to direct in-process execution instead of queuing.
     const msg = (err instanceof Error ? err.message : String(err)) ?? "";
     if (msg.includes("max requests limit") || msg.includes("WRONGPASS") || msg.includes("NOAUTH")) {
-      logger.warn({ msg }, "Redis unavailable due to auth/rate-limit error");
+      logger.warn({ failureType: "AUTH_OR_RATE_LIMIT" }, "Redis unavailable due to auth/rate-limit error");
     }
     _redisAvailableCache = { ok: false, at: now };
     return false;

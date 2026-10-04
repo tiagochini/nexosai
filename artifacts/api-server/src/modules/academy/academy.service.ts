@@ -68,8 +68,8 @@ export async function findOrCreateCustomer(name: string, email: string, cpfCnpj?
     { headers: asaasHeaders() }
   );
   if (!searchResp.ok) {
-    const text = await searchResp.text();
-    logger.error({ status: searchResp.status, body: text }, "asaas: customer search failed");
+    await searchResp.text();
+    logger.error({ status: searchResp.status }, "asaas: customer search failed");
     throw new Error("Falha ao consultar clientes no Asaas");
   }
   const searchData = await searchResp.json() as { data?: AsaasCustomer[] };
@@ -96,8 +96,8 @@ export async function findOrCreateCustomer(name: string, email: string, cpfCnpj?
     body: JSON.stringify(createBody),
   });
   if (!createResp.ok) {
-    const text = await createResp.text();
-    logger.error({ status: createResp.status, body: text }, "asaas: customer create failed");
+    await createResp.text();
+    logger.error({ status: createResp.status }, "asaas: customer create failed");
     throw new Error("Falha ao criar cliente no Asaas");
   }
   return createResp.json() as Promise<AsaasCustomer>;
@@ -128,8 +128,8 @@ export async function createPayment(opts: {
   });
 
   if (!resp.ok) {
-    const text = await resp.text();
-    logger.error({ status: resp.status, body: text }, "asaas: payment create failed");
+    await resp.text();
+    logger.error({ status: resp.status }, "asaas: payment create failed");
     throw new Error("Falha ao criar cobrança no Asaas");
   }
   return resp.json() as Promise<AsaasPayment>;
@@ -203,10 +203,10 @@ export async function sendAccessEmail(opts: {
     });
 
     if (!resp.ok) {
-      const text = await resp.text();
-      logger.error({ status: resp.status, body: text }, "academy: failed to send access email via Resend");
+      await resp.text();
+      logger.error({ status: resp.status }, "academy: failed to send access email via Resend");
     } else {
-      logger.info({ email: opts.email, via: "resend" }, "academy: access email sent via Resend");
+      logger.info({ via: "resend" }, "academy: access email sent via Resend");
     }
   }
 }

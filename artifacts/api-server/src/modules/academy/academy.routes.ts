@@ -295,7 +295,7 @@ router.post("/leads", async (req, res): Promise<void> => {
     utmCampaign: parsed.utmCampaign ?? null,
   }).onConflictDoNothing().returning({ id: academyLeadsTable.id });
 
-  logger.info({ email: parsed.email, source: parsed.source }, "academy: free lead captured");
+  logger.info({ source: parsed.source }, "academy: free lead captured");
 
   // Auto-enroll in perpetual sales funnel + send welcome email immediately
   if (inserted.length > 0 && inserted[0]) {
@@ -328,7 +328,7 @@ router.post("/leads", async (req, res): Promise<void> => {
             consentText: "Aceito receber comunicações da NexOS AI",
           }),
         });
-        logger.info({ email: capturedEmail, sequenceId: NEXOS_SEQUENCE_ID }, "academy: lead enrolled in NexOS AI sequence");
+        logger.info({ sequenceId: NEXOS_SEQUENCE_ID }, "academy: lead enrolled in NexOS AI sequence");
       } catch (err) {
         logger.warn({ err }, "academy: failed to enroll lead in NexOS AI sequence (non-critical)");
       }

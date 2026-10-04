@@ -41,6 +41,9 @@ The system should only be considered ready for open production when:
   assistant.
 - [x] Remove tokens from Academy logs.
 - [ ] Complete the sensitive-data audit for logs in the remaining modules.
+- [x] Protect central/HTTP loggers, errors and child bindings from sensitive
+  fields; remove unnecessary data at reviewed call sites.
+  Scope and limits: [LOG_SECURITY.en.md](./LOG_SECURITY.en.md).
 - [x] Restrict realtime campaign rooms to the authenticated workspace,
   validate WebSocket/polling origins and disconnect on token expiry.
   Evidence: [REALTIME_SECURITY.en.md](./REALTIME_SECURITY.en.md).

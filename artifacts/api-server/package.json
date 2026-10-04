@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:log-security": "tsx src/scripts/test-log-security.ts",
     "test:realtime-security-db": "cross-env NODE_ENV=test tsx src/scripts/test-realtime-security-db.ts",
     "test:dependency-runtime": "tsx src/scripts/test-dependency-runtime.ts",
     "test:auth-sessions-http": "cross-env NODE_ENV=test tsx src/scripts/test-auth-sessions-http.ts",
