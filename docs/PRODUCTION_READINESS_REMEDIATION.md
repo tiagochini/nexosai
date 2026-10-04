@@ -41,6 +41,9 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 - [x] Impedir envio de tokens, chaves e screenshots ao assistente de integrações.
 - [x] Remover tokens de logs da Academy.
 - [ ] Concluir auditoria de dados sensíveis nos logs dos demais módulos.
+- [x] Restringir salas de campanhas em tempo real ao workspace autenticado,
+  validar origem de WebSocket/polling e desconectar ao expirar o token.
+  Evidência: [REALTIME_SECURITY.md](./REALTIME_SECURITY.md).
 - [x] Remover segredo padrão do webhook WhatsApp.
 - [x] Validar assinatura HMAC do webhook WhatsApp.
 - [x] Criptografar tokens de integrações em repouso com chave externa ao banco.

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:realtime-security-db": "cross-env NODE_ENV=test tsx src/scripts/test-realtime-security-db.ts",
     "test:dependency-runtime": "tsx src/scripts/test-dependency-runtime.ts",
     "test:auth-sessions-http": "cross-env NODE_ENV=test tsx src/scripts/test-auth-sessions-http.ts",
     "test:auth-cookie-security": "cross-env NODE_ENV=test tsx src/scripts/test-auth-cookie-security.ts",
@@ -112,6 +113,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "socket.io-client": "^4.8.3",
     "@types/archiver": "^7.0.0",
     "@types/bcryptjs": "^3.0.0",
     "@types/cookie-parser": "^1.4.10",

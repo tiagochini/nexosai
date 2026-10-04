@@ -30,6 +30,7 @@ export interface WorkspaceAlert {
 }
 
 let _socket: Socket | null = null;
+const campaignListeners = new Map<string, number>();
 let removeRecoveryListeners: (() => void) | null = null;
 let lastAuthErrorLogAt = 0;
 
@@ -149,6 +150,8 @@ export function useCampaignSocket(
 
     const socket = getSocket();
 
+    campaignListeners.set(campaignId, (campaignListeners.get(campaignId) ?? 0) + 1);
+
     const joinAndListen = () => {
       socket.emit("join:campaign", campaignId);
     };
@@ -168,6 +171,12 @@ export function useCampaignSocket(
     return () => {
       socket.off("campaign:event", handler);
       socket.off("connect", joinAndListen);
+      const remaining = (campaignListeners.get(campaignId) ?? 1) - 1;
+      if (remaining > 0) campaignListeners.set(campaignId, remaining);
+      else {
+        campaignListeners.delete(campaignId);
+        if (socket.connected) socket.emit("leave:campaign", campaignId);
+      }
     };
   }, [campaignId, enabled]);
 }
@@ -214,4 +223,14 @@ export function disconnectSocket() {
   removeRecoveryListeners = null;
   _socket?.disconnect();
   _socket = null;
+}
+
+/** Keep listeners, but replace rooms and credentials after refresh/workspace changes. */
+export function synchronizeSocketAuth() {
+  if (!_socket) return;
+  const current = typeof _socket.auth === "function" ? undefined : _socket.auth;
+  if (current?.token === getAccessToken()) return;
+  refreshSocketAuth(_socket);
+  _socket.disconnect();
+  if (getAccessToken()) _socket.connect();
 }

@@ -41,6 +41,9 @@ The system should only be considered ready for open production when:
   assistant.
 - [x] Remove tokens from Academy logs.
 - [ ] Complete the sensitive-data audit for logs in the remaining modules.
+- [x] Restrict realtime campaign rooms to the authenticated workspace,
+  validate WebSocket/polling origins and disconnect on token expiry.
+  Evidence: [REALTIME_SECURITY.en.md](./REALTIME_SECURITY.en.md).
 - [x] Remove the default WhatsApp webhook secret.
 - [x] Validate the WhatsApp webhook HMAC signature.
 - [x] Encrypt integration tokens at rest with a key stored outside the database.

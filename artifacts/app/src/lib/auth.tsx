@@ -5,6 +5,7 @@ import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
 import type { User, Workspace } from "@workspace/api-client-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
+import { disconnectSocket, synchronizeSocketAuth } from "./socket";
 
 // ── Synchronous module-level init — ensures token is sent even on the very
 // first request before AuthProvider's useEffect has had a chance to run.
@@ -83,9 +84,11 @@ const AuthContext = createContext<AuthContextType | null>(null);
 function saveTokens(access: string) {
   localStorage.setItem("accessToken", access);
   localStorage.removeItem("refreshToken");
+  synchronizeSocketAuth();
 }
 
 function clearTokens() {
+  disconnectSocket();
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
 }
