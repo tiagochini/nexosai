@@ -44,8 +44,12 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 - [x] Usar aleatoriedade criptográfica nos códigos Academy de checkout/brindes
   e validar lotes de brindes antes da emissão, mantendo códigos existentes.
   Evidência local: [ACADEMY_ADMIN_SECURITY.md](./ACADEMY_ADMIN_SECURITY.md).
-- [ ] Limitar tentativas públicas de validação Academy e revisar proteção,
+- [x] Limitar tentativas públicas de validação Academy por IP/sub-rede,
+  resistir a cabeçalhos de origem falsificados e autenticar webhook/confirmador simulado.
+- [ ] Compartilhar cotas entre instâncias e revisar proteção,
   validade/revogação de códigos e exposição de dados pessoais.
+- [ ] Corrigir autenticação fail-open do webhook de billing quando faltar segredo
+  e conciliar eventos Academy com o estado real do pagamento no provedor.
 
 - [x] Remover segredos previamente versionados e limpar o histórico Git.
 - [x] Impedir envio de tokens, chaves e screenshots ao assistente de integrações.

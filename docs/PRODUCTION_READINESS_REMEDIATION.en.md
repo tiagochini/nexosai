@@ -43,8 +43,12 @@ The system should only be considered ready for open production when:
 - [x] Use cryptographic randomness for Academy checkout/gift codes and validate
   gift batches before issuance, preserving existing codes.
   Local evidence: [ACADEMY_ADMIN_SECURITY.en.md](./ACADEMY_ADMIN_SECURITY.en.md).
-- [ ] Limit public Academy verification attempts and review code protection,
+- [x] Limit public Academy verification attempts by IP/subnet, resist spoofed
+  origin headers and authenticate the webhook/simulated confirmation endpoint.
+- [ ] Share quotas across instances and review code protection,
   expiry/revocation and personal-data exposure.
+- [ ] Fix fail-open billing webhook authentication when its secret is absent
+  and reconcile Academy events with actual provider payment state.
 
 - [x] Remove previously committed secrets and clean Git history.
 - [x] Prevent tokens, keys, and screenshots from being sent to the integrations

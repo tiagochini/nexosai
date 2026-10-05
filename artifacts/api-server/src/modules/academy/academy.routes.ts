@@ -7,6 +7,8 @@ import { academyPurchasesTable, academyLeadsTable, academyFunnelEmailsTable } fr
 import { logger } from "../../lib/logger.js";
 import { env } from "../../lib/env.js";
 import { checkAcademyAdmin as checkCrm } from "./academy-admin.security.js";
+import { createAcademyVerificationLimiter } from "./academy-verification.security.js";
+import { checkAcademyWebhook } from "./academy-webhook.security.js";
 import { ALLAN_CONSTRAINT_REASONING } from "../agents/constraint-reasoning.js";
 import {
   findOrCreateCustomer,
@@ -24,6 +26,9 @@ import {
 } from "./academy-funnel.service.js";
 
 const router = Router();
+const verificationLimiter = createAcademyVerificationLimiter(
+  (process.env["ACADEMY_TRUSTED_PROXY_IPS"] ?? "").split(",").map((ip) => ip.trim()).filter(Boolean),
+);
 
 const ACADEMY_PRODUCTS: Record<string, { name: string; amountBrl: number }> = {
   "mini-guide": { name: "Mapa dos Primeiros R$10K em Vendas Online", amountBrl: 97 },
@@ -133,6 +138,7 @@ router.post("/checkout", async (req, res): Promise<void> => {
 // POST /api/academy/webhook
 // Asaas webhook — confirms payment and activates access token
 router.post("/webhook", async (req, res): Promise<void> => {
+  if (!checkAcademyWebhook(req, res)) return;
   const event = req.body?.event as string | undefined;
   const payment = req.body?.payment as {
     id?: string;
@@ -207,8 +213,9 @@ router.post("/webhook", async (req, res): Promise<void> => {
 
 // GET /api/academy/verify/:token
 // Validates an access token — no auth required
-router.get("/verify/:token", async (req, res): Promise<void> => {
-  const token = req.params.token?.toUpperCase().trim();
+router.get("/verify/:token", verificationLimiter, async (req, res): Promise<void> => {
+  const rawToken = req.params.token;
+  const token = typeof rawToken === "string" ? rawToken.toUpperCase().trim() : "";
   if (!token || token.length < 8) {
     res.status(400).json({ valid: false, error: "Token inválido." });
     return;
@@ -810,6 +817,7 @@ DIRETRIZES DE RESPOSTA
 
 // POST /api/academy/simulate-confirm (dev/owner only — manually confirms a pending purchase)
 router.post("/simulate-confirm", async (req, res): Promise<void> => {
+  if (!checkCrm(req, res)) return;
   if (env.NODE_ENV === "production") {
     res.status(403).json({ error: "Not available in production." });
     return;

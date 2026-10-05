@@ -4,9 +4,9 @@ Local review: October 5, 2026. [Português](./ACADEMY_ADMIN_SECURITY.md).
 
 ## Remediation
 
-Removed the embedded default password from administrative/CRM routes. All 11
-reviewed routes share the same authorization check, including `/funnel-tick`,
-which previously did not check authorization. Lead/purchase listings, statistics,
+Removed the embedded default password from administrative/CRM routes. All 12
+reviewed routes share the same authorization check, including `/funnel-tick`
+and `/simulate-confirm`, which previously lacked authorization. Lead/purchase listings, statistics,
 purchase confirmation, gift-code generation and CRM updates require valid
 credentials before reading data or performing actions.
 
@@ -28,7 +28,7 @@ no longer authenticate.
 pnpm --filter @workspace/api-server run test:academy-admin-security
 ```
 
-The test starts only a temporary local HTTP server, exercises all 11 routes with
+The test starts only a temporary local HTTP server, exercises all 12 routes with
 missing/weak configuration and absent/default/query credentials, and verifies
 that a valid header reaches input validation. It does not confirm purchases,
 generate codes, run the scheduler, send email or modify the database. Temporary
@@ -39,6 +39,43 @@ but not executed remotely in this stage because there was no push. The running
 API was not automatically restarted.
 
 ## Limits
+
+### Public verification and payment origin
+
+`GET /verify/:token` accepts up to 10 attempts per 15 minutes per IPv4 address
+or IPv6 `/56` block, including invalid and valid attempts. Further requests
+receive `429`, `ACADEMY_VERIFICATION_RATE_LIMITED` and `Retry-After`. This also
+applies in development and is independent of the code being queried.
+
+By default it uses the connection IP, not client-supplied forwarding headers.
+Behind a reverse proxy, configure `ACADEMY_TRUSTED_PROXY_IPS` with exact IPs
+of controlled proxies. Those proxies must correctly overwrite/append the real
+client address; the app currently trusts one proxy hop. Invalid entries and
+broad networks are not accepted by this check. Without configuration, users
+behind the same proxy share quota. Misconfiguration can block legitimate users
+or allow origin spoofing.
+
+Quota storage is per-process memory; restarting resets it and multiple instances
+have separate quotas. Redis/shared storage and global proxy-trust review remain
+pending. This is not a guarantee against distributed attacks. Other endpoints
+do not receive this specific quota.
+
+`/webhook` now requires configured `ASAAS_WEBHOOK_TOKEN` and a matching
+`asaas-access-token` header before processing events. Missing, wrong or URL-only
+credentials receive `401`. Configure the same private token in server and
+provider; no value was changed in this stage. Simulated confirmation requires
+administrative credentials and remains forbidden in production.
+
+Local tests cover exceeding quota while changing codes and `X-Forwarded-For`,
+IPv6 grouping, isolation of other routes and rejection of unauthenticated
+payment events. An authenticated unknown event is accepted without modifying
+purchases. No real payment confirmation was tested. Provider reconciliation
+and replay protection remain pending.
+
+```powershell
+pnpm --filter @workspace/api-server run test:academy-verification-security
+pnpm --filter @workspace/api-server run test:academy-admin-security
+```
 
 ### Access-code generation
 
@@ -66,7 +103,7 @@ reject invalid input and check default and boundary counts 1/50 before product
 validation, without inserting gifts or querying real purchases. Tests did not
 modify any existing code or real purchase.
 
-Public verification attempt limiting, protected code storage, expiry/revocation
+Shared quotas across instances, protected code storage, expiry/revocation
 and review of personal-data responses remain pending. Cryptographic generation
 alone does not resolve these risks.
 
