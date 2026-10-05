@@ -85,6 +85,42 @@ Owned fixtures are removed in `finally`; external calls are forbidden in this te
 The regression is included in the workflow's database job.
 
 Limits: provider acceptance followed by database failure still requires reconciliation;
-a local transaction cannot make the provider transactional. Canonical settlement
-verification in billing remains pending. Monthly balance resets and credit reversals
+a local transaction cannot make the provider transactional. Monthly balance resets and credit reversals
 were not fixed in this stage. No real charges, API restart, push or secret changes.
+
+## Canonical lookup and local restart — 2026-10-05
+
+Before external-ID confirmation, billing queries `GET /v3/payments/{id}` in the
+configured Asaas account. Webhook data is a notification, not payment proof.
+ID, `value` converted to cents, local BRL currency and payment method must match
+the local record. `netValue` is not compared because it excludes provider fees.
+The lookup has a 10-second deadline. Outages, unsuccessful HTTP responses or
+unreadable JSON return 503 without confirmation or grants. Incomplete objects
+return 502; mismatches and deleted charges return 409.
+
+Pix/boleto require `RECEIVED`; cards also accept `CONFIRMED`. Pix `CONFIRMED`
+can be under precautionary hold, so it waits for receipt. Ineligible states are
+acknowledged without local mutation. Guarded manual confirmation remains separate.
+
+HTTP runs outside the transaction. Local record ID and ID/amount/method binding
+are checked again under the row lock. Stored evidence contains only ID, status,
+amount in cents, method and verification time, not the full provider object or
+raw notification. Historical data is not deleted. Paid-record replay neither
+queries the provider nor grants credits again.
+
+`test:billing-settlement` covers the contract, status policy, values, identity,
+currency, deadline, escaped URL, HTTP errors, timeout and malformed responses
+with mocks. Database regression also covers spoofed notifications, provider
+outage/retry and a local amount change during lookup. No real Asaas calls.
+
+Official sources: [payment lookup](https://docs.asaas.com/reference/recuperar-uma-unica-cobranca),
+[creation and Pix caveat](https://docs.asaas.com/reference/criar-nova-cobranca),
+[card response and amount fields](https://docs.asaas.com/reference/pay-a-charge-with-credit-card).
+
+The project was started through `scripts/dev-local.mjs`, preserving existing local
+safe mode with schedulers/automatic recovery disabled: API 8080, frontend 8081.
+No secrets were changed or credential-free routes enabled. Academy, reversals,
+recovery between provider acceptance and persistence, historical reconciliation,
+session-based auditing and end-to-end sandbox certification remain pending.
+Remote state can change after lookup; there is no distributed provider transaction
+or complete billing certification.

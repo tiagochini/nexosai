@@ -53,7 +53,9 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
   Evidência local: [BILLING_WEBHOOK_SECURITY.md](./BILLING_WEBHOOK_SECURITY.md).
 - [x] Tornar confirmação de billing, saldo e extrato atômicos e idempotentes;
   validar concorrência entre confirmações, concessões e descontos com fixtures locais.
-- [ ] Conciliar eventos Academy/billing com o estado real do pagamento;
+- [x] Conferir confirmação de billing com ID, valor, forma e estado atuais no Asaas;
+  bloquear concessão em falhas/divergências, revalidar vínculo sob bloqueio e testar com mocks.
+- [ ] Conciliar eventos Academy com o estado real do pagamento;
   revisar reversões, saldos históricos e recuperação após falha no provedor/banco.
 
 - [x] Remover segredos previamente versionados e limpar o histórico Git.

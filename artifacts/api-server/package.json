@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:billing-settlement": "tsx src/scripts/test-billing-settlement.ts",
     "test:billing-credit-concurrency-db": "cross-env NODE_ENV=test tsx src/scripts/test-billing-credit-concurrency-db.ts",
     "test:billing-webhook-security": "cross-env NODE_ENV=test tsx src/scripts/test-billing-webhook-security.ts",
     "test:academy-verification-security": "cross-env NODE_ENV=test tsx src/scripts/test-academy-verification-security.ts",

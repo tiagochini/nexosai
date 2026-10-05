@@ -52,7 +52,9 @@ The system should only be considered ready for open production when:
   Local evidence: [BILLING_WEBHOOK_SECURITY.en.md](./BILLING_WEBHOOK_SECURITY.en.md).
 - [x] Make billing confirmation, balance and ledger atomic and idempotent;
   validate concurrent confirmations, grants and deductions using local fixtures.
-- [ ] Reconcile Academy/billing events with actual provider payment state;
+- [x] Verify billing against current Asaas ID, amount, method and status;
+  block grants on outages/mismatches, recheck binding under lock and test with mocks.
+- [ ] Reconcile Academy events with actual provider payment state;
   review reversals, historical balances and provider/database failure recovery.
 
 - [x] Remove previously committed secrets and clean Git history.

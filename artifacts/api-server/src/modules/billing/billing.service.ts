@@ -10,6 +10,7 @@ import {
 import { AppError, NotFoundError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
 import { grantCreditsInTransaction } from "../credits/credits.service.js";
+import { fetchAsaasSettlement, parseAsaasSettlement, matchesBillingSettlement, type AsaasSettlement } from "./billing-settlement.js";
 
 // ─── Asaas API ────────────────────────────────────────────────────────────────
 
@@ -482,16 +483,21 @@ export async function initiatePackPayment(opts: {
 
 // ─── Confirmation ─────────────────────────────────────────────────────────────
 
-async function settleSubscriptionPayment(where: SQL, metadataChanges: Record<string, unknown>): Promise<SubscriptionPayment | undefined> {
+async function settleSubscriptionPayment(where: SQL, metadataChanges: Record<string, unknown>, settlement?: AsaasSettlement, expectedPaymentId?: string): Promise<SubscriptionPayment | undefined> {
   return db.transaction(async (trx) => {
     const rows = await trx.select().from(subscriptionPaymentsTable).where(where)
       .orderBy(subscriptionPaymentsTable.id).limit(2).for("update");
     if (rows.length > 1) throw new AppError(409, "Pagamento externo ambíguo", "AMBIGUOUS_EXTERNAL_PAYMENT");
     const payment = rows[0];
+    if (payment && expectedPaymentId && payment.id !== expectedPaymentId) {
+      throw new AppError(409, "Pagamento alterado durante verificação", "PAYMENT_CHANGED_DURING_VERIFICATION");
+    }
     if (!payment || payment.status === "paid") return payment;
     if (payment.status !== "pending" && payment.status !== "processing") {
       throw new AppError(409, "Pagamento não pode ser confirmado neste estado", "INVALID_PAYMENT_TRANSITION");
     }
+    // Recheck under the row lock; never hold a database lock across HTTP.
+    if (settlement && !matchesBillingSettlement(payment, settlement)) return payment;
     const meta = payment.metadata as { type?: string; packCredits?: number };
     const [updated] = await trx.update(subscriptionPaymentsTable).set({
       status: "paid", paidAt: new Date(), updatedAt: new Date(),
@@ -507,10 +513,27 @@ async function settleSubscriptionPayment(where: SQL, metadataChanges: Record<str
 
 export async function confirmPaymentByExternalId(
   externalId: string,
-  providerPayload: unknown
+  providerPayload: unknown,
+  lookup: (id: string) => Promise<unknown> = fetchAsaasSettlement,
 ): Promise<void> {
-  const payment = await settleSubscriptionPayment(eq(subscriptionPaymentsTable.externalId, externalId), { providerPayload });
-  if (!payment) { logger.warn({ externalId }, "Payment not found for external ID"); return; }
+  const where = eq(subscriptionPaymentsTable.externalId, externalId);
+  const rows = await db.select().from(subscriptionPaymentsTable).where(where).limit(2);
+  if (rows.length > 1) throw new AppError(409, "Pagamento externo ambíguo", "AMBIGUOUS_EXTERNAL_PAYMENT");
+  const existing = rows[0];
+  if (!existing) { logger.warn({ externalId }, "Payment not found for external ID"); return; }
+  if (existing.status === "paid") return;
+  if (existing.status !== "pending" && existing.status !== "processing") {
+    throw new AppError(409, "Pagamento não pode ser confirmado neste estado", "INVALID_PAYMENT_TRANSITION");
+  }
+  const settlement = parseAsaasSettlement(await lookup(externalId));
+  if (!matchesBillingSettlement(existing, settlement)) return;
+  const event = providerPayload && typeof providerPayload === "object"
+    ? (providerPayload as { event?: unknown }).event : undefined;
+  const payment = await settleSubscriptionPayment(where, {
+    providerSettlement: { id: settlement.id, status: settlement.status, amountCents: Math.round(settlement.value * 100), billingType: settlement.billingType, verifiedAt: new Date().toISOString() },
+    ...(event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED" ? { providerEvent: event } : {}),
+  }, settlement, existing.id);
+  if (!payment) throw new AppError(409, "Pagamento alterado durante verificação", "PAYMENT_CHANGED_DURING_VERIFICATION");
   logger.info({ paymentId: payment.id, workspaceId: payment.workspaceId }, "Payment confirmation reconciled");
 }
 

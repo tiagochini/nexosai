@@ -87,7 +87,45 @@ com provedor simulado e replay. Fixtures próprias são removidas no `finally`.
 Chamadas externas são proibidas no teste. Incluído no job de banco do workflow.
 
 Limites: uma cobrança aceita pelo provedor seguida de falha no banco ainda exige
-conciliação; esta transação local não torna o provedor transacional. A verificação
-canônica do pagamento antes da concessão no billing continua pendente. Reset
+conciliação; esta transação local não torna o provedor transacional. Reset
 mensal de saldo e reversão de créditos não foram corrigidos nesta etapa. Nenhuma
 cobrança real foi feita; API não reiniciada, sem push e sem alterar segredos.
+
+## Consulta canônica e reinício local — 05/10/2026
+
+Antes da confirmação por ID externo, o billing consulta `GET /v3/payments/{id}`
+na conta Asaas configurada. O corpo do webhook é uma notificação, não prova de
+pagamento. ID, `value` convertido em centavos, moeda local BRL e forma de
+pagamento precisam corresponder ao registro. Não se compara `netValue`, que
+desconta tarifas. Consulta com prazo de 10 segundos; indisponibilidade, resposta
+HTTP não bem-sucedida ou JSON ilegível retornam 503 sem confirmar ou conceder.
+Objeto incompleto retorna 502; divergência ou cobrança excluída retorna 409.
+
+Pix e boleto só são liberados em `RECEIVED`; cartão também aceita `CONFIRMED`.
+Pix `CONFIRMED` pode estar em bloqueio cautelar, portanto aguarda o evento de
+recebimento. Estados ainda não elegíveis são reconhecidos sem mutação local.
+A confirmação manual continua separada, protegida pelo guard administrativo.
+
+A consulta ocorre fora da transação para não bloquear o banco durante HTTP.
+Depois, o ID do registro e o vínculo de ID/valor/forma são conferidos novamente
+sob bloqueio. A prova salva contém somente ID, status, valor em centavos, forma
+e horário da consulta; novos fluxos não persistem o objeto completo nem o corpo
+bruto da notificação. Dados históricos não foram apagados. Replay de registro
+já pago não consulta o provedor nem refaz a concessão.
+
+`test:billing-settlement` cobre contrato, estados, valores, identificação, moeda,
+prazo, URL escapada, erros HTTP, timeout e respostas inválidas usando mocks.
+O teste de banco também cobre notificação falsa, queda do provedor, retry e
+mudança do valor durante a consulta. Nenhuma chamada real ao Asaas é realizada.
+
+Referências oficiais: [consulta da cobrança](https://docs.asaas.com/reference/recuperar-uma-unica-cobranca),
+[criação e ressalva Pix](https://docs.asaas.com/reference/criar-nova-cobranca),
+[retorno de cartão e campos de valor](https://docs.asaas.com/reference/pay-a-charge-with-credit-card).
+
+Projeto iniciado pelo script `scripts/dev-local.mjs`, preservando o modo seguro
+local existente: sem schedulers/recuperação automática. API na 8080 e frontend
+na 8081. Esta etapa não altera segredos nem habilita rotas sem credenciais.
+Continuam pendentes Academy, estornos/reversões, recuperação entre cobrança e
+persistência, conciliação histórica, auditoria por sessão e validação ponta a ponta
+no sandbox. O estado remoto ainda pode mudar após a consulta; não há transação
+distribuída com o provedor, nem certificação integral de billing.

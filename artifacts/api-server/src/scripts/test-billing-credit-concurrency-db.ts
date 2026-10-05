@@ -14,9 +14,10 @@ const workspaceId = randomUUID();
 const otherWorkspaceId = randomUUID();
 const marker = randomUUID();
 let planId: string;
+const received = async (id: string) => ({ id, status: "RECEIVED", value: 1, billingType: "PIX" });
 async function payment(credits = 100, status: "pending" | "processing" | "refunded" | "paid" = "pending", externalId = `fixture-${randomUUID()}`) {
   const [row] = await db.insert(subscriptionPaymentsTable).values({
-    workspaceId, userId, planId, amountCents: 100, method: "manual", status,
+    workspaceId, userId, planId, amountCents: 100, method: "pix", status,
     externalId, description: "Billing regression fixture", metadata: { type: "pack", packCredits: credits },
   }).returning();
   return row!;
@@ -48,7 +49,7 @@ try {
   const first = await payment();
   await Promise.all(Array.from({ length: 16 }, (_, i) => i % 2
     ? markPaymentPaid(workspaceId, first.id, "fixture")
-    : confirmPaymentByExternalId(first.externalId!, { fixture: true })));
+    : confirmPaymentByExternalId(first.externalId!, { fixture: true }, received)));
   assert.equal(await balance(), 1100);
   assert.equal((await ledger(first.id)).length, 1);
   const settled = await readPayment(first.id);
@@ -142,6 +143,43 @@ try {
   ]).flat());
   assert.equal(await balance(), mixedStart + 8 * (20 - CREDIT_COSTS.strategy_generation));
   console.log("PASS: concurrent grants and deductions preserve the shared balance");
+
+  const verificationStart = await balance();
+  const verified = await payment();
+  const notify = { event: "PAYMENT_CONFIRMED", payment: { id: verified.externalId, value: 999999, status: "RECEIVED" }, customer: "private-notification" };
+  for (const status of ["PENDING", "CONFIRMED", "REFUNDED", "OVERDUE"]) {
+    await confirmPaymentByExternalId(verified.externalId!, notify, async (id) => ({ ...await received(id), status }));
+    assert.equal((await readPayment(verified.id)).status, "pending");
+  }
+  for (const changed of [{ id: "pay_wrong" }, { value: 2 }, { billingType: "CREDIT_CARD" }, { deleted: true }]) {
+    await assert.rejects(confirmPaymentByExternalId(verified.externalId!, notify, async (id) => ({ ...await received(id), ...changed })), /divergente/);
+  }
+  await assert.rejects(confirmPaymentByExternalId(verified.externalId!, notify, async () => { throw new Error("offline-outage"); }), /offline-outage/);
+  await assert.rejects(confirmPaymentByExternalId(verified.externalId!, notify, async () => ({})), /inválida/);
+  // Default production boundary is also fail-closed. fetch is blocked above.
+  await assert.rejects(confirmPaymentByExternalId(verified.externalId!, notify), (error: unknown) => {
+    assert.equal((error as { statusCode: number }).statusCode, 503);
+    return true;
+  });
+  assert.equal(await balance(), verificationStart);
+  assert.equal((await ledger(verified.id)).length, 0);
+  await confirmPaymentByExternalId(verified.externalId!, notify, received);
+  assert.equal(await balance(), verificationStart + 100);
+  const verifiedRow = await readPayment(verified.id);
+  assert.equal(verifiedRow.status, "paid");
+  assert.equal((await ledger(verified.id)).length, 1);
+  assert.ok(!JSON.stringify(verifiedRow.metadata).includes("private-notification"));
+  assert.ok(!("providerPayload" in (verifiedRow.metadata as object)));
+
+  const changedDuringLookup = await payment();
+  await assert.rejects(confirmPaymentByExternalId(changedDuringLookup.externalId!, {}, async (id) => {
+    await db.update(subscriptionPaymentsTable).set({ amountCents: 200 }).where(eq(subscriptionPaymentsTable.id, changedDuringLookup.id));
+    return received(id);
+  }), /divergente/);
+  assert.equal((await readPayment(changedDuringLookup.id)).status, "pending");
+  assert.equal((await ledger(changedDuringLookup.id)).length, 0);
+  assert.equal(await balance(), verificationStart + 100);
+  console.log("PASS: provider state overrides spoofed notification; mismatches/outage cannot grant; retry and locked binding recheck");
 } finally {
   // Exact owned UUID only; cascade removes this test's workspaces, payments and ledger.
   try { await db.delete(usersTable).where(eq(usersTable.id, userId)); }
