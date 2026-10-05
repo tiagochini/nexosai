@@ -54,8 +54,11 @@ The system should only be considered ready for open production when:
   validate concurrent confirmations, grants and deductions using local fixtures.
 - [x] Verify billing against current Asaas ID, amount, method and status;
   block grants on outages/mismatches, recheck binding under lock and test with mocks.
-- [ ] Reconcile Academy events with actual provider payment state;
-  review reversals, historical balances and provider/database failure recovery.
+- [x] Verify Academy webhook against Asaas payment/customer/reference/amount/status;
+  commit purchase/conversion together and test concurrency without real delivery.
+  Local evidence: [ACADEMY_PAYMENT_CONFIRMATION.en.md](./ACADEMY_PAYMENT_CONFIRMATION.en.md).
+- [ ] Review reversals, historical balances/purchases and provider/database failure
+  recovery; implement a durable Academy access-email outbox.
 
 - [x] Remove previously committed secrets and clean Git history.
 - [x] Prevent tokens, keys, and screenshots from being sent to the integrations

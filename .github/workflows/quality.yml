@@ -93,5 +93,6 @@ jobs:
           pnpm --filter @workspace/api-server run test:auth-sessions-http
           pnpm --filter @workspace/api-server run test:realtime-security-db
           pnpm --filter @workspace/api-server run test:academy-funnel-db
+          pnpm --filter @workspace/api-server run test:academy-settlement-db
           pnpm --filter @workspace/api-server run test:billing-credit-concurrency-db
           pnpm --filter @workspace/db run verify

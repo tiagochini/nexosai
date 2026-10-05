@@ -8,7 +8,7 @@ import { logger } from "../../lib/logger.js";
 import { env } from "../../lib/env.js";
 import { checkAcademyAdmin as checkCrm } from "./academy-admin.security.js";
 import { createAcademyVerificationLimiter } from "./academy-verification.security.js";
-import { checkAcademyWebhook } from "./academy-webhook.security.js";
+import { createAcademyPaymentWebhook } from "./academy-payment-webhook.js";
 import { ALLAN_CONSTRAINT_REASONING } from "../agents/constraint-reasoning.js";
 import {
   findOrCreateCustomer,
@@ -137,79 +137,9 @@ router.post("/checkout", async (req, res): Promise<void> => {
 
 // POST /api/academy/webhook
 // Asaas webhook — confirms payment and activates access token
-router.post("/webhook", async (req, res): Promise<void> => {
-  if (!checkAcademyWebhook(req, res)) return;
-  const event = req.body?.event as string | undefined;
-  const payment = req.body?.payment as {
-    id?: string;
-    externalReference?: string;
-    status?: string;
-    value?: number;
-  } | undefined;
-
-  logger.info({ event, paymentId: payment?.id }, "academy: webhook received");
-
-  if (!event || !payment) {
-    res.status(400).json({ error: "Invalid webhook payload" });
-    return;
-  }
-
-  const confirmedEvents = ["PAYMENT_RECEIVED", "PAYMENT_CONFIRMED", "PAYMENT_APPROVED_BY_RISK_ANALYSIS"];
-  if (!confirmedEvents.includes(event)) {
-    res.json({ ok: true, ignored: true });
-    return;
-  }
-
-  const purchaseId = payment.externalReference;
-  if (!purchaseId) {
-    logger.warn({ paymentId: payment.id }, "academy: webhook missing externalReference");
-    res.json({ ok: true });
-    return;
-  }
-
-  const [purchase] = await db
-    .select()
-    .from(academyPurchasesTable)
-    .where(eq(academyPurchasesTable.id, purchaseId))
-    .limit(1);
-
-  if (!purchase) {
-    logger.warn({ purchaseId }, "academy: purchase not found in webhook");
-    res.json({ ok: true });
-    return;
-  }
-
-  if (purchase.status === "confirmed") {
-    res.json({ ok: true, alreadyConfirmed: true });
-    return;
-  }
-
-  await db
-    .update(academyPurchasesTable)
-    .set({ status: "confirmed", confirmedAt: new Date(), asaasPaymentId: payment.id ?? purchase.asaasPaymentId })
-    .where(eq(academyPurchasesTable.id, purchase.id));
-
-  logger.info({ purchaseId }, "academy: purchase confirmed");
-
-  // Send access email non-blocking
-  const productInfo = ACADEMY_PRODUCTS[purchase.productId];
-  setImmediate(() => {
-    sendAccessEmail({
-      email: purchase.customerEmail,
-      name: purchase.customerName ?? purchase.customerEmail,
-      token: purchase.accessToken,
-      productName: productInfo?.name ?? purchase.productId,
-      portalUrl: `${env.APP_URL}/nexos-academy/`,
-    }).catch(err => logger.error({ err }, "academy: access email error"));
-
-    // Mark matching funnel lead as converted (stops sales emails)
-    markLeadConverted(purchase.customerEmail).catch(err =>
-      logger.error({ err }, "academy: failed to mark lead converted")
-    );
-  });
-
-  res.json({ ok: true, token: purchase.accessToken });
-});
+router.post("/webhook", createAcademyPaymentWebhook({
+  productName: (id) => ACADEMY_PRODUCTS[id]?.name ?? id,
+}));
 
 // GET /api/academy/verify/:token
 // Validates an access token — no auth required

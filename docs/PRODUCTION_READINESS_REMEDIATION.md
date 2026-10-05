@@ -55,8 +55,11 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
   validar concorrência entre confirmações, concessões e descontos com fixtures locais.
 - [x] Conferir confirmação de billing com ID, valor, forma e estado atuais no Asaas;
   bloquear concessão em falhas/divergências, revalidar vínculo sob bloqueio e testar com mocks.
-- [ ] Conciliar eventos Academy com o estado real do pagamento;
-  revisar reversões, saldos históricos e recuperação após falha no provedor/banco.
+- [x] Conferir webhook Academy com pagamento, cliente, referência, valor e estado
+  no Asaas; confirmar compra/conversão juntas e testar concorrência sem envio real.
+  Evidência local: [ACADEMY_PAYMENT_CONFIRMATION.md](./ACADEMY_PAYMENT_CONFIRMATION.md).
+- [ ] Revisar reversões, saldos/compras históricos e recuperação após falha no
+  provedor/banco; implementar outbox durável para o e-mail de acesso Academy.
 
 - [x] Remover segredos previamente versionados e limpar o histórico Git.
 - [x] Impedir envio de tokens, chaves e screenshots ao assistente de integrações.
