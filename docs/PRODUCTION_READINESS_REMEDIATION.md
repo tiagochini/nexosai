@@ -44,6 +44,8 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 - [x] Proteger logger central/HTTP, erros e bindings filhos contra campos
   sensíveis; remover dados desnecessários nos pontos revisados.
   Escopo e limites: [LOG_SECURITY.md](./LOG_SECURITY.md).
+- [x] Remover conteúdo privado dos logs revisados de Meta/WhatsApp, respostas
+  de provedores e previews de IA; adicionar guard AST de logging ao workflow local.
 - [x] Restringir salas de campanhas em tempo real ao workspace autenticado,
   validar origem de WebSocket/polling e desconectar ao expirar o token.
   Evidência: [REALTIME_SECURITY.md](./REALTIME_SECURITY.md).
@@ -79,6 +81,8 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 
 - [ ] Concluir jornada sandbox: cadastro → campanha → conteúdo → publicação →
   lead → checkout → atribuição.
+- [ ] Impedir que o funil Academy marque e-mails como enviados sem provedor
+  configurado; distinguir simulação de entrega real.
 - [ ] Implementar concessões de acesso a objetos para o worker de mídia.
 - [ ] Concluir e certificar executores de vídeo e mídia paga.
 - [ ] Criar conjunto versionado de avaliações de IA com critérios por artefato.

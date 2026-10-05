@@ -591,14 +591,14 @@ export async function sendEmailSystemNotification(
       body: JSON.stringify({ from, to, subject, html }),
     });
     if (!res.ok) {
-      const body = await res.text();
-      log.warn({ status: res.status, body }, "Email system notification failed — Resend API error");
+      await res.text();
+      log.warn({ status: res.status }, "Email system notification failed — Resend API error");
       return false;
     }
-    log.info({ to }, "Email system notification sent via Resend");
+    log.info("Email system notification sent via Resend");
     return true;
   } catch (err) {
-    log.warn({ err, to }, "Email system notification failed — non-blocking");
+    log.warn({ err }, "Email system notification failed — non-blocking");
     return false;
   }
 }

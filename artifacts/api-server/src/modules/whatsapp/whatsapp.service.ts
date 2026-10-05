@@ -468,7 +468,7 @@ export async function handleWhatsAppWebhook(payload: unknown) {
        if (!from) continue;
       processed++;
 
-      log.info({ from, body: body.substring(0, 50) }, "Incoming WhatsApp message");
+      log.info("Incoming WhatsApp message");
 
       const [integration] = await db
         .select({

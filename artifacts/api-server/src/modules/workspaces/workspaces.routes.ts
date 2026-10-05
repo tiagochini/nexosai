@@ -860,7 +860,7 @@ router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> =>
       buildDownloadUrl(parsed.data.consentKey),
     ]);
 
-    req.log.info({ workspaceId, trainingUrl: trainingUrl.slice(0, 80) }, "Calling HeyGen Digital Twin (v3)");
+    req.log.info({ workspaceId }, "Calling HeyGen Digital Twin (v3)");
 
     // ── Attempt Digital Twin via v3 API ────────────────────────────────────
     // POST /v3/avatars type:digital_twin — replaces deprecated /v2/video_avatar (405).
@@ -931,7 +931,7 @@ router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> =>
 
     const dtStatus  = dtRes.status;
     const dtErrText = await dtRes.text();
-    req.log.warn({ workspaceId, dtStatus, dtErrText: dtErrText.slice(0, 300) }, "Digital Twin rejected — trying photo avatar fallback");
+      req.log.warn({ workspaceId, dtStatus }, "Digital Twin rejected — trying photo avatar fallback");
 
     if (!parsed.data.frameBase64) {
       res.status(422).json({

@@ -295,11 +295,11 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
     });
 
     const resText = await res.text();
-    log.info({ "[HEYGEN][RES]": true, httpStatus: res.status, body: resText }, "HeyGen v2 response");
+    log.info({ "[HEYGEN][RES]": true, httpStatus: res.status }, "HeyGen v2 response");
 
     if (!res.ok) {
       const errText = resText;
-      log.warn({ status: res.status, errText, avatarId: req.avatarId }, "HeyGen v2 submit failed");
+      log.warn({ status: res.status, avatarId: req.avatarId }, "HeyGen v2 submit failed");
       // Avatar ou look inválido → mensagem clara para o usuário reselecionar
       if (
         res.status === 404 ||
@@ -383,12 +383,12 @@ export async function pollHeyGenJob(jobId: string): Promise<VideoClipResult> {
       return { status: "ready", clipUrl, provider: "heygen" };
     }
     if (status === "failed") {
-      log.warn({ jobId, failureMsg, videoData: JSON.stringify(videoData) }, "HeyGen video failed");
+      log.warn({ jobId }, "HeyGen video failed");
       return { status: "failed", error: failureMsg ?? "HeyGen video render failed", provider: "heygen" };
     }
     // "completed" sem URL — tratar como failed (evita loop infinito)
     if (status === "completed" && !clipUrl) {
-      log.error({ jobId, videoData: JSON.stringify(videoData) }, "HeyGen completed but no video_url");
+      log.error({ jobId }, "HeyGen completed but no video_url");
       return { status: "failed", error: "HeyGen retornou completed sem URL de vídeo", provider: "heygen" };
     }
     return { status: "processing", jobId, provider: "heygen" };

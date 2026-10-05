@@ -396,8 +396,6 @@ export async function runLaunchSequenceBuilderAgent(
         workspaceId,
         model: input.model,
         rawLength: result.content.length,
-        rawPreview: result.content.slice(0, 600),
-        rawTail: result.content.slice(-300),
       },
       "Sequence builder returned 0 items — LLM response likely truncated or malformed",
     );

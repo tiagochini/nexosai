@@ -1303,7 +1303,7 @@ export async function publishBio(
       const data = (await resp.json()) as Record<string, unknown>;
       if (!resp.ok || data.error) {
         const msg = (data.error as Record<string, string>)?.message ?? JSON.stringify(data);
-        log.error({ msg }, "presence: bio publish instagram error");
+        log.error({ err: msg }, "presence: bio publish instagram error");
         return { success: false, error: `Instagram: ${msg}` };
       }
       log.info({ accountId }, "presence: bio published to instagram");
@@ -1321,7 +1321,7 @@ export async function publishBio(
       const data = (await resp.json()) as Record<string, unknown>;
       if (!resp.ok || data.error) {
         const msg = (data.error as Record<string, string>)?.message ?? JSON.stringify(data);
-        log.error({ msg }, "presence: bio publish facebook error");
+        log.error({ err: msg }, "presence: bio publish facebook error");
         return { success: false, error: `Facebook: ${msg}` };
       }
       log.info({ accountId }, "presence: bio published to facebook");
@@ -2651,10 +2651,10 @@ async function generateStoryboardFrame(
               isAI: true,
             };
           }
-          log.warn({ model: modelId, geminiData: JSON.stringify(geminiData).slice(0, 200) }, "presence: Gemini image returned no image part — trying next");
+          log.warn({ model: modelId }, "presence: Gemini image returned no image part — trying next");
         } else {
           const errText = await geminiResp.text().catch(() => "");
-          log.warn({ model: modelId, status: geminiResp.status, errText: errText.slice(0, 200) }, "presence: Gemini image REST failed — trying next");
+          log.warn({ model: modelId, status: geminiResp.status }, "presence: Gemini image REST failed — trying next");
         }
       } catch (geminiErr) {
         log.warn({ geminiErr, model: modelId }, "presence: Gemini image exception — trying next");
@@ -2705,7 +2705,7 @@ async function generateStoryboardFrame(
         }
         log.warn({ status: imgResp.status, model: oaiModel }, "presence: OpenAI image download failed — trying next");
       } else {
-        log.warn({ model: oaiModel, data: JSON.stringify(resp.data).slice(0, 200) }, "presence: OpenAI returned no b64 or url — trying next");
+        log.warn({ model: oaiModel }, "presence: OpenAI returned no b64 or url — trying next");
       }
     } catch (oaiErr) {
       log.warn({ oaiErr, model: oaiModel }, `presence: ${oaiModel} failed — trying next`);
@@ -3886,7 +3886,7 @@ export async function processDmSequences(): Promise<void> {
         // Desistir após MAX_STEP_RETRIES falhas consecutivas no mesmo step
         if ((seq.retryCount ?? 0) >= MAX_STEP_RETRIES) {
           log.error(
-            { seqId: seq.id, step: seq.currentStep, retryCount: seq.retryCount, lastError: seq.lastError },
+            { seqId: seq.id, step: seq.currentStep, retryCount: seq.retryCount },
             "dm-sequence: step abandonado após muitas falhas — marcando sequência como concluída",
           );
           await db

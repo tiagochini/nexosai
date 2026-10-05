@@ -26,6 +26,11 @@ const error = Object.assign(new Error(`provider echoed ${password} ${token} ${em
 log.error({ err: error }, "Provider transport failed");
 log.error(error, "Bare error");
 log.error({ err: `opaque provider error ${password}` }, "String error");
+log.warn({ text: password, msg: password, message: password, lastError: password,
+  oaiErr: { message: password, code: "ECONNRESET" }, providerErrorMessage: password, errText: password,
+  contractWarn: password, response: { arbitrary: password }, stdout: password, stderr: password,
+  tokens: 24, rawPreview: password, rawTail: password, feedback: password, geminiData: password,
+  videoData: password, dtErrText: password, failureMsg: password }, "Alternate fields and private DM fixture");
 log.info(`Contact ${email}; credential Bearer ${token}; redirect ${url}`);
 log.info("Formatted email %s and URL %s", email, url);
 const child = log.child({ credentials: { opaque: password }, refreshToken: password });
@@ -77,5 +82,6 @@ assert(records.some((record) => record.workspaceId === "workspace-fixture" && re
 assert(records.some((record) => record.err?.code === "ECONNRESET" && record.err?.statusCode === 502));
 assert(records.some((record) => record.res?.statusCode === 200), "HTTP status code must remain available");
 assert(records.some((record) => record.msg === "Provider request failed"));
+assert(records.some((record) => record.tokens === 24 && record.oaiErr?.code === "ECONNRESET"));
 assert(output.includes(LOG_REDACTED));
 console.log("Log security passed: nested secrets/PII, errors, child bindings, interpolation, HTTP paths/headers, cycles and non-mutation");

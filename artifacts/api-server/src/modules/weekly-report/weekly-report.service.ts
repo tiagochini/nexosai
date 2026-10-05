@@ -153,8 +153,8 @@ export async function sendWeeklyReport(workspaceId: string): Promise<void> {
       insight,
     });
 
-    log.info({ workspaceId, to: owner.email, weekNum }, "Weekly report composed — mock send (configure SMTP to enable delivery)");
-    log.debug({ preview: html.substring(0, 200) }, "Weekly report HTML preview");
+    log.info({ workspaceId, weekNum }, "Weekly report composed — mock send (configure SMTP to enable delivery)");
+    log.debug({ workspaceId }, "Weekly report generated without email provider");
   } catch (err) {
     log.error({ err, workspaceId }, "Failed to send weekly report");
   }

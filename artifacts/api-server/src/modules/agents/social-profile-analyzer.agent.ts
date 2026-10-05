@@ -124,7 +124,7 @@ export async function analyzeSocialProfile(
           }
         } else {
           const errText = await geminiResp.text().catch(() => "");
-          log.warn({ model: modelId, status: geminiResp.status, errText: errText.slice(0, 200) }, "social-profile-analyzer: Gemini falhou — tentando próximo modelo");
+          log.warn({ model: modelId, status: geminiResp.status }, "social-profile-analyzer: Gemini falhou — tentando próximo modelo");
         }
       } catch (err) {
         log.warn({ err, modelId }, "social-profile-analyzer: erro ao chamar Gemini");

@@ -1659,7 +1659,7 @@ export async function processMetaWebhook(body: unknown): Promise<void> {
         continue;
       }
 
-      logger.info({ accountId, senderId, text: msg.message.text }, "Meta webhook: DM recebida");
+      logger.info({ accountId }, "Meta webhook: DM recebida");
 
       setImmediate(async () => {
         try {

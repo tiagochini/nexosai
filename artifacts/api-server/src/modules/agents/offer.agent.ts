@@ -866,8 +866,6 @@ Retorne APENAS o JSON válido.`,
       output.uniqueMechanism.name = primaryDifferentiatorShortName;
       log.info({
         campaignId,
-        overriddenFrom: llmName.slice(0, 80),
-        overriddenTo: primaryDifferentiatorShortName,
       }, "[OFFER_AGENT] uniqueMechanism.name overridden to match strategy primaryDifferentiator");
     }
   }

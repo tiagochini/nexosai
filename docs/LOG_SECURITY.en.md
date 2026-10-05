@@ -33,6 +33,7 @@ in campaign context now uses the protected logger.
 
 ```powershell
 pnpm --filter @workspace/api-server run test:log-security
+pnpm run security:check-runtime-logging
 pnpm --filter @workspace/api-server run typecheck
 pnpm --filter @workspace/api-server run build
 pnpm --filter @workspace/api-server run test:dependency-runtime
@@ -46,6 +47,29 @@ random password/token/email fixtures and a phone. It covers nested fields,
 arrays, errors/string errors, interpolation, chained children/setBindings,
 tokens in URL paths/queries, headers, cycles, getters, toJSON and non-mutation.
 It also checks preservation of operational IDs, status and counters.
+
+## Follow-up review — October 4, 2026
+
+Reviewed logs no longer include Meta DM text, WhatsApp message snippets, user
+feedback, AI previews/responses, report HTML or raw Resend/Gemini/OpenAI/HeyGen
+responses. Processing logic, content sent to providers and user-facing content
+remain unchanged; this batch limits logging only. Contract warnings retain IDs
+and a violation indicator rather than generated-output fragments.
+
+Sanitization handles aliases including `lastError`, `errText`, `oaiErr`,
+`providerErrorMessage`, `dtErrText`, `failureMsg`, `rawPreview`, `rawTail` and raw
+provider data. The numeric `tokens` counter remains available.
+
+The AST guard `security:check-runtime-logging` passed on 325 API TypeScript files
+and 1,030 structured calls. It blocks known raw fields in literal log metadata,
+direct console/stdout/stderr writes and Pino imports outside the protected
+factory (type-only imports are allowed). Rule tests are included, and the guard
+is wired into the local quality workflow.
+
+This is not full data-flow analysis: spreads, logger aliases, new field names,
+interpolated messages and persisted data may need manual review. Diagnostic
+scripts are excluded. A passing guard does not prove the whole project is free
+of sensitive-data exposure.
 
 The test was added to the local quality workflow. This batch must not be pushed:
 the user authorizes a local commit only. Remote CI does not validate these

@@ -1067,7 +1067,7 @@ export async function generateCampaignContent(
 
     // B2: contract violation → rejected + auto-reprocess; no violation → pending_approval
     if (copyContractWarn) {
-      log.warn({ campaignId, contractWarn: copyContractWarn }, "[B2] email_sequence contract violation — blocking (status=rejected), scheduling reprocess");
+      log.warn({ campaignId, contractViolated: true }, "[B2] email_sequence contract violation — blocking (status=rejected), scheduling reprocess");
       const [blocked] = await db
         .insert(contentPiecesTable)
         .values({
@@ -1157,7 +1157,7 @@ export async function generateCampaignContent(
 
       // B2: contract violation → rejected + auto-reprocess
       if (lpContractWarn) {
-        log.warn({ campaignId, contractWarn: lpContractWarn }, "[B2] landing_page_structure contract violation — blocking (status=rejected), scheduling reprocess");
+      log.warn({ campaignId, contractViolated: true }, "[B2] landing_page_structure contract violation — blocking (status=rejected), scheduling reprocess");
         const [blocked] = await db
           .insert(contentPiecesTable)
           .values({
@@ -1337,7 +1337,7 @@ export async function generateCampaignContent(
 
     // B2: contract violation → rejected + auto-reprocess
     if (adContractWarn) {
-      log.warn({ campaignId, contractWarn: adContractWarn }, "[B2] ad_copy contract violation — blocking (status=rejected), scheduling reprocess");
+      log.warn({ campaignId, contractViolated: true }, "[B2] ad_copy contract violation — blocking (status=rejected), scheduling reprocess");
       const [blocked] = await db
         .insert(contentPiecesTable)
         .values({
@@ -1435,7 +1435,7 @@ export async function generateCampaignContent(
 
       // B2: contract violation → rejected + auto-reprocess
       if (targetingContractWarn) {
-        log.warn({ campaignId, contractWarn: targetingContractWarn }, "[B2] targeting_config contract violation — blocking (status=rejected), scheduling reprocess");
+      log.warn({ campaignId, contractViolated: true }, "[B2] targeting_config contract violation — blocking (status=rejected), scheduling reprocess");
         const [blocked] = await db
           .insert(contentPiecesTable)
           .values({
@@ -1595,7 +1595,7 @@ export async function generateCampaignContent(
 
       // B2: contract violation → rejected + auto-reprocess
       if (vslContractWarn) {
-        log.warn({ campaignId, contractWarn: vslContractWarn }, "[B2] vsl_script contract violation — blocking (status=rejected), scheduling reprocess");
+      log.warn({ campaignId, contractViolated: true }, "[B2] vsl_script contract violation — blocking (status=rejected), scheduling reprocess");
         const [blocked] = await db
           .insert(contentPiecesTable)
           .values({
@@ -1753,7 +1753,7 @@ export async function generateCampaignContent(
 
       // B2: contract violation → rejected + auto-reprocess
       if (cplContractWarn) {
-        log.warn({ campaignId, contractWarn: cplContractWarn }, "[B2] cpl_script contract violation — blocking (status=rejected), scheduling reprocess");
+      log.warn({ campaignId, contractViolated: true }, "[B2] cpl_script contract violation — blocking (status=rejected), scheduling reprocess");
         const [blocked] = await db
           .insert(contentPiecesTable)
           .values({
@@ -2000,7 +2000,7 @@ export async function generateCampaignContent(
 
     // B2: contract violation → rejected + auto-reprocess
     if (storiesContractWarn) {
-      log.warn({ campaignId, contractWarn: storiesContractWarn }, "[B2] stories_sequence contract violation — blocking (status=rejected), scheduling reprocess");
+      log.warn({ campaignId, contractViolated: true }, "[B2] stories_sequence contract violation — blocking (status=rejected), scheduling reprocess");
       const [blocked] = await db
         .insert(contentPiecesTable)
         .values({
@@ -3247,7 +3247,7 @@ Reescreva essa peça incorporando o feedback acima. Retorne APENAS o JSON com a 
 
   if (!updated) throw new NotFoundError("Content piece");
 
-  log.info({ pieceId, campaignId, feedback: userFeedback.slice(0, 80) }, "Content piece rewritten by AI");
+  log.info({ pieceId, campaignId }, "Content piece rewritten by AI");
   return updated;
 }
 
@@ -3497,7 +3497,7 @@ export async function regeneratePiece(
     if (nextRetryCount > MAX_CONTRACT_RETRIES) {
       // Ceiling hit — mark permanently rejected, stop looping.
       log.error(
-        { campaignId, pieceId, agentName, contractWarn: regenContractWarn, retries: currentRetryCount },
+        { campaignId, pieceId, agentName, contractViolated: true, retries: currentRetryCount },
         "[B2] regeneratePiece: contract still violated after MAX_CONTRACT_RETRIES — marking _permanentlyRejected",
       );
       const [updated] = await db
@@ -3524,7 +3524,7 @@ export async function regeneratePiece(
 
     // Under ceiling — keep rejected, increment counter, schedule another attempt.
     log.warn(
-      { campaignId, pieceId, agentName, contractWarn: regenContractWarn, nextRetryCount },
+      { campaignId, pieceId, agentName, contractViolated: true, nextRetryCount },
       `[B2] regeneratePiece: contract still violated (attempt ${nextRetryCount}/${MAX_CONTRACT_RETRIES}) — scheduling retry`,
     );
     const [updated] = await db

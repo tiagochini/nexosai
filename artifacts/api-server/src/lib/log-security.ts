@@ -6,8 +6,10 @@ const privateFields = new Set([
   "prompt", "messages", "content", "transcript", "screenshot", "buffer", "query",
   "params", "sql", "parameters", "detail", "stack", "cause", "note", "queryerror",
   "url", "uri", "connectionstring", "name", "fullname", "address", "recipient",
+  "msg", "message", "text", "contractwarn", "response", "result", "stdout", "stderr",
+  "preview", "rawpreview", "rawtail", "feedback", "geminidata", "videodata",
 ]);
-const tokenCounters = new Set(["inputtokens", "outputtokens", "totaltokens", "cachedtokens"]);
+const tokenCounters = new Set(["tokens", "inputtokens", "outputtokens", "totaltokens", "cachedtokens"]);
 
 function dataProperty(object: object, key: string): unknown {
   let current: object | null = object;
@@ -47,7 +49,7 @@ export function sanitizeLogValue(value: unknown): unknown {
     const key = field.replace(/[^a-z0-9]/gi, "").toLowerCase();
     if (tokenCounters.has(key) && typeof input === "number" && Number.isFinite(input)) return input;
     if (sensitiveKey.test(key) || privateFields.has(key)) return LOG_REDACTED;
-    if (["err", "error", "reason", "rejected"].includes(key)) {
+    if (/(?:err|error|exception)(?:text|message|response|detail)?$/.test(key) || ["reason", "rejected", "failuremessage", "failuremsg", "failurestack"].includes(key)) {
       return typeof input === "object" && input !== null ? safeError(input) : LOG_REDACTED;
     }
     if (typeof input === "string") return sanitizeLogText(input);

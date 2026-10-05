@@ -184,7 +184,7 @@ export async function runIsolatedAgent<T extends Record<string, unknown> = Recor
   // 5 — JSON parse
   const parsed = parseAgentJSON<T>(raw, fallback);
   if (!parsed || parsed === fallback) {
-    log.warn({ agentRole, rawPreview: raw.slice(0, 200) }, "AgentSandbox: output parse failed — using fallback");
+      log.warn({ agentRole }, "AgentSandbox: output parse failed — using fallback");
     return {
       ok: false,
       error: "failed to parse agent JSON output",

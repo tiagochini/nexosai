@@ -946,7 +946,7 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO 
         (nextQuestion ? `${nextQuestion.label}` : "Intake concluído!");
     }
   } else {
-    log.warn({ error: safeResult.error, message: safeResult.message, campaignId }, "Conversational AI failed — returning graceful retry message, history already checkpointed");
+    log.warn({ error: safeResult.error, campaignId }, "Conversational AI failed — returning graceful retry message, history already checkpointed");
     aiMessage = safeResult.error === "TIMEOUT"
       ? "Essa resposta está demorando mais que o esperado. Sua mensagem já foi salva — pode tentar reenviar em alguns segundos que eu continuo de onde paramos."
       : (nextQuestion

@@ -44,6 +44,8 @@ The system should only be considered ready for open production when:
 - [x] Protect central/HTTP loggers, errors and child bindings from sensitive
   fields; remove unnecessary data at reviewed call sites.
   Scope and limits: [LOG_SECURITY.en.md](./LOG_SECURITY.en.md).
+- [x] Remove private content from reviewed Meta/WhatsApp logs, provider responses
+  and AI previews; add an AST logging guard to the local workflow.
 - [x] Restrict realtime campaign rooms to the authenticated workspace,
   validate WebSocket/polling origins and disconnect on token expiry.
   Evidence: [REALTIME_SECURITY.en.md](./REALTIME_SECURITY.en.md).
@@ -80,6 +82,8 @@ The system should only be considered ready for open production when:
 
 - [ ] Complete the sandbox journey: registration → campaign → content →
   publishing → lead → checkout → attribution.
+- [ ] Prevent the Academy funnel from marking emails as sent without a configured
+  provider; distinguish simulation from real delivery.
 - [ ] Implement object-access grants for the media worker.
 - [ ] Complete and certify video and paid-media executors.
 - [ ] Create a versioned AI evaluation set with criteria for each artifact.

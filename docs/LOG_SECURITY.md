@@ -34,6 +34,7 @@ foi direcionado ao logger protegido.
 
 ```powershell
 pnpm --filter @workspace/api-server run test:log-security
+pnpm run security:check-runtime-logging
 pnpm --filter @workspace/api-server run typecheck
 pnpm --filter @workspace/api-server run build
 pnpm --filter @workspace/api-server run test:dependency-runtime
@@ -47,6 +48,30 @@ com fixtures aleatórias de senha/token/e-mail e telefone. Cobre campos aninhado
 arrays, erros/string errors, interpolação, child/child encadeado/setBindings,
 URL com token no caminho/query, headers, ciclos, getters, toJSON e não mutação.
 Verifica também preservação de IDs, status e contadores operacionais.
+
+## Revisão complementar — 04/10/2026
+
+Removidos dos logs revisados textos de DMs Meta, trechos de mensagens WhatsApp,
+feedback do usuário, previews/respostas de IA, relatórios HTML e respostas brutas
+de Resend, Gemini, OpenAI e HeyGen. A lógica de processamento, os textos enviados
+aos provedores e o conteúdo entregue ao usuário não foram removidos; a mudança
+limita o que é registrado em logs. Avisos de contrato guardam IDs e um indicador
+de violação, em vez de trechos de saída gerada.
+
+A sanitização cobre aliases como `lastError`, `errText`, `oaiErr`,
+`providerErrorMessage`, `dtErrText`, `failureMsg`, `rawPreview`, `rawTail` e dados
+brutos de provedores. O contador numérico `tokens` continua disponível.
+
+O guard AST `security:check-runtime-logging` passou em 325 arquivos TypeScript
+da API e 1.030 chamadas estruturadas. Ele bloqueia campos brutos conhecidos em
+objetos literais de log, `console`/stdout/stderr diretos e imports de Pino fora
+da fábrica protegida (imports exclusivamente de tipos são permitidos). Tem
+testes de regras e foi incluído no workflow local de qualidade.
+
+Essa checagem não faz análise completa de fluxo de dados: spreads, aliases de
+logger, nomes de campos novos, mensagens interpoladas e dados persistidos podem
+exigir revisão manual. Scripts de diagnóstico ficam fora do guard. Não tratar
+o resultado como prova de ausência de vazamento em todo o projeto.
 
 O teste foi adicionado ao workflow local de qualidade. Esta etapa não deve
 ser enviada ao remoto: por orientação do usuário, somente commit local está
