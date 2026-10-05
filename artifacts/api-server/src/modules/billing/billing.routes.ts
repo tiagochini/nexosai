@@ -12,6 +12,8 @@ import {
 } from "./billing.service.js";
 import { db, inviteCodesTable, workspacesTable, plansTable, subscriptionPaymentsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { matchesAsaasWebhookToken } from "../../lib/asaas-webhook-auth.js";
+import { checkBillingManualConfirmation } from "./billing.security.js";
 
 const router = Router();
 
@@ -110,6 +112,7 @@ router.post("/packs/initiate", requireAuth, async (req, res): Promise<void> => {
 // ─── Manual confirmation ──────────────────────────────────────────────────────
 
 router.post("/confirm/:paymentId", requireAuth, async (req, res): Promise<void> => {
+  if (!checkBillingManualConfirmation(req, res)) return;
   const paymentId = req.params["paymentId"] as string;
   const note = (req.body as { note?: string }).note;
   const payment = await markPaymentPaid(req.auth.workspaceId, paymentId, note);
@@ -119,13 +122,12 @@ router.post("/confirm/:paymentId", requireAuth, async (req, res): Promise<void> 
 // ─── Asaas webhook (public) ───────────────────────────────────────────────────
 
 router.post("/webhooks/asaas", async (req, res): Promise<void> => {
-  const webhookSecret = process.env["ASAAS_WEBHOOK_SECRET"];
-  if (webhookSecret) {
-    const signature = req.headers["asaas-access-token"] as string | undefined;
-    if (signature !== webhookSecret) {
-      res.status(401).json({ error: "Invalid webhook token" });
-      return;
-    }
+  // Keep explicit legacy billing configuration; only use the shared token
+  // when the legacy variable is absent, never when it is explicitly empty.
+  const configured = process.env["ASAAS_WEBHOOK_SECRET"] ?? process.env["ASAAS_WEBHOOK_TOKEN"];
+  if (!matchesAsaasWebhookToken(req.headers["asaas-access-token"], configured)) {
+    res.status(401).json({ error: "Invalid webhook token", code: "UNAUTHORIZED_WEBHOOK" });
+    return;
   }
   await processAsaasWebhook(req.body);
   res.status(200).json({ received: true });

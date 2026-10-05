@@ -47,8 +47,11 @@ The system should only be considered ready for open production when:
   origin headers and authenticate the webhook/simulated confirmation endpoint.
 - [ ] Share quotas across instances and review code protection,
   expiry/revocation and personal-data exposure.
-- [ ] Fix fail-open billing webhook authentication when its secret is absent
-  and reconcile Academy events with actual provider payment state.
+- [x] Block billing webhooks without a valid token and require additional privilege
+  for manual confirmation; share safe comparison with Academy/product checkout.
+  Local evidence: [BILLING_WEBHOOK_SECURITY.en.md](./BILLING_WEBHOOK_SECURITY.en.md).
+- [ ] Reconcile Academy/billing events with actual provider payment state and
+  certify confirmation/credit-grant idempotency and concurrency.
 
 - [x] Remove previously committed secrets and clean Git history.
 - [x] Prevent tokens, keys, and screenshots from being sent to the integrations

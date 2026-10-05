@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { timingSafeEqual } from "node:crypto";
+import { matchesAsaasWebhookToken } from "../../lib/asaas-webhook-auth.js";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
 import {
@@ -21,10 +21,7 @@ export function isValidAsaasWebhookToken(
   provided: string | undefined,
   configured: string | undefined = process.env["ASAAS_WEBHOOK_TOKEN"],
 ): boolean {
-  if (!provided || !configured) return false;
-  const actual = Buffer.from(provided);
-  const expected = Buffer.from(configured);
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
+  return matchesAsaasWebhookToken(provided, configured);
 }
 
 const cardSchema = z.object({
@@ -134,7 +131,7 @@ router.post("/webhooks/asaas", async (req, res): Promise<void> => {
   const payload = req.body as { event?: string; payment?: { id?: string } };
   const asaasId = payload.payment?.id;
   const header = req.headers["asaas-access-token"];
-  const token = Array.isArray(header) ? header[0] : header;
+  const token = typeof header === "string" ? header : undefined;
   if (!isValidAsaasWebhookToken(token)) {
     res.status(401).json({ error: "Webhook não autorizado", code: "UNAUTHORIZED_WEBHOOK" });
     return;
