@@ -131,10 +131,15 @@ mas não executado remotamente nesta etapa, porque não houve push.
   alertas automáticos para envios interrompidos e conciliação operacional quando
   o provedor aceita mas a gravação no banco falha e revisão completa do fluxo
   de consentimento/descadastro. Esta correção não certifica entrega exatamente uma vez.
-- O envio do e-mail transacional de acesso é um fluxo separado: ainda precisa
-  corrigir o caminho Gmail e validar recibos de aceitação. Nesta etapa, somente
-  seu HTML foi protegido; as correções de estado/reserva do funil não se aplicam
-  automaticamente ao envio de acesso.
+- O e-mail transacional de acesso agora reutiliza a entrega validada do funil:
+  Gmail quando Resend não está configurado, sucesso somente com recibo válido,
+  sem fallback após resultado ambíguo. `sendAccessEmail` retorna o resultado e
+  registra somente o estado, sem destinatário/código/corpo. Teste offline:
+  `pnpm --filter @workspace/api-server run test:academy-access-email`.
+  O retorno `scheduled` sem provedor não cria uma fila persistida nesse fluxo.
+  Ainda faltam outbox, reserva e conciliação do envio de acesso; as correções de
+  persistência do funil não se aplicam automaticamente às compras. A resposta
+  de checkout informa solicitação de reenvio, não entrega confirmada.
 - Rollback: restaurar somente o código anterior e reconstruir a API. Não exige
   rollback de banco, mas pode reintroduzir falhas já corrigidas; preferir correção
   adiante. Código antigo não reconhece `sending`; esses registros precisam de

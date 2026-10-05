@@ -33,6 +33,8 @@ jobs:
         run: |
           pnpm --filter @workspace/api-server run test:academy-funnel-delivery
           pnpm --filter @workspace/api-server run test:academy-email-html
+          pnpm --filter @workspace/api-server run test:academy-access-email
+          pnpm --filter @workspace/api-server run test:academy-admin-security
       - name: Credential security regression tests
         run: |
           pnpm run security:check-runtime-logging

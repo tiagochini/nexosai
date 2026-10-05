@@ -36,6 +36,11 @@ The system should only be considered ready for open production when:
 
 ### P0 — Credential security
 
+- [x] Remove Academy default administrative credentials, protect the 11 reviewed
+  routes and reject URL credentials; authorize the manual scheduler endpoint.
+  Local evidence and compatibility: [ACADEMY_ADMIN_SECURITY.en.md](./ACADEMY_ADMIN_SECURITY.en.md).
+- [ ] Move Academy administration to owner sessions and audit remaining routes/codes.
+
 - [x] Remove previously committed secrets and clean Git history.
 - [x] Prevent tokens, keys, and screenshots from being sent to the integrations
   assistant.
@@ -89,7 +94,8 @@ The system should only be considered ready for open production when:
   provider; advance only after provider acceptance, without production simulation.
   Local evidence and limits: [ACADEMY_FUNNEL_DELIVERY.en.md](./ACADEMY_FUNNEL_DELIVERY.en.md).
 - [ ] Certify Academy sending idempotency, concurrency and recovery.
-- [ ] Fix Gmail dispatch and receipt validation for Academy transactional access emails.
+- [x] Fix Gmail dispatch and receipt validation for Academy transactional access emails.
+- [ ] Persist an outbox and reconcile transactional Academy access-email failures.
 - [x] Make Academy enrollment transactional/idempotent per lead and atomically
   claim dispatch across welcome/scheduler calls; quarantine ambiguous outcomes.
   Local concurrency and separate-process crash tests passed. Read-only inspection

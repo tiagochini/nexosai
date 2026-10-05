@@ -6,6 +6,7 @@ import { db } from "@workspace/db";
 import { academyPurchasesTable, academyLeadsTable, academyFunnelEmailsTable } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
 import { env } from "../../lib/env.js";
+import { checkAcademyAdmin as checkCrm } from "./academy-admin.security.js";
 import { ALLAN_CONSTRAINT_REASONING } from "../agents/constraint-reasoning.js";
 import {
   findOrCreateCustomer,
@@ -76,7 +77,7 @@ router.post("/checkout", async (req, res): Promise<void> => {
     });
     res.json({
       alreadyPurchased: true,
-      message: "Você já tem acesso! Reenviamos o código para o seu e-mail.",
+      message: "Você já tem acesso! Solicitamos o reenvio do código para o seu e-mail.",
     });
     return;
   }
@@ -238,14 +239,11 @@ router.get("/verify/:token", async (req, res): Promise<void> => {
   });
 });
 
-// GET /api/academy/leads?secret=nexos2025
+// GET /api/academy/leads — header-authenticated owner access
 // Owner-only list of all captured leads
 router.get("/leads", async (req, res): Promise<void> => {
-  const { secret, limit = "100", offset = "0" } = req.query as Record<string, string>;
-  if (secret !== "nexos2025") {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
+  if (!checkCrm(req, res)) return;
+  const { limit = "100", offset = "0" } = req.query as Record<string, string>;
   const rows = await db
     .select()
     .from(academyLeadsTable)
@@ -338,13 +336,9 @@ router.post("/leads", async (req, res): Promise<void> => {
   res.json({ ok: true });
 });
 
-// GET /api/academy/funnel/stats?secret=nexos2025
+// GET /api/academy/funnel/stats — header-authenticated owner access
 router.get("/funnel/stats", async (req, res): Promise<void> => {
-  const { secret } = req.query as Record<string, string>;
-  if (secret !== "nexos2025") {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
+  if (!checkCrm(req, res)) return;
   const stats = await getFunnelStats();
   res.json(stats);
 });
@@ -360,14 +354,11 @@ router.post("/unsubscribe", async (req, res): Promise<void> => {
   res.json({ ok: true });
 });
 
-// GET /api/academy/purchases?secret=nexos2025
+// GET /api/academy/purchases — header-authenticated owner access
 // Owner-only list of all purchases
 router.get("/purchases", async (req, res): Promise<void> => {
-  const { secret, limit = "100" } = req.query as Record<string, string>;
-  if (secret !== "nexos2025") {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
+  if (!checkCrm(req, res)) return;
+  const { limit = "100" } = req.query as Record<string, string>;
   const rows = await db
     .select({
       id: academyPurchasesTable.id,
@@ -849,12 +840,7 @@ router.post("/simulate-confirm", async (req, res): Promise<void> => {
 
 // GET /api/academy/admin/purchases — owner dashboard (protected by ACADEMY_ADMIN_SECRET)
 router.get("/admin/purchases", async (req, res): Promise<void> => {
-  const secret = req.headers["x-admin-secret"] ?? req.query["secret"];
-  const adminSecret = process.env["ACADEMY_ADMIN_SECRET"] ?? "nexos2025";
-  if (secret !== adminSecret) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
+  if (!checkCrm(req, res)) return;
   try {
     const purchases = await db
       .select()
@@ -882,12 +868,7 @@ router.get("/admin/purchases", async (req, res): Promise<void> => {
 
 // POST /api/academy/admin/confirm — manually confirm a purchase and (re)send access email
 router.post("/admin/confirm", async (req, res): Promise<void> => {
-  const secret = req.headers["x-admin-secret"] ?? req.query["secret"];
-  const adminSecret = process.env["ACADEMY_ADMIN_SECRET"] ?? "nexos2025";
-  if (secret !== adminSecret) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
+  if (!checkCrm(req, res)) return;
   const { purchaseId } = req.body as { purchaseId?: string };
   if (!purchaseId) { res.status(400).json({ error: "purchaseId required" }); return; }
 
@@ -920,9 +901,7 @@ router.post("/admin/confirm", async (req, res): Promise<void> => {
 
 // POST /api/academy/admin/gift-codes — generate N gift access codes (owner only)
 router.post("/admin/gift-codes", async (req, res): Promise<void> => {
-  const secret = req.headers["x-admin-secret"] ?? req.query["secret"];
-  const adminSecret = process.env["ACADEMY_ADMIN_SECRET"] ?? "nexos2025";
-  if (secret !== adminSecret) { res.status(401).json({ error: "Unauthorized" }); return; }
+  if (!checkCrm(req, res)) return;
 
   const { count = 5, productId = "complete-bundle" } = req.body as { count?: number; productId?: string };
   const product = ACADEMY_PRODUCTS[productId as keyof typeof ACADEMY_PRODUCTS];
@@ -958,13 +937,6 @@ router.post("/admin/gift-codes", async (req, res): Promise<void> => {
 });
 
 // ── CRM endpoints ────────────────────────────────────────────────────────────
-
-const CRM_SECRET = process.env["ACADEMY_ADMIN_SECRET"] ?? "nexos2025";
-function checkCrm(req: import("express").Request, res: import("express").Response): boolean {
-  const s = req.headers["x-admin-secret"] ?? req.query["secret"];
-  if (s !== CRM_SECRET) { res.status(401).json({ error: "Unauthorized" }); return false; }
-  return true;
-}
 
 // GET /api/academy/leads/:id — lead detail + funnel email history
 router.get("/leads/:id", async (req, res): Promise<void> => {
@@ -1032,6 +1004,7 @@ router.post("/leads/:id/convert", async (req, res): Promise<void> => {
 
 // POST /api/academy/funnel-tick (owner only — force-runs the funnel scheduler tick)
 router.post("/funnel-tick", async (req, res): Promise<void> => {
+  if (!checkCrm(req, res)) return;
   try {
     await runFunnelSchedulerTick();
     res.json({ ok: true });

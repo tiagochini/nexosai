@@ -127,10 +127,15 @@ in this stage because there was no push.
   automated interrupted-dispatch alerts and operational reconciliation when provider acceptance
   succeeds but persistence fails, and full consent/unsubscribe flow review.
   This fix does not certify exactly-once delivery.
-- Transactional access-email dispatch is a separate flow: its Gmail path and
-  acceptance-receipt validation still need correction. Only its HTML was
-  protected in this stage; funnel state/claim fixes do not automatically apply
-  to access-email dispatch.
+- Transactional access email now reuses validated funnel delivery: Gmail when
+  Resend is absent, success only with a valid receipt, and no fallback after an
+  ambiguous outcome. `sendAccessEmail` returns the result and logs only state,
+  never recipient/code/body. Offline test:
+  `pnpm --filter @workspace/api-server run test:academy-access-email`.
+  A no-provider `scheduled` result does not create a persisted queue in this
+  flow. Access-email outbox, claims and reconciliation remain pending; funnel
+  persistence fixes do not automatically apply to purchases. The checkout
+  response reports a resend request, not confirmed delivery.
 - Rollback: restore only the previous code and rebuild the API. No database
   rollback is required, but it may reintroduce previously fixed failures; prefer a
   forward fix. Old code does not recognize `sending`; reconcile these records,

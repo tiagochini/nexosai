@@ -37,6 +37,11 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 
 ### P0 — Segurança de credenciais
 
+- [x] Remover senha administrativa padrão Academy, proteger as 11 rotas
+  revisadas e bloquear credenciais em URL; incluir autorização no scheduler manual.
+  Evidência local e compatibilidade: [ACADEMY_ADMIN_SECURITY.md](./ACADEMY_ADMIN_SECURITY.md).
+- [ ] Migrar administração Academy para sessão de proprietário e auditar demais rotas/códigos.
+
 - [x] Remover segredos previamente versionados e limpar o histórico Git.
 - [x] Impedir envio de tokens, chaves e screenshots ao assistente de integrações.
 - [x] Remover tokens de logs da Academy.
@@ -88,7 +93,8 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
   configurado; avançar somente após aceitação pelo provedor, sem simulação em produção.
   Evidência local e limites: [ACADEMY_FUNNEL_DELIVERY.md](./ACADEMY_FUNNEL_DELIVERY.md).
 - [ ] Certificar idempotência, concorrência e recuperação do envio Academy.
-- [ ] Corrigir envio Gmail e validação de recibos no e-mail transacional de acesso Academy.
+- [x] Corrigir envio Gmail e validação de recibos no e-mail transacional de acesso Academy.
+- [ ] Persistir outbox e conciliar falhas do envio transacional de acesso Academy.
 - [x] Tornar inscrição Academy transacional/idempotente por lead e reservar
   envios atomicamente entre boas-vindas/scheduler; bloquear resultados ambíguos.
   Testes locais de concorrência e queda de processo separado passaram. Há checagem
