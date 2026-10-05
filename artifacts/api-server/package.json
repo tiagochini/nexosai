@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "academy:access-check": "tsx src/scripts/check-academy-access-outbox.ts",
+    "test:academy-access-outbox-db": "cross-env NODE_ENV=test tsx src/scripts/test-academy-access-outbox-db.ts",
     "test:academy-settlement-db": "cross-env NODE_ENV=test tsx src/scripts/test-academy-settlement-db.ts",
     "test:billing-settlement": "tsx src/scripts/test-billing-settlement.ts",
     "test:billing-credit-concurrency-db": "cross-env NODE_ENV=test tsx src/scripts/test-billing-credit-concurrency-db.ts",

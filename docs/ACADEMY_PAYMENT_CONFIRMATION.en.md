@@ -61,9 +61,9 @@ No schema migration or automatic historical purchase repair. Missing payment/
 customer bindings require reconciliation, not notification-reference fallback.
 Already-confirmed records are not reverified in this flow.
 
-Access emails still lack a durable outbox. Process exit after commit and before
-delivery can lose an email; replay must not blindly resend it. This stage does
-not guarantee email delivery/recovery. Administrative confirmation/resend routes
+Webhook confirmation now creates a [durable outbox](./ACADEMY_ACCESS_EMAIL_OUTBOX.en.md)
+in the same transaction. Unclaimed jobs can resume; ambiguous outcomes are not
+blindly retried. This does not guarantee inbox delivery. Administrative confirmation/resend routes
 remain separate and do not share this concurrency certification. Reversals,
 revocation, historical reconciliation, provider-acceptance/persistence recovery,
 session auditing and end-to-end sandbox tests remain pending. Remote state can

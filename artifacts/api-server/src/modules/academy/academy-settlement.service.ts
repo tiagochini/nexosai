@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db, academyPurchasesTable, academyLeadsTable, type AcademyPurchase } from "@workspace/db";
 import { AppError } from "../../lib/errors.js";
 import { parseAsaasSettlement, type AsaasSettlement } from "../billing/billing-settlement.js";
+import { enqueueAcademyAccessEmail } from "./academy-access-outbox.service.js";
 
 export interface AcademySettlement extends AsaasSettlement {
   customer: string;
@@ -83,6 +84,7 @@ export async function confirmAcademyPayment(
     await trx.update(academyLeadsTable).set({ convertedAt: confirmedAt }).where(and(
       eq(academyLeadsTable.email, purchase.customerEmail.toLowerCase()), isNull(academyLeadsTable.convertedAt),
     ));
+    await enqueueAcademyAccessEmail(trx, purchase.id);
     return { status: "confirmed", purchase: confirmed! };
   });
 }

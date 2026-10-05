@@ -125,7 +125,7 @@ Referências oficiais: [consulta da cobrança](https://docs.asaas.com/reference/
 Projeto iniciado pelo script `scripts/dev-local.mjs`, preservando o modo seguro
 local existente: sem schedulers/recuperação automática. API na 8080 e frontend
 na 8081. Esta etapa não altera segredos nem habilita rotas sem credenciais.
-Continuam pendentes outbox do e-mail Academy, estornos/reversões, recuperação entre cobrança e
+Continuam pendentes conciliação de entregas incertas Academy, estornos/reversões, recuperação entre cobrança e
 persistência, conciliação histórica, auditoria por sessão e validação ponta a ponta
 no sandbox. O estado remoto ainda pode mudar após a consulta; não há transação
 distribuída com o provedor, nem certificação integral de billing.

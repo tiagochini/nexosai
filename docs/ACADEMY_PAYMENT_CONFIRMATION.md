@@ -66,9 +66,9 @@ Sem migração de schema ou reparação automática de compras históricas. Comp
 sem pagamento/cliente vinculado precisam de conciliação, não confirmação baseada
 na referência da notificação. Registros já confirmados não são revalidados neste fluxo.
 
-O e-mail de acesso ainda não tem outbox durável. Uma queda após commit e antes
-do envio pode perder a entrega; replay não deve reenviar cegamente. Esta etapa
-não garante entrega nem recuperação do e-mail. Rotas administrativas de confirmação
+A confirmação por webhook agora cria uma [fila durável](./ACADEMY_ACCESS_EMAIL_OUTBOX.md)
+na mesma transação. Itens não iniciados podem ser retomados; resultados ambíguos
+não são reenviados cegamente. Isso não garante entrega na caixa do cliente. Rotas administrativas de confirmação
 e reenvio continuam separadas e não têm essa mesma certificação de concorrência.
 Estornos/revogação, reconciliação histórica, falha entre cobrança e persistência,
 auditoria por sessão e teste ponta a ponta no sandbox continuam pendentes. O estado

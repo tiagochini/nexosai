@@ -3,7 +3,8 @@ import { z } from "zod/v4";
 import { checkAcademyWebhook } from "./academy-webhook.security.js";
 import { confirmAcademyPayment } from "./academy-settlement.service.js";
 import { sendAccessEmail } from "./academy.service.js";
-import { env } from "../../lib/env.js";
+import { dispatchAcademyAccessEmail } from "./academy-access-outbox.service.js";
+import type { FunnelDeliveryResult } from "./academy-funnel-delivery.js";
 import { logger } from "../../lib/logger.js";
 
 const eventSchema = z.object({ event: z.string().min(1).max(100) });
@@ -12,7 +13,7 @@ const notificationSchema = eventSchema.extend({
 });
 export function createAcademyPaymentWebhook(options: {
   lookup?: (id: string) => Promise<unknown>;
-  sendAccess?: (opts: Parameters<typeof sendAccessEmail>[0]) => Promise<unknown>;
+  sendAccess?: (opts: Parameters<typeof sendAccessEmail>[0]) => Promise<FunnelDeliveryResult>;
   productName?: (id: string) => string;
 } = {}): RequestHandler {
   return async (req, res): Promise<void> => {
@@ -33,14 +34,10 @@ export function createAcademyPaymentWebhook(options: {
     }
     const purchase = result.purchase;
     logger.info({ purchaseId: purchase.id }, "academy: payment verified and confirmed");
-    // Only the transaction winner schedules delivery. A durable access-email
-    // outbox is still required to recover a process exit after this commit.
+    // Durable job is already committed; this is merely a best-effort wake-up.
     setImmediate(() => {
-      (options.sendAccess ?? sendAccessEmail)({
-        email: purchase.customerEmail, name: purchase.customerName ?? purchase.customerEmail,
-        token: purchase.accessToken, productName: options.productName?.(purchase.productId) ?? purchase.productId,
-        portalUrl: `${env.APP_URL}/nexos-academy/`,
-      }).catch((err) => logger.error({ err }, "academy: access email error"));
+      dispatchAcademyAccessEmail(purchase.id, { deliver: options.sendAccess, productName: options.productName })
+        .catch((err) => logger.error({ err }, "academy: access outbox dispatch error"));
     });
     // Provider acknowledgements must not disclose the customer's access code.
     res.json({ ok: true });

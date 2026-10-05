@@ -59,7 +59,11 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
   no Asaas; confirmar compra/conversão juntas e testar concorrência sem envio real.
   Evidência local: [ACADEMY_PAYMENT_CONFIRMATION.md](./ACADEMY_PAYMENT_CONFIRMATION.md).
 - [ ] Revisar reversões, saldos/compras históricos e recuperação após falha no
-  provedor/banco; implementar outbox durável para o e-mail de acesso Academy.
+  provedor/banco e retry auditado de entregas incertas.
+- [x] Persistir a fila do e-mail de acesso na confirmação Academy por webhook;
+  validar retomada de pendentes, claim concorrente e quarentena após queda de processo.
+  Evidência local: [ACADEMY_ACCESS_EMAIL_OUTBOX.md](./ACADEMY_ACCESS_EMAIL_OUTBOX.md).
+- [ ] Migrar reenvios/admin/brindes para entrega durável e conciliação autorizada.
 
 - [x] Remover segredos previamente versionados e limpar o histórico Git.
 - [x] Impedir envio de tokens, chaves e screenshots ao assistente de integrações.

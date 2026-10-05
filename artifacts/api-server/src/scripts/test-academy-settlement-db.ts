@@ -3,7 +3,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import express from "express";
 import { eq, inArray } from "drizzle-orm";
-import { db, pool, academyPurchasesTable, academyLeadsTable, type AcademyPurchase } from "@workspace/db";
+import { db, pool, academyPurchasesTable, academyLeadsTable, academyAccessEmailOutboxTable, type AcademyPurchase } from "@workspace/db";
 import { createAcademyPaymentWebhook } from "../modules/academy/academy-payment-webhook.js";
 import { confirmAcademyPayment, fetchAcademySettlement, type AcademySettlement } from "../modules/academy/academy-settlement.service.js";
 import { generateAccessToken } from "../modules/academy/academy-access-code.js";
@@ -58,6 +58,14 @@ async function read(purchase: AcademyPurchase) {
   const [row] = await db.select().from(academyPurchasesTable).where(eq(academyPurchasesTable.id, purchase.id));
   return row!;
 }
+async function waitForEmail(purchase: AcademyPurchase) {
+  for (let i = 0; i < 500; i++) {
+    const [job] = await db.select().from(academyAccessEmailOutboxTable).where(eq(academyAccessEmailOutboxTable.purchaseId, purchase.id));
+    if (job?.status === "sent") return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error("Mock outbox delivery did not finish");
+}
 async function lead(purchase: AcademyPurchase) {
   const [row] = await db.select().from(academyLeadsTable).where(eq(academyLeadsTable.email, purchase.customerEmail));
   return row!;
@@ -79,7 +87,7 @@ try {
   assert.equal(lookupCalls, 0);
   const first = await fixture();
   const responses = await Promise.all(Array.from({ length: 16 }, () => notify(first)));
-  await new Promise<void>((resolve) => setImmediate(resolve));
+  await waitForEmail(first);
   assert.ok(responses.every((r) => r.status === 200 && !("token" in r.body)));
   assert.equal(responses.filter((r) => r.body.alreadyConfirmed).length, 15);
   assert.equal(delivered.filter((token) => token === first.accessToken).length, 1);
@@ -115,7 +123,7 @@ try {
   assert.equal(delivered.length, 1);
   proofs.set(pending.asaasPaymentId!, proofFor(pending));
   assert.equal((await notify(pending)).status, 200);
-  await new Promise<void>((resolve) => setImmediate(resolve));
+  await waitForEmail(pending);
   assert.equal((await read(pending)).status, "confirmed");
   assert.equal(delivered.length, 2);
   console.log("PASS: risk approval/unsettled state, ID/customer/reference/amount mismatch, malformed response and outage cannot release access; retry succeeds");
@@ -146,7 +154,7 @@ try {
   proofs.set(boleto.asaasPaymentId!, { ...proofFor(boleto), billingType: "BOLETO" });
   assert.equal((await notify(boleto)).status, 200);
   assert.equal((await read(boleto)).status, "confirmed");
-  await new Promise<void>((resolve) => setImmediate(resolve));
+  await Promise.all([waitForEmail(card), waitForEmail(boleto)]);
   assert.equal(delivered.filter((token) => token === card.accessToken).length, 1);
   assert.equal(delivered.filter((token) => token === boleto.accessToken).length, 1);
   console.log("PASS: canonically confirmed card and received boleto release access; malformed notification never queries provider");

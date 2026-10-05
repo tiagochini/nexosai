@@ -9,6 +9,7 @@ import { env } from "../../lib/env.js";
 import { checkAcademyAdmin as checkCrm } from "./academy-admin.security.js";
 import { createAcademyVerificationLimiter } from "./academy-verification.security.js";
 import { createAcademyPaymentWebhook } from "./academy-payment-webhook.js";
+import { ACADEMY_PRODUCTS } from "./academy-products.js";
 import { ALLAN_CONSTRAINT_REASONING } from "../agents/constraint-reasoning.js";
 import {
   findOrCreateCustomer,
@@ -29,11 +30,6 @@ const router = Router();
 const verificationLimiter = createAcademyVerificationLimiter(
   (process.env["ACADEMY_TRUSTED_PROXY_IPS"] ?? "").split(",").map((ip) => ip.trim()).filter(Boolean),
 );
-
-const ACADEMY_PRODUCTS: Record<string, { name: string; amountBrl: number }> = {
-  "mini-guide": { name: "Mapa dos Primeiros R$10K em Vendas Online", amountBrl: 97 },
-  "complete-bundle": { name: "Metodologia NexOS — Edição Completa", amountBrl: 2500 },
-};
 
 const giftCodesSchema = z.object({
   count: z.number().int().min(1).max(50).default(5),

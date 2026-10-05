@@ -119,7 +119,7 @@ Official sources: [payment lookup](https://docs.asaas.com/reference/recuperar-um
 
 The project was started through `scripts/dev-local.mjs`, preserving existing local
 safe mode with schedulers/automatic recovery disabled: API 8080, frontend 8081.
-No secrets were changed or credential-free routes enabled. Academy access-email outbox, reversals,
+No secrets were changed or credential-free routes enabled. Academy uncertain-delivery reconciliation, reversals,
 recovery between provider acceptance and persistence, historical reconciliation,
 session-based auditing and end-to-end sandbox certification remain pending.
 Remote state can change after lookup; there is no distributed provider transaction

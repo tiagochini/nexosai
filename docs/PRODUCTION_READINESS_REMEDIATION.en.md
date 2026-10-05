@@ -58,7 +58,11 @@ The system should only be considered ready for open production when:
   commit purchase/conversion together and test concurrency without real delivery.
   Local evidence: [ACADEMY_PAYMENT_CONFIRMATION.en.md](./ACADEMY_PAYMENT_CONFIRMATION.en.md).
 - [ ] Review reversals, historical balances/purchases and provider/database failure
-  recovery; implement a durable Academy access-email outbox.
+  recovery and audited retry of uncertain deliveries.
+- [x] Persist the access-email outbox in Academy webhook confirmation;
+  validate pending recovery, concurrent claims and quarantine after process death.
+  Local evidence: [ACADEMY_ACCESS_EMAIL_OUTBOX.en.md](./ACADEMY_ACCESS_EMAIL_OUTBOX.en.md).
+- [ ] Migrate resend/admin/gift flows to durable delivery and authorized reconciliation.
 
 - [x] Remove previously committed secrets and clean Git history.
 - [x] Prevent tokens, keys, and screenshots from being sent to the integrations
