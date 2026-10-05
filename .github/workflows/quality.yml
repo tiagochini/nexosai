@@ -29,6 +29,8 @@ jobs:
         run: pnpm run security:audit-dependencies
       - name: Dependency runtime regression tests
         run: pnpm --filter @workspace/api-server run test:dependency-runtime
+      - name: Academy offline delivery regression tests
+        run: pnpm --filter @workspace/api-server run test:academy-funnel-delivery
       - name: Credential security regression tests
         run: |
           pnpm run security:check-runtime-logging
@@ -82,4 +84,5 @@ jobs:
           pnpm --filter @workspace/api-server run test:auth-registration-db
           pnpm --filter @workspace/api-server run test:auth-sessions-http
           pnpm --filter @workspace/api-server run test:realtime-security-db
+          pnpm --filter @workspace/api-server run test:academy-funnel-db
           pnpm --filter @workspace/db run verify

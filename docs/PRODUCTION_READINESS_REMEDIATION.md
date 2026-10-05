@@ -81,8 +81,10 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 
 - [ ] Concluir jornada sandbox: cadastro → campanha → conteúdo → publicação →
   lead → checkout → atribuição.
-- [ ] Impedir que o funil Academy marque e-mails como enviados sem provedor
-  configurado; distinguir simulação de entrega real.
+- [x] Impedir que o funil Academy marque e-mails como enviados sem provedor
+  configurado; avançar somente após aceitação pelo provedor, sem simulação em produção.
+  Evidência local e limites: [ACADEMY_FUNNEL_DELIVERY.md](./ACADEMY_FUNNEL_DELIVERY.md).
+- [ ] Certificar idempotência, concorrência e recuperação do envio Academy.
 - [ ] Implementar concessões de acesso a objetos para o worker de mídia.
 - [ ] Concluir e certificar executores de vídeo e mídia paga.
 - [ ] Criar conjunto versionado de avaliações de IA com critérios por artefato.

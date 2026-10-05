@@ -11,36 +11,12 @@
  * Day 10 → Step 4: Última chance / urgência perpétua
  */
 
-import nodemailer from "nodemailer";
-import { and, eq, isNull, lte, ne } from "drizzle-orm";
+import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { academyLeadsTable, academyFunnelEmailsTable } from "@workspace/db";
 import { env } from "../../lib/env.js";
 import { logger } from "../../lib/logger.js";
-
-async function sendViaGmailFunnel(opts: {
-  to: string;
-  subject: string;
-  html: string;
-}): Promise<boolean> {
-  if (!env.GMAIL_USER || !env.GMAIL_APP_PASSWORD) return false;
-  try {
-    const transport = nodemailer.createTransport({
-      service: "gmail",
-      auth: { user: env.GMAIL_USER, pass: env.GMAIL_APP_PASSWORD },
-    });
-    await transport.sendMail({
-      from: `"NexOS Academy" <${env.GMAIL_USER}>`,
-      to: opts.to,
-      subject: opts.subject,
-      html: opts.html,
-    });
-    return true;
-  } catch (err) {
-    logger.error({ err }, "academy-funnel: gmail send failed");
-    return false;
-  }
-}
+import { deliverFunnelMessage, funnelDeliveryPatch, type FunnelDeliveryResult } from "./academy-funnel-delivery.js";
 
 // Day offset for each step (from enrolledAt)
 export const FUNNEL_STEPS: {
@@ -193,7 +169,7 @@ export async function enrollLeadInFunnel(
   // Mark lead as enrolled
   await db
     .update(academyLeadsTable)
-    .set({ funnelEnrolledAt: enrolledAt, funnelStep: 0 })
+    .set({ funnelEnrolledAt: enrolledAt, funnelStep: -1 })
     .where(eq(academyLeadsTable.id, leadId));
 
   // Schedule all 5 emails
@@ -212,95 +188,41 @@ export async function enrollLeadInFunnel(
   );
 }
 
-// ─── Send a single funnel email via Resend ───────────────────────────────────
+// ─── Send a single funnel email through a configured provider ───────────────
 
 async function sendFunnelEmail(opts: {
   email: string;
   name: string | null;
   step: number;
   funnelEmailId: string;
-}): Promise<void> {
+}, deliver = deliverFunnelMessage): Promise<FunnelDeliveryResult> {
   const stepMeta = FUNNEL_STEPS.find((s) => s.step === opts.step);
-  if (!stepMeta) return;
+  if (!stepMeta) return { status: "failed", errorCode: "INVALID_FUNNEL_STEP" };
 
   const firstName = (opts.name ?? "").split(" ")[0] || "";
   const html = buildEmailHtml(opts.step, firstName);
 
-  // Try Resend first (if configured), then Gmail fallback, then log-only
-  const useResend = !!env.RESEND_API_KEY;
-  const useGmail = !!(env.GMAIL_USER && env.GMAIL_APP_PASSWORD);
-
-  if (!useResend && !useGmail) {
-    logger.info(
-      { email: opts.email, step: opts.step, subject: stepMeta.subject },
-      "academy-funnel: [NO EMAIL PROVIDER] would send email — configure RESEND_API_KEY or GMAIL_USER+GMAIL_APP_PASSWORD",
-    );
-    await db
-      .update(academyFunnelEmailsTable)
-      .set({ status: "sent", sentAt: new Date(), resendId: "dev-no-provider" })
-      .where(eq(academyFunnelEmailsTable.id, opts.funnelEmailId));
-    return;
-  }
-
-  try {
-    let sent = false;
-
-    if (useResend) {
-      const resp = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${env.RESEND_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: env.RESEND_FROM_EMAIL,
-          to: opts.email,
-          subject: stepMeta.subject,
-          html,
-        }),
-      });
-
-      if (!resp.ok) {
-        const text = await resp.text();
-        throw new Error(`Resend error ${resp.status}: ${text}`);
-      }
-
-      const data = (await resp.json()) as { id?: string };
-      await db
-        .update(academyFunnelEmailsTable)
-        .set({ status: "sent", sentAt: new Date(), resendId: data.id ?? null })
-        .where(eq(academyFunnelEmailsTable.id, opts.funnelEmailId));
-      logger.info(
-        {
-          email: opts.email,
-          step: opts.step,
-          resendId: data.id,
-          via: "resend",
-        },
-        "academy-funnel: email sent via Resend",
-      );
-    }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    await db
-      .update(academyFunnelEmailsTable)
-      .set({ status: "failed", errorMessage: msg })
-      .where(eq(academyFunnelEmailsTable.id, opts.funnelEmailId));
-
-    logger.error(
-      { email: opts.email, step: opts.step, err: msg },
-      "academy-funnel: email send failed",
-    );
-  }
+  const result = await deliver({ to: opts.email, subject: stepMeta.subject, html }, {
+    resendKey: env.RESEND_API_KEY,
+    resendFrom: env.RESEND_FROM_EMAIL,
+    gmailUser: env.GMAIL_USER,
+    gmailPassword: env.GMAIL_APP_PASSWORD,
+  });
+  await db.update(academyFunnelEmailsTable)
+    .set(funnelDeliveryPatch(result))
+    .where(eq(academyFunnelEmailsTable.id, opts.funnelEmailId));
+  logger.info({ funnelEmailId: opts.funnelEmailId, step: opts.step, status: result.status },
+    "academy-funnel: delivery attempt recorded");
+  return result;
 }
 
 // ─── Fire welcome email immediately after enrollment ─────────────────────────
 
-export async function sendWelcomeEmailNow(leadId: string): Promise<void> {
+export async function sendWelcomeEmailNow(leadId: string, deliver = deliverFunnelMessage): Promise<void> {
   const lead = await db.query.academyLeadsTable.findFirst({
     where: eq(academyLeadsTable.id, leadId),
   });
-  if (!lead) return;
+  if (!lead || lead.unsubscribedAt) return;
 
   // Find the step-0 funnel email row
   const funnelEmailRows = await db
@@ -310,7 +232,7 @@ export async function sendWelcomeEmailNow(leadId: string): Promise<void> {
       and(
         eq(academyFunnelEmailsTable.leadId, leadId),
         eq(academyFunnelEmailsTable.step, 0),
-        ne(academyFunnelEmailsTable.status, "sent"),
+        or(eq(academyFunnelEmailsTable.status, "scheduled"), eq(academyFunnelEmailsTable.status, "failed")),
       ),
     )
     .limit(1);
@@ -318,22 +240,27 @@ export async function sendWelcomeEmailNow(leadId: string): Promise<void> {
   if (funnelEmailRows.length === 0) return;
   const row = funnelEmailRows[0]!;
 
-  await sendFunnelEmail({
+  const result = await sendFunnelEmail({
     email: lead.email,
     name: lead.name,
     step: 0,
     funnelEmailId: row.id,
-  });
+  }, deliver);
+
+  if (result.status !== "sent") return;
 
   await db
     .update(academyLeadsTable)
-    .set({ funnelStep: 0 })
+    .set({ funnelStep: sql`greatest(${academyLeadsTable.funnelStep}, 0)` })
     .where(eq(academyLeadsTable.id, leadId));
 }
 
 // ─── Hourly scheduler tick ───────────────────────────────────────────────────
 
-export async function runFunnelSchedulerTick(): Promise<void> {
+export async function runFunnelSchedulerTick(options: {
+  leadId?: string;
+  deliver?: typeof deliverFunnelMessage;
+} = {}): Promise<void> {
   const now = new Date();
 
   // Find scheduled emails whose scheduledAt is due
@@ -356,6 +283,7 @@ export async function runFunnelSchedulerTick(): Promise<void> {
       and(
         eq(academyFunnelEmailsTable.status, "scheduled"),
         lte(academyFunnelEmailsTable.scheduledAt, now),
+        options.leadId ? eq(academyFunnelEmailsTable.leadId, options.leadId) : undefined,
       ),
     )
     .limit(50);
@@ -386,17 +314,19 @@ export async function runFunnelSchedulerTick(): Promise<void> {
       continue;
     }
 
-    await sendFunnelEmail({
+    const result = await sendFunnelEmail({
       email: row.email,
       name: row.name,
       step: row.step,
       funnelEmailId: row.funnelEmailId,
-    });
+    }, options.deliver ?? deliverFunnelMessage);
 
-    // Update lead's current funnel step
+    if (result.status !== "sent") continue;
+
+    // Advance only after provider acceptance; never regress a later step.
     await db
       .update(academyLeadsTable)
-      .set({ funnelStep: row.step })
+      .set({ funnelStep: sql`greatest(${academyLeadsTable.funnelStep}, ${row.step})` })
       .where(eq(academyLeadsTable.id, row.leadId));
   }
 }

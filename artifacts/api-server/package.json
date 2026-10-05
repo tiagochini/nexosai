@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:academy-funnel-delivery": "tsx src/scripts/test-academy-funnel-delivery.ts",
+    "test:academy-funnel-db": "cross-env NODE_ENV=test tsx src/scripts/test-academy-funnel-db.ts",
     "test:log-security": "tsx src/scripts/test-log-security.ts",
     "test:realtime-security-db": "cross-env NODE_ENV=test tsx src/scripts/test-realtime-security-db.ts",
     "test:dependency-runtime": "tsx src/scripts/test-dependency-runtime.ts",

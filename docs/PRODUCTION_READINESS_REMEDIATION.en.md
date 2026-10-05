@@ -82,8 +82,10 @@ The system should only be considered ready for open production when:
 
 - [ ] Complete the sandbox journey: registration → campaign → content →
   publishing → lead → checkout → attribution.
-- [ ] Prevent the Academy funnel from marking emails as sent without a configured
-  provider; distinguish simulation from real delivery.
+- [x] Prevent the Academy funnel from marking emails as sent without a configured
+  provider; advance only after provider acceptance, without production simulation.
+  Local evidence and limits: [ACADEMY_FUNNEL_DELIVERY.en.md](./ACADEMY_FUNNEL_DELIVERY.en.md).
+- [ ] Certify Academy sending idempotency, concurrency and recovery.
 - [ ] Implement object-access grants for the media worker.
 - [ ] Complete and certify video and paid-media executors.
 - [ ] Create a versioned AI evaluation set with criteria for each artifact.
