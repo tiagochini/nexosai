@@ -111,16 +111,7 @@ export async function createPayment(opts: {
   return resp.json() as Promise<AsaasPayment>;
 }
 
-// Generate a readable 12-char uppercase access token like "A1B2-C3D4-E5F6"
-export function generateAccessToken(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let token = "";
-  for (let i = 0; i < 12; i++) {
-    if (i === 4 || i === 8) token += "-";
-    token += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return token;
-}
+export { generateAccessToken } from "./academy-access-code.js";
 
 // Send access token via Gmail or Resend
 export async function sendAccessEmail(opts: {

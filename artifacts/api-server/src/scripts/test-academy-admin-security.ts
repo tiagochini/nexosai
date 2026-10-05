@@ -46,7 +46,24 @@ try {
   });
   assert.equal(accepted.status, 400, "configured header must reach ordinary input validation, without any DB write");
   assert.deepEqual(await accepted.json(), { error: "purchaseId required" });
+  for (const body of [null, [], { count: 0 }, { count: -1 }, { count: 1.5 }, { count: 51 }, { count: "5" }, { count: null }, { productId: 42 }]) {
+    const response = await fetch(`${base}/admin/gift-codes`, {
+      method: "POST", headers: { "x-admin-secret": secret, "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    assert.equal(response.status, 400, "invalid gift-code input must fail before any DB insertion");
+    // Primitive JSON is rejected by Express before the route; its default
+    // test-app error page is HTML, while route validation returns JSON.
+    await response.arrayBuffer();
+  }
+  for (const body of [{ productId: "missing-fixture-product" }, { count: 1, productId: "missing-fixture-product" }, { count: 50, productId: "missing-fixture-product" }]) {
+    const response = await fetch(`${base}/admin/gift-codes`, {
+      method: "POST", headers: { "x-admin-secret": secret, "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { error: "Produto inválido" }, "default and boundary counts must reach product validation, without issuing codes");
+  }
   console.log("PASS Academy admin HTTP: 11 sensitive routes deny absent/default/query credentials; configured header reaches validation (no DB or email writes)");
+  console.log("PASS Academy gift-code HTTP: non-integer, oversized, negative and malformed batches rejected before issuance");
 } finally {
   if (previous === undefined) delete process.env.ACADEMY_ADMIN_SECRET;
   else process.env.ACADEMY_ADMIN_SECRET = previous;

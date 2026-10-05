@@ -30,6 +30,11 @@ const ACADEMY_PRODUCTS: Record<string, { name: string; amountBrl: number }> = {
   "complete-bundle": { name: "Metodologia NexOS — Edição Completa", amountBrl: 2500 },
 };
 
+const giftCodesSchema = z.object({
+  count: z.number().int().min(1).max(50).default(5),
+  productId: z.string().min(1).max(100).default("complete-bundle"),
+});
+
 const checkoutSchema = z.object({
   name: z.string().min(2).max(200),
   email: z.email(),
@@ -903,22 +908,17 @@ router.post("/admin/confirm", async (req, res): Promise<void> => {
 router.post("/admin/gift-codes", async (req, res): Promise<void> => {
   if (!checkCrm(req, res)) return;
 
-  const { count = 5, productId = "complete-bundle" } = req.body as { count?: number; productId?: string };
+  const parsed = giftCodesSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Dados inválidos. Quantidade deve ser um inteiro entre 1 e 50." });
+    return;
+  }
+  const { count, productId } = parsed.data;
   const product = ACADEMY_PRODUCTS[productId as keyof typeof ACADEMY_PRODUCTS];
   if (!product) { res.status(400).json({ error: "Produto inválido" }); return; }
 
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  function makeToken() {
-    let t = "";
-    for (let i = 0; i < 12; i++) {
-      if (i === 4 || i === 8) t += "-";
-      t += chars[Math.floor(Math.random() * chars.length)];
-    }
-    return t;
-  }
-
-  const rows = Array.from({ length: Math.min(count, 50) }, () => ({
-    accessToken: makeToken(),
+  const rows = Array.from({ length: count }, () => ({
+    accessToken: generateAccessToken(),
     customerEmail: "brinde@agencianexos.vip",
     customerName: "Convidado",
     productId,

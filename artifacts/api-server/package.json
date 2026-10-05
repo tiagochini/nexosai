@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:academy-access-code": "tsx src/scripts/test-academy-access-code.ts",
     "test:academy-access-email": "cross-env NODE_ENV=test tsx src/scripts/test-academy-access-email.ts",
     "test:academy-admin-security": "cross-env NODE_ENV=test tsx src/scripts/test-academy-admin-security.ts",
     "test:academy-email-html": "tsx src/scripts/test-academy-email-html.ts",

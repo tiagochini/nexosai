@@ -40,6 +40,36 @@ A API em execução não foi reiniciada automaticamente.
 
 ## Limites
 
+### Geração dos códigos de acesso
+
+Checkout e brindes usam o mesmo gerador baseado em `node:crypto.randomInt`,
+sem `Math.random` nem fallback não criptográfico. O formato existente de três
+grupos de quatro caracteres foi preservado, assim como o alfabeto de 32 símbolos
+sem letras ambíguas. São 60 bits de aleatoriedade por código novo; a mudança
+melhora a fonte de aleatoriedade, não aumenta o comprimento/entropia do formato.
+Códigos anteriores não foram rotacionados, modificados ou excluídos.
+
+Solicitações de brindes exigem corpo JSON válido e `count` inteiro entre 1 e 50;
+se omitido no objeto, o padrão é 5. Valores negativos, zero, fracionários, strings
+e lotes maiores não geram códigos. A restrição única do banco continua sendo a
+garantia final contra colisão; ainda falta retentativa específica para colisões.
+
+```powershell
+pnpm --filter @workspace/api-server run test:academy-access-code
+pnpm --filter @workspace/api-server run test:academy-admin-security
+```
+
+O teste gera 1.000 amostras somente em memória, com `Math.random` bloqueado,
+verifica formato e ausência de duplicação nessa amostra, sem imprimir códigos.
+Não é uma prova estatística de entropia ou garantia de ausência de colisões.
+O teste HTTP rejeita entradas inválidas e verifica os limites 1/50 e o padrão
+antes da validação de produto, sem inserir brindes ou consultar compras reais.
+Nenhum código existente ou compra real foi alterado pelos testes.
+
+Permanecem pendentes: limitação de tentativas nos endpoints públicos de validação,
+armazenamento protegido dos códigos, validade/revogação e revisão de respostas
+com dados pessoais. Geração criptográfica não resolve sozinha esses riscos.
+
 É uma credencial administrativa compartilhada, não autorização por conta.
 Ainda faltam migração para sessão autenticada com papel de proprietário,
 limitação de tentativas específica, trilha de auditoria das ações e revisão

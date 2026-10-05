@@ -41,6 +41,11 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
   revisadas e bloquear credenciais em URL; incluir autorização no scheduler manual.
   Evidência local e compatibilidade: [ACADEMY_ADMIN_SECURITY.md](./ACADEMY_ADMIN_SECURITY.md).
 - [ ] Migrar administração Academy para sessão de proprietário e auditar demais rotas/códigos.
+- [x] Usar aleatoriedade criptográfica nos códigos Academy de checkout/brindes
+  e validar lotes de brindes antes da emissão, mantendo códigos existentes.
+  Evidência local: [ACADEMY_ADMIN_SECURITY.md](./ACADEMY_ADMIN_SECURITY.md).
+- [ ] Limitar tentativas públicas de validação Academy e revisar proteção,
+  validade/revogação de códigos e exposição de dados pessoais.
 
 - [x] Remover segredos previamente versionados e limpar o histórico Git.
 - [x] Impedir envio de tokens, chaves e screenshots ao assistente de integrações.

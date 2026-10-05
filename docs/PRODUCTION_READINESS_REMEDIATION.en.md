@@ -40,6 +40,11 @@ The system should only be considered ready for open production when:
   routes and reject URL credentials; authorize the manual scheduler endpoint.
   Local evidence and compatibility: [ACADEMY_ADMIN_SECURITY.en.md](./ACADEMY_ADMIN_SECURITY.en.md).
 - [ ] Move Academy administration to owner sessions and audit remaining routes/codes.
+- [x] Use cryptographic randomness for Academy checkout/gift codes and validate
+  gift batches before issuance, preserving existing codes.
+  Local evidence: [ACADEMY_ADMIN_SECURITY.en.md](./ACADEMY_ADMIN_SECURITY.en.md).
+- [ ] Limit public Academy verification attempts and review code protection,
+  expiry/revocation and personal-data exposure.
 
 - [x] Remove previously committed secrets and clean Git history.
 - [x] Prevent tokens, keys, and screenshots from being sent to the integrations
