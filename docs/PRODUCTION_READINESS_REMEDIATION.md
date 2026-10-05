@@ -85,6 +85,10 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
   configurado; avançar somente após aceitação pelo provedor, sem simulação em produção.
   Evidência local e limites: [ACADEMY_FUNNEL_DELIVERY.md](./ACADEMY_FUNNEL_DELIVERY.md).
 - [ ] Certificar idempotência, concorrência e recuperação do envio Academy.
+- [x] Tornar inscrição Academy transacional/idempotente por lead e reservar
+  envios atomicamente entre boas-vindas/scheduler; bloquear resultados ambíguos.
+  Testes locais de concorrência passaram; queda real multi-instância e conciliação
+  operacional continuam pendentes em [ACADEMY_FUNNEL_DELIVERY.md](./ACADEMY_FUNNEL_DELIVERY.md).
 - [ ] Implementar concessões de acesso a objetos para o worker de mídia.
 - [ ] Concluir e certificar executores de vídeo e mídia paga.
 - [ ] Criar conjunto versionado de avaliações de IA com critérios por artefato.

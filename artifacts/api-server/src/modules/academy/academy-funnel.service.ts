@@ -11,7 +11,7 @@
  * Day 10 → Step 4: Última chance / urgência perpétua
  */
 
-import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
+import { and, eq, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { academyLeadsTable, academyFunnelEmailsTable } from "@workspace/db";
 import { env } from "../../lib/env.js";
@@ -166,24 +166,24 @@ export async function enrollLeadInFunnel(
   leadId: string,
   enrolledAt: Date = new Date(),
 ): Promise<void> {
-  // Mark lead as enrolled
-  await db
-    .update(academyLeadsTable)
-    .set({ funnelEnrolledAt: enrolledAt, funnelStep: -1 })
-    .where(eq(academyLeadsTable.id, leadId));
-
-  // Schedule all 5 emails
-  const inserts = FUNNEL_STEPS.map(({ step, dayOffset }) => {
-    const scheduledAt = new Date(
-      enrolledAt.getTime() + dayOffset * 24 * 60 * 60 * 1000,
-    );
-    return { leadId, step, scheduledAt, status: "scheduled" as const };
+  // The conditional update serializes concurrent enrollments of this lead.
+  // Enrollment and all scheduled emails commit together or roll back together.
+  const enrolled = await db.transaction(async (tx) => {
+    const claimed = await tx.update(academyLeadsTable)
+      .set({ funnelEnrolledAt: enrolledAt, funnelStep: -1 })
+      .where(and(eq(academyLeadsTable.id, leadId), isNull(academyLeadsTable.funnelEnrolledAt)))
+      .returning({ id: academyLeadsTable.id });
+    if (claimed.length === 0) return false;
+    await tx.insert(academyFunnelEmailsTable).values(FUNNEL_STEPS.map(({ step, dayOffset }) => ({
+      leadId, step, status: "scheduled",
+      scheduledAt: new Date(enrolledAt.getTime() + dayOffset * 24 * 60 * 60 * 1000),
+    })));
+    return true;
   });
-
-  await db.insert(academyFunnelEmailsTable).values(inserts);
+  if (!enrolled) return;
 
   logger.info(
-    { leadId, steps: inserts.length },
+    { leadId, steps: FUNNEL_STEPS.length },
     "academy-funnel: lead enrolled",
   );
 }
@@ -191,29 +191,52 @@ export async function enrollLeadInFunnel(
 // ─── Send a single funnel email through a configured provider ───────────────
 
 async function sendFunnelEmail(opts: {
-  email: string;
-  name: string | null;
-  step: number;
   funnelEmailId: string;
-}, deliver = deliverFunnelMessage): Promise<FunnelDeliveryResult> {
-  const stepMeta = FUNNEL_STEPS.find((s) => s.step === opts.step);
-  if (!stepMeta) return { status: "failed", errorCode: "INVALID_FUNNEL_STEP" };
+}, deliver = deliverFunnelMessage): Promise<void> {
+  // Durable compare-and-set claim: only one process can dispatch this row.
+  // Never auto-reclaim "sending": after a crash provider acceptance is unknown.
+  const claim = await db.transaction(async (tx) => {
+    const [row] = await tx.update(academyFunnelEmailsTable)
+      .set({ status: "sending", sentAt: null, resendId: null, errorMessage: "DELIVERY_IN_PROGRESS_OR_UNKNOWN" })
+      .where(and(eq(academyFunnelEmailsTable.id, opts.funnelEmailId), eq(academyFunnelEmailsTable.status, "scheduled")))
+      .returning();
+    if (!row) return null;
+    const [lead] = await tx.select().from(academyLeadsTable).where(eq(academyLeadsTable.id, row.leadId));
+    if (!lead || lead.unsubscribedAt || (lead.convertedAt && row.step >= 3)) {
+      await tx.update(academyFunnelEmailsTable)
+        .set({ status: "skipped", errorMessage: lead?.unsubscribedAt ? "unsubscribed" : "already_converted" })
+        .where(eq(academyFunnelEmailsTable.id, row.id));
+      return null;
+    }
+    return { row, lead };
+  });
+  if (!claim) return;
+  const { row, lead } = claim;
+  const stepMeta = FUNNEL_STEPS.find((s) => s.step === row.step);
 
-  const firstName = (opts.name ?? "").split(" ")[0] || "";
-  const html = buildEmailHtml(opts.step, firstName);
+  const firstName = (lead.name ?? "").split(" ")[0] || "";
+  const html = buildEmailHtml(row.step, firstName);
 
-  const result = await deliver({ to: opts.email, subject: stepMeta.subject, html }, {
+  const result: FunnelDeliveryResult = stepMeta ? await deliver({ to: lead.email, subject: stepMeta.subject, html }, {
     resendKey: env.RESEND_API_KEY,
     resendFrom: env.RESEND_FROM_EMAIL,
     gmailUser: env.GMAIL_USER,
     gmailPassword: env.GMAIL_APP_PASSWORD,
+  }) : { status: "failed", errorCode: "INVALID_FUNNEL_STEP" };
+  // If persistence fails, "sending" survives and prevents blind redelivery.
+  await db.transaction(async (tx) => {
+    const updated = await tx.update(academyFunnelEmailsTable)
+      .set(funnelDeliveryPatch(result))
+      .where(and(eq(academyFunnelEmailsTable.id, row.id), eq(academyFunnelEmailsTable.status, "sending")))
+      .returning({ id: academyFunnelEmailsTable.id });
+    if (updated.length && result.status === "sent") {
+      await tx.update(academyLeadsTable)
+        .set({ funnelStep: sql`greatest(${academyLeadsTable.funnelStep}, ${row.step})` })
+        .where(eq(academyLeadsTable.id, lead.id));
+    }
   });
-  await db.update(academyFunnelEmailsTable)
-    .set(funnelDeliveryPatch(result))
-    .where(eq(academyFunnelEmailsTable.id, opts.funnelEmailId));
-  logger.info({ funnelEmailId: opts.funnelEmailId, step: opts.step, status: result.status },
+  logger.info({ funnelEmailId: row.id, step: row.step, status: result.status },
     "academy-funnel: delivery attempt recorded");
-  return result;
 }
 
 // ─── Fire welcome email immediately after enrollment ─────────────────────────
@@ -232,7 +255,7 @@ export async function sendWelcomeEmailNow(leadId: string, deliver = deliverFunne
       and(
         eq(academyFunnelEmailsTable.leadId, leadId),
         eq(academyFunnelEmailsTable.step, 0),
-        or(eq(academyFunnelEmailsTable.status, "scheduled"), eq(academyFunnelEmailsTable.status, "failed")),
+        eq(academyFunnelEmailsTable.status, "scheduled"),
       ),
     )
     .limit(1);
@@ -240,19 +263,7 @@ export async function sendWelcomeEmailNow(leadId: string, deliver = deliverFunne
   if (funnelEmailRows.length === 0) return;
   const row = funnelEmailRows[0]!;
 
-  const result = await sendFunnelEmail({
-    email: lead.email,
-    name: lead.name,
-    step: 0,
-    funnelEmailId: row.id,
-  }, deliver);
-
-  if (result.status !== "sent") return;
-
-  await db
-    .update(academyLeadsTable)
-    .set({ funnelStep: sql`greatest(${academyLeadsTable.funnelStep}, 0)` })
-    .where(eq(academyLeadsTable.id, leadId));
+  await sendFunnelEmail({ funnelEmailId: row.id }, deliver);
 }
 
 // ─── Hourly scheduler tick ───────────────────────────────────────────────────
@@ -267,18 +278,8 @@ export async function runFunnelSchedulerTick(options: {
   const due = await db
     .select({
       funnelEmailId: academyFunnelEmailsTable.id,
-      step: academyFunnelEmailsTable.step,
-      leadId: academyFunnelEmailsTable.leadId,
-      email: academyLeadsTable.email,
-      name: academyLeadsTable.name,
-      unsubscribedAt: academyLeadsTable.unsubscribedAt,
-      convertedAt: academyLeadsTable.convertedAt,
     })
     .from(academyFunnelEmailsTable)
-    .innerJoin(
-      academyLeadsTable,
-      eq(academyFunnelEmailsTable.leadId, academyLeadsTable.id),
-    )
     .where(
       and(
         eq(academyFunnelEmailsTable.status, "scheduled"),
@@ -286,6 +287,7 @@ export async function runFunnelSchedulerTick(options: {
         options.leadId ? eq(academyFunnelEmailsTable.leadId, options.leadId) : undefined,
       ),
     )
+    .orderBy(academyFunnelEmailsTable.scheduledAt, academyFunnelEmailsTable.step, academyFunnelEmailsTable.id)
     .limit(50);
 
   if (due.length === 0) return;
@@ -296,38 +298,8 @@ export async function runFunnelSchedulerTick(options: {
   );
 
   for (const row of due) {
-    // Skip unsubscribed leads
-    if (row.unsubscribedAt) {
-      await db
-        .update(academyFunnelEmailsTable)
-        .set({ status: "skipped", errorMessage: "unsubscribed" })
-        .where(eq(academyFunnelEmailsTable.id, row.funnelEmailId));
-      continue;
-    }
-
-    // Skip converted leads for sales emails (steps 3+)
-    if (row.convertedAt && row.step >= 3) {
-      await db
-        .update(academyFunnelEmailsTable)
-        .set({ status: "skipped", errorMessage: "already_converted" })
-        .where(eq(academyFunnelEmailsTable.id, row.funnelEmailId));
-      continue;
-    }
-
-    const result = await sendFunnelEmail({
-      email: row.email,
-      name: row.name,
-      step: row.step,
-      funnelEmailId: row.funnelEmailId,
-    }, options.deliver ?? deliverFunnelMessage);
-
-    if (result.status !== "sent") continue;
-
-    // Advance only after provider acceptance; never regress a later step.
-    await db
-      .update(academyLeadsTable)
-      .set({ funnelStep: sql`greatest(${academyLeadsTable.funnelStep}, ${row.step})` })
-      .where(eq(academyLeadsTable.id, row.leadId));
+    // Re-read consent/conversion after claiming, not from this stale snapshot.
+    await sendFunnelEmail({ funnelEmailId: row.funnelEmailId }, options.deliver ?? deliverFunnelMessage);
   }
 }
 
@@ -372,6 +344,7 @@ export async function getFunnelStats(): Promise<{
     sent: number;
     failed: number;
     scheduled: number;
+    sending: number;
     skipped: number;
   }[];
 }> {
@@ -403,6 +376,7 @@ export async function getFunnelStats(): Promise<{
       sent: stepEmails.filter((e) => e.status === "sent").length,
       failed: stepEmails.filter((e) => e.status === "failed").length,
       scheduled: stepEmails.filter((e) => e.status === "scheduled").length,
+      sending: stepEmails.filter((e) => e.status === "sending").length,
       skipped: stepEmails.filter((e) => e.status === "skipped").length,
     };
   });

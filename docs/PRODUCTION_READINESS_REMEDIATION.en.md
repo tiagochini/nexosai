@@ -86,6 +86,10 @@ The system should only be considered ready for open production when:
   provider; advance only after provider acceptance, without production simulation.
   Local evidence and limits: [ACADEMY_FUNNEL_DELIVERY.en.md](./ACADEMY_FUNNEL_DELIVERY.en.md).
 - [ ] Certify Academy sending idempotency, concurrency and recovery.
+- [x] Make Academy enrollment transactional/idempotent per lead and atomically
+  claim dispatch across welcome/scheduler calls; quarantine ambiguous outcomes.
+  Local concurrency tests passed; real multi-instance crashes and operational
+  reconciliation remain pending in [ACADEMY_FUNNEL_DELIVERY.en.md](./ACADEMY_FUNNEL_DELIVERY.en.md).
 - [ ] Implement object-access grants for the media worker.
 - [ ] Complete and certify video and paid-media executors.
 - [ ] Create a versioned AI evaluation set with criteria for each artifact.

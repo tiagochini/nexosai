@@ -50,7 +50,7 @@ export const academyFunnelEmailsTable = pgTable("academy_funnel_emails", {
   step: integer("step").notNull(),
   scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
   sentAt: timestamp("sent_at", { withTimezone: true }),
-  status: varchar("status", { length: 20 }).default("scheduled").notNull(), // scheduled | sent | failed | skipped
+  status: varchar("status", { length: 20 }).default("scheduled").notNull(), // scheduled | sending (in-flight/unknown) | sent | failed | skipped
   resendId: varchar("resend_id", { length: 100 }),
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
