@@ -10,12 +10,12 @@ import { checkAcademyAdmin as checkCrm } from "./academy-admin.security.js";
 import { createAcademyVerificationLimiter } from "./academy-verification.security.js";
 import { createAcademyPaymentWebhook } from "./academy-payment-webhook.js";
 import { ACADEMY_PRODUCTS } from "./academy-products.js";
+import { confirmAcademyManually, requestAcademyResend, createAcademyGiftBatch, wakeAcademyDelivery } from "./academy-delivery-intents.service.js";
 import { ALLAN_CONSTRAINT_REASONING } from "../agents/constraint-reasoning.js";
 import {
   findOrCreateCustomer,
   createPayment,
   generateAccessToken,
-  sendAccessEmail,
 } from "./academy.service.js";
 import {
   enrollLeadInFunnel,
@@ -34,7 +34,14 @@ const verificationLimiter = createAcademyVerificationLimiter(
 const giftCodesSchema = z.object({
   count: z.number().int().min(1).max(50).default(5),
   productId: z.string().min(1).max(100).default("complete-bundle"),
+  recipientEmail: z.email().transform((email) => email.toLowerCase()).optional(),
+  recipientName: z.string().min(1).max(200).optional(),
 });
+const deliveryKeySchema = z.string().min(8).max(128).regex(/^[A-Za-z0-9:_-]+$/);
+function deliveryKey(value: unknown): string | undefined {
+  const parsed = deliveryKeySchema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
+}
 
 const checkoutSchema = z.object({
   name: z.string().min(2).max(200),
@@ -71,16 +78,8 @@ router.post("/checkout", async (req, res): Promise<void> => {
     p => p.productId === parsed.productId && p.status === "confirmed"
   );
   if (confirmedForProduct) {
-    // Resend the access email
-    setImmediate(() => {
-      sendAccessEmail({
-        email: parsed.email,
-        name: parsed.name,
-        token: confirmedForProduct.accessToken,
-        productName: product.name,
-        portalUrl: `${env.APP_URL}/nexos-academy/`,
-      }).catch(err => logger.error({ err }, "academy: resend email error"));
-    });
+    await requestAcademyResend(confirmedForProduct.id, `checkout:${confirmedForProduct.id}:${Math.floor(Date.now() / 300000)}`, { publicRequest: true });
+    wakeAcademyDelivery(confirmedForProduct.id);
     res.json({
       alreadyPurchased: true,
       message: "Você já tem acesso! Solicitamos o reenvio do código para o seu e-mail.",
@@ -154,6 +153,8 @@ router.get("/verify/:token", verificationLimiter, async (req, res): Promise<void
       productId: academyPurchasesTable.productId,
       customerEmail: academyPurchasesTable.customerEmail,
       customerName: academyPurchasesTable.customerName,
+      revokedAt: academyPurchasesTable.revokedAt,
+      financialHold: academyPurchasesTable.financialHold,
     })
     .from(academyPurchasesTable)
     .where(eq(academyPurchasesTable.accessToken, token))
@@ -164,7 +165,11 @@ router.get("/verify/:token", verificationLimiter, async (req, res): Promise<void
     return;
   }
 
-  if (purchase.status !== "confirmed") {
+  if (purchase.status !== "confirmed" || purchase.revokedAt || purchase.financialHold) {
+    if (purchase.revokedAt || purchase.financialHold || ["refunded", "suspended", "cancelled"].includes(purchase.status)) {
+      res.status(403).json({ valid: false, error: "Acesso revogado ou temporariamente suspenso.", code: "ACADEMY_ACCESS_REVOKED" });
+      return;
+    }
     res.status(402).json({ valid: false, error: "Pagamento ainda não confirmado. Aguarde alguns minutos." });
     return;
   }
@@ -758,10 +763,9 @@ router.post("/simulate-confirm", async (req, res): Promise<void> => {
   const [purchase] = await db
     .select()
     .from(academyPurchasesTable)
-    .where(or(
-      eq(academyPurchasesTable.accessToken, token.toUpperCase()),
-      eq(academyPurchasesTable.id, token)
-    ))
+    .where(z.uuid().safeParse(token).success ? or(
+      eq(academyPurchasesTable.accessToken, token.toUpperCase()), eq(academyPurchasesTable.id, token)
+    ) : eq(academyPurchasesTable.accessToken, token.toUpperCase()))
     .limit(1);
 
   if (!purchase) {
@@ -769,10 +773,8 @@ router.post("/simulate-confirm", async (req, res): Promise<void> => {
     return;
   }
 
-  await db
-    .update(academyPurchasesTable)
-    .set({ status: "confirmed", confirmedAt: new Date() })
-    .where(eq(academyPurchasesTable.id, purchase.id));
+  await confirmAcademyManually(purchase.id);
+  wakeAcademyDelivery(purchase.id);
 
   res.json({ ok: true, token: purchase.accessToken, email: purchase.customerEmail });
 });
@@ -805,37 +807,30 @@ router.get("/admin/purchases", async (req, res): Promise<void> => {
   }
 });
 
-// POST /api/academy/admin/confirm — manually confirm a purchase and (re)send access email
+// POST /api/academy/admin/confirm — confirm once and enqueue initial access delivery
 router.post("/admin/confirm", async (req, res): Promise<void> => {
   if (!checkCrm(req, res)) return;
-  const { purchaseId } = req.body as { purchaseId?: string };
-  if (!purchaseId) { res.status(400).json({ error: "purchaseId required" }); return; }
-
-  const [purchase] = await db
-    .select()
-    .from(academyPurchasesTable)
-    .where(eq(academyPurchasesTable.id, purchaseId))
-    .limit(1);
-
-  if (!purchase) { res.status(404).json({ error: "Not found" }); return; }
-
-  await db.update(academyPurchasesTable)
-    .set({ status: "confirmed", confirmedAt: new Date() })
-    .where(eq(academyPurchasesTable.id, purchaseId));
-
-  // Fire access email (non-blocking)
-  const productInfo = ACADEMY_PRODUCTS[purchase.productId as keyof typeof ACADEMY_PRODUCTS];
-  setImmediate(() => {
-    sendAccessEmail({
-      email: purchase.customerEmail,
-      name: purchase.customerName ?? "",
-      token: purchase.accessToken,
-      productName: productInfo?.name ?? purchase.productId,
-      portalUrl: `${env.APP_URL}/nexos-academy/`,
-    }).catch(err => logger.error({ err }, "academy: admin resend email error"));
-  });
+  const parsed = z.object({ purchaseId: z.uuid() }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "purchaseId required" }); return; }
+  const purchase = await confirmAcademyManually(parsed.data.purchaseId);
+  wakeAcademyDelivery(purchase.id);
 
   res.json({ ok: true, token: purchase.accessToken, email: purchase.customerEmail });
+});
+
+// Explicit delivery intents: stable key must be reused when retrying a request.
+for (const path of ["/admin/resend", "/admin/gift-delivery"]) router.post(path, async (req, res): Promise<void> => {
+  if (!checkCrm(req, res)) return;
+  const schema = path === "/admin/gift-delivery"
+    ? z.object({ purchaseId: z.uuid(), recipientEmail: z.email().transform((email) => email.toLowerCase()), recipientName: z.string().min(1).max(200).optional() })
+    : z.object({ purchaseId: z.uuid() });
+  const parsed = schema.safeParse(req.body);
+  const key = deliveryKey(req.headers["idempotency-key"]);
+  if (!parsed.success || !key) { res.status(400).json({ error: "Valid purchase and Idempotency-Key required" }); return; }
+  const data = parsed.data as { purchaseId: string; recipientEmail?: string; recipientName?: string };
+  const result = await requestAcademyResend(data.purchaseId, key, data);
+  wakeAcademyDelivery(data.purchaseId);
+  res.status(202).json({ ok: true, jobId: result.jobId, reused: result.reused });
 });
 
 // POST /api/academy/admin/gift-codes — generate N gift access codes (owner only)
@@ -851,23 +846,13 @@ router.post("/admin/gift-codes", async (req, res): Promise<void> => {
   const product = ACADEMY_PRODUCTS[productId as keyof typeof ACADEMY_PRODUCTS];
   if (!product) { res.status(400).json({ error: "Produto inválido" }); return; }
 
-  const rows = Array.from({ length: count }, () => ({
-    accessToken: generateAccessToken(),
-    customerEmail: "brinde@agencianexos.vip",
-    customerName: "Convidado",
-    productId,
-    status: "confirmed" as const,
-    amountCents: 0,
-    confirmedAt: new Date(),
-  }));
-
-  const inserted = await db
-    .insert(academyPurchasesTable)
-    .values(rows)
-    .returning({ id: academyPurchasesTable.id, accessToken: academyPurchasesTable.accessToken });
+  const key = deliveryKey(req.headers["idempotency-key"]);
+  if (!key) { res.status(400).json({ error: "Valid Idempotency-Key required" }); return; }
+  const inserted = await createAcademyGiftBatch(key, parsed.data);
+  if (parsed.data.recipientEmail) for (const purchase of inserted) wakeAcademyDelivery(purchase.id);
 
   logger.info({ count: inserted.length, productId }, "academy: gift codes generated");
-  res.status(201).json({ codes: inserted.map(r => r.accessToken), total: inserted.length });
+  res.status(201).json({ codes: inserted.map(r => r.accessToken), purchases: inserted.map(r => ({ id: r.id, code: r.accessToken })), total: inserted.length });
 });
 
 // ── CRM endpoints ────────────────────────────────────────────────────────────

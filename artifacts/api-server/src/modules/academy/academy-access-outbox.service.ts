@@ -12,8 +12,11 @@ type Options = {
   deliver?: (opts: Parameters<typeof sendAccessEmail>[0]) => Promise<FunnelDeliveryResult>;
   productName?: (id: string) => string;
 };
-export async function enqueueAcademyAccessEmail(trx: Transaction, purchaseId: string): Promise<void> {
-  await trx.insert(academyAccessEmailOutboxTable).values({ purchaseId }).onConflictDoNothing({ target: academyAccessEmailOutboxTable.purchaseId });
+export async function enqueueAcademyAccessEmail(trx: Transaction, purchaseId: string, options: { skipReason?: string; purpose?: string } = {}): Promise<void> {
+  await trx.insert(academyAccessEmailOutboxTable).values({
+    purchaseId, deliveryKey: `initial:${purchaseId}`, purpose: options.purpose ?? "initial",
+    ...(options.skipReason ? { status: "skipped" as const, errorCode: options.skipReason } : {}),
+  }).onConflictDoNothing({ target: academyAccessEmailOutboxTable.deliveryKey });
 }
 
 function boundedError(code: string): string {
@@ -30,7 +33,7 @@ export async function dispatchAcademyAccessEmail(purchaseId: string, options: Op
     eq(academyAccessEmailOutboxTable.status, "scheduled"), lte(academyAccessEmailOutboxTable.nextAttemptAt, sql`now()`))).returning();
   if (!job) return false;
   const [purchase] = await db.select().from(academyPurchasesTable).where(eq(academyPurchasesTable.id, purchaseId));
-  if (!purchase || purchase.status !== "confirmed") {
+  if (!purchase || purchase.status !== "confirmed" || purchase.revokedAt || purchase.financialHold) {
     await db.update(academyAccessEmailOutboxTable).set({ status: "skipped", errorCode: "PURCHASE_NOT_CONFIRMED", updatedAt: new Date() })
       .where(and(eq(academyAccessEmailOutboxTable.id, job.id), eq(academyAccessEmailOutboxTable.status, "sending")));
     return true;

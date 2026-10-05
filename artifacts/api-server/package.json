@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:academy-delivery-lifecycle-db": "cross-env NODE_ENV=test tsx src/scripts/test-academy-delivery-lifecycle-db.ts",
+    "test:billing-reversal-db": "cross-env NODE_ENV=test tsx src/scripts/test-billing-reversal-db.ts",
     "academy:access-check": "tsx src/scripts/check-academy-access-outbox.ts",
     "test:academy-access-outbox-db": "cross-env NODE_ENV=test tsx src/scripts/test-academy-access-outbox-db.ts",
     "test:academy-settlement-db": "cross-env NODE_ENV=test tsx src/scripts/test-academy-settlement-db.ts",

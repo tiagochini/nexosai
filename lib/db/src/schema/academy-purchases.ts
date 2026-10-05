@@ -1,4 +1,5 @@
 import { pgTable, uuid, varchar, integer, timestamp, text } from "drizzle-orm/pg-core";
+import { academyGiftBatchesTable } from "./academy-gift-batches";
 
 export const academyPurchasesTable = pgTable("academy_purchases", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -13,6 +14,10 @@ export const academyPurchasesTable = pgTable("academy_purchases", {
   paymentUrl: varchar("payment_url", { length: 500 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+  giftBatchId: uuid("gift_batch_id").references(() => academyGiftBatchesTable.id, { onDelete: "cascade" }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  refundedAmountCents: integer("refunded_amount_cents").notNull().default(0),
+  financialHold: varchar("financial_hold", { length: 30 }),
 });
 
 export type AcademyPurchase = typeof academyPurchasesTable.$inferSelect;

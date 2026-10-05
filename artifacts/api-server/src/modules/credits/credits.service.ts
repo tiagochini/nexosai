@@ -96,6 +96,7 @@ export async function deductCredits(
       }
     }
 
+    if (ws.creditsBalance < 0) throw new InsufficientCreditsError(cost, ws.creditsBalance);
     unlimited = (ws.settings as Record<string, unknown>)?.unlimitedCredits === true || adminWorkspace;
     if (!unlimited && ws.creditsBalance < cost) {
       throw new InsufficientCreditsError(cost, ws.creditsBalance);
@@ -230,44 +231,32 @@ export async function resetMonthlyCredits(
   workspaceId: string,
   log: Logger,
 ): Promise<void> {
-  const [ws] = await db
-    .select({ planId: workspacesTable.planId })
-    .from(workspacesTable)
-    .where(eq(workspacesTable.id, workspaceId))
-    .limit(1);
-
-  if (!ws) throw new NotFoundError("Workspace");
-
-  const [plan] = await db
-    .select({ creditsMonthly: plansTable.creditsMonthly })
-    .from(plansTable)
-    .where(eq(plansTable.id, ws.planId))
-    .limit(1);
-
-  if (!plan) throw new NotFoundError("Plan");
-
-  await db
-    .update(workspacesTable)
-    .set({
-      creditsBalance: plan.creditsMonthly,
-      creditsLastReset: new Date(),
-    })
-    .where(eq(workspacesTable.id, workspaceId));
-
-  await db.insert(creditTransactionsTable).values({
-    workspaceId,
-    type: "credit",
-    action: "monthly_reset",
-    amount: plan.creditsMonthly,
-    balanceBefore: 0,
-    balanceAfter: plan.creditsMonthly,
-    description: "Monthly credit renewal",
+  await db.transaction(async (trx) => {
+    const [ws] = await trx.select().from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).for("update");
+    if (!ws) throw new NotFoundError("Workspace");
+    const resetKey = `monthly-reset:${workspaceId}:${new Date().toISOString().slice(0, 7)}`;
+    const [alreadyReset] = await trx.select().from(creditTransactionsTable).where(eq(creditTransactionsTable.idempotencyKey, resetKey));
+    if (alreadyReset) return;
+    const [plan] = await trx.select().from(plansTable).where(eq(plansTable.id, ws.planId));
+    if (!plan) throw new NotFoundError("Plan");
+    // New monthly allocation repays debt; renewal must never erase refund debt.
+    const balanceAfter = ws.creditsBalance < 0 ? ws.creditsBalance + plan.creditsMonthly : plan.creditsMonthly;
+    await trx.update(workspacesTable).set({ creditsBalance: balanceAfter, creditsLastReset: new Date() }).where(eq(workspacesTable.id, workspaceId));
+    await trx.insert(creditTransactionsTable).values({ workspaceId, type: "credit", action: "monthly_reset", amount: plan.creditsMonthly, balanceBefore: ws.creditsBalance, balanceAfter, description: "Monthly credit renewal", idempotencyKey: resetKey });
   });
+  log.info({ workspaceId }, "Monthly credits reset with debt preserved");
+}
 
-  log.info(
-    { workspaceId, credits: plan.creditsMonthly },
-    "Monthly credits reset",
-  );
+export async function reversePurchaseCreditsInTransaction(trx: CreditDbTransaction, workspaceId: string, delta: number, key: string): Promise<void> {
+  if (!Number.isSafeInteger(delta) || delta === 0) throw new Error("Invalid reversal delta");
+  const [ws] = await trx.select().from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).for("update");
+  if (!ws) throw new NotFoundError("Workspace");
+  const [prior] = await trx.select().from(creditTransactionsTable).where(eq(creditTransactionsTable.idempotencyKey, key));
+  if (prior) throw new Error("Reversal ledger key already used");
+  const balanceAfter = ws.creditsBalance - delta;
+  if (!Number.isSafeInteger(balanceAfter) || balanceAfter < -2147483648 || balanceAfter > 2147483647) throw new Error("Reversal balance exceeds supported range");
+  await trx.update(workspacesTable).set({ creditsBalance: balanceAfter }).where(eq(workspacesTable.id, workspaceId));
+  await trx.insert(creditTransactionsTable).values({ workspaceId, type: delta > 0 ? "debit" : "credit", action: "refund_reversal", amount: Math.abs(delta), balanceBefore: ws.creditsBalance, balanceAfter, idempotencyKey: key, description: delta > 0 ? "Verified payment reversal" : "Verified chargeback release" });
 }
 
 export async function getTransactionHistory(
@@ -388,5 +377,5 @@ export async function checkCredits(
   const flagUnlimited = (ws?.settings as Record<string, unknown>)?.unlimitedCredits === true;
   const unlimited = flagUnlimited || (ws?.ownerId ? await isAdminWorkspace(ws.ownerId) : false);
   const required = CREDIT_COSTS[action] ?? 0;
-  return { sufficient: unlimited || balance >= required, balance, required, unlimited };
+  return { sufficient: balance >= 0 && (unlimited || balance >= required), balance, required, unlimited: balance >= 0 && unlimited };
 }

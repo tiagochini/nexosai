@@ -1,11 +1,12 @@
 # Fila durável de e-mails de acesso Academy
 
-Atualização: 05/10/2026. Escopo: confirmação automática de pagamento por webhook.
+Atualização: 05/10/2026. Escopo ampliado: webhook, reenvios, administração e brindes.
 
 ## Funcionamento
 
 A migração `0064_academy_access_email_outbox.sql` adiciona uma tabela com um
-item único por compra. A confirmação, a conversão do lead e a criação desse
+item inicial único por compra. A 0065 permite histórico de reenvios com chaves
+de intenção e apenas um item ativo por compra. A confirmação, a conversão do lead e a criação desse
 item acontecem na mesma transação. Se ela falhar, as alterações são desfeitas
 juntas. Não há backfill nem reenvio de compras antigas.
 
@@ -54,8 +55,8 @@ envio real nem alterada configuração privada durante os testes.
 
 ## Validação
 
-Migração local aplicada e verificada: 173 tabelas públicas e 70 entradas de
-histórico. Sem alteração de usuários/workspaces/campanhas existentes.
+Migrações locais aplicadas: 0064, 0065 e 0066. Sem alteração de
+usuários/workspaces/campanhas existentes.
 Testes com mocks cobrem unicidade, 16 workers concorrentes, comprovante persistido,
 ausência de configuração/backoff, rejeição, resultado desconhecido e erro sem
 persistência de conteúdo privado; rollback compra/fila e bloqueio de compra não
@@ -66,9 +67,9 @@ As regressões de webhook, autorização, acesso, transporte e logs também pass
 
 ## Limites
 
-Rotas de reenvio, confirmação administrativa e brindes ainda usam seus fluxos
-anteriores; não recebem automaticamente essa garantia. Compras históricas
-confirmadas não criam itens por replay. Pendentes: ferramenta autorizada de
-conciliação/retry auditado, migração desses outros fluxos, indicadores operacionais,
-reversões/revogação e teste ponta a ponta com provedores em sandbox.
+Reenvios, confirmação administrativa, brindes e estornos foram implementados;
+consulte [contratos, regras e exceções históricas](ACADEMY_DELIVERY_AND_REVERSALS.md).
+Compras históricas confirmadas não criam itens por replay de confirmação.
+Continuam pendentes a conciliação de resultados ambíguos com o provedor,
+indicadores operacionais e teste ponta a ponta com provedores em sandbox.
 Para rollback de aplicação, manter a tabela e seus itens; não apagar a fila.

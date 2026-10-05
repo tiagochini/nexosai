@@ -21,6 +21,7 @@ const base = `http://127.0.0.1:${address.port}/api/academy`;
 const routes: [string, string][] = [
   ["GET", "/leads"], ["GET", "/funnel/stats"], ["GET", "/purchases"],
   ["GET", "/admin/purchases"], ["POST", "/admin/confirm"], ["POST", "/admin/gift-codes"],
+  ["POST", "/admin/resend"], ["POST", "/admin/gift-delivery"],
   ["GET", "/leads/00000000-0000-4000-8000-000000000000"],
   ["PATCH", "/leads/00000000-0000-4000-8000-000000000000"],
   ["POST", "/leads/00000000-0000-4000-8000-000000000000/enroll"],
@@ -64,7 +65,7 @@ try {
     assert.equal(response.status, 400);
     assert.deepEqual(await response.json(), { error: "Produto inválido" }, "default and boundary counts must reach product validation, without issuing codes");
   }
-  console.log("PASS Academy admin HTTP: 12 sensitive routes deny absent/default/query credentials; configured header reaches validation (no DB or email writes)");
+  console.log(`PASS Academy admin HTTP: ${routes.length} sensitive routes deny absent/default/query credentials; configured header reaches validation (no DB or email writes)`);
   console.log("PASS Academy gift-code HTTP: non-integer, oversized, negative and malformed batches rejected before issuance");
   for (const configured of [undefined, "", " ", secret]) {
     if (configured === undefined) delete process.env.ASAAS_WEBHOOK_TOKEN;

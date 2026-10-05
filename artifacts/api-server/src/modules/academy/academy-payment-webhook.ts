@@ -1,7 +1,8 @@
 import type { RequestHandler } from "express";
 import { z } from "zod/v4";
 import { checkAcademyWebhook } from "./academy-webhook.security.js";
-import { confirmAcademyPayment } from "./academy-settlement.service.js";
+import { confirmAcademyPayment, reconcileAcademyReversal, reconcileAcademyIfHeld } from "./academy-settlement.service.js";
+import { REVERSAL_EVENTS } from "../../lib/asaas-refunds.js";
 import { sendAccessEmail } from "./academy.service.js";
 import { dispatchAcademyAccessEmail } from "./academy-access-outbox.service.js";
 import type { FunnelDeliveryResult } from "./academy-funnel-delivery.js";
@@ -21,12 +22,18 @@ export function createAcademyPaymentWebhook(options: {
     const notification = eventSchema.safeParse(req.body);
     if (!notification.success) { res.status(400).json({ error: "Invalid webhook payload" }); return; }
     const { event } = notification.data;
-    if (!["PAYMENT_RECEIVED", "PAYMENT_CONFIRMED", "PAYMENT_APPROVED_BY_RISK_ANALYSIS"].includes(event)) {
+    if (!["PAYMENT_RECEIVED", "PAYMENT_CONFIRMED", "PAYMENT_APPROVED_BY_RISK_ANALYSIS", ...REVERSAL_EVENTS].includes(event)) {
       res.json({ ok: true, ignored: true }); return;
     }
     const parsed = notificationSchema.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: "Invalid webhook payload" }); return; }
     const { payment } = parsed.data;
+    if (REVERSAL_EVENTS.includes(event)) {
+      await reconcileAcademyReversal(payment.id, options.lookup);
+      res.json({ ok: true }); return;
+    }
+    // A successful state may release a canonical chargeback hold, not a refund.
+    await reconcileAcademyIfHeld(payment.id, options.lookup);
     const result = await confirmAcademyPayment(payment.id, options.lookup);
     if (result.status !== "confirmed") {
       res.json({ ok: true, ...(result.status === "already_confirmed" ? { alreadyConfirmed: true } : { ignored: true }) });

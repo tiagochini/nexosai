@@ -11,6 +11,8 @@ import { AppError, NotFoundError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
 import { grantCreditsInTransaction } from "../credits/credits.service.js";
 import { fetchAsaasSettlement, parseAsaasSettlement, matchesBillingSettlement, type AsaasSettlement } from "./billing-settlement.js";
+import { reconcileBillingReversal, reconcileBillingIfHeld } from "./billing-reversal.service.js";
+import { REVERSAL_EVENTS } from "../../lib/asaas-refunds.js";
 
 // ─── Asaas API ────────────────────────────────────────────────────────────────
 
@@ -622,8 +624,10 @@ export async function processAsaasWebhook(body: unknown): Promise<void> {
   const event = payload.event;
   if (!asaasId) return;
   if (event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED") {
+    await reconcileBillingIfHeld(asaasId);
     await confirmPaymentByExternalId(asaasId, payload);
   }
+  if (REVERSAL_EVENTS.includes(event ?? "")) await reconcileBillingReversal(asaasId);
   // Radar orders have a separate immutable payment record. Keeping this call
   // independent preserves legacy plan/credit-pack fulfillment semantics.
   const { processRadarAsaasEvent } = await import("../market-intel/radar-entitlements.service.js");

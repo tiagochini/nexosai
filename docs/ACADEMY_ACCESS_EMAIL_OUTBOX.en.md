@@ -1,10 +1,11 @@
 # Durable Academy access-email outbox
 
-Updated: 2026-10-05. Scope: automatic payment confirmation through webhooks.
+Updated: 2026-10-05. Expanded scope: webhooks, resends, administration and gifts.
 
 ## Behavior
 
-Migration `0064_academy_access_email_outbox.sql` adds one unique job per purchase.
+Migration `0064_academy_access_email_outbox.sql` adds one initial job per purchase.
+0065 supports keyed resend history while allowing only one active job per purchase.
 Confirmation, lead conversion and job creation commit in one transaction and
 roll back together. No historical backfill or replay-driven resend.
 
@@ -51,8 +52,8 @@ requests immediate dispatch. Tests neither enable real delivery nor alter secret
 
 ## Validation
 
-Local additive migration applied/verified: 173 public tables, 70 schema history
-entries. Existing business users/workspaces/campaigns unchanged. Mocked regression
+Local additive migrations applied: 0064, 0065 and 0066.
+Existing business users/workspaces/campaigns unchanged. Mocked regression
 covers uniqueness, 16 concurrent workers, persistent receipt, missing-provider
 backoff, rejection, unknown outcome/private error handling, purchase/outbox rollback
 and unconfirmed-purchase blocking. A fresh process resumes an unclaimed job.
@@ -63,9 +64,9 @@ also passed.
 
 ## Limits
 
-Resend, administrative confirmation and gift routes still use earlier flows and
-do not automatically gain this guarantee. Confirmed historical purchases do not
-create jobs on replay. Authorized reconciliation/audited retry tooling, migration
-of other flows, operational metrics, reversals/revocation and end-to-end provider
-sandbox certification remain pending. Keep the table/jobs if rolling back code;
+Resends, administrative confirmation, gifts and reversals are implemented;
+see [contracts, policies and historical exceptions](ACADEMY_DELIVERY_AND_REVERSALS.en.md).
+Confirmed historical purchases do not create jobs on confirmation replay.
+Provider reconciliation of ambiguous outcomes, operational metrics and end-to-end
+provider sandbox certification remain pending. Keep the table/jobs if rolling back code;
 do not delete the outbox.

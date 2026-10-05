@@ -1,8 +1,9 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { db, academyPurchasesTable, academyLeadsTable, type AcademyPurchase } from "@workspace/db";
+import { db, academyPurchasesTable, academyLeadsTable, academyAccessEmailOutboxTable, type AcademyPurchase } from "@workspace/db";
 import { AppError } from "../../lib/errors.js";
 import { parseAsaasSettlement, type AsaasSettlement } from "../billing/billing-settlement.js";
 import { enqueueAcademyAccessEmail } from "./academy-access-outbox.service.js";
+import { completedRefundCents, isChargebackHold } from "../../lib/asaas-refunds.js";
 
 export interface AcademySettlement extends AsaasSettlement {
   customer: string;
@@ -64,7 +65,7 @@ export async function confirmAcademyPayment(
   if (candidates.length > 1) throw new AppError(409, "Pagamento Academy ambíguo", "AMBIGUOUS_ACADEMY_PAYMENT");
   const existing = candidates[0];
   if (!existing) return { status: "not_found" };
-  if (existing.status === "confirmed") return { status: "already_confirmed" };
+  if (existing.status === "confirmed" && !existing.financialHold && !existing.revokedAt) return { status: "already_confirmed" };
   if (existing.status !== "pending") throw new AppError(409, "Estado da compra não permite confirmação", "INVALID_ACADEMY_TRANSITION");
   const payment = parseAcademySettlement(await lookup(paymentId));
   if (!matchesAcademySettlement(existing, payment)) return { status: "unsettled" };
@@ -87,4 +88,41 @@ export async function confirmAcademyPayment(
     await enqueueAcademyAccessEmail(trx, purchase.id);
     return { status: "confirmed", purchase: confirmed! };
   });
+}
+
+// Passive reconciliation only: never initiates a refund or financial transfer.
+export async function reconcileAcademyReversal(paymentId: string, lookup: (id: string) => Promise<unknown> = fetchAcademySettlement) {
+  const where = eq(academyPurchasesTable.asaasPaymentId, paymentId);
+  const candidates = await db.select().from(academyPurchasesTable).where(where).limit(2);
+  if (candidates.length > 1) throw new AppError(409, "Pagamento Academy ambíguo", "AMBIGUOUS_ACADEMY_PAYMENT");
+  if (!candidates[0]) return { handled: false };
+  const proof = parseAcademySettlement(await lookup(paymentId));
+  matchesAcademySettlement(candidates[0], proof); // Includes customer/reference/value binding, irrespective of paid status.
+  const refunded = completedRefundCents(proof);
+  const hold = isChargebackHold(proof);
+  const paid = proof.status === "RECEIVED" || (proof.billingType === "CREDIT_CARD" && proof.status === "CONFIRMED");
+  return db.transaction(async (trx) => {
+    const rows = await trx.select().from(academyPurchasesTable).where(where).orderBy(academyPurchasesTable.id).limit(2).for("update");
+    const purchase = rows[0];
+    if (rows.length !== 1 || !purchase || purchase.id !== candidates[0]!.id) throw new AppError(409, "Compra alterada", "ACADEMY_PURCHASE_CHANGED");
+    matchesAcademySettlement(purchase, proof);
+    if (refunded < purchase.refundedAmountCents) throw new AppError(409, "Estorno consultado regrediu", "REFUND_STATE_REGRESSION");
+    const full = refunded === purchase.amountCents;
+    const restored = !!purchase.financialHold && !hold && paid && !full;
+    const revoked = full || hold;
+    if (!revoked && !restored && refunded === purchase.refundedAmountCents) return { handled: true, changed: false };
+    await trx.update(academyPurchasesTable).set({
+      refundedAmountCents: refunded,
+      ...(revoked ? { status: full ? "refunded" : "suspended", revokedAt: purchase.revokedAt ?? new Date(), financialHold: full ? null : proof.status } : {}),
+      ...(restored ? { status: purchase.confirmedAt ? "confirmed" : "pending", revokedAt: null, financialHold: null } : {}),
+    }).where(eq(academyPurchasesTable.id, purchase.id));
+    if (revoked) await trx.update(academyAccessEmailOutboxTable).set({ status: "skipped", errorCode: "PURCHASE_REVOKED", updatedAt: new Date() })
+      .where(and(eq(academyAccessEmailOutboxTable.purchaseId, purchase.id), eq(academyAccessEmailOutboxTable.status, "scheduled")));
+    return { handled: true, changed: true };
+  });
+}
+
+export async function reconcileAcademyIfHeld(paymentId: string, lookup?: (id: string) => Promise<unknown>): Promise<void> {
+  const [purchase] = await db.select({ financialHold: academyPurchasesTable.financialHold }).from(academyPurchasesTable).where(eq(academyPurchasesTable.asaasPaymentId, paymentId)).limit(1);
+  if (purchase?.financialHold) await reconcileAcademyReversal(paymentId, lookup);
 }
