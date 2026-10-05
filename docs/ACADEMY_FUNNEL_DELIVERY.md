@@ -1,6 +1,6 @@
 # Academy — estado real de envio
 
-Atualizado em 4 de outubro de 2026. [English](./ACADEMY_FUNNEL_DELIVERY.en.md).
+Atualizado em 5 de outubro de 2026. [English](./ACADEMY_FUNNEL_DELIVERY.en.md).
 
 ## Correção
 
@@ -13,7 +13,9 @@ Resend tem prioridade. Gmail funciona quando apenas Gmail está configurado.
 O resultado `sent` exige um identificador válido retornado pelo Resend ou
 aceitação do destinatário pelo Gmail com identificador da mensagem.
 **Isso significa aceitação pelo provedor, não entrega na caixa de entrada.**
-Falhas ficam `failed`, com códigos limitados; corpos de resposta e mensagens
+Rejeições ficam `failed`. Timeouts, falhas de transporte, respostas Resend 5xx
+e recibos de aceitação inválidos ficam `sending`, com resultado incerto e
+sem reenvio automático. Ambos usam códigos limitados; corpos de resposta e mensagens
 de exceção do provedor não são persistidos. Não há fallback após falha do
 Resend, pois a aceitação pode ter ocorrido antes de uma interrupção de rede.
 
@@ -45,7 +47,32 @@ mas não diferencia sozinho envio ativo de envio interrompido.
 O teste de banco cobre oito inscrições concorrentes, disputa simultânea entre
 16 chamadas de boas-vindas/scheduler, envio mantido em andamento e interrupção
 simulada. São conexões PostgreSQL concorrentes no mesmo processo de teste;
-testes de queda real entre múltiplas instâncias continuam pendentes.
+Também há teste com três processos Node separados: somente um chega ao envio
+simulado, o teste encerra esse processo e um substituto não reenvia o registro.
+Isso valida a reserva e o bloqueio após queda de processo, mas não certifica
+queda de host/banco nem conciliação com provedores reais.
+
+## Checagem operacional somente de leitura
+
+```powershell
+pnpm --filter @workspace/api-server run academy:funnel-check
+```
+
+Executar com `DATABASE_URL` disponível no ambiente. O comando usa uma transação
+PostgreSQL `READ ONLY` e não chama provedores, envia e-mails ou altera registros.
+Mostra contagens por estado, pendentes sem configuração, falsos sucessos antigos,
+grupos duplicados e IDs dos registros `sending`/`failed` para revisão. Não mostra
+e-mails, nomes, credenciais, corpos de mensagens ou erros brutos persistidos.
+Listas são limitadas a 100 itens, com indicação de possível truncamento.
+
+Códigos de saída: `0` sem itens detectados para revisão, `2` revisão necessária,
+`1` erro de execução. `0` não certifica configuração dos provedores, saúde geral
+ou entrega real; `2` não autoriza reenvio. `scheduledAt` é a data do agendamento,
+não a data da reserva; `sending` pode ser ativo ou interrompido.
+
+Na validação local, após a limpeza dos testes, todas as contagens ficaram em
+zero. Foram testados também os detectores de duplicação, falso sucesso e falta
+de configuração com registros temporários.
 
 ## Validação
 
@@ -83,10 +110,10 @@ mas não executado remotamente nesta etapa, porque não houve push.
   endpoint de reprocessamento nesta etapa.
 - Permanecem pendentes: deduplicação de leads/histórico, idempotência no provedor,
   retentativas com backoff, limite de idade dos pendentes, webhooks de entrega/bounce,
-  alertas para envios interrompidos e conciliação operacional quando
+  alertas automáticos para envios interrompidos e conciliação operacional quando
   o provedor aceita mas a gravação no banco falha e revisão completa do fluxo
   de consentimento/descadastro. Esta correção não certifica entrega exatamente uma vez.
 - Rollback: restaurar somente o código anterior e reconstruir a API. Não exige
-  rollback de banco, mas reintroduziria os falsos sucessos; preferir correção
+  rollback de banco, mas pode reintroduzir falhas já corrigidas; preferir correção
   adiante. Código antigo não reconhece `sending`; esses registros precisam de
   conciliação, não conversão em massa para pendentes. Não modificar registros aceitos.

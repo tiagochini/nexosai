@@ -34,23 +34,26 @@ for (const receipt of [{ accepted: [], messageId: "fixture" }, { accepted: ["oth
   const result = await deliverFunnelMessage(message, gmailConfig, {
     ...dependencies, sendGmail: async () => receipt,
   });
-  assert.equal(result.status, "failed");
+  assert.equal(result.status, receipt.messageId ? "failed" : "sending");
   assert.equal(funnelDeliveryPatch(result).sentAt, null);
 }
 for (const body of [{}, { id: "" }, { id: 5 }, { id: "x".repeat(101) }]) {
   assert.deepEqual(await deliverFunnelMessage(message, resendConfig, {
     ...dependencies, fetch: (async () => new Response(JSON.stringify(body))) as typeof fetch,
-  }), { status: "failed", errorCode: "RESEND_INVALID_RECEIPT" });
+  }), { status: "sending", errorCode: "RESEND_INVALID_RECEIPT" });
 }
 assert.deepEqual(await deliverFunnelMessage(message, resendConfig, {
   ...dependencies, fetch: (async () => new Response("private-provider-body", { status: 429 })) as typeof fetch,
 }), { status: "failed", errorCode: "RESEND_HTTP_429" });
+assert.deepEqual(await deliverFunnelMessage(message, resendConfig, {
+  ...dependencies, fetch: (async () => new Response("private-provider-body", { status: 503 })) as typeof fetch,
+}), { status: "sending", errorCode: "RESEND_HTTP_503" });
 for (const providerConfig of [resendConfig, gmailConfig]) {
   const result = await deliverFunnelMessage(message, providerConfig, {
     fetch: (async () => { throw new Error("private-secret"); }) as typeof fetch,
     sendGmail: async () => { throw new Error("private-secret"); },
   });
-  assert.equal(result.status, "failed");
+  assert.equal(result.status, "sending");
   assert.ok(!JSON.stringify(result).includes("private-secret"));
 }
 assert.equal(gmailRequests, 1, "Resend failure must not fall back and risk duplicate delivery");

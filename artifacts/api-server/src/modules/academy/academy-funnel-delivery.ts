@@ -2,7 +2,7 @@ import nodemailer from "nodemailer";
 
 export type FunnelDeliveryResult =
   | { status: "sent"; providerId: string }
-  | { status: "scheduled" | "failed"; errorCode: string };
+  | { status: "scheduled" | "failed" | "sending"; errorCode: string };
 
 type Message = { to: string; subject: string; html: string };
 type Configuration = {
@@ -60,13 +60,13 @@ export async function deliverFunnelMessage(
         signal: AbortSignal.timeout(30_000),
       });
       if (!response.ok) {
-        return { status: "failed", errorCode: `RESEND_HTTP_${response.status}` };
+        return { status: response.status >= 500 ? "sending" : "failed", errorCode: `RESEND_HTTP_${response.status}` };
       }
       const receipt: unknown = await response.json();
       const id = receipt && typeof receipt === "object" && "id" in receipt
         ? receipt.id : undefined;
       if (typeof id !== "string" || !id.trim() || id.length > 100) {
-        return { status: "failed", errorCode: "RESEND_INVALID_RECEIPT" };
+        return { status: "sending", errorCode: "RESEND_INVALID_RECEIPT" };
       }
       return { status: "sent", providerId: id };
     }
@@ -74,13 +74,16 @@ export async function deliverFunnelMessage(
     const accepted = receipt.accepted?.some((recipient) =>
       typeof recipient === "string" && recipient.toLowerCase() === message.to.toLowerCase(),
     );
-    if (!accepted || !receipt.messageId?.trim() || receipt.messageId.length > 100) {
+    if (!receipt.accepted || (accepted && (!receipt.messageId?.trim() || receipt.messageId.length > 100))) {
+      return { status: "sending", errorCode: "GMAIL_INVALID_RECEIPT" };
+    }
+    if (!accepted) {
       return { status: "failed", errorCode: "GMAIL_RECIPIENT_NOT_ACCEPTED" };
     }
-    return { status: "sent", providerId: receipt.messageId };
+    return { status: "sent", providerId: receipt.messageId! };
   } catch {
     // Never persist provider response bodies, recipient data or credentials.
-    return { status: "failed", errorCode: config.resendKey
+    return { status: "sending", errorCode: config.resendKey
       ? "RESEND_TRANSPORT_ERROR" : "GMAIL_TRANSPORT_ERROR" };
   }
 }

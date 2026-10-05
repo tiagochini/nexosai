@@ -1,6 +1,6 @@
 # Academy — truthful sending state
 
-Updated October 4, 2026. [Português](./ACADEMY_FUNNEL_DELIVERY.md).
+Updated October 5, 2026. [Português](./ACADEMY_FUNNEL_DELIVERY.md).
 
 ## Remediation
 
@@ -13,7 +13,9 @@ Resend takes precedence. Gmail works when only Gmail is configured.
 The `sent` result requires a valid identifier returned by Resend or recipient
 acceptance by Gmail with a message identifier.
 **This means provider acceptance, not delivery to the recipient's inbox.**
-Failures become `failed`, with bounded codes; provider response bodies and
+Rejections become `failed`. Timeouts, transport errors, Resend 5xx responses
+and invalid acceptance receipts remain `sending`, with an uncertain outcome
+and no automatic redelivery. Both use bounded codes; provider response bodies and
 exception messages are not persisted. There is no fallback after Resend fails,
 because acceptance may have occurred before a network interruption.
 
@@ -43,7 +45,31 @@ but does not by itself distinguish active dispatch from interrupted dispatch.
 The database test covers eight concurrent enrollments, simultaneous contention
 between 16 welcome/scheduler calls, held in-flight delivery and simulated
 interruption. These use concurrent PostgreSQL connections within one test
-process; real crash tests across multiple instances remain pending.
+process. An additional test uses three separate Node processes: only one reaches
+simulated dispatch, the test terminates that process and a replacement does not
+resend the record. This validates claiming and quarantine after process death,
+but does not certify host/database crashes or reconciliation with real providers.
+
+## Read-only operational inspection
+
+```powershell
+pnpm --filter @workspace/api-server run academy:funnel-check
+```
+
+Run with `DATABASE_URL` available in the environment. The command uses a
+PostgreSQL `READ ONLY` transaction and does not call providers, send emails or
+modify records. It reports counts by state, unconfigured pending messages,
+historical false successes, duplicate groups and `sending`/`failed` record IDs
+for review. It excludes email addresses, names, credentials, message bodies
+and raw persisted errors. Lists are capped at 100 items with truncation indicators.
+
+Exit codes: `0` no detected review items, `2` review required, `1` execution error.
+`0` does not certify provider configuration, overall health or actual delivery;
+`2` does not authorize redelivery. `scheduledAt` is the schedule date, not the
+claim timestamp; `sending` may be active or interrupted.
+
+Local validation found zero counts after test cleanup. Duplicate, false-success
+and missing-configuration detectors were also tested with temporary records.
 
 ## Validation
 
@@ -80,10 +106,10 @@ in this stage because there was no push.
   consent, conversion and duplication. No reprocessing endpoint was added.
 - Still pending: lead/history deduplication, provider-side idempotency,
   backoff retries, pending-message age limits, delivery/bounce webhooks,
-  interrupted-dispatch alerts and operational reconciliation when provider acceptance
+  automated interrupted-dispatch alerts and operational reconciliation when provider acceptance
   succeeds but persistence fails, and full consent/unsubscribe flow review.
   This fix does not certify exactly-once delivery.
 - Rollback: restore only the previous code and rebuild the API. No database
-  rollback is required, but this would reintroduce false successes; prefer a
+  rollback is required, but it may reintroduce previously fixed failures; prefer a
   forward fix. Old code does not recognize `sending`; reconcile these records,
   rather than bulk-converting them to pending. Do not modify accepted-send records.

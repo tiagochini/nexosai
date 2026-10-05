@@ -87,8 +87,10 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 - [ ] Certificar idempotência, concorrência e recuperação do envio Academy.
 - [x] Tornar inscrição Academy transacional/idempotente por lead e reservar
   envios atomicamente entre boas-vindas/scheduler; bloquear resultados ambíguos.
-  Testes locais de concorrência passaram; queda real multi-instância e conciliação
-  operacional continuam pendentes em [ACADEMY_FUNNEL_DELIVERY.md](./ACADEMY_FUNNEL_DELIVERY.md).
+  Testes locais de concorrência e queda de processo separado passaram. Há checagem
+  somente de leitura e bloqueio explícito de resultados ambíguos. Queda de
+  host/banco e conciliação real continuam pendentes em
+  [ACADEMY_FUNNEL_DELIVERY.md](./ACADEMY_FUNNEL_DELIVERY.md).
 - [ ] Implementar concessões de acesso a objetos para o worker de mídia.
 - [ ] Concluir e certificar executores de vídeo e mídia paga.
 - [ ] Criar conjunto versionado de avaliações de IA com critérios por artefato.

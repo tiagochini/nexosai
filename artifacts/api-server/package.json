@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "academy:funnel-check": "tsx src/scripts/check-academy-funnel.ts",
     "test:academy-funnel-delivery": "tsx src/scripts/test-academy-funnel-delivery.ts",
     "test:academy-funnel-db": "cross-env NODE_ENV=test tsx src/scripts/test-academy-funnel-db.ts",
     "test:log-security": "tsx src/scripts/test-log-security.ts",
