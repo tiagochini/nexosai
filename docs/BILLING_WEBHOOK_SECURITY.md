@@ -59,8 +59,35 @@ sem execução remota porque não houve push. A API em execução não foi reini
 Sem migração de banco nem alteração de pagamentos existentes.
 
 Autenticação de origem não garante que um pagamento foi liquidado. Permanecem
-pendentes revisão de conciliação com o provedor, idempotência/concorrência na
-concessão de créditos e confirmação manual, replay, autorização administrativa
-por sessão e auditoria. Não considerar billing integralmente certificado.
+pendentes conciliação com o provedor, proteção de replay do evento, autorização
+administrativa por sessão e auditoria. Não considerar billing integralmente certificado.
 Rollback do código pode reintroduzir os acessos inseguros; preferir correção
 adiante e não reabrir rotas por ausência de segredo.
+
+## Confirmação e créditos atômicos — 05/10/2026
+
+A confirmação manual e a confirmação pelo ID externo agora compartilham uma
+transação: bloqueiam o pagamento, alteram seu status e concedem o pack junto com
+o extrato. O saldo também é bloqueado para evitar perda de atualizações. A chave
+`billing-payment:<UUID>` usa o índice único de idempotência já existente; não
+exige migração. Concessões diretas de crédito passaram a ser transacionais.
+Cartão aprovado recebe créditos antes do commit, sem tarefa assíncrona silenciosa.
+
+Somente estados `pending` e `processing` podem virar `paid`. Estados terminais
+retornam conflito e precisam de conciliação explícita. ID externo associado a
+mais de um pagamento é bloqueado. Repetir um pagamento já pago não muda o
+registro nem reaplica créditos, inclusive nos registros históricos sem chave.
+Isso não corrige automaticamente eventuais saldos históricos inconsistentes.
+
+Teste `test:billing-credit-concurrency-db`: 16 confirmações simultâneas entre
+caminhos manual/provedor; 8 pagamentos distintos; grants concorrentes; chave
+repetida; conflito entre workspaces; valor inválido; overflow; rollback e retry;
+isolamento de workspace; estado terminal; ID externo ambíguo; cartão aprovado
+com provedor simulado e replay. Fixtures próprias são removidas no `finally`.
+Chamadas externas são proibidas no teste. Incluído no job de banco do workflow.
+
+Limites: uma cobrança aceita pelo provedor seguida de falha no banco ainda exige
+conciliação; esta transação local não torna o provedor transacional. A verificação
+canônica do pagamento antes da concessão no billing continua pendente. Reset
+mensal de saldo e reversão de créditos não foram corrigidos nesta etapa. Nenhuma
+cobrança real foi feita; API não reiniciada, sem push e sem alterar segredos.

@@ -51,8 +51,10 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 - [x] Bloquear webhook de billing sem token válido e exigir privilégio adicional
   para confirmação manual; compartilhar comparação segura com Academy/checkout.
   Evidência local: [BILLING_WEBHOOK_SECURITY.md](./BILLING_WEBHOOK_SECURITY.md).
-- [ ] Conciliar eventos Academy/billing com o estado real do pagamento e
-  certificar idempotência/concorrência na confirmação e concessão de créditos.
+- [x] Tornar confirmação de billing, saldo e extrato atômicos e idempotentes;
+  validar concorrência entre confirmações, concessões e descontos com fixtures locais.
+- [ ] Conciliar eventos Academy/billing com o estado real do pagamento;
+  revisar reversões, saldos históricos e recuperação após falha no provedor/banco.
 
 - [x] Remover segredos previamente versionados e limpar o histórico Git.
 - [x] Impedir envio de tokens, chaves e screenshots ao assistente de integrações.

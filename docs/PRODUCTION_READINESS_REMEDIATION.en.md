@@ -50,8 +50,10 @@ The system should only be considered ready for open production when:
 - [x] Block billing webhooks without a valid token and require additional privilege
   for manual confirmation; share safe comparison with Academy/product checkout.
   Local evidence: [BILLING_WEBHOOK_SECURITY.en.md](./BILLING_WEBHOOK_SECURITY.en.md).
-- [ ] Reconcile Academy/billing events with actual provider payment state and
-  certify confirmation/credit-grant idempotency and concurrency.
+- [x] Make billing confirmation, balance and ledger atomic and idempotent;
+  validate concurrent confirmations, grants and deductions using local fixtures.
+- [ ] Reconcile Academy/billing events with actual provider payment state;
+  review reversals, historical balances and provider/database failure recovery.
 
 - [x] Remove previously committed secrets and clean Git history.
 - [x] Prevent tokens, keys, and screenshots from being sent to the integrations

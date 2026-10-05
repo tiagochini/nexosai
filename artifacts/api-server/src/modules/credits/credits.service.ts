@@ -157,29 +157,46 @@ export async function deductCredits(
   return insertedTx!;
 }
 
-export async function grantCredits(
+type CreditDbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export async function grantCreditsInTransaction(
+  trx: CreditDbTransaction,
   workspaceId: string,
   amount: number,
   action: "monthly_reset" | "purchase" | "admin_grant" | "referral_bonus",
-  log: Logger,
   description?: string,
+  idempotencyKey?: string,
 ): Promise<CreditTransaction> {
-  const [ws] = await db
+  if (!Number.isSafeInteger(amount) || amount <= 0) throw new Error("Invalid credit grant amount");
+  const [ws] = await trx
     .select()
     .from(workspacesTable)
     .where(eq(workspacesTable.id, workspaceId))
-    .limit(1);
+    .limit(1)
+    .for("update");
 
   if (!ws) throw new NotFoundError("Workspace");
 
-  const newBalance = ws.creditsBalance + amount;
+  if (idempotencyKey) {
+    const [existing] = await trx.select().from(creditTransactionsTable)
+      .where(eq(creditTransactionsTable.idempotencyKey, idempotencyKey)).limit(1);
+    if (existing) {
+      if (existing.workspaceId !== workspaceId || existing.type !== "credit" || existing.amount !== amount || existing.action !== action) {
+        throw new Error("Credit grant idempotency conflict");
+      }
+      return existing;
+    }
+  }
 
-  await db
+  const newBalance = ws.creditsBalance + amount;
+  if (!Number.isSafeInteger(newBalance) || newBalance > 2_147_483_647) throw new Error("Credit balance exceeds supported range");
+
+  await trx
     .update(workspacesTable)
     .set({ creditsBalance: newBalance })
     .where(eq(workspacesTable.id, workspaceId));
 
-  const [tx] = await db
+  const [tx] = await trx
     .insert(creditTransactionsTable)
     .values({
       workspaceId,
@@ -189,11 +206,23 @@ export async function grantCredits(
       balanceBefore: ws.creditsBalance,
       balanceAfter: newBalance,
       description: description ?? action.replace(/_/g, " "),
+      idempotencyKey,
     })
     .returning();
 
-  log.info({ workspaceId, action, amount, newBalance }, "Credits granted");
+  return tx!;
+}
 
+export async function grantCredits(
+  workspaceId: string,
+  amount: number,
+  action: "monthly_reset" | "purchase" | "admin_grant" | "referral_bonus",
+  log: Logger,
+  description?: string,
+  idempotencyKey?: string,
+): Promise<CreditTransaction> {
+  const tx = await db.transaction((trx) => grantCreditsInTransaction(trx, workspaceId, amount, action, description, idempotencyKey));
+  log.info({ workspaceId, action, amount, newBalance: tx.balanceAfter }, "Credit grant reconciled");
   return tx;
 }
 

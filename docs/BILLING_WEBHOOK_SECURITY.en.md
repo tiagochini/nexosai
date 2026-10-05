@@ -58,7 +58,33 @@ but not executed remotely because there was no push. The running API was not
 restarted. No schema migration or existing-payment changes were made.
 
 Origin authentication does not prove settlement. Provider reconciliation review,
-credit-grant/manual-confirmation idempotency and concurrency, replay protection,
+event replay protection,
 session-based administrative authorization and auditing remain pending. Billing
 is not fully certified. Rolling back can reintroduce unsafe access; prefer a
 forward fix and never reopen routes because a secret is absent.
+
+## Atomic payment confirmation and credit grants — 2026-10-05
+
+Manual and external-ID confirmations now share one transaction: lock the payment,
+update its status, and grant pack credits together with the ledger entry. A workspace
+row lock prevents lost balance updates. The `billing-payment:<UUID>` key uses the
+existing unique idempotency index; no migration is required. Direct credit grants
+are transactional too. Approved cards receive credits before commit, with no
+silently failing background task.
+
+Only `pending` and `processing` may transition to `paid`. Terminal states return
+a conflict and require explicit reconciliation. Ambiguous external IDs are blocked.
+Replaying a paid record neither modifies it nor grants credits, including historical
+records without a key. Historical balance inconsistencies are not repaired automatically.
+
+`test:billing-credit-concurrency-db` covers 16 concurrent manual/provider confirmations,
+8 separate payments, concurrent grants, repeated keys, cross-workspace conflicts,
+invalid amounts, overflow, rollback/retry, workspace isolation, terminal states,
+ambiguous external IDs, approved-card transactions using a mocked provider and replay.
+Owned fixtures are removed in `finally`; external calls are forbidden in this test.
+The regression is included in the workflow's database job.
+
+Limits: provider acceptance followed by database failure still requires reconciliation;
+a local transaction cannot make the provider transactional. Canonical settlement
+verification in billing remains pending. Monthly balance resets and credit reversals
+were not fixed in this stage. No real charges, API restart, push or secret changes.

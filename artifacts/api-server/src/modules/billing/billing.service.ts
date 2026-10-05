@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, type SQL } from "drizzle-orm";
 import {
   db,
   subscriptionPaymentsTable,
@@ -9,7 +9,7 @@ import {
 } from "@workspace/db";
 import { AppError, NotFoundError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
-import { grantCredits } from "../credits/credits.service.js";
+import { grantCreditsInTransaction } from "../credits/credits.service.js";
 
 // ─── Asaas API ────────────────────────────────────────────────────────────────
 
@@ -422,7 +422,7 @@ export async function initiatePackPayment(opts: {
   userName: string;
   userEmail: string;
   card?: CardInputData;
-}): Promise<SubscriptionPayment> {
+}, buildPayment: typeof buildAsaasPayment = buildAsaasPayment): Promise<SubscriptionPayment> {
   const pack = PACK_CONFIG[opts.packId];
   if (!pack) throw new NotFoundError("Pack de créditos não encontrado");
 
@@ -437,7 +437,7 @@ export async function initiatePackPayment(opts: {
   const description = pack.label;
   const dueDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]!;
 
-  const pd = await buildAsaasPayment(opts.method, {
+  const pd = await buildPayment(opts.method, {
     name: opts.userName,
     email: opts.userEmail,
     amountCents,
@@ -448,8 +448,8 @@ export async function initiatePackPayment(opts: {
   const isCardApproved = pd.cardResult &&
     (pd.cardResult.status === "CONFIRMED" || pd.cardResult.status === "RECEIVED");
 
-  const [payment] = await db
-    .insert(subscriptionPaymentsTable)
+  const payment = await db.transaction(async (trx) => {
+    const [inserted] = await trx.insert(subscriptionPaymentsTable)
     .values({
       workspaceId: opts.workspaceId,
       userId: opts.userId,
@@ -469,14 +469,12 @@ export async function initiatePackPayment(opts: {
       metadata: { type: "pack", packId: opts.packId, packCredits: pack.credits, cardResult: pd.cardResult },
     })
     .returning();
-
-  if (!payment) throw new AppError(500, "Falha ao criar pagamento", "DB_ERROR");
-
-  if (isCardApproved && pack.credits > 0) {
-    setImmediate(() =>
-      grantCredits(opts.workspaceId, pack.credits, "purchase", logger, pack.label).catch(() => {})
-    );
-  }
+    if (!inserted) throw new AppError(500, "Falha ao criar pagamento", "DB_ERROR");
+    if (isCardApproved && pack.credits > 0) {
+      await grantCreditsInTransaction(trx, opts.workspaceId, pack.credits, "purchase", pack.label, `billing-payment:${inserted.id}`);
+    }
+    return inserted;
+  });
 
   logger.info({ workspaceId: opts.workspaceId, packId: opts.packId, amountCents: pd.chargedCents }, "Pack payment initiated");
   return payment;
@@ -484,43 +482,36 @@ export async function initiatePackPayment(opts: {
 
 // ─── Confirmation ─────────────────────────────────────────────────────────────
 
+async function settleSubscriptionPayment(where: SQL, metadataChanges: Record<string, unknown>): Promise<SubscriptionPayment | undefined> {
+  return db.transaction(async (trx) => {
+    const rows = await trx.select().from(subscriptionPaymentsTable).where(where)
+      .orderBy(subscriptionPaymentsTable.id).limit(2).for("update");
+    if (rows.length > 1) throw new AppError(409, "Pagamento externo ambíguo", "AMBIGUOUS_EXTERNAL_PAYMENT");
+    const payment = rows[0];
+    if (!payment || payment.status === "paid") return payment;
+    if (payment.status !== "pending" && payment.status !== "processing") {
+      throw new AppError(409, "Pagamento não pode ser confirmado neste estado", "INVALID_PAYMENT_TRANSITION");
+    }
+    const meta = payment.metadata as { type?: string; packCredits?: number };
+    const [updated] = await trx.update(subscriptionPaymentsTable).set({
+      status: "paid", paidAt: new Date(), updatedAt: new Date(),
+      metadata: { ...(payment.metadata as object), ...metadataChanges },
+    }).where(eq(subscriptionPaymentsTable.id, payment.id)).returning();
+    if (meta?.type === "pack") {
+      await grantCreditsInTransaction(trx, payment.workspaceId, meta.packCredits!, "purchase",
+        payment.description ?? "Pack de créditos", `billing-payment:${payment.id}`);
+    }
+    return updated;
+  });
+}
+
 export async function confirmPaymentByExternalId(
   externalId: string,
   providerPayload: unknown
 ): Promise<void> {
-  const [payment] = await db
-    .select()
-    .from(subscriptionPaymentsTable)
-    .where(eq(subscriptionPaymentsTable.externalId, externalId))
-    .limit(1);
-
+  const payment = await settleSubscriptionPayment(eq(subscriptionPaymentsTable.externalId, externalId), { providerPayload });
   if (!payment) { logger.warn({ externalId }, "Payment not found for external ID"); return; }
-  if (payment.status === "paid") return;
-
-  const meta = payment.metadata as { type?: string; packCredits?: number } | null;
-
-  await db
-    .update(subscriptionPaymentsTable)
-    .set({
-      status: "paid",
-      paidAt: new Date(),
-      metadata: { ...(payment.metadata as object), providerPayload },
-      updatedAt: new Date(),
-    })
-    .where(eq(subscriptionPaymentsTable.id, payment.id));
-
-  if (meta?.type === "pack" && meta.packCredits && meta.packCredits > 0) {
-    await grantCredits(
-      payment.workspaceId,
-      meta.packCredits,
-      "purchase",
-      logger,
-      payment.description ?? "Pack de créditos"
-    );
-    logger.info({ paymentId: payment.id, credits: meta.packCredits }, "Credits granted for pack payment");
-  }
-
-  logger.info({ paymentId: payment.id, workspaceId: payment.workspaceId }, "Payment confirmed via webhook");
+  logger.info({ paymentId: payment.id, workspaceId: payment.workspaceId }, "Payment confirmation reconciled");
 }
 
 export async function markPaymentPaid(
@@ -528,43 +519,13 @@ export async function markPaymentPaid(
   paymentId: string,
   adminNote?: string
 ): Promise<SubscriptionPayment> {
-  const [payment] = await db
-    .select()
-    .from(subscriptionPaymentsTable)
-    .where(
+  const payment = await settleSubscriptionPayment(
       and(
         eq(subscriptionPaymentsTable.id, paymentId),
         eq(subscriptionPaymentsTable.workspaceId, workspaceId)
-      )
-    )
-    .limit(1);
-
+      )!, { adminNote, confirmedManually: true });
   if (!payment) throw new NotFoundError("Pagamento não encontrado");
-
-  const meta = payment.metadata as { type?: string; packCredits?: number } | null;
-
-  const [updated] = await db
-    .update(subscriptionPaymentsTable)
-    .set({
-      status: "paid",
-      paidAt: new Date(),
-      metadata: { ...(payment.metadata as object), adminNote, confirmedManually: true },
-      updatedAt: new Date(),
-    })
-    .where(eq(subscriptionPaymentsTable.id, paymentId))
-    .returning();
-
-  if (meta?.type === "pack" && meta.packCredits && meta.packCredits > 0) {
-    await grantCredits(
-      payment.workspaceId,
-      meta.packCredits,
-      "purchase",
-      logger,
-      payment.description ?? "Pack de créditos"
-    );
-  }
-
-  return updated!;
+  return payment;
 }
 
 // ─── Getters ──────────────────────────────────────────────────────────────────
