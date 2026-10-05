@@ -40,6 +40,9 @@ The system should only be considered ready for open production when:
 - [x] Prevent tokens, keys, and screenshots from being sent to the integrations
   assistant.
 - [x] Remove tokens from Academy logs.
+- [x] Escape dynamic values in Academy funnel/access emails; validate and
+  escape URLs in the reviewed templates' attributes.
+  Local evidence: [ACADEMY_FUNNEL_DELIVERY.en.md](./ACADEMY_FUNNEL_DELIVERY.en.md).
 - [ ] Complete the sensitive-data audit for logs in the remaining modules.
 - [x] Protect central/HTTP loggers, errors and child bindings from sensitive
   fields; remove unnecessary data at reviewed call sites.
@@ -86,6 +89,7 @@ The system should only be considered ready for open production when:
   provider; advance only after provider acceptance, without production simulation.
   Local evidence and limits: [ACADEMY_FUNNEL_DELIVERY.en.md](./ACADEMY_FUNNEL_DELIVERY.en.md).
 - [ ] Certify Academy sending idempotency, concurrency and recovery.
+- [ ] Fix Gmail dispatch and receipt validation for Academy transactional access emails.
 - [x] Make Academy enrollment transactional/idempotent per lead and atomically
   claim dispatch across welcome/scheduler calls; quarantine ambiguous outcomes.
   Local concurrency and separate-process crash tests passed. Read-only inspection

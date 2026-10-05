@@ -214,6 +214,18 @@ try {
   console.log("PASS Academy database: welcome and scheduler pending/failure/success, no regression, conversion and unsubscribe (no real mail)");
   console.log("PASS Academy concurrency: enrollment idempotency, atomic dispatch claims, in-flight visibility and interruption quarantine");
   console.log("PASS Academy recovery: separate-process contention, owned-worker termination, restart quarantine and read-only inspection");
+  // Exercise the actual HTML of all five steps without invoking any provider.
+  await db.update(academyLeadsTable).set({ name: "<img/src=x/onerror=alert(1)> Silva" }).where(eq(academyLeadsTable.id, leadId));
+  await db.update(academyFunnelEmailsTable).set({ status: "scheduled", scheduledAt: dueDate }).where(eq(academyFunnelEmailsTable.leadId, leadId));
+  let htmlChecks = 0;
+  await runFunnelSchedulerTick({ leadId, deliver: async (message) => {
+    assert.ok(message.html.includes("&lt;img/src=x/onerror=alert(1)&gt;"));
+    assert.ok(!message.html.includes("<img"));
+    htmlChecks++;
+    return { status: "scheduled", errorCode: "EMAIL_PROVIDER_NOT_CONFIGURED" };
+  } });
+  assert.equal(htmlChecks, 5, "all funnel steps must escape customer text");
+  console.log("PASS Academy funnel HTML: all five production templates escape injected lead names (no real mail)");
 } finally {
   await db.delete(academyLeadsTable).where(eq(academyLeadsTable.id, leadId));
   await pool.end();

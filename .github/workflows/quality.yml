@@ -30,7 +30,9 @@ jobs:
       - name: Dependency runtime regression tests
         run: pnpm --filter @workspace/api-server run test:dependency-runtime
       - name: Academy offline delivery regression tests
-        run: pnpm --filter @workspace/api-server run test:academy-funnel-delivery
+        run: |
+          pnpm --filter @workspace/api-server run test:academy-funnel-delivery
+          pnpm --filter @workspace/api-server run test:academy-email-html
       - name: Credential security regression tests
         run: |
           pnpm run security:check-runtime-logging

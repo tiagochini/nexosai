@@ -17,6 +17,7 @@ import { academyLeadsTable, academyFunnelEmailsTable } from "@workspace/db";
 import { env } from "../../lib/env.js";
 import { logger } from "../../lib/logger.js";
 import { deliverFunnelMessage, funnelDeliveryPatch, type FunnelDeliveryResult } from "./academy-funnel-delivery.js";
+import { escapeEmailHtml, emailHref } from "./academy-email-html.js";
 
 // Day offset for each step (from enrolledAt)
 export const FUNNEL_STEPS: {
@@ -55,14 +56,14 @@ const PORTAL_URL = `${env.APP_URL}/nexos-academy/`;
 const CHECKOUT_URL = `${env.APP_URL}/nexos-academy/#products`;
 
 function buildEmailHtml(step: number, firstName: string): string {
-  const name = firstName || "empreendedor(a)";
+  const name = escapeEmailHtml(firstName || "empreendedor(a)");
 
   const bodies: Record<number, string> = {
     0: `
       <h1 style="color:#fff;font-size:22px;font-weight:700;margin:0 0 16px">Seu guia chegou, ${name}! 🎁</h1>
       <p style="color:#a0aec0;line-height:1.7;margin:0 0 16px">Aqui está o link para acessar <strong style="color:#e2e8f0">Os 7 Erros do Primeiro Lançamento</strong>:</p>
       <div style="text-align:center;margin:24px 0">
-        <a href="${PORTAL_URL}#guia-gratuito" style="display:inline-block;background:linear-gradient(135deg,#6d4aff,#a78bfa);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px">📖 Ler o Guia Agora →</a>
+        <a href="${emailHref(`${PORTAL_URL}#guia-gratuito`)}" style="display:inline-block;background:linear-gradient(135deg,#6d4aff,#a78bfa);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px">📖 Ler o Guia Agora →</a>
       </div>
       <p style="color:#a0aec0;line-height:1.7;margin:0 0 16px">Nos próximos dias vou te mandar mais conteúdo sobre o que <em>realmente</em> separa quem fatura seis dígitos em um lançamento de quem patina no mesmo lugar.</p>
       <p style="color:#a0aec0;line-height:1.7;margin:0">Fique de olho — o próximo e-mail chega em 48 horas e é o mais importante que você vai ler sobre lançamentos esse ano.</p>
@@ -112,7 +113,7 @@ function buildEmailHtml(step: number, firstName: string): string {
           <p style="color:#e2e8f0;font-size:20px;font-weight:800;margin:0">R$ 2.500 <span style="font-size:13px;font-weight:400;color:#a0aec0">pagamento único</span></p>
         </div>
         <div style="text-align:center">
-          <a href="${CHECKOUT_URL}" style="display:inline-block;background:linear-gradient(135deg,#6d4aff,#a78bfa);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px">Quero a Metodologia NexOS →</a>
+          <a href="${emailHref(CHECKOUT_URL)}" style="display:inline-block;background:linear-gradient(135deg,#6d4aff,#a78bfa);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px">Quero a Metodologia NexOS →</a>
         </div>
       </div>
       <p style="color:#a0aec0;line-height:1.7;margin:0">Esta oferta fica disponível por tempo limitado. No próximo e-mail te aviso quando fechar.</p>
@@ -126,7 +127,7 @@ function buildEmailHtml(step: number, firstName: string): string {
       <div style="background:#1a1a2e;border:1px solid #ef444433;border-radius:12px;padding:20px;margin:20px 0;text-align:center">
         <p style="color:#fca5a5;font-size:13px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 8px">Oferta por tempo limitado</p>
         <p style="color:#fff;font-size:24px;font-weight:800;margin:0 0 16px">R$ 2.500 — Acesso Vitalício</p>
-        <a href="${CHECKOUT_URL}" style="display:inline-block;background:linear-gradient(135deg,#ef4444,#f97316);color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-weight:700;font-size:15px">Garantir meu acesso agora →</a>
+        <a href="${emailHref(CHECKOUT_URL)}" style="display:inline-block;background:linear-gradient(135deg,#ef4444,#f97316);color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-weight:700;font-size:15px">Garantir meu acesso agora →</a>
       </div>
       <p style="color:#a0aec0;line-height:1.7;margin:0 0 16px">Se preferir esperar, tudo bem — o curso volta com preço atualizado na próxima janela.</p>
       <p style="color:#a0aec0;line-height:1.7;margin:0">Boa sorte no seu lançamento. 🚀</p>
@@ -153,7 +154,7 @@ function buildEmailHtml(step: number, firstName: string): string {
       <div style="padding:20px 32px;background:#080b12;border-top:1px solid #1e1e3a;text-align:center">
         <p style="color:#374151;font-size:11px;margin:0">
           Você recebeu este e-mail porque se inscreveu em NexOS Academy.<br/>
-          <a href="${PORTAL_URL}?unsubscribe=1" style="color:#4b5563;text-decoration:underline">Descadastrar</a>
+          <a href="${emailHref(`${PORTAL_URL}?unsubscribe=1`)}" style="color:#4b5563;text-decoration:underline">Descadastrar</a>
         </p>
       </div>
     </div>

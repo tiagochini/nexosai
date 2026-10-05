@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:academy-email-html": "tsx src/scripts/test-academy-email-html.ts",
     "academy:funnel-check": "tsx src/scripts/check-academy-funnel.ts",
     "test:academy-funnel-delivery": "tsx src/scripts/test-academy-funnel-delivery.ts",
     "test:academy-funnel-db": "cross-env NODE_ENV=test tsx src/scripts/test-academy-funnel-db.ts",

@@ -40,6 +40,9 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 - [x] Remover segredos previamente versionados e limpar o histórico Git.
 - [x] Impedir envio de tokens, chaves e screenshots ao assistente de integrações.
 - [x] Remover tokens de logs da Academy.
+- [x] Escapar valores dinâmicos nos e-mails do funil e de acesso Academy;
+  validar e escapar URLs nos atributos dos templates revisados.
+  Evidência local: [ACADEMY_FUNNEL_DELIVERY.md](./ACADEMY_FUNNEL_DELIVERY.md).
 - [ ] Concluir auditoria de dados sensíveis nos logs dos demais módulos.
 - [x] Proteger logger central/HTTP, erros e bindings filhos contra campos
   sensíveis; remover dados desnecessários nos pontos revisados.
@@ -85,6 +88,7 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
   configurado; avançar somente após aceitação pelo provedor, sem simulação em produção.
   Evidência local e limites: [ACADEMY_FUNNEL_DELIVERY.md](./ACADEMY_FUNNEL_DELIVERY.md).
 - [ ] Certificar idempotência, concorrência e recuperação do envio Academy.
+- [ ] Corrigir envio Gmail e validação de recibos no e-mail transacional de acesso Academy.
 - [x] Tornar inscrição Academy transacional/idempotente por lead e reservar
   envios atomicamente entre boas-vindas/scheduler; bloquear resultados ambíguos.
   Testes locais de concorrência e queda de processo separado passaram. Há checagem

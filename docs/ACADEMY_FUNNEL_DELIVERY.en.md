@@ -50,6 +50,23 @@ simulated dispatch, the test terminates that process and a replacement does not
 resend the record. This validates claiming and quarantine after process death,
 but does not certify host/database crashes or reconciliation with real providers.
 
+## Email HTML security
+
+Lead/customer names are escaped before insertion into the five funnel templates
+and the access email. Product names and access codes in the access-email body
+are also treated as text, not HTML markup. HTML control characters (`&`, `<`,
+`>`, quotes) become entities; accents and emoji are preserved.
+
+Links are normalized as HTTP/HTTPS URLs without embedded credentials and escaped
+for HTML attributes. Invalid URLs or executable schemes are rejected with a
+generic error that excludes link contents. This does not establish a trusted
+domain allowlist or fix the unsubscribe flow.
+
+Offline tests cover the access template, quotes in URLs, invalid schemes,
+accents and tag-bearing names. The database test exercises all five actual
+funnel templates with a malicious name and mocked transport. This does not
+certify rendering in every email client or audit other templates.
+
 ## Read-only operational inspection
 
 ```powershell
@@ -75,6 +92,7 @@ and missing-configuration detectors were also tested with temporary records.
 
 ```powershell
 pnpm --filter @workspace/api-server run test:academy-funnel-delivery
+pnpm --filter @workspace/api-server run test:academy-email-html
 pnpm --filter @workspace/api-server run test:academy-funnel-db
 pnpm --filter @workspace/api-server run typecheck
 pnpm --filter @workspace/api-server run build
@@ -109,6 +127,10 @@ in this stage because there was no push.
   automated interrupted-dispatch alerts and operational reconciliation when provider acceptance
   succeeds but persistence fails, and full consent/unsubscribe flow review.
   This fix does not certify exactly-once delivery.
+- Transactional access-email dispatch is a separate flow: its Gmail path and
+  acceptance-receipt validation still need correction. Only its HTML was
+  protected in this stage; funnel state/claim fixes do not automatically apply
+  to access-email dispatch.
 - Rollback: restore only the previous code and rebuild the API. No database
   rollback is required, but it may reintroduce previously fixed failures; prefer a
   forward fix. Old code does not recognize `sending`; reconcile these records,

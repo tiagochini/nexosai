@@ -52,6 +52,23 @@ simulado, o teste encerra esse processo e um substituto não reenvia o registro.
 Isso valida a reserva e o bloqueio após queda de processo, mas não certifica
 queda de host/banco nem conciliação com provedores reais.
 
+## Segurança do HTML dos e-mails
+
+Nomes do lead/cliente são escapados antes de entrar nos cinco templates do funil
+e no e-mail de acesso. Nome de produto e código no corpo do e-mail de acesso
+também são tratados como texto, não como marcação HTML. Caracteres de controle
+de HTML (`&`, `<`, `>`, aspas) viram entidades; acentos e emojis são preservados.
+
+Links são normalizados como URLs HTTP/HTTPS, sem credenciais embutidas, e
+escapados para atributos HTML. URLs inválidas ou com protocolos executáveis
+são rejeitadas com erro genérico, sem incluir o conteúdo do link no erro.
+Isso não cria uma lista de domínios confiáveis nem corrige o fluxo de descadastro.
+
+Testes offline cobrem o template de acesso, aspas em URLs, esquemas inválidos,
+acentos e nomes com tags. O teste de banco percorre os cinco templates reais do
+funil com nome malicioso e transporte simulado. Não é uma certificação de
+renderização em todos os clientes de e-mail nem auditoria dos demais templates.
+
 ## Checagem operacional somente de leitura
 
 ```powershell
@@ -78,6 +95,7 @@ de configuração com registros temporários.
 
 ```powershell
 pnpm --filter @workspace/api-server run test:academy-funnel-delivery
+pnpm --filter @workspace/api-server run test:academy-email-html
 pnpm --filter @workspace/api-server run test:academy-funnel-db
 pnpm --filter @workspace/api-server run typecheck
 pnpm --filter @workspace/api-server run build
@@ -113,6 +131,10 @@ mas não executado remotamente nesta etapa, porque não houve push.
   alertas automáticos para envios interrompidos e conciliação operacional quando
   o provedor aceita mas a gravação no banco falha e revisão completa do fluxo
   de consentimento/descadastro. Esta correção não certifica entrega exatamente uma vez.
+- O envio do e-mail transacional de acesso é um fluxo separado: ainda precisa
+  corrigir o caminho Gmail e validar recibos de aceitação. Nesta etapa, somente
+  seu HTML foi protegido; as correções de estado/reserva do funil não se aplicam
+  automaticamente ao envio de acesso.
 - Rollback: restaurar somente o código anterior e reconstruir a API. Não exige
   rollback de banco, mas pode reintroduzir falhas já corrigidas; preferir correção
   adiante. Código antigo não reconhece `sending`; esses registros precisam de
