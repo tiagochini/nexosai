@@ -97,8 +97,8 @@ The system should only be considered ready for open production when:
 
 - [ ] Activate the actual administrator UUID and complete Asaas sandbox evidence;
   these remain technical P0 activation conditions, with account/credential missing.
-- [ ] Complete the full/frontend build; Windows attempts were stopped after
-  excessive time/memory usage. API build and types passed.
+- [x] Complete the full/frontend build and types: Rollup pinned to 4.63.6 after
+  local diagnosis/comparison. Audit now includes tooling and passed without known vulnerabilities.
 
 ### P1 — Dependencies and CI
 - [ ] Move static paid Academy materials behind server-side authorization;
@@ -159,7 +159,7 @@ Each item must include:
 
 P0 fixes are implemented locally within [documented limits](./P0_SECURITY_CLOSEOUT.en.md).
 This is not production approval: actual administrator, Asaas sandbox/webhooks and
-full build and remote CI remain unvalidated. While any P0 activation condition remains open or a high-severity vulnerability exists on an
+remote CI remain unvalidated; the local full build passed. While any P0 activation condition remains open or a high-severity vulnerability exists on an
 exposed path, the recommended release target is staging or a restricted canary
 without real customer credentials. Open production requires completed P0 and P1
 work, plus minimum evidence for P2 and P3.

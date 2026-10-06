@@ -97,8 +97,8 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 
 - [ ] Ativar administrador real por UUID e concluir a evidência Asaas sandbox.
   São condições de ativação do P0 técnico, não realizadas por falta de conta/credencial.
-- [ ] Concluir o build completo/frontend; as tentativas no Windows foram
-  interrompidas após demora excessiva/alto uso de memória. Build da API e tipos passaram.
+- [x] Concluir o build completo/frontend e tipos: Rollup fixado em 4.63.6 após
+  diagnóstico/comparação local. Auditoria inclui ferramentas e passou sem vulnerabilidades conhecidas.
 
 ### P1 — Dependências e CI
 - [ ] Separar a entrega de material pago estático da Academy para autorização
@@ -158,7 +158,7 @@ Cada item deve incluir:
 
 As correções do P0 foram implementadas localmente com os limites documentados em
 [P0_SECURITY_CLOSEOUT.md](./P0_SECURITY_CLOSEOUT.md). Isso não autoriza produção:
-administrador real, Asaas sandbox/webhooks, build completo e CI remoto continuam sem validação.
+administrador real, Asaas sandbox/webhooks e CI remoto continuam sem validação; build completo local passou.
 Enquanto houver condição de ativação do P0 aberta ou vulnerabilidade alta em caminho exposto, a
 liberação recomendada é somente homologação ou canário restrito, sem credenciais
 reais de clientes. Produção aberta exige P0 e P1 concluídos e evidência mínima de

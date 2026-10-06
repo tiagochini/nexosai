@@ -1,7 +1,7 @@
 # Fechamento técnico do P0
 
-Status: implementação local concluída; fechamento para liberação ainda pendente
-de build completo, administrador real e evidência Asaas sandbox.
+Status: implementação, build completo e testes locais concluídos; fechamento
+para liberação ainda pendente de administrador real e evidência Asaas sandbox.
 
 05/10/2026. [English](P0_SECURITY_CLOSEOUT.en.md).
 
@@ -43,6 +43,14 @@ Use `not_accepted` sem `providerId` somente para rejeição/ausência de aceita�
 
 ## Evidências e limites de liberação
 
-Testes locais: `test:academy-p0-db`, `test:academy-quota-redis`, `test:academy-admin-security`, `test:academy-verification-security`, `test:academy-delivery-lifecycle-db`, `test:auth-sessions-http`, `test:auth-cookie-security`, `test:academy-access-outbox-db`, `test:billing-reversal-db` e `test:log-security`. Passaram guard do cliente, typecheck completo, build da API, scanner de segredos, auditoria do histórico e auditoria de dependências. O build completo/frontend no Windows ficou excessivamente lento, com alto uso de memória; as tentativas próprias foram encerradas. Scanner e compilador CSS passaram isoladamente, mas isso não aprova o bundle. Ajustes experimentais de CSS foram retirados, sem conclusão sobre a causa. CI foi preparado com PostgreSQL e Redis descartáveis, mas não executado remotamente: sem push por determinação do usuário.
+Testes locais: `test:academy-p0-db`, `test:academy-quota-redis`, `test:academy-admin-security`, `test:academy-verification-security`, `test:academy-delivery-lifecycle-db`, `test:auth-sessions-http`, `test:auth-cookie-security`, `test:academy-access-outbox-db`, `test:billing-reversal-db` e `test:log-security`. Passaram guard do cliente, typecheck completo, build completo de todos os aplicativos/API, scanner de segredos, auditoria do histórico e auditoria completa de dependências. Após a correção das ferramentas, os testes P0 de banco, Redis, estornos e compatibilidade de dependências foram repetidos com sucesso. CI foi preparado com PostgreSQL e Redis descartáveis, mas não executado remotamente: sem push por determinação do usuário.
+
+### Build e ferramentas — pendência resolvida em 05/10/2026
+
+O inspector local mostrou recursão de otimização do Rollup ao incluir argumentos de chamadas no módulo React DOM de produção. Na mesma árvore de fontes, Rollup 4.64.0 travou; a comparação isolada com 4.59.0 passou em cerca de três segundos. A correção final fixa 4.63.6 no workspace/lockfile, mantendo tree-shaking e minificação habilitados. O build completo passou novamente após as demais alterações. Não houve correção permanente no CSS nem alteração dos limites do bundle para esconder falhas.
+
+A auditoria anterior usava `--prod` e não cobria ferramentas de desenvolvimento. A auditoria completa identificou esbuild, postcss-selector-parser e braces vulneráveis. Atualizados esbuild para 0.28.1 e postcss-selector-parser para 7.1.6; como braces 3.0.4 não estava disponível no npm, removida a cadeia fast-glob/micromatch/braces do sandbox. A descoberta de mockups agora usa diretórios nativos, exclui arquivos privados/ocultos, não segue links simbólicos e tem dois testes de regressão. `pnpm run security:audit-dependencies` agora inclui desenvolvimento e passou sem vulnerabilidades conhecidas. CI usa essa auditoria e limita o job de build a vinte minutos.
+
+O app principal passou seu orçamento de JavaScript inicial (449.1 KiB, limite 500 KiB). Avisos de chunks grandes na Academy/landing e avisos de sourcemap em componentes do app continuam não bloqueantes; otimização destes bundles não foi declarada concluída. Builds locais não certificam uma jornada real de navegador nem o CI Linux.
 
 Fechamento técnico local não é liberação de produção. Restam configuração do administrador real, credencial/webhooks Asaas, sandbox e execução remota autorizada. Retenção/acesso de logs, consoles de terceiros, scripts diagnósticos e serviços Python não são certificados por esse guard. O curso contém materiais estáticos no frontend: essas correções protegem administração/API/tutor, mas não são DRM; entrega de material pago exclusivamente pelo servidor é uma frente separada de licenciamento.

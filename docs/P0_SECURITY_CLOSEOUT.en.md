@@ -1,7 +1,7 @@
 # Technical P0 security closeout
 
-Status: local implementation completed; release closeout still requires the full
-build, actual administrator configuration and Asaas sandbox evidence.
+Status: local implementation, full build and tests completed; release closeout
+still requires actual administrator configuration and Asaas sandbox evidence.
 
 October 5, 2026. [Português](P0_SECURITY_CLOSEOUT.md).
 
@@ -43,6 +43,14 @@ Use `not_accepted` without `providerId` only when rejection/non-acceptance is pr
 
 ## Evidence and release limitations
 
-Local tests: `test:academy-p0-db`, `test:academy-quota-redis`, `test:academy-admin-security`, `test:academy-verification-security`, `test:academy-delivery-lifecycle-db`, `test:auth-sessions-http`, `test:auth-cookie-security`, `test:academy-access-outbox-db`, `test:billing-reversal-db` and `test:log-security`. Client guard, full typecheck, API build, secret scanner, sensitive-history audit and dependency audit passed. Full/frontend builds on Windows became excessively slow with high memory usage; owned attempts were stopped. CSS scanner/compiler passed in isolation, which does not certify the bundle. Experimental CSS changes were reverted; root cause is unconfirmed. CI now includes disposable PostgreSQL and Redis, but remote execution was not performed: the user prohibited pushing.
+Local tests: `test:academy-p0-db`, `test:academy-quota-redis`, `test:academy-admin-security`, `test:academy-verification-security`, `test:academy-delivery-lifecycle-db`, `test:auth-sessions-http`, `test:auth-cookie-security`, `test:academy-access-outbox-db`, `test:billing-reversal-db` and `test:log-security`. Client guard, full typecheck, full build of all applications/API, secret scanner, sensitive-history audit and full dependency audit passed. After the tooling fix, P0 database, Redis, reversal and dependency compatibility tests passed again. CI now includes disposable PostgreSQL and Redis, but remote execution was not performed: the user prohibited pushing.
+
+### Build and tooling — blocker resolved on October 5, 2026
+
+The local inspector showed recursive Rollup optimization of call arguments inside production React DOM. With identical sources, Rollup 4.64.0 stalled; an isolated comparison using 4.59.0 passed in roughly three seconds. The final fix pins 4.63.6 in the workspace/lockfile, keeping tree-shaking and minification enabled. The full build passed again after the remaining changes. No permanent CSS fix or relaxed bundle budget was used to hide failures.
+
+The previous audit used `--prod`, excluding development tools. The full audit found vulnerable esbuild, postcss-selector-parser and braces. esbuild was updated to 0.28.1 and postcss-selector-parser to 7.1.6. Since braces 3.0.4 was unavailable on npm, the sandbox's fast-glob/micromatch/braces dependency chain was removed. Native directory discovery now excludes private/hidden files, does not follow symlinks and has two regression tests. `pnpm run security:audit-dependencies` now includes development dependencies and passed without known vulnerabilities. CI uses this audit and a twenty-minute build-job timeout.
+
+The main app passed its initial JavaScript budget (449.1 KiB, 500 KiB limit). Large-chunk warnings in Academy/landing and sourcemap warnings in app components remain non-blocking; these bundles are not claimed fully optimized. Local builds do not certify a real browser journey or Linux CI.
 
 Technical local closeout is not production approval. Actual administrator configuration, Asaas credentials/webhooks, sandbox validation and authorized remote execution remain. Log retention/access, third-party consoles, diagnostic scripts and Python services are not certified by this guard. Course materials include static frontend content: these changes protect administration/API/tutor, not DRM; exclusively server-authorized paid-content delivery remains a separate licensing workstream.

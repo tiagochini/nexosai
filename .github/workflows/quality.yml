@@ -15,6 +15,7 @@ concurrency:
 jobs:
   typecheck-and-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -25,10 +26,12 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Audit runtime dependencies (fail on any known severity)
+      - name: Audit runtime and build dependencies (fail on any known severity)
         run: pnpm run security:audit-dependencies
       - name: Dependency runtime regression tests
         run: pnpm --filter @workspace/api-server run test:dependency-runtime
+      - name: Native mockup discovery regression tests
+        run: node --test scripts/check-mockup-discovery.test.mjs
       - name: Payment and Academy offline regression tests
         run: |
           pnpm --filter @workspace/api-server run test:academy-funnel-delivery

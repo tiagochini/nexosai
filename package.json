@@ -11,7 +11,7 @@
     "security:scan": "node scripts/scan-secrets.mjs",
     "security:check-academy-client": "node --test scripts/check-academy-client-security.test.mjs",
     "security:check-runtime-logging": "node --test scripts/check-runtime-logging.test.mjs && node scripts/check-runtime-logging.mjs",
-    "security:audit-dependencies": "pnpm audit --prod --audit-level low",
+    "security:audit-dependencies": "pnpm audit --audit-level low",
     "security:audit-history": "node scripts/audit-sensitive-history.mjs",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
