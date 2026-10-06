@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import { nativeObjectGrants } from '../modules/video-production/native-object-grants.js';
 import express from "express";
-import { createHash, createHmac, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -81,18 +82,35 @@ try {
   assert.equal((await fetch(`${base}/renew`, { method: "POST", headers: { "content-type": "application/json", "x-native-worker-id": otherWorker.id, "x-native-worker-credential": otherCredential, "x-native-worker-timestamp": ts, "x-native-worker-nonce": nonce, "x-native-worker-signature": sig }, body: otherRaw })).status, 409);
 
   const inputUrl = `${base}/jobs/${job.id}/inputs/0`; const getAuth = signed("GET", inputUrl, worker.id, Buffer.alloc(0));
-  const inputRes = await fetch(inputUrl, { headers: { ...getAuth.headers, "x-native-lease-token": leased.leaseToken } });
+  const grants = async () => (await (await jsonCall(base, worker.id, '/object-grants', { jobId: job.id, leaseToken: leased.leaseToken })).json() as any).objectAccess;
+  const objectAccess = await grants();
+  const [activeJob] = await db.select().from(nativeMediaJobsTable).where(eq(nativeMediaJobsTable.id, job.id)); assert.ok(activeJob);
+  const download = (grant?: string) => fetch(inputUrl, { headers: { ...signed('GET', inputUrl, worker.id, Buffer.alloc(0)).headers,
+    'x-native-lease-token': leased.leaseToken, ...(grant ? { 'x-native-object-grant': grant } : {}) } });
+  assert.equal((await download()).status, 403);
+  assert.equal((await download(nativeObjectGrants({ ...activeJob, leaseExpiresAt: new Date(Date.now() - 1) }).inputs[0]!.grant)).status, 403);
+  assert.equal((await download(nativeObjectGrants({ ...activeJob, leasedWorkerId: otherWorker.id }).inputs[0]!.grant)).status, 403);
+  assert.equal((await download(nativeObjectGrants({ ...activeJob, id: randomUUID() }).inputs[0]!.grant)).status, 403);
+  assert.equal((await download(objectAccess.output.grant)).status, 403, 'write grants cannot read inputs');
+  assert.equal((await download(objectAccess.inputs[0].grant + 'x')).status, 403);
+  const inputRes = await download(objectAccess.inputs[0].grant);
   assert.equal(inputRes.status, 200); assert.equal(await inputRes.text(), "tiny-input");
+  assert.equal((await download(objectAccess.inputs[0].grant)).status, 409, 'grant is consumed once');
+  const simultaneousGrant = (await grants()).inputs[0].grant;
+  const concurrent = await Promise.all([download(simultaneousGrant), download(simultaneousGrant)]);
+  assert.deepEqual(concurrent.map(response => response.status).sort(), [200, 409]);
+  await Promise.all(concurrent.map(response => response.text()));
 
   const video = path.join(root, "fixture.mp4");
   await exec("ffmpeg", ["-y", "-f", "lavfi", "-i", "color=c=black:s=16x16:r=10:d=1", "-pix_fmt", "yuv420p", video]);
   const bytes = await readFile(video); const outputUrl = `${base}/jobs/${job.id}/output`; const putAuth = signed("PUT", outputUrl, worker.id, bytes);
-  const put = await fetch(outputUrl, { method: "PUT", headers: { ...putAuth.headers, "x-native-lease-token": leased.leaseToken, "content-type": "video/mp4", "content-length": String(bytes.length) }, body: bytes });
+  const put = await fetch(outputUrl, { method: "PUT", headers: { ...putAuth.headers, "x-native-object-grant": (await grants()).output.grant, "x-native-lease-token": leased.leaseToken, "content-type": "video/mp4", "content-length": String(bytes.length) }, body: bytes });
   assert.equal(put.status, 201, await put.text());
   assert.equal((await jsonCall(base, worker.id, "/complete", { jobId: job.id, leaseToken: leased.leaseToken, telemetry: { modelId: "forged", executionBackend: "cpu", gpuSeconds: "0", estimatedGpuCost: "0" } })).status, 200);
   assert.equal((await db.select().from(nativeMediaJobsTable).where(eq(nativeMediaJobsTable.id, job.id)))[0]?.status, "succeeded");
   assert.equal((await db.select().from(nativeMediaProvenanceTable).where(eq(nativeMediaProvenanceTable.jobId, job.id))).length, 1);
   assert.equal((await db.select().from(nativeMediaUsageTable).where(eq(nativeMediaUsageTable.jobId, job.id))).length, 1);
+  assert.equal((await jsonCall(base, worker.id, '/object-grants', { jobId: job.id, leaseToken: leased.leaseToken })).status, 409, 'completed jobs cannot mint grants');
   console.log("native media real HTTP canonical/streaming integration passed");
 } finally {
   if (server) await new Promise<void>(resolve => server!.close(() => resolve()));

@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-10-06T13:35:46.209Z",
+  "scope": "Owned isolated containers, mocked providers and reference AI fixtures; no real inference or live publication",
+  "runtimeSource": "API/database source in freshly built test image",
+  "checks": {
+    "aiEvaluationFramework": "PASS versioned references, adversarial regressions and artifact/prompt/model-bound human review format; live AI release remains blocked",
+    "schemaIntegrity": "PASS repeat-safe forward trigger/scope repair, missing-FK and disabled-trigger rejection and atomic bootstrap rollback",
+    "test-p3-journey": "PASS",
+    "test-academy-funnel-db": "PASS",
+    "test-academy-access-outbox-db": "PASS",
+    "test-academy-delivery-lifecycle-db": "PASS",
+    "test-native-media-control-plane": "PASS",
+    "test-native-media-http": "PASS",
+    "test-timeline-render-compiler": "PASS",
+    "test-paid-media": "PASS",
+    "test-paid-media-launch": "PASS",
+    "test-conditional-execution-db": "PASS",
+    "test-social-publication-governance": "PASS",
+    "test-product-asaas-sandbox-unit": "PASS",
+    "test-canonical-completion-chain": "PASS",
+    "nativeWorkerSelfTest": "PASS CPU cannot advertise or execute GPU inference"
+  }
+}

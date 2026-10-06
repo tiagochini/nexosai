@@ -7,10 +7,19 @@
 
 ## 1. Doutrina operacional não negociável
 
+**Checkpoint P3 local (06/10/2026):** jornada com provedores simulados, outbox
+Academy, concessões de objetos vinculadas ao lease e regressões dos contratos
+de mídia/execução foram validados em containers próprios. A migração 0068
+restaura triggers de integridade omitidos pelo bootstrap histórico. Dataset de
+IA versionado e revisão vinculada ao artefato são preparação para avaliação
+real, sem promover consentimento, qualidade de modelos ou maturidade M11/M12.
+Evidência, limites e próximo checkpoint externo:
+[P3_CLOSEOUT](./docs/P3_CLOSEOUT.md) e [checklist](./NEXOS_BUILD_CHECKLIST.md).
+
 **Implantação anterior ao P3 (06/10/2026):** imagens Docker e seleção entre
 PostgreSQL local/externo com TLS foram validadas em infraestrutura isolada.
 [Guia e limites](./docs/DOCKER_DEPLOYMENT.md). Esse checkpoint não certifica
-jornada, consentimento ou qualidade de IA; P3 e homologação real permanecem.
+jornada, consentimento ou qualidade de IA; homologação real permanece.
 
 **Evidência de infraestrutura (06/10/2026):** P1/P2 preparados e validados
 localmente, conforme [P1_CLOSEOUT](./docs/P1_CLOSEOUT.md),

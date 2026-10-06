@@ -435,6 +435,9 @@ export async function reconcileProductSaleFromAsaasWebhook(
   // Resolve after locating the sale so an incoming id cannot cross workspace boundaries.
   const { apiKey, base } = await resolveAsaas(sale.workspaceId);
   const payment = await fetchAsaasPayment(apiKey, base, externalId, transport);
+  if (!Number.isFinite(payment.value) || Math.round(payment.value! * 100) !== sale.amountCents || payment.value! < 0) {
+    throw new AppError(409, 'O valor verificado não corresponde à compra', 'ASAAS_PAYMENT_AMOUNT_MISMATCH');
+  }
   if (SETTLED_ASAAS_STATUSES.has(payment.status)) {
     await confirmProductSaleByExternalId(externalId);
     return "paid";

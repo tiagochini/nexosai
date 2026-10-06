@@ -3,6 +3,7 @@ import { createHash, createHmac, randomUUID, scryptSync, timingSafeEqual } from 
 import { and, eq } from "drizzle-orm";
 import { db, nativeMediaJobsTable, nativeMediaWorkerNoncesTable, nativeMediaWorkersTable } from "@workspace/db";
 import { assertNativeLease } from "./native-media-engine.service.js";
+import { nativeObjectGrants, consumeNativeObjectGrant } from './native-object-grants.js';
 import { createGCSObjectStream, uploadFileToGCS } from "../../lib/gcs-recordings.js";
 import { createWriteStream } from "node:fs";
 import { rm } from "node:fs/promises";
@@ -115,10 +116,8 @@ function principal(req: import("express").Request) { return (req as any).nativeW
 internal.post("/heartbeat", async (req, res) => { const p = principal(req); res.json({ worker: await heartbeatNativeWorker(p.workspaceId, p.id) }); });
 internal.post("/lease", async (req, res) => {
   const p = principal(req); const job = await leaseNativeJob(p.workspaceId, p.id);
-  // Object access grants are intentionally not minted here: the configured object
-  // store cannot issue object-bound one-time grants. Returning only opaque keys is
-  // fail-closed; workers must use a separately configured least-privilege broker.
-  res.json({ job });
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ job, objectAccess: job ? nativeObjectGrants(job) : null });
 });
 internal.get("/jobs/:jobId/inputs/:index", async (req, res) => {
   const p = principal(req);
@@ -129,6 +128,7 @@ internal.get("/jobs/:jobId/inputs/:index", async (req, res) => {
   const input = (job.inputObjects as Array<{ key: string; sha256: string; mimeType?: string }>)[index];
   const prefix = `native-media/${p.workspaceId}/`;
   if (!Number.isSafeInteger(index) || !input || !input.key.startsWith(prefix)) { res.status(404).json({ error: "Input object unavailable" }); return; }
+  await consumeNativeObjectGrant(req.header('x-native-object-grant') ?? '', job, 'GET', `inputs/${index}`);
   res.setHeader("Content-Type", input.mimeType ?? "application/octet-stream");
   res.setHeader("Cache-Control", "no-store");
   createGCSObjectStream(input.key).on("error", () => res.destroy()).pipe(res);
@@ -137,6 +137,7 @@ internal.put("/jobs/:jobId/output", async (req, res) => {
   const p = principal(req); const jobId = uuid.parse(req.params.jobId);
   const token = req.header("x-native-lease-token") ?? "";
   const job = await assertNativeLease(p.workspaceId, p.id, jobId, token);
+  await consumeNativeObjectGrant(req.header('x-native-object-grant') ?? '', job, 'PUT', 'output');
   if (!["leased", "running"].includes(job.status)) { res.status(409).json({ error: "Job is not active" }); return; }
   const mime = (req.header("content-type") ?? "").split(";")[0]!;
   const allowed = new Set(["video/mp4", "video/webm", "audio/wav", "audio/mpeg", "image/png", "image/jpeg"]);
@@ -170,6 +171,12 @@ internal.put("/jobs/:jobId/output", async (req, res) => {
   } finally { await rm(temp, { force: true }); }
 });
 const leaseBody = z.object({ jobId: uuid, leaseToken: uuid });
+internal.post('/object-grants', async (req, res) => {
+  const body = leaseBody.parse(req.body), p = principal(req);
+  const job = await assertNativeLease(p.workspaceId, p.id, body.jobId, body.leaseToken);
+  if (!['leased', 'running'].includes(job.status)) { res.status(409).json({ error: 'Job is not active' }); return; }
+  res.setHeader('Cache-Control', 'no-store'); res.json({ objectAccess: nativeObjectGrants(job) });
+});
 internal.post("/ack", async (req, res) => { const b = leaseBody.parse(req.body), p = principal(req); res.json({ job: await acknowledgeNativeJob(p.workspaceId, p.id, b.jobId, b.leaseToken) }); });
 internal.post("/progress", async (req, res) => { const b = leaseBody.extend({ progress: z.number() }).parse(req.body), p = principal(req); await progressNativeJob(p.workspaceId, p.id, b.jobId, b.leaseToken, b.progress); res.status(204).end(); });
 internal.post("/renew", async (req, res) => { const b = leaseBody.parse(req.body), p = principal(req); res.json({ job: await renewNativeLease(p.workspaceId, p.id, b.jobId, b.leaseToken) }); });

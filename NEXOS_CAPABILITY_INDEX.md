@@ -12,6 +12,13 @@
 
 ## 1. Como ler o sistema único
 
+Checkpoint P3 de 06/10/2026: jornada conectada e entrega Academy em provedores
+simulados, concessões de objeto por lease, regressões de mídia/execução e
+integridade de banco passaram localmente. Dataset/regras de IA cobrem cinco
+artefatos; referências sintéticas não certificam modelos. Evidência e roteiro
+externo em [P3_CLOSEOUT](./docs/P3_CLOSEOUT.md). Homologação real, vídeo GPU e
+launch Google/TikTok seguem abertos; M11/M12 e certificação GLP22 não são promovidos.
+
 Implantação anterior ao P3: aplicação Docker com PostgreSQL local opcional ou
 externo com TLS verificado validada em fixtures isoladas, incluindo restauração
 da disponibilidade após queda do banco. Evidência no
@@ -23,7 +30,7 @@ localmente, incluindo autorização de conteúdo pago, CI crítico, Redis persis
 backup/restauração e recuperação sob falhas/carga. Evidência e limites em
 [P1](./docs/P1_CLOSEOUT.md), [P2](./docs/P2_CLOSEOUT.md) e no checklist canônico.
 Essa prova de infraestrutura não altera os níveis M11/M12 nem certifica
-capacidades GLP22; jornada sandbox, avaliações de IA e ativação real permanecem.
+capacidades GLP22; o P3 local abaixo não substitui a ativação e a homologação reais.
 
 O NexOS possui duas dimensões complementares:
 

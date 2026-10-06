@@ -11,8 +11,8 @@
 - **Estágio operacional em foco:** transversal — Control Room e governança de capacidades;
 - **Nível de maturidade em foco:** M11 — fechamento das autorizações Content/Social; fundamentos M12 continuam locais;
 - **Último nível concluído:** M10 — Council operacional;
-- **Checkpoint atual:** auditoria dos quatro briefs registrada em `research/audit-fullstack-realization-vs-briefs.md`; publicação social implícita e agendamentos sem prévia/autorização agora falham fechados; preview-confirm explícito permanece disponível e passou em Graph simulado. M11 e M12 seguem incompletos; M10 é o último nível concluído;
-- **Próximo checkpoint:** vincular aprovação da peça ao payload/plano/contas, criar autorização versionada para agendamento/autopublicação e reconciliar filas bloqueadas sem inventar consentimento; então homologar Meta real e completar o lifecycle com entrega e readback.
+- **Checkpoint atual:** P3 local: jornada simulada, entrega Academy, concessões de objetos, integridade do schema e framework de qualidade de IA; evidência e limites em [P3_CLOSEOUT](./docs/P3_CLOSEOUT.md). M11/M12 seguem incompletos; M10 é o último nível concluído.
+- **Próximo checkpoint:** homologação externa do P3 com contas próprias, GPU/pesos aprovados, matriz real de IA e CI remoto; concluir os vínculos de aprovação/autorização pendentes antes da operação autônoma.
 
 ## Checkpoint transversal — P1/P2 local (06/10/2026)
 
@@ -27,7 +27,7 @@
 - **Limite:** escopo local; CI remoto, ativação/backup externo e jornada real
   continuam pendentes. M10 permanece o último nível concluído; M11/M12 e os
   estados de capacidades GLP22 não são promovidos por estes testes.
-- **Próximo checkpoint de prontidão:** P3 — jornada sandbox e avaliações de IA;
+- **Próximo checkpoint de prontidão:** homologação externa do P3;
   os gates de consentimento e homologação real acima continuam obrigatórios.
 
 ## Checkpoint anterior ao P3 — implantação Docker (06/10/2026)
@@ -45,6 +45,24 @@
   domínio HTTPS e CI remotos ainda não ativados. Workers/schedulers continuam
   no processo atual; não há promoção de maturidade ou certificação de vídeo.
 - **Próximo checkpoint:** P3 — jornada sandbox e qualidade de IA.
+
+## Checkpoint transversal — P3 local (06/10/2026)
+
+- [x] Jornada conectada com cadastro real, campanha/conteúdo fixture, publicação
+  autorizada simulada, lead consentido, checkout e atribuição concorrente idempotente.
+- [x] Regressões de Academy/outbox, mídia nativa e execução condicional;
+  concessões de objeto assinadas, curtas, vinculadas ao lease e de uso único.
+- [x] Integridade restaurada em bancos novos/existentes por migração 0068:
+  18 triggers e 37 chaves omitidas; estágio temporário encerrado e verificação
+  detecta triggers desativados e chaves ausentes/não validadas.
+- [x] Dataset de cinco artefatos, mínimo 85/100 e revisão humana vinculada;
+  referências sintéticas não certificam qualidade de modelos reais.
+- **Evidência:** [P3_CLOSEOUT](./docs/P3_CLOSEOUT.md) e
+  [resultados locais](./docs/P3_VALIDATION_RESULTS.json).
+- **Limite:** vídeo GPU/modelos reais, Meta externo e launch Google/TikTok
+  continuam sem certificação. M10 permanece o último nível concluído.
+- **Próximo checkpoint:** executar o roteiro de homologação externa do P3 com
+  contas próprias, GPU/pesos aprovados, matriz real de IA e CI remoto.
 
 ## Checklist dos 12 níveis de maturidade
 

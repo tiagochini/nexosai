@@ -46,15 +46,18 @@ def post(path, body, bootstrap=False):
     req = Request(API + path, raw, headers=hdr, method="POST")
     with urlopen(req, timeout=20) as r: return json.loads(r.read() or b"{}")
 def transfer(method, path, body=b"", mime="application/json", lease=""):
+    access = post('/object-grants', {'jobId': path.split('/')[2], 'leaseToken': lease})['objectAccess']
+    grant = access['inputs'][int(path.rsplit('/', 1)[1])]['grant']
     stamp, nonce = headers(); digest = hashlib.sha256(body).hexdigest()
     canonical = f"{stamp}\n{nonce}\n{method}\n{canonical_path(path)}\n{digest}"
     sig = hmac.new(SECRET.encode(), canonical.encode(), hashlib.sha256).hexdigest()
     hdr={"content-type":mime,"content-length":str(len(body)),"x-native-worker-timestamp":stamp,
          "x-native-worker-nonce":nonce,"x-native-worker-id":WORKER_ID,
          "x-native-worker-credential":SECRET,"x-native-worker-signature":sig,
-         "x-native-body-sha256":digest,"x-native-lease-token":lease}
+         "x-native-body-sha256":digest,"x-native-lease-token":lease,"x-native-object-grant":grant}
     return urlopen(Request(API+path, data=body if method=="PUT" else None, headers=hdr, method=method), timeout=120)
 def put_file(path, source, mime, lease):
+    grant = post('/object-grants', {'jobId': path.split('/')[2], 'leaseToken': lease})['objectAccess']['output']['grant']
     digest=hashlib.sha256()
     with source.open("rb") as stream:
         for chunk in iter(lambda:stream.read(1024*1024),b""): digest.update(chunk)
@@ -63,7 +66,7 @@ def put_file(path, source, mime, lease):
     signature=hmac.new(SECRET.encode(),canonical.encode(),hashlib.sha256).hexdigest()
     hdr={"content-type":mime,"content-length":str(source.stat().st_size),"x-native-worker-timestamp":stamp,
          "x-native-worker-nonce":nonce,"x-native-worker-id":WORKER_ID,"x-native-worker-credential":SECRET,
-         "x-native-worker-signature":signature,"x-native-body-sha256":body_hash,"x-native-lease-token":lease}
+         "x-native-worker-signature":signature,"x-native-body-sha256":body_hash,"x-native-lease-token":lease,"x-native-object-grant":grant}
     with source.open("rb") as stream, urlopen(Request(API+path,data=stream,headers=hdr,method="PUT"),timeout=3600) as response:
         return json.load(response)
 def main():
@@ -98,7 +101,12 @@ def main():
             inputs=[]
             for i, _ in enumerate(job.get("inputObjects", [])):
                 dest=work/f"input-{i}"
-                with transfer("GET",f"/jobs/{job['id']}/inputs/{i}",lease=job["leaseToken"]) as src, dest.open("wb") as out: shutil.copyfileobj(src,out)
+                digest = hashlib.sha256()
+                with transfer("GET",f"/jobs/{job['id']}/inputs/{i}",lease=job["leaseToken"]) as src, dest.open("wb") as out:
+                    for chunk in iter(lambda: src.read(1024 * 1024), b''):
+                        digest.update(chunk); out.write(chunk)
+                if digest.hexdigest() != job['inputObjects'][i]['sha256']:
+                    raise RuntimeError('Input object hash mismatch')
                 inputs.append(str(dest))
             output=work/"output"
             argv=[str(value).replace("{output}",str(output)).replace("{inputs}",json.dumps(inputs)) for value in command]

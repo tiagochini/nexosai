@@ -145,24 +145,36 @@ local opcional ou externo via TLS, ferramentas de schema explícitas e teste de
 recuperação. [Guia Docker](./DOCKER_DEPLOYMENT.md) e
 [evidência](./DOCKER_DEPLOYMENT_RESULTS.json). Ambiente real não foi ativado.
 
-- [ ] Concluir jornada sandbox: cadastro → campanha → conteúdo → publicação →
-  lead → checkout → atribuição.
+- [x] Validar jornada local simulada: cadastro → campanha/conteúdo fixture →
+  publicação autorizada → lead → checkout → atribuição; sem inferência ou envio real.
 - [x] Impedir que o funil Academy marque e-mails como enviados sem provedor
   configurado; avançar somente após aceitação pelo provedor, sem simulação em produção.
   Evidência local e limites: [ACADEMY_FUNNEL_DELIVERY.md](./ACADEMY_FUNNEL_DELIVERY.md).
-- [ ] Certificar idempotência, concorrência e recuperação do envio Academy.
+- [x] Validar localmente idempotência, concorrência, retomada e quarentena do
+  envio Academy; entrega/conciliação real e queda de host/banco seguem pendentes.
 - [x] Corrigir envio Gmail e validação de recibos no e-mail transacional de acesso Academy.
-- [ ] Persistir outbox e conciliar falhas do envio transacional de acesso Academy.
+- [x] Persistir outbox e validar localmente reconciliação/retomada do envio
+  transacional de acesso Academy, sem reenvio cego de resultados ambíguos.
 - [x] Tornar inscrição Academy transacional/idempotente por lead e reservar
   envios atomicamente entre boas-vindas/scheduler; bloquear resultados ambíguos.
   Testes locais de concorrência e queda de processo separado passaram. Há checagem
   somente de leitura e bloqueio explícito de resultados ambíguos. Queda de
   host/banco e conciliação real continuam pendentes em
   [ACADEMY_FUNNEL_DELIVERY.md](./ACADEMY_FUNNEL_DELIVERY.md).
-- [ ] Implementar concessões de acesso a objetos para o worker de mídia.
+- [x] Implementar concessões assinadas de uso único por lease/worker/objeto;
+  validar expiração, isolamento, adulteração, replay e concorrência por HTTP.
 - [ ] Concluir e certificar executores de vídeo e mídia paga.
-- [ ] Criar conjunto versionado de avaliações de IA com critérios por artefato.
-- [ ] Definir nota mínima, revisão humana e regressão de prompts/modelos.
+  Controle de mídia, upload FFmpeg e contratos suportados passaram localmente;
+  GPU/pesos reais, Meta externo e launch Google/TikTok continuam abertos.
+- [x] Criar conjunto versionado de avaliações de IA com critérios para cinco artefatos.
+- [x] Definir nota mínima 85/100, revisão humana vinculada ao artefato/template/modelo
+  e regressões automatizadas. A qualidade de modelos reais ainda exige homologação.
+
+P3 entregue no escopo **local** autorizado e homologação externa preparada.
+Evidência, migração de integridade do bootstrap e pendências:
+[P3_CLOSEOUT.md](./P3_CLOSEOUT.md), [resultados](./P3_VALIDATION_RESULTS.json)
+e [protocolo de IA](./AI_QUALITY_EVALUATION.md). Certificação completa de executores,
+provedores/modelos reais e execução remota do CI permanecem abertas.
 
 ## 4. Evidência exigida por correção
 

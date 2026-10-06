@@ -8,6 +8,11 @@ local model paths and advertises only capabilities that exist locally.
 
 No weights are downloaded and no HuggingFace or commercial API is called.
 Without CUDA it intentionally advertises no inference capability and produces
-no placeholder media. Object access grants are not implemented by the current
-storage adapter; the server returns opaque keys only and a deployment must add
-an object-bound, short-TTL broker before plugins can read/write media.
+no placeholder media. The control plane brokers object access with one-time
+grants scoped to worker, workspace, job, lease, method and input hash. Grants
+expire within 60 seconds and never expose storage credentials. Before each
+transfer, the worker requests fresh grants through signed `/object-grants`.
+The API rechecks the active lease and consent; replay consumption is atomic in
+PostgreSQL. Input files are hashed while streaming and must match the job hash.
+Deploy the API and worker changes together; older workers without grant headers
+will be rejected. GPU model/license/output homologation remains required.

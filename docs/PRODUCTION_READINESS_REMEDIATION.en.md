@@ -145,24 +145,36 @@ local or external TLS PostgreSQL, explicit schema tooling and recovery testing.
 [Docker guide (Portuguese)](./DOCKER_DEPLOYMENT.md) and
 [evidence](./DOCKER_DEPLOYMENT_RESULTS.json). No live environment was activated.
 
-- [ ] Complete the sandbox journey: registration → campaign → content →
-  publishing → lead → checkout → attribution.
+- [x] Validate the local simulated journey: registration → campaign/content
+  fixtures → authorized publishing → lead → checkout → attribution, without live inference or sends.
 - [x] Prevent the Academy funnel from marking emails as sent without a configured
   provider; advance only after provider acceptance, without production simulation.
   Local evidence and limits: [ACADEMY_FUNNEL_DELIVERY.en.md](./ACADEMY_FUNNEL_DELIVERY.en.md).
-- [ ] Certify Academy sending idempotency, concurrency and recovery.
+- [x] Validate Academy idempotency, concurrency, recovery and quarantine locally;
+  actual delivery/reconciliation and host/database interruption remain pending.
 - [x] Fix Gmail dispatch and receipt validation for Academy transactional access emails.
-- [ ] Persist an outbox and reconcile transactional Academy access-email failures.
+- [x] Persist and locally validate the transactional Academy access-email outbox
+  and recovery; ambiguous outcomes are not blindly resent.
 - [x] Make Academy enrollment transactional/idempotent per lead and atomically
   claim dispatch across welcome/scheduler calls; quarantine ambiguous outcomes.
   Local concurrency and separate-process crash tests passed. Read-only inspection
   and explicit quarantine of ambiguous outcomes are implemented. Host/database
   crashes and real provider reconciliation remain pending in
   [ACADEMY_FUNNEL_DELIVERY.en.md](./ACADEMY_FUNNEL_DELIVERY.en.md).
-- [ ] Implement object-access grants for the media worker.
+- [x] Implement signed one-use object grants bound to lease/worker/object;
+  test expiry, isolation, tampering, replay and concurrency over HTTP.
 - [ ] Complete and certify video and paid-media executors.
-- [ ] Create a versioned AI evaluation set with criteria for each artifact.
-- [ ] Define minimum scores, human review, and prompt/model regression checks.
+  Media controls, FFmpeg upload and supported contracts passed locally;
+  actual GPU/weights, external Meta and Google/TikTok launch remain open.
+- [x] Create a versioned AI evaluation set covering five artifacts.
+- [x] Define minimum 85/100, artifact/template/model-bound human review and
+  regression tests. Actual model quality still requires external evaluation.
+
+P3 is delivered within the authorized **local** scope, with external staging
+prepared. Evidence, bootstrap integrity migration and remaining requirements:
+[P3_CLOSEOUT.en.md](./P3_CLOSEOUT.en.md), [results](./P3_VALIDATION_RESULTS.json)
+and [AI protocol](./AI_QUALITY_EVALUATION.md). Full executor certification,
+real provider/model evidence and remote CI remain open.
 
 ## 4. Evidence required for each remediation
 
