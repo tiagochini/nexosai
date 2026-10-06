@@ -46,6 +46,15 @@ logging, política/checksums de migração e regressões de IA passaram. Os buil
 mantêm avisos existentes de sourcemap e tamanho de chunks. A interrupção local
 do motor Docker não foi registrada como sucesso; a suíte foi repetida integralmente.
 
+## Isolamento posterior de usuários e projetos
+
+A regressão local passou novamente com 23 grupos, incluindo ownership HTTP,
+memória/contexto por projeto, concorrência de agentes, sessões/realtime,
+retomada de conteúdo e limpeza do histórico privado no navegador. A imagem
+foi reconstruída sem overlays. A migração 0069 impede vínculos cruzados de
+memória e preserva registros inválidos como histórico sem projeto.
+[Evidência, implantação e limites](./PROJECT_CONTEXT_ISOLATION.md).
+
 ## Correção de integridade do bootstrap
 
 Os testes detectaram que o snapshot histórico de tabelas não continha os

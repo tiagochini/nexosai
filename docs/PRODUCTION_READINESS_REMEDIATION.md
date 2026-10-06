@@ -176,6 +176,15 @@ Evidência, migração de integridade do bootstrap e pendências:
 e [protocolo de IA](./AI_QUALITY_EVALUATION.md). Certificação completa de executores,
 provedores/modelos reais e execução remota do CI permanecem abertas.
 
+### Reforço transversal — isolamento de usuários e projetos (06/10/2026)
+
+Ownership atual, consultas de memória/contexto por projeto, ausência de
+reaproveitamento entre campanhas, configurações concorrentes e histórico privado
+do navegador foram reforçados. Migração 0069 e testes adversariais passaram
+localmente em imagem reconstruída. Evidência e limites em
+[PROJECT_CONTEXT_ISOLATION.md](./PROJECT_CONTEXT_ISOLATION.md). Aplicação em
+homologação, CI remoto e auditoria de artefatos antigos seguem pendentes.
+
 ## 4. Evidência exigida por correção
 
 Cada item deve incluir:

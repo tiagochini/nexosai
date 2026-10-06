@@ -12,6 +12,15 @@
 
 ## 1. Como ler o sistema único
 
+**Isolamento de projetos e usuários (06/10/2026):** ownership atual verificado
+por requisição; memória e contexto vinculados a workspace/projeto; referências
+entre projetos removidas; configurações concorrentes de agentes isoladas;
+histórico privado do navegador separado e limpo na troca de conta/workspace.
+Migração 0069, testes negativos e 23 grupos locais passaram em imagem reconstruída.
+[Evidência e limites](./docs/PROJECT_CONTEXT_ISOLATION.md). CI remoto, aplicação
+da migração em homologação e auditoria dos artefatos antigos permanecem pendentes.
+M10 continua concluído; M11/M12 permanecem incompletos.
+
 Reparo de CI de 06/10/2026: saúde operacional pura executa sem infraestrutura;
 o job de banco gera uma chave de teste válida de 32 bytes. Testes locais passaram,
 incluindo retomada de conteúdo em PostgreSQL descartável; reexecução remota segue
