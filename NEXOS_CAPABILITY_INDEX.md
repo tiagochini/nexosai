@@ -1,11 +1,12 @@
 # NexOS Capability Index
 
-**Supabase — teste de 06/10/2026:** conexão PostgreSQL externa passou com TLS 1.3
-e CA/hostname validados, em sessão somente leitura. O esquema `public` está vazio;
-migrações, conta founder e isolamento nesse banco ainda não foram provisionados
-ou certificados. O banco ativo local não foi alterado. Próximo checkpoint:
-preparar o esquema externo e verificar integridade/privilégios antes da troca.
-[Evidência](docs/SUPABASE_CONNECTION_VALIDATION.md). Maturidade permanece inalterada.
+**Supabase — homologação de 06/10/2026:** esquema externo preparado (177 tabelas,
+75 entradas de esquema/migração e 19 triggers ativos), TLS verificado, role privada
+e acesso público bloqueado. Seis grupos de regressão, administração founder por
+UUID e API compilada com Redis exclusivo passaram. Perfis, portas e filas locais
+permanecem separados. Próximo checkpoint: jornada de navegador e provedores
+sandbox autorizados. [Guia/evidência](docs/SUPABASE_HOMOLOGATION.md).
+Maturidade permanece inalterada; implantação pública não foi feita.
 
 ## Fluxo operacional único e plano canônico de indexação de capacidades
 

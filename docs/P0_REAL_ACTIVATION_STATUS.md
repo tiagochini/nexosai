@@ -2,6 +2,11 @@
 
 Atualizado em 06/10/2026, 21:06 UTC. **Administrador local ativado; Asaas sandbox pendente.**
 
+Checkpoint posterior: o Supabase foi preparado para homologação e a conta master
+foi provisionada nesse banco com UUID próprio. Login, sessões, auditoria,
+isolamento e API compilada passaram. Consulte [guia de homologação](./SUPABASE_HOMOLOGATION.md).
+As observações locais abaixo documentam a inspeção anterior; Asaas permanece pendente.
+
 ## Evidência obtida
 
 - O banco configurado pelo launcher local é PostgreSQL em `127.0.0.1:5432`,

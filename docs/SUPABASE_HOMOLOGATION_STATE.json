@@ -1,0 +1,44 @@
+{
+  "verifiedAt": "2026-10-06T21:35:12.308Z",
+  "schema": {
+    "tables": 177,
+    "migration_entries": 75,
+    "rls_tables": 177,
+    "active_user_triggers": 19
+  },
+  "counts": {
+    "users": 1,
+    "workspaces": 1,
+    "campaigns": 0,
+    "workspace_integrations": 0,
+    "workspace_memory": 0,
+    "content_pieces": 0,
+    "activeSessions": 0
+  },
+  "publicApiRoles": [
+    {
+      "rolname": "anon",
+      "schema_usage": false
+    },
+    {
+      "rolname": "authenticated",
+      "schema_usage": false
+    },
+    {
+      "rolname": "service_role",
+      "schema_usage": false
+    }
+  ],
+  "publishableKeyUsersReadStatus": 401,
+  "privateRuntimeRole": "nexos_homologation",
+  "tlsCertificateVerified": true,
+  "queuePrefix": "homologation-lwjkykbjynmqnixeoldd",
+  "redisLogicalDatabase": "/5",
+  "redisConnectivityTested": true,
+  "applicationPublicDeployment": false,
+  "redisPort": 6385,
+  "redisComposeProject": "nexos-homologation",
+  "compiledApiSmokePassed": true,
+  "redisVerifiedAt": "2026-10-06T21:37:07.960Z",
+  "compiledApiSmokeVerifiedAt": "2026-10-06T21:39:52.057Z"
+}

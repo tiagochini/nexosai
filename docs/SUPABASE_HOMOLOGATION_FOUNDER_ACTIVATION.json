@@ -1,0 +1,23 @@
+{
+  "verifiedAt": "2026-10-06T21:31:52.135Z",
+  "scope": "Supabase homologation PostgreSQL and temporary loopback HTTP server; no public deployment",
+  "email": "founder@nexos.ai",
+  "userId": "94942b5f-23ea-47f4-b589-a37457db3b6c",
+  "workspaceId": "a03c9141-c1af-46de-a62c-44a2e122646c",
+  "checks": {
+    "firstUserCreated": true,
+    "passwordLogin": "PASS",
+    "uuidAuthorization": "PASS",
+    "activeWorkspaceOwnership": "PASS",
+    "noAuthorization": "401",
+    "tokenWithoutSession": "401",
+    "revokedSession": "401",
+    "persistedAdminAudit": "PASS"
+  },
+  "auditId": "141676b6-2696-4861-b961-b0057972d12d",
+  "emailOwnershipVerified": false,
+  "externalProviderCalls": 0,
+  "testSessionsRevoked": true,
+  "restartConfiguredApiRequired": true,
+  "asaasSandboxJourney": "BLOCKED missing valid key and public application webhook URL"
+}

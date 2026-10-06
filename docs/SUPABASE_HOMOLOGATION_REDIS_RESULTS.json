@@ -1,0 +1,18 @@
+{
+  "testedAt": "2026-10-06T21:37:07.960Z",
+  "mode": "redis",
+  "host": "db.lwjkykbjynmqnixeoldd.supabase.co",
+  "tls": "verify-full with official CA",
+  "runtimeRole": "nexos_homologation",
+  "localDatabaseChanged": false,
+  "limitations": [
+    "Destructive schema-repair control runs only on disposable local databases; remote tests keep all live constraints and triggers enabled",
+    "No live provider delivery, AI inference or public deployment is certified"
+  ],
+  "checks": {
+    "isolated Redis": "PASS",
+    "Redis authentication and isolation": "PASS",
+    "schema verification": "PASS",
+    "security verification": "PASS"
+  }
+}

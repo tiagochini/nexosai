@@ -1,0 +1,16 @@
+{
+  "testedAt": "2026-10-06T21:27:04.500Z",
+  "mode": "prepare",
+  "host": "db.lwjkykbjynmqnixeoldd.supabase.co",
+  "tls": "verify-full with official CA",
+  "runtimeRole": "nexos_homologation",
+  "localDatabaseChanged": false,
+  "checks": {
+    "privileges": "PASS",
+    "migrations": "PASS",
+    "runtime policies": "PASS",
+    "plans": "PASS",
+    "schema verification": "PASS",
+    "security verification": "PASS"
+  }
+}

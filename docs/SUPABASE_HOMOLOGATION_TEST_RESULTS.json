@@ -1,0 +1,23 @@
+{
+  "testedAt": "2026-10-06T21:31:21.461Z",
+  "mode": "test",
+  "host": "db.lwjkykbjynmqnixeoldd.supabase.co",
+  "tls": "verify-full with official CA",
+  "runtimeRole": "nexos_homologation",
+  "localDatabaseChanged": false,
+  "limitations": [
+    "Destructive schema-repair control runs only on disposable local databases; remote tests keep all live constraints and triggers enabled",
+    "No live provider delivery, AI inference or public deployment is certified"
+  ],
+  "checks": {
+    "schema verification": "PASS",
+    "security verification": "PASS",
+    "test-auth-registration-db": "PASS",
+    "test-auth-sessions-http": "PASS",
+    "test-realtime-security-db": "PASS",
+    "test-project-isolation-db": "PASS",
+    "test-content-checkpoint-resume": "PASS",
+    "token encryption": "PASS",
+    "final schema verification": "PASS"
+  }
+}

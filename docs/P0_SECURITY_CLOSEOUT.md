@@ -11,6 +11,11 @@ Login, sessão ativa, bloqueios e auditoria passaram. A credencial Asaas dispon�
 retornou 401 no sandbox; token local preparado; chave válida e endpoint público permanecem
 pendentes. [Evidência atual e requisitos](./P0_REAL_ACTIVATION_STATUS.md).
 
+Homologação Supabase em 06/10/2026: schema e conta master externos provisionados;
+UUID `94942b5f-23ea-47f4-b589-a37457db3b6c`. Login, revogação, auditoria e isolamento
+passaram, inclusive smoke da API compilada local com Redis exclusivo. Nenhuma
+implantação pública nem jornada Asaas foi certificada. [Guia/evidência](./SUPABASE_HOMOLOGATION.md).
+
 ## Implementado e validado localmente
 
 - Administração Academy exige JWT vinculado a uma sessão de login ativa, UUID explicitamente autorizado e propriedade de workspace ativo. Revogação da sessão bloqueia o token antigo, mesmo após novo login. Cada solicitação autorizada registra ator, rota estática, método e resultado; nenhum corpo, senha, código ou e-mail entra nessa auditoria.

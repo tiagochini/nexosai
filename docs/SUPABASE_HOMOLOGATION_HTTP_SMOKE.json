@@ -1,0 +1,14 @@
+{
+  "testedAt": "2026-10-06T21:39:52.057Z",
+  "scope": "Compiled API on temporary local port, Supabase database and isolated local Redis; safe mode; no public deployment or provider HTTP",
+  "checks": {
+    "readiness": "PASS",
+    "databaseAndRedisHealth": "PASS",
+    "founderLogin": "PASS",
+    "founderUuidAdministration": "PASS",
+    "logout": "PASS",
+    "revokedSessionDenied": "PASS"
+  },
+  "testSessionRevoked": true,
+  "apiStopped": true
+}

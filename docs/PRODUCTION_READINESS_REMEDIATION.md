@@ -99,8 +99,11 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
   `founder@nexos.ai`, UUID `dc97c52d-3769-4be3-bed1-c4239cc40796`. Login,
   autorização UUID/sessão, revogação e auditoria foram comprovados por HTTP.
   [Evidência sanitizada](./P0_REAL_ADMIN_ACTIVATION.json).
-- [ ] Provisionar/autorizar a conta no banco do ambiente externo; UUID local
-  e configuração `.env.local` não representam implantação em produção.
+- [x] Conta master provisionada no banco Supabase de homologação, com UUID
+  `94942b5f-23ea-47f4-b589-a37457db3b6c`; login, sessão, revogação e auditoria
+  comprovados também na API compilada local. [Evidência](./SUPABASE_HOMOLOGATION.md).
+- [ ] Implantar/validar a aplicação no ambiente público e provisionar o banco de
+  produção separadamente; homologação Supabase não representa liberação de produção.
 - [ ] Concluir a evidência Asaas sandbox: a credencial disponível retornou 401
   no sandbox; token local preparado; chave válida e URL pública do webhook ainda faltam.
   [Inspeção e requisitos de continuação](./P0_REAL_ACTIVATION_STATUS.md).
