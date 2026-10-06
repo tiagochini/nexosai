@@ -13,6 +13,7 @@
     "security:check-runtime-logging": "node --test scripts/check-runtime-logging.test.mjs && node scripts/check-runtime-logging.mjs",
     "security:audit-dependencies": "pnpm audit --audit-level low",
     "security:audit-history": "node scripts/audit-sensitive-history.mjs",
+    "test:p1-local": "node scripts/test-p1-local.mjs",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"

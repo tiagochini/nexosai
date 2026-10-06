@@ -1,4 +1,5 @@
 import { Router } from "express";
+import academyContentRouter from './academy-content.routes.js';
 import { z } from "zod/v4";
 import { eq, or } from "drizzle-orm";
 import Anthropic from "@anthropic-ai/sdk";
@@ -28,6 +29,7 @@ import {
 } from "./academy-funnel.service.js";
 
 const router = Router();
+router.use('/content', academyContentRouter);
 const verificationLimiter = createAcademyVerificationLimiter(
   (process.env["ACADEMY_TRUSTED_PROXY_IPS"] ?? "").split(",").map((ip) => ip.trim()).filter(Boolean),
 );

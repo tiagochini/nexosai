@@ -12,6 +12,10 @@ import MiniGuideSales from "@/pages/mini-guide-sales";
 import FreeGuide from "@/pages/free-guide";
 import LeadMagnet from "@/pages/lead-magnet";
 import { useAntiPiracy, clearSession } from "@/hooks/useAntiPiracy";
+import { academyAccessHeaders } from '@/pages/owner';
+import { setPaidCurriculum, resetPaidCurriculum } from '@/data/curriculum';
+import { setPaidglossary } from '@/data/glossary';
+import { setPaidbibliography } from '@/data/bibliography';
 
 const queryClient = new QueryClient();
 
@@ -80,6 +84,8 @@ function AcademyApp() {
   const [verifiedProduct, setVerifiedProduct] = useState<string | null>(null);
   const [brand, setBrand] = useState<BrandConfig>(() => loadBrand());
   const [sessionConflict, setSessionConflict] = useState(false);
+  const [courseReady, setCourseReady] = useState(false);
+  const [courseError, setCourseError] = useState('');
   const [studentName] = useState<string>(() => localStorage.getItem("nexos-student-name") ?? "");
   const [studentEmail] = useState<string>(() => localStorage.getItem("nexos-student-email") ?? "");
 
@@ -164,6 +170,20 @@ function AcademyApp() {
 
   const canAccess = hasAccess || ownerMode;
 
+  useEffect(() => {
+    setCourseReady(false); setCourseError('');
+    resetPaidCurriculum(); setPaidglossary([]); setPaidbibliography([]);
+    if (!canAccess) return;
+    const controller = new AbortController();
+    fetch('/api/academy/content/course', { headers: academyAccessHeaders(), cache: 'no-store', signal: controller.signal })
+      .then(async response => { if (!response.ok) throw new Error('Acesso ao curso recusado. Confira seu código ou sessão.'); return response.json(); })
+      .then(data => {
+        if (controller.signal.aborted) return;
+        setPaidCurriculum(data.curriculum); setPaidglossary(data.glossary); setPaidbibliography(data.bibliography); setCourseReady(true);
+      }).catch(err => { if (!controller.signal.aborted) setCourseError(err.message); });
+    return () => controller.abort();
+  }, [canAccess, ownerMode]);
+
   useAntiPiracy({
     studentName,
     studentEmail,
@@ -177,6 +197,9 @@ function AcademyApp() {
   const navItems = canAccess ? ALL_NAV_ITEMS : PUBLIC_NAV_ITEMS;
 
   function renderPage() {
+    if (canAccess && ['modules', 'module', 'lesson', 'progress', 'glossary'].includes(nav.page) && !courseReady) {
+      return <p role={courseError ? 'alert' : undefined}>{courseError || 'Carregando material autorizado...'}</p>;
+    }
     if (!canAccess && !(nav.page === "mini-guide" && verifiedProduct === "mini-guide") && RESTRICTED_PAGES.includes(nav.page)) {
       return (
         <div className="max-w-2xl mx-auto text-center py-20 space-y-6">

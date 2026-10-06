@@ -14,9 +14,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
       - name: Scan tracked files for secrets
         run: node scripts/scan-secrets.mjs
+      - name: Audit all reachable history for forbidden sensitive paths
+        run: node scripts/audit-sensitive-history.mjs

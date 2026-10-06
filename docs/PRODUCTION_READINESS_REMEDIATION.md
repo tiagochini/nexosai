@@ -101,18 +101,25 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
   diagnóstico/comparação local. Auditoria inclui ferramentas e passou sem vulnerabilidades conhecidas.
 
 ### P1 — Dependências e CI
-- [ ] Separar a entrega de material pago estático da Academy para autorização
+- [x] Separar a entrega de material pago estático da Academy para autorização
   pelo servidor; o controle da interface não é proteção contra extração do bundle.
 
 - [x] Atualizar dependências diretas vulneráveis da API e transitivas corrigidas.
 - [x] Remover a cadeia antiga `html-pdf-node`/Puppeteer não utilizada.
 - [x] Adicionar `pnpm audit --prod` ao CI, bloqueando qualquer severidade.
   Evidência: [DEPENDENCY_SECURITY_REMEDIATION.md](./DEPENDENCY_SECURITY_REMEDIATION.md).
-- [ ] Executar testes críticos no CI com PostgreSQL e Redis descartáveis.
+- [x] Configurar testes críticos no CI com PostgreSQL e Redis descartáveis;
+  suíte equivalente validada localmente em containers isolados.
 - [x] Executar testes de autenticação, concorrência de cadastro e criptografia
-  no CI com PostgreSQL descartável. Redis e demais fluxos continuam pendentes.
-- [ ] Executar bootstrap de banco vazio, verificação e rollback no CI.
-- [ ] Executar auditoria completa do histórico no workflow de segurança.
+  no CI com PostgreSQL descartável. Redis, pagamentos, Academy e retomada
+  agora integram o workflow e passaram na validação local.
+- [x] Configurar bootstrap de banco vazio, verificação e rollback no CI;
+  execução local aprovada com 177 tabelas e 73 entradas de schema.
+- [x] Executar auditoria de caminhos sensíveis em todo o histórico alcançável
+  no workflow de segurança, com checkout completo e rejeição de clone raso.
+- [ ] Confirmar execução remota dos workflows desta revisão. O GitHub CLI
+  está sem autenticação válida; implementação e evidência local concluídas.
+  Evidência e implantação: [P1_CLOSEOUT.md](./P1_CLOSEOUT.md).
 
 ### P2 — Infraestrutura e recuperação
 

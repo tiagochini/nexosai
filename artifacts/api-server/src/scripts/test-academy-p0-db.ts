@@ -25,6 +25,8 @@ try {
   const outsider = await issueTokens({ id: other, email: `p0-${other}@example.invalid` }, workspace);
   process.env.ACADEMY_ADMIN_USER_IDS = owner;
   const headers = { authorization: `Bearer ${tokens.accessToken}`, "Content-Type": "application/json" };
+  assert.equal((await localFetch(`${base}/content/course`, { headers })).status, 200, 'Authorized owner can read course');
+  assert.equal((await localFetch(`${base}/content/mini-guide`, { headers: { authorization: `Bearer ${outsider.accessToken}` } })).status, 403, 'Unauthorized owner cannot read paid material');
   assert.equal((await localFetch(`${base}/admin/purchases`)).status, 401);
   assert.equal((await localFetch(`${base}/admin/purchases`, { headers: { authorization: `Bearer ${outsider.accessToken}` } })).status, 403);
   process.env.ACADEMY_ADMIN_USER_IDS = `${owner},${other}`;

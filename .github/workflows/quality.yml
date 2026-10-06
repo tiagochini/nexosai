@@ -43,6 +43,9 @@ jobs:
           pnpm --filter @workspace/api-server run test:academy-verification-security
           pnpm --filter @workspace/api-server run test:billing-webhook-security
           pnpm --filter @workspace/api-server run test:billing-settlement
+          pnpm --filter @workspace/api-server run test:orchestration-fallback-race
+          pnpm --filter @workspace/api-server run test:boot-recovery-safety
+          pnpm --filter @workspace/api-server run test:operational-health
       - name: Credential security regression tests
         run: |
           pnpm run security:check-runtime-logging
@@ -52,6 +55,8 @@ jobs:
           pnpm --filter @workspace/api-server run test:integration-security
           pnpm --filter @workspace/api-server run test:auth-cookie-security
       - run: pnpm run build
+      - name: Paid Academy material must be absent from public build
+        run: node scripts/check-academy-paid-bundle.mjs
 
   auth-database-tests:
     runs-on: ubuntu-latest
@@ -83,6 +88,8 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/nexos_ci
       REDIS_URL: redis://127.0.0.1:6379
       SESSION_SECRET: ci-only-session-signing-fixture
+      # Public fixture key, only for disposable encrypted integration rows.
+      INTEGRATION_TOKEN_ENCRYPTION_KEY: BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=
       APP_URL: http://localhost:8081
       ALLOWED_ORIGINS: http://localhost:8081
     steps:
@@ -97,6 +104,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Bootstrap a disposable database and verify migrations
         run: |
+          pnpm --filter @workspace/db run test:bootstrap-rollback
           pnpm --filter @workspace/db run bootstrap:empty
           pnpm --filter @workspace/db run seed:plans
           pnpm --filter @workspace/db run verify
@@ -112,7 +120,9 @@ jobs:
           pnpm --filter @workspace/api-server run test:academy-access-outbox-db
           pnpm --filter @workspace/api-server run test:academy-delivery-lifecycle-db
           pnpm --filter @workspace/api-server run test:academy-p0-db
+          pnpm --filter @workspace/api-server run test:academy-content-db
           pnpm --filter @workspace/api-server run test:academy-quota-redis
           pnpm --filter @workspace/api-server run test:billing-reversal-db
           pnpm --filter @workspace/api-server run test:billing-credit-concurrency-db
+          pnpm --filter @workspace/api-server run test:content-checkpoint-resume
           pnpm --filter @workspace/db run verify

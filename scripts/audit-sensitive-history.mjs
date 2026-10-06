@@ -2,6 +2,9 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
+if (execFileSync('git', ['rev-parse', '--is-shallow-repository'], { cwd: root, encoding: 'utf8' }).trim() === 'true') {
+  throw new Error('Full history audit requires a complete checkout (fetch-depth: 0).');
+}
 const output = execFileSync(
   "git",
   ["log", "--all", "--pretty=format:", "--name-only"],

@@ -101,18 +101,25 @@ The system should only be considered ready for open production when:
   local diagnosis/comparison. Audit now includes tooling and passed without known vulnerabilities.
 
 ### P1 — Dependencies and CI
-- [ ] Move static paid Academy materials behind server-side authorization;
+- [x] Move static paid Academy materials behind server-side authorization;
   interface controls do not prevent bundle extraction.
 
 - [x] Upgrade vulnerable direct API dependencies and patched transitives.
 - [x] Remove the unused legacy `html-pdf-node`/Puppeteer dependency chain.
 - [x] Add `pnpm audit --prod` to CI, blocking every severity.
   Evidence: [DEPENDENCY_SECURITY_REMEDIATION.en.md](./DEPENDENCY_SECURITY_REMEDIATION.en.md).
-- [ ] Run critical tests in CI with disposable PostgreSQL and Redis.
+- [x] Configure critical tests in CI with disposable PostgreSQL and Redis;
+  the equivalent suite passed locally in isolated containers.
 - [x] Run authentication, concurrent registration, and encryption tests in CI
-  with disposable PostgreSQL. Redis and remaining flows are still pending.
-- [ ] Run empty-database bootstrap, verification, and rollback in CI.
-- [ ] Run a full Git history audit in the security workflow.
+  with disposable PostgreSQL. Redis, payments, Academy and checkpoint recovery
+  are now in the workflow and passed locally.
+- [x] Configure empty-database bootstrap, verification, and rollback in CI;
+  local checks passed with 177 tables and 73 schema entries.
+- [x] Audit sensitive paths across all reachable Git history in the security
+  workflow, using a full checkout and rejecting shallow clones.
+- [ ] Confirm remote workflow execution for this revision. GitHub CLI
+  authentication is invalid; implementation and local evidence are complete.
+  Evidence and deployment: [P1_CLOSEOUT.en.md](./P1_CLOSEOUT.en.md).
 
 ### P2 — Infrastructure and recovery
 

@@ -19,7 +19,7 @@ export function academyVerificationKey(req: Pick<Request, "socket" | "ip">, trus
 
 const clients = new Set<Redis>();
 export function closeAcademyQuotaConnections(): void { for (const client of clients) client.disconnect(); clients.clear(); }
-export function createAcademyVerificationLimiter(trustedProxyIPs: string[] = [], options: { redisURL?: string; prefix?: string; memoryForTests?: boolean; scope?: "verify" | "tutor" | "checkout" | "leads" } = {}): RequestHandler {
+export function createAcademyVerificationLimiter(trustedProxyIPs: string[] = [], options: { redisURL?: string; prefix?: string; memoryForTests?: boolean; scope?: "verify" | "tutor" | "checkout" | "leads" | "content" } = {}): RequestHandler {
   const memory = options.memoryForTests ?? (process.env.NODE_ENV === "test" && !options.redisURL);
   if (memory && process.env.NODE_ENV !== "test") throw new Error("Memory quota is test-only");
   const counters = new Map<string, { count: number; until: number }>();
