@@ -1,5 +1,12 @@
 # NexOS — Checklist Canônico de Construção
 
+**Supabase — teste de 06/10/2026:** conexão PostgreSQL externa passou com TLS 1.3
+e CA/hostname validados, em sessão somente leitura. O esquema `public` está vazio;
+migrações, conta founder e isolamento nesse banco ainda não foram provisionados
+ou certificados. O banco ativo local não foi alterado. Próximo checkpoint:
+preparar o esquema externo e verificar integridade/privilégios antes da troca.
+[Evidência](docs/SUPABASE_CONNECTION_VALIDATION.md). Maturidade permanece inalterada.
+
 > Atualizado após cada unidade de desenvolvimento.
 >
 > Este arquivo responde três perguntas: **onde estamos**, **o que foi comprovado** e **qual é o próximo checkpoint**.

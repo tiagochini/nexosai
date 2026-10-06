@@ -1,0 +1,58 @@
+{
+  "testedAt": "2026-10-06T21:18:33.196Z",
+  "mode": "READ ONLY; no application switch",
+  "host": "db.lwjkykbjynmqnixeoldd.supabase.co",
+  "postgresDns": [
+    {
+      "address": "2600:1f18:5e38:3f01::9803",
+      "family": 6
+    }
+  ],
+  "apiDns": [
+    {
+      "address": "172.64.149.246",
+      "family": 4
+    },
+    {
+      "address": "104.18.38.10",
+      "family": 4
+    }
+  ],
+  "api": {
+    "tls": "verified",
+    "purpose": "API metadata only; no row access",
+    "invalidKeyReported": false,
+    "authSettingsStatus": 200,
+    "publishableKeyAcceptedByAuth": true,
+    "restMetadataStatus": 401
+  },
+  "database": {
+    "connected": true,
+    "connectMs": 1429
+  },
+  "server": {
+    "database": "postgres",
+    "role": "postgres",
+    "version": "17.11",
+    "read_only": "on"
+  },
+  "tls": {
+    "ssl": true,
+    "version": "TLSv1.3",
+    "cipher": "TLS_AES_256_GCM_SHA384"
+  },
+  "publicTables": [],
+  "requiredTables": {
+    "users": false,
+    "workspaces": false,
+    "campaigns": false,
+    "plans": false,
+    "nexos_schema_migrations": false,
+    "academy_admin_audit": false
+  },
+  "publicUserTriggers": 0,
+  "publicUnvalidatedForeignKeys": 0,
+  "schemaReadyForNexos": false,
+  "writesPerformed": false,
+  "activeApplicationDatabaseChanged": false
+}

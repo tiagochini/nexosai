@@ -1,5 +1,12 @@
 # NexOSAI — Fluxo Operacional e de Implementação Canônico
 
+**Supabase — teste de 06/10/2026:** conexão PostgreSQL externa passou com TLS 1.3
+e CA/hostname validados, em sessão somente leitura. O esquema `public` está vazio;
+migrações, conta founder e isolamento nesse banco ainda não foram provisionados
+ou certificados. O banco ativo local não foi alterado. Próximo checkpoint:
+preparar o esquema externo e verificar integridade/privilégios antes da troca.
+[Evidência](docs/SUPABASE_CONNECTION_VALIDATION.md). Maturidade permanece inalterada.
+
 > **Fonte única de verdade cumulativa.** Este arquivo incorpora os mapas e descrições anteriores de workflow em um único sistema.
 > Ele define o comportamento operacional desejado do NexOSAI, os limites de responsabilidade humana, os gates de segurança e a ordem de implementação.
 > Nenhuma área deve ser apresentada como autônoma antes de cumprir os gates e a Definition of Done desta especificação.
