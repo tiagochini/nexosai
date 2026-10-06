@@ -33,6 +33,7 @@ node_modules
 # misc
 /.env
 /.env.local
+/.env.homologation.local
 /.env.exemple
 /backup.sql
 /*.local.sql

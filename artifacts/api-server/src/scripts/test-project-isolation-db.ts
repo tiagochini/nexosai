@@ -17,11 +17,9 @@ import { socialPresenceConfigTable } from "@workspace/db";
 import pino from "pino";
 import { runAgent } from "../modules/agents/agent.runner.js";
 import { completeWithAgent } from "../modules/ai-gateway/ai-gateway.service.js";
+import { assertIsolationTestDatabase } from "./helpers/test-database-target.js";
 
-assert.equal(process.env.NODE_ENV, "test");
-const database = new URL(process.env.DATABASE_URL!);
-assert.ok(["postgres", "127.0.0.1", "localhost"].includes(database.hostname));
-assert.ok(["/nexos_p3", "/nexos_p1", "/nexos_ci"].includes(database.pathname), "Disposable test database required");
+const testTarget = await assertIsolationTestDatabase(pool);
 const marker = randomUUID();
 const users: string[] = [], workspaces: string[] = [];
 let server: ReturnType<typeof express.application.listen> | undefined;
@@ -82,18 +80,25 @@ try {
   await db.update(socialPresenceConfigTable).set({ weeklyInsight: { campaignId: a.id, weekStart: "2026-10-05", summary: "PROJECT_A_ONLY", wins: [], losses: [], adjustments: [], winningFormats: [], generatedAt: new Date().toISOString() } }).where(eq(socialPresenceConfigTable.workspaceId, workspaces[0]!));
   assert.equal((await getConfig(workspaces[0]!))?.weeklyInsight, null, "A previous project's insight cannot appear in the selected project");
 
-  const repair = await readFile(new URL("../../../../lib/db/drizzle/0069_project_memory_isolation.sql", import.meta.url), "utf8");
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    await client.query("ALTER TABLE workspace_memory DROP CONSTRAINT workspace_memory_project_scope_fk");
-    await client.query("DROP TRIGGER workspace_memory_scope_immutable ON workspace_memory");
-    const legacy = await client.query("INSERT INTO workspace_memory (workspace_id, campaign_id, agent_role, memory_type, title, summary) VALUES ($1,$2,'copywriter','approved_copy','legacy-preserved','legacy-private') RETURNING id", [workspaces[0]!, foreign.id]);
-    await client.query(repair);
-    await client.query(repair);
-    const repaired = await client.query("SELECT campaign_id, title, summary FROM workspace_memory WHERE id = $1", [legacy.rows[0].id]);
-    assert.deepEqual(repaired.rows[0], { campaign_id: null, title: "legacy-preserved", summary: "legacy-private" });
-  } finally { await client.query("ROLLBACK"); client.release(); }
+  // This negative control removes live protections; keep it on disposable local
+  // databases. Remote homologation uses the private runtime role and checks the
+  // actual constraints/trigger rejection above without changing their DDL.
+  if (testTarget === 'local') {
+    const repair = await readFile(new URL("../../../../lib/db/drizzle/0069_project_memory_isolation.sql", import.meta.url), "utf8");
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("ALTER TABLE workspace_memory DROP CONSTRAINT workspace_memory_project_scope_fk");
+      await client.query("DROP TRIGGER workspace_memory_scope_immutable ON workspace_memory");
+      const legacy = await client.query("INSERT INTO workspace_memory (workspace_id, campaign_id, agent_role, memory_type, title, summary) VALUES ($1,$2,'copywriter','approved_copy','legacy-preserved','legacy-private') RETURNING id", [workspaces[0]!, foreign.id]);
+      await client.query(repair);
+      await client.query(repair);
+      const repaired = await client.query("SELECT campaign_id, title, summary FROM workspace_memory WHERE id = $1", [legacy.rows[0].id]);
+      assert.deepEqual(repaired.rows[0], { campaign_id: null, title: "legacy-preserved", summary: "legacy-private" });
+    } finally { await client.query("ROLLBACK"); client.release(); }
+  } else {
+    console.log('SKIP destructive schema-repair control: disposable local databases only; remote FK and immutable-scope rejection were exercised');
+  }
 
   const app = express(); app.use(express.json()); app.use("/memory", memoryRouter);
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

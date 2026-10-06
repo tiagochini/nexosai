@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 import pg from "pg";
+import { databaseConnectionOptions } from "../src/connection-options.mjs";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { workspaceIntegrationsTable, insertWorkspaceIntegrationSchema } from "../src/schema/workspace-integrations";
 import { decryptIntegrationToken, encryptIntegrationToken, validateIntegrationEncryptionConfig } from "../src/integration-token-crypto";
@@ -68,7 +69,7 @@ if (process.argv.includes("--database")) {
     }
   }
   assert.ok(databaseUrl, "DATABASE_URL is required for the database test");
-  const pool = new pg.Pool({ connectionString: databaseUrl });
+  const pool = new pg.Pool(databaseConnectionOptions({ ...process.env, DATABASE_URL: databaseUrl }));
   const client = await pool.connect();
   try {
     await client.query("BEGIN");

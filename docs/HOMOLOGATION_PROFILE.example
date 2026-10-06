@@ -1,0 +1,23 @@
+# Copy to .env.homologation.local in the project root (ignored). Never enter secrets in this template.
+# URL-encode PostgreSQL passwords. Application uses a private SQL role; no public API key is required.
+DATABASE_URL=postgresql://nexos_homologation:SENHA_URL_ENCODED@db.PROJECTREF.supabase.co:5432/postgres
+DATABASE_ADMIN_URL=postgresql://postgres:SENHA_URL_ENCODED@db.PROJECTREF.supabase.co:5432/postgres
+HOMOLOGATION_DATABASE_HOST=db.PROJECTREF.supabase.co
+HOMOLOGATION_DB_TESTS=true
+DATABASE_SSL_MODE=verify-full
+DATABASE_SSL_CA_FILE=C:/CAMINHO/PRIVADO/supabase-root-ca.crt
+DB_POOL_MAX=5
+DB_CONNECTION_TIMEOUT_MS=15000
+SESSION_SECRET=SUBSTITUA_POR_UMA_CHAVE_ALEATORIA_LONGA
+INTEGRATION_TOKEN_ENCRYPTION_KEY=
+# Redis password must match .local/homologation-redis-password.txt (ignored).
+REDIS_URL=redis://:SENHA_URL_ENCODED@127.0.0.1:6385/5
+QUEUE_PREFIX=homologation-PROJECTREF
+DEV_API_PORT=8090
+DEV_APP_PORT=8091
+APP_URL=http://localhost:8091
+ALLOWED_ORIGINS=http://localhost:8091
+ASAAS_ENV=sandbox
+ASAAS_SANDBOX=true
+ACADEMY_ALLOW_LEGACY_ADMIN_SECRET=false
+META_WEBHOOK_AUTO_SUBSCRIBE=false

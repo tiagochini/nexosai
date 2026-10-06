@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
 import { parseEnv } from "node:util";
 import { fileURLToPath } from "node:url";
+import { homologationEnvironment } from "./homologation-environment.mjs";
 
 const root = new URL("../", import.meta.url);
 const rootPath = fileURLToPath(root);
@@ -12,13 +13,15 @@ function readEnv(name) {
   return existsSync(path) ? parseEnv(readFileSync(path, "utf8")) : {};
 }
 
-const sharedEnv = {
+const sharedEnv = process.argv.includes("--homologation") ? homologationEnvironment().environment : {
   ...process.env,
   ...readEnv(".env"),
   ...readEnv(".env.local"),
 };
 
 const metaE2eMode = process.argv.includes("--meta-e2e");
+const apiPort = sharedEnv.DEV_API_PORT || "8080";
+const appPort = sharedEnv.DEV_APP_PORT || "8081";
 
 const required = ["DATABASE_URL", "SESSION_SECRET"];
 const missing = required.filter((name) => !sharedEnv[name]);
@@ -29,15 +32,15 @@ if (missing.length > 0) {
 
 const apiEnv = {
   ...sharedEnv,
-  PORT: "8080",
+  PORT: apiPort,
   NODE_ENV: "development",
   ...(metaE2eMode ? { META_E2E_TEST_MODE: "true" } : {}),
 };
 const appEnv = {
   ...sharedEnv,
-  PORT: "8081",
+  PORT: appPort,
   BASE_PATH: sharedEnv.BASE_PATH || "/",
-  API_PROXY_TARGET: "http://127.0.0.1:8080",
+  API_PROXY_TARGET: `http://127.0.0.1:${apiPort}`,
   NODE_ENV: "development",
 };
 
@@ -86,7 +89,7 @@ for (const child of children) {
   });
 }
 
-console.log("NexOS local: http://localhost:8081 (API: http://localhost:8080/api)");
+console.log(`NexOS ${process.argv.includes("--homologation") ? "homologação" : "local"}: http://localhost:${appPort} (API: http://localhost:${apiPort}/api)`);
 if (metaE2eMode) {
   console.log("Meta E2E mode enabled: outbound Graph API calls are simulated in memory.");
 }

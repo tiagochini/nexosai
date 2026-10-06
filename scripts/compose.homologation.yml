@@ -1,0 +1,23 @@
+services:
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "127.0.0.1:6385:6379"
+    command:
+      - sh
+      - -c
+      - 'exec redis-server --appendonly yes --requirepass "$$(cat /run/secrets/homologation_redis_password)"'
+    secrets:
+      - homologation_redis_password
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH="$$(cat /run/secrets/homologation_redis_password)" redis-cli ping | grep -q PONG']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+secrets:
+  homologation_redis_password:
+    file: ../.local/homologation-redis-password.txt
+volumes:
+  redis-data:
