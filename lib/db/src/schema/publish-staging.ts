@@ -9,4 +9,4 @@
  * confirmed in production, set this to false, sync the development schema and
  * publish again. Do not leave phase 1 enabled as a permanent schema design.
  */
-export const PUBLISH_STAGE_ONE = true;
+export const PUBLISH_STAGE_ONE = false;

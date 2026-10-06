@@ -199,6 +199,7 @@ export const paidMediaAccountsTable = pgTable(
       table.providerAccountId,
     ),
     index("paid_media_accounts_workspace_provider_idx").on(table.workspaceId, table.provider),
+    uniqueIndex("paid_media_accounts_workspace_id_uidx").on(table.workspaceId, table.id),
   ],
 );
 
@@ -236,6 +237,7 @@ export const paidMediaEntitiesTable = pgTable(
       table.entityType,
     ),
     index("paid_media_entities_workspace_account_idx").on(table.workspaceId, table.accountId),
+    uniqueIndex("paid_media_entities_workspace_id_uidx").on(table.workspaceId, table.id),
   ],
 );
 
@@ -378,6 +380,7 @@ export const paidMediaProposalsTable = pgTable(
       table.workspaceId,
       table.idempotencyKey,
     ),
+    uniqueIndex("paid_media_proposals_workspace_id_uidx").on(table.workspaceId, table.id),
     index("paid_media_proposals_workspace_status_idx").on(table.workspaceId, table.status),
   ],
 );

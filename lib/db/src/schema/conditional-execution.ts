@@ -31,6 +31,7 @@ export const conditionalExecutionPoliciesTable = pgTable("conditional_execution_
   uniqueIndex("conditional_execution_policies_campaign_version_uidx").on(t.workspaceId, t.campaignId, t.version),
   uniqueIndex("conditional_execution_policies_idempotency_uidx").on(t.workspaceId, t.idempotencyKey),
   uniqueIndex("conditional_execution_policies_campaign_id_uidx").on(t.workspaceId, t.campaignId, t.id),
+  uniqueIndex("conditional_execution_policies_workspace_id_uidx").on(t.workspaceId, t.id),
   index("conditional_execution_policies_current_idx").on(t.workspaceId, t.campaignId, t.enabled),
   ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.campaignId], foreignColumns: [campaignsTable.workspaceId, campaignsTable.id], name: "conditional_policies_campaign_scope_fk" })]),
   ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.ownerUserId], foreignColumns: [workspacesTable.id, workspacesTable.ownerId], name: "conditional_policies_owner_fk" })]),
@@ -49,6 +50,7 @@ export const conditionalExecutionPolicyActionsTable = pgTable("conditional_execu
   maxActionsPerDay: integer("max_actions_per_day").notNull(),
 }, (t) => [
   uniqueIndex("conditional_policy_actions_policy_target_uidx").on(t.policyId, t.provider, t.accountId, t.entityId, t.actionType),
+  uniqueIndex("conditional_policy_actions_workspace_id_uidx").on(t.workspaceId, t.id),
     uniqueIndex("conditional_actions_workspace_policy_id_uidx").on(t.workspaceId, t.policyId, t.id),
     ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.policyId], foreignColumns: [conditionalExecutionPoliciesTable.workspaceId, conditionalExecutionPoliciesTable.id], name: "conditional_actions_policy_scope_fk" })]),
     ...(PUBLISH_STAGE_ONE ? [] : [foreignKey({ columns: [t.workspaceId, t.accountId], foreignColumns: [paidMediaAccountsTable.workspaceId, paidMediaAccountsTable.id], name: "conditional_actions_account_scope_fk" })]),
