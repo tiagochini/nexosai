@@ -1,5 +1,9 @@
 # Log protection — local batch
 
+P0 update: API runtime field inventory was reviewed and opaque canaries now cover
+free-text names, questions, keywords, codes and raw responses.
+[Closeout and scope limitations](P0_SECURITY_CLOSEOUT.en.md).
+
 Português: [LOG_SECURITY.md](./LOG_SECURITY.md)
 
 ## Changes

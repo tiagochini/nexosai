@@ -38,14 +38,6 @@ function saveProgress(p: Record<string, boolean>) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
 }
 
-function hasStoredAccess(): boolean {
-  // Requires both the access flag AND the correct product (complete-bundle)
-  return (
-    localStorage.getItem(ACCESS_KEY) === "true" &&
-    localStorage.getItem(PRODUCT_KEY) === "complete-bundle"
-  );
-}
-
 const ALL_NAV_ITEMS = [
   { id: "home", label: "Início", icon: "🏠" },
   { id: "modules", label: "Curso Completo", icon: "📦" },
@@ -83,21 +75,9 @@ function AcademyApp() {
   const [nav, setNav] = useState<NavState>(getInitialPage);
   const [progress, setProgress] = useState<Record<string, boolean>>(loadProgress);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [ownerMode, setOwnerMode] = useState<boolean>(() => {
-    if (isOwnerMode()) return true;
-    // Check both ?owner= in search AND embedded in hash (e.g. #mini-guide?owner=TOKEN)
-    const hashSearch = window.location.hash.includes("?")
-      ? new URLSearchParams(window.location.hash.split("?")[1])
-      : null;
-    const searchParams = new URLSearchParams(window.location.search);
-    const token = searchParams.get("owner") ?? hashSearch?.get("owner");
-    if (token === "NX-FOUNDER-2026") {
-      sessionStorage.setItem("nexos-owner-mode", "true");
-      return true;
-    }
-    return false;
-  });
-  const [hasAccess, setHasAccess] = useState<boolean>(() => hasStoredAccess() || isOwnerMode());
+  const [ownerMode, setOwnerMode] = useState<boolean>(() => isOwnerMode());
+  const [hasAccess, setHasAccess] = useState(false);
+  const [verifiedProduct, setVerifiedProduct] = useState<string | null>(null);
   const [brand, setBrand] = useState<BrandConfig>(() => loadBrand());
   const [sessionConflict, setSessionConflict] = useState(false);
   const [studentName] = useState<string>(() => localStorage.getItem("nexos-student-name") ?? "");
@@ -111,11 +91,29 @@ function AcademyApp() {
 
   const ACADEMY_TOKEN_KEY = "nexos-academy-token";
 
-  const grantAccess = useCallback((token?: string) => {
+  const grantAccess = useCallback((token?: string, productId = "complete-bundle") => {
+    if (!token) return;
     localStorage.setItem(ACCESS_KEY, "true");
-    localStorage.setItem(PRODUCT_KEY, "complete-bundle");
+    localStorage.setItem(PRODUCT_KEY, productId);
     if (token) localStorage.setItem(ACADEMY_TOKEN_KEY, token);
-    setHasAccess(true);
+    setHasAccess(productId === "complete-bundle"); setVerifiedProduct(productId);
+  }, []);
+
+  useEffect(() => {
+    let stopped = false;
+    const verify = async () => {
+      const token = localStorage.getItem(ACADEMY_TOKEN_KEY); if (!token) return;
+      try {
+        const response = await fetch(`/api/academy/verify/${encodeURIComponent(token)}`, { cache: "no-store" });
+        const result = await response.json() as { valid?: boolean; productId?: string };
+        if (stopped) return;
+        if (response.ok && result.valid && result.productId) { setHasAccess(result.productId === "complete-bundle"); setVerifiedProduct(result.productId); }
+        else { setHasAccess(false); setVerifiedProduct(null); if ([403, 404].includes(response.status)) { localStorage.removeItem(ACADEMY_TOKEN_KEY); localStorage.removeItem(ACCESS_KEY); localStorage.removeItem(PRODUCT_KEY); } }
+      } catch { if (!stopped) { setHasAccess(false); setVerifiedProduct(null); } }
+    };
+    void verify(); const timer = window.setInterval(() => void verify(), 5 * 60_000);
+    const ended = () => setOwnerMode(false); window.addEventListener("owner-session-ended", ended);
+    return () => { stopped = true; window.clearInterval(timer); window.removeEventListener("owner-session-ended", ended); };
   }, []);
 
   useEffect(() => {
@@ -158,10 +156,6 @@ function AcademyApp() {
 
   const handleOwnerChange = useCallback((val: boolean) => {
     setOwnerMode(val);
-    if (val) {
-      localStorage.setItem(ACCESS_KEY, "true");
-      setHasAccess(true);
-    }
   }, []);
 
   const totalLessons = 118;
@@ -183,7 +177,7 @@ function AcademyApp() {
   const navItems = canAccess ? ALL_NAV_ITEMS : PUBLIC_NAV_ITEMS;
 
   function renderPage() {
-    if (!canAccess && RESTRICTED_PAGES.includes(nav.page)) {
+    if (!canAccess && !(nav.page === "mini-guide" && verifiedProduct === "mini-guide") && RESTRICTED_PAGES.includes(nav.page)) {
       return (
         <div className="max-w-2xl mx-auto text-center py-20 space-y-6">
           <div className="text-5xl mb-2">🔒</div>

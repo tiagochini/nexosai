@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { isOwnerMode } from "./owner";
 import { generateProtectedPDF } from "@/lib/generate-pdf";
 
 const CAPTURE_KEY = "nexos-lead-captured";
@@ -582,14 +583,8 @@ function GuideStage({ onNavigate, leadName, leadEmail }: { onNavigate: (page: st
   );
 }
 
-// Token de acesso do proprietário — mantido server-side via hash
-const OWNER_TOKEN = "NX-FOUNDER-2026";
-
 function isOwnerAccess(): boolean {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    return params.get("owner") === OWNER_TOKEN;
-  } catch { return false; }
+  return isOwnerMode();
 }
 
 export default function LeadMagnet({ onNavigate }: Props) {

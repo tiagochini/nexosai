@@ -4,7 +4,7 @@ import { once } from "node:events";
 import type { Request } from "express";
 import { academyVerificationKey, ACADEMY_VERIFICATION_LIMIT } from "../modules/academy/academy-verification.security.js";
 
-process.env.DATABASE_URL ??= "postgresql://fixture:fixture@127.0.0.1:1/unused";
+process.env.DATABASE_URL ??= "postgresql://127.0.0.1:1/unused";
 // Default route must not trust forwarded addresses from direct clients.
 delete process.env.ACADEMY_TRUSTED_PROXY_IPS;
 const { default: router } = await import("../modules/academy/academy.routes.js");

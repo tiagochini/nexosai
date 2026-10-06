@@ -4,8 +4,9 @@ import express from "express";
 import { once } from "node:events";
 
 // Unauthorized routes and the empty authorized request must never query the DB.
-process.env.DATABASE_URL ??= "postgresql://fixture:fixture@127.0.0.1:1/unused";
+process.env.DATABASE_URL ??= "postgresql://127.0.0.1:1/unused";
 const previous = process.env.ACADEMY_ADMIN_SECRET;
+process.env.ACADEMY_ALLOW_LEGACY_ADMIN_SECRET = "true";
 const previousWebhook = process.env.ASAAS_WEBHOOK_TOKEN;
 const secret = randomBytes(32).toString("hex");
 const { default: academyRouter } = await import("../modules/academy/academy.routes.js");
@@ -22,6 +23,8 @@ const routes: [string, string][] = [
   ["GET", "/leads"], ["GET", "/funnel/stats"], ["GET", "/purchases"],
   ["GET", "/admin/purchases"], ["POST", "/admin/confirm"], ["POST", "/admin/gift-codes"],
   ["POST", "/admin/resend"], ["POST", "/admin/gift-delivery"],
+  ["POST", "/admin/delivery-reconciliation"],
+  ["GET", "/admin/session"],
   ["GET", "/leads/00000000-0000-4000-8000-000000000000"],
   ["PATCH", "/leads/00000000-0000-4000-8000-000000000000"],
   ["POST", "/leads/00000000-0000-4000-8000-000000000000/enroll"],

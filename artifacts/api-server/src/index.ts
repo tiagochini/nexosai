@@ -36,6 +36,7 @@ import {
   stopFunnelScheduler,
 } from "./modules/academy/academy-funnel.service.js";
 import { startAcademyAccessOutboxScheduler, stopAcademyAccessOutboxScheduler } from "./modules/academy/academy-access-outbox.service.js";
+import { closeAcademyQuotaConnections } from "./modules/academy/academy-verification.security.js";
 import {
   startRegionalAcquisitionScheduler,
   stopRegionalAcquisitionScheduler,
@@ -336,6 +337,7 @@ async function shutdown(signal: string): Promise<void> {
   stopPaidMediaScheduler();
   stopFunnelScheduler();
   stopAcademyAccessOutboxScheduler();
+  closeAcademyQuotaConnections();
 
   // Let accepted HTTP requests and active workers finish before closing the
   // queues and database they may still need during their final operations.

@@ -8,6 +8,13 @@ const privateFields = new Set([
   "url", "uri", "connectionstring", "name", "fullname", "address", "recipient",
   "msg", "message", "text", "contractwarn", "response", "result", "stdout", "stderr",
   "preview", "rawpreview", "rawtail", "feedback", "geminidata", "videodata",
+  "title", "lessontitle", "campaignname", "strategyname", "summary", "description",
+  "snippet", "instructions", "answer", "output", "input", "settings", "metadata", "config",
+  "question", "reply", "keyword", "keywords", "highlight", "originalname", "leadname",
+  "pagename", "avatarname", "igusername", "handle", "confirmationcode", "codigo",
+  "rawresponse", "rawevent", "rawprovider", "errbody", "from", "to", "key", "gcskey",
+  "dbhost", "dbname", "dbuser", "items", "posts", "issues", "warnings", "violations",
+  "blockers", "risks", "positioning", "private",
 ]);
 const tokenCounters = new Set(["tokens", "inputtokens", "outputtokens", "totaltokens", "cachedtokens"]);
 

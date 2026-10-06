@@ -79,6 +79,10 @@ autorizado. CI remoto não valida estas mudanças enquanto não houver push.
 
 ## Pendências e limitações
 
+Atualização P0: inventário dos campos de logging do runtime TypeScript revisado,
+incluindo perguntas, nomes, títulos, códigos, termos de mensagens e respostas
+brutas; canários opacos testados. [Evidências e limites](P0_SECURITY_CLOSEOUT.md).
+
 A auditoria completa por módulo continua aberta: texto livre com dados opacos,
 loggers independentes, bibliotecas externas e scripts de diagnóstico precisam
 de revisão. Esta proteção cobre o logger central e seus filhos, não qualquer

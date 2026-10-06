@@ -1,5 +1,9 @@
 # Academy — administrative protection
 
+P0 update: [individual sessions, frontend and audit](P0_SECURITY_CLOSEOUT.en.md).
+The shared-secret contract below is historical: explicit development/testing
+opt-in is now required and production always rejects it.
+
 Local review: October 5, 2026. [Português](./ACADEMY_ADMIN_SECURITY.md).
 
 ## Remediation

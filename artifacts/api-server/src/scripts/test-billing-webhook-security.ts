@@ -5,7 +5,7 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import { matchesAsaasWebhookToken } from "../lib/asaas-webhook-auth.js";
 
-process.env.DATABASE_URL ??= "postgresql://fixture:fixture@127.0.0.1:1/unused";
+process.env.DATABASE_URL ??= "postgresql://127.0.0.1:1/unused";
 const { default: router } = await import("../modules/billing/billing.routes.js");
 const { pool } = await import("@workspace/db");
 const { env } = await import("../lib/env.js");

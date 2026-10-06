@@ -2,7 +2,7 @@
 
 Versão em português: [PRODUCTION_READINESS_REMEDIATION.md](./PRODUCTION_READINESS_REMEDIATION.md)
 
-**Review date:** October 3, 2026  
+**Review date:** October 5, 2026
 **Scope:** monorepo, API, frontend, database, Redis, queues, integrations,
 security, recovery, concurrency, and AI quality.
 
@@ -10,7 +10,7 @@ security, recovery, concurrency, and AI quality.
 
 - Linux CI build and typecheck pass.
 - Secret scanning and Git history audit pass.
-- PostgreSQL was verified with 172 tables and 69 schema entries.
+- PostgreSQL was verified with 177 tables and 73 schema entries after 0067.
 - Transactional and concurrent registration, concurrent credits,
   orchestration fallback, checkpoint/resume, and operational health passed
   locally.
@@ -39,14 +39,16 @@ The system should only be considered ready for open production when:
 - [x] Remove Academy default administrative credentials, protect the 11 reviewed
   routes and reject URL credentials; authorize the manual scheduler endpoint.
   Local evidence and compatibility: [ACADEMY_ADMIN_SECURITY.en.md](./ACADEMY_ADMIN_SECURITY.en.md).
-- [ ] Move Academy administration to owner sessions and audit remaining routes/codes.
+- [x] Move Academy administration to revocable individual owner sessions and
+  explicit UUID authorization; remove frontend PIN/magic tokens and audit requests.
+  Evidence and activation: [P0_SECURITY_CLOSEOUT.en.md](./P0_SECURITY_CLOSEOUT.en.md).
 - [x] Use cryptographic randomness for Academy checkout/gift codes and validate
   gift batches before issuance, preserving existing codes.
   Local evidence: [ACADEMY_ADMIN_SECURITY.en.md](./ACADEMY_ADMIN_SECURITY.en.md).
 - [x] Limit public Academy verification attempts by IP/subnet, resist spoofed
   origin headers and authenticate the webhook/simulated confirmation endpoint.
-- [ ] Share quotas across instances and review code protection,
-  expiry/revocation and personal-data exposure.
+- [x] Share quotas using Redis, fail closed on outages and review code
+  revocation, client revalidation, tutor authorization and personal-data exposure.
 - [x] Block billing webhooks without a valid token and require additional privilege
   for manual confirmation; share safe comparison with Academy/product checkout.
   Local evidence: [BILLING_WEBHOOK_SECURITY.en.md](./BILLING_WEBHOOK_SECURITY.en.md).
@@ -57,12 +59,13 @@ The system should only be considered ready for open production when:
 - [x] Verify Academy webhook against Asaas payment/customer/reference/amount/status;
   commit purchase/conversion together and test concurrency without real delivery.
   Local evidence: [ACADEMY_PAYMENT_CONFIRMATION.en.md](./ACADEMY_PAYMENT_CONFIRMATION.en.md).
-- [ ] Review reversals, historical balances/purchases and provider/database failure
-  recovery and audited retry of uncertain deliveries.
+- [x] Review reversals, debt and recovery with mocks/concurrency;
+  verify no local historical purchases and implement audited delivery reconciliation.
+  External evidence remains a release condition.
 - [x] Persist the access-email outbox in Academy webhook confirmation;
   validate pending recovery, concurrent claims and quarantine after process death.
   Local evidence: [ACADEMY_ACCESS_EMAIL_OUTBOX.en.md](./ACADEMY_ACCESS_EMAIL_OUTBOX.en.md).
-- [ ] Migrate resend/admin/gift flows to durable delivery and authorized reconciliation.
+- [x] Migrate resend/admin/gift flows to durable delivery and authorized reconciliation.
 
 - [x] Remove previously committed secrets and clean Git history.
 - [x] Prevent tokens, keys, and screenshots from being sent to the integrations
@@ -71,7 +74,9 @@ The system should only be considered ready for open production when:
 - [x] Escape dynamic values in Academy funnel/access emails; validate and
   escape URLs in the reviewed templates' attributes.
   Local evidence: [ACADEMY_FUNNEL_DELIVERY.en.md](./ACADEMY_FUNNEL_DELIVERY.en.md).
-- [ ] Complete the sensitive-data audit for logs in the remaining modules.
+- [x] Review TypeScript API runtime logging fields, protect free text/codes/metadata
+  and test opaque canaries; external services, diagnostic scripts and retention
+  are not certified by this evidence.
 - [x] Protect central/HTTP loggers, errors and child bindings from sensitive
   fields; remove unnecessary data at reviewed call sites.
   Scope and limits: [LOG_SECURITY.en.md](./LOG_SECURITY.en.md).
@@ -88,7 +93,16 @@ The system should only be considered ready for open production when:
   `SameSite` cookies, with rotation and revocation.
   Procedure: [AUTH_SESSION_SECURITY.en.md](./AUTH_SESSION_SECURITY.en.md).
 
+### P0 — Open closeout conditions
+
+- [ ] Activate the actual administrator UUID and complete Asaas sandbox evidence;
+  these remain technical P0 activation conditions, with account/credential missing.
+- [ ] Complete the full/frontend build; Windows attempts were stopped after
+  excessive time/memory usage. API build and types passed.
+
 ### P1 — Dependencies and CI
+- [ ] Move static paid Academy materials behind server-side authorization;
+  interface controls do not prevent bundle extraction.
 
 - [x] Upgrade vulnerable direct API dependencies and patched transitives.
 - [x] Remove the unused legacy `html-pdf-node`/Puppeteer dependency chain.
@@ -143,7 +157,9 @@ Each item must include:
 
 ## 5. Release state
 
-While any P0 item remains open or a high-severity vulnerability exists on an
+P0 fixes are implemented locally within [documented limits](./P0_SECURITY_CLOSEOUT.en.md).
+This is not production approval: actual administrator, Asaas sandbox/webhooks and
+full build and remote CI remain unvalidated. While any P0 activation condition remains open or a high-severity vulnerability exists on an
 exposed path, the recommended release target is staging or a restricted canary
 without real customer credentials. Open production requires completed P0 and P1
 work, plus minimum evidence for P2 and P3.

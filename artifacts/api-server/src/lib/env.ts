@@ -147,9 +147,10 @@ if (env.NODE_ENV === "production") {
     );
   }
 
-  if (env.JWT_SECRET === "nexos-dev-secret") {
+  if (!process.env["SESSION_SECRET"] || env.SESSION_SECRET.trim() !== env.SESSION_SECRET || env.SESSION_SECRET.length < 32 ||
+      env.JWT_SECRET.trim() !== env.JWT_SECRET || env.JWT_SECRET.length < 32 || env.JWT_SECRET === "nexos-dev-secret") {
     throw new Error(
-      "JWT_SECRET must be set to a secure value in production (SESSION_SECRET will be used as fallback)",
+      "SESSION_SECRET and JWT_SECRET must use private signing secrets of at least 32 characters in production",
     );
   }
   if (!env.ALLOWED_ORIGINS.trim()) {

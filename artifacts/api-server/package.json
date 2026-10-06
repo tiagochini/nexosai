@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:production-signing": "tsx src/scripts/test-production-signing.ts",
+    "test:academy-p0-db": "cross-env NODE_ENV=test tsx src/scripts/test-academy-p0-db.ts",
+    "test:academy-quota-redis": "cross-env NODE_ENV=test tsx src/scripts/test-academy-quota-redis.ts",
     "test:academy-delivery-lifecycle-db": "cross-env NODE_ENV=test tsx src/scripts/test-academy-delivery-lifecycle-db.ts",
     "test:billing-reversal-db": "cross-env NODE_ENV=test tsx src/scripts/test-billing-reversal-db.ts",
     "academy:access-check": "tsx src/scripts/check-academy-access-outbox.ts",

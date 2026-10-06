@@ -11,6 +11,7 @@ import { createAcademyVerificationLimiter } from "./academy-verification.securit
 import { createAcademyPaymentWebhook } from "./academy-payment-webhook.js";
 import { ACADEMY_PRODUCTS } from "./academy-products.js";
 import { confirmAcademyManually, requestAcademyResend, createAcademyGiftBatch, wakeAcademyDelivery } from "./academy-delivery-intents.service.js";
+import { reconcileAcademyDelivery } from "./academy-delivery-reconciliation.service.js";
 import { ALLAN_CONSTRAINT_REASONING } from "../agents/constraint-reasoning.js";
 import {
   findOrCreateCustomer,
@@ -30,6 +31,9 @@ const router = Router();
 const verificationLimiter = createAcademyVerificationLimiter(
   (process.env["ACADEMY_TRUSTED_PROXY_IPS"] ?? "").split(",").map((ip) => ip.trim()).filter(Boolean),
 );
+const tutorLimiter = createAcademyVerificationLimiter([], { scope: "tutor" });
+const checkoutLimiter = createAcademyVerificationLimiter([], { scope: "checkout" });
+const leadLimiter = createAcademyVerificationLimiter([], { scope: "leads" });
 
 const giftCodesSchema = z.object({
   count: z.number().int().min(1).max(50).default(5),
@@ -52,7 +56,7 @@ const checkoutSchema = z.object({
 
 // POST /api/academy/checkout
 // Creates Asaas customer + payment, returns paymentUrl
-router.post("/checkout", async (req, res): Promise<void> => {
+router.post("/checkout", checkoutLimiter, async (req, res): Promise<void> => {
   let parsed;
   try {
     parsed = checkoutSchema.parse(req.body);
@@ -139,9 +143,10 @@ router.post("/webhook", createAcademyPaymentWebhook({
 // GET /api/academy/verify/:token
 // Validates an access token — no auth required
 router.get("/verify/:token", verificationLimiter, async (req, res): Promise<void> => {
+  res.setHeader("Cache-Control", "no-store");
   const rawToken = req.params.token;
   const token = typeof rawToken === "string" ? rawToken.toUpperCase().trim() : "";
-  if (!token || token.length < 8) {
+  if (!/^[A-Z0-9-]{8,64}$/.test(token)) {
     res.status(400).json({ valid: false, error: "Token inválido." });
     return;
   }
@@ -151,8 +156,6 @@ router.get("/verify/:token", verificationLimiter, async (req, res): Promise<void
       id: academyPurchasesTable.id,
       status: academyPurchasesTable.status,
       productId: academyPurchasesTable.productId,
-      customerEmail: academyPurchasesTable.customerEmail,
-      customerName: academyPurchasesTable.customerName,
       revokedAt: academyPurchasesTable.revokedAt,
       financialHold: academyPurchasesTable.financialHold,
     })
@@ -177,15 +180,13 @@ router.get("/verify/:token", verificationLimiter, async (req, res): Promise<void
   res.json({
     valid: true,
     productId: purchase.productId,
-    email: purchase.customerEmail,
-    name: purchase.customerName,
   });
 });
 
 // GET /api/academy/leads — header-authenticated owner access
 // Owner-only list of all captured leads
 router.get("/leads", async (req, res): Promise<void> => {
-  if (!checkCrm(req, res)) return;
+  if (!await checkCrm(req, res)) return;
   const { limit = "100", offset = "0" } = req.query as Record<string, string>;
   const rows = await db
     .select()
@@ -211,7 +212,7 @@ const leadSchema = z.object({
   utmCampaign: z.string().max(100).optional(),
 });
 
-router.post("/leads", async (req, res): Promise<void> => {
+router.post("/leads", leadLimiter, async (req, res): Promise<void> => {
   let parsed;
   try {
     parsed = leadSchema.parse(req.body);
@@ -281,7 +282,7 @@ router.post("/leads", async (req, res): Promise<void> => {
 
 // GET /api/academy/funnel/stats — header-authenticated owner access
 router.get("/funnel/stats", async (req, res): Promise<void> => {
-  if (!checkCrm(req, res)) return;
+  if (!await checkCrm(req, res)) return;
   const stats = await getFunnelStats();
   res.json(stats);
 });
@@ -300,7 +301,7 @@ router.post("/unsubscribe", async (req, res): Promise<void> => {
 // GET /api/academy/purchases — header-authenticated owner access
 // Owner-only list of all purchases
 router.get("/purchases", async (req, res): Promise<void> => {
-  if (!checkCrm(req, res)) return;
+  if (!await checkCrm(req, res)) return;
   const { limit = "100" } = req.query as Record<string, string>;
   const rows = await db
     .select({
@@ -350,7 +351,17 @@ function getAnthropicForAcademy(): { client: Anthropic; model: string } {
   throw new Error("No Anthropic API key configured for academy tutor.");
 }
 
-router.post("/tutor", async (req, res): Promise<void> => {
+router.post("/tutor", tutorLimiter, async (req, res): Promise<void> => {
+  if (req.headers.authorization) {
+    if (!await checkCrm(req, res)) return;
+  } else {
+    const code = req.headers["x-academy-access-code"];
+    if (typeof code !== "string" || !/^[A-Z0-9-]{8,64}$/.test(code)) { res.status(401).json({ error: "Active Academy access required" }); return; }
+    const [purchase] = await db.select().from(academyPurchasesTable).where(eq(academyPurchasesTable.accessToken, code)).limit(1);
+    if (!purchase || purchase.status !== "confirmed" || purchase.productId !== "complete-bundle" || purchase.revokedAt || purchase.financialHold) {
+      res.status(403).json({ error: "Active complete-bundle access required" }); return;
+    }
+  }
   let parsed;
   try {
     parsed = tutorSchema.parse(req.body);
@@ -748,7 +759,7 @@ DIRETRIZES DE RESPOSTA
 
 // POST /api/academy/simulate-confirm (dev/owner only — manually confirms a pending purchase)
 router.post("/simulate-confirm", async (req, res): Promise<void> => {
-  if (!checkCrm(req, res)) return;
+  if (!await checkCrm(req, res)) return;
   if (env.NODE_ENV === "production") {
     res.status(403).json({ error: "Not available in production." });
     return;
@@ -780,8 +791,14 @@ router.post("/simulate-confirm", async (req, res): Promise<void> => {
 });
 
 // GET /api/academy/admin/purchases — owner dashboard (protected by ACADEMY_ADMIN_SECRET)
+router.get("/admin/session", async (req, res): Promise<void> => {
+  if (!await checkCrm(req, res)) return;
+  if (!req.auth) { res.status(403).json({ error: "Owner session required" }); return; }
+  res.json({ userId: req.auth.userId });
+});
+
 router.get("/admin/purchases", async (req, res): Promise<void> => {
-  if (!checkCrm(req, res)) return;
+  if (!await checkCrm(req, res)) return;
   try {
     const purchases = await db
       .select()
@@ -809,7 +826,7 @@ router.get("/admin/purchases", async (req, res): Promise<void> => {
 
 // POST /api/academy/admin/confirm — confirm once and enqueue initial access delivery
 router.post("/admin/confirm", async (req, res): Promise<void> => {
-  if (!checkCrm(req, res)) return;
+  if (!await checkCrm(req, res)) return;
   const parsed = z.object({ purchaseId: z.uuid() }).safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: "purchaseId required" }); return; }
   const purchase = await confirmAcademyManually(parsed.data.purchaseId);
@@ -820,7 +837,7 @@ router.post("/admin/confirm", async (req, res): Promise<void> => {
 
 // Explicit delivery intents: stable key must be reused when retrying a request.
 for (const path of ["/admin/resend", "/admin/gift-delivery"]) router.post(path, async (req, res): Promise<void> => {
-  if (!checkCrm(req, res)) return;
+  if (!await checkCrm(req, res)) return;
   const schema = path === "/admin/gift-delivery"
     ? z.object({ purchaseId: z.uuid(), recipientEmail: z.email().transform((email) => email.toLowerCase()), recipientName: z.string().min(1).max(200).optional() })
     : z.object({ purchaseId: z.uuid() });
@@ -834,8 +851,19 @@ for (const path of ["/admin/resend", "/admin/gift-delivery"]) router.post(path, 
 });
 
 // POST /api/academy/admin/gift-codes — generate N gift access codes (owner only)
+router.post("/admin/delivery-reconciliation", async (req, res): Promise<void> => {
+  if (!await checkCrm(req, res)) return;
+  if (!req.auth) { res.status(403).json({ error: "Owner session required" }); return; }
+  const parsed = z.object({ jobId: z.uuid(), decision: z.enum(["accepted", "not_accepted"]),
+    evidenceReference: z.string().trim().min(8).max(500), providerId: z.string().regex(/^[A-Za-z0-9:_-]{1,100}$/).optional(),
+  }).refine((v) => v.decision === "accepted" ? !!v.providerId : !v.providerId).safeParse(req.body);
+  const key = deliveryKey(req.headers["idempotency-key"]);
+  if (!parsed.success || !key) { res.status(400).json({ error: "Valid evidence, decision and Idempotency-Key required" }); return; }
+  res.json(await reconcileAcademyDelivery(req.auth.userId, key, parsed.data));
+});
+
 router.post("/admin/gift-codes", async (req, res): Promise<void> => {
-  if (!checkCrm(req, res)) return;
+  if (!await checkCrm(req, res)) return;
 
   const parsed = giftCodesSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -859,7 +887,7 @@ router.post("/admin/gift-codes", async (req, res): Promise<void> => {
 
 // GET /api/academy/leads/:id — lead detail + funnel email history
 router.get("/leads/:id", async (req, res): Promise<void> => {
-  if (!checkCrm(req, res)) return;
+  if (!await checkCrm(req, res)) return;
   const { id } = req.params;
   const [lead] = await db.select().from(academyLeadsTable).where(eq(academyLeadsTable.id, id)).limit(1);
   if (!lead) { res.status(404).json({ error: "Lead not found" }); return; }
@@ -881,7 +909,7 @@ router.get("/leads/:id", async (req, res): Promise<void> => {
 
 // PATCH /api/academy/leads/:id — update CRM status + notes
 router.patch("/leads/:id", async (req, res): Promise<void> => {
-  if (!checkCrm(req, res)) return;
+  if (!await checkCrm(req, res)) return;
   const { id } = req.params;
   const { crmStatus, crmNotes } = req.body as { crmStatus?: string; crmNotes?: string };
   const allowed = ["novo", "contatado", "qualificado", "convertido", "perdido"];
@@ -900,7 +928,7 @@ router.patch("/leads/:id", async (req, res): Promise<void> => {
 
 // POST /api/academy/leads/:id/enroll — manually enroll lead in funnel
 router.post("/leads/:id/enroll", async (req, res): Promise<void> => {
-  if (!checkCrm(req, res)) return;
+  if (!await checkCrm(req, res)) return;
   const { id } = req.params;
   const [lead] = await db.select().from(academyLeadsTable).where(eq(academyLeadsTable.id, id)).limit(1);
   if (!lead) { res.status(404).json({ error: "Lead not found" }); return; }
@@ -910,7 +938,7 @@ router.post("/leads/:id/enroll", async (req, res): Promise<void> => {
 
 // POST /api/academy/leads/:id/convert — manually mark lead as converted
 router.post("/leads/:id/convert", async (req, res): Promise<void> => {
-  if (!checkCrm(req, res)) return;
+  if (!await checkCrm(req, res)) return;
   const { id } = req.params;
   const [lead] = await db.select().from(academyLeadsTable).where(eq(academyLeadsTable.id, id)).limit(1);
   if (!lead) { res.status(404).json({ error: "Lead not found" }); return; }
@@ -923,7 +951,7 @@ router.post("/leads/:id/convert", async (req, res): Promise<void> => {
 
 // POST /api/academy/funnel-tick (owner only — force-runs the funnel scheduler tick)
 router.post("/funnel-tick", async (req, res): Promise<void> => {
-  if (!checkCrm(req, res)) return;
+  if (!await checkCrm(req, res)) return;
   try {
     await runFunnelSchedulerTick();
     res.json({ ok: true });

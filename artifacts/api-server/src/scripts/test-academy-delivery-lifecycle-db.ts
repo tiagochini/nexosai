@@ -98,6 +98,7 @@ try {
   assert.equal((await read(held.id)).status, "confirmed");
   console.log("PASS: verified refunds revoke access/cancel pending jobs; holds suspend/release canonically; partial/pending refunds and outages handled safely");
   const previousSecret = process.env.ACADEMY_ADMIN_SECRET;
+  process.env.ACADEMY_ALLOW_LEGACY_ADMIN_SECRET = "true";
   const providerConfig = [env.RESEND_API_KEY, env.GMAIL_USER, env.GMAIL_APP_PASSWORD];
   Object.assign(env, { RESEND_API_KEY: "", GMAIL_USER: "", GMAIL_APP_PASSWORD: "" });
   process.env.ACADEMY_ADMIN_SECRET = randomUUID();

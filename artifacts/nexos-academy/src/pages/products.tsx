@@ -4,7 +4,7 @@ import { PRODUCTS } from "@/data/curriculum";
 interface ProductsProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
   hasAccess: boolean;
-  onAccessGranted: (token?: string) => void;
+  onAccessGranted: (token?: string, productId?: string) => void;
   paymentSuccess?: boolean;
 }
 
@@ -83,10 +83,8 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
       const resp = await fetch(`${API_BASE}/verify/${encodeURIComponent(token.trim().toUpperCase())}`);
       const data = await resp.json() as { valid?: boolean; productId?: string; error?: string; email?: string; name?: string };
       if (data.valid) {
-        // Save identifying info for watermark
-        if (data.email) localStorage.setItem("nexos-academy-email", data.email);
-        if (data.name) localStorage.setItem("nexos-academy-name", data.name);
         if (data.productId === "mini-guide") {
+          onAccessGranted(token.trim().toUpperCase(), "mini-guide");
           onNavigate("mini-guide");
           return;
         }

@@ -1,5 +1,9 @@
 # Academy — proteção administrativa
 
+Atualização P0: [sessões individuais, frontend e auditoria](P0_SECURITY_CLOSEOUT.md).
+O contrato por segredo descrito abaixo é histórico; agora exige opt-in explícito
+somente em desenvolvimento/testes e é recusado em produção.
+
 Revisão local: 5 de outubro de 2026. [English](./ACADEMY_ADMIN_SECURITY.en.md).
 
 ## Correção

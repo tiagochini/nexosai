@@ -74,3 +74,4 @@ export * from "./operational-council";
 export * from "./m11-social-intelligence";
 export * from "./academy-access-email-outbox";
 export * from "./academy-gift-batches";
+export * from "./academy-admin-audit";

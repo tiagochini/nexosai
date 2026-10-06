@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { academyAccessHeaders } from "./owner";
 import { CURRICULUM } from "@/data/curriculum";
 import { GLOSSARY } from "@/data/glossary";
 import { getBibliographyForLesson, DIFFICULTY_LABEL, DIFFICULTY_COLOR } from "@/data/bibliography";
@@ -269,7 +270,7 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
     try {
       const res = await fetch(`${API_BASE}/academy/tutor`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...academyAccessHeaders() },
         body: JSON.stringify({
           ...ctx,
           question: q,

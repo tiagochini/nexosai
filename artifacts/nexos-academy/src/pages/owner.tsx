@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { CURRICULUM } from "@/data/curriculum";
 
 // ── Brand Config ─────────────────────────────────────────────────────────────
@@ -60,14 +60,25 @@ interface FunnelStats {
   byStep: FunnelStep[];
 }
 
-const OWNER_PIN = "nexos2025";
 const OWNER_KEY = "nexos-owner-mode";
-const OWNER_SECRET = "nexos2025";
+let ownerAccessToken = "";
+export function academyAccessHeaders(): Record<string, string> {
+  return ownerAccessToken ? { Authorization: `Bearer ${ownerAccessToken}` } : { "X-Academy-Access-Code": localStorage.getItem("nexos-academy-token") ?? "" };
+}
+async function ownerRequest(url: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers); headers.set("Authorization", `Bearer ${ownerAccessToken}`);
+  const response = await fetch(url, { ...init, headers, cache: "no-store" });
+  if (response.status === 401 || response.status === 403) {
+    ownerAccessToken = ""; setOwnerMode(false); window.dispatchEvent(new Event("owner-session-ended"));
+  }
+  if (!response.ok) throw new Error("Solicitação administrativa recusada. Confira sua sessão e os dados.");
+  return response;
+}
 
-// sessionStorage: expires when browser tab/window is closed — PIN required every session
+// Local display flag only. API authorization always checks the individual session.
 export function isOwnerMode(): boolean {
   try {
-    return sessionStorage.getItem(OWNER_KEY) === "true";
+    return !!ownerAccessToken && sessionStorage.getItem(OWNER_KEY) === "true";
   } catch {
     return false;
   }
@@ -160,8 +171,15 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps) {
   const [pin, setPin] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
   const [error, setError] = useState("");
   const [showPin, setShowPin] = useState(false);
+  const giftIntents = useRef(new Map<string, string>());
+  useEffect(() => {
+    const clear = () => { onOwnerChange(false); setLeads([]); setPurchases([]); setGiftCodes([]); setLeadDetail(null); setFunnelStats(null); setError("Sessão encerrada ou usuário não autorizado."); };
+    window.addEventListener("owner-session-ended", clear);
+    return () => window.removeEventListener("owner-session-ended", clear);
+  }, [onOwnerChange]);
 
   const [tab, setTab] = useState<Tab>("leads");
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -225,7 +243,7 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
   const fetchLeads = useCallback(async () => {
     setLeadsLoading(true);
     try {
-      const r = await fetch(`/api/academy/leads?secret=${OWNER_SECRET}&limit=200`);
+      const r = await ownerRequest(`/api/academy/leads?limit=200`);
       const j = await r.json();
       setLeads(j.leads ?? []);
       setLeadsTotal(j.total ?? 0);
@@ -239,7 +257,7 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
   const fetchPurchases = useCallback(async () => {
     setPurchasesLoading(true);
     try {
-      const r = await fetch(`/api/academy/purchases?secret=${OWNER_SECRET}&limit=200`);
+      const r = await ownerRequest(`/api/academy/purchases?limit=200`);
       const j = await r.json();
       setPurchases(j.purchases ?? []);
       setPurchasesTotal(j.total ?? 0);
@@ -253,7 +271,7 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
   const fetchFunnelStats = useCallback(async () => {
     setFunnelLoading(true);
     try {
-      const r = await fetch(`/api/academy/funnel/stats?secret=${OWNER_SECRET}`);
+      const r = await ownerRequest(`/api/academy/funnel/stats`);
       const j = await r.json();
       setFunnelStats(j);
     } catch {
@@ -266,7 +284,7 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
   const fetchGiftCodes = useCallback(async () => {
     setGiftLoading(true);
     try {
-      const r = await fetch(`/api/academy/purchases?secret=${OWNER_SECRET}&limit=500`);
+      const r = await ownerRequest(`/api/academy/purchases?limit=500`);
       const j = await r.json();
       const all: GiftCode[] = j.purchases ?? [];
       setGiftCodes(all.filter((p: GiftCode) => p.amountCents === 0 || p.customerEmail === "brinde@agencianexos.vip" || (j.purchases as GiftCode[]).filter((x: GiftCode) => x.accessToken === p.accessToken && x.amountCents === 0).length > 0));
@@ -283,15 +301,19 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
     setGiftGeneratingProduct(productId);
     setGiftGenerating(true);
     try {
-      const r = await fetch("/api/academy/admin/gift-codes", {
+      const intent = `${count}:${productId}`;
+      const key = giftIntents.current.get(intent) ?? crypto.randomUUID();
+      giftIntents.current.set(intent, key);
+      const r = await ownerRequest("/api/academy/admin/gift-codes", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-admin-secret": OWNER_SECRET },
+        headers: { "Content-Type": "application/json", "Idempotency-Key": key },
         body: JSON.stringify({ count, productId }),
       });
       if (!r.ok) throw new Error("Erro ao gerar");
+      giftIntents.current.delete(intent);
       await fetchGiftCodes();
     } catch {
-      // ignore
+      setError("Não foi possível gerar o lote. A nova tentativa reutilizará a chave da solicitação.");
     } finally {
       setGiftGenerating(false);
       setGiftGeneratingProduct(null);
@@ -313,7 +335,7 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
     setLeadDetail(null);
     setLoadingDetail(true);
     try {
-      const r = await fetch(`/api/academy/leads/${lead.id}?secret=${OWNER_SECRET}`);
+      const r = await ownerRequest(`/api/academy/leads/${lead.id}`);
       const j = await r.json();
       setLeadDetail(j);
     } catch { /* ignore */ }
@@ -325,9 +347,9 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
   const updateStatus = async (leadId: string, status: string) => {
     setSavingStatus(true);
     try {
-      const r = await fetch(`/api/academy/leads/${leadId}`, {
+      const r = await ownerRequest(`/api/academy/leads/${leadId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-admin-secret": OWNER_SECRET },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ crmStatus: status }),
       });
       const j = await r.json();
@@ -341,9 +363,9 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
   const saveNotes = async (leadId: string) => {
     setSavingStatus(true);
     try {
-      await fetch(`/api/academy/leads/${leadId}`, {
+      await ownerRequest(`/api/academy/leads/${leadId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-admin-secret": OWNER_SECRET },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ crmNotes: notesValue }),
       });
       setLeads(prev => prev.map(l => l.id === leadId ? { ...l, crmNotes: notesValue } : l));
@@ -357,8 +379,8 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
   const enrollLead = async (leadId: string) => {
     setSavingStatus(true);
     try {
-      await fetch(`/api/academy/leads/${leadId}/enroll`, {
-        method: "POST", headers: { "x-admin-secret": OWNER_SECRET },
+      await ownerRequest(`/api/academy/leads/${leadId}/enroll`, {
+        method: "POST",
       });
       await openLead(selectedLead!);
       setActionMsg("✓ Lead inscrito no funil");
@@ -369,8 +391,8 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
   const convertLead = async (leadId: string) => {
     setSavingStatus(true);
     try {
-      await fetch(`/api/academy/leads/${leadId}/convert`, {
-        method: "POST", headers: { "x-admin-secret": OWNER_SECRET },
+      await ownerRequest(`/api/academy/leads/${leadId}/convert`, {
+        method: "POST",
       });
       setLeads(prev => prev.map(l => l.id === leadId ? { ...l, crmStatus: "convertido", convertedAt: new Date().toISOString() } : l));
       if (selectedLead) setSelectedLead({ ...selectedLead, crmStatus: "convertido", convertedAt: new Date().toISOString() });
@@ -393,21 +415,26 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
     if (tab === "codigos") fetchGiftCodes();
   }, [isOwner, tab, fetchLeads, fetchPurchases, fetchFunnelStats, fetchGiftCodes]);
 
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (pin === OWNER_PIN) {
+    try {
+      const response = await fetch("/api/auth/login", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: ownerEmail, password: pin }) });
+      if (!response.ok) throw new Error("Login recusado");
+      const session = await response.json() as { accessToken: string };
+      ownerAccessToken = session.accessToken;
+      await ownerRequest("/api/academy/admin/session");
       setOwnerMode(true);
       onOwnerChange(true);
       setError("");
-    } else {
-      setError("PIN incorreto.");
-      setPin("");
-    }
+    } catch { ownerAccessToken = ""; setOwnerMode(false); setError("Login inválido ou usuário sem autorização Academy."); }
+    finally { setPin(""); }
   }
 
   function handleLogout() {
     if (confirm("Sair do modo dono?")) {
       setOwnerMode(false);
+      ownerAccessToken = "";
+      void fetch("/api/auth/logout", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: "{}" });
       onOwnerChange(false);
       onNavigate("home");
     }
@@ -416,9 +443,9 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
   async function confirmPurchase(purchase: Purchase) {
     setConfirmingId(purchase.id);
     try {
-      const r = await fetch(`/api/academy/admin/confirm`, {
+      const r = await ownerRequest(`/api/academy/admin/confirm`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-admin-secret": OWNER_SECRET },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ purchaseId: purchase.id }),
       });
       const j = await r.json() as { ok?: boolean; error?: string };
@@ -491,16 +518,19 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
               N
             </div>
             <h1 className="text-2xl font-bold text-white mb-1">Área do Dono</h1>
-            <p className="text-sm text-[hsl(220_10%_50%)]">Acesso restrito — insira o PIN de administrador</p>
+            <p className="text-sm text-[hsl(220_10%_50%)]">Entre com sua conta individual autorizada para a Academy.</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
+            <input type="email" autoComplete="username" required value={ownerEmail} onChange={e => setOwnerEmail(e.target.value)} placeholder="E-mail da sua conta" className="w-full px-4 py-3 rounded-xl bg-[hsl(220_20%_8%)] text-white" />
             <div className="relative">
               <input
                 type={showPin ? "text" : "password"}
                 value={pin}
                 onChange={e => setPin(e.target.value)}
-                placeholder="PIN de acesso"
+                placeholder="Senha da sua conta"
+                autoComplete="current-password"
+                required
                 className="w-full px-4 py-3 rounded-xl bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_15%)] text-white text-center text-xl tracking-[0.3em] placeholder:tracking-normal placeholder:text-[hsl(220_10%_40%)] focus:outline-none focus:border-[hsl(250_90%_65%)] transition-colors"
                 autoFocus
               />
@@ -1212,7 +1242,7 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
               <div className="space-y-3">
                 {[
                   { title: "Conteúdo 100% desbloqueado", desc: "Você acessa todas as aulas sem pagar" },
-                  { title: "Sem paywall nunca", desc: "O modo dono fica salvo neste navegador" },
+                  { title: "Sessão individual", desc: "A API confere sua autorização e a validade da sessão" },
                   { title: "Badge \"Dono\" visível", desc: "Você sempre sabe que está no modo admin" },
                 ].map(item => (
                   <div key={item.title} className="flex items-start gap-3">
@@ -1231,8 +1261,8 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
                   <p className="text-xs text-[hsl(220_10%_40%)]">Salve este link. Só você sabe que ele existe.</p>
                 </div>
                 <div className="p-4 rounded-xl bg-[hsl(220_20%_8%)]">
-                  <p className="text-xs text-[hsl(220_10%_45%)] uppercase tracking-wider font-semibold mb-1">PIN atual</p>
-                  <code className="text-[hsl(250_90%_75%)] text-sm">{OWNER_PIN}</code>
+                  <p className="text-xs text-[hsl(220_10%_45%)] uppercase tracking-wider font-semibold mb-1">Autenticação</p>
+                  <span className="text-[hsl(250_90%_75%)] text-sm">Sessão individual autorizada no servidor</span>
                   <p className="text-xs text-[hsl(220_10%_40%)] mt-1">Guarde em local seguro.</p>
                 </div>
               </div>

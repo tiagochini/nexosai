@@ -39,6 +39,7 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 export interface TokenPayload {
+  sessionId?: string;
   userId: string;
   workspaceId: string;
   email: string;
@@ -76,14 +77,16 @@ export async function issueTokens(
   user: { id: string; email: string },
   workspaceId: string,
 ): Promise<AuthTokens> {
+  const session = await createRefreshSession(user.id, workspaceId);
   const payload: TokenPayload = {
     userId: user.id,
     workspaceId,
     email: user.email,
+    sessionId: session.refreshToken.split(".")[0],
   };
   return {
     accessToken: signAccess(payload),
-    ...await createRefreshSession(user.id, workspaceId),
+    ...session,
     expiresIn: accessTokenLifetime(payload),
   };
 }
@@ -341,7 +344,7 @@ export async function refreshTokens(
     throw new UnauthorizedError("Selected workspace is no longer available");
   }
 
-  const payload = { userId: user.id, email: user.email, workspaceId: workspace.id };
+  const payload = { userId: user.id, email: user.email, workspaceId: workspace.id, sessionId: decoded.id };
   return {
     accessToken: signAccess(payload),
     expiresIn: accessTokenLifetime(payload),
@@ -351,7 +354,7 @@ export async function refreshTokens(
 
 export function verifyAccessToken(token: string): TokenPayload {
   try {
-    return jwt.verify(token, env.JWT_SECRET) as TokenPayload;
+    return jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] }) as TokenPayload;
   } catch {
     throw new UnauthorizedError("Invalid or expired token");
   }

@@ -12,6 +12,9 @@ const email = `fixture-${randomBytes(8).toString("hex")}@example.invalid`;
 const phone = "+5565999991234";
 const url = `https://example.invalid/private/${password}?access_token=${token}`;
 const lines: string[] = [];
+for (const field of ["lessonTitle", "question", "keyword", "keywords", "highlight", "originalName", "leadName", "pageName", "confirmationCode", "codigo", "rawResponse", "rawEvent", "rawProvider", "errBody", "config", "metadata", "from", "to", "dbUser"]) {
+  assert.deepEqual(sanitizeLogValue({ [field]: "opaque-private-canary-not-a-known-token" }), { [field]: LOG_REDACTED });
+}
 const log = createSafeLogger({ level: "trace", base: { service: "fixture", apiKey: password } },
   { write: (line: string) => { lines.push(line); } });
 const input = { password, Access_Token: token, customer: { email, phone, name: password },

@@ -2,6 +2,10 @@
 
 Updated October 5, 2026. [Português](ACADEMY_DELIVERY_AND_REVERSALS.md).
 
+Update: administrative authentication now uses individual sessions;
+[session contract and audited reconciliation](P0_SECURITY_CLOSEOUT.en.md)
+supersede the shared-secret instructions below. The separate Academy client was adapted.
+
 ## Completed scope
 
 Administrative confirmation, local simulation, checkout resend, administrative resend and gifts now use the durable access-delivery queue. Purchases and delivery intents commit together. Repeated confirmation never creates another delivery. History is retained and only one active attempt is allowed per purchase. Uncertain `sending` attempts require reconciliation, including after process death; they are never blindly retried.
@@ -21,7 +25,7 @@ All administrative routes require configured `x-admin-secret`, never a URL secre
 
 Gift batches accept optional `recipientEmail` and `recipientName`. Unassigned gifts retain usable administrator-issued codes, but delivery is `skipped/GIFT_RECIPIENT_NOT_ASSIGNED`; the placeholder address never receives mail. Assignment also accepts optional `recipientName`. Public checkout resends have a five-minute cooldown and never disclose access codes.
 
-External administrative clients must add the new header for gift/resend routes. No frontend consumers of these routes were found in this repository.
+The separate Academy frontend now uses individual sessions and idempotency keys for gifts. External administrative clients must also follow the current session contract in the P0 closeout document; the shared-secret contract below is historical.
 
 ## Financial reconciliation
 

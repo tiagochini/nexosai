@@ -2,6 +2,10 @@
 
 Atualizado em 05/10/2026. [English](ACADEMY_DELIVERY_AND_REVERSALS.en.md).
 
+Atualização: a autenticação administrativa agora usa sessão individual;
+[contrato e conciliação auditada](P0_SECURITY_CLOSEOUT.md) substituem o segredo
+compartilhado descrito abaixo. O frontend separado da Academy foi adaptado.
+
 ## Escopo concluído
 
 Confirmação administrativa, simulação local, reenvio do checkout, reenvio administrativo e brindes agora usam a fila persistente de acesso. Compra e intenção de envio são gravadas na mesma transação; confirmação repetida não gera outro envio. O histórico é preservado, com uma única tentativa ativa por compra. Resultados incertos (`sending`) exigem conciliação, inclusive quando um processo morre: não se força reenvio automático.
@@ -21,7 +25,7 @@ Todas as rotas administrativas exigem `x-admin-secret` configurado; nunca passe 
 
 O lote aceita `recipientEmail` e `recipientName` opcionais. Sem destinatário, os códigos continuam disponíveis ao administrador, mas o envio fica `skipped/GIFT_RECIPIENT_NOT_ASSIGNED`; o endereço padrão nunca recebe e-mail. `recipientName` também é opcional na atribuição. Reenvio público do checkout tem intervalo de cinco minutos e não devolve código de acesso.
 
-Clientes administrativos externos precisam enviar o novo cabeçalho nas rotas de brindes/reenvios. Nenhum consumidor dessas rotas foi encontrado no frontend deste repositório.
+O frontend separado da Academy foi adaptado para sessão individual e chave de idempotência em brindes. Clientes administrativos externos também devem seguir o contrato atual de sessão descrito no documento de fechamento P0; o contrato de segredo compartilhado abaixo é histórico.
 
 ## Conciliação financeira
 

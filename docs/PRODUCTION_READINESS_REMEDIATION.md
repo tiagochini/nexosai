@@ -2,7 +2,7 @@
 
 English version: [PRODUCTION_READINESS_REMEDIATION.en.md](./PRODUCTION_READINESS_REMEDIATION.en.md)
 
-**Data da revisão:** 03/10/2026  
+**Data da revisão:** 05/10/2026
 **Escopo:** monorepo, API, frontend, banco, Redis, filas, integrações, segurança,
 recuperação, concorrência e qualidade de IA.
 
@@ -10,7 +10,7 @@ recuperação, concorrência e qualidade de IA.
 
 - Build e typecheck aprovados no CI Linux.
 - Scanner de segredos e auditoria do histórico aprovados.
-- PostgreSQL verificado com 172 tabelas e 69 entradas de schema.
+- PostgreSQL verificado com 177 tabelas e 73 entradas de schema após a 0067.
 - Cadastro transacional, cadastro concorrente, créditos concorrentes, fallback de
   orquestração, checkpoint/retomada e saúde operacional aprovados localmente.
 - As 22 capacidades GLP22 permanecem em 20 `PARTIAL`, 2 `BLOCKED` e 0 `HEALTHY`.
@@ -40,14 +40,16 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 - [x] Remover senha administrativa padrão Academy, proteger as 11 rotas
   revisadas e bloquear credenciais em URL; incluir autorização no scheduler manual.
   Evidência local e compatibilidade: [ACADEMY_ADMIN_SECURITY.md](./ACADEMY_ADMIN_SECURITY.md).
-- [ ] Migrar administração Academy para sessão de proprietário e auditar demais rotas/códigos.
+- [x] Migrar administração Academy para sessão individual revogável e UUID de
+  proprietário autorizado; retirar PIN/token mágico do frontend e auditar solicitações.
+  Evidência e ativação: [P0_SECURITY_CLOSEOUT.md](./P0_SECURITY_CLOSEOUT.md).
 - [x] Usar aleatoriedade criptográfica nos códigos Academy de checkout/brindes
   e validar lotes de brindes antes da emissão, mantendo códigos existentes.
   Evidência local: [ACADEMY_ADMIN_SECURITY.md](./ACADEMY_ADMIN_SECURITY.md).
 - [x] Limitar tentativas públicas de validação Academy por IP/sub-rede,
   resistir a cabeçalhos de origem falsificados e autenticar webhook/confirmador simulado.
-- [ ] Compartilhar cotas entre instâncias e revisar proteção,
-  validade/revogação de códigos e exposição de dados pessoais.
+- [x] Compartilhar cotas por Redis, bloquear em indisponibilidade, revisar
+  revogação de códigos, revalidação do cliente, tutor e exposição de dados pessoais.
 - [x] Bloquear webhook de billing sem token válido e exigir privilégio adicional
   para confirmação manual; compartilhar comparação segura com Academy/checkout.
   Evidência local: [BILLING_WEBHOOK_SECURITY.md](./BILLING_WEBHOOK_SECURITY.md).
@@ -58,12 +60,13 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 - [x] Conferir webhook Academy com pagamento, cliente, referência, valor e estado
   no Asaas; confirmar compra/conversão juntas e testar concorrência sem envio real.
   Evidência local: [ACADEMY_PAYMENT_CONFIRMATION.md](./ACADEMY_PAYMENT_CONFIRMATION.md).
-- [ ] Revisar reversões, saldos/compras históricos e recuperação após falha no
-  provedor/banco e retry auditado de entregas incertas.
+- [x] Revisar reversões, dívida e recuperação com mocks/concorrência;
+  confirmar ausência de compras históricas locais e implementar conciliação
+  auditada de entregas incertas. Evidência externa permanece requisito de liberação.
 - [x] Persistir a fila do e-mail de acesso na confirmação Academy por webhook;
   validar retomada de pendentes, claim concorrente e quarentena após queda de processo.
   Evidência local: [ACADEMY_ACCESS_EMAIL_OUTBOX.md](./ACADEMY_ACCESS_EMAIL_OUTBOX.md).
-- [ ] Migrar reenvios/admin/brindes para entrega durável e conciliação autorizada.
+- [x] Migrar reenvios/admin/brindes para entrega durável e conciliação autorizada.
 
 - [x] Remover segredos previamente versionados e limpar o histórico Git.
 - [x] Impedir envio de tokens, chaves e screenshots ao assistente de integrações.
@@ -71,7 +74,9 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 - [x] Escapar valores dinâmicos nos e-mails do funil e de acesso Academy;
   validar e escapar URLs nos atributos dos templates revisados.
   Evidência local: [ACADEMY_FUNNEL_DELIVERY.md](./ACADEMY_FUNNEL_DELIVERY.md).
-- [ ] Concluir auditoria de dados sensíveis nos logs dos demais módulos.
+- [x] Revisar campos dos logs do runtime TypeScript da API, aplicar proteção
+  de texto livre/códigos/metadados e testar canários opacos; serviços externos,
+  scripts de diagnóstico e retenção não são certificados por essa evidência.
 - [x] Proteger logger central/HTTP, erros e bindings filhos contra campos
   sensíveis; remover dados desnecessários nos pontos revisados.
   Escopo e limites: [LOG_SECURITY.md](./LOG_SECURITY.md).
@@ -88,7 +93,16 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
   `SameSite`, com rotação e revogação.
   Procedimento: [AUTH_SESSION_SECURITY.md](./AUTH_SESSION_SECURITY.md).
 
+### P0 — Condições de fechamento ainda abertas
+
+- [ ] Ativar administrador real por UUID e concluir a evidência Asaas sandbox.
+  São condições de ativação do P0 técnico, não realizadas por falta de conta/credencial.
+- [ ] Concluir o build completo/frontend; as tentativas no Windows foram
+  interrompidas após demora excessiva/alto uso de memória. Build da API e tipos passaram.
+
 ### P1 — Dependências e CI
+- [ ] Separar a entrega de material pago estático da Academy para autorização
+  pelo servidor; o controle da interface não é proteção contra extração do bundle.
 
 - [x] Atualizar dependências diretas vulneráveis da API e transitivas corrigidas.
 - [x] Remover a cadeia antiga `html-pdf-node`/Puppeteer não utilizada.
@@ -142,7 +156,10 @@ Cada item deve incluir:
 
 ## 5. Estado de liberação
 
-Enquanto houver item P0 aberto ou vulnerabilidade alta em caminho exposto, a
+As correções do P0 foram implementadas localmente com os limites documentados em
+[P0_SECURITY_CLOSEOUT.md](./P0_SECURITY_CLOSEOUT.md). Isso não autoriza produção:
+administrador real, Asaas sandbox/webhooks, build completo e CI remoto continuam sem validação.
+Enquanto houver condição de ativação do P0 aberta ou vulnerabilidade alta em caminho exposto, a
 liberação recomendada é somente homologação ou canário restrito, sem credenciais
 reais de clientes. Produção aberta exige P0 e P1 concluídos e evidência mínima de
 P2 e P3.
