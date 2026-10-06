@@ -16,6 +16,12 @@
 
 ## Checkpoint transversal — P1/P2 local (06/10/2026)
 
+Correção posterior dos jobs Quality: teste de saúde isolado de banco/Redis e
+chave de criptografia de CI gerada com 32 bytes. Ambos os erros dos logs remotos
+foram corrigidos e reproduzidos/validados localmente; tipos/build da API e
+segurança passaram. [Evidência](./docs/CI_REGRESSION_FIXES.md).
+Próximo checkpoint deste reparo: reexecutar o CI remoto com a revisão corrigida.
+
 - [x] P1: material pago Academy autorizado pelo servidor; dependências, CI
   crítico, bootstrap/rollback e auditoria de histórico preparados e validados
   localmente. Evidência: [P1_CLOSEOUT.md](./docs/P1_CLOSEOUT.md).

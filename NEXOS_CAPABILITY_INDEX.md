@@ -12,6 +12,11 @@
 
 ## 1. Como ler o sistema único
 
+Reparo de CI de 06/10/2026: saúde operacional pura executa sem infraestrutura;
+o job de banco gera uma chave de teste válida de 32 bytes. Testes locais passaram,
+incluindo retomada de conteúdo em PostgreSQL descartável; reexecução remota segue
+pendente. [Evidência](./docs/CI_REGRESSION_FIXES.md).
+
 Checkpoint P3 de 06/10/2026: jornada conectada e entrega Academy em provedores
 simulados, concessões de objeto por lease, regressões de mídia/execução e
 integridade de banco passaram localmente. Dataset/regras de IA cobrem cinco

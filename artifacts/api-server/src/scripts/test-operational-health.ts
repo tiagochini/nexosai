@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildOperationalHealth } from "../routes/health.js";
+import { buildOperationalHealth } from "../modules/operations/operational-health.js";
 import {
   getSchedulerHealth,
   registerScheduler,

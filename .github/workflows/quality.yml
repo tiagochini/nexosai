@@ -45,7 +45,7 @@ jobs:
           pnpm --filter @workspace/api-server run test:billing-settlement
           pnpm --filter @workspace/api-server run test:orchestration-fallback-race
           pnpm --filter @workspace/api-server run test:boot-recovery-safety
-          pnpm --filter @workspace/api-server run test:operational-health
+          env -u DATABASE_URL -u REDIS_URL pnpm --filter @workspace/api-server run test:operational-health
       - name: Credential security regression tests
         run: |
           pnpm run security:check-runtime-logging
@@ -88,8 +88,6 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/nexos_ci
       REDIS_URL: redis://127.0.0.1:6379
       SESSION_SECRET: ci-only-session-signing-fixture
-      # Public fixture key, only for disposable encrypted integration rows.
-      INTEGRATION_TOKEN_ENCRYPTION_KEY: BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=
       APP_URL: http://localhost:8081
       ALLOWED_ORIGINS: http://localhost:8081
     steps:
@@ -102,6 +100,8 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Generate a masked encryption key for disposable test rows
+        run: node scripts/generate-ci-integration-key.mjs
       - name: Bootstrap a disposable database and verify migrations
         run: |
           pnpm --filter @workspace/db run test:bootstrap-rollback

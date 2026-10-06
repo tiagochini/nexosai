@@ -7,6 +7,11 @@
 
 ## 1. Doutrina operacional não negociável
 
+**Reparo de CI (06/10/2026):** builder de saúde isolado das dependências de
+infraestrutura e chave descartável de criptografia gerada com 32 bytes.
+Saúde sem banco/Redis e retomada de conteúdo passaram localmente; aguarda-se
+reexecução dos jobs remotos. [Evidência](./docs/CI_REGRESSION_FIXES.md).
+
 **Checkpoint P3 local (06/10/2026):** jornada com provedores simulados, outbox
 Academy, concessões de objetos vinculadas ao lease e regressões dos contratos
 de mídia/execução foram validados em containers próprios. A migração 0068
