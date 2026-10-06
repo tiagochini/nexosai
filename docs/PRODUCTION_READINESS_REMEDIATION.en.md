@@ -140,6 +140,11 @@ remain pending; this does not certify production readiness.
 
 ### P3 — Product journey and quality
 
+Additional prerequisite completed locally: Docker application with optional
+local or external TLS PostgreSQL, explicit schema tooling and recovery testing.
+[Docker guide (Portuguese)](./DOCKER_DEPLOYMENT.md) and
+[evidence](./DOCKER_DEPLOYMENT_RESULTS.json). No live environment was activated.
+
 - [ ] Complete the sandbox journey: registration → campaign → content →
   publishing → lead → checkout → attribution.
 - [x] Prevent the Academy funnel from marking emails as sent without a configured

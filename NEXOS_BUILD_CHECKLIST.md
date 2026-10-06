@@ -30,6 +30,22 @@
 - **Próximo checkpoint de prontidão:** P3 — jornada sandbox e avaliações de IA;
   os gates de consentimento e homologação real acima continuam obrigatórios.
 
+## Checkpoint anterior ao P3 — implantação Docker (06/10/2026)
+
+- [x] API e frontend em imagens Linux, configuração externa de segredos e Redis
+  privado; PostgreSQL opcional em Compose local ou externo por `DATABASE_URL`.
+- [x] Bootstrap/seed/verificação explícitos nos dois modos, certificado/nome
+  verificados no banco externo, rejeição de hostname incorreto e recuperação
+  após parada do banco sem reiniciar a API.
+- [x] API sem root e gravações persistentes após recriação; build das imagens,
+  typecheck, scanner de segredos e guard de logging aprovados.
+- **Evidência:** [guia Docker](./docs/DOCKER_DEPLOYMENT.md) e
+  [resultado local](./docs/DOCKER_DEPLOYMENT_RESULTS.json).
+- **Limite:** simulação de infraestrutura externa em stack isolado; provedor,
+  domínio HTTPS e CI remotos ainda não ativados. Workers/schedulers continuam
+  no processo atual; não há promoção de maturidade ou certificação de vídeo.
+- **Próximo checkpoint:** P3 — jornada sandbox e qualidade de IA.
+
 ## Checklist dos 12 níveis de maturidade
 
 | Nível | Entrega | Estado | Evidência atual | Próximo critério |

@@ -1,0 +1,62 @@
+services:
+  api:
+    image: ${NEXOS_API_IMAGE:-nexos-api:local}
+    build:
+      context: ../..
+      dockerfile: ops/app/Dockerfile
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    mem_limit: 2g
+    environment:
+      NODE_ENV: production
+      PORT: '8080'
+      DATABASE_MODE: external
+    secrets: [app_env, redis_password]
+    volumes: [recordings:/workspace/artifacts/api-server/uploads]
+    depends_on:
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:8080/api/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 8s
+      retries: 3
+      start_period: 45s
+    networks: [default, database]
+  web:
+    image: ${NEXOS_WEB_IMAGE:-nexos-web:local}
+    build:
+      context: ../..
+      dockerfile: ops/app/Dockerfile.web
+    restart: unless-stopped
+    mem_limit: 256m
+    ports: ["127.0.0.1:${WEB_PORT:-8081}:8080"]
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+  redis:
+    extends:
+      file: ../redis/compose.yml
+      service: redis
+    ports: !reset []
+  db-tools:
+    extends: api
+    profiles: [tools]
+    restart: 'no'
+    healthcheck: { disable: true }
+    command: [/workspace/lib/db/scripts/verify-database.mjs]
+networks:
+  database:
+    name: ${NEXOS_DATABASE_NETWORK:-nexos-database}
+volumes:
+  recordings:
+  redis-data:
+secrets:
+  app_env:
+    file: ${APP_ENV_FILE:?Set the external runtime environment file path}
+  redis_password:
+    file: ${REDIS_PASSWORD_FILE:?Set the Redis secret file path}

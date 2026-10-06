@@ -12,6 +12,12 @@
 
 ## 1. Como ler o sistema único
 
+Implantação anterior ao P3: aplicação Docker com PostgreSQL local opcional ou
+externo com TLS verificado validada em fixtures isoladas, incluindo restauração
+da disponibilidade após queda do banco. Evidência no
+[guia Docker](./docs/DOCKER_DEPLOYMENT.md) e checklist. Ativação real permanece
+pendente e os níveis de maturidade/certificação das capacidades não mudam.
+
 Checkpoint transversal de 06/10/2026: P1 e P2 foram preparados e validados
 localmente, incluindo autorização de conteúdo pago, CI crítico, Redis persistente,
 backup/restauração e recuperação sob falhas/carga. Evidência e limites em

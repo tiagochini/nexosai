@@ -1,0 +1,8 @@
+services:
+  api:
+    secrets: [database_ca]
+  db-tools:
+    secrets: [database_ca]
+secrets:
+  database_ca:
+    file: ${DATABASE_CA_FILE:?Set the PostgreSQL provider CA certificate file path}

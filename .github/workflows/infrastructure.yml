@@ -13,6 +13,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  docker-deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node --test lib/db/scripts/connection-options.test.mjs
+      - name: Docker application with optional local or external TLS PostgreSQL
+        run: node scripts/test-docker-deployment.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docker-deployment-results
+          path: docs/DOCKER_DEPLOYMENT_RESULTS.json
+          if-no-files-found: error
   persistence-recovery-and-load:
     runs-on: ubuntu-latest
     timeout-minutes: 20

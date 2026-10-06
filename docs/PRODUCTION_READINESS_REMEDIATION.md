@@ -140,6 +140,11 @@ continuam pendentes; não constituem homologação de produção.
 
 ### P3 — Jornada e qualidade do produto
 
+Pré-requisito adicional concluído localmente: aplicação Docker com PostgreSQL
+local opcional ou externo via TLS, ferramentas de schema explícitas e teste de
+recuperação. [Guia Docker](./DOCKER_DEPLOYMENT.md) e
+[evidência](./DOCKER_DEPLOYMENT_RESULTS.json). Ambiente real não foi ativado.
+
 - [ ] Concluir jornada sandbox: cadastro → campanha → conteúdo → publicação →
   lead → checkout → atribuição.
 - [x] Impedir que o funil Academy marque e-mails como enviados sem provedor

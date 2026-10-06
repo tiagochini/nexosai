@@ -15,6 +15,7 @@
     "security:audit-history": "node scripts/audit-sensitive-history.mjs",
     "test:p1-local": "node scripts/test-p1-local.mjs",
     "test:p2-local": "node scripts/test-p2-local.mjs",
+    "test:docker-local": "node scripts/test-docker-deployment.mjs",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"

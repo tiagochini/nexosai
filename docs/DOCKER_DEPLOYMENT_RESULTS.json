@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-10-06T12:37:46.771Z",
+  "scope": "Owned Docker deployment fixtures; no production or provider access",
+  "checks": {
+    "local": "PASS optional local PostgreSQL, explicit bootstrap/seed/verify, real production API and frontend proxy, non-root API and persistent recordings",
+    "external": "PASS no PostgreSQL in application stack, independently owned database, verified certificate/hostname, TLS sessions, same schema tooling and application smoke",
+    "tlsNegativeControl": "PASS hostname mismatch rejected; certificate validation is enabled",
+    "externalRecovery": "PASS external database outage makes readiness fail while API survives; existing TLS pool recovers without application restart"
+  }
+}

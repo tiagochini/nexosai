@@ -7,6 +7,11 @@
 
 ## 1. Doutrina operacional não negociável
 
+**Implantação anterior ao P3 (06/10/2026):** imagens Docker e seleção entre
+PostgreSQL local/externo com TLS foram validadas em infraestrutura isolada.
+[Guia e limites](./docs/DOCKER_DEPLOYMENT.md). Esse checkpoint não certifica
+jornada, consentimento ou qualidade de IA; P3 e homologação real permanecem.
+
 **Evidência de infraestrutura (06/10/2026):** P1/P2 preparados e validados
 localmente, conforme [P1_CLOSEOUT](./docs/P1_CLOSEOUT.md),
 [P2_CLOSEOUT](./docs/P2_CLOSEOUT.md) e
