@@ -1,0 +1,38 @@
+name: Infrastructure recovery
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infrastructure-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  persistence-recovery-and-load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Backup authentication and publication safeguards
+        run: node --test scripts/backup-crypto.test.mjs
+      - name: Isolated persistent Redis, encrypted backup, restore and outage/load drills
+        run: pnpm run test:p2-local
+      - name: Upload timing and capacity evidence (no dumps or secrets)
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-infrastructure-results
+          path: docs/P2_VALIDATION_RESULTS.json
+          if-no-files-found: error

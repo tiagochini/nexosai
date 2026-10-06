@@ -2,7 +2,7 @@
 
 English version: [PRODUCTION_READINESS_REMEDIATION.en.md](./PRODUCTION_READINESS_REMEDIATION.en.md)
 
-**Data da revisão:** 05/10/2026
+**Data da revisão:** 06/10/2026
 **Escopo:** monorepo, API, frontend, banco, Redis, filas, integrações, segurança,
 recuperação, concorrência e qualidade de IA.
 
@@ -123,11 +123,20 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 
 ### P2 — Infraestrutura e recuperação
 
-- [ ] Atualizar Redis para versão suportada, preferencialmente Redis 7.
-- [ ] Configurar Redis como serviço persistente e monitorado.
-- [ ] Testar backup e restauração completos.
-- [ ] Executar testes de falha de PostgreSQL, Redis e provedores externos.
-- [ ] Medir carga, latência, saturação e recuperação para concorrência real.
+- [x] Preparar Redis 7.4 suportado e validar localmente sua configuração.
+- [x] Configurar Redis persistente, autenticado e monitorado, com AOF e volume.
+- [x] Testar backup cifrado e restauração de todo o banco e dos dados Redis
+  em destinos novos; comparar schema, linhas, valores e TTLs.
+- [x] Executar falhas reais de PostgreSQL/Redis e falhas de provedores em
+  servidor HTTP de loopback, incluindo timeout e resposta inválida.
+- [x] Medir carga HTTP transacional, latência, saturação do pool e recuperação
+  a 1, 8 e 32 clientes concorrentes, com saldo/extrato e replay verificados.
+
+P2 concluído no escopo autorizado de preparação e validação **local**.
+Procedimentos, limites e evidência: [P2_CLOSEOUT.md](./P2_CLOSEOUT.md) e
+[P2_VALIDATION_RESULTS.json](./P2_VALIDATION_RESULTS.json). Ativação em servidor,
+armazenamento externo/mídia, volume representativo e execução remota do novo CI
+continuam pendentes; não constituem homologação de produção.
 
 ### P3 — Jornada e qualidade do produto
 

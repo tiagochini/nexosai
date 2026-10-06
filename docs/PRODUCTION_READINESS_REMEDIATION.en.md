@@ -2,7 +2,7 @@
 
 Versão em português: [PRODUCTION_READINESS_REMEDIATION.md](./PRODUCTION_READINESS_REMEDIATION.md)
 
-**Review date:** October 5, 2026
+**Review date:** October 6, 2026
 **Scope:** monorepo, API, frontend, database, Redis, queues, integrations,
 security, recovery, concurrency, and AI quality.
 
@@ -123,12 +123,20 @@ The system should only be considered ready for open production when:
 
 ### P2 — Infrastructure and recovery
 
-- [ ] Upgrade Redis to a supported release, preferably Redis 7.
-- [ ] Configure Redis as a persistent, monitored service.
-- [ ] Test complete backup and restore procedures.
-- [ ] Exercise PostgreSQL, Redis, and external-provider failure scenarios.
-- [ ] Measure load, latency, saturation, and recovery under realistic
-  concurrency.
+- [x] Prepare supported Redis 7.4 and validate its configuration locally.
+- [x] Configure persistent, authenticated and monitored Redis with AOF and a volume.
+- [x] Test encrypted full database and Redis backups restored into new targets;
+  compare schema, rows, values and TTLs.
+- [x] Exercise real PostgreSQL/Redis outages and provider failures through a
+  loopback HTTP server, including timeouts and malformed responses.
+- [x] Measure transactional HTTP load, latency, pool saturation and recovery
+  with 1, 8 and 32 concurrent clients, verifying balances, ledger and replay.
+
+P2 is complete within the authorized **local** preparation and validation scope.
+Procedures, limits and evidence: [P2_CLOSEOUT.en.md](./P2_CLOSEOUT.en.md) and
+[P2_VALIDATION_RESULTS.json](./P2_VALIDATION_RESULTS.json). Server activation,
+external storage/media, representative data volumes and the new remote CI run
+remain pending; this does not certify production readiness.
 
 ### P3 — Product journey and quality
 

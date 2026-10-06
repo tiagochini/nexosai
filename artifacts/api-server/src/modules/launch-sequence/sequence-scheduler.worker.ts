@@ -11,6 +11,7 @@ import {
   contentPiecesTable,
 } from "@workspace/db";
 import { env } from "../../lib/env.js";
+import { redisConnectionOptions } from '../../lib/redis-connection.js';
 import { logger } from "../../lib/logger.js";
 import { sendEmailDispatch } from "../email-dispatch/email-dispatch.service.js";
 import { sendWhatsAppDispatch, createWhatsAppDispatch, sendWhatsAppSystemNotification, getWorkspaceOwnerContact } from "../whatsapp/whatsapp.service.js";
@@ -25,16 +26,7 @@ import { executeFirstTouch, getFirstTouchAdapter, setFirstTouchAdapter, type Fir
 
 export const SEQUENCE_SCHEDULER_QUEUE_NAME = QUEUE_NAMES.SEQUENCE_SCHEDULER;
 
-const redisConnection = {
-  url: env.REDIS_URL,
-  maxRetriesPerRequest: null,
-  enableReadyCheck: false,
-  lazyConnect: true,
-  retryStrategy: (times: number) => {
-    if (times > 3) return null;
-    return Math.min(times * 1000, 5000);
-  },
-};
+const redisConnection = redisConnectionOptions('worker');
 
 let worker: Worker | null = null;
 let schedulerQueue: Queue | null = null;
@@ -931,7 +923,7 @@ export async function initSequenceScheduler(options: SequenceSchedulerOptions = 
 
   if (env.REDIS_URL && !options.disableRedis) {
     try {
-      schedulerQueue = new Queue(SEQUENCE_SCHEDULER_QUEUE_NAME, { connection: redisConnection });
+      schedulerQueue = new Queue(SEQUENCE_SCHEDULER_QUEUE_NAME, { connection: redisConnectionOptions('producer') });
       await schedulerQueue.upsertJobScheduler(
         "sequence-tick",
         { every: schedulerEveryMs },

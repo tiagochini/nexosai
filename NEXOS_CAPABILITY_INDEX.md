@@ -12,6 +12,13 @@
 
 ## 1. Como ler o sistema único
 
+Checkpoint transversal de 06/10/2026: P1 e P2 foram preparados e validados
+localmente, incluindo autorização de conteúdo pago, CI crítico, Redis persistente,
+backup/restauração e recuperação sob falhas/carga. Evidência e limites em
+[P1](./docs/P1_CLOSEOUT.md), [P2](./docs/P2_CLOSEOUT.md) e no checklist canônico.
+Essa prova de infraestrutura não altera os níveis M11/M12 nem certifica
+capacidades GLP22; jornada sandbox, avaliações de IA e ativação real permanecem.
+
 O NexOS possui duas dimensões complementares:
 
 1. **12 estágios do ciclo operacional** — descrevem a jornada completa executada pelo NexOS, da fundação à homologação.

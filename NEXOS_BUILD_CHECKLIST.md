@@ -4,7 +4,7 @@
 >
 > Este arquivo responde três perguntas: **onde estamos**, **o que foi comprovado** e **qual é o próximo checkpoint**.
 
-Última atualização: **24 de setembro de 2026**
+Última atualização: **6 de outubro de 2026**
 
 ## Estado executivo
 
@@ -13,6 +13,22 @@
 - **Último nível concluído:** M10 — Council operacional;
 - **Checkpoint atual:** auditoria dos quatro briefs registrada em `research/audit-fullstack-realization-vs-briefs.md`; publicação social implícita e agendamentos sem prévia/autorização agora falham fechados; preview-confirm explícito permanece disponível e passou em Graph simulado. M11 e M12 seguem incompletos; M10 é o último nível concluído;
 - **Próximo checkpoint:** vincular aprovação da peça ao payload/plano/contas, criar autorização versionada para agendamento/autopublicação e reconciliar filas bloqueadas sem inventar consentimento; então homologar Meta real e completar o lifecycle com entrega e readback.
+
+## Checkpoint transversal — P1/P2 local (06/10/2026)
+
+- [x] P1: material pago Academy autorizado pelo servidor; dependências, CI
+  crítico, bootstrap/rollback e auditoria de histórico preparados e validados
+  localmente. Evidência: [P1_CLOSEOUT.md](./docs/P1_CLOSEOUT.md).
+- [x] P2: Redis 7.4 autenticado/AOF, restauração cifrada integral, quedas reais
+  de Redis/PostgreSQL, recuperação de produtores/workers, falhas de provedores
+  em loopback e carga transacional concorrente passaram em containers isolados.
+  Evidência: [P2_CLOSEOUT.md](./docs/P2_CLOSEOUT.md) e
+  [resultados medidos](./docs/P2_VALIDATION_RESULTS.json).
+- **Limite:** escopo local; CI remoto, ativação/backup externo e jornada real
+  continuam pendentes. M10 permanece o último nível concluído; M11/M12 e os
+  estados de capacidades GLP22 não são promovidos por estes testes.
+- **Próximo checkpoint de prontidão:** P3 — jornada sandbox e avaliações de IA;
+  os gates de consentimento e homologação real acima continuam obrigatórios.
 
 ## Checklist dos 12 níveis de maturidade
 

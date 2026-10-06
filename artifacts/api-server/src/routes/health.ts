@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db } from "@workspace/db";
+import { db, pool } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { env } from "../lib/env.js";
@@ -13,10 +13,10 @@ const startedAt = new Date().toISOString();
 const PROBE_TIMEOUT_MS = 2_000;
 
 function within<T>(operation: Promise<T>): Promise<T> {
-  return Promise.race([
-    operation,
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("probe timeout")), PROBE_TIMEOUT_MS)),
-  ]);
+  let timer: ReturnType<typeof setTimeout>;
+  return Promise.race([operation, new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('probe timeout')), PROBE_TIMEOUT_MS);
+  })]).finally(() => clearTimeout(timer));
 }
 
 type Backlog = { waiting: number; active: number; delayed: number; failed: number };
@@ -98,7 +98,7 @@ export async function collectOperationalHealth() {
   const redisStarted = Date.now();
   let redisOk = false;
   try {
-    redisOk = await within(isRedisAvailable());
+    redisOk = await within(isRedisAvailable({ fresh: true }));
   } catch {
     // Redis has a direct-execution fallback; report it below without error detail.
   }
@@ -129,7 +129,8 @@ export async function collectOperationalHealth() {
     env: env.NODE_ENV,
     startedAt,
     uptime: Math.floor(process.uptime()),
-    services: health.services,
+    services: { ...health.services, database: { ...health.services.database,
+      pool: { total: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount, max: pool.options.max } } },
     schedulers: health.schedulers,
   };
 }
@@ -144,7 +145,9 @@ router.get("/livez", (_req, res): void => {
 
 router.get("/readyz", async (_req, res): Promise<void> => {
   const health = await collectOperationalHealth();
-  const ready = health.statusCode < 500;
+  // Redis backs security quotas; optional job fallbacks do not make protected
+  // requests ready when that dependency is unavailable.
+  const ready = health.statusCode < 500 && health.services.redis.ok;
   res.status(ready ? 200 : 503).json({ status: ready ? "ready" : "not_ready" });
 });
 

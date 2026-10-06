@@ -2,24 +2,16 @@ import { Queue, Worker, QueueEvents } from "bullmq";
 import Redis from "ioredis";
 import { env } from "../../lib/env.js";
 import { logger } from "../../lib/logger.js";
+import { redisConnectionOptions } from '../../lib/redis-connection.js';
 
-const connection = {
-  url: env.REDIS_URL,
-  maxRetriesPerRequest: null,
-  enableReadyCheck: false,
-  lazyConnect: true,
-  retryStrategy: (times: number) => {
-    if (times > 3) return null;
-    return Math.min(times * 1000, 5000);
-  },
-};
+const connection = redisConnectionOptions('producer');
 
 // Cache result for 10s to avoid hammering Redis on every enqueue
 let _redisAvailableCache: { ok: boolean; at: number } | null = null;
 
-export async function isRedisAvailable(): Promise<boolean> {
+export async function isRedisAvailable(options: { fresh?: boolean } = {}): Promise<boolean> {
   const now = Date.now();
-  if (_redisAvailableCache && now - _redisAvailableCache.at < 10_000) {
+  if (!options.fresh && _redisAvailableCache && now - _redisAvailableCache.at < 10_000) {
     return _redisAvailableCache.ok;
   }
   if (!env.REDIS_URL) {
@@ -62,7 +54,7 @@ export async function isRedisAvailable(): Promise<boolean> {
   } finally {
     // disconnect also handles a timed-out connection attempt without waiting for
     // ioredis retries; this probe must never leave a health-check socket behind.
-    if (probe) await probe.quit().catch(() => probe?.disconnect());
+    probe?.disconnect();
   }
 }
 
@@ -81,7 +73,7 @@ export function buildEnvironmentQueueName(
   baseName: string,
   options: { queuePrefix?: string; nodeEnv?: string } = {},
 ): string {
-  const rawPrefix = options.queuePrefix
+  const rawPrefix = options.queuePrefix ?? process.env['QUEUE_PREFIX']
     ?? ((options.nodeEnv ?? process.env["NODE_ENV"]) === "production" ? "prod" : "dev");
   const normalizedPrefix = rawPrefix.replace(/[^a-zA-Z0-9_-]/g, "-").replace(/-+$/g, "");
   return normalizedPrefix ? `${normalizedPrefix}-${baseName}` : baseName;
@@ -104,6 +96,7 @@ const queues = new Map<string, Queue>();
 export function getQueue(name: QueueName): Queue {
   if (!queues.has(name)) {
     const queue = new Queue(name, { connection });
+    queue.on('error', () => undefined); // Health probes expose dependency state without unhandled events.
     queues.set(name, queue);
     logger.info({ queue: name }, "Queue initialized");
   }
@@ -181,7 +174,7 @@ export async function closeAllQueues(): Promise<void> {
 // worker process was killed by the server restart. Removing them prevents the
 // dedup check from blocking new user-triggered executions.
 export async function drainQueueAtBoot(name: QueueName): Promise<void> {
-  if (!connection.url) return; // Redis not configured — nothing to drain
+  if (!env.REDIS_URL) return; // Redis not configured — nothing to drain
   try {
     const queue = getQueue(name);
     // clean(grace=0, limit=1000, type) removes all jobs of that type instantly

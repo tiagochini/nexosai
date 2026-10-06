@@ -1,0 +1,26 @@
+services:
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    mem_limit: 768m
+    stop_grace_period: 30s
+    command: ["sh", "/etc/nexos/start.sh"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    secrets: [redis_password]
+    volumes:
+      - redis-data:/data
+      - ./redis.conf:/etc/nexos/redis.conf:ro
+      - ./start.sh:/etc/nexos/start.sh:ro
+      - ./healthcheck.sh:/etc/nexos/healthcheck.sh:ro
+    healthcheck:
+      test: ["CMD", "sh", "/etc/nexos/healthcheck.sh"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+secrets:
+  redis_password:
+    file: ${REDIS_PASSWORD_FILE:?Set a path to the external Redis secret file}
+volumes:
+  redis-data:

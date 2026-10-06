@@ -1,0 +1,127 @@
+{
+  "generatedAt": "2026-10-06T12:16:11.945Z",
+  "scope": "Owned local containers and inert fixtures; no external provider calls",
+  "checks": {
+    "redisPolicy": "PASS authenticated, persistent AOF, noeviction, monitored health",
+    "concurrentLedger": "PASS 192 unique charges and 32 replays produce one additional debit",
+    "redisCrashPersistence": "PASS SIGKILL and restart retain acknowledged fixture and delayed BullMQ job",
+    "redisOutage": "PASS live API, unready service, quotas and producer reject; same producer/worker recover after prolonged outage without API restart",
+    "postgresOutage": "PASS API survives idle pool errors; dependency rejects and existing pool recovers with ledger intact",
+    "providerFailures": "PASS billing and Academy reject loopback HTTP 429, 503, malformed JSON and timed-out requests without provider detail",
+    "redisMemoryPressure": "PASS OOM rejects oversized writes without evicting durable keys",
+    "fullRestore": "PASS every public table/row digest, schema verifier, encrypted integration ciphertext, Redis value/type/TTL and delayed queue restored"
+  },
+  "load": [
+    {
+      "route": "/balance",
+      "concurrency": 1,
+      "requests": 96,
+      "errors": 0,
+      "elapsedMs": 145,
+      "requestsPerSecond": 661,
+      "p50Ms": 1,
+      "p95Ms": 2,
+      "maxMs": 5,
+      "peakPoolWaiting": 0
+    },
+    {
+      "route": "/deduct",
+      "concurrency": 1,
+      "requests": 64,
+      "errors": 0,
+      "elapsedMs": 616,
+      "requestsPerSecond": 104,
+      "p50Ms": 9,
+      "p95Ms": 11,
+      "maxMs": 19,
+      "peakPoolWaiting": 0
+    },
+    {
+      "route": "/balance",
+      "concurrency": 8,
+      "requests": 96,
+      "errors": 0,
+      "elapsedMs": 52,
+      "requestsPerSecond": 1838,
+      "p50Ms": 3,
+      "p95Ms": 16,
+      "maxMs": 17,
+      "peakPoolWaiting": 0
+    },
+    {
+      "route": "/deduct",
+      "concurrency": 8,
+      "requests": 64,
+      "errors": 0,
+      "elapsedMs": 344,
+      "requestsPerSecond": 186,
+      "p50Ms": 16,
+      "p95Ms": 219,
+      "maxMs": 331,
+      "peakPoolWaiting": 0
+    },
+    {
+      "route": "/balance",
+      "concurrency": 32,
+      "requests": 96,
+      "errors": 0,
+      "elapsedMs": 51,
+      "requestsPerSecond": 1881,
+      "p50Ms": 15,
+      "p95Ms": 22,
+      "maxMs": 48,
+      "peakPoolWaiting": 8
+    },
+    {
+      "route": "/deduct",
+      "concurrency": 32,
+      "requests": 64,
+      "errors": 0,
+      "elapsedMs": 367,
+      "requestsPerSecond": 174,
+      "p50Ms": 166,
+      "p95Ms": 201,
+      "maxMs": 220,
+      "peakPoolWaiting": 22
+    },
+    {
+      "route": "/saturation",
+      "concurrency": 32,
+      "requests": 64,
+      "errors": 0,
+      "elapsedMs": 1065,
+      "requestsPerSecond": 60,
+      "p50Ms": 456,
+      "p95Ms": 606,
+      "maxMs": 608,
+      "peakPoolWaiting": 22
+    }
+  ],
+  "redisVersion": "7.4.9",
+  "dockerResources": "20 CPUs / 12468797440 bytes RAM",
+  "dockerStats": "nexos-p2-tests-postgres-1: CPU=0.06% RAM=92.07MiB / 11.61GiB\nnexos-p2-tests-redis-1: CPU=3.55% RAM=5.316MiB / 768MiB\nnexos-p2-tests-redis-restore-1: CPU=0.31% RAM=7.117MiB / 11.61GiB",
+  "redisCrashRecoveryMs": 6666,
+  "redisOutageRecoveryMs": 6753,
+  "postgresOutageRecoveryMs": 3177,
+  "providerFailures": {
+    "rejected": 8,
+    "elapsedMs": 10029
+  },
+  "backup": {
+    "tables": 177,
+    "rows": 288,
+    "redisKeys": 25,
+    "archives": {
+      "postgres": {
+        "bytes": 679717,
+        "sha256": "5b102b496e6425a79013585a09316b448ac1310176814b37ac1b02f28a5a2290"
+      },
+      "redis": {
+        "bytes": 2713,
+        "sha256": "121f1d03949420c7fda488c85543c5e5e713017e1cb2b76de85c2b77c36159e0"
+      }
+    },
+    "restoreMs": 7997,
+    "encryptedTransport": "AES-256-GCM; wrong-key and tamper rejection passed"
+  }
+}

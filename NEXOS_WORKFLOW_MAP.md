@@ -7,6 +7,13 @@
 
 ## 1. Doutrina operacional não negociável
 
+**Evidência de infraestrutura (06/10/2026):** P1/P2 preparados e validados
+localmente, conforme [P1_CLOSEOUT](./docs/P1_CLOSEOUT.md),
+[P2_CLOSEOUT](./docs/P2_CLOSEOUT.md) e
+[checklist canônico](./NEXOS_BUILD_CHECKLIST.md). Recuperação, persistência e carga
+de fixtures sustentam os gates de resiliência; homologação externa, consentimento,
+jornada e qualidade da IA continuam exigindo suas próprias evidências.
+
 O NexOSAI não é uma coleção de ferramentas que o cliente precisa operar. É uma **agência autônoma de marketing digital**, monitorada pelo cliente.
 
 O usuário fornece o briefing e decide somente o que é material ou financeiramente relevante:

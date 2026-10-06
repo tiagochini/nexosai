@@ -15,18 +15,10 @@ import { bridgeCampaignToSequence } from "../launch-sequence/sequence-bridge.ser
 import { enforceLaunchAutonomyGate, enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import { logger } from "../../lib/logger.js";
 import { env } from "../../lib/env.js";
+import { redisConnectionOptions } from '../../lib/redis-connection.js';
 import { captureTerminalOrchestrationFailure, markDeadLetterReplayCompleted } from "./dead-letter.service.js";
 
-const redisConnection = {
-  url: env.REDIS_URL,
-  maxRetriesPerRequest: null,
-  enableReadyCheck: false,
-  lazyConnect: true,
-  retryStrategy: (times: number) => {
-    if (times > 3) return null;
-    return Math.min(times * 1000, 5000);
-  },
-};
+const redisConnection = redisConnectionOptions('worker');
 
 // ── Job processors ────────────────────────────────────────────────────────────
 
