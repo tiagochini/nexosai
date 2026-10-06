@@ -16,6 +16,14 @@
 
 ## Checkpoint transversal — isolamento de usuários e projetos (06/10/2026)
 
+**Ativação real P0 — checkpoint de 06/10/2026:** por autorização explícita,
+`founder@nexos.ai` foi criado como primeiro usuário master local. UUID Academy,
+login, sessão, revogação e auditoria passaram por HTTP; segredo legado desativado.
+A credencial disponível retornou 401 no Asaas sandbox; o token local foi preparado, mas faltam chave válida
+e URL pública da aplicação para o webhook. Não houve cobrança ou implantação
+externa. M10/M11/M12 permanecem no estado anterior.
+[Evidência e requisitos](./docs/P0_REAL_ACTIVATION_STATUS.md).
+
 **Isolamento de projetos e usuários (06/10/2026):** ownership atual verificado
 por requisição; memória e contexto vinculados a workspace/projeto; referências
 entre projetos removidas; configurações concorrentes de agentes isoladas;

@@ -1,9 +1,15 @@
 # Fechamento técnico do P0
 
 Status: implementação, build completo e testes locais concluídos; fechamento
-para liberação ainda pendente de administrador real e evidência Asaas sandbox.
+para liberação ainda pendente de evidência Asaas sandbox e ativação externa.
 
 05/10/2026. [English](P0_SECURITY_CLOSEOUT.en.md).
+
+Ativação local em 06/10/2026: por autorização do usuário, `founder@nexos.ai`
+foi cadastrado como primeiro usuário master; seu UUID foi autorizado na Academy.
+Login, sessão ativa, bloqueios e auditoria passaram. A credencial Asaas disponível
+retornou 401 no sandbox; token local preparado; chave válida e endpoint público permanecem
+pendentes. [Evidência atual e requisitos](./P0_REAL_ACTIVATION_STATUS.md).
 
 ## Implementado e validado localmente
 
@@ -18,11 +24,11 @@ para liberação ainda pendente de administrador real e evidência Asaas sandbox
 
 ## Ativação segura
 
-1. Cadastre normalmente a conta real do administrador. Configure `ACADEMY_ADMIN_USER_IDS` com seu UUID (separado por vírgula para mais de um). Não use e-mail como critério de privilégio. Entre novamente para receber token vinculado à sessão. Banco local está sem usuários; nenhum administrador ou senha foi inventado.
+1. Cadastre normalmente a conta real do administrador. Configure `ACADEMY_ADMIN_USER_IDS` com seu UUID (separado por vírgula para mais de um). Não use e-mail como critério de privilégio. Entre novamente para receber token vinculado à sessão. A conta `founder@nexos.ai` foi criada localmente por autorização explícita em 06/10/2026; seu UUID é `dc97c52d-3769-4be3-bed1-c4239cc40796`. Senha inicial privada, fora do Git.
 2. Mantenha `ACADEMY_ALLOW_LEGACY_ADMIN_SECRET=false`. O modo legado só existe para compatibilidade explícita em desenvolvimento/testes e nunca funciona em produção. As rotas de sessão/conciliação recusam essa alternativa em qualquer ambiente.
 3. Aplique `0067_academy_admin_audit.sql` antes da API nova. Preserve as tabelas em eventual rollback; voltar ao código antigo reintroduz o acesso compartilhado e não deve ser uma estratégia de produção.
 4. Configure Redis privado/persistente e a lista exata de proxies confiáveis. As cotas são por origem, inclusive para alunos atrás de NAT: avalie esse limite em homologação. Não remova o bloqueio em falhas para contornar indisponibilidade.
-5. Configure a credencial do Asaas sandbox e os tokens/eventos dos webhooks; execute a jornada sandbox autorizada antes de ativar produção. A configuração local não contém `ASAAS_API_KEY`, logo essa validação externa não foi executada. Nenhum pagamento, e-mail ou estorno real foi feito.
+5. Configure a credencial do Asaas sandbox e os tokens/eventos dos webhooks; execute a jornada sandbox autorizada antes de ativar produção. A credencial legada configurada retornou 401 no sandbox em 06/10/2026; a jornada externa permanece pendente. Nenhum pagamento, e-mail ou estorno real foi feito.
 
 ## Conciliação de envio incerto
 
@@ -53,4 +59,4 @@ A auditoria anterior usava `--prod` e não cobria ferramentas de desenvolvimento
 
 O app principal passou seu orçamento de JavaScript inicial (449.1 KiB, limite 500 KiB). Avisos de chunks grandes na Academy/landing e avisos de sourcemap em componentes do app continuam não bloqueantes; otimização destes bundles não foi declarada concluída. Builds locais não certificam uma jornada real de navegador nem o CI Linux.
 
-Fechamento técnico local não é liberação de produção. Restam configuração do administrador real, credencial/webhooks Asaas, sandbox e execução remota autorizada. Retenção/acesso de logs, consoles de terceiros, scripts diagnósticos e serviços Python não são certificados por esse guard. O curso contém materiais estáticos no frontend: essas correções protegem administração/API/tutor, mas não são DRM; entrega de material pago exclusivamente pelo servidor é uma frente separada de licenciamento.
+Fechamento técnico local não é liberação de produção. A conta master foi ativada e testada localmente. Restam ativação no ambiente externo, credencial/webhooks Asaas, jornada sandbox e execução remota autorizada. Retenção/acesso de logs, consoles de terceiros, scripts diagnósticos e serviços Python não são certificados por esse guard. O curso contém materiais estáticos no frontend: essas correções protegem administração/API/tutor, mas não são DRM; entrega de material pago exclusivamente pelo servidor é uma frente separada de licenciamento.

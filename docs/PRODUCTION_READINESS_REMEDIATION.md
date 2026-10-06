@@ -95,8 +95,15 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
 
 ### P0 — Condições de fechamento ainda abertas
 
-- [ ] Ativar administrador real por UUID e concluir a evidência Asaas sandbox.
-  São condições de ativação do P0 técnico, não realizadas por falta de conta/credencial.
+- [x] Administrador real **local** criado por autorização explícita:
+  `founder@nexos.ai`, UUID `dc97c52d-3769-4be3-bed1-c4239cc40796`. Login,
+  autorização UUID/sessão, revogação e auditoria foram comprovados por HTTP.
+  [Evidência sanitizada](./P0_REAL_ADMIN_ACTIVATION.json).
+- [ ] Provisionar/autorizar a conta no banco do ambiente externo; UUID local
+  e configuração `.env.local` não representam implantação em produção.
+- [ ] Concluir a evidência Asaas sandbox: a credencial disponível retornou 401
+  no sandbox; token local preparado; chave válida e URL pública do webhook ainda faltam.
+  [Inspeção e requisitos de continuação](./P0_REAL_ACTIVATION_STATUS.md).
 - [x] Concluir o build completo/frontend e tipos: Rollup fixado em 4.63.6 após
   diagnóstico/comparação local. Auditoria inclui ferramentas e passou sem vulnerabilidades conhecidas.
 
@@ -200,7 +207,7 @@ Cada item deve incluir:
 
 As correções do P0 foram implementadas localmente com os limites documentados em
 [P0_SECURITY_CLOSEOUT.md](./P0_SECURITY_CLOSEOUT.md). Isso não autoriza produção:
-administrador real, Asaas sandbox/webhooks e CI remoto continuam sem validação; build completo local passou.
+administrador validado localmente; ativação externa, Asaas sandbox/webhooks e CI remoto continuam pendentes; build completo local passou.
 Enquanto houver condição de ativação do P0 aberta ou vulnerabilidade alta em caminho exposto, a
 liberação recomendada é somente homologação ou canário restrito, sem credenciais
 reais de clientes. Produção aberta exige P0 e P1 concluídos e evidência mínima de

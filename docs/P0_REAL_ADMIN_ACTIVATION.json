@@ -1,0 +1,23 @@
+{
+  "verifiedAt": "2026-10-06T21:05:59.581Z",
+  "scope": "Configured local PostgreSQL and temporary loopback HTTP server; no deployment",
+  "email": "founder@nexos.ai",
+  "userId": "dc97c52d-3769-4be3-bed1-c4239cc40796",
+  "workspaceId": "a15c8db7-c1e2-4b59-9071-617a7ba55aaf",
+  "checks": {
+    "firstUserCreated": true,
+    "passwordLogin": "PASS",
+    "uuidAuthorization": "PASS",
+    "activeWorkspaceOwnership": "PASS",
+    "noAuthorization": "401",
+    "tokenWithoutSession": "401",
+    "revokedSession": "401",
+    "persistedAdminAudit": "PASS"
+  },
+  "auditId": "c8b5f6af-8118-4834-ba01-75ecf33dc440",
+  "emailOwnershipVerified": false,
+  "externalProviderCalls": 0,
+  "testSessionsRevoked": true,
+  "restartConfiguredApiRequired": true,
+  "asaasSandboxJourney": "BLOCKED missing valid key and public application webhook URL"
+}
