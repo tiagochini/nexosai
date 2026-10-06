@@ -9,7 +9,7 @@
  */
 
 import { db, campaignsTable, campaignAgentsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc , and } from "drizzle-orm";
 import { NotFoundError } from "../../lib/errors.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -294,7 +294,7 @@ export async function getDecisionTrace(
       intakeData: campaignsTable.intakeData,
     })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
 
   if (!row) throw new NotFoundError("Campaign not found");

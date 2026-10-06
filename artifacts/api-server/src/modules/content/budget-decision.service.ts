@@ -23,27 +23,27 @@ export interface BudgetDecisionResult {
   effectiveBudget: number;
 }
 
-async function loadBrainData(campaignId: string): Promise<Record<string, unknown>> {
+async function loadBrainData(campaignId: string, workspaceId: string): Promise<Record<string, unknown>> {
   const [row] = await db
     .select({ brainData: (campaignsTable as any).brainData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
   return (row?.brainData ?? {}) as Record<string, unknown>;
 }
 
-async function loadIntakeData(campaignId: string): Promise<Record<string, unknown>> {
+async function loadIntakeData(campaignId: string, workspaceId: string): Promise<Record<string, unknown>> {
   const [row] = await db
     .select({ intakeData: (campaignsTable as any).intakeData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
   return (row?.intakeData ?? {}) as Record<string, unknown>;
 }
 
-async function loadStrategyAndProfile(campaignId: string) {
+async function loadStrategyAndProfile(campaignId: string, workspaceId: string) {
   const [row] = await db
     .select({ brainData: (campaignsTable as any).brainData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
   const brain = (row?.brainData ?? {}) as Record<string, unknown>;
   const strategy = (brain["strategyData"] ?? {}) as Record<string, unknown>;
@@ -71,14 +71,14 @@ async function deleteExistingBudgetProposedPieces(
 }
 
 async function saveBudgetToIntake(
-  campaignId: string,
+  campaignId: string, workspaceId: string,
   trafficBudget: number,
   log: Logger,
 ): Promise<void> {
   const [row] = await db
     .select({ intakeData: (campaignsTable as any).intakeData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
   const existing = ((row?.intakeData ?? {}) as Record<string, unknown>);
   await db
@@ -92,21 +92,21 @@ async function saveBudgetToIntake(
       } as any,
       updatedAt: new Date(),
     })
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
   log.info({ campaignId, trafficBudget }, "[BUDGET-DECISION] Confirmed budget saved to intakeData");
 }
 
 async function clearBudgetProposalFromBrain(
-  campaignId: string,
+  campaignId: string, workspaceId: string,
   log: Logger,
 ): Promise<void> {
-  const brain = await loadBrainData(campaignId);
+  const brain = await loadBrainData(campaignId, workspaceId);
   const { budgetProposal: _removed, ...rest } = brain;
   await db
     .update(campaignsTable)
     .set({ brainData: rest as any, updatedAt: new Date() })
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
   log.info({ campaignId }, "[BUDGET-DECISION] budgetProposal cleared from brainData");
 }
 
@@ -123,7 +123,7 @@ async function rerunTrafficAgents(
     "campaign.budget.traffic_confirmed": true,
   };
 
-  const { strategy, profile, launchPlan } = await loadStrategyAndProfile(campaignId);
+  const { strategy, profile, launchPlan } = await loadStrategyAndProfile(campaignId, workspaceId);
 
   let capturedTargetingOutput: TargetingOutput | undefined;
   let targetingPieceId: string | undefined;
@@ -262,24 +262,24 @@ export async function applyBudgetDecision(params: BudgetDecisionParams): Promise
 
   if (!campaignRow) throw new AppError(404, "Campaign not found", "NOT_FOUND");
 
-  const intakeData = await loadIntakeData(campaignId);
-  const brain = await loadBrainData(campaignId);
+  const intakeData = await loadIntakeData(campaignId, workspaceId);
+  const brain = await loadBrainData(campaignId, workspaceId);
   const proposal = brain["budgetProposal"] as ReverseBudgetResult | undefined;
 
   log.info({ campaignId, decision, budget }, "[BUDGET-DECISION] Applying budget decision");
 
   if (decision === "organic_only") {
     const deleted = await deleteExistingBudgetProposedPieces(campaignId, workspaceId);
-    await clearBudgetProposalFromBrain(campaignId, log);
+    await clearBudgetProposalFromBrain(campaignId, workspaceId, log);
 
-    const organic_brain = await loadBrainData(campaignId);
+    const organic_brain = await loadBrainData(campaignId, workspaceId);
     await db
       .update(campaignsTable)
       .set({
         brainData: { ...organic_brain, organicOnly: true, organicOnlySetAt: new Date().toISOString() } as any,
         updatedAt: new Date(),
       })
-      .where(eq(campaignsTable.id, campaignId));
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
     emitCampaignEvent({
       campaignId,
@@ -304,8 +304,8 @@ export async function applyBudgetDecision(params: BudgetDecisionParams): Promise
     }
     const effectiveBudget = proposal.budgetMid;
     const deleted = await deleteExistingBudgetProposedPieces(campaignId, workspaceId);
-    await saveBudgetToIntake(campaignId, effectiveBudget, log);
-    await clearBudgetProposalFromBrain(campaignId, log);
+    await saveBudgetToIntake(campaignId, workspaceId, effectiveBudget, log);
+    await clearBudgetProposalFromBrain(campaignId, workspaceId, log);
 
     setImmediate(() => {
       rerunTrafficAgents(campaignId, workspaceId, { ...intakeData, "campaign.budget.traffic": effectiveBudget }, effectiveBudget, log)
@@ -333,8 +333,8 @@ export async function applyBudgetDecision(params: BudgetDecisionParams): Promise
     }
 
     const deleted = await deleteExistingBudgetProposedPieces(campaignId, workspaceId);
-    await saveBudgetToIntake(campaignId, effectiveBudget, log);
-    await clearBudgetProposalFromBrain(campaignId, log);
+    await saveBudgetToIntake(campaignId, workspaceId, effectiveBudget, log);
+    await clearBudgetProposalFromBrain(campaignId, workspaceId, log);
 
     const revenueTarget = Number(intakeData["campaign.revenueTarget"] ?? 0);
     const impliedROAS = revenueTarget > 0 && effectiveBudget > 0
@@ -377,10 +377,10 @@ export async function applyBudgetDecision(params: BudgetDecisionParams): Promise
     };
 
     const deleted = await deleteExistingBudgetProposedPieces(campaignId, workspaceId);
-    await saveBudgetToIntake(campaignId, baseBudget, log);
-    await clearBudgetProposalFromBrain(campaignId, log);
+    await saveBudgetToIntake(campaignId, workspaceId, baseBudget, log);
+    await clearBudgetProposalFromBrain(campaignId, workspaceId, log);
 
-    const seedBrain = await loadBrainData(campaignId);
+    const seedBrain = await loadBrainData(campaignId, workspaceId);
     await db
       .update(campaignsTable)
       .set({
@@ -390,7 +390,7 @@ export async function applyBudgetDecision(params: BudgetDecisionParams): Promise
         } as any,
         updatedAt: new Date(),
       })
-      .where(eq(campaignsTable.id, campaignId));
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
     setImmediate(() => {
       rerunTrafficAgents(campaignId, workspaceId, seedIntakeData, baseBudget, log)

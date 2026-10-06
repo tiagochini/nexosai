@@ -1,3 +1,4 @@
+import { requireProject } from "../operations/project-access.service.js";
 /**
  * Gestão de Presença Social Always-On
  * Módulo autônomo de presença nas redes — opera independente de lançamentos.
@@ -177,6 +178,9 @@ export async function getConfig(
     .from(socialPresenceConfigTable)
     .where(eq(socialPresenceConfigTable.workspaceId, workspaceId))
     .limit(1);
+  if (config?.weeklyInsight && config.weeklyInsight.campaignId !== (config.alignedCampaignId ?? null)) {
+    return { ...config, weeklyInsight: null };
+  }
   return config ?? null;
 }
 
@@ -194,6 +198,7 @@ export async function upsertConfig(
   workspaceId: string,
   patch: ConfigPatch,
 ): Promise<SocialPresenceConfig> {
+  if (patch.alignedCampaignId) await requireProject(workspaceId, patch.alignedCampaignId);
   const existing = await getConfig(workspaceId);
   // Build the set object so we can explicitly set alignedCampaignId to null
   const setData: Record<string, unknown> = {};
@@ -202,7 +207,10 @@ export async function upsertConfig(
   if (patch.contentPillars !== undefined) setData.contentPillars = patch.contentPillars;
   if (patch.tone !== undefined) setData.tone = patch.tone;
   if (patch.businessContext !== undefined) setData.businessContext = patch.businessContext;
-  if ("alignedCampaignId" in patch) setData.alignedCampaignId = patch.alignedCampaignId ?? null;
+  if ("alignedCampaignId" in patch) {
+    setData.alignedCampaignId = patch.alignedCampaignId ?? null;
+    if ((existing?.alignedCampaignId ?? null) !== (patch.alignedCampaignId ?? null)) setData.weeklyInsight = null;
+  }
 
   if (existing) {
     const [updated] = await db
@@ -235,25 +243,22 @@ async function buildBusinessContext(
 ): Promise<string> {
   // O boot cleanup (index.ts) já limpa business_context NexOS do banco em produção.
   // Aqui: usa apenas se preenchido com conteúdo real do cliente.
-  const rawCtx = config.businessContext?.trim() ?? "";
-  if (rawCtx.length > 0) {
-    return rawCtx;
-  }
-  // Fallback: intake da campanha mais recente do workspace
+  if (!config.alignedCampaignId) return config.businessContext?.trim() ?? "";
+  // Only the explicitly selected project can supply business context.
   const [campaign] = await db
     .select({
       title: campaignsTable.title,
       intakeData: campaignsTable.intakeData,
     })
     .from(campaignsTable)
-    .where(eq(campaignsTable.workspaceId, workspaceId))
+    .where(and(eq(campaignsTable.workspaceId, workspaceId), eq(campaignsTable.id, config.alignedCampaignId)))
     .orderBy(desc(campaignsTable.createdAt))
     .limit(1);
 
   if (!campaign) return "";
 
   const intake = (campaign.intakeData ?? {}) as Record<string, unknown>;
-  const lines: string[] = [`Produto/Campanha mais recente: ${campaign.title}`];
+  const lines: string[] = [`Projeto selecionado: ${campaign.title}`];
   const FIELDS = [
     "productName", "productDescription", "niche", "market", "targetAudience",
     "audienceDescription", "mainPromise", "transformation", "uniqueMechanism",
@@ -268,52 +273,10 @@ async function buildBusinessContext(
 
 // ─── Alinhamento com lançamento ──────────────────────────────────────────────
 
-export async function findActiveLaunchContext(
-  workspaceId: string,
-): Promise<{ campaignId: string; context: PresenceLaunchContext } | null> {
-  const [campaign] = await db
-    .select({
-      id: campaignsTable.id,
-      title: campaignsTable.title,
-      status: campaignsTable.status,
-    })
-    .from(campaignsTable)
-    .where(
-      and(
-        eq(campaignsTable.workspaceId, workspaceId),
-        inArray(campaignsTable.status, ["executing", "live"] as never[]),
-      ),
-    )
-    .orderBy(desc(campaignsTable.updatedAt))
-    .limit(1);
-
-  if (!campaign) return null;
-
-  const brain = await getCampaignBrain(campaign.id).catch(() => null);
-  const narrative = brain?.narrative;
-
-  return {
-    campaignId: campaign.id,
-    context: {
-      campaignTitle: campaign.title,
-      campaignStatus: campaign.status,
-      centralNarrative: narrative?.centralNarrative || undefined,
-      bigDomino: narrative?.bigDomino || undefined,
-      forbiddenTopics: narrative?.forbiddenTopics?.length
-        ? narrative.forbiddenTopics
-        : undefined,
-      launchPhaseHint:
-        campaign.status === "live"
-          ? "carrinho aberto — urgência permitida"
-          : "aquecimento — antecipação e crença, sem venda direta",
-    },
-  };
-}
-
 // ─── Alinhamento por campanha explícita ──────────────────────────────────────
 
 /**
- * Like findActiveLaunchContext but for a specific campaign chosen by the user.
+ * Context of the specific campaign chosen by the user.
  * Returns null if the campaign doesn't exist or isn't accessible to the workspace.
  */
 export async function findCampaignContextById(
@@ -337,7 +300,7 @@ export async function findCampaignContextById(
 
   if (!campaign) return null;
 
-  const brain = await getCampaignBrain(campaign.id).catch(() => null);
+  const brain = await getCampaignBrain(campaign.id, workspaceId).catch(() => null);
   const narrative = brain?.narrative;
 
   return {
@@ -429,10 +392,10 @@ export async function getPresenceIntelligenceContext(
   campaignId?: string | null,
 ): Promise<PresenceIntelligenceContext> {
   const config = await getConfig(workspaceId);
-  const resolvedCampaignId = campaignId ?? config?.alignedCampaignId ?? null;
+  const resolvedCampaignId = campaignId === undefined ? config?.alignedCampaignId ?? null : campaignId;
   const aligned = resolvedCampaignId
     ? await findCampaignContextById(workspaceId, resolvedCampaignId)
-    : await findActiveLaunchContext(workspaceId);
+    : null;
 
   if (!aligned) {
     return {
@@ -723,7 +686,8 @@ export async function startGenerateWeek(
   // that exact campaign before any planner/insight AI work is started.
   const aligned = config.alignedCampaignId
     ? await findCampaignContextById(workspaceId, config.alignedCampaignId)
-    : await findActiveLaunchContext(workspaceId);
+    : null;
+  if (config.alignedCampaignId && !aligned) throw new Error("Selected project unavailable");
   if (aligned) {
     const alignedIntel = await buildSocialMarketIntelContext(workspaceId, aligned.campaignId);
     assertAlignedMarketIntel(aligned.campaignId, alignedIntel);
@@ -821,7 +785,7 @@ async function generateWeekNow(
   // 1. Alinhamento com lançamento ativo (or explicit user-selected campaign)
   const launch = config.alignedCampaignId
     ? await findCampaignContextById(workspaceId, config.alignedCampaignId)
-    : await findActiveLaunchContext(workspaceId);
+    : null;
 
   // 2. Realinhamento semanal — analisa semana anterior (se houve posts publicados)
   // Idempotency key is stable across restarts: same workspace + same prev-week date.
@@ -829,7 +793,8 @@ async function generateWeekNow(
     .toISOString()
     .slice(0, 10);
   const insight = await maybeGenerateWeeklyInsight(workspaceId, weekStart, log, {
-    idempotencyKeyOverride: `presence_insight:${workspaceId}:${prevWeekISO}`,
+    idempotencyKeyOverride: `presence_insight:${workspaceId}:${launch?.campaignId ?? "standalone"}:${prevWeekISO}`,
+    campaignId: launch?.campaignId ?? null,
   });
 
   // 3. Semana 1 de segurança: sem auto-publish nos primeiros 7 dias da config
@@ -866,7 +831,7 @@ async function generateWeekNow(
       // Stable idempotency key: workspace + week + platform — survives process restarts.
       // If the server crashes after this platform's credit deduction, a restart rebuilds
       // the same key and the C3 guard in agent.runner.ts blocks the duplicate charge.
-      const plannerIdempotencyKey = `presence:${workspaceId}:${weekStartISO}:${platform.platform}`;
+      const plannerIdempotencyKey = `presence:${workspaceId}:${launch?.campaignId ?? "standalone"}:${weekStartISO}:${platform.platform}`;
       const plan = await runPresencePlannerAgent(
         workspaceId,
         {
@@ -882,7 +847,7 @@ async function generateWeekNow(
           lifestylePreferences,
         },
         log,
-        { idempotencyKeyOverride: plannerIdempotencyKey },
+        { idempotencyKeyOverride: plannerIdempotencyKey, campaignId: launch?.campaignId ?? null },
       );
 
       const autoSchedule = platform.autoPublish && !firstWeekSafety;
@@ -999,7 +964,7 @@ async function maybeGenerateWeeklyInsight(
   workspaceId: string,
   weekStart: Date,
   log: Logger,
-  opts?: { idempotencyKeyOverride?: string },
+  opts?: { idempotencyKeyOverride?: string; campaignId?: string | null },
 ): Promise<PresenceInsightOutput | null> {
   try {
     const prevWeekStart = new Date(weekStart);
@@ -1012,6 +977,7 @@ async function maybeGenerateWeeklyInsight(
         and(
           eq(socialPresencePostsTable.workspaceId, workspaceId),
           eq(socialPresencePostsTable.weekStart, prevWeekStart),
+          opts?.campaignId ? eq(socialPresencePostsTable.campaignId, opts.campaignId) : isNull(socialPresencePostsTable.campaignId),
         ),
       );
 
@@ -1028,6 +994,7 @@ async function maybeGenerateWeeklyInsight(
         and(
           eq(socialPresencePostsTable.workspaceId, workspaceId),
           eq(socialPresencePostsTable.weekStart, prevWeekStart),
+          opts?.campaignId ? eq(socialPresencePostsTable.campaignId, opts.campaignId) : isNull(socialPresencePostsTable.campaignId),
           eq(socialPresencePostsTable.status, "published"),
         ),
       );
@@ -1043,10 +1010,12 @@ ${notPublished > 0 ? `\n${notPublished} posts planejados não foram publicados (
 
     const insight = await runPresenceInsightAgent(workspaceId, summaryText, log, {
       idempotencyKeyOverride: opts?.idempotencyKeyOverride,
+      campaignId: opts?.campaignId ?? null,
     });
     if (!insight.summary) return null;
 
     const weeklyInsight: PresenceWeeklyInsight = {
+      campaignId: opts?.campaignId ?? null,
       weekStart: prevWeekStart.toISOString().slice(0, 10),
       summary: insight.summary,
       wins: insight.wins,
@@ -1059,7 +1028,7 @@ ${notPublished > 0 ? `\n${notPublished} posts planejados não foram publicados (
     await db
       .update(socialPresenceConfigTable)
       .set({ weeklyInsight })
-      .where(eq(socialPresenceConfigTable.workspaceId, workspaceId));
+      .where(and(eq(socialPresenceConfigTable.workspaceId, workspaceId), opts?.campaignId ? eq(socialPresenceConfigTable.alignedCampaignId, opts.campaignId) : isNull(socialPresenceConfigTable.alignedCampaignId)));
 
     return insight;
   } catch (err) {

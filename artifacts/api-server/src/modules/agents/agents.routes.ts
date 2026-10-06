@@ -1,3 +1,4 @@
+import { requireProject } from "../operations/project-access.service.js";
 import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
@@ -187,7 +188,7 @@ router.post("/:campaignId/approve", async (req, res): Promise<void> => {
     setImmediate(() => {
       const category = parsed.data.approved ? "decision_approved" : "decision_rejected";
       const content = `${checkpoint.checkpointType} — ${parsed.data.approved ? "APROVADO" : "REJEITADO"}${parsed.data.feedback ? `: ${parsed.data.feedback}` : ""}`;
-      addMemoryEntry(campaignId, category, content, "human", {
+      addMemoryEntry(campaignId, req.auth.workspaceId, category, content, "human", {
         checkpointId: parsed.data.checkpointId,
         checkpointType: checkpoint.checkpointType,
         feedback: parsed.data.feedback,
@@ -337,6 +338,7 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
   }
 
   try {
+    if (campaignId) await requireProject(req.auth.workspaceId, campaignId);
     // Check credits
     const [ws] = await db
       .select({ creditsBalance: workspacesTable.creditsBalance, name: workspacesTable.name })

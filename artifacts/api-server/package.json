@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:project-execution-isolation": "tsx src/scripts/test-project-execution-isolation.ts",
+    "test:project-isolation-db": "cross-env NODE_ENV=test tsx src/scripts/test-project-isolation-db.ts",
     "test:academy-content-db": "cross-env NODE_ENV=test tsx src/scripts/test-academy-content-db.ts",
     "test:production-signing": "tsx src/scripts/test-production-signing.ts",
     "test:academy-p0-db": "cross-env NODE_ENV=test tsx src/scripts/test-academy-p0-db.ts",

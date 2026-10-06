@@ -295,7 +295,7 @@ export async function runAdCopyAgent(
   profile: ProfileBuilderOutput | undefined,
   log: Logger,
 ): Promise<AdCopyOutput> {
-  const memCtx = await getMemoryContext(workspaceId, "ad_copy", String(intakeData["product.category"] ?? ""));
+  const memCtx = await getMemoryContext(workspaceId, "ad_copy", campaignId);
   const memBlock = buildMemoryContextBlock(memCtx);
 
   const segmentsContext = profile?.segments.length

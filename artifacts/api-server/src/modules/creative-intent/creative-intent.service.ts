@@ -14,7 +14,7 @@
  * - Resolve alucinação criativa cara
  */
 
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, campaignsTable } from "@workspace/db";
 import { runAgent, parseAgentJSON } from "../agents/agent.runner.js";
 import { deductCredits } from "../credits/credits.service.js";
@@ -75,7 +75,7 @@ export async function generateCreativeIntent(
   const [campaign] = await db
     .select()
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
 
   if (!campaign || campaign.workspaceId !== workspaceId) {
@@ -100,7 +100,7 @@ export async function generateCreativeIntent(
   await deductCredits(workspaceId, "creative_brief", log, campaignId ?? undefined, undefined, undefined, undefined, `ws:${workspaceId}:creative_intent:${campaignId}`);
 
   // Get campaign brain for context
-  const brain = await getCampaignBrain(campaignId);
+  const brain = await getCampaignBrain(campaignId, workspaceId);
   const intake = (campaign.intakeData ?? {}) as Record<string, unknown>;
 
   const prompt = buildIntentPrompt(campaign, brain, intake);
@@ -153,7 +153,7 @@ export async function generateCreativeIntent(
   await db
     .update(campaignsTable)
     .set({ brainData: { ...currentBrain, creativeIntent: intentData } } as any)
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
   log.info({ campaignId, draftCount: drafts.length }, "Creative intent generated");
   return intentData;
@@ -166,7 +166,7 @@ export async function getCreativeIntent(
   const [campaign] = await db
     .select({ brainData: (campaignsTable as any).brainData, workspaceId: campaignsTable.workspaceId })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
 
   if (!campaign || campaign.workspaceId !== workspaceId) throw new NotFoundError("Campaign");
@@ -184,7 +184,7 @@ export async function approveCreativeDraft(
   const [campaign] = await db
     .select()
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
 
   if (!campaign || campaign.workspaceId !== workspaceId) throw new NotFoundError("Campaign");
@@ -207,7 +207,7 @@ export async function approveCreativeDraft(
   await db
     .update(campaignsTable)
     .set({ brainData: { ...currentBrain, creativeIntent: updated } } as any)
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
   log.info({ campaignId, draftIndex, title: intent.drafts[draftIndex]?.title }, "Creative direction approved");
   return updated;
@@ -221,7 +221,7 @@ export async function revokeCreativeApproval(
   const [campaign] = await db
     .select()
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
 
   if (!campaign || campaign.workspaceId !== workspaceId) throw new NotFoundError("Campaign");
@@ -240,7 +240,7 @@ export async function revokeCreativeApproval(
   await db
     .update(campaignsTable)
     .set({ brainData: { ...currentBrain, creativeIntent: updated } } as any)
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
   log.info({ campaignId }, "Creative direction approval revoked");
 }

@@ -1,3 +1,4 @@
+import { withProjectExecution } from "../operations/project-execution-context.js";
 import { eq, and, desc, ne, count, inArray, sql } from "drizzle-orm";
 import {
   db,
@@ -437,14 +438,14 @@ async function runInlinePsychologyRecovery(
   const [latestBrainRow] = await db
     .select({ brainData: (campaignsTable as any).brainData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
   const latestBrain = ((latestBrainRow?.brainData ?? {}) as Record<string, unknown>);
 
   await db
     .update(campaignsTable)
     .set({ brainData: { ...latestBrain, offerPsychologyLayer: recoveredLayer } as any })
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
   const sectionsPresent = [pricingOutput, upsellOutput, objectionOutput, testimonialOutput, scarcityOutput, hookOutput].filter(Boolean).length;
   log.info({ campaignId, sectionsPresent }, "[PSYCH-RECOVERY] Layer persisted — recovery complete");
@@ -461,7 +462,10 @@ async function runInlinePsychologyRecovery(
 
 // ── Main orchestrator ─────────────────────────────────────────────────────────
 
-export async function generateCampaignContent(
+export function generateCampaignContent(campaignId: string, workspaceId: string, log: Logger): Promise<ContentGenerationResult> {
+  return withProjectExecution(workspaceId, campaignId, () => generateCampaignContentInternal(campaignId, workspaceId, log));
+}
+async function generateCampaignContentInternal(
   campaignId: string,
   workspaceId: string,
   log: Logger,
@@ -605,7 +609,7 @@ export async function generateCampaignContent(
           const [freshBrainRow] = await db
             .select({ brainData: (campaignsTable as any).brainData })
             .from(campaignsTable)
-            .where(eq(campaignsTable.id, campaignId))
+            .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
             .limit(1);
           const freshBrain = ((freshBrainRow?.brainData ?? {}) as Record<string, unknown>);
           await db
@@ -623,7 +627,7 @@ export async function generateCampaignContent(
                 },
               } as any,
             })
-            .where(eq(campaignsTable.id, campaignId));
+            .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
         } catch (dbErr) {
           log.error({ err: dbErr, campaignId }, "[PSYCH-LAYER] Failed to persist psychologyLayerMissing state");
         }
@@ -974,7 +978,7 @@ export async function generateCampaignContent(
   const heartbeatInterval = setInterval(() => {
     db.select({ bd: (campaignsTable as any).brainData })
       .from(campaignsTable)
-      .where(eq(campaignsTable.id, campaignId))
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
       .limit(1)
       .then(([row]) => {
         const brain = ((row?.bd ?? {}) as Record<string, unknown>);
@@ -983,7 +987,7 @@ export async function generateCampaignContent(
         return db.update(campaignsTable).set({
           updatedAt: new Date(),
           brainData: { ...brain, pipelineCheckpoint: { ...cp, lastProgressAt: nowIso } } as any,
-        }).where(eq(campaignsTable.id, campaignId));
+        }).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
       })
       .catch(() => { /* non-fatal — heartbeat is best-effort */ });
   }, 90_000);
@@ -2378,7 +2382,7 @@ export async function generateCampaignContent(
       const [current] = await db
         .select({ brainData: campaignsTable.brainData })
         .from(campaignsTable)
-        .where(eq(campaignsTable.id, campaignId))
+        .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
         .limit(1);
       const brainNow = ((current?.brainData ?? {}) as Record<string, unknown>);
 
@@ -2403,7 +2407,7 @@ export async function generateCampaignContent(
             },
           } as any,
         })
-        .where(eq(campaignsTable.id, campaignId));
+        .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
       await transitionCampaign(campaignId, workspaceId, "compliance_review", "compliance gate — critical violations require user review", log);
 
@@ -2806,7 +2810,7 @@ export async function generateCampaignContent(
     await db
       .update(campaignsTable)
       .set({ brainData: { ...brainRaw, contentRetry: newContentRetry } as any })
-      .where(eq(campaignsTable.id, campaignId))
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
       .catch(err => log.warn({ err, campaignId }, "[FAILSAFE] Failed to write contentRetry state — non-blocking"));
 
     // ── Autocorrection dispatch (fire-and-forget) ────────────────────────
@@ -2845,7 +2849,7 @@ export async function generateCampaignContent(
     await db
       .update(campaignsTable)
       .set({ brainData: { ...brainRaw, contentRetry: clearedRetry } as any })
-      .where(eq(campaignsTable.id, campaignId))
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
       .catch(err => log.warn({ err, campaignId }, "[FAILSAFE] Failed to clear contentRetry state — non-blocking"));
   }
 
@@ -3292,7 +3296,10 @@ function buildMinimalFallback(pieceType: string, _intakeData: Record<string, unk
   };
 }
 
-export async function regeneratePiece(
+export function regeneratePiece(campaignId: string, workspaceId: string, pieceId: string, log: Logger) {
+  return withProjectExecution(workspaceId, campaignId, () => regeneratePieceInternal(campaignId, workspaceId, pieceId, log));
+}
+async function regeneratePieceInternal(
   campaignId: string,
   workspaceId: string,
   pieceId: string,
@@ -3838,6 +3845,7 @@ function buildComplianceRevisionHint(
 
 async function clearComplianceRevisionProgress(
   campaignId: string,
+  workspaceId: string,
   brainNow: Record<string, unknown>,
 ): Promise<void> {
   const existing = ((brainNow["complianceRevision"] ?? {}) as Record<string, unknown>);
@@ -3849,7 +3857,7 @@ async function clearComplianceRevisionProgress(
         complianceRevision: { ...existing, inProgress: false, errorAt: new Date().toISOString() },
       } as any,
     })
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .catch(() => {});
 }
 
@@ -3859,7 +3867,11 @@ async function clearComplianceRevisionProgress(
 // regeneratePiece) → re-evaluates compliance via runComplianceAgent.
 // On pass: transitions to awaiting_approval.
 // On fail: stays in compliance_review; marks requiresHumanDecision when ceiling hit.
-async function runComplianceRevisionLoop(
+function runComplianceRevisionLoop(campaignId: string, workspaceId: string, piecesToRetry: Array<{ pieceId: string; pieceType: string; hint: string; attemptNum: number }>, log: Logger): Promise<void> {
+  return withProjectExecution(workspaceId, campaignId, () => runComplianceRevisionLoopInternal(campaignId, workspaceId, piecesToRetry, log));
+}
+
+async function runComplianceRevisionLoopInternal(
   campaignId: string,
   workspaceId: string,
   piecesToRetry: Array<{ pieceId: string; pieceType: string; hint: string; attemptNum: number }>,
@@ -3914,7 +3926,7 @@ async function runComplianceRevisionLoop(
   const [campaignNow] = await db
     .select({ brainData: campaignsTable.brainData, intakeData: campaignsTable.intakeData, status: campaignsTable.status })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
 
   if (!campaignNow || campaignNow.status !== "compliance_review") {
@@ -3957,7 +3969,7 @@ async function runComplianceRevisionLoop(
       message: "⚠️ Erro na reavaliação de compliance — decisão manual necessária",
       timestamp: new Date().toISOString(),
     });
-    await clearComplianceRevisionProgress(campaignId, brainNow2);
+    await clearComplianceRevisionProgress(campaignId, workspaceId, brainNow2);
     return;
   }
 
@@ -3989,7 +4001,7 @@ async function runComplianceRevisionLoop(
           complianceRevision: { ...existingRevision2, inProgress: false, completedAt: new Date().toISOString(), outcome: "approved" },
         } as any,
       })
-      .where(eq(campaignsTable.id, campaignId));
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
     emitCampaignEvent({
       campaignId,
@@ -4027,7 +4039,7 @@ async function runComplianceRevisionLoop(
           },
         } as any,
       })
-      .where(eq(campaignsTable.id, campaignId));
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
     const actionMsg = hasRetriesLeft
       ? `⚠️ Compliance ainda detecta violações após reescrita (tentativa ${piecesToRetry[0]?.attemptNum ?? 1} de 2). Solicite nova revisão ou use accept_all/override.`
@@ -4159,7 +4171,7 @@ export async function resolveComplianceReview(
           contentRetry: { ...existingContentRetry, complianceCorrections },
         } as any,
       })
-      .where(eq(campaignsTable.id, campaignId));
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
     await db.insert(auditLogsTable).values({
       workspaceId,
@@ -4234,7 +4246,7 @@ export async function resolveComplianceReview(
         ...(decision === "override" ? { complianceOverride: { at: new Date().toISOString(), by: "user" } } : {}),
       } as any,
     })
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
   await db.insert(auditLogsTable).values({
     workspaceId,

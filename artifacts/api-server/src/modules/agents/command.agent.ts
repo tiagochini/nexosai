@@ -1,3 +1,4 @@
+import { withProjectExecution } from "../operations/project-execution-context.js";
 import { eq, and } from "drizzle-orm";
 import { db, campaignsTable, auditLogsTable, campaignAgentsTable } from "@workspace/db";
 import { transitionCampaign, VALID_STATUS_TRANSITIONS, STRATEGY_PHASE_ENTRY_STATUSES } from "../campaigns/campaigns.service.js";
@@ -26,7 +27,6 @@ import { runTrafficIntelligenceAgent, type TrafficIntelligenceOutput } from "./t
 import { runExecutionGovernor, type ExecutionPlan } from "./execution-governor.agent.js";
 import { runBusinessIntelligenceAgent, type BusinessIntelligenceOutput } from "./business-intelligence.agent.js";
 import { runMemoryCompression } from "./memory-compression.agent.js";
-import { buildCrossCampaignIntelligence } from "./cross-campaign-intelligence.service.js";
 import { runUXSimplificationEngine } from "./ux-simplification.agent.js";
 import {
   initializeCampaignMemory,
@@ -79,18 +79,18 @@ const PIPELINE_LOCK_GRACE_MS = 3 * 60 * 1000; // 3 min
 /** Truncate memoryContext to this size to keep heap usage bounded. */
 const MAX_MEMORY_CONTEXT_CHARS = 8_000;
 
-async function loadCheckpoint(campaignId: string): Promise<PipelineCheckpoint | null> {
+async function loadCheckpoint(campaignId: string, workspaceId: string): Promise<PipelineCheckpoint | null> {
   const [row] = await db
     .select({ brainData: (campaignsTable as any).brainData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
   const brain = (row?.brainData ?? {}) as Record<string, unknown>;
   return (brain["pipelineCheckpoint"] as PipelineCheckpoint | null) ?? null;
 }
 
 async function saveCheckpoint(
-  campaignId: string,
+  campaignId: string, workspaceId: string,
   step: string,
   summary: Record<string, unknown>,
   cp: PipelineCheckpoint,
@@ -105,13 +105,13 @@ async function saveCheckpoint(
   const [row] = await db
     .select({ brainData: (campaignsTable as any).brainData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
   const existing = (row?.brainData ?? {}) as Record<string, unknown>;
   await db
     .update(campaignsTable)
     .set({ brainData: { ...existing, pipelineCheckpoint: updated } as any })
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
   log.info(
     { campaignId, step, completedSteps: updated.completedSteps.length },
     "[PIPELINE_STEP_CHECKPOINT]",
@@ -129,7 +129,7 @@ function isLockActive(cp: PipelineCheckpoint | null): boolean {
 }
 
 async function acquireExecutionLock(
-  campaignId: string,
+  campaignId: string, workspaceId: string,
   cp: PipelineCheckpoint | null,
   log: Logger,
 ): Promise<PipelineCheckpoint> {
@@ -148,13 +148,13 @@ async function acquireExecutionLock(
   const [row] = await db
     .select({ brainData: (campaignsTable as any).brainData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
   const existing = (row?.brainData ?? {}) as Record<string, unknown>;
   await db
     .update(campaignsTable)
     .set({ brainData: { ...existing, pipelineCheckpoint: updated } as any })
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
   const isRecovery = (cp?.completedSteps?.length ?? 0) > 0;
   log.info(
     { campaignId, isRecovery, completedSteps: updated.completedSteps },
@@ -163,11 +163,11 @@ async function acquireExecutionLock(
   return updated;
 }
 
-async function releaseExecutionLock(campaignId: string): Promise<void> {
+async function releaseExecutionLock(campaignId: string, workspaceId: string): Promise<void> {
   const [row] = await db
     .select({ brainData: (campaignsTable as any).brainData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
   if (!row) return;
   const existing = (row.brainData ?? {}) as Record<string, unknown>;
@@ -177,7 +177,7 @@ async function releaseExecutionLock(campaignId: string): Promise<void> {
   await db
     .update(campaignsTable)
     .set({ brainData: { ...existing, pipelineCheckpoint: released } as any })
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
   // Clean up any orphaned "running" agent rows left from parallel agents that were
   // still awaiting their LLM response when the pipeline's finally block executed.
   // Without this, the trigger guards in triggerContentPhase / triggerStrategyPhase
@@ -391,7 +391,10 @@ function buildCommandSystemPrompt(type: string, hasTraffic: boolean): string {
   );
 }
 
-export async function orchestrateCampaign(
+export function orchestrateCampaign(campaignId: string, workspaceId: string, log: Logger): Promise<OrchestrationResult> {
+  return withProjectExecution(workspaceId, campaignId, () => orchestrateCampaignInternal(campaignId, workspaceId, log));
+}
+async function orchestrateCampaignInternal(
   campaignId: string,
   workspaceId: string,
   log: Logger,
@@ -426,7 +429,7 @@ export async function orchestrateCampaign(
   const campaignTimezone = locationToTimezone(intakeData["audience.location"] as string | undefined);
   // Persist derived timezone on campaign record if not already set
   if (!campaign.timezone || campaign.timezone === "America/Sao_Paulo") {
-    await db.update(campaignsTable).set({ timezone: campaignTimezone }).where(eq(campaignsTable.id, campaignId)).catch(() => void 0);
+    await db.update(campaignsTable).set({ timezone: campaignTimezone }).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).catch(() => void 0);
   }
   const hasTraffic = Boolean(
     // campaign.budget.traffic = chave atual do intake (AI conversacional)
@@ -446,7 +449,7 @@ export async function orchestrateCampaign(
   // ── Checkpoint: resume-safe execution + duplicate-run lock ──────────────────
   // Load any existing checkpoint (previous incomplete run), check for active lock,
   // then acquire the lock before running any agent.
-  let cp = await loadCheckpoint(campaignId);
+  let cp = await loadCheckpoint(campaignId, workspaceId);
 
   // Fix: Re-run from strategy_ready means the user explicitly requested a fresh strategy
   // run (not a resume). Reset completedSteps so agents execute fresh instead of all being
@@ -469,7 +472,7 @@ export async function orchestrateCampaign(
       "Pipeline já está executando para esta campanha — aguarde ou tente novamente em alguns minutos",
     );
   }
-  cp = await acquireExecutionLock(campaignId, cp, log);
+  cp = await acquireExecutionLock(campaignId, workspaceId, cp, log);
 
   // Enable pipeline mode: drops NEXOS_COGNITIVE_FOUNDATIONS (27KB) from every
   // runAgent() call during this execution window. Released in the finally block.
@@ -513,6 +516,7 @@ export async function orchestrateCampaign(
     const mvResult = await runMarketValidation(campaignId, workspaceId, intakeData, log);
     cp = await saveCheckpoint(
       campaignId,
+          workspaceId,
       "market_validation",
       {
         verdict: mvResult.overallVerdict,
@@ -626,7 +630,7 @@ Retorne o JSON de avaliação.`,
   });
 
   // Checkpoint: command step completed
-  cp = await saveCheckpoint(campaignId, "command", {
+  cp = await saveCheckpoint(campaignId, workspaceId, "command", {
     readinessScore: commandPlan.readinessScore ?? 70,
     campaignComplexity: commandPlan.campaignComplexity ?? "standard",
   }, cp, log);
@@ -707,24 +711,7 @@ Retorne o JSON de avaliação.`,
   const isSkippedByGovernor = (agentId: string): boolean =>
     executionPlan?.skippedAgents?.includes(agentId) ?? false;
 
-  // ── 0c. Cross-Campaign Intelligence ────────────────────────────────────────
-  // Extracts patterns from past campaigns of this workspace and vertical learnings.
-  // Runs non-blocking — result is prepended to memoryContext when it's built.
-  // This is what makes each new campaign smarter than the last.
-  let crossCampaignContext = "";
-  try {
-    crossCampaignContext = await buildCrossCampaignIntelligence(
-      workspaceId,
-      campaignId,
-      intakeData,
-      log,
-    );
-    if (crossCampaignContext) {
-      log.info({ campaignId }, "Cross-campaign intelligence loaded — historical patterns active");
-    }
-  } catch (crossErr) {
-    log.warn({ crossErr, campaignId }, "Cross-campaign intelligence unavailable (non-fatal)");
-  }
+  // Project context never includes historical campaigns or vertical aggregates.
 
   // ── 1. Profile Builder Agent (all campaign types — runs first) ─────────────
   // Builds deep product, avatar, segmentation and market intelligence.
@@ -751,7 +738,7 @@ Retorne o JSON de avaliação.`,
       );
       profile = result;
       agentsRun.push("profile_builder");
-      cp = await saveCheckpoint(campaignId, "profile_builder", { profileScore: result.profileScore ?? 70 }, cp, log);
+      cp = await saveCheckpoint(campaignId, workspaceId, "profile_builder", { profileScore: result.profileScore ?? 70 }, cp, log);
 
       // Save to audienceData (avatar + segments) and targetingData (market + positioning)
       await db
@@ -772,7 +759,7 @@ Retorne o JSON de avaliação.`,
             positioning: result.positioning,
           } as any,
         })
-        .where(eq(campaignsTable.id, campaignId));
+        .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
       log.info({ campaignId, profileScore: result.profileScore }, "Profile builder completed");
     } catch (err) {
@@ -785,7 +772,7 @@ Retorne o JSON de avaliação.`,
     const [savedPb] = await db
       .select({ audienceData: campaignsTable.audienceData, targetingData: campaignsTable.targetingData })
       .from(campaignsTable)
-      .where(eq(campaignsTable.id, campaignId))
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
       .limit(1);
     if (savedPb?.audienceData && Object.keys(savedPb.audienceData as object).length > 0) {
       // Reconstitute the profile shape that downstream agents expect
@@ -833,23 +820,19 @@ Retorne o JSON de avaliação.`,
     try {
       campaignMemory = await initializeCampaignMemory(
         campaignId,
+        workspaceId,
         intakeData,
         strategicBrief,
         log,
       );
-      // Prepend cross-campaign intelligence so every agent has historical context
-      // from past campaigns BEFORE the current campaign's assembled context.
-      const baseContext = assembleCampaignContext(campaignMemory);
-      memoryContext = crossCampaignContext
-        ? crossCampaignContext + "\n" + baseContext
-        : baseContext;
+      memoryContext = assembleCampaignContext(campaignMemory);
       // Truncate memoryContext to keep heap usage bounded across 10+ sequential agents
       if (memoryContext.length > MAX_MEMORY_CONTEXT_CHARS) {
         log.warn({ campaignId, originalLength: memoryContext.length }, "[PIPELINE_MEMORY_TRUNCATE] memoryContext truncated for heap safety");
         memoryContext = memoryContext.slice(0, MAX_MEMORY_CONTEXT_CHARS) + "\n[...contexto de memória truncado por limite de heap]";
       }
       agentsRun.push("campaign_memory");
-      log.info({ campaignId, memoryVersion: campaignMemory.version, hasCrossContext: !!crossCampaignContext }, "Campaign memory initialized");
+      log.info({ campaignId, memoryVersion: campaignMemory.version }, "Campaign memory initialized");
     } catch (memErr) {
       log.warn({ memErr, campaignId }, "Campaign memory init failed — agents will run without memory context");
     }
@@ -884,10 +867,10 @@ Retorne o JSON de avaliação.`,
       );
       agentsRun.push("strategic_doctrine");
       // Persist doctrine into memory — downstream agents get it via memoryContext
-      await setDoctrine(campaignId, doctrine, log);
+      await setDoctrine(campaignId, workspaceId, doctrine, log);
       // Rebuild memoryContext with the enriched doctrine block so
       // all downstream agents see consciousness stage, launch logic, warnings, etc.
-      const refreshedMemory = await getCampaignMemory(campaignId);
+      const refreshedMemory = await getCampaignMemory(campaignId, workspaceId);
       if (refreshedMemory) memoryContext = assembleCampaignContext(refreshedMemory);
 
       // Inject approved Creative Direction into memoryContext (if user approved one)
@@ -939,7 +922,7 @@ Retorne o JSON de avaliação.`,
       );
       strategy = result as unknown as Record<string, unknown>;
       agentsRun.push("strategy");
-      cp = await saveCheckpoint(campaignId, "strategy", { launchModel: (result as any).launchModel }, cp, log);
+      cp = await saveCheckpoint(campaignId, workspaceId, "strategy", { launchModel: (result as any).launchModel }, cp, log);
       checkpointsPending.push("strategy_approval");
 
       // transitionCampaign spreads `extra` directly into the Drizzle UPDATE set.
@@ -965,7 +948,7 @@ Retorne o JSON de avaliação.`,
           const [row] = await db
             .select({ brainData: (campaignsTable as any).brainData })
             .from(campaignsTable)
-            .where(eq(campaignsTable.id, campaignId))
+            .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
             .limit(1);
           const existing = (row?.brainData ?? {}) as Record<string, unknown>;
           if (existing.strategyTransitionFailed) {
@@ -973,7 +956,7 @@ Retorne o JSON de avaliação.`,
             await db
               .update(campaignsTable)
               .set({ brainData: cleanBrain as any })
-              .where(eq(campaignsTable.id, campaignId));
+              .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
             log.info({ campaignId }, "[RC-011] strategyTransitionFailed marker cleared — strategy succeeded");
           }
           // Persist plannedChannels from strategic brief
@@ -985,7 +968,7 @@ Retorne o JSON de avaliação.`,
             await db
               .update(campaignsTable)
               .set({ brainData: { ...latestBrain, plannedChannels: channelsToSave } as any })
-              .where(eq(campaignsTable.id, campaignId));
+              .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
           }
         } catch { /* non-fatal */ }
       });
@@ -993,7 +976,7 @@ Retorne o JSON de avaliação.`,
       // Doctrine Gate + Self-Critique (fire-and-forget — never block pipeline)
       setImmediate(() => {
         const strategySnapshot = strategy ?? {};
-        getCampaignBrain(campaignId).then(brainSnap => {
+        getCampaignBrain(campaignId, workspaceId).then(brainSnap => {
           if (brainSnap?.offer) {
             checkDoctrineAsync(campaignId, workspaceId, "strategy", strategySnapshot, brainSnap, log);
           }
@@ -1015,7 +998,7 @@ Retorne o JSON de avaliação.`,
           const [row] = await db
             .select({ brainData: (campaignsTable as any).brainData })
             .from(campaignsTable)
-            .where(eq(campaignsTable.id, campaignId))
+            .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
             .limit(1);
           const existing = (row?.brainData ?? {}) as Record<string, unknown>;
           await db
@@ -1032,7 +1015,7 @@ Retorne o JSON de avaliação.`,
               } as any,
               updatedAt: new Date(),
             })
-            .where(eq(campaignsTable.id, campaignId));
+            .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
           log.warn({ campaignId, failedAt }, "[RC-011] strategyTransitionFailed marker persisted to DB");
         } catch (dbErr) {
           log.warn({ dbErr, campaignId }, "[RC-011] failed to persist strategyTransitionFailed marker — campaign may appear stuck");
@@ -1046,7 +1029,7 @@ Retorne o JSON de avaliação.`,
     const [savedSt] = await db
       .select({ strategyData: campaignsTable.strategyData })
       .from(campaignsTable)
-      .where(eq(campaignsTable.id, campaignId))
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
       .limit(1);
     if (savedSt?.strategyData && Object.keys(savedSt.strategyData as object).length > 0) {
       strategy = savedSt.strategyData as unknown as Record<string, unknown>;
@@ -1092,17 +1075,17 @@ Retorne o JSON de avaliação.`,
       );
       offerAnalysis = result as unknown as Record<string, unknown>;
       agentsRun.push("offer");
-      cp = await saveCheckpoint(campaignId, "offer", { offerName: (result as any).offerName }, cp, log);
+      cp = await saveCheckpoint(campaignId, workspaceId, "offer", { offerName: (result as any).offerName }, cp, log);
       // Log offer output summary to memory + Doctrine Gate + Self-Critique (all fire-and-forget)
       setImmediate(() => {
         if (campaignMemory) {
-          addMemoryEntry(campaignId, "agent_output_summary",
+          addMemoryEntry(campaignId, workspaceId, "agent_output_summary",
             `Oferta: ${result.offerName} | Preço: R$${result.offerStructure?.anchoringLogic?.strategicPrice ?? ""} | Garantia: ${result.offerStructure?.guarantee?.type ?? ""}`,
             "offer_agent", { uniqueMechanism: result.uniqueMechanism?.name }, log,
           ).catch(() => {});
         }
         const offerSnapshot = offerAnalysis ?? {};
-        getCampaignBrain(campaignId).then(brainForOffer => {
+        getCampaignBrain(campaignId, workspaceId).then(brainForOffer => {
           if (brainForOffer?.offer) {
             checkDoctrineAsync(campaignId, workspaceId, "offer", offerSnapshot, brainForOffer, log);
           }
@@ -1151,7 +1134,7 @@ Retorne o JSON de avaliação.`,
       const [existingBrainRow] = await db
         .select({ brainData: (campaignsTable as any).brainData })
         .from(campaignsTable)
-        .where(eq(campaignsTable.id, campaignId))
+        .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
         .limit(1);
       const existingPsychLayer = (existingBrainRow?.brainData as Record<string, unknown> | null)?.["offerPsychologyLayer"] as Record<string, unknown> | null;
 
@@ -1268,7 +1251,7 @@ Retorne o JSON de avaliação.`,
       if (pricingRes.status === "fulfilled" && pricingRes.value) {
         pricingOutput = pricingRes.value;
         agentsRun.push("pricing_psychologist");
-        cp = await saveCheckpoint(campaignId, "pricing_psychologist",
+        cp = await saveCheckpoint(campaignId, workspaceId, "pricing_psychologist",
           { recommendedPrice: pricingOutput.recommendedPrice }, cp, log);
         log.info({ campaignId, recommendedPrice: pricingOutput.recommendedPrice }, "pricing_psychologist ✓");
       } else if (pricingRes.status === "rejected") {
@@ -1279,7 +1262,7 @@ Retorne o JSON de avaliação.`,
       if (upsellRes.status === "fulfilled" && upsellRes.value) {
         upsellOutput = upsellRes.value;
         agentsRun.push("upsell_architect");
-        cp = await saveCheckpoint(campaignId, "upsell_architect", { done: true }, cp, log);
+        cp = await saveCheckpoint(campaignId, workspaceId, "upsell_architect", { done: true }, cp, log);
         log.info({ campaignId }, "upsell_architect ✓");
       } else if (upsellRes.status === "rejected") {
         log.warn({ err: upsellRes.reason, campaignId }, "upsell_architect failed (non-fatal)");
@@ -1307,7 +1290,7 @@ Retorne o JSON de avaliação.`,
       if (objRes.status === "fulfilled" && objRes.value) {
         objectionOutput = objRes.value;
         agentsRun.push("objection_killer");
-        cp = await saveCheckpoint(campaignId, "objection_killer", { done: true }, cp, log);
+        cp = await saveCheckpoint(campaignId, workspaceId, "objection_killer", { done: true }, cp, log);
         log.info({ campaignId }, "objection_killer ✓");
       } else if (objRes.status === "rejected") {
         log.warn({ err: objRes.reason, campaignId }, "objection_killer failed (non-fatal)");
@@ -1317,7 +1300,7 @@ Retorne o JSON de avaliação.`,
       if (testRes.status === "fulfilled" && testRes.value) {
         testimonialOutput = testRes.value;
         agentsRun.push("testimonial_curator");
-        cp = await saveCheckpoint(campaignId, "testimonial_curator", { done: true }, cp, log);
+        cp = await saveCheckpoint(campaignId, workspaceId, "testimonial_curator", { done: true }, cp, log);
         log.info({ campaignId }, "testimonial_curator ✓");
       } else if (testRes.status === "rejected") {
         log.warn({ err: testRes.reason, campaignId }, "testimonial_curator failed (non-fatal)");
@@ -1327,7 +1310,7 @@ Retorne o JSON de avaliação.`,
       if (scarcRes.status === "fulfilled" && scarcRes.value) {
         scarcityOutput = scarcRes.value;
         agentsRun.push("scarcity_engineer");
-        cp = await saveCheckpoint(campaignId, "scarcity_engineer", { done: true }, cp, log);
+        cp = await saveCheckpoint(campaignId, workspaceId, "scarcity_engineer", { done: true }, cp, log);
         log.info({ campaignId }, "scarcity_engineer ✓");
       } else if (scarcRes.status === "rejected") {
         log.warn({ err: scarcRes.reason, campaignId }, "scarcity_engineer failed (non-fatal)");
@@ -1348,7 +1331,7 @@ Retorne o JSON de avaliação.`,
             campaignId, workspaceId, hookTopic, psyAvatar, psyChannels, "launch_hook", log,
           );
           agentsRun.push("hook_factory");
-          cp = await saveCheckpoint(campaignId, "hook_factory",
+          cp = await saveCheckpoint(campaignId, workspaceId, "hook_factory",
             { hooksCount: hookOutput.hooks?.length ?? 0 }, cp, log);
           log.info({ campaignId, hooksCount: hookOutput.hooks?.length }, "hook_factory ✓");
         } catch (hookErr) {
@@ -1392,13 +1375,13 @@ Retorne o JSON de avaliação.`,
           const [brainRow] = await db
             .select({ brainData: (campaignsTable as any).brainData })
             .from(campaignsTable)
-            .where(eq(campaignsTable.id, campaignId))
+            .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
             .limit(1);
           const existingBrain = ((brainRow?.brainData ?? {}) as Record<string, unknown>);
           await db
             .update(campaignsTable)
             .set({ brainData: { ...existingBrain, offerPsychologyLayer: psychLayer } as any })
-            .where(eq(campaignsTable.id, campaignId));
+            .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
           log.info({ campaignId }, "offer psychology layer persisted to brainData ✓");
         } catch (brainErr) {
           log.error({ err: brainErr, campaignId }, "[PSYCH-LAYER] PERSIST FAILED — copy agents will run without psychology context");
@@ -1448,20 +1431,20 @@ Retorne o JSON de avaliação.`,
         profile as any,
       );
       agentsRun.push("semente_launch");
-      cp = await saveCheckpoint(campaignId, "semente_launch", { done: true }, cp, log);
+      cp = await saveCheckpoint(campaignId, workspaceId, "semente_launch", { done: true }, cp, log);
       log.info({ campaignId }, "semente_launch ✓");
       setImmediate(async () => {
         try {
           const [brainRow] = await db
             .select({ brainData: (campaignsTable as any).brainData })
             .from(campaignsTable)
-            .where(eq(campaignsTable.id, campaignId))
+            .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
             .limit(1);
           const existingBrain = ((brainRow?.brainData ?? {}) as Record<string, unknown>);
           await db
             .update(campaignsTable)
             .set({ brainData: { ...existingBrain, sementeLaunchPlan: sementeResult } as any })
-            .where(eq(campaignsTable.id, campaignId));
+            .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
         } catch { /* non-fatal */ }
       });
     } catch (sementeErr) {
@@ -1485,7 +1468,7 @@ Retorne o JSON de avaliação.`,
       const [savedTl] = await db
         .select({ timelineData: campaignsTable.timelineData })
         .from(campaignsTable)
-        .where(eq(campaignsTable.id, campaignId))
+        .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
         .limit(1);
       if (savedTl?.timelineData && Object.keys(savedTl.timelineData as object).length > 0) {
         launchPlan = savedTl.timelineData as unknown as Record<string, unknown>;
@@ -1511,13 +1494,13 @@ Retorne o JSON de avaliação.`,
         );
         launchPlan = result as unknown as Record<string, unknown>;
         agentsRun.push("launch_manager");
-        cp = await saveCheckpoint(campaignId, "launch_manager", { totalDays: (result as any).totalDays }, cp, log);
+        cp = await saveCheckpoint(campaignId, workspaceId, "launch_manager", { totalDays: (result as any).totalDays }, cp, log);
         checkpointsPending.push("launch_plan_approval");
 
         await db
           .update(campaignsTable)
           .set({ timelineData: result as any })
-          .where(eq(campaignsTable.id, campaignId));
+          .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
       } else if (typeConfig.managerAgent === "continuous_sales_manager") {
         const result = await runContinuousSalesManagerAgent(
           campaignId,
@@ -1534,7 +1517,7 @@ Retorne o JSON de avaliação.`,
         await db
           .update(campaignsTable)
           .set({ timelineData: result as any })
-          .where(eq(campaignsTable.id, campaignId));
+          .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
       } else if (typeConfig.managerAgent === "perpetual_launch_manager") {
         const result = await runPerpetualLaunchManagerAgent(
           campaignId,
@@ -1551,7 +1534,7 @@ Retorne o JSON de avaliação.`,
         await db
           .update(campaignsTable)
           .set({ timelineData: result as any })
-          .where(eq(campaignsTable.id, campaignId));
+          .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
       }
       // "generic" types: strategy + offer is sufficient for now
     } catch (err) {
@@ -1574,13 +1557,13 @@ Retorne o JSON de avaliação.`,
       );
       financialProjection = result as unknown as Record<string, unknown>;
       agentsRun.push("financial_projector");
-      cp = await saveCheckpoint(campaignId, "financial_projector", { done: true }, cp, log);
+      cp = await saveCheckpoint(campaignId, workspaceId, "financial_projector", { done: true }, cp, log);
       checkpointsPending.push("budget_approval");
 
       await db
         .update(campaignsTable)
         .set({ offerData: { financialProjection: result } as any })
-        .where(eq(campaignsTable.id, campaignId));
+        .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
     } catch (err) {
       log.error({ err, campaignId }, "Financial projector failed");
       emitAgentError(campaignId, "financial_projector", err);
@@ -1629,7 +1612,7 @@ Retorne o JSON de avaliação.`,
       setImmediate(() => {
         db.update(campaignsTable)
           .set({ offerData: { financialProjection, businessIntelligence: biOutput } as any })
-          .where(eq(campaignsTable.id, campaignId))
+          .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
           .catch((e: unknown) => log.warn({ e, campaignId }, "Failed to persist BI output"));
       });
     } catch (biErr) {
@@ -1672,12 +1655,12 @@ Retorne o JSON de avaliação.`,
             trafficPlan: trafficPlan as any,
           } as any,
         })
-        .where(eq(campaignsTable.id, campaignId));
+        .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
       // Log to campaign memory
       setImmediate(() => {
         if (campaignMemory) {
-          addMemoryEntry(campaignId, "agent_output_summary",
+          addMemoryEntry(campaignId, workspaceId, "agent_output_summary",
             `Tráfego: ${trafficPlan?.campaignStructure?.platforms?.map((p) => p.platform).join(", ") ?? ""} | Budget total: R$${trafficPlan?.campaignStructure?.totalBudgetBrl ?? 0} | Clearance: ${trafficPlan?.prePublishValidation?.overallClearance ?? ""}`,
             "traffic_intelligence_agent",
             {
@@ -1730,7 +1713,7 @@ Retorne o JSON de avaliação.`,
     const [liveSnapshot] = await db
       .select({ status: campaignsTable.status })
       .from(campaignsTable)
-      .where(eq(campaignsTable.id, campaignId))
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
       .limit(1);
 
     const liveRank   = CAMPAIGN_STATUS_RANK[liveSnapshot?.status as CampaignStatus] ?? 0;
@@ -1866,7 +1849,7 @@ Retorne o JSON de avaliação.`,
   // Assembles canonical truth from all agent outputs. Detects misalignments and
   // contradictions between agents BEFORE they reach the launch phase.
   setImmediate(() => {
-    buildCampaignBrain(campaignId, log)
+    buildCampaignBrain(campaignId, workspaceId, log)
       .then((brain) => {
         if (!brain) return;
         return runStrategicAlignmentEngine(campaignId, brain, log)
@@ -1878,8 +1861,8 @@ Retorne o JSON de avaliação.`,
               dimensions: report.dimensions,
               isMisaligned: report.isMisaligned,
               checkedAt: report.checkedAt,
-            }, log);
-            await updateBrainSection(campaignId, "contradictions", report.contradictions, log);
+            }, log, workspaceId);
+            await updateBrainSection(campaignId, "contradictions", report.contradictions, log, workspaceId);
             if (report.isMisaligned) {
               log.warn({
                 campaignId,
@@ -1925,7 +1908,7 @@ Retorne o JSON de avaliação.`,
       const [finalCampaign] = await db
         .select({ status: campaignsTable.status, brainData: (campaignsTable as any).brainData })
         .from(campaignsTable)
-        .where(eq(campaignsTable.id, campaignId))
+        .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
         .limit(1);
       if (finalCampaign?.status === "analyzing") {
         const brain = (finalCampaign.brainData ?? {}) as Record<string, unknown>;
@@ -1943,7 +1926,7 @@ Retorne o JSON de avaliação.`,
       log.warn({ recoveryErr, campaignId }, "[PIPELINE_RECOVERY] Recovery transition failed — non-blocking");
     }
 
-    void releaseExecutionLock(campaignId).catch(() => {});
+    void releaseExecutionLock(campaignId, workspaceId).catch(() => {});
   }
 }
 

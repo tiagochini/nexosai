@@ -18,7 +18,7 @@
  * aprovadas, aprendizados importantes, confidence score contextual.
  */
 
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, campaignsTable } from "@workspace/db";
 import type { StrategicBrief } from "./strategic-core.agent.js";
 import type {
@@ -207,6 +207,7 @@ function makeEntry(
  */
 export async function initializeCampaignMemory(
   campaignId: string,
+  workspaceId: string,
   intakeData: Record<string, unknown>,
   brief: StrategicBrief,
   log: Logger,
@@ -262,7 +263,7 @@ export async function initializeCampaignMemory(
   memory.initializedAt = new Date().toISOString();
   memory.lastUpdated = new Date().toISOString();
 
-  await persistMemory(campaignId, memory);
+  await persistMemory(campaignId, workspaceId, memory);
   log.info({ campaignId, confidenceScore: memory.confidenceScore }, "Campaign memory initialized");
   return memory;
 }
@@ -270,11 +271,11 @@ export async function initializeCampaignMemory(
 /**
  * Read the current memory for a campaign.
  */
-export async function getCampaignMemory(campaignId: string): Promise<CampaignMemory | null> {
+export async function getCampaignMemory(campaignId: string, workspaceId: string): Promise<CampaignMemory | null> {
   const [row] = await db
     .select({ memoryData: campaignsTable.memoryData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
 
   if (!row) return null;
@@ -288,13 +289,14 @@ export async function getCampaignMemory(campaignId: string): Promise<CampaignMem
  */
 export async function addMemoryEntry(
   campaignId: string,
+  workspaceId: string,
   category: MemoryCategory,
   content: string,
   source: string,
   metadata?: Record<string, unknown>,
   log?: Logger,
 ): Promise<void> {
-  const memory = await getCampaignMemory(campaignId);
+  const memory = await getCampaignMemory(campaignId, workspaceId);
   if (!memory) return;
 
   const entry = makeEntry(category, content, source, metadata);
@@ -336,7 +338,7 @@ export async function addMemoryEntry(
 
   memory.lastUpdated = new Date().toISOString();
   memory.version += 1;
-  await persistMemory(campaignId, memory);
+  await persistMemory(campaignId, workspaceId, memory);
   log?.info({ campaignId, category, source }, "Memory entry added");
 }
 
@@ -345,6 +347,7 @@ export async function addMemoryEntry(
  */
 export async function patchCampaignMemory(
   campaignId: string,
+  workspaceId: string,
   patch: Partial<Pick<CampaignMemory,
     | "operationStatus"
     | "confidenceScore"
@@ -354,13 +357,13 @@ export async function patchCampaignMemory(
     | "coreWarnings"
   >>,
 ): Promise<void> {
-  const memory = await getCampaignMemory(campaignId);
+  const memory = await getCampaignMemory(campaignId, workspaceId);
   if (!memory) return;
   Object.assign(memory, patch, {
     lastUpdated: new Date().toISOString(),
     version: memory.version + 1,
   });
-  await persistMemory(campaignId, memory);
+  await persistMemory(campaignId, workspaceId, memory);
 }
 
 /**
@@ -370,10 +373,11 @@ export async function patchCampaignMemory(
  */
 export async function setDoctrine(
   campaignId: string,
+  workspaceId: string,
   doctrine: DoctrineOutput,
   log?: Logger,
 ): Promise<void> {
-  const memory = await getCampaignMemory(campaignId);
+  const memory = await getCampaignMemory(campaignId, workspaceId);
   if (!memory) return;
 
   memory.doctrine = {
@@ -399,18 +403,18 @@ export async function setDoctrine(
 
   memory.lastUpdated = new Date().toISOString();
   memory.version += 1;
-  await persistMemory(campaignId, memory);
+  await persistMemory(campaignId, workspaceId, memory);
   log?.info({ campaignId, hasDoc: true }, "Doctrine stored in campaign memory");
 }
 
 /**
  * Persist memory to DB.
  */
-async function persistMemory(campaignId: string, memory: CampaignMemory): Promise<void> {
+async function persistMemory(campaignId: string, workspaceId: string, memory: CampaignMemory): Promise<void> {
   await db
     .update(campaignsTable)
     .set({ memoryData: memory as any })
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 }
 
 // ─── Context Assembly ──────────────────────────────────────────────────────────

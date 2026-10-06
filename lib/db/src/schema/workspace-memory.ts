@@ -1,5 +1,7 @@
 import {
   pgTable,
+  foreignKey,
+  index,
   text,
   uuid,
   timestamp,
@@ -9,6 +11,7 @@ import {
   boolean,
   real,
 } from "drizzle-orm/pg-core";
+import { campaignsTable } from "./campaigns";
 import { workspacesTable } from "./workspaces";
 
 export const memoryTypeEnum = pgEnum("memory_type", [
@@ -52,7 +55,10 @@ export const workspaceMemoryTable = pgTable("workspace_memory", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-});
+}, (table) => [
+  foreignKey({ name: "workspace_memory_project_scope_fk", columns: [table.workspaceId, table.campaignId], foreignColumns: [campaignsTable.workspaceId, campaignsTable.id] }).onDelete("cascade"),
+  index("workspace_memory_project_scope_idx").on(table.workspaceId, table.campaignId, table.agentRole),
+]);
 
 export type WorkspaceMemory = typeof workspaceMemoryTable.$inferSelect;
 export type InsertWorkspaceMemory = typeof workspaceMemoryTable.$inferInsert;

@@ -1,3 +1,4 @@
+import { clearPrivateContextStorage } from "./private-context-storage";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { setAuthTokenGetter, setUnauthorizedHandler } from "@workspace/api-client-react/custom-fetch";
@@ -13,6 +14,7 @@ setAuthTokenGetter(() => localStorage.getItem("accessToken"));
 // Remove credentials persisted by earlier versions. New refresh sessions are
 // supplied only by the browser through the HttpOnly cookie.
 localStorage.removeItem("refreshToken");
+clearPrivateContextStorage(localStorage);
 
 export interface Plan {
   id: string;
@@ -170,6 +172,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [!!token]);
 
   const setToken = (newToken: string | null) => {
+    clearPrivateContextStorage(localStorage);
+    clearPrivateContextStorage(sessionStorage);
+    void queryClient.cancelQueries();
+    queryClient.clear();
     sessionVersion.current++;
     if (newToken) {
       saveTokens(newToken);

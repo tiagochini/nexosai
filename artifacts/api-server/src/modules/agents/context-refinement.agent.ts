@@ -13,7 +13,7 @@
  * Non-blocking: always called via setImmediate / fire-and-forget.
  */
 
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, campaignsTable, agentClarificationRequestsTable } from "@workspace/db";
 import { completeWithAgent } from "../ai-gateway/ai-gateway.service.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
@@ -33,7 +33,7 @@ export async function runContextRefinement(
   const [campaign] = await db
     .select({ brainData: campaignsTable.brainData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
 
   if (!campaign) return;
@@ -50,7 +50,7 @@ export async function runContextRefinement(
         contentRetry: { ...contentRetry, autocorrectionStatus: "running" },
       } as any,
     })
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
   const intakeSummary = JSON.stringify({
     offerName: intakeData["offerName"] ?? intakeData["productName"],
@@ -140,7 +140,7 @@ Responda em JSON:
   const [refreshed] = await db
     .select({ brainData: campaignsTable.brainData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
 
   if (!refreshed) return;
@@ -163,7 +163,7 @@ Responda em JSON:
         },
       } as any,
     })
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
   // Emit real-time event so frontend knows to surface the clarification panel
   emitCampaignEvent({

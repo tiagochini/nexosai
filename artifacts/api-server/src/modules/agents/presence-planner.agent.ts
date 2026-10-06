@@ -244,7 +244,7 @@ export async function runPresencePlannerAgent(
   workspaceId: string,
   input: PresencePlannerInput,
   log: Logger,
-  opts?: { idempotencyKeyOverride?: string },
+  opts?: { idempotencyKeyOverride?: string; campaignId?: string | null },
 ): Promise<PresenceWeekPlanOutput> {
   const totalPosts = Math.min(input.postsPerDay, 5) * 7;
 
@@ -278,7 +278,7 @@ ${lp.other       ? `- Outros: ${lp.other}` : ""}`
     : "";
 
   const result = await runAgent({
-    campaignId: null,
+    campaignId: opts?.campaignId ?? null,
     workspaceId,
     agentRole: "presence_planner",
     systemPrompt: PLANNER_PROMPT,
@@ -363,10 +363,10 @@ export async function runPresenceInsightAgent(
   workspaceId: string,
   prevWeekSummary: string,
   log: Logger,
-  opts?: { idempotencyKeyOverride?: string },
+  opts?: { idempotencyKeyOverride?: string; campaignId?: string | null },
 ): Promise<PresenceInsightOutput> {
   const result = await runAgent({
-    campaignId: null,
+    campaignId: opts?.campaignId ?? null,
     workspaceId,
     agentRole: "presence_planner",
     systemPrompt: INSIGHT_PROMPT,

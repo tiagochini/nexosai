@@ -348,7 +348,7 @@ export async function runVSLScriptAgent(
   log: Logger,
   instructions?: string,
 ): Promise<VSLOutput> {
-  const memCtx = await getMemoryContext(workspaceId, "vsl_script", String(intakeData["product.category"] ?? ""));
+  const memCtx = await getMemoryContext(workspaceId, "vsl_script", campaignId);
   const memBlock = buildMemoryContextBlock(memCtx);
 
   const avatarContext = profile

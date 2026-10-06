@@ -15,7 +15,7 @@
  */
 
 import { db, campaignsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { completeWithAgent } from "../ai-gateway/ai-gateway.service.js";
 import { saveIntakeData } from "../intake/intake.service.js";
 import type { Logger } from "pino";
@@ -123,7 +123,7 @@ Escreva o monólogo agora — como esta pessoa fala consigo mesma sobre o proble
     const current = await db
       .select({ intakeData: campaignsTable.intakeData })
       .from(campaignsTable)
-      .where(eq(campaignsTable.id, campaignId))
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
       .limit(1);
 
     const existing = (current[0]?.intakeData ?? {}) as Record<string, unknown>;

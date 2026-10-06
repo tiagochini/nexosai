@@ -13,7 +13,7 @@
  * philosophy layers, just structural JSON analysis.
  */
 
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, campaignsTable } from "@workspace/db";
 import { runAgent } from "./agent.runner.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
@@ -54,7 +54,7 @@ export async function detectPremiseConflicts(
         brainData: campaignsTable.brainData,
       })
       .from(campaignsTable)
-      .where(eq(campaignsTable.id, campaignId))
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
       .limit(1);
 
     if (!campaign) return empty;
@@ -155,7 +155,7 @@ Detecte conflitos e retorne o JSON acima.`;
         await db
           .update(campaignsTable)
           .set({ brainData: { ...existingBrain, premiseConflicts: Array.from(conflictMap.values()), lastConflictCheck: new Date().toISOString() } })
-          .where(eq(campaignsTable.id, campaignId));
+          .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
       } catch (persistErr) {
         log.warn({ persistErr }, "conflict-detector: failed to persist conflicts (non-fatal)");
       }
@@ -186,6 +186,7 @@ Detecte conflitos e retorne o JSON acima.`;
  */
 export async function resolvePremiseConflict(
   campaignId: string,
+  workspaceId: string,
   field: string,
   resolution: "override" | "keep_both" | "ignore",
   log: Logger,
@@ -194,7 +195,7 @@ export async function resolvePremiseConflict(
     const [campaign] = await db
       .select({ brainData: campaignsTable.brainData })
       .from(campaignsTable)
-      .where(eq(campaignsTable.id, campaignId))
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
       .limit(1);
 
     if (!campaign) return;
@@ -206,7 +207,7 @@ export async function resolvePremiseConflict(
     await db
       .update(campaignsTable)
       .set({ brainData: { ...brain, premiseConflicts: conflicts } })
-      .where(eq(campaignsTable.id, campaignId));
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
     emitCampaignEvent({
       campaignId,

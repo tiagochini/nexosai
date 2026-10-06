@@ -328,7 +328,7 @@ export async function runStrategyAgent(
   profile?: import("./profile-builder.agent.js").ProfileBuilderOutput,
   strategicBrief?: StrategicBrief,
 ): Promise<StrategyOutput> {
-  const memCtx = await getMemoryContext(workspaceId, "strategy", String(intakeData["product.category"] ?? ""));
+  const memCtx = await getMemoryContext(workspaceId, "strategy", campaignId);
   const memBlock = buildMemoryContextBlock(memCtx);
 
   const intakeJson = JSON.stringify(intakeData, null, 2);

@@ -286,7 +286,7 @@ Retorne APENAS JSON.`;
     content = critique.refinedOutput;
   } else {
     const result = await runAgent({
-      campaignId: null,
+      campaignId,
       workspaceId,
       agentRole: "semente_launch",
       systemPrompt,

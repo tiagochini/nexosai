@@ -8,14 +8,21 @@ import {
 } from "./memory.service.js";
 import { db, workspaceMemoryTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
-import { NotFoundError, ValidationError } from "../../lib/errors.js";
+import { NotFoundError } from "../../lib/errors.js";
+import { requireProject } from "../operations/project-access.service.js";
 
 const router = Router();
 router.use(requireAuth);
 
+router.use(async (req, _res, next) => {
+  const campaignId = z.string().uuid().parse(req.method === "POST" ? req.body?.campaignId : req.query.campaignId);
+  await requireProject(req.auth.workspaceId, campaignId);
+  next();
+});
+
 // ── GET /memory/stats ─────────────────────────────────────────────────────────
 router.get("/stats", async (req, res) => {
-  const stats = await getWorkspaceMemoryStats(req.auth.workspaceId);
+  const stats = await getWorkspaceMemoryStats(req.auth.workspaceId, String(req.query.campaignId));
   res.json({ stats });
 });
 
@@ -23,7 +30,7 @@ router.get("/stats", async (req, res) => {
 router.get("/", async (req, res) => {
   const { agentRole, type, limit = "20" } = req.query as Record<string, string>;
 
-  const conditions = [eq(workspaceMemoryTable.workspaceId, req.auth.workspaceId)];
+  const conditions = [eq(workspaceMemoryTable.workspaceId, req.auth.workspaceId), eq(workspaceMemoryTable.campaignId, String(req.query.campaignId)), eq(workspaceMemoryTable.isPublicReference, false)];
   if (agentRole) conditions.push(eq(workspaceMemoryTable.agentRole, agentRole));
   if (type) conditions.push(eq(workspaceMemoryTable.memoryType, type as any));
 
@@ -32,7 +39,7 @@ router.get("/", async (req, res) => {
     .from(workspaceMemoryTable)
     .where(and(...conditions))
     .orderBy(desc(workspaceMemoryTable.createdAt))
-    .limit(Math.min(Number(limit), 50));
+    .limit(z.coerce.number().int().min(1).max(50).parse(limit));
 
   res.json({ memories, total: memories.length });
 });
@@ -40,9 +47,8 @@ router.get("/", async (req, res) => {
 // ── GET /memory/context/:agentRole ────────────────────────────────────────────
 router.get("/context/:agentRole", async (req, res) => {
   const { agentRole } = req.params as { agentRole: string };
-  const { niche } = req.query as Record<string, string>;
 
-  const ctx = await getMemoryContext(req.auth.workspaceId, agentRole, niche);
+  const ctx = await getMemoryContext(req.auth.workspaceId, agentRole, String(req.query.campaignId));
   res.json({ context: ctx });
 });
 
@@ -68,13 +74,14 @@ router.delete("/:id", async (req, res) => {
     .where(and(
       eq(workspaceMemoryTable.id, id),
       eq(workspaceMemoryTable.workspaceId, req.auth.workspaceId),
+      eq(workspaceMemoryTable.campaignId, String(req.query.campaignId)),
+      eq(workspaceMemoryTable.isPublicReference, false),
     ))
     .limit(1);
 
   if (!memory) throw new NotFoundError("Memory entry");
-  if (memory.isPublicReference) throw new ValidationError("Cannot delete public reference entries");
 
-  await db.delete(workspaceMemoryTable).where(eq(workspaceMemoryTable.id, id));
+  await db.delete(workspaceMemoryTable).where(and(eq(workspaceMemoryTable.id, id), eq(workspaceMemoryTable.workspaceId, req.auth.workspaceId), eq(workspaceMemoryTable.campaignId, String(req.query.campaignId))));
   res.json({ message: "Memory entry deleted" });
 });
 

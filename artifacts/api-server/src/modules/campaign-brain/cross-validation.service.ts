@@ -12,7 +12,7 @@
  */
 
 import { db, campaignsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { Logger } from "pino";
 import { getCampaignBrain } from "./campaign-brain.service.js";
 
@@ -61,7 +61,7 @@ export async function runCrossAgentValidation(
       targetingData: campaignsTable.targetingData,
     })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
 
   if (!campaign) {
@@ -72,7 +72,7 @@ export async function runCrossAgentValidation(
   const strategy = (campaign.strategyData ?? {}) as Record<string, unknown>;
   const offer    = (campaign.offerData    ?? {}) as Record<string, unknown>;
   const traffic  = (campaign.targetingData?? {}) as Record<string, unknown>;
-  const brain    = await getCampaignBrain(campaignId);
+  const brain    = await getCampaignBrain(campaignId, workspaceId);
 
   // ── Extract key metrics from agent outputs ──
   const ticketPrice    = Number(intake["product.price"] ?? 0);

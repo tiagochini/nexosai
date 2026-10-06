@@ -1,3 +1,5 @@
+import { useAuth } from "@/lib/auth";
+import { useListCampaigns } from "@workspace/api-client-react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
@@ -73,21 +75,27 @@ export default function MemoryPage() {
   const { locale } = useUiLocale();
   const numberLocale = intlLocale(locale);
   const qc = useQueryClient();
+  const { user, workspace } = useAuth();
+  const [campaignId, setCampaignId] = useState("");
+  const { data: projects } = useListCampaigns();
+  const projectSelected = !!user?.id && !!workspace?.id && !!campaignId && !!projects?.campaigns.some(p => p.id === campaignId);
   const [filterAgent, setFilterAgent] = useState("");
   const [filterType, setFilterType] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const { data: statsData, isLoading: loadingStats } = useQuery({
-    queryKey: ["/api/memory/stats"],
+    queryKey: ["/api/memory/stats", user?.id, workspace?.id, campaignId],
+    enabled: projectSelected,
     queryFn: async () => {
-      return customFetch<{ stats: MemoryStats }>("/api/memory/stats").catch(() => null);
+      return customFetch<{ stats: MemoryStats }>(`/api/memory/stats?campaignId=${campaignId}`).catch(() => null);
     },
   });
 
   const { data: memoriesData, isLoading: loadingMemories } = useQuery({
-    queryKey: ["/api/memory", filterAgent, filterType],
+    queryKey: ["/api/memory", user?.id, workspace?.id, campaignId, filterAgent, filterType],
+    enabled: projectSelected,
     queryFn: async () => {
-      const params = new URLSearchParams({ limit: "50" });
+      const params = new URLSearchParams({ limit: "50", campaignId });
       if (filterAgent) params.set("agentRole", filterAgent);
       if (filterType) params.set("type", filterType);
       return customFetch<{ memories: MemoryEntry[] }>(`/api/memory?${params}`)
@@ -97,18 +105,18 @@ export default function MemoryPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return customFetch<unknown>(`/api/memory/${id}`, { method: "DELETE" });
+      return customFetch<unknown>(`/api/memory/${id}?campaignId=${campaignId}`, { method: "DELETE" });
     },
     onSuccess: () => {
-      toast.success(t("Memória removida do cérebro compartilhado", "Memory removed from the shared brain", "Memoria eliminada del cerebro compartido"));
+      toast.success(t("Memória removida do projeto", "Memory removed from the project", "Memoria eliminada del proyecto"));
       void qc.invalidateQueries({ queryKey: ["/api/memory"] });
       void qc.invalidateQueries({ queryKey: ["/api/memory/stats"] });
     },
     onError: () => toast.error(t("Não foi possível remover esta memória", "Could not remove this memory", "No se pudo eliminar esta memoria")),
   });
 
-  const stats = statsData?.stats;
-  const memories = memoriesData?.memories ?? [];
+  const stats = projectSelected ? statsData?.stats : undefined;
+  const memories = projectSelected ? memoriesData?.memories ?? [] : [];
   const allAgents = Object.keys(stats?.byAgent ?? {});
   const allTypes = Object.keys(stats?.byType ?? {});
 
@@ -124,15 +132,23 @@ export default function MemoryPage() {
           </h1>
         </div>
         <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-          {t("Conhecimento acumulado pelos agentes ao longo das suas campanhas", "Knowledge accumulated by agents across your campaigns", "Conocimiento acumulado por los agentes durante tus campañas")}
+          {t("Conhecimento exclusivo do projeto selecionado", "Knowledge exclusive to the selected project", "Conocimiento exclusivo del proyecto seleccionado")}
         </p>
       </div>
+
+      <label className="block text-sm">
+        {t("Projeto", "Project", "Proyecto")}
+        <select className="block w-full border border-border bg-background p-2 mt-2" value={projectSelected ? campaignId : ""} onChange={e => { setCampaignId(e.target.value); setExpanded(null); }}>
+          <option value="">{t("Selecione um projeto", "Select a project", "Selecciona un proyecto")}</option>
+          {(projects?.campaigns ?? []).map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+        </select>
+      </label>
 
       {/* ── Info banner ── */}
       <div className="border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
         <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
         <p className="font-mono text-[11px] text-muted-foreground/80 leading-relaxed">
-          {t("Cada agente armazena aqui o que aprendeu sobre seu negócio, mercado e audiência. Quanto mais você usa a plataforma, mais preciso e personalizado fica o output de cada agente. Memórias de referência pública não podem ser deletadas.", "Each agent stores what it learns about your business, market, and audience here. The more you use the platform, the more precise and personalized each agent's output becomes. Public reference memories cannot be deleted.", "Cada agente guarda aquí lo que aprende sobre tu negocio, mercado y audiencia. Cuanto más uses la plataforma, más precisos y personalizados serán los resultados de cada agente. Las memorias de referencia pública no se pueden eliminar.")}
+          {t("As memórias pertencem somente a este projeto. Outros projetos e usuários não são usados como referência.", "Memories belong only to this project. Other projects and users are never used as references.", "Las memorias pertenecen solo a este proyecto. Otros proyectos y usuarios nunca se usan como referencias.")}
         </p>
       </div>
 

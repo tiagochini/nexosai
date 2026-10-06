@@ -329,7 +329,7 @@ export async function runComplianceAgent(
   adContent: Record<string, unknown> | undefined,
   log: Logger,
 ): Promise<ComplianceOutput> {
-  const memCtx = await getMemoryContext(workspaceId, "compliance");
+  const memCtx = await getMemoryContext(workspaceId, "compliance", campaignId);
   const memBlock = buildMemoryContextBlock(memCtx);
 
   const contentSample = JSON.stringify({

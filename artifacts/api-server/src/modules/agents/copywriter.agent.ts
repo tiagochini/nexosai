@@ -946,7 +946,7 @@ export async function runCopywriterAgent(
   launchPlan: Record<string, unknown> | undefined,
   log: Logger,
 ): Promise<CopywriterOutput> {
-  const memCtx = await getMemoryContext(workspaceId, "copywriter", String(intakeData["product.category"] ?? ""));
+  const memCtx = await getMemoryContext(workspaceId, "copywriter", campaignId);
   const memBlock = buildMemoryContextBlock(memCtx);
 
   const sharedContext = buildCopywriterSharedContext(intakeData, strategy, profile, launchPlan, memBlock);

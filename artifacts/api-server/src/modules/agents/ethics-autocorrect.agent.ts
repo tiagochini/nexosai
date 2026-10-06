@@ -10,7 +10,7 @@
  * Non-blocking: always called via setImmediate / fire-and-forget.
  */
 
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, campaignsTable } from "@workspace/db";
 import { completeWithAgent } from "../ai-gateway/ai-gateway.service.js";
 import type { Logger } from "pino";
@@ -31,7 +31,7 @@ export async function runEthicsAutocorrect(
   const [campaign] = await db
     .select({ brainData: campaignsTable.brainData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
 
   if (!campaign) return;
@@ -47,7 +47,7 @@ export async function runEthicsAutocorrect(
         contentRetry: { ...contentRetry, autocorrectionStatus: "running" },
       } as any,
     })
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
   const offerName = String(intakeData["offerName"] ?? intakeData["productName"] ?? "produto");
   const targetAudience = String(intakeData["targetAudience"] ?? intakeData["avatar"] ?? "audiência-alvo");
@@ -126,7 +126,7 @@ Gere um JSON com as diretrizes de reescrita para destravar este agente:
   const [refreshed] = await db
     .select({ brainData: campaignsTable.brainData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
 
   if (!refreshed) return;
@@ -154,7 +154,7 @@ Gere um JSON com as diretrizes de reescrita para destravar este agente:
         },
       } as any,
     })
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
   log.info({ campaignId, pieceType }, "[ETHICS-AUTOCORRECT] Compliance directive stored — intervention lock released, retry ready");
 }

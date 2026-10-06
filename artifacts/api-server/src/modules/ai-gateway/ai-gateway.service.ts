@@ -1,3 +1,5 @@
+import { requireProject } from "../operations/project-access.service.js";
+import { executionSettings, setExecutionSetting, withProjectExecution } from "../operations/project-execution-context.js";
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -128,8 +130,7 @@ const GEMINI_FLASH_NATIVE = "gemini-2.5-flash";
 // When active, heavy models are swapped for lighter/faster alternatives.
 // Activated by content.service.ts when retryCount >= 2 to prevent infinite loops
 // on deterministic errors (context overflow, safety blocks, etc.).
-let _fallbackMode = false;
-export function setFallbackMode(active: boolean): void { _fallbackMode = active; }
+export function setFallbackMode(active: boolean): void { setExecutionSetting("fallbackMode", active); }
 
 const FALLBACK_MODEL_MAP: Record<string, string> = {
   "claude-opus-4-5":   "claude-haiku-3-5",
@@ -970,7 +971,12 @@ function hasCredentials(attempt: CanonicalCompletionAttempt): boolean {
     : hasGeminiIntegration();
 }
 
-export async function completeWithAgent(
+export function completeWithAgent(...args: Parameters<typeof completeWithAgentInternal>): ReturnType<typeof completeWithAgentInternal> {
+  args[5] ??= executionSettings()?.campaignId ?? undefined;
+  return withProjectExecution(args[3], args[5] ?? null, () => completeWithAgentInternal(...args));
+}
+
+async function completeWithAgentInternal(
   agentRole: AgentRole,
   systemPrompt: string,
   messages: AIMessage[],
@@ -982,6 +988,7 @@ export async function completeWithAgent(
   maxTokens?: number,
   timeoutMs?: number,
 ): Promise<AICompletionResult> {
+  if (campaignId) await requireProject(workspaceId, campaignId);
   const agentConfig = AGENT_PROVIDER_MAP[agentRole];
   // providerOverride remains in this public signature for legacy test callers, but
   // production completions always use this canonical chain.
@@ -999,7 +1006,7 @@ export async function completeWithAgent(
     hasCredentials,
     async (attempt) => {
       const configuredModel = agentConfig.provider === attempt.provider ? agentConfig.model : attempt.model;
-      const attemptModel = _fallbackMode && FALLBACK_MODEL_MAP[configuredModel]
+      const attemptModel = executionSettings()?.fallbackMode && FALLBACK_MODEL_MAP[configuredModel]
         ? FALLBACK_MODEL_MAP[configuredModel] : configuredModel;
       const cappedTokens = Math.min(effectiveMaxTokens, attempt.provider === "gemini" ? 8192 : 16384);
       log.info({ agentRole, ...attempt, attemptModel, maxTokens: cappedTokens }, "AI completion provider attempt");

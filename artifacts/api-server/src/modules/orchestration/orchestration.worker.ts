@@ -6,7 +6,6 @@ import {
   STRATEGY_PHASE_ENTRY_STATUSES,
   CONTENT_PHASE_ENTRY_STATUSES,
 } from "../campaigns/campaigns.service.js";
-import { saveVerticalLearning } from "../campaign-brain/vertical-memory.service.js";
 import { QUEUE_NAMES, type CampaignOrchestrationJob } from "../queue/queue.service.js";
 import { orchestrateCampaign } from "../agents/command.agent.js";
 import { generateCampaignContent } from "../content/content.service.js";
@@ -385,12 +384,7 @@ async function processComplete(job: Job<CampaignOrchestrationJob>): Promise<void
 
   log.info({ campaignId }, "Campaign completed");
 
-  // Learning Memory per Vertical — fire-and-forget — accumulates intelligence across campaigns
-  setImmediate(() => {
-    saveVerticalLearning(campaignId, workspaceId, log).catch((err: unknown) => {
-      log.warn({ err, campaignId }, "Vertical Memory save failed — non-blocking");
-    });
-  });
+  // Historical vertical aggregates are excluded from isolated project execution.
 }
 
 // ── Worker factory ─────────────────────────────────────────────────────────────

@@ -19,7 +19,7 @@
 
 import type { Logger } from "pino";
 import { db, campaignsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { runAgent } from "../agents/agent.runner.js";
 import { getCampaignBrain, updateBrainSection, type CampaignBrain } from "./campaign-brain.service.js";
 
@@ -59,13 +59,13 @@ export async function runSelfCritique(
   log:          Logger,
 ): Promise<SelfCritiqueResult | null> {
   try {
-    const brain = await getCampaignBrain(campaignId);
+    const brain = await getCampaignBrain(campaignId, workspaceId);
     if (!brain) return null;
 
     const [campaign] = await db
       .select({ intakeData: campaignsTable.intakeData })
       .from(campaignsTable)
-      .where(eq(campaignsTable.id, campaignId))
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
       .limit(1);
 
     const intake = (campaign?.intakeData ?? {}) as Record<string, unknown>;
@@ -87,7 +87,7 @@ export async function runSelfCritique(
     // Store in Campaign Brain (cap at 10 critiques to avoid bloat)
     const existingCritiques = (brain as any).selfCritiques ?? [];
     const updatedCritiques = [parsed, ...existingCritiques].slice(0, 10);
-    await updateBrainSection(campaignId, "selfCritiques" as keyof CampaignBrain, updatedCritiques as any, log);
+    await updateBrainSection(campaignId, "selfCritiques" as keyof CampaignBrain, updatedCritiques as any, log, workspaceId);
 
     log.info({
       campaignId, agentType,

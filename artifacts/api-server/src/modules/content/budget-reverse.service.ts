@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, campaignsTable } from "@workspace/db";
 import {
   reverseBudget,
@@ -85,21 +85,21 @@ export async function calculateReverseBudget(
 
 export async function saveBudgetProposal(
   campaignId: string,
-  _workspaceId: string,
+  workspaceId: string,
   proposal: ReverseBudgetResult,
   log: Logger,
 ): Promise<void> {
   const [row] = await db
     .select({ brainData: (campaignsTable as any).brainData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
   const existing = ((row?.brainData ?? {}) as Record<string, unknown>);
 
   await db
     .update(campaignsTable)
     .set({ brainData: { ...existing, budgetProposal: proposal } as any, updatedAt: new Date() })
-    .where(eq(campaignsTable.id, campaignId));
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
   emitCampaignEvent({
     campaignId,

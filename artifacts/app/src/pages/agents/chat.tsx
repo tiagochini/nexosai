@@ -1,3 +1,4 @@
+import { useAuth } from "@/lib/auth";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRoute, Link } from "wouter";
@@ -195,20 +196,20 @@ const MODE_LABELS: Record<ContextMode, string> = {
 // ── localStorage helpers ──────────────────────────────────────────────────────
 const CHAT_MAX_STORED = 60;
 
-function chatStorageKey(role: string, campaignId: string) {
-  return `nexos-chat-${role}${campaignId ? `-${campaignId}` : ""}`;
+function chatStorageKey(role: string, campaignId: string, identity: string) {
+  return `nexos-chat-v2:${identity}:${role}:${campaignId || "no-project"}`;
 }
-function loadChatHistory(role: string, campaignId: string): ChatMsg[] {
+function loadChatHistory(role: string, campaignId: string, identity: string): ChatMsg[] {
   try {
-    const raw = localStorage.getItem(chatStorageKey(role, campaignId));
+    const raw = sessionStorage.getItem(chatStorageKey(role, campaignId, identity));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as Array<{ role: string; content: string; timestamp: string; meta?: ChatMsg["meta"] }>;
     return parsed.map(m => ({ ...m, role: m.role as "user" | "assistant", timestamp: new Date(m.timestamp) }));
   } catch { return []; }
 }
-function saveChatHistory(role: string, campaignId: string, msgs: ChatMsg[]) {
+function saveChatHistory(role: string, campaignId: string, msgs: ChatMsg[], identity: string) {
   try {
-    localStorage.setItem(chatStorageKey(role, campaignId), JSON.stringify(msgs.slice(-CHAT_MAX_STORED)));
+    sessionStorage.setItem(chatStorageKey(role, campaignId, identity), JSON.stringify(msgs.slice(-CHAT_MAX_STORED)));
   } catch { /* storage full */ }
 }
 
@@ -401,6 +402,15 @@ function MessageProcess({ msg, agentName, phaseCount }:
 
 // ── Main chat page ────────────────────────────────────────────────────────────
 export default function AgentChat() {
+  const { user, workspace } = useAuth();
+  if (!user?.id || !workspace?.id) return null;
+  return <ScopedAgentChat key={`${user?.id}:${workspace?.id}`} />;
+}
+
+function ScopedAgentChat() {
+  const { user, workspace } = useAuth();
+  const identity = `${user?.id}:${workspace?.id}`;
+  const skipHistorySave = useRef(false);
   const t = useUiText();
   const { locale } = useUiLocale();
   const [, params] = useRoute("/agents/:role");
@@ -415,6 +425,15 @@ export default function AgentChat() {
   const [retryInfo, setRetryInfo] = useState<{ attempt: number; max: number } | null>(null);
   const [contextMode, setContextMode] = useState<ContextMode>("question");
   const [selectedCampaign, setSelectedCampaign] = useState<string>("");
+  const chatScope = `${identity}:${role}:${selectedCampaign}`;
+  const activeScope = useRef(chatScope);
+  activeScope.current = chatScope;
+  const chatRequest = useRef<AbortController | null>(null);
+  useEffect(() => {
+    activeScope.current = chatScope;
+    setPendingAttachments([]); setInput(""); setSending(false); setRetryInfo(null);
+    return () => { activeScope.current = ""; chatRequest.current?.abort(); };
+  }, [chatScope]);
   const [pendingAttachments, setPendingAttachments] = useState<FileAttachment[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [showThinkingProcess, setShowThinkingProcess] = useState(false);
@@ -436,14 +455,16 @@ export default function AgentChat() {
 
   // Restore history
   useEffect(() => {
-    setMessages(loadChatHistory(role, selectedCampaign));
+    skipHistorySave.current = true;
+    setMessages(loadChatHistory(role, selectedCampaign, identity));
     setTimeout(() => textareaRef.current?.focus(), 100);
-  }, [role, selectedCampaign]);
+  }, [role, selectedCampaign, identity]);
 
   // Auto-save
   useEffect(() => {
-    if (messages.length > 0) saveChatHistory(role, selectedCampaign, messages);
-  }, [messages, role, selectedCampaign]);
+    if (skipHistorySave.current) { skipHistorySave.current = false; return; }
+    if (messages.length > 0) saveChatHistory(role, selectedCampaign, messages, identity);
+  }, [messages, role, selectedCampaign, identity]);
 
   // Auto-grow textarea
   const autoGrow = useCallback(() => {
@@ -697,6 +718,7 @@ export default function AgentChat() {
   const FETCH_TIMEOUT_MS = 110_000;
 
   const sendMessage = async (overrideMsg?: string) => {
+    const requestScope = chatScope;
     const text = (overrideMsg ?? input).trim();
     if ((!text && pendingAttachments.length === 0) || sending) return;
 
@@ -758,12 +780,15 @@ export default function AgentChat() {
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      if (activeScope.current !== requestScope) return;
       if (attempt > 0) {
         setRetryInfo({ attempt, max: MAX_RETRIES });
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS_MS[attempt - 1]));
       }
 
+      if (activeScope.current !== requestScope) return;
       const controller = new AbortController();
+      chatRequest.current = controller;
       const timeoutId = setTimeout(() => controller.abort(new DOMException("Tempo limite excedido", "TimeoutError")), FETCH_TIMEOUT_MS);
 
       try {
@@ -772,6 +797,7 @@ export default function AgentChat() {
           { method: "POST", headers: { "Content-Type": "application/json" }, body: requestBody, signal: controller.signal },
         );
         clearTimeout(timeoutId);
+        if (activeScope.current !== requestScope) return;
         setRetryInfo(null);
 
         const elapsedMs = Date.now() - sendStartRef.current;
@@ -788,12 +814,13 @@ export default function AgentChat() {
         };
         const withAi = [...withUser, aiMsg];
         setMessages(withAi);
-        saveChatHistory(role, selectedCampaign, withAi);
+        saveChatHistory(role, selectedCampaign, withAi, identity);
         setSending(false);
         setTimeout(() => textareaRef.current?.focus(), 100);
         return;
       } catch (err) {
         clearTimeout(timeoutId);
+        if (activeScope.current !== requestScope) return;
         lastError = err instanceof Error ? err : new Error(String(err));
         const isRetryable = !(err instanceof ApiError) || err.status >= 500;
         if (!isRetryable || attempt === MAX_RETRIES) break;
@@ -837,7 +864,7 @@ export default function AgentChat() {
     toast(t("Ouvindo… fale agora.", "Listening… speak now.", "Escuchando… habla ahora."), { duration: 2500 });
   };
 
-  const clearChat = () => { setMessages([]); localStorage.removeItem(chatStorageKey(role, selectedCampaign)); };
+  const clearChat = () => { setMessages([]); sessionStorage.removeItem(chatStorageKey(role, selectedCampaign, identity)); };
   const exportChat = () => {
     const text = messages.map(m => `[${m.role === "user" ? "Você" : agent.name}] ${m.content}`).join("\n\n");
     const blob = new Blob([text], { type: "text/plain" });

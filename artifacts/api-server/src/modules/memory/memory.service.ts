@@ -1,11 +1,10 @@
-import { eq, and, desc, inArray, isNull, or } from "drizzle-orm";
+import { requireProject } from "../operations/project-access.service.js";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import {
   db,
   workspaceMemoryTable,
   contentPiecesTable,
-  type InsertWorkspaceMemory,
 } from "@workspace/db";
-import type { AgentRole } from "../ai-gateway/ai-gateway.service.js";
 import type { Logger } from "pino";
 
 // ── Agent → memory type mapping ───────────────────────────────────────────────
@@ -115,11 +114,12 @@ export interface MemoryContext {
 export async function getMemoryContext(
   workspaceId: string,
   agentRole: string,
-  productNiche?: string,
+  campaignId: string,
 ): Promise<MemoryContext> {
+  await requireProject(workspaceId, campaignId);
   const memType = AGENT_MEMORY_TYPE[agentRole];
 
-  // Fetch approved examples from this workspace (up to 3 most recent)
+  // Fetch approved examples from this project (up to 3 most recent)
   const positiveMemories = memType
     ? await db
         .select()
@@ -127,6 +127,7 @@ export async function getMemoryContext(
         .where(
           and(
             eq(workspaceMemoryTable.workspaceId, workspaceId),
+            eq(workspaceMemoryTable.campaignId, campaignId),
             eq(workspaceMemoryTable.isNegative, false),
             eq(workspaceMemoryTable.isPublicReference, false),
             eq(workspaceMemoryTable.agentRole, agentRole),
@@ -136,13 +137,15 @@ export async function getMemoryContext(
         .limit(3)
     : [];
 
-  // Fetch rejection/negative memories from this workspace (up to 3)
+  // Fetch rejection/negative memories from this project (up to 3)
   const negativeMemories = await db
     .select()
     .from(workspaceMemoryTable)
     .where(
       and(
         eq(workspaceMemoryTable.workspaceId, workspaceId),
+        eq(workspaceMemoryTable.campaignId, campaignId),
+        eq(workspaceMemoryTable.isPublicReference, false),
         eq(workspaceMemoryTable.isNegative, true),
         eq(workspaceMemoryTable.agentRole, agentRole),
       ),
@@ -150,22 +153,7 @@ export async function getMemoryContext(
     .orderBy(desc(workspaceMemoryTable.createdAt))
     .limit(3);
 
-  // Fetch public reference launches (niche-matched first, then generic)
-  const publicRefs = await db
-    .select()
-    .from(workspaceMemoryTable)
-    .where(
-      and(
-        eq(workspaceMemoryTable.isPublicReference, true),
-        eq(workspaceMemoryTable.agentRole, agentRole),
-        or(
-          productNiche ? eq(workspaceMemoryTable.productNiche, productNiche) : isNull(workspaceMemoryTable.id),
-          isNull(workspaceMemoryTable.productNiche),
-        ),
-      ),
-    )
-    .orderBy(desc(workspaceMemoryTable.qualityScore))
-    .limit(2);
+  // Customer memory is never shared, including entries previously marked public.
 
   // Fetch performance insights
   const insights = await db
@@ -174,6 +162,8 @@ export async function getMemoryContext(
     .where(
       and(
         eq(workspaceMemoryTable.workspaceId, workspaceId),
+        eq(workspaceMemoryTable.campaignId, campaignId),
+        eq(workspaceMemoryTable.isPublicReference, false),
         eq(workspaceMemoryTable.memoryType, "performance_insight"),
       ),
     )
@@ -192,11 +182,7 @@ export async function getMemoryContext(
         .join("\n")
     : "";
 
-  const publicReferences = publicRefs.length > 0
-    ? publicRefs
-        .map((m) => `**Referência de lançamento real — ${m.title}:**\n${m.summary}`)
-        .join("\n\n")
-    : "";
+  const publicReferences = "";
 
   const performanceInsights = insights.length > 0
     ? insights
@@ -205,12 +191,12 @@ export async function getMemoryContext(
     : "";
 
   // Update usage count for retrieved memories
-  const allIds = [...positiveMemories, ...negativeMemories, ...publicRefs].map((m) => m.id);
+  const allIds = [...positiveMemories, ...negativeMemories].map((m) => m.id);
   if (allIds.length > 0) {
     await db
       .update(workspaceMemoryTable)
       .set({ lastUsedAt: new Date() })
-      .where(inArray(workspaceMemoryTable.id, allIds));
+      .where(and(inArray(workspaceMemoryTable.id, allIds), eq(workspaceMemoryTable.workspaceId, workspaceId), eq(workspaceMemoryTable.campaignId, campaignId)));
   }
 
   const hasContext =
@@ -228,18 +214,12 @@ export function buildMemoryContextBlock(ctx: MemoryContext): string {
   if (!ctx.hasContext) return "";
 
   const parts: string[] = [
-    "## MEMÓRIA DO SISTEMA — USE COMO CALIBRAÇÃO DE QUALIDADE",
+    "## MEMÓRIA EXCLUSIVA DESTE PROJETO — USE COMO CALIBRAÇÃO DE QUALIDADE",
     "",
   ];
 
-  if (ctx.publicReferences) {
-    parts.push("### Referências de Lançamentos Reais (Alta Performance)");
-    parts.push(ctx.publicReferences);
-    parts.push("");
-  }
-
   if (ctx.positiveExamples) {
-    parts.push("### Conteúdo Aprovado Anteriormente por Este Cliente");
+    parts.push("### Conteúdo Aprovado neste Projeto");
     parts.push("Use como referência de tom, estilo e profundidade esperados:");
     parts.push(ctx.positiveExamples);
     parts.push("");
@@ -253,7 +233,7 @@ export function buildMemoryContextBlock(ctx: MemoryContext): string {
   }
 
   if (ctx.performanceInsights) {
-    parts.push("### Insights de Performance de Campanhas Anteriores");
+    parts.push("### Insights de Performance deste Projeto");
     parts.push(ctx.performanceInsights);
     parts.push("");
   }
@@ -277,6 +257,7 @@ export async function saveApprovedToMemory(
   productNiche?: string,
   qualityScore?: number,
 ): Promise<void> {
+  await requireProject(workspaceId, campaignId);
   const memType = AGENT_MEMORY_TYPE[agentRole] ?? "approved_copy";
 
   await db.insert(workspaceMemoryTable).values({
@@ -305,6 +286,7 @@ export async function saveRejectionToMemory(
   rejectionReason: string,
   contentSummary: string,
 ): Promise<void> {
+  await requireProject(workspaceId, campaignId);
   const summary = `Conteúdo rejeitado: "${contentTitle}". Motivo: ${rejectionReason}. Padrão a evitar: ${contentSummary.slice(0, 300)}`;
 
   await db.insert(workspaceMemoryTable).values({
@@ -329,6 +311,7 @@ export async function savePerformanceInsight(
   insight: string,
   score: number,
 ): Promise<void> {
+  await requireProject(workspaceId, campaignId);
   await db.insert(workspaceMemoryTable).values({
     workspaceId,
     campaignId,
@@ -359,7 +342,7 @@ export async function processContentPieceApproval(
     const [piece] = await db
       .select()
       .from(contentPiecesTable)
-      .where(eq(contentPiecesTable.id, pieceId))
+      .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.campaignId, campaignId), eq(contentPiecesTable.workspaceId, workspaceId)))
       .limit(1);
 
     if (!piece) return;
@@ -444,11 +427,12 @@ function extractContentSummary(
 
 // ── Get memory stats for workspace ────────────────────────────────────────────
 
-export async function getWorkspaceMemoryStats(workspaceId: string) {
+export async function getWorkspaceMemoryStats(workspaceId: string, campaignId: string) {
+  await requireProject(workspaceId, campaignId);
   const memories = await db
     .select()
     .from(workspaceMemoryTable)
-    .where(eq(workspaceMemoryTable.workspaceId, workspaceId))
+    .where(and(eq(workspaceMemoryTable.workspaceId, workspaceId), eq(workspaceMemoryTable.campaignId, campaignId), eq(workspaceMemoryTable.isPublicReference, false)))
     .orderBy(desc(workspaceMemoryTable.createdAt));
 
   const byType = memories.reduce<Record<string, number>>((acc, m) => {

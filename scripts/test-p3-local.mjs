@@ -25,7 +25,7 @@ const run = (...args) => command('docker', ['run', '--rm', '--network', `${proje
   ...Object.entries(environment).flatMap(([key, value]) => ['-e', `${key}=${value}`]), image, ...args]);
 const tsx = '/workspace/artifacts/api-server/node_modules/tsx/dist/cli.mjs';
 const checks = [
-  'test-p3-journey', 'test-academy-funnel-db', 'test-academy-access-outbox-db', 'test-academy-delivery-lifecycle-db',
+  'test-project-execution-isolation', 'test-project-isolation-db', 'test-content-coherence-idor', 'test-auth-sessions-http', 'test-realtime-security-db', 'test-content-checkpoint-resume', 'test-p3-journey', 'test-academy-funnel-db', 'test-academy-access-outbox-db', 'test-academy-delivery-lifecycle-db',
   'test-native-media-control-plane', 'test-native-media-http', 'test-timeline-render-compiler',
   'test-paid-media', 'test-paid-media-launch', 'test-conditional-execution-db', 'test-social-publication-governance',
   'test-product-asaas-sandbox-unit', 'test-canonical-completion-chain',
@@ -35,6 +35,7 @@ const results = { generatedAt: new Date().toISOString(), scope: 'Owned isolated 
 try {
   console.log(process.argv.includes('--skip-build') ? 'P3: using existing test image (source mode is recorded in results)' : 'P3: building API test image with FFmpeg/Python');
   if (!process.argv.includes('--skip-build')) await command('docker', ['build', '-t', image, '-f', 'ops/app/Dockerfile', '.']);
+  await command(process.execPath, ['--test', 'scripts/test-private-context-storage.mjs']); results.checks.privateBrowserContext = 'PASS account/workspace transition removes private browser history and intake remnants';
   await command(process.execPath, ['--test', 'scripts/evaluate-ai-quality.test.mjs']); results.checks.aiEvaluationFramework = 'PASS versioned references, adversarial regressions and artifact/prompt/model-bound human review format; live AI release remains blocked';
   await compose('up', '-d', '--wait');
   await run('/workspace/lib/db/scripts/bootstrap-empty-database.mjs', '--execute');

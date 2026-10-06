@@ -1,3 +1,4 @@
+import { NotFoundError } from "../../lib/errors.js";
 /**
  * Tenant-scoped, canonical campaign facts for runAgent().
  *
@@ -136,7 +137,7 @@ export async function buildCampaignActionContext(
   if (!campaign) {
     // Intentionally no unscoped lookup: this is both missing and cross-tenant safe.
     logger.warn({ campaignId, workspaceId, agentRole }, "SECURITY_CAMPAIGN_CONTEXT_MISMATCH");
-    return unavailable("A campanha não existe neste workspace ou não está disponível.");
+    throw new NotFoundError("Project");
   }
 
   const approvedMasterplan = await getApprovedMasterplan(workspaceId, campaignId);

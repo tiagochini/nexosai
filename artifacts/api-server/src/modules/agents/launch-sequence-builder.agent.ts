@@ -35,6 +35,7 @@ export interface LaunchSequencePlan {
 }
 
 export interface SequenceBuilderInput {
+  campaignId: string | null;
   model: string;
   totalDays: number;
   productName: string;
@@ -335,8 +336,9 @@ export async function runLaunchSequenceBuilderAgent(
   input: SequenceBuilderInput,
   log: Logger,
 ): Promise<LaunchSequencePlan> {
-  const memCtx = await getMemoryContext(workspaceId, "launch_sequence", input.model);
-  const memBlock = buildMemoryContextBlock(memCtx);
+  const memBlock = input.campaignId
+    ? buildMemoryContextBlock(await getMemoryContext(workspaceId, "launch_sequence", input.campaignId))
+    : "";
 
   const isFlash = input.totalDays !== undefined && input.totalDays <= 7;
 
@@ -360,7 +362,7 @@ export async function runLaunchSequenceBuilderAgent(
   const userMessage = buildUserMessage(input, modelLabel, phaseStructure);
 
   const result = await runAgent({
-    campaignId: null,
+    campaignId: input.campaignId,
     workspaceId,
     agentRole: "launch_sequence_builder",
     systemPrompt: COGNITIVE_IDENTITY_LAUNCH_SEQUENCE_BUILDER + memBlock + SEQUENCE_BUILDER_PROMPT,

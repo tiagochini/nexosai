@@ -42,6 +42,7 @@ export type PresencePlatformConfig = {
 };
 
 export type PresenceWeeklyInsight = {
+  campaignId?: string | null;
   weekStart: string; // YYYY-MM-DD (segunda-feira analisada)
   summary: string;
   wins: string[];

@@ -389,7 +389,7 @@ export async function runLandingPageAgent(
   profile: ProfileBuilderOutput | undefined,
   log: Logger,
 ): Promise<LandingPageOutput> {
-  const memCtx = await getMemoryContext(workspaceId, "landing_page", String(intakeData["product.category"] ?? ""));
+  const memCtx = await getMemoryContext(workspaceId, "landing_page", campaignId);
   const memBlock = buildMemoryContextBlock(memCtx);
 
   const avatarContext = profile

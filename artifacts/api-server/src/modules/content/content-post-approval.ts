@@ -55,12 +55,12 @@ export function runPostApprovalHooks(ctx: PostApprovalContext): void {
 
   // Hook 4 — Contradiction detector: re-run alignment after each approval
   setImmediate(() => {
-    getCampaignBrain(campaignId)
+    getCampaignBrain(campaignId, workspaceId)
       .then((brain) => {
         if (!brain) return;
         return runStrategicAlignmentEngine(campaignId, brain, log).then((report) => {
           if (report.contradictions.length > 0) {
-            return updateBrainSection(campaignId, "contradictions", report.contradictions, log);
+            return updateBrainSection(campaignId, "contradictions", report.contradictions, log, workspaceId);
           }
           return undefined;
         });

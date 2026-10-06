@@ -17,7 +17,7 @@ import {
   type MemoryEntry,
 } from "./campaign-memory.service.js";
 import { db, campaignsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { Logger } from "pino";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -163,7 +163,7 @@ export async function runMemoryCompression(
   log: Logger,
   force = false,
 ): Promise<CompressionResult | null> {
-  const memory = await getCampaignMemory(campaignId);
+  const memory = await getCampaignMemory(campaignId, workspaceId);
   if (!memory) {
     log.warn({ campaignId }, "Memory compression: no memory found");
     return null;
@@ -237,7 +237,7 @@ export async function runMemoryCompression(
 
   // Persist a compression audit summary as an agent output in the memory
   try {
-    const currentMemory = await getCampaignMemory(campaignId);
+    const currentMemory = await getCampaignMemory(campaignId, workspaceId);
     if (currentMemory) {
       const compressionEntry: MemoryEntry = {
         id: `compression_${Date.now()}`,
@@ -266,7 +266,7 @@ export async function runMemoryCompression(
       await db
         .update(campaignsTable)
         .set({ memoryData: updatedMemory as any })
-        .where(eq(campaignsTable.id, campaignId));
+        .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
     }
   } catch (persistErr) {
     log.warn({ persistErr, campaignId }, "Memory compression: failed to persist result");

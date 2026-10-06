@@ -11,7 +11,7 @@
  * Este arquivo implementa apenas a MECÂNICA.
  */
 
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, campaignsTable } from "@workspace/db";
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
@@ -157,6 +157,7 @@ const VALIDATOR_DEFAULTS: Record<string, Partial<MarketValidatorResult>> = {
 
 async function persistMarketValidation(
   campaignId: string,
+  workspaceId: string,
   result: MarketValidationResult,
   log: Logger,
 ): Promise<void> {
@@ -164,13 +165,13 @@ async function persistMarketValidation(
     const [row] = await db
       .select({ brainData: (campaignsTable as any).brainData })
       .from(campaignsTable)
-      .where(eq(campaignsTable.id, campaignId))
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
       .limit(1);
     const existing = ((row?.brainData ?? {}) as Record<string, unknown>);
     await db
       .update(campaignsTable)
       .set({ brainData: { ...existing, marketValidation: result } as any })
-      .where(eq(campaignsTable.id, campaignId));
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
     log.info({ campaignId, verdict: result.overallVerdict }, "[MARKET_VALIDATION] Resultado persistido em brainData");
   } catch (err) {
     log.warn({ err, campaignId }, "[MARKET_VALIDATION] Falha ao persistir em brainData (não-bloqueante)");
@@ -344,7 +345,7 @@ export async function runMarketValidation(
     validatedAt: new Date().toISOString(),
   };
 
-  await persistMarketValidation(campaignId, result, log);
+  await persistMarketValidation(campaignId, workspaceId, result, log);
 
   emitCampaignEvent({
     campaignId,

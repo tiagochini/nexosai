@@ -240,7 +240,7 @@ export async function generateSequencePlan(
         audienceData: campaignsTable.audienceData,
       })
       .from(campaignsTable)
-      .where(eq(campaignsTable.id, sequence.campaignId));
+      .where(and(eq(campaignsTable.id, sequence.campaignId), eq(campaignsTable.workspaceId, workspaceId)));
     if (campaign) {
       intakeData = campaign.intakeData as Record<string, unknown>;
       if (campaign.strategyData) strategy = campaign.strategyData as unknown as StrategyOutput;
@@ -253,6 +253,7 @@ export async function generateSequencePlan(
   const plan = await runLaunchSequenceBuilderAgent(
     workspaceId,
     {
+      campaignId: sequence.campaignId,
       model: sequence.model,
       totalDays: sequence.totalDays,
       productName: sequence.productName ?? String(intakeData["product.name"] ?? ""),

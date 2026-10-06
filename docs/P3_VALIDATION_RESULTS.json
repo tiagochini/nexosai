@@ -1,10 +1,17 @@
 {
-  "generatedAt": "2026-10-06T13:35:46.209Z",
+  "generatedAt": "2026-10-06T14:44:17.402Z",
   "scope": "Owned isolated containers, mocked providers and reference AI fixtures; no real inference or live publication",
   "runtimeSource": "API/database source in freshly built test image",
   "checks": {
+    "privateBrowserContext": "PASS account/workspace transition removes private browser history and intake remnants",
     "aiEvaluationFramework": "PASS versioned references, adversarial regressions and artifact/prompt/model-bound human review format; live AI release remains blocked",
     "schemaIntegrity": "PASS repeat-safe forward trigger/scope repair, missing-FK and disabled-trigger rejection and atomic bootstrap rollback",
+    "test-project-execution-isolation": "PASS",
+    "test-project-isolation-db": "PASS",
+    "test-content-coherence-idor": "PASS",
+    "test-auth-sessions-http": "PASS",
+    "test-realtime-security-db": "PASS",
+    "test-content-checkpoint-resume": "PASS",
     "test-p3-journey": "PASS",
     "test-academy-funnel-db": "PASS",
     "test-academy-access-outbox-db": "PASS",

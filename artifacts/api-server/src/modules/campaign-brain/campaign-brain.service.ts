@@ -152,6 +152,7 @@ function defaultTrafficLearnings(): TrafficLearnings {
 
 export async function buildCampaignBrain(
   campaignId: string,
+  workspaceId: string,
   log: Logger,
 ): Promise<CampaignBrain | null> {
   try {
@@ -166,7 +167,7 @@ export async function buildCampaignBrain(
         brainData:    (campaignsTable as any).brainData,
       })
       .from(campaignsTable)
-      .where(eq(campaignsTable.id, campaignId))
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
       .limit(1);
 
     if (!campaign) return null;
@@ -235,7 +236,7 @@ export async function buildCampaignBrain(
 
     await db.update(campaignsTable as any)
       .set({ brainData: brain as any })
-      .where(eq(campaignsTable.id, campaignId));
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
     log.info({ campaignId, version: brain.version, icpSophistication: icp.sophisticationLevel, positioning: offerProfile.positioning }, "Campaign Brain built");
     return brain;
@@ -245,13 +246,11 @@ export async function buildCampaignBrain(
   }
 }
 
-export async function getCampaignBrain(campaignId: string, workspaceId?: string): Promise<CampaignBrain | null> {
+export async function getCampaignBrain(campaignId: string, workspaceId: string): Promise<CampaignBrain | null> {
   const [row] = await db
     .select({ brainData: (campaignsTable as any).brainData })
     .from(campaignsTable)
-    .where(workspaceId
-      ? (and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
-      : eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
   return (row?.brainData as CampaignBrain | null) ?? null;
 }
@@ -261,7 +260,7 @@ export async function updateBrainSection<K extends keyof CampaignBrain>(
   key: K,
   value: CampaignBrain[K],
   log: Logger,
-  workspaceId?: string,
+  workspaceId: string,
 ): Promise<void> {
   try {
     const existing = await getCampaignBrain(campaignId, workspaceId);
@@ -269,9 +268,7 @@ export async function updateBrainSection<K extends keyof CampaignBrain>(
     const updated = { ...existing, [key]: value };
     await db.update(campaignsTable as any)
       .set({ brainData: updated as any })
-      .where(workspaceId
-        ? (and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
-        : eq(campaignsTable.id, campaignId));
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
   } catch (err) {
     log.warn({ err, campaignId, key }, "Brain section update failed");
   }

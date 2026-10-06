@@ -14,7 +14,7 @@
 
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import { db, campaignsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { Logger } from "pino";
 
@@ -131,7 +131,7 @@ export async function generateCampaignEmotionalArc(
   const [existing] = await db
     .select({ brainData: campaignsTable.brainData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
   const existingBrain = (existing?.brainData ?? {}) as Record<string, unknown>;
   if (existingBrain["emotionalArc"]) {
@@ -205,14 +205,14 @@ Gere o Arco Emocional Completo de 9 fases para ESTA campanha específica.`;
     const [current] = await db
       .select({ brainData: campaignsTable.brainData })
       .from(campaignsTable)
-      .where(eq(campaignsTable.id, campaignId))
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
       .limit(1);
 
     const currentBrain = (current?.brainData ?? {}) as Record<string, unknown>;
     await db
       .update(campaignsTable)
       .set({ brainData: { ...currentBrain, emotionalArc: arc } as any })
-      .where(eq(campaignsTable.id, campaignId));
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
     log.info({ campaignId, phases: arc.phases.length }, "Campaign Emotional Arc generated and saved");
     return arc;

@@ -15,7 +15,6 @@ import {
   optimizeBio,
   publishBio,
   getMetricsOverview,
-  findActiveLaunchContext,
   findCampaignContextById,
   listWorkspaceCampaigns,
   currentPlanWeekStart,
@@ -91,17 +90,12 @@ router.get("/config", async (req, res): Promise<void> => {
 
   // Resolve aligned campaign:
   // 1. If user explicitly chose a campaign → use it (even if not active)
-  // 2. Otherwise → fall back to auto-detecting the active launch
+  // Without an explicit project, presence stays standalone.
   let alignedCampaign: { campaignId: string; title: string; status: string } | null = null;
   if (config?.alignedCampaignId) {
     const ctx = await findCampaignContextById(req.auth.workspaceId, config.alignedCampaignId).catch(() => null);
     if (ctx) {
       alignedCampaign = { campaignId: ctx.campaignId, title: ctx.context.campaignTitle, status: ctx.context.campaignStatus };
-    }
-  } else {
-    const launch = await findActiveLaunchContext(req.auth.workspaceId).catch(() => null);
-    if (launch) {
-      alignedCampaign = { campaignId: launch.campaignId, title: launch.context.campaignTitle, status: launch.context.campaignStatus };
     }
   }
 
