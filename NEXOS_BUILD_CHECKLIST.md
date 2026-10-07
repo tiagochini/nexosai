@@ -1,5 +1,12 @@
 # NexOS — Checklist Canônico de Construção
 
+**Separação de ambientes — 07/10/2026:** Supabase reservado à homologação;
+desenvolvimento no PostgreSQL local/Docker e regressões em bancos descartáveis
+locais/Docker. Removido `homologation:test`; o runtime de testes bloqueia conexões
+Supabase. Perfil de homologação separado, dados e evidências históricos preservados.
+Próximo checkpoint: jornada de navegador e provedores sandbox na homologação.
+[Política e comandos](docs/SUPABASE_HOMOLOGATION.md). Maturidade inalterada.
+
 **Supabase — homologação de 06/10/2026:** esquema externo preparado (177 tabelas,
 75 entradas de esquema/migração e 19 triggers ativos), TLS verificado, role privada
 e acesso público bloqueado. Seis grupos de regressão, administração founder por

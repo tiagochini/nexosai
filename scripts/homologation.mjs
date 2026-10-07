@@ -1,10 +1,9 @@
 import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { homologationEnvironment, root } from './homologation-environment.mjs';
 const mode = process.argv[2];
-if (!['prepare','verify','test','founder','redis','smoke'].includes(mode)) throw new Error('Usage: homologation.mjs prepare|verify|test|founder|redis|smoke');
+if (!['prepare','verify','founder','redis','smoke'].includes(mode)) throw new Error('Supabase is reserved for homologation. Usage: homologation.mjs prepare|verify|founder|redis|smoke. Run regression suites with test:p1-local or test:p3-local.');
 const { environment, adminUrl } = homologationEnvironment();
 const tsx = path.join(root, 'artifacts/api-server/node_modules/tsx/dist/cli.mjs');
 const checks = {};
@@ -49,13 +48,6 @@ try {
     await run('founder UUID activation', [tsx, 'src/scripts/provision-homologation-founder.ts'], false, path.join(root, 'artifacts/api-server'));
   }
   if (mode === 'smoke') await run('compiled API smoke', ['scripts/smoke-homologation.mjs']);
-  if (mode === 'test') {
-    for (const name of ['test-auth-registration-db','test-auth-sessions-http','test-realtime-security-db','test-project-isolation-db','test-content-checkpoint-resume']) {
-      await run(name, ['--import', pathToFileURL(path.join(root, 'scripts/homologation-test-transport.mjs')).href, tsx, `src/scripts/${name}.ts`], false, path.join(root, 'artifacts/api-server'));
-    }
-    await run('token encryption', [tsx, 'lib/db/scripts/test-integration-token-crypto.ts', '--database']);
-    await run('final schema verification', ['lib/db/scripts/verify-database.mjs']);
-  }
 } finally {
   writeFileSync(path.join(root, `docs/SUPABASE_HOMOLOGATION_${mode.toUpperCase()}_RESULTS.json`), JSON.stringify({ testedAt: new Date().toISOString(), mode, host: environment.HOMOLOGATION_DATABASE_HOST, tls: 'verify-full with official CA', runtimeRole: 'nexos_homologation', localDatabaseChanged: false, limitations: ['Destructive schema-repair control runs only on disposable local databases; remote tests keep all live constraints and triggers enabled', 'No live provider delivery, AI inference or public deployment is certified'], checks }, null, 2) + '\n');
 }

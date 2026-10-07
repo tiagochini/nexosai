@@ -1,6 +1,6 @@
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { assertIsolationTestDatabase } from "./helpers/test-database-target.js";
+import { assertHomologationDatabase } from "./helpers/homologation-database.js";
 import { randomBytes } from "node:crypto";
 import { once } from "node:events";
 import assert from "node:assert/strict";
@@ -15,7 +15,7 @@ const { default: pino } = await import("pino");
 const { registerUser, loginUser, verifyAccessToken, signAccess } = await import("../modules/auth/auth.service.js");
 const { default: express } = await import("express");
 const { default: academyRouter } = await import("../modules/academy/academy.routes.js");
-assert.equal(await assertIsolationTestDatabase(pool), "homologation");
+await assertHomologationDatabase(pool);
 const root = new URL("../../../../", import.meta.url);
 const credentialsPath = fileURLToPath(new URL(".local/founder-homologation-credentials.json", root));
 const email = "founder@nexos.ai";

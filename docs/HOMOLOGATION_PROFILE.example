@@ -1,9 +1,10 @@
 # Copy to .env.homologation.local in the project root (ignored). Never enter secrets in this template.
+# Reserved for homologation; regression tests use local/Docker databases.
 # URL-encode PostgreSQL passwords. Application uses a private SQL role; no public API key is required.
 DATABASE_URL=postgresql://nexos_homologation:SENHA_URL_ENCODED@db.PROJECTREF.supabase.co:5432/postgres
 DATABASE_ADMIN_URL=postgresql://postgres:SENHA_URL_ENCODED@db.PROJECTREF.supabase.co:5432/postgres
 HOMOLOGATION_DATABASE_HOST=db.PROJECTREF.supabase.co
-HOMOLOGATION_DB_TESTS=true
+HOMOLOGATION_ENVIRONMENT=true
 DATABASE_SSL_MODE=verify-full
 DATABASE_SSL_CA_FILE=C:/CAMINHO/PRIVADO/supabase-root-ca.crt
 DB_POOL_MAX=5

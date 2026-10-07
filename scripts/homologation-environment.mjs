@@ -7,7 +7,7 @@ export function buildHomologationEnvironment(profile, parent = process.env) {
   const system = Object.fromEntries(Object.entries(parent).filter(([key]) =>
     /^(PATH|PATHEXT|SYSTEMROOT|SYSTEMDRIVE|WINDIR|COMSPEC|TEMP|TMP|USERPROFILE|APPDATA|LOCALAPPDATA|HOME|PROGRAMFILES|PROGRAMFILES\(X86\)|PROGRAMW6432|PROGRAMDATA|ALLUSERSPROFILE)$/i.test(key)));
   const url = new URL(profile.DATABASE_URL);
-  if (profile.HOMOLOGATION_DB_TESTS !== 'true' || profile.DATABASE_SSL_MODE !== 'verify-full' ||
+  if (profile.HOMOLOGATION_ENVIRONMENT !== 'true' || profile.DATABASE_SSL_MODE !== 'verify-full' ||
       url.hostname !== profile.HOMOLOGATION_DATABASE_HOST ||
       !/^db\.[a-z0-9]+\.supabase\.co$/.test(url.hostname) || url.pathname !== '/postgres' ||
       url.username !== 'nexos_homologation' || !profile.DATABASE_SSL_CA_FILE) {
@@ -18,7 +18,7 @@ export function buildHomologationEnvironment(profile, parent = process.env) {
       profile.QUEUE_PREFIX !== `homologation-${url.hostname.split('.')[1]}`) {
     throw new Error('A separate Redis logical database and project-specific homologation queue prefix are required');
   }
-  const environment = { ...system, ...profile, NODE_ENV: 'test' };
+  const environment = { ...system, ...profile, NODE_ENV: 'development' };
   const adminUrl = profile.DATABASE_ADMIN_URL;
   delete environment.DATABASE_ADMIN_URL;
   return { environment, adminUrl };

@@ -6,7 +6,7 @@ import { buildHomologationEnvironment } from './homologation-environment.mjs';
 const profile = {
   DATABASE_URL: 'postgresql://nexos_homologation@db.fixture.supabase.co:5432/postgres',
   DATABASE_ADMIN_URL: 'postgresql://postgres@db.fixture.supabase.co:5432/postgres',
-  HOMOLOGATION_DB_TESTS: 'true', HOMOLOGATION_DATABASE_HOST: 'db.fixture.supabase.co',
+  HOMOLOGATION_ENVIRONMENT: 'true', HOMOLOGATION_DATABASE_HOST: 'db.fixture.supabase.co',
   DATABASE_SSL_MODE: 'verify-full', DATABASE_SSL_CA_FILE: '/fixture/ca.crt',
   REDIS_URL: 'redis://localhost:6379/5', QUEUE_PREFIX: 'homologation-fixture',
 };
@@ -16,7 +16,7 @@ test('profile isolates local provider/database secrets and removes the migration
   });
   assert.equal(environment.DATABASE_URL, profile.DATABASE_URL);
   assert.equal(environment.PATH, '/fixture/bin');
-  assert.equal(environment.NODE_ENV, 'test');
+  assert.equal(environment.NODE_ENV, 'development');
   for (const name of ['DATABASE_ADMIN_URL','OPENAI_API_KEY','GMAIL_APP_PASSWORD','NODE_OPTIONS']) assert.equal(environment[name], undefined);
   assert.equal(adminUrl, profile.DATABASE_ADMIN_URL);
   for (const override of [{ DATABASE_SSL_MODE: 'disable' }, { HOMOLOGATION_DATABASE_HOST: 'db.other.supabase.co' }, { DATABASE_URL: profile.DATABASE_ADMIN_URL }, { REDIS_URL: 'redis://localhost:6379/0' }, { QUEUE_PREFIX: 'dev' }]) {

@@ -11,7 +11,6 @@
     "homologation:founder": "node scripts/homologation.mjs founder",
     "homologation:redis": "node scripts/homologation.mjs redis",
     "homologation:smoke": "node scripts/homologation.mjs smoke",
-    "homologation:test": "node scripts/homologation.mjs test",
     "dev:homologation": "node scripts/dev-local.mjs --homologation",
     "dev:local:meta-test": "node scripts/dev-local.mjs --meta-e2e",
     "dev:meta-gateway": "node scripts/meta-webhook-gateway.mjs",

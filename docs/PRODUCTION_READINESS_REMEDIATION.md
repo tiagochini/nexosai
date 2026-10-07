@@ -93,6 +93,11 @@ O sistema somente deve ser considerado pronto para produção aberta quando:
   `SameSite`, com rotação e revogação.
   Procedimento: [AUTH_SESSION_SECURITY.md](./AUTH_SESSION_SECURITY.md).
 
+Política de ambientes em 07/10/2026: Supabase exclusivo de homologação;
+desenvolvimento e regressões em PostgreSQL local/Docker. As evidências remotas de
+06/10/2026 são históricas; a suíte de regressão Supabase foi desativada.
+[Comandos e limites](./SUPABASE_HOMOLOGATION.md).
+
 ### P0 — Condições de fechamento ainda abertas
 
 - [x] Administrador real **local** criado por autorização explícita:

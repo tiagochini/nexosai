@@ -1,9 +1,19 @@
-# Supabase para testes e homologação NexOS
+# Supabase exclusivo para homologação NexOS
 
 Preparado e validado em 06/10/2026. Banco remoto Supabase, API/frontend executados
 localmente e Redis exclusivo da homologação. Nenhuma implantação pública foi feita.
 
-## Estado comprovado
+## Política de ambientes — 07/10/2026
+
+Por decisão do usuário, o Supabase fica reservado à homologação persistente.
+Desenvolvimento usa PostgreSQL local ou Docker. Regressões automatizadas, fixtures
+e controles destrutivos usam bancos locais/Docker descartáveis. O comando
+`homologation:test` foi removido; o runtime `NODE_ENV=test` recusa endpoints
+Supabase diretos e pooler antes de abrir a conexão. O perfil privado usa
+`HOMOLOGATION_ENVIRONMENT=true`; o antigo opt-in de testes remotos foi removido.
+Preparo/migrações, verificação e smoke de homologação continuam disponíveis.
+
+## Estado comprovado em 06/10/2026
 
 - PostgreSQL 17.11 com CA oficial e hostname validados (`verify-full`).
 - 177 tabelas, 75 entradas de esquema/migração, 19 triggers ativos. Verificador
@@ -41,7 +51,6 @@ criptografia deste perfil; não gere outras a cada reinício.
 
 ```powershell
 pnpm homologation:verify     # esquema, integridade e privilégios
-pnpm homologation:test       # seis grupos de testes com fixtures e limpeza
 pnpm homologation:redis      # iniciar/revalidar Redis exclusivo, se necessário
 pnpm homologation:smoke      # API compilada temporária; requer build API e Redis
 pnpm dev:homologation        # compila/inicia API 8090 e frontend 8091
@@ -65,6 +74,19 @@ Para aplicar futuras migrações/atualizar privilégios e planos, use
 recusa esquema existente desconhecido. O processo protege os defaults antes de
 criar tabelas, mantém as políticas RLS e verifica o resultado. Não use push-force
 ou os testes de bootstrap/DDL descartável neste banco persistente.
+
+## Desenvolvimento e regressões
+
+```powershell
+pnpm dev:local              # desenvolvimento no PostgreSQL local
+pnpm test:p1-local          # regressões em containers descartáveis
+pnpm test:p2-local          # operação/recuperação/carga em containers isolados
+pnpm test:p3-local          # jornada e isolamento em containers descartáveis
+pnpm test:docker-local      # implantação Docker com PostgreSQL local/externo simulado
+```
+
+As evidências de regressão remota de 06/10/2026 abaixo são históricas, anteriores
+à nova política. Não são comandos para repetir regressões no Supabase.
 
 ## Administrador de homologação
 
