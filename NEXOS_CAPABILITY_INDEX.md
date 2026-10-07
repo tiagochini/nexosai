@@ -1,5 +1,11 @@
 # NexOS Capability Index
 
+**CI P3 — correção de 07/10/2026:** reproduzida em Linux a ausência de TypeScript
+no runner; workflow instala dependências antes do P3. Diagnóstico passa a incluir
+stdout/stderr com segredos de fixtures ocultos. Três testes do runner passaram em
+Linux; execução remota do novo commit permanece pendente. Supabase não foi acessado.
+[Evidência e limite](docs/CI_REGRESSION_FIXES.md). Maturidade inalterada.
+
 **Dados padrão Supabase — 07/10/2026:** esquema e privilégios verificados;
 planos Solo/Agency carregados, founder preservado e duas pastas padrão criadas
 no seu workspace. Nenhuma fixture ou memória compartilhada entre projetos foi

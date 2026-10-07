@@ -7,11 +7,12 @@ const project = 'nexos-p3-tests', file = 'scripts/compose.p3-tests.yml', image =
 async function command(bin, args) {
   const child = spawn(bin, args, { cwd: root, windowsHide: true });
   let diagnostic = '';
-  child.stdout?.on('data', () => {}); child.stderr?.on('data', chunk => { diagnostic = (diagnostic + chunk).slice(-12_000); });
+  const capture = chunk => { diagnostic = (diagnostic + chunk).slice(-12_000); };
+  child.stdout?.on('data', capture); child.stderr?.on('data', capture);
   const status = await new Promise((resolve, reject) => { child.once('error', reject); child.once('close', resolve); });
   if (status !== 0) {
     for (const value of Object.values(environment)) if (value.length > 8) diagnostic = diagnostic.replaceAll(value, '[fixture]');
-    throw new Error(`P3 ${path.basename(bin)} command failed (${status}): ${diagnostic.slice(-3000)}`);
+    throw new Error(`P3 ${path.basename(bin)} command failed (${status}): ${diagnostic.slice(-3000) || 'No output captured'}`);
   }
 }
 const compose = (...args) => command('docker', ['compose', '-p', project, '-f', file, ...args]);

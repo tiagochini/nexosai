@@ -18,9 +18,14 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: Isolated product journey, delivery/media contracts and AI quality framework
         run: node scripts/test-p3-local.mjs
       - uses: actions/upload-artifact@v4
