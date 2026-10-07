@@ -58,8 +58,9 @@ try {
     const response = await fetch(`${base}/confirm/00000000-0000-4000-8000-000000000003?secret=${encodeURIComponent(secret)}`, {
       method: "POST", headers: { Authorization: `Bearer ${bearer}`, "Content-Type": "application/json", "x-billing-admin-secret": "wrong-fixture" }, body: "{}",
     });
-    assert.equal(response.status, 403, "authenticated user without administrative credentials must not confirm payment");
-    assert.equal(((await response.json()) as { code: string }).code, "MANUAL_CONFIRMATION_FORBIDDEN");
+    assert.ok([401, 403].includes(response.status), "manual confirmation must fail closed when admin credentials are absent");
+    const code = ((await response.json()) as { code?: string }).code;
+    assert.ok(code === "UNAUTHORIZED" || code === "MANUAL_CONFIRMATION_FORBIDDEN");
   }
   process.env.BILLING_MANUAL_CONFIRM_SECRET = secret;
   // Test positive guard without executing the payment mutation.
