@@ -1,5 +1,12 @@
 # NexOS Capability Index
 
+**Dados padrão Supabase — 07/10/2026:** esquema e privilégios verificados;
+planos Solo/Agency carregados, founder preservado e duas pastas padrão criadas
+no seu workspace. Nenhuma fixture ou memória compartilhada entre projetos foi
+inserida. [Carga verificada](docs/SUPABASE_HOMOLOGATION_DEFAULT_DATA.json).
+Próximo checkpoint: jornada de navegador e provedores sandbox na homologação.
+Maturidade inalterada; desenvolvimento/regressões permanecem locais/Docker.
+
 **Separação de ambientes — 07/10/2026:** Supabase reservado à homologação;
 desenvolvimento no PostgreSQL local/Docker e regressões em bancos descartáveis
 locais/Docker. Removido `homologation:test`; o runtime de testes bloqueia conexões

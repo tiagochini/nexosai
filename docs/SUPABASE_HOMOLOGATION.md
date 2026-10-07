@@ -41,6 +41,19 @@ Preparo/migrações, verificação e smoke de homologação continuam disponíve
   ele não certifica workers, navegador, entrega por provedor ou publicação pública.
 - Tipos da API, build, guards de alvo/perfil/HTTP e scanner de segredos passaram.
 
+## Dados padrão — carga de 07/10/2026
+
+Esquema existente verificado e dados padrão aplicados com
+`pnpm homologation:seed`: planos Solo/Agency atualizados pelo seed canônico,
+conta founder/Agency preservada e duas pastas de sistema criadas no seu workspace
+(Gravações automáticas e Uploads manuais). A carga usa transação, trava de execução
+e conflitos tratados para evitar duplicação das pastas. Não altera senhas,
+créditos dos workspaces, projetos ou memórias privadas. O seed legado de referências
+compartilhadas e o código fixo de convite de testes não fazem parte dessa carga.
+
+[Evidência da carga](./SUPABASE_HOMOLOGATION_DEFAULT_DATA.json) e
+[verificação final](./SUPABASE_HOMOLOGATION_SEED_RESULTS.json).
+
 ## Perfil e comandos
 
 `.env.homologation.local` contém as conexões/chaves privadas. É ignorado pelo Git
@@ -51,6 +64,7 @@ criptografia deste perfil; não gere outras a cada reinício.
 
 ```powershell
 pnpm homologation:verify     # esquema, integridade e privilégios
+pnpm homologation:seed       # planos e pastas padrão, preservando a conta founder
 pnpm homologation:redis      # iniciar/revalidar Redis exclusivo, se necessário
 pnpm homologation:smoke      # API compilada temporária; requer build API e Redis
 pnpm dev:homologation        # compila/inicia API 8090 e frontend 8091

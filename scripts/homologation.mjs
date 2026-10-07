@@ -3,7 +3,7 @@ import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { homologationEnvironment, root } from './homologation-environment.mjs';
 const mode = process.argv[2];
-if (!['prepare','verify','founder','redis','smoke'].includes(mode)) throw new Error('Supabase is reserved for homologation. Usage: homologation.mjs prepare|verify|founder|redis|smoke. Run regression suites with test:p1-local or test:p3-local.');
+if (!['prepare','verify','founder','redis','smoke','seed'].includes(mode)) throw new Error('Supabase is reserved for homologation. Usage: homologation.mjs prepare|verify|founder|redis|smoke|seed. Run regression suites with test:p1-local or test:p3-local.');
 const { environment, adminUrl } = homologationEnvironment();
 const tsx = path.join(root, 'artifacts/api-server/node_modules/tsx/dist/cli.mjs');
 const checks = {};
@@ -44,6 +44,11 @@ try {
   }
   await run('schema verification', ['lib/db/scripts/verify-database.mjs']);
   await run('security verification', ['scripts/verify-homologation-security.mjs']);
+  if (mode === 'seed') {
+    await run('standard plans', [tsx, 'lib/db/src/seed-plans.ts']);
+    await run('workspace defaults', ['scripts/seed-homologation-defaults.mjs']);
+    await run('final schema verification', ['lib/db/scripts/verify-database.mjs']);
+  }
   if (mode === 'founder') {
     await run('founder UUID activation', [tsx, 'src/scripts/provision-homologation-founder.ts'], false, path.join(root, 'artifacts/api-server'));
   }

@@ -1,0 +1,35 @@
+{
+  "populatedAt": "2026-10-07T12:12:31.728Z",
+  "scope": "Standard data in persistent Supabase homologation; no development/regression fixtures",
+  "plans": [
+    {
+      "slug": "solo",
+      "price_monthly": "3990.00",
+      "credits_monthly": 900
+    },
+    {
+      "slug": "agency",
+      "price_monthly": "9990.00",
+      "credits_monthly": 2000
+    }
+  ],
+  "founder": {
+    "userId": "94942b5f-23ea-47f4-b589-a37457db3b6c",
+    "workspaceId": "a03c9141-c1af-46de-a62c-44a2e122646c",
+    "plan": "agency",
+    "accountPreserved": true
+  },
+  "systemFolders": [
+    {
+      "system_type": "automatic",
+      "name": "Gravações automáticas"
+    },
+    {
+      "system_type": "manual",
+      "name": "Uploads manuais"
+    }
+  ],
+  "foldersCreatedThisRun": 2,
+  "sharedProjectMemorySeeded": false,
+  "localDatabaseChanged": false
+}
