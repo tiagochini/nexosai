@@ -28,6 +28,17 @@ assert.deepEqual(instagram, [{
   text: "Quero saber mais",
 }]);
 
+assert.deepEqual(extractMetaCommentChanges({
+  object: "instagram",
+  entry: [{ id: "ig-account", changes: [{ field: "comments", value: {
+    id: "comment-mapa", text: "MAPA", media: { id: "media-mapa" },
+    from: { id: "reader", username: "reader_name" },
+  } }] }],
+}), [{
+  platform: "instagram", accountId: "ig-account", postId: "media-mapa",
+  commentId: "comment-mapa", authorId: "reader", authorName: "reader_name", text: "MAPA",
+}], "Instagram id/text/media fields must reach the comment pipeline");
+
 const facebook = extractMetaCommentChanges({
   object: "page",
   entry: [{

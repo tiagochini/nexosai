@@ -26,6 +26,7 @@ const run = (...args) => command('docker', ['run', '--rm', '--network', `${proje
   ...Object.entries(environment).flatMap(([key, value]) => ['-e', `${key}=${value}`]), image, ...args]);
 const tsx = '/workspace/artifacts/api-server/node_modules/tsx/dist/cli.mjs';
 const checks = [
+  'test-meta-webhook-routing', 'test-mapa-comment-db',
   'test-project-execution-isolation', 'test-project-isolation-db', 'test-content-coherence-idor', 'test-auth-sessions-http', 'test-realtime-security-db', 'test-content-checkpoint-resume', 'test-p3-journey', 'test-academy-funnel-db', 'test-academy-access-outbox-db', 'test-academy-delivery-lifecycle-db',
   'test-native-media-control-plane', 'test-native-media-http', 'test-timeline-render-compiler',
   'test-paid-media', 'test-paid-media-launch', 'test-conditional-execution-db', 'test-social-publication-governance',

@@ -32,9 +32,12 @@ export function extractMetaCommentChanges(body: unknown): MetaCommentChange[] {
         field?: string;
         value?: {
           item?: string;
+          id?: string;
+          text?: string;
+          media?: { id?: string };
           comment_id?: string;
           parent_id?: string;
-          from?: { id?: string; name?: string };
+          from?: { id?: string; name?: string; username?: string };
           message?: string;
           post_id?: string;
           verb?: string;
@@ -55,16 +58,18 @@ export function extractMetaCommentChanges(body: unknown): MetaCommentChange[] {
       if (change.field !== "comments" && change.field !== "feed") continue;
       const value = change.value ?? {};
       if (value.item !== "comment" && change.field !== "comments") continue;
-      if (value.verb === "remove" || !value.comment_id || !value.message) continue;
+      const commentId = platform === "instagram" ? value.id ?? value.comment_id : value.comment_id;
+      const text = platform === "instagram" ? value.text ?? value.message : value.message;
+      if (value.verb === "remove" || !commentId || !text) continue;
       comments.push({
         platform,
         accountId: entry.id,
-        postId: value.post_id ?? entry.id,
-        commentId: value.comment_id,
+        postId: (platform === "instagram" ? value.media?.id : undefined) ?? value.post_id ?? entry.id,
+        commentId,
         ...(value.parent_id ? { parentCommentId: value.parent_id } : {}),
         authorId: value.from?.id ?? "unknown",
-        authorName: value.from?.name ?? "unknown",
-        text: value.message,
+        authorName: value.from?.name ?? value.from?.username ?? "unknown",
+        text,
       });
     }
   }

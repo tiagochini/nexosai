@@ -1,5 +1,11 @@
 # NexOS — Checklist Canônico de Construção
 
+**Comentário MAPA — 07/10/2026:** corrigida leitura de `id/text/media.id` no
+webhook Instagram. Testes Linux/Docker passaram para resposta imediata configurada,
+envio público/privado simulado e repetição/conta desconhecida. Supabase preservado.
+[Evidência e limites](docs/MAPA_COMMENT_VALIDATION.md). Maturidade inalterada;
+próximo checkpoint: recebimento real em conta Meta autorizada na homologação.
+
 **CI P3 — correção de 07/10/2026:** reproduzida em Linux a ausência de TypeScript
 no runner; workflow instala dependências antes do P3. Diagnóstico passa a incluir
 stdout/stderr com segredos de fixtures ocultos. Três testes do runner passaram em
