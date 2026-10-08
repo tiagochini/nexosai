@@ -1,0 +1,53 @@
+{
+  "startedAt": "2026-10-08T20:49:03.102Z",
+  "completedAt": "2026-10-08T20:52:28.020Z",
+  "environment": "Asaas sandbox + Supabase homologation",
+  "domain": "https://agencianexos.vip",
+  "scope": "Public authenticated billing API, separate ordinary user/workspace, official fictitious sandbox card, real sandbox charges and provider refunds; no production provider calls",
+  "result": "PARTIAL: credit pack passed; Agency plan payment confirmed but entitlement activation failed",
+  "baseline": {
+    "plan": "Solo",
+    "credits": 900
+  },
+  "plan": {
+    "requested": "Agency",
+    "chargeAmountCents": 1033965,
+    "providerAfterPayment": "CONFIRMED",
+    "localAfterPayment": "paid",
+    "actualWorkspacePlanAfterPayment": "Solo",
+    "activation": "FAIL",
+    "includedCreditsNotGranted": true,
+    "providerAfterRefund": "REFUNDED",
+    "localAfterRefund": "refunded"
+  },
+  "creditPack": {
+    "pack": "pack_500",
+    "creditsPurchased": 500,
+    "chargeAmountCents": 8798,
+    "providerAfterPayment": "CONFIRMED",
+    "localAfterPayment": "paid",
+    "balanceAfterPayment": 1400,
+    "creditLedgerEntries": 1,
+    "duplicateConfirmations": 3,
+    "providerAfterRefund": "REFUNDED",
+    "localAfterRefund": "refunded",
+    "balanceAfterRefund": 900,
+    "reversalLedgerEntries": 1,
+    "duplicateRefunds": 3
+  },
+  "checks": {
+    "realRefundWebhooks": "PASS both local payments became refunded and pack balance returned to baseline before any controlled refund replay",
+    "idempotence": "PASS one 500 credit grant and one 500 debit; three confirmation and three refund repeats do not change balance",
+    "isolation": "PASS founder cannot read payments of separate workspace (404); absent, invalid and other endpoint tokens denied (401)",
+    "founderPlanAndBalanceUnchanged": true,
+    "subscriptionInactiveAfterRefund": true,
+    "ownedHistoryOnly": true,
+    "ordinaryUser": true,
+    "testSessionsRevoked": true
+  },
+  "remaining": [
+    "Fix transactional plan activation and included benefits on confirmed payment, plus rollback policy for refunded plans; revalidate on local/Docker before repeating sandbox journey",
+    "Actual Academy email delivery",
+    "PIX/boleto settlement, partial refunds, chargebacks and rejected card are not covered by this sandbox run"
+  ]
+}

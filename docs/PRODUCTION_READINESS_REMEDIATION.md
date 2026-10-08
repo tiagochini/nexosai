@@ -111,8 +111,16 @@ desenvolvimento e regressões em PostgreSQL local/Docker. As evidências remotas
   produção separadamente; homologação Supabase não representa liberação de produção.
 - [ ] Concluir a homologação de todos os fluxos Asaas: Campanhas e Academy passaram
   checkout público, cartão sandbox, webhook real, repetição e estorno integral em
-  08/10/2026. Falta o fluxo de planos/créditos da plataforma e envio efetivo do
-  e-mail Academy. [Evidência atual](./ASAAS_SANDBOX_JOURNEY_RESULTS.json).
+  08/10/2026. Pacote de 500 créditos também passou pagamento, estorno real e
+  idempotência em conta/workspace separados (900 → 1.400 → 900), sem alterar o
+  founder. **Plano Agency reprovado:** cobrança confirmada/paga, mas workspace
+  permaneceu Solo e não recebeu benefícios Agency. Ambas as cobranças billing
+  foram estornadas, sessões de teste revogadas e histórico preservado.
+  Falta corrigir ativação/reversão de planos e repetir homologação; envio efetivo
+  do e-mail Academy também pendente. PIX/boleto, estorno parcial, chargeback e
+  cartão rejeitado não estão comprovados por este teste externo.
+  [Evidência Campanhas/Academy](./ASAAS_SANDBOX_JOURNEY_RESULTS.json),
+  [evidência billing](./ASAAS_BILLING_SANDBOX_RESULTS.json).
 - [x] Concluir o build completo/frontend e tipos: Rollup fixado em 4.63.6 após
   diagnóstico/comparação local. Auditoria inclui ferramentas e passou sem vulnerabilidades conhecidas.
 
