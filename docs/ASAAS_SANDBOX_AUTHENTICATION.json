@@ -1,0 +1,10 @@
+{
+  "verifiedAt": "2026-10-08T01:00:41.792Z",
+  "environment": "sandbox",
+  "baseUrl": "https://api-sandbox.asaas.com/v3",
+  "httpStatus": 200,
+  "configured": true,
+  "productionKeyActivated": false,
+  "scope": "Authentication GET with unique non-customer external reference; no customer, payment or webhook writes",
+  "liveSandboxJourney": "Not executed"
+}

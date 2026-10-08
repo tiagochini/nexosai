@@ -1,5 +1,11 @@
 # NexOS Capability Index
 
+**Asaas sandbox — 07/10/2026:** chave de homologação autenticada com HTTP 200,
+perfil privado configurado em sandbox e runtime reiniciado. Produção permanece
+separada; nenhuma criação de cliente/cobrança/webhook nesta validação.
+[Evidência](docs/ASAAS_SANDBOX_AUTHENTICATION.json). Maturidade inalterada;
+próximo checkpoint: jornada sandbox de checkout, liquidação e webhook público.
+
 **APIs de IA — homologação de 07/10/2026:** autenticação/listagem de modelos
 OpenAI e Gemini passou; chaves nativas guardadas somente no perfil privado e
 runtime reiniciado. Anthropic exige ID de workspace, ainda não informado.
