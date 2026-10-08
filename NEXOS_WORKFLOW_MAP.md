@@ -1,5 +1,12 @@
 # NexOSAI — Fluxo Operacional e de Implementação Canônico
 
+**Meta — homologação de 08/10/2026:** credenciais existentes copiadas somente
+para o perfil privado e runtime reiniciado. API pública confirma OAuth habilitado,
+gera retorno Instagram e valida/rejeita assinatura de webhook com evento vazio.
+[Evidência](docs/META_HOMOLOGATION_CONFIGURATION.json). Nenhuma conexão/publicação
+real; maturidade inalterada. Próximo checkpoint: cadastrar retorno no painel Meta,
+autorizar a conta e verificar recebimento real do comentário MAPA.
+
 **Asaas sandbox — 07/10/2026:** chave de homologação autenticada com HTTP 200,
 perfil privado configurado em sandbox e runtime reiniciado. Produção permanece
 separada; nenhuma criação de cliente/cobrança/webhook nesta validação.

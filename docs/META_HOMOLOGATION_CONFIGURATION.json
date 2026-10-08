@@ -1,0 +1,19 @@
+{
+  "verifiedAt": "2026-10-08T11:09:07.354Z",
+  "scope": "Configured existing private Meta app credentials and verified public API routing; no external Meta authorization, account connection or publication",
+  "checks": {
+    "readiness": "PASS",
+    "metaOAuthEnabled": "PASS",
+    "instagramOAuthUrl": "PASS",
+    "signedEmptyWebhook": "PASS",
+    "unsignedWebhookRejected": "PASS",
+    "verificationLogout": "PASS"
+  },
+  "redirectUri": "https://agencianexos.vip/api/integrations/oauth/callback/instagram",
+  "webhookUrl": "https://agencianexos.vip/api/social/webhooks/meta",
+  "autoSubscribe": false,
+  "limitations": [
+    "Meta dashboard redirect registration and app credentials validity are not verified",
+    "No Instagram account connected or live MAPA delivery tested"
+  ]
+}
