@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { db, pool, usersTable, workspacesTable, plansTable, subscriptionPaymentsTable as payments, creditTransactionsTable as credits } from "@workspace/db";
+import { db, pool, usersTable, workspacesTable, plansTable, subscriptionPaymentsTable as payments, creditTransactionsTable as credits, type SubscriptionPayment } from "@workspace/db";
 import { confirmPaymentByExternalId, initiatePayment, initiatePackPayment, getSubscriptionStatus, markPaymentPaid } from "../modules/billing/billing.service.js";
 import { reconcileBillingReversal } from "../modules/billing/billing-reversal.service.js";
 
@@ -70,10 +70,34 @@ try {
   assert.equal((await ws()).creditsBalance, 1000);
   console.log("PASS pending webhook confirmation, invalid binding, concurrent replay, lifetime access, chargeback recovery and refund ordering");
 
+  const taxId = "12345678909";
+  const pendingBuilder: Parameters<typeof initiatePayment>[1] = async (_method, input) => {
+    assert.equal(input.cpfCnpj, taxId, "The payer document must reach the provider builder");
+    return { externalId: `fixture-${randomUUID()}`, chargedCents: input.amountCents, expiresAt: new Date(),
+      pixData: null, boletoData: null, cryptoData: null, bankTransferData: null };
+  };
+  for (const method of ["pix", "boleto"] as const) {
+    const before = (await ws()).creditsBalance;
+    const payment: SubscriptionPayment = method === "pix"
+      ? await initiatePayment({ ...opts, method, cpfCnpj: taxId }, pendingBuilder)
+      : await initiatePackPayment({ ...opts, packId: "pack_500", method, cpfCnpj: taxId }, pendingBuilder);
+    assert.equal(payment.status, "pending");
+    assert.equal((await ws()).creditsBalance, before);
+    const received = { ...proof(payment), billingType: method === "pix" ? "PIX" : "BOLETO", status: "RECEIVED" };
+    await confirmPaymentByExternalId(payment.externalId!, {}, async () => ({ ...received, status: "CONFIRMED" }));
+    assert.equal((await row(payment.id)).status, "pending");
+    assert.equal((await ws()).creditsBalance, before);
+    await Promise.all(Array.from({ length: 6 }, () => confirmPaymentByExternalId(payment.externalId!, {}, async () => received)));
+    assert.equal((await ws()).creditsBalance, before + (method === "pix" ? agency.creditsMonthly : 500));
+    await reconcileBillingReversal(payment.externalId!, async () => ({ ...received, status: "REFUNDED", refunds: [{ status: "DONE", value: payment.amountCents / 100 }] }));
+    assert.equal((await ws()).creditsBalance, before);
+  }
+  console.log("PASS PIX/boleto carry payer document, remain pending until RECEIVED, and grant benefits once under concurrent notifications");
+
   await db.update(workspacesTable).set({ creditsBalance: 2147483640 }).where(eq(workspacesTable.id, workspaceId));
   await assert.rejects(initiatePayment(opts, approved), /supported range/);
   assert.equal((await ws()).planId, solo.id); assert.equal((await ws()).creditsBalance, 2147483640);
   const all = await db.select().from(payments).where(eq(payments.workspaceId, workspaceId));
-  assert.equal(all.length, 4, "Failed grant must roll back new payment and activation");
+  assert.equal(all.length, 6, "Failed grant must roll back new payment and activation");
   console.log("PASS credit overflow rolls back the complete payment/plan/ledger transaction");
 } finally { try { await db.delete(usersTable).where(eq(usersTable.id, userId)); } finally { await pool.end(); } }

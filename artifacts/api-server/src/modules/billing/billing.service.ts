@@ -252,7 +252,7 @@ type PaymentData = Pick<
 
 async function buildAsaasPayment(
   method: PaymentMethod,
-  opts: { name: string; email: string; amountCents: number; description: string; dueDate: string },
+  opts: { name: string; email: string; cpfCnpj?: string; amountCents: number; description: string; dueDate: string },
   card?: CardInputData
 ): Promise<PaymentData> {
   const result: PaymentData = {
@@ -362,6 +362,7 @@ export async function initiatePayment(opts: {
   workspaceId: string;
   userId: string;
   planId: string;
+  cpfCnpj?: string;
   method: PaymentMethod;
   userName: string;
   userEmail: string;
@@ -381,6 +382,7 @@ export async function initiatePayment(opts: {
   const pd = await buildPayment(opts.method, {
     name: opts.userName,
     email: opts.userEmail,
+    cpfCnpj: opts.cpfCnpj,
     amountCents,
     description,
     dueDate,
@@ -426,6 +428,7 @@ export async function initiatePackPayment(opts: {
   workspaceId: string;
   userId: string;
   packId: string;
+  cpfCnpj?: string;
   method: PaymentMethod;
   userName: string;
   userEmail: string;
@@ -448,6 +451,7 @@ export async function initiatePackPayment(opts: {
   const pd = await buildPayment(opts.method, {
     name: opts.userName,
     email: opts.userEmail,
+    cpfCnpj: opts.cpfCnpj,
     amountCents,
     description,
     dueDate,

@@ -117,8 +117,17 @@ desenvolvimento e regressões em PostgreSQL local/Docker. As evidências remotas
   900 → 2.900 no plano → 3.400 com pack; estornos reais restauraram Solo/900.
   Replays não duplicaram concessões/reversões; regressões Docker e tipos passaram.
   Cobranças billing estornadas, sessões de teste revogadas e histórico preservado.
-  Envio efetivo do e-mail Academy pendente. PIX/boleto, estorno parcial, chargeback e
-  cartão rejeitado não estão comprovados por este teste externo.
+  **Ampliação em 08/10/2026:** PIX e boleto de R$85 chegaram a `RECEIVED` e
+  liberaram 500 créditos cada, uma vez, com webhook real; cartões rejeitados de
+  plano e pack retornaram 400 sem criar pagamento/benefícios. CPF/CNPJ ausente no
+  checkout foi corrigido. Estorno parcial PIX de R$42,50 aguarda autorização
+  crítica; parcial de cartão foi recusado até o próximo dia. Chargeback depende
+  de simulação pelo suporte; cobrança e rascunho privados preparados. PIX Agency
+  sob bloqueio segue `CONFIRMED`, sem ativação antecipada. Envio efetivo do e-mail
+  Academy ainda pendente. Não marcar homologação completa antes de conferir os
+  estados canônicos e benefícios das etapas restantes.
+  [Evidência ampliada](./ASAAS_EXTENDED_SANDBOX_RESULTS.json) e
+  [procedimento de retomada](./ASAAS_EXTENDED_SANDBOX.md).
   [Evidência Campanhas/Academy](./ASAAS_SANDBOX_JOURNEY_RESULTS.json),
   [falha billing histórica](./ASAAS_BILLING_SANDBOX_RESULTS.json),
   [reteste billing aprovado](./ASAAS_BILLING_SANDBOX_RETEST_RESULTS.json).

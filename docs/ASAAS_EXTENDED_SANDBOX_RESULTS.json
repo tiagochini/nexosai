@@ -1,0 +1,134 @@
+{
+  "checkedAt": "2026-10-08T23:39:18.274Z",
+  "startedAt": "2026-10-08T23:26:46.721Z",
+  "environment": "Asaas sandbox + Supabase homologation",
+  "scope": "Public authenticated billing checkout, separate ordinary account/workspace, fictitious payer and official sandbox cards. No production calls or real money.",
+  "result": "PARTIAL: external chargeback requires Asaas support; pending provider stages listed explicitly",
+  "baseline": {
+    "plan": "Solo",
+    "credits": 900
+  },
+  "pix": {
+    "pack": "pack_500",
+    "amountCents": 8500,
+    "issuedPendingWithoutBenefits": true,
+    "providerStatus": "RECEIVED",
+    "localStatus": "paid",
+    "creditsGranted": 500,
+    "grants": 1,
+    "result": "PASS settled PIX with real callback"
+  },
+  "boleto": {
+    "pack": "pack_500",
+    "amountCents": 8500,
+    "issuedPendingWithoutBenefits": true,
+    "providerStatus": "RECEIVED",
+    "localStatus": "paid",
+    "creditsGranted": 500,
+    "grants": 1,
+    "result": "PASS settled boleto with real callback"
+  },
+  "partialRefund": {
+    "method": "PIX",
+    "originalCents": 8500,
+    "requestedCents": 4250,
+    "completedCents": 0,
+    "canonicalRefundStates": [
+      "AWAITING_CRITICAL_ACTION_AUTHORIZATION"
+    ],
+    "expectedCreditsReversed": 250,
+    "actualCreditsReversed": 0,
+    "result": "PENDING critical authorization; no premature credit reversal"
+  },
+  "cardPartial": {
+    "requestedCents": 4399,
+    "providerResponse": "HTTP 400 invalid_action: Esta transação só pode ser estornada parcialmente no próximo dia.",
+    "result": "PENDING earliest retry 2026-10-09; approved isolated charge preserved"
+  },
+  "rejectedCards": {
+    "result": "PASS",
+    "cases": [
+      {
+        "kind": "plan",
+        "httpStatus": 400,
+        "feedbackPresent": true,
+        "noPaymentPersisted": true,
+        "noBenefitsGranted": true
+      },
+      {
+        "kind": "pack",
+        "httpStatus": 400,
+        "feedbackPresent": true,
+        "noPaymentPersisted": true,
+        "noBenefitsGranted": true
+      }
+    ]
+  },
+  "chargeback": {
+    "result": "PENDING provider simulation",
+    "canonicalStatus": "CONFIRMED",
+    "localStatus": "paid",
+    "support": "integracoes@asaas.com.br",
+    "draftPrepared": true,
+    "messageSent": false,
+    "expected": "Block/reverse the original 500 credits once on hold; restore once on canonical recovery"
+  },
+  "precautionaryPix": {
+    "amountCents": 999000,
+    "canonicalStatus": "CONFIRMED",
+    "localStatus": "pending",
+    "planRemains": "Solo",
+    "result": "PASS no premature activation; RECEIVED journey for this plan amount pending provider review"
+  },
+  "checks": {
+    "replays": [
+      {
+        "at": "2026-10-08T23:38:38.504Z",
+        "result": "PASS",
+        "eventsRepeated": 3
+      }
+    ],
+    "payerInput": "PASS",
+    "ownHistoryOnly": true,
+    "ordinaryUser": true,
+    "crossWorkspacePaymentReads": "PASS 404 including founder",
+    "founderUnchanged": true,
+    "testSessionsRevoked": true,
+    "noProductionWrites": true
+  },
+  "current": {
+    "credits": 2900,
+    "plan": "Solo",
+    "ledger": [
+      {
+        "type": "credit",
+        "amount": 500
+      },
+      {
+        "type": "credit",
+        "amount": 500
+      },
+      {
+        "type": "credit",
+        "amount": 500
+      },
+      {
+        "type": "credit",
+        "amount": 500
+      }
+    ]
+  },
+  "remaining": [
+    "Provider chargeback simulation and recovery",
+    "Partial credit card refund after the provider next-day restriction",
+    "PIX plan under precautionary hold: wait for RECEIVED/REFUNDED",
+    "Actual Academy email delivery"
+  ],
+  "sources": [
+    "https://docs.asaas.com/docs/faq-sandbox",
+    "https://docs.asaas.com/docs/o-que-pode-ser-testado",
+    "https://docs.asaas.com/docs/como-testar-a%C3%A7%C3%B5es-cr%C3%ADticas",
+    "https://docs.asaas.com/reference/create-new-payment",
+    "https://docs.asaas.com/reference/estornar-cobranca"
+  ]
+}

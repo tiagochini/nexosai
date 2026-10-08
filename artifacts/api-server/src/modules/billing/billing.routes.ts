@@ -56,16 +56,23 @@ const cardDataSchema = z.object({
   postalCode: z.string().optional(),
 });
 
+const payerDocumentSchema = z.string().trim().max(20)
+  .transform(value => value.replace(/[.\-/\s]/g, ""))
+  .pipe(z.string().regex(/^(\d{11}|\d{14})$/, "Informe um CPF/CNPJ válido"));
+
 const initiateSchema = z.object({
   planId: z.string().uuid(),
   method: z.enum(["pix", "boleto", "bank_transfer", "credit_card", "manual"]),
   card: cardDataSchema.optional(),
+  cpfCnpj: payerDocumentSchema.optional(),
+}).refine(data => !["pix", "boleto"].includes(data.method) || Boolean(data.cpfCnpj), {
+  message: "Informe o CPF/CNPJ para emitir PIX ou boleto", path: ["cpfCnpj"],
 });
 
 router.post("/initiate", requireAuth, async (req, res): Promise<void> => {
   const parsed = initiateSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Dados de pagamento inválidos", code: "VALIDATION_ERROR" });
     return;
   }
 
@@ -77,6 +84,7 @@ router.post("/initiate", requireAuth, async (req, res): Promise<void> => {
     userName: req.auth.email,
     userEmail: req.auth.email,
     card: parsed.data.card,
+    cpfCnpj: parsed.data.cpfCnpj,
   });
 
   res.status(201).json({ payment });
@@ -88,12 +96,15 @@ const initiatePackSchema = z.object({
   packId: z.string(),
   method: z.enum(["pix", "boleto", "bank_transfer", "credit_card", "manual"]),
   card: cardDataSchema.optional(),
+  cpfCnpj: payerDocumentSchema.optional(),
+}).refine(data => !["pix", "boleto"].includes(data.method) || Boolean(data.cpfCnpj), {
+  message: "Informe o CPF/CNPJ para emitir PIX ou boleto", path: ["cpfCnpj"],
 });
 
 router.post("/packs/initiate", requireAuth, async (req, res): Promise<void> => {
   const parsed = initiatePackSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Dados de pagamento inválidos", code: "VALIDATION_ERROR" });
     return;
   }
 
@@ -101,6 +112,7 @@ router.post("/packs/initiate", requireAuth, async (req, res): Promise<void> => {
     workspaceId: req.auth.workspaceId,
     userId: req.auth.userId,
     packId: parsed.data.packId,
+    cpfCnpj: parsed.data.cpfCnpj,
     method: parsed.data.method,
     card: parsed.data.card,
     userName: req.auth.email,

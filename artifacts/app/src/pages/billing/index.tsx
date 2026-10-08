@@ -420,7 +420,7 @@ function CheckoutSelector({ label, amount, amountCents, onMethod, loading, onCan
   label: string;
   amount: string;
   amountCents: number;
-  onMethod: (method: string, card?: CardData) => void;
+  onMethod: (method: string, card?: CardData, cpfCnpj?: string) => void;
   loading: boolean;
   onCancel: () => void;
 }) {
@@ -437,6 +437,10 @@ function CheckoutSelector({ label, amount, amountCents, onMethod, loading, onCan
   const displayAmount = method === "credit_card" ? `R$ ${(cardFee / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : amount;
 
   const handlePay = () => {
+    if (["pix", "boleto"].includes(method) && !/^(\d{11}|\d{14})$/.test(cardCpf.replace(/[.\-/\s]/g, ""))) {
+      toast.error(t("Informe o CPF/CNPJ para emitir o pagamento.", "Enter your tax ID to create the payment.", "Ingresa tu documento fiscal para generar el pago."));
+      return;
+    }
     if (method === "credit_card") {
       if (!cardHolder || !cardNumber || !cardMonth || !cardYear || !cardCvv) {
         return;
@@ -450,7 +454,7 @@ function CheckoutSelector({ label, amount, amountCents, onMethod, loading, onCan
         cpfCnpj: cardCpf || undefined,
       });
     } else {
-      onMethod(method);
+      onMethod(method, undefined, cardCpf.replace(/[.\-/\s]/g, "") || undefined);
     }
   };
 
@@ -493,6 +497,13 @@ function CheckoutSelector({ label, amount, amountCents, onMethod, loading, onCan
       </div>
 
       {/* Card form */}
+      {["pix", "boleto"].includes(method) && (
+        <div className="space-y-1.5">
+          <label htmlFor="billing-tax-id" className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("CPF/CNPJ do pagador", "Payer tax ID", "Documento fiscal del pagador")}</label>
+          <input id="billing-tax-id" value={cardCpf} onChange={e => setCardCpf(e.target.value)} maxLength={20} placeholder="CPF/CNPJ" autoComplete="off"
+            className="w-full border border-border/40 bg-background/50 rounded-none px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary" />
+        </div>
+      )}
       {method === "credit_card" && (
         <div className="border border-border/40 bg-muted/5 p-4 space-y-3">
           <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground font-bold flex items-center gap-2">
@@ -685,11 +696,11 @@ export default function BillingPage() {
   });
 
   const initiatePlanMutation = useMutation({
-    mutationFn: async ({ planId, method, card }: { planId: string; method: string; card?: CardData }) => {
+    mutationFn: async ({ planId, method, card, cpfCnpj }: { planId: string; method: string; card?: CardData; cpfCnpj?: string }) => {
       const data = await customFetch<{ payment: PaymentRecord }>("/api/billing/initiate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, method, card }),
+        body: JSON.stringify({ planId, method, card, cpfCnpj }),
       });
       return data;
     },
@@ -704,11 +715,11 @@ export default function BillingPage() {
   });
 
   const initiatePackMutation = useMutation({
-    mutationFn: async ({ packId, method, card }: { packId: string; method: string; card?: CardData }) => {
+    mutationFn: async ({ packId, method, card, cpfCnpj }: { packId: string; method: string; card?: CardData; cpfCnpj?: string }) => {
       const data = await customFetch<{ payment: PaymentRecord }>("/api/billing/packs/initiate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ packId, method, card }),
+        body: JSON.stringify({ packId, method, card, cpfCnpj }),
       });
       return data;
     },
@@ -925,7 +936,7 @@ export default function BillingPage() {
               amountCents={parseInt(checkout.amountBrl.replace(/[^\d]/g, ""), 10) || 0}
               loading={initiatePackMutation.isPending}
               onCancel={() => setCheckout(null)}
-              onMethod={(method, card) => initiatePackMutation.mutate({ packId: checkout.id, method, card })}
+              onMethod={(method, card, cpfCnpj) => initiatePackMutation.mutate({ packId: checkout.id, method, card, cpfCnpj })}
             />
           </div>
         )}
@@ -1018,7 +1029,7 @@ export default function BillingPage() {
                         amountCents={plan.monthlyPriceBrl}
                         loading={initiatePlanMutation.isPending}
                         onCancel={() => setCheckout(null)}
-                        onMethod={(method, card) => initiatePlanMutation.mutate({ planId: plan.id, method, card })}
+                        onMethod={(method, card, cpfCnpj) => initiatePlanMutation.mutate({ planId: plan.id, method, card, cpfCnpj })}
                       />
                     </div>
                   )}
