@@ -1,5 +1,12 @@
 # NexOS Capability Index
 
+**APIs de IA — homologação de 07/10/2026:** autenticação/listagem de modelos
+OpenAI e Gemini passou; chaves nativas guardadas somente no perfil privado e
+runtime reiniciado. Anthropic exige ID de workspace, ainda não informado.
+[Evidência sem segredos](docs/AI_PROVIDER_HOMOLOGATION_RESULTS.json).
+Nenhuma geração/inferência real certificada; maturidade inalterada. Próximo
+checkpoint: resolver escopo Anthropic e validar a jornada de IA na homologação.
+
 **Login de homologação — 07/10/2026:** Sonner montado e erro persistente no
 formulário; launcher autoriza os dois endereços loopback da interface.
 TypeScript/UI negativa e bloqueio de origem externa verificados; API reiniciada

@@ -1,0 +1,36 @@
+{
+  "testedAt": "2026-10-08T00:47:09.603Z",
+  "scope": "Provider authentication and model discovery only; no generation or project context sent",
+  "secretStorage": "Ignored private homologation environment; accepted keys only",
+  "results": [
+    {
+      "provider": "Anthropic",
+      "endpoint": "https://api.anthropic.com/v1/models",
+      "httpStatus": 400,
+      "authenticated": false,
+      "configured": false,
+      "configuredModel": "claude-opus-4-5",
+      "configuredModelListed": null,
+      "errorType": "invalid_request_error",
+      "diagnostic": "This API key is not scoped to a workspace, so this request must include the anthropic-workspace-id header with the ID of the workspace to use. Add the header, or use an API key that is scoped to a workspace."
+    },
+    {
+      "provider": "Gemini",
+      "endpoint": "https://generativelanguage.googleapis.com/v1beta/models",
+      "httpStatus": 200,
+      "authenticated": true,
+      "configured": true,
+      "configuredModel": "models/gemini-2.5-flash",
+      "configuredModelListed": true
+    },
+    {
+      "provider": "OpenAI",
+      "endpoint": "https://api.openai.com/v1/models",
+      "httpStatus": 200,
+      "authenticated": true,
+      "configured": true,
+      "configuredModel": "gpt-5.5",
+      "configuredModelListed": true
+    }
+  ]
+}
