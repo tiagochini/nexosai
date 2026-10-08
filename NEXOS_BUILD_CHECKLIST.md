@@ -7,20 +7,23 @@ um único job de entrega; Campanhas registrou um único evento pago e um estorna
 Corrigida compatibilidade com `refunds: null` da API real. Cobranças estornadas e
 produto de homologação desativado; histórico preservado.
 [Evidência](docs/ASAAS_SANDBOX_JOURNEY_RESULTS.json). E-mail efetivamente enviado
-e ativação de planos ainda pendentes; maturidade geral inalterada.
+e validações externas adicionais ainda pendentes; maturidade geral inalterada.
 
-**Planos e créditos — 08/10/2026:** conta comum em workspace separado na
-homologação. Pacote de 500 créditos passou: 900 → 1.400 → 900 após estorno real,
-com uma concessão e uma reversão no ledger; três repetições de cada evento não
-duplicaram efeitos. Tokens incorretos/cruzados retornaram 401 e pagamento de
-outro workspace retornou 404, inclusive para o founder. Plano Agency: cobrança
-confirmada e marcada paga, porém workspace permaneceu Solo, sem os benefícios
-Agency — **ativação reprovada**. Ambas as cobranças foram estornadas; histórico
+**Planos e créditos corrigidos — 08/10/2026:** ativação transacional e créditos
+incluídos corrigidos após a falha histórica. Reteste em conta comum separada:
+Solo/900 → Agency/2.900 → Agency/3.400 com pack de 500; estornos reais restauraram
+Solo/900. Ledger teve uma concessão e uma reversão por compra; três repetições
+de confirmação e estorno não duplicaram efeitos. Tokens incorretos/cruzados
+retornaram 401; pagamento de outro workspace retornou 404 inclusive para founder.
+Consulta de assinatura exclui packs e respeita acesso vitalício. Regressões
+Docker e tipos passaram; CI/P3 incluem a regressão de ativação. Histórico
 preservado, sessões de teste revogadas e plano/saldo founder inalterados.
-[Evidência billing](docs/ASAAS_BILLING_SANDBOX_RESULTS.json).
-Próximo checkpoint: corrigir ativação transacional/benefícios e política de
-reversão de planos, validar em local/Docker e repetir homologação. Entrega real
-Academy e conexão Meta/MAPA continuam pendentes. Produção não foi utilizada.
+[Reteste billing](docs/ASAAS_BILLING_SANDBOX_RETEST_RESULTS.json),
+[regressões locais](docs/BILLING_LOCAL_VALIDATION.json) e
+[política de ativação/reversão](docs/BILLING_PLAN_ACTIVATION.md).
+Próximo checkpoint: entrega real Academy e conexão Meta/MAPA. PIX/boleto,
+estorno parcial, chargeback e rejeição de cartão ainda exigem prova externa.
+Produção não foi utilizada; maturidade geral inalterada.
 
 **Webhooks Asaas separados — 08/10/2026:** tokens informados para Campanhas
 e Academy configurados somente no perfil privado de homologação. Overrides

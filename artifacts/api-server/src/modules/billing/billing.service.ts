@@ -1,4 +1,4 @@
-import { eq, and, desc, type SQL } from "drizzle-orm";
+import { eq, and, desc, sql, type SQL } from "drizzle-orm";
 import {
   db,
   subscriptionPaymentsTable,
@@ -13,6 +13,7 @@ import { grantCreditsInTransaction } from "../credits/credits.service.js";
 import { fetchAsaasSettlement, parseAsaasSettlement, matchesBillingSettlement, type AsaasSettlement } from "./billing-settlement.js";
 import { reconcileBillingReversal, reconcileBillingIfHeld } from "./billing-reversal.service.js";
 import { REVERSAL_EVENTS } from "../../lib/asaas-refunds.js";
+import { activatePaidPlan } from "./billing-plan-activation.js";
 
 // ─── Asaas API ────────────────────────────────────────────────────────────────
 
@@ -365,19 +366,19 @@ export async function initiatePayment(opts: {
   userName: string;
   userEmail: string;
   card?: CardInputData;
-}): Promise<SubscriptionPayment> {
+}, buildPayment: typeof buildAsaasPayment = buildAsaasPayment): Promise<SubscriptionPayment> {
   const [plan] = await db
     .select()
     .from(plansTable)
     .where(eq(plansTable.id, opts.planId))
     .limit(1);
-  if (!plan) throw new NotFoundError("Plano não encontrado");
+  if (!plan || !plan.active) throw new NotFoundError("Plano não encontrado");
 
   const amountCents = Math.round(Number(plan.priceMonthly) * 100);
   const description = `NexOS AI — Acesso ${plan.name} (vitalício)`;
   const dueDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]!;
 
-  const pd = await buildAsaasPayment(opts.method, {
+  const pd = await buildPayment(opts.method, {
     name: opts.userName,
     email: opts.userEmail,
     amountCents,
@@ -388,29 +389,33 @@ export async function initiatePayment(opts: {
   const isCardApproved = pd.cardResult &&
     (pd.cardResult.status === "CONFIRMED" || pd.cardResult.status === "RECEIVED");
 
-  const [payment] = await db
-    .insert(subscriptionPaymentsTable)
-    .values({
-      workspaceId: opts.workspaceId,
-      userId: opts.userId,
-      planId: opts.planId,
-      amountCents: pd.chargedCents,
-      currency: "BRL",
-      method: opts.method,
-      status: isCardApproved ? "paid" : "pending",
-      description,
-      externalId: pd.externalId,
-      pixData: pd.pixData,
-      boletoData: pd.boletoData,
-      cryptoData: pd.cryptoData,
-      bankTransferData: pd.bankTransferData,
-      expiresAt: pd.expiresAt,
-      paidAt: isCardApproved ? new Date() : null,
-      metadata: { type: "plan", cardResult: pd.cardResult },
-    })
-    .returning();
+  const payment = await db.transaction(async (trx) => {
+    const [inserted] = await trx.insert(subscriptionPaymentsTable)
+      .values({
+        workspaceId: opts.workspaceId,
+        userId: opts.userId,
+        planId: opts.planId,
+        amountCents: pd.chargedCents,
+        currency: "BRL",
+        method: opts.method,
+        status: isCardApproved ? "paid" : "pending",
+        description,
+        externalId: pd.externalId,
+        pixData: pd.pixData,
+        boletoData: pd.boletoData,
+        cryptoData: pd.cryptoData,
+        bankTransferData: pd.bankTransferData,
+        expiresAt: pd.expiresAt,
+        paidAt: isCardApproved ? new Date() : null,
+        metadata: { type: "plan", planCredits: plan.creditsMonthly, cardResult: pd.cardResult },
+      })
+      .returning();
 
-  if (!payment) throw new AppError(500, "Falha ao criar pagamento", "DB_ERROR");
+    if (!inserted) throw new AppError(500, "Falha ao criar pagamento", "DB_ERROR");
+    if (isCardApproved) await activatePaidPlan(trx, inserted);
+    const [result] = await trx.select().from(subscriptionPaymentsTable).where(eq(subscriptionPaymentsTable.id, inserted.id));
+    return result!;
+  });
   logger.info({ workspaceId: opts.workspaceId, method: opts.method, amountCents: pd.chargedCents }, "Plan payment initiated");
   return payment;
 }
@@ -509,6 +514,11 @@ async function settleSubscriptionPayment(where: SQL, metadataChanges: Record<str
       await grantCreditsInTransaction(trx, payment.workspaceId, meta.packCredits!, "purchase",
         payment.description ?? "Pack de créditos", `billing-payment:${payment.id}`);
     }
+    if (updated && meta?.type === "plan") {
+      await activatePaidPlan(trx, updated);
+      const [result] = await trx.select().from(subscriptionPaymentsTable).where(eq(subscriptionPaymentsTable.id, payment.id));
+      return result;
+    }
     return updated;
   });
 }
@@ -597,22 +607,21 @@ export async function getSubscriptionStatus(workspaceId: string): Promise<{
     .where(
       and(
         eq(subscriptionPaymentsTable.workspaceId, workspaceId),
-        eq(subscriptionPaymentsTable.status, "paid")
+        eq(subscriptionPaymentsTable.status, "paid"),
+        sql`${subscriptionPaymentsTable.metadata}->>'type' = 'plan'`
       )
     )
-    .orderBy(desc(subscriptionPaymentsTable.paidAt))
+    .orderBy(desc(subscriptionPaymentsTable.paidAt), desc(subscriptionPaymentsTable.id))
     .limit(1);
 
   const last = payments[0];
   if (!last) return { isActive: false, lastPayment: null, planName: null, nextDueDate: null };
 
-  const paidAt = last.payment.paidAt!;
-  const nextDue = new Date(paidAt.getTime() + 30 * 24 * 60 * 60 * 1000);
   return {
-    isActive: nextDue > new Date(),
+    isActive: true,
     lastPayment: last.payment,
     planName: last.planName,
-    nextDueDate: nextDue,
+    nextDueDate: null,
   };
 }
 

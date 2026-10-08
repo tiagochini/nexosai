@@ -128,6 +128,7 @@ jobs:
           pnpm --filter @workspace/api-server run test:academy-content-db
           pnpm --filter @workspace/api-server run test:academy-quota-redis
           pnpm --filter @workspace/api-server run test:billing-reversal-db
+          pnpm --filter @workspace/api-server run test:billing-plan-activation-db
           pnpm --filter @workspace/api-server run test:billing-credit-concurrency-db
           pnpm --filter @workspace/api-server run test:content-checkpoint-resume
           pnpm --filter @workspace/db run verify

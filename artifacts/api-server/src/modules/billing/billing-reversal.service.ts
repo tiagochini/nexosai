@@ -4,6 +4,7 @@ import { parseAsaasSettlement, fetchAsaasSettlement, assertBillingSettlementBind
 import { completedRefundCents, isChargebackHold } from "../../lib/asaas-refunds.js";
 import { reversePurchaseCreditsInTransaction } from "../credits/credits.service.js";
 import { AppError } from "../../lib/errors.js";
+import { reconcileWorkspacePlan } from "./billing-plan-activation.js";
 
 export async function reconcileBillingReversal(externalId: string, lookup: (id: string) => Promise<unknown> = fetchAsaasSettlement) {
   const where = eq(payments.externalId, externalId);
@@ -26,7 +27,9 @@ export async function reconcileBillingReversal(externalId: string, lookup: (id: 
     const priorRefunded = Number(meta.refundedAmountCents ?? 0);
     if (refunded < priorRefunded) throw new AppError(409, "Estorno consultado regrediu", "REFUND_STATE_REGRESSION");
     const full = refunded === payment.amountCents;
-    const packCredits = meta.type === "pack" ? Number(meta.packCredits) : 0;
+    const activation = meta.planActivation as { creditsGranted?: number; basePlanId: string } | undefined;
+    const packCredits = meta.type === "pack" ? Number(meta.packCredits)
+      : meta.type === "plan" && activation ? Number(activation.creditsGranted) : 0;
     if (!Number.isSafeInteger(packCredits) || packCredits < 0) throw new AppError(409, "Pack inválido", "INVALID_PACK_REVERSAL");
     // Cumulative integer proportion; repeated partial events cannot compound rounding.
     const desired = hold || full ? packCredits : Number(BigInt(packCredits) * BigInt(refunded) / BigInt(payment.amountCents));
@@ -49,6 +52,7 @@ export async function reconcileBillingReversal(externalId: string, lookup: (id: 
       creditsReversed: review ? prior : desired, reversalVersion: desired !== prior && !review ? version + 1 : version,
       reversalReview: review, providerFinancialStatus: proof.status,
     } }).where(eq(payments.id, payment.id));
+    if (meta.type === "plan" && activation) await reconcileWorkspacePlan(trx, payment.workspaceId, activation.basePlanId);
     return { handled: true, changed: true, review };
   });
 }

@@ -1,0 +1,58 @@
+{
+  "startedAt": "2026-10-08T21:42:02.175Z",
+  "completedAt": "2026-10-08T21:43:39.117Z",
+  "environment": "Asaas sandbox + Supabase homologation",
+  "domain": "https://agencianexos.vip",
+  "scope": "Public authenticated billing API, separate ordinary user/workspace, official fictitious sandbox card, real sandbox charges and provider refunds; no production provider calls",
+  "result": "PASS Agency plan activation, included credits, credit pack, idempotence and real sandbox refund callbacks",
+  "baseline": {
+    "plan": "Solo",
+    "credits": 900
+  },
+  "plan": {
+    "requested": "Agency",
+    "chargeAmountCents": 1033965,
+    "providerAfterPayment": "CONFIRMED",
+    "localAfterPayment": "paid",
+    "actualWorkspacePlanAfterPayment": "Agency",
+    "activation": "PASS",
+    "includedCreditsNotGranted": false,
+    "creditsGranted": 2000,
+    "providerAfterRefund": "REFUNDED",
+    "localAfterRefund": "refunded",
+    "balanceAfterPlanPayment": 2900,
+    "workspacePlanAfterRefund": "Solo",
+    "creditLedgerEntries": 1,
+    "reversalLedgerEntries": 1
+  },
+  "creditPack": {
+    "pack": "pack_500",
+    "creditsPurchased": 500,
+    "chargeAmountCents": 8798,
+    "providerAfterPayment": "CONFIRMED",
+    "localAfterPayment": "paid",
+    "balanceAfterPayment": 3400,
+    "creditLedgerEntries": 1,
+    "duplicateConfirmations": 3,
+    "providerAfterRefund": "REFUNDED",
+    "localAfterRefund": "refunded",
+    "balanceAfterRefund": 900,
+    "reversalLedgerEntries": 1,
+    "duplicateRefunds": 3
+  },
+  "checks": {
+    "realRefundWebhooks": "PASS both local payments became refunded and pack balance returned to baseline before any controlled refund replay",
+    "idempotence": "PASS one grant and one reversal per purchase: 2,000 plan credits and 500 pack credits; three confirmation and three refund repeats do not change balance",
+    "isolation": "PASS founder cannot read payments of separate workspace (404); absent, invalid and other endpoint tokens denied (401)",
+    "founderPlanAndBalanceUnchanged": true,
+    "subscriptionInactiveAfterRefund": true,
+    "ownedHistoryOnly": true,
+    "ordinaryUser": true,
+    "testSessionsRevoked": true,
+    "paidLifetimeStatus": "PASS public API reports Agency active and no next monthly due date, including after buying the credit pack"
+  },
+  "remaining": [
+    "Actual Academy email delivery",
+    "PIX/boleto settlement, partial refunds, chargebacks and rejected card are not covered by this sandbox run"
+  ]
+}
