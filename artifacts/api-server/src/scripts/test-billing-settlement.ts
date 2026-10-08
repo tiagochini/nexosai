@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { fetchAsaasSettlement, parseAsaasSettlement, matchesBillingSettlement } from "../modules/billing/billing-settlement.js";
+import { completedRefundCents } from "../lib/asaas-refunds.js";
 
 const payment = { externalId: "pay_fixture", amountCents: 12990, currency: "BRL" as const, method: "pix" as const };
 const proof = { id: "pay_fixture", status: "RECEIVED", value: 129.9, billingType: "PIX" };
@@ -18,6 +19,13 @@ for (const malformed of [null, {}, { ...proof, value: "129.90" }, { ...proof, va
   assert.throws(() => parseAsaasSettlement(malformed), /inválida/);
 }
 assert.deepEqual(parseAsaasSettlement({ ...proof, customer: "private", creditCard: { token: "private" } }), { ...proof, deleted: undefined });
+assert.deepEqual(parseAsaasSettlement({ ...proof, refunds: null }), { ...proof, deleted: undefined });
+assert.equal(matchesBillingSettlement(payment, parseAsaasSettlement({ ...proof, refunds: null })), true);
+for (const refunds of [{}, "none", [{ status: "DONE", value: -1 }]]) {
+  assert.throws(() => parseAsaasSettlement({ ...proof, refunds }), /Estornos inválidos/);
+}
+assert.throws(() => completedRefundCents(parseAsaasSettlement({ ...proof, status: "REFUNDED", refunds: null })), /sem comprovação/);
+assert.equal(completedRefundCents(parseAsaasSettlement({ ...proof, status: "REFUNDED", refunds: [{ status: "DONE", value: proof.value }] })), payment.amountCents);
 const previousKey = process.env.ASAAS_API_KEY;
 const previousEnv = process.env.ASAAS_ENV;
 try {

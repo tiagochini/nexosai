@@ -1,0 +1,67 @@
+{
+  "startedAt": "2026-10-08T20:30:53.522Z",
+  "completedAt": "2026-10-08T20:40:26.457Z",
+  "environment": "Asaas sandbox + Supabase homologation",
+  "domain": "https://agencianexos.vip",
+  "scope": "Two public application checkouts, real sandbox card payment, real Asaas webhook delivery, authenticated repeat testing and full sandbox refunds; no production provider calls",
+  "checks": {
+    "checkoutCreation": "PASS two public checkouts created real sandbox charges",
+    "academyControlledReplay": {
+      "status": 200,
+      "ok": true,
+      "alreadyConfirmed": true
+    },
+    "accessActivation": "PASS Academy verify HTTP 200 valid true",
+    "duplicates": "PASS three authenticated repeats per endpoint preserve confirmation times and one Academy delivery job",
+    "realProviderRedelivery": "PASS Asaas logs: Academy PAYMENT_CONFIRMED HTTP 200 at 17:36, after refunds null correction; first controlled replay returned alreadyConfirmed",
+    "refund": "PASS real sandbox refunds triggered product refunded and Academy refunded/revoked; access HTTP 403; outbox skipped",
+    "lifecycleIdempotence": "PASS exactly one paid and one refunded lifecycle event for the product sale",
+    "cleanup": "PASS sandbox charges fully refunded and homologation product deactivated; history retained"
+  },
+  "products": {
+    "checkoutAmountCents": 1500,
+    "initialStatus": "pending",
+    "providerAfterPayment": "CONFIRMED",
+    "localAfterPayment": "paid",
+    "providerAfterRefund": "REFUNDED",
+    "finalStatus": "refunded",
+    "active": false,
+    "lifecyclePaidEvents": 1,
+    "lifecycleRefundedEvents": 1
+  },
+  "academy": {
+    "checkoutAmountCents": 9700,
+    "initialStatus": "pending",
+    "providerAfterPayment": "CONFIRMED",
+    "localAfterPayment": "confirmed",
+    "accessAfterPayment": 200,
+    "providerAfterRefund": "REFUNDED",
+    "finalStatus": "refunded",
+    "accessAfterRefund": 403,
+    "deliveryJobs": [
+      {
+        "status": "skipped",
+        "count": 1
+      }
+    ]
+  },
+  "fix": {
+    "problem": "Asaas payments with no refunds contain refunds:null; parser rejected them, preventing Academy confirmation.",
+    "resolution": "Treat null as absence of refunds; continue to reject malformed refund arrays and require full refund completion proof.",
+    "offlineRegression": "PASS billing settlement test with null, malformed refunds and missing/completed full refund proof",
+    "typecheck": "PASS"
+  },
+  "webhookConfiguration": {
+    "products": "Existing Campanhas webhook token explicitly aligned with provided private token, events preserved.",
+    "academy": "Missing webhook created in sandbox with private Academy token and payment confirmation/reversal events.",
+    "providerLogs": "Brave Asaas sandbox webhook logs verified: Academy confirmation 17:36 HTTP 200 and both endpoints refund notifications 17:39 HTTP 200; earlier Academy 502 retained as pre-fix history.",
+    "tokenInspection": "Asaas list response omits authToken; initial comparison could not establish mismatch."
+  },
+  "cleanup": "Sandbox charges fully refunded; test product deactivated; payment and purchase history retained for homologation evidence; temporary founder sessions logged out.",
+  "limits": [
+    "Actual customer email delivery was not verified; one Academy delivery job was scheduled, then skipped on refund.",
+    "Platform plan/credit billing endpoint was not part of this journey.",
+    "Production, chargeback, partial-refund and all supported payment methods are not certified by this run.",
+    "This authorized external homologation creates clearly marked synthetic buyer/product history in the homologation environment; regression suites remain local/Docker."
+  ]
+}

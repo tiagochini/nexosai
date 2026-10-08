@@ -22,7 +22,9 @@ export function parseAsaasSettlement(value: unknown): AsaasSettlement {
   }
   // Do not retain the full provider object (customer/card details, tokens, etc.).
   let refunds: AsaasSettlement["refunds"];
-  if (row.refunds !== undefined) {
+  // Asaas returns null when a payment has no refunds. Actual refund entries
+  // still require an array and complete validation; full refunds require proof.
+  if (row.refunds !== undefined && row.refunds !== null) {
     if (!Array.isArray(row.refunds) || row.refunds.length > 1000) throw new AppError(502, "Estornos inválidos do provedor", "INVALID_REFUND_RESPONSE");
     refunds = row.refunds.map((item: unknown) => {
       const refund = item as Record<string, unknown> | null;

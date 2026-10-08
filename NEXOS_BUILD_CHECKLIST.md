@@ -1,5 +1,16 @@
 # NexOS — Checklist Canônico de Construção
 
+**Asaas sandbox real — 08/10/2026:** Campanhas e Academy concluíram checkout
+público, pagamento com cartão fictício, webhook real, repetição sem duplicação e
+estorno integral. Academy liberou acesso (200) e revogou após estorno (403), com
+um único job de entrega; Campanhas registrou um único evento pago e um estornado.
+Corrigida compatibilidade com `refunds: null` da API real. Cobranças estornadas e
+produto de homologação desativado; histórico preservado.
+[Evidência](docs/ASAAS_SANDBOX_JOURNEY_RESULTS.json). E-mail efetivamente enviado
+e planos/créditos da plataforma ainda não homologados; maturidade geral inalterada.
+Próximo checkpoint: webhook de planos/créditos e entrega real Academy, seguido da
+conexão Meta/MAPA. Produção não foi utilizada.
+
 **Webhooks Asaas separados — 08/10/2026:** tokens informados para Campanhas
 e Academy configurados somente no perfil privado de homologação. Overrides
 `ASAAS_PRODUCT_WEBHOOK_TOKEN` e `ASAAS_ACADEMY_WEBHOOK_TOKEN` isolam os endpoints;

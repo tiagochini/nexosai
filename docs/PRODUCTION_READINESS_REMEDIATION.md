@@ -109,9 +109,10 @@ desenvolvimento e regressões em PostgreSQL local/Docker. As evidências remotas
   comprovados também na API compilada local. [Evidência](./SUPABASE_HOMOLOGATION.md).
 - [ ] Implantar/validar a aplicação no ambiente público e provisionar o banco de
   produção separadamente; homologação Supabase não representa liberação de produção.
-- [ ] Concluir a evidência Asaas sandbox: a credencial disponível retornou 401
-  no sandbox; token local preparado; chave válida e URL pública do webhook ainda faltam.
-  [Inspeção e requisitos de continuação](./P0_REAL_ACTIVATION_STATUS.md).
+- [ ] Concluir a homologação de todos os fluxos Asaas: Campanhas e Academy passaram
+  checkout público, cartão sandbox, webhook real, repetição e estorno integral em
+  08/10/2026. Falta o fluxo de planos/créditos da plataforma e envio efetivo do
+  e-mail Academy. [Evidência atual](./ASAAS_SANDBOX_JOURNEY_RESULTS.json).
 - [x] Concluir o build completo/frontend e tipos: Rollup fixado em 4.63.6 após
   diagnóstico/comparação local. Auditoria inclui ferramentas e passou sem vulnerabilidades conhecidas.
 
