@@ -23,5 +23,19 @@ Evidência deste checkpoint:
 - Scanner de segredos: PASS; nenhuma senha ou token registrado nesta evidência.
 
 Supabase permanece como banco de homologação; não foram criadas fixtures.
-Próximo checkpoint: configurar a URL HTTPS exata do Cloudflare Tunnel no perfil
-de homologação e verificar o login por esse endereço. A URL ainda não foi informada.
+
+O usuário informou `https://agencianexos.vip`. Perfil privado de homologação
+atualizado com esse `APP_URL`, origem explícita, base pública do webhook Meta e
+retorno OAuth `https://agencianexos.vip/api/social/callback/meta`. Reinício feito.
+Não houve alteração no painel da Meta nem assinatura automática de contas.
+
+Validação pelo domínio público:
+
+- `/api/readyz`: HTTP 200 `ready`.
+- Login do founder: HTTP 200.
+- Sessão administrativa: HTTP 200, UUID igual ao cadastrado na homologação.
+- Logout da sessão de verificação: HTTP 204.
+- Origem externa não configurada continua recebendo HTTP 403.
+
+Próximo checkpoint: configurar e verificar os retornos/permissões da Meta e
+homologar recebimento real do comentário MAPA. A entrega Meta não foi testada aqui.

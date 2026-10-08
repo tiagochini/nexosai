@@ -4,7 +4,9 @@
 formulário; launcher autoriza os dois endereços loopback da interface.
 TypeScript/UI negativa e bloqueio de origem externa verificados; API reiniciada
 e pronta. [Evidência](docs/LOGIN_HOMOLOGATION_VALIDATION.md). Maturidade inalterada;
-próximo checkpoint: configurar e validar a URL HTTPS exata do Cloudflare Tunnel.
+`https://agencianexos.vip` configurado: prontidão/login/administração por UUID
+passaram pelo domínio público; sessão de verificação encerrada. Próximo checkpoint:
+retornos/permissões Meta e recebimento real do comentário MAPA.
 
 **Comentário MAPA — 07/10/2026:** corrigida leitura de `id/text/media.id` no
 webhook Instagram. Testes Linux/Docker passaram para resposta imediata configurada,
