@@ -14,9 +14,15 @@ Security e Infrastructure concluíram com sucesso no SHA remoto `81b0d3e0`,
 que contém a implementação original P1 `757ec7c0`; seis jobs aprovados.
 [Evidência por SHA](docs/P1_REMOTE_CI_RESULTS.json) e
 [fechamento P1](docs/P1_CLOSEOUT.md). Pendência remota do P1 original encerrada.
-Alterações locais posteriores, incluindo `c2bc26d3`, ainda precisam de CI no
-próprio SHA após publicação autorizada; nenhum push realizado. Este fechamento
-não certifica produção nem promove a maturidade das capacidades.
+**Revisão atual publicada e aprovada — 08/10/2026:** push autorizado de 11 commits
+em `93a5db75`, incluindo ativação de planos `c2bc26d3`. Quality, Security e
+Infrastructure passaram nos seis jobs. Regressão de planos comprovada nos logs
+do job de banco e no artefato P3; artefatos Docker/P2/P3 baixados e checks
+verificados. [Evidência atual](docs/P1_CURRENT_REMOTE_CI_RESULTS.json).
+Pendência de publicação/CI dessa implementação encerrada; o commit seguinte
+registra a evidência e tem CI acompanhado separadamente. Próximo checkpoint:
+homologações externas remanescentes e implantação, com suas próprias provas.
+Este fechamento não certifica produção nem promove a maturidade das capacidades.
 
 **Planos e créditos corrigidos — 08/10/2026:** ativação transacional e créditos
 incluídos corrigidos após a falha histórica. Reteste em conta comum separada:

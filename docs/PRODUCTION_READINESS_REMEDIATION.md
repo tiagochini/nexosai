@@ -148,10 +148,14 @@ desenvolvimento e regressões em PostgreSQL local/Docker. As evidências remotas
   Confirmação por SHA, jobs e etapas em 08/10/2026:
   [evidência remota](./P1_REMOTE_CI_RESULTS.json),
   [fechamento e implantação](./P1_CLOSEOUT.md).
-- [ ] Confirmar CI remoto das alterações locais posteriores, incluindo ativação
-  de planos `c2bc26d3`. Esses commits não estão no SHA aprovado; publicação
-  continua sujeita à orientação de não fazer push. A prova do P1 original não
-  certifica estas alterações nem implantação de produção.
+- [x] Publicar e confirmar CI remoto das alterações posteriores, incluindo
+  ativação de planos `c2bc26d3`. Push autorizado e executado em 08/10/2026:
+  `81b0d3e0` → `93a5db75`, com 11 commits publicados. Quality, Security e
+  Infrastructure aprovaram os seis jobs nesse SHA; regressão de planos
+  confirmada nos logs de banco e no artefato P3. Artefatos Docker, P2 e P3
+  disponíveis, baixados e verificados. [Evidência atual por SHA, jobs, logs e
+  artefatos](./P1_CURRENT_REMOTE_CI_RESULTS.json). Este CI usa infraestrutura
+  descartável e não certifica implantação de produção.
 
 ### P2 — Infraestrutura e recuperação
 

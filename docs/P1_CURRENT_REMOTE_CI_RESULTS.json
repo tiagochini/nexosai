@@ -1,0 +1,465 @@
+{
+  "publicationCommand": "git push origin main",
+  "scope": "GitHub-hosted CI with disposable test infrastructure; no production deployment or real-provider certification",
+  "publishedLocalCommits": 11,
+  "result": "PASS all three workflows and six jobs for the published implementation revision",
+  "artifacts": [
+    {
+      "id": 11583045981,
+      "sizeBytes": 598,
+      "expired": false,
+      "name": "docker-deployment-results"
+    },
+    {
+      "id": 11582532479,
+      "sizeBytes": 1510,
+      "expired": false,
+      "name": "p2-infrastructure-results"
+    },
+    {
+      "id": 11582363432,
+      "sizeBytes": 917,
+      "expired": false,
+      "name": "p3-local-results"
+    }
+  ],
+  "previousRemoteSha": "81b0d3e0ec32622ae018f92ef04e6f163d531e53",
+  "workflows": [
+    {
+      "name": "Security checks",
+      "status": "completed",
+      "runId": 37852392631,
+      "headSha": "93a5db7533daf62967d492dca19afd6c78ebf49b",
+      "url": "https://github.com/tiagochini/nexosai/actions/runs/37852392631",
+      "jobs": [
+        {
+          "name": "secret-scan",
+          "startedAt": "2026-10-08T22:16:16Z",
+          "completedAt": "2026-10-08T22:16:40Z",
+          "url": "https://github.com/tiagochini/nexosai/actions/runs/37852392631/job/113568288987",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Scan tracked files for secrets"
+            },
+            {
+              "conclusion": "success",
+              "name": "Audit all reachable history for forbidden sensitive paths"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/setup-node@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Complete job"
+            }
+          ],
+          "conclusion": "success"
+        }
+      ],
+      "conclusion": "success"
+    },
+    {
+      "name": "Quality checks",
+      "status": "completed",
+      "runId": 37852392718,
+      "headSha": "93a5db7533daf62967d492dca19afd6c78ebf49b",
+      "url": "https://github.com/tiagochini/nexosai/actions/runs/37852392718",
+      "jobs": [
+        {
+          "name": "typecheck-and-build",
+          "startedAt": "2026-10-08T22:16:16Z",
+          "completedAt": "2026-10-08T22:18:03Z",
+          "url": "https://github.com/tiagochini/nexosai/actions/runs/37852392718/job/113568289684",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run pnpm/action-setup@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run pnpm install --frozen-lockfile"
+            },
+            {
+              "conclusion": "success",
+              "name": "Audit runtime and build dependencies (fail on any known severity)"
+            },
+            {
+              "conclusion": "success",
+              "name": "Dependency runtime regression tests"
+            },
+            {
+              "conclusion": "success",
+              "name": "Native mockup discovery regression tests"
+            },
+            {
+              "conclusion": "success",
+              "name": "Payment and Academy offline regression tests"
+            },
+            {
+              "conclusion": "success",
+              "name": "Credential security regression tests"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run pnpm run build"
+            },
+            {
+              "conclusion": "success",
+              "name": "Paid Academy material must be absent from public build"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/setup-node@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run pnpm/action-setup@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Complete job"
+            }
+          ],
+          "conclusion": "success"
+        },
+        {
+          "name": "auth-database-tests",
+          "startedAt": "2026-10-08T22:16:16Z",
+          "completedAt": "2026-10-08T22:18:17Z",
+          "url": "https://github.com/tiagochini/nexosai/actions/runs/37852392718/job/113568290157",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job"
+            },
+            {
+              "conclusion": "success",
+              "name": "Initialize containers"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run pnpm/action-setup@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run pnpm install --frozen-lockfile"
+            },
+            {
+              "conclusion": "success",
+              "name": "Generate a masked encryption key for disposable test rows"
+            },
+            {
+              "conclusion": "success",
+              "name": "Bootstrap a disposable database and verify migrations"
+            },
+            {
+              "conclusion": "success",
+              "name": "Authentication and encrypted credential database tests"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/setup-node@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run pnpm/action-setup@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Stop containers"
+            },
+            {
+              "conclusion": "success",
+              "name": "Complete job"
+            }
+          ],
+          "conclusion": "success"
+        }
+      ],
+      "conclusion": "success"
+    },
+    {
+      "name": "Infrastructure recovery",
+      "status": "completed",
+      "runId": 37852392710,
+      "headSha": "93a5db7533daf62967d492dca19afd6c78ebf49b",
+      "url": "https://github.com/tiagochini/nexosai/actions/runs/37852392710",
+      "jobs": [
+        {
+          "name": "docker-deployment",
+          "startedAt": "2026-10-08T22:16:16Z",
+          "completedAt": "2026-10-08T22:18:41Z",
+          "url": "https://github.com/tiagochini/nexosai/actions/runs/37852392710/job/113568291155",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node --test lib/db/scripts/connection-options.test.mjs"
+            },
+            {
+              "conclusion": "success",
+              "name": "Docker application with optional local or external TLS PostgreSQL"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/upload-artifact@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/setup-node@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Complete job"
+            }
+          ],
+          "conclusion": "success"
+        },
+        {
+          "name": "persistence-recovery-and-load",
+          "startedAt": "2026-10-08T22:16:16Z",
+          "completedAt": "2026-10-08T22:17:46Z",
+          "url": "https://github.com/tiagochini/nexosai/actions/runs/37852392710/job/113568291464",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run pnpm/action-setup@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run pnpm install --frozen-lockfile"
+            },
+            {
+              "conclusion": "success",
+              "name": "Backup authentication and publication safeguards"
+            },
+            {
+              "conclusion": "success",
+              "name": "Isolated persistent Redis, encrypted backup, restore and outage/load drills"
+            },
+            {
+              "conclusion": "success",
+              "name": "Upload timing and capacity evidence (no dumps or secrets)"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/setup-node@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run pnpm/action-setup@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Complete job"
+            }
+          ],
+          "conclusion": "success"
+        },
+        {
+          "name": "p3-product-local",
+          "startedAt": "2026-10-08T22:16:16Z",
+          "completedAt": "2026-10-08T22:20:50Z",
+          "url": "https://github.com/tiagochini/nexosai/actions/runs/37852392710/job/113568291581",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run pnpm/action-setup@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run pnpm install --frozen-lockfile"
+            },
+            {
+              "conclusion": "success",
+              "name": "Isolated product journey, delivery/media contracts and AI quality framework"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/upload-artifact@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/setup-node@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run pnpm/action-setup@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4"
+            },
+            {
+              "conclusion": "success",
+              "name": "Complete job"
+            }
+          ],
+          "conclusion": "success"
+        }
+      ],
+      "conclusion": "success"
+    }
+  ],
+  "limitation": "This evidence pins the published implementation SHA. The following commit records documentation and evidence; its workflows are followed separately.",
+  "event": "push",
+  "billingPlanRegressionProof": [
+    "PASS approved card activates Agency atomically",
+    "PASS pending webhook confirmation",
+    "PASS credit overflow rolls back"
+  ],
+  "repository": "https://github.com/tiagochini/nexosai",
+  "checkedAt": "2026-10-08T22:23:00.0457125Z",
+  "implementationSha": "93a5db7533daf62967d492dca19afd6c78ebf49b",
+  "verifiedArtifactResults": [
+    {
+      "checks": {
+        "local": "PASS optional local PostgreSQL, explicit bootstrap/seed/verify, real production API and frontend proxy, non-root API and persistent recordings",
+        "external": "PASS no PostgreSQL in application stack, independently owned database, verified certificate/hostname, TLS sessions, same schema tooling and application smoke",
+        "tlsNegativeControl": "PASS hostname mismatch rejected; certificate validation is enabled",
+        "externalRecovery": "PASS external database outage makes readiness fail while API survives; existing TLS pool recovers without application restart"
+      },
+      "checkCount": 4,
+      "sha256": "2c73e4ca02a3d5e027386cd88012d0324f905cb917b2b26e8faf3d7cc568f5f1",
+      "name": "DOCKER_DEPLOYMENT_RESULTS.json"
+    },
+    {
+      "checks": {
+        "redisPolicy": "PASS authenticated, persistent AOF, noeviction, monitored health",
+        "concurrentLedger": "PASS 192 unique charges and 32 replays produce one additional debit",
+        "redisCrashPersistence": "PASS SIGKILL and restart retain acknowledged fixture and delayed BullMQ job",
+        "redisOutage": "PASS live API, unready service, quotas and producer reject; same producer/worker recover after prolonged outage without API restart",
+        "postgresOutage": "PASS API survives idle pool errors; dependency rejects and existing pool recovers with ledger intact",
+        "providerFailures": "PASS billing and Academy reject loopback HTTP 429, 503, malformed JSON and timed-out requests without provider detail",
+        "redisMemoryPressure": "PASS OOM rejects oversized writes without evicting durable keys",
+        "fullRestore": "PASS every public table/row digest, schema verifier, encrypted integration ciphertext, Redis value/type/TTL and delayed queue restored"
+      },
+      "checkCount": 8,
+      "sha256": "0cc196a30638772c02d29e3a879f5c5fe82fa9d2939a6c617bb48a5a145838f3",
+      "name": "P2_VALIDATION_RESULTS.json"
+    },
+    {
+      "checks": {
+        "privateBrowserContext": "PASS account/workspace transition removes private browser history and intake remnants",
+        "aiEvaluationFramework": "PASS versioned references, adversarial regressions and artifact/prompt/model-bound human review format; live AI release remains blocked",
+        "schemaIntegrity": "PASS repeat-safe forward trigger/scope repair, missing-FK and disabled-trigger rejection and atomic bootstrap rollback",
+        "test-billing-plan-activation-db": "PASS",
+        "test-meta-webhook-routing": "PASS",
+        "test-mapa-comment-db": "PASS",
+        "test-platform-admin-db": "PASS",
+        "test-project-execution-isolation": "PASS",
+        "test-project-isolation-db": "PASS",
+        "test-content-coherence-idor": "PASS",
+        "test-auth-sessions-http": "PASS",
+        "test-realtime-security-db": "PASS",
+        "test-content-checkpoint-resume": "PASS",
+        "test-p3-journey": "PASS",
+        "test-academy-funnel-db": "PASS",
+        "test-academy-access-outbox-db": "PASS",
+        "test-academy-delivery-lifecycle-db": "PASS",
+        "test-native-media-control-plane": "PASS",
+        "test-native-media-http": "PASS",
+        "test-timeline-render-compiler": "PASS",
+        "test-paid-media": "PASS",
+        "test-paid-media-launch": "PASS",
+        "test-conditional-execution-db": "PASS",
+        "test-social-publication-governance": "PASS",
+        "test-product-asaas-sandbox-unit": "PASS",
+        "test-canonical-completion-chain": "PASS",
+        "nativeWorkerSelfTest": "PASS CPU cannot advertise or execute GPU inference"
+      },
+      "checkCount": 27,
+      "sha256": "d88e6bd656e33561cea85220ddc37626d9beca7e0652fd9d3beb36ad2537b2ef",
+      "name": "P3_VALIDATION_RESULTS.json"
+    }
+  ]
+}

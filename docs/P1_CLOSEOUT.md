@@ -18,9 +18,32 @@ concluíram com sucesso em 07/10/2026, conforme API do GitHub consultada em
   Docker, persistência/recuperação/carga e jornada P3 isolada aprovados.
 
 [Evidência remota por SHA e job](./P1_REMOTE_CI_RESULTS.json).
-Os dez commits locais posteriores, até `c2bc26d3`, não estão nesse SHA e
-continuam exigindo CI remoto próprio após publicação. Nenhum push nem rerun
-foi realizado nesta verificação; o fechamento abaixo cobre o P1 original.
+Na primeira conferência, os dez commits posteriores até `c2bc26d3` ainda não
+estavam publicados. Com autorização posterior, o push de 08/10/2026 publicou
+11 commits, incluindo o registro daquela conferência, em `93a5db75`.
+
+## CI da revisão atual publicada
+
+O SHA `93a5db7533daf62967d492dca19afd6c78ebf49b` inclui a correção de ativação
+de planos e todas as alterações locais anteriores. Os três workflows e seus
+seis jobs concluíram com sucesso, sem rerun nem correção adicional necessária:
+
+- [Quality checks](https://github.com/tiagochini/nexosai/actions/runs/37852392718):
+  build/tipos, dependências, conteúdo pago, autenticação e regressões de banco;
+  logs confirmam ativação Agency, concessão única, isolamento, estorno,
+  chargeback/recuperação e rollback por overflow.
+- [Security checks](https://github.com/tiagochini/nexosai/actions/runs/37852392631):
+  scanner atual e auditoria do histórico completo aprovados.
+- [Infrastructure recovery](https://github.com/tiagochini/nexosai/actions/runs/37852392710):
+  Docker/PostgreSQL externo com TLS, persistência/recuperação/carga e jornada P3.
+  Os artefatos `docker-deployment-results`, `p2-infrastructure-results` e
+  `p3-local-results` foram publicados, baixados e tiveram seus checks conferidos;
+  a regressão de planos também passou no runner P3.
+
+[Evidência atual por SHA, jobs, logs e hashes dos artefatos](./P1_CURRENT_REMOTE_CI_RESULTS.json).
+O commit seguinte documenta esse resultado; sua execução de CI é acompanhada
+separadamente. Os workflows usam infraestrutura descartável e provedores de
+teste; não implantam produção nem substituem homologações de provedores reais.
 
 ## Material pago Academy
 
@@ -96,7 +119,6 @@ Não há mudança de schema nem migração de dados neste P1. Se a implantação
 falhar, suspender temporariamente a área paga e manter a API protegida;
 restaurar o frontend antigo reintroduz a exposição do conteúdo.
 
-O fechamento verificável do P1 original está confirmado pelos workflows acima.
-As revisões posteriores exigem publicação e sucesso vinculados ao seu próprio
-SHA. Implantação de produção e limpeza dos artefatos antigos mantêm as condições
-de publicação e rollback descritas neste documento.
+O fechamento verificável do P1 e o CI das correções publicadas estão confirmados
+pelos workflows vinculados ao SHA acima. Implantação de produção e limpeza dos
+artefatos antigos mantêm as condições de publicação e rollback deste documento.
