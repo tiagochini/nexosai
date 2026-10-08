@@ -23,6 +23,14 @@ const metaE2eMode = process.argv.includes("--meta-e2e");
 const apiPort = sharedEnv.DEV_API_PORT || "8080";
 const appPort = sharedEnv.DEV_APP_PORT || "8081";
 
+// Both loopback addresses serve the same local frontend. Public tunnel origins
+// still require explicit configuration in the selected environment profile.
+sharedEnv.ALLOWED_ORIGINS = [...new Set([
+  ...(sharedEnv.ALLOWED_ORIGINS || "").split(",").map(value => value.trim()).filter(Boolean),
+  `http://localhost:${appPort}`,
+  `http://127.0.0.1:${appPort}`,
+])].join(",");
+
 const required = ["DATABASE_URL", "SESSION_SECRET"];
 const missing = required.filter((name) => !sharedEnv[name]);
 if (missing.length > 0) {

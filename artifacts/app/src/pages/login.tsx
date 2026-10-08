@@ -15,6 +15,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [, setLocation] = useLocation();
   const { setToken } = useAuth();
   const tr = useAppI18n();
@@ -23,18 +24,25 @@ export default function Login() {
   const loginMutation = useLogin({
     mutation: {
       onSuccess: (data) => {
+        setLoginError(null);
         setToken(data.accessToken);
         toast.success(t.success);
         setLocation("/");
       },
       onError: (error: Error) => {
-        toast.error(error.message || t.error);
+        const apiError = error as Error & { status?: number; data?: { code?: string; error?: string } };
+        const message = apiError.data?.code === "UNTRUSTED_ORIGIN"
+          ? t.origin_error
+          : apiError.status === 401 ? t.error : apiError.data?.error || t.connection_error;
+        setLoginError(message);
+        toast.error(message);
       },
     },
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(null);
     await waitForPendingLogout();
     loginMutation.mutate({ data: { email, password } });
   };
@@ -106,6 +114,12 @@ export default function Login() {
                 </button>
               </div>
             </div>
+
+            {loginError && (
+              <p role="alert" className="text-sm text-destructive border border-destructive/40 bg-destructive/10 p-3">
+                {loginError}
+              </p>
+            )}
 
             <Button
               type="submit"

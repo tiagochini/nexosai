@@ -66,6 +66,8 @@ export const APP_TRANSLATIONS = {
       register: "Registrar-se",
       success: "Acesso autorizado.",
       error: "Acesso negado. Verifique as credenciais.",
+      origin_error: "Este endereço ainda não está autorizado para login. Use o endereço configurado ou solicite a liberação deste domínio.",
+      connection_error: "Não foi possível entrar. Verifique a conexão e tente novamente.",
     },
     register: {
       tagline: "Automated Launch",
@@ -164,6 +166,8 @@ export const APP_TRANSLATIONS = {
       register: "Create account",
       success: "Access granted.",
       error: "Access denied. Please check your credentials.",
+      origin_error: "This address is not authorized for sign-in yet. Use the configured address or request authorization for this domain.",
+      connection_error: "Could not sign in. Check your connection and try again.",
     },
     register: {
       tagline: "Automated Launch",
@@ -262,6 +266,8 @@ export const APP_TRANSLATIONS = {
       register: "Create account",
       success: "Access granted.",
       error: "Access denied. Please check your credentials.",
+      origin_error: "This address is not authorized for sign-in yet. Use the configured address or request authorization for this domain.",
+      connection_error: "Could not sign in. Check your connection and try again.",
     },
     register: {
       tagline: "Automated Launch",
@@ -360,6 +366,8 @@ export const APP_TRANSLATIONS = {
       register: "Crear cuenta",
       success: "Acceso concedido.",
       error: "Acceso denegado. Verifica tus credenciales.",
+      origin_error: "Esta dirección aún no está autorizada para iniciar sesión. Usa la dirección configurada o solicita autorización para este dominio.",
+      connection_error: "No se pudo iniciar sesión. Verifica la conexión e inténtalo de nuevo.",
     },
     register: {
       tagline: "Lanzamiento Automatizado",

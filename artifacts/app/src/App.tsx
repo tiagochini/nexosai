@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Router as WouterRouter } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { AppI18nProvider } from "@/lib/i18n";
@@ -29,6 +30,7 @@ function App() {
             <TooltipProvider>
               <AppRoutes />
               <Toaster />
+              <SonnerToaster />
             </TooltipProvider>
           </I18nBridge>
         </AuthProvider>
