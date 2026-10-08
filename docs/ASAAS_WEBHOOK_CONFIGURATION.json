@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-08T20:25:31.706Z",
+  "environment": "homologation/sandbox",
+  "scope": "Public webhook authentication with inert ignored events; no payment, purchase or provider API calls",
+  "checks": {
+    "products": {
+      "url": "https://agencianexos.vip/api/products/webhooks/asaas",
+      "ownToken": 200,
+      "otherEndpointToken": 401,
+      "missingToken": 401
+    },
+    "academy": {
+      "url": "https://agencianexos.vip/api/academy/webhook",
+      "ownToken": 200,
+      "otherEndpointToken": 401,
+      "missingToken": 401
+    }
+  },
+  "limits": [
+    "Screenshots show forms being edited; saving and selected events in the Asaas dashboard were not verified",
+    "Real Asaas webhook delivery and payment settlement remain pending",
+    "Billing webhook token was not changed"
+  ]
+}

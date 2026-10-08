@@ -1,5 +1,14 @@
 # NexOSAI — Fluxo Operacional e de Implementação Canônico
 
+**Webhooks Asaas separados — 08/10/2026:** tokens informados para Campanhas
+e Academy configurados somente no perfil privado de homologação. Overrides
+`ASAAS_PRODUCT_WEBHOOK_TOKEN` e `ASAAS_ACADEMY_WEBHOOK_TOKEN` isolam os endpoints;
+valor ausente mantém compatibilidade, valor explicitamente vazio bloqueia acesso.
+HTTP público: token próprio 200; token cruzado/ausente 401. Eventos de verificação
+ignorados, sem cobrança ou concessão. [Evidência](docs/ASAAS_WEBHOOK_CONFIGURATION.json).
+Próximo checkpoint: salvar as configurações no Asaas sandbox e verificar entrega
+real e liquidação ponta a ponta. Maturidade geral inalterada.
+
 **Administração global por UUID — 08/10/2026:** Command Center e privilégios
 administrativos relacionados usam `PLATFORM_ADMIN_USER_IDS`, sem autorização por
 e-mail. Ações administrativas exigem sessão ativa vinculada ao usuário e workspace;

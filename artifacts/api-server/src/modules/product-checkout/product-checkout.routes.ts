@@ -19,7 +19,7 @@ const router = Router();
 /** Constant-time webhook authentication seam used by route and unit tests. */
 export function isValidAsaasWebhookToken(
   provided: string | undefined,
-  configured: string | undefined = process.env["ASAAS_WEBHOOK_TOKEN"],
+  configured: string | undefined = process.env["ASAAS_PRODUCT_WEBHOOK_TOKEN"] ?? process.env["ASAAS_WEBHOOK_TOKEN"],
 ): boolean {
   return matchesAsaasWebhookToken(provided, configured);
 }

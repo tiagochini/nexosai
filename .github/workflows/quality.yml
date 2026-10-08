@@ -42,6 +42,7 @@ jobs:
           pnpm --filter @workspace/api-server run test:academy-access-code
           pnpm --filter @workspace/api-server run test:academy-verification-security
           pnpm --filter @workspace/api-server run test:billing-webhook-security
+          pnpm --filter @workspace/api-server run test:asaas-webhook-token-isolation
           pnpm --filter @workspace/api-server run test:billing-settlement
           pnpm --filter @workspace/api-server run test:orchestration-fallback-race
           pnpm --filter @workspace/api-server run test:boot-recovery-safety

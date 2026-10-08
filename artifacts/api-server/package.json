@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:asaas-webhook-token-isolation": "cross-env NODE_ENV=test tsx src/scripts/test-asaas-webhook-token-isolation.ts",
     "test:platform-admin-db": "cross-env NODE_ENV=test tsx src/scripts/test-platform-admin-db.ts",
     "test:project-execution-isolation": "tsx src/scripts/test-project-execution-isolation.ts",
     "test:project-isolation-db": "cross-env NODE_ENV=test tsx src/scripts/test-project-isolation-db.ts",
