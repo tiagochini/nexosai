@@ -18,7 +18,7 @@ export async function getWorkspaceOverview(userId: string, activeWorkspaceId: st
   await assertOwnedActiveWorkspace(userId, activeWorkspaceId);
   const [owner] = await db.select({ email: usersTable.email }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (!owner) throw new NotFoundError("User");
-  const internalWorkspaceAccess = canCreateInternalWorkspace(owner.email);
+  const internalWorkspaceAccess = canCreateInternalWorkspace(userId);
   const workspaces = await db.select({
     id: workspacesTable.id, name: workspacesTable.name, slug: workspacesTable.slug,
     status: workspacesTable.status, createdAt: workspacesTable.createdAt, planId: workspacesTable.planId,
@@ -83,7 +83,7 @@ export async function createOwnedWorkspace(userId: string, currentWorkspaceId: s
       throw new AppError(403, "Workspace is not owned by this user or is inactive", "FORBIDDEN");
     }
     const [owner] = await tx.select({ email: usersTable.email }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-    if (!owner || !canCreateInternalWorkspace(owner.email)) {
+    if (!owner || !canCreateInternalWorkspace(userId)) {
       throw new AppError(403, "Criação de novos workspaces ainda não está disponível para esta conta", "WORKSPACE_CREATION_NOT_AVAILABLE");
     }
     const [plan] = await tx.select().from(plansTable).where(eq(plansTable.id, current.planId)).limit(1);

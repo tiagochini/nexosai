@@ -705,6 +705,8 @@ export interface AuthResponse {
 }
 
 export interface MeResponse {
+  /** Server-authorized UUID administrator with an active session. */
+  isPlatformAdmin?: boolean;
   user: User;
   workspace: Workspace;
 }

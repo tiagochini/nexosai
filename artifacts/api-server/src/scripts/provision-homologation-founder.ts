@@ -51,7 +51,9 @@ try {
   let config = readFileSync(path, "utf8");
   const configured = new Set((process.env.ACADEMY_ADMIN_USER_IDS ?? "").split(",").map(v => v.trim()).filter(Boolean));
   configured.add(auth.userId);
-  const updates = { ACADEMY_ADMIN_USER_IDS: [...configured].join(","), ACADEMY_ALLOW_LEGACY_ADMIN_SECRET: "false" };
+  const platformAdmins = new Set((process.env.PLATFORM_ADMIN_USER_IDS ?? "").split(",").map(v => v.trim()).filter(Boolean));
+  platformAdmins.add(auth.userId);
+  const updates = { PLATFORM_ADMIN_USER_IDS: [...platformAdmins].join(","), ACADEMY_ADMIN_USER_IDS: [...configured].join(","), ACADEMY_ALLOW_LEGACY_ADMIN_SECRET: "false" };
   for (const [key, value] of Object.entries(updates)) {
     const line = `${key}=${value}`;
     const pattern = new RegExp(`^${key}=.*$`, "m");

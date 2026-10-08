@@ -1953,6 +1953,9 @@ components:
     MeResponse:
       type: object
       properties:
+        isPlatformAdmin:
+          type: boolean
+          description: Server-authorized UUID administrator with an active session.
         user:
           $ref: "#/components/schemas/User"
         workspace:

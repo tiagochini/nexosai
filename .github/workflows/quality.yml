@@ -116,6 +116,7 @@ jobs:
           node --test scripts/test-private-context-storage.mjs
           pnpm --filter @workspace/api-server run test:project-execution-isolation
           pnpm --filter @workspace/api-server run test:project-isolation-db
+          pnpm --filter @workspace/api-server run test:platform-admin-db
           pnpm --filter @workspace/api-server run test:auth-sessions-http
           pnpm --filter @workspace/api-server run test:realtime-security-db
           pnpm --filter @workspace/api-server run test:academy-funnel-db

@@ -1,15 +1,8 @@
+import { requirePlatformAdmin } from "../admin/admin.middleware.js";
 import { Router } from "express";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { registerFingerprint, lookupFingerprint, listRecentDownloads } from "./fingerprint.service.js";
-import { AppError, UnauthorizedError } from "../../lib/errors.js";
-
-const ADMIN_EMAILS = new Set(["admin@nexos.ai", "founder@nexos.ai"]);
-
-function requireAdmin(email: string) {
-  if (!ADMIN_EMAILS.has(email)) {
-    throw new UnauthorizedError("Admin access required");
-  }
-}
+import { AppError } from "../../lib/errors.js";
 
 const router = Router();
 
@@ -50,8 +43,7 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
 });
 
 // GET /api/fingerprints/:code — admin lookup by fingerprint code
-router.get("/:code", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.get("/:code", requireAuth, requirePlatformAdmin, async (req, res): Promise<void> => {
   const { code } = req.params as { code: string };
   const record = await lookupFingerprint(code);
   if (!record) throw new AppError(404, "Fingerprint não encontrado");
@@ -59,8 +51,7 @@ router.get("/:code", requireAuth, async (req, res): Promise<void> => {
 });
 
 // GET /api/fingerprints — admin list recent downloads
-router.get("/", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.get("/", requireAuth, requirePlatformAdmin, async (req, res): Promise<void> => {
   const limit = Math.min(Number(req.query["limit"] ?? 100), 500);
   const records = await listRecentDownloads(limit);
   res.json({ records });

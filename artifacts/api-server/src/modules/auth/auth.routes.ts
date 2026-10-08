@@ -1,3 +1,4 @@
+import { hasActivePlatformAdminSession } from "../admin/admin.middleware.js";
 import { Router } from "express";
 import { z } from "zod/v4";
 import { issueTokens, registerUser, loginUser, refreshTokens } from "./auth.service.js";
@@ -238,13 +239,6 @@ router.patch("/me", requireAuth, async (req, res): Promise<void> => {
   res.json({ ok: true });
 });
 
-// Founder/admin accounts always receive Agency-level plan data regardless of DB plan.
-const FOUNDER_EMAILS_ME = new Set([
-  "founder@nexos.ai",
-  "founder@agencianexos.vip",
-  "admin@nexos.ai",
-  "admin@agencianexos.vip",
-]);
 
 router.post("/onboarding/seen", requireAuth, async (req, res): Promise<void> => {
   await db.update(usersTable)
@@ -290,7 +284,7 @@ router.get("/me", requireAuth, async (req, res): Promise<void> => {
     .limit(1);
 
   // Founders always see Agency plan — fetch it by slug so all frontend plan gates pass.
-  const isFounder = FOUNDER_EMAILS_ME.has(user.email);
+  const isFounder = await hasActivePlatformAdminSession(req.auth);
   const plan = workspace
     ? await db
         .select()
@@ -299,7 +293,8 @@ router.get("/me", requireAuth, async (req, res): Promise<void> => {
         .limit(1)
     : [];
 
-  res.json({ user, workspace, plan: plan[0] ?? null });
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ user, workspace, plan: plan[0] ?? null, isPlatformAdmin: isFounder });
 });
 
 export default router;

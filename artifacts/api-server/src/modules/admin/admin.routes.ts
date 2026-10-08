@@ -3,10 +3,10 @@ import { requireAuth } from "../auth/auth.middleware.js";
 import { getAdminOverview, getAdminFinancials, getAdminPayments, getCampaignCostBreakdown, getAdminDRE, getAdminCRM } from "./admin.service.js";
 import { queryAgentExecutionLogs, getAgentExecutionLogById, getAgentExecutionLogsSummary } from "./audit-logs.service.js";
 import { markPaymentPaid } from "../billing/billing.service.js";
-import { UnauthorizedError, NotFoundError, ValidationError } from "../../lib/errors.js";
+import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { collectOperationalHealth } from "../../routes/health.js";
 import { getOperationalStatus } from "../operations/operational-status.service.js";
-import { isAdminEmail } from "./admin-access.js";
+import { requirePlatformAdmin } from "./admin.middleware.js";
 import { grantCredits } from "../credits/credits.service.js";
 import { triggerStrategyPhase, triggerContentPhase } from "../orchestration/orchestration.service.js";
 import { getDeadLetter, listDeadLetters, replayDeadLetter } from "../orchestration/dead-letter.service.js";
@@ -18,12 +18,8 @@ import {
 import { eq, desc, count, sql } from "drizzle-orm";
 
 const router = Router();
+router.use(requireAuth, requirePlatformAdmin);
 
-function requireAdmin(email: string) {
-  if (!isAdminEmail(email)) {
-    throw new UnauthorizedError("Admin access required");
-  }
-}
 
 function assertOptionalUuid(value: string | undefined, field: string): void {
   if (value && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
@@ -34,8 +30,7 @@ function assertOptionalUuid(value: string | undefined, field: string): void {
 // GET /api/admin/operations/status — fleet-wide, sanitized operational view.
 // This is deliberately admin-only; regular workspace users must use their
 // product-facing integration screens and can never enumerate another tenant.
-router.get("/operations/status", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.get("/operations/status", async (req, res): Promise<void> => {
   const query = req.query as Record<string, string | undefined>;
   assertOptionalUuid(query["workspaceId"], "workspaceId");
   assertOptionalUuid(query["campaignId"], "campaignId");
@@ -54,48 +49,41 @@ router.get("/operations/status", requireAuth, async (req, res): Promise<void> =>
   res.status(health.statusCode).json({ health, ...operational });
 });
 
-router.get("/overview", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.get("/overview", async (req, res): Promise<void> => {
   const data = await getAdminOverview();
   res.json(data);
 });
 
-router.get("/financials", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.get("/financials", async (req, res): Promise<void> => {
   const data = await getAdminFinancials();
   res.json(data);
 });
 
-router.get("/cost-breakdown", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.get("/cost-breakdown", async (req, res): Promise<void> => {
   const limit = Math.min(parseInt(req.query["limit"] as string ?? "50", 10), 200);
   const data = await getCampaignCostBreakdown(limit);
   res.json(data);
 });
 
-router.get("/dre", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.get("/dre", async (req, res): Promise<void> => {
   const year = parseInt(req.query["year"] as string ?? String(new Date().getFullYear()), 10);
   const data = await getAdminDRE(year);
   res.json(data);
 });
 
-router.get("/crm", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.get("/crm", async (req, res): Promise<void> => {
   const data = await getAdminCRM();
   res.json(data);
 });
 
-router.get("/payments", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.get("/payments", async (req, res): Promise<void> => {
   const status = req.query["status"] as string | undefined;
   const limit  = parseInt(req.query["limit"] as string ?? "100", 10);
   const data = await getAdminPayments({ status, limit });
   res.json({ payments: data });
 });
 
-router.post("/payments/:paymentId/confirm", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.post("/payments/:paymentId/confirm", async (req, res): Promise<void> => {
   const paymentId = req.params["paymentId"] as string;
   const note = (req.body as { note?: string }).note ?? `Confirmado manualmente por ${req.auth.email}`;
 
@@ -120,8 +108,7 @@ function generateInviteCode(): string {
 }
 
 // GET /api/admin/invite-codes — list all invite codes (with used-by name via join)
-router.get("/invite-codes", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.get("/invite-codes", async (req, res): Promise<void> => {
   const rows = await db
     .select({
       id: inviteCodesTable.id,
@@ -143,8 +130,7 @@ router.get("/invite-codes", requireAuth, async (req, res): Promise<void> => {
 });
 
 // POST /api/admin/invite-codes/generate — generate N new invite codes
-router.post("/invite-codes/generate", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.post("/invite-codes/generate", async (req, res): Promise<void> => {
   const { count = 10, planSlug = "agency", label } = req.body as {
     count?: number;
     planSlug?: string;
@@ -166,8 +152,7 @@ router.post("/invite-codes/generate", requireAuth, async (req, res): Promise<voi
 });
 
 // DELETE /api/admin/invite-codes/:id — delete a free invite code
-router.delete("/invite-codes/:id", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.delete("/invite-codes/:id", async (req, res): Promise<void> => {
   const id = req.params["id"] as string;
   const [code] = await db
     .select()
@@ -181,8 +166,7 @@ router.delete("/invite-codes/:id", requireAuth, async (req, res): Promise<void> 
 });
 
 // ─── Grant plan access to existing workspace ──────────────────────────────────
-router.post("/workspaces/:workspaceId/grant-plan", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.post("/workspaces/:workspaceId/grant-plan", async (req, res): Promise<void> => {
   const { workspaceId } = req.params as { workspaceId: string };
   const { planSlug, note } = req.body as { planSlug?: string; note?: string };
 
@@ -209,8 +193,7 @@ router.post("/workspaces/:workspaceId/grant-plan", requireAuth, async (req, res)
 });
 
 // ─── User detail / profile ────────────────────────────────────────────────────
-router.get("/users/:userId", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.get("/users/:userId", async (req, res): Promise<void> => {
   const { userId } = req.params as { userId: string };
 
   const [user] = await db
@@ -313,15 +296,13 @@ router.get("/users/:userId", requireAuth, async (req, res): Promise<void> => {
 // ─── Audit Logs ───────────────────────────────────────────────────────────────
 
 // GET /api/admin/audit-logs/summary — aggregate stats
-router.get("/audit-logs/summary", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.get("/audit-logs/summary", async (req, res): Promise<void> => {
   const summary = await getAgentExecutionLogsSummary();
   res.json(summary);
 });
 
 // GET /api/admin/audit-logs — list with filters
-router.get("/audit-logs", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.get("/audit-logs", async (req, res): Promise<void> => {
   const q = req.query as Record<string, string>;
   const logs = await queryAgentExecutionLogs({
     campaignId:       q["campaignId"],
@@ -339,8 +320,7 @@ router.get("/audit-logs", requireAuth, async (req, res): Promise<void> => {
 });
 
 // GET /api/admin/audit-logs/:id — single log detail
-router.get("/audit-logs/:id", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.get("/audit-logs/:id", async (req, res): Promise<void> => {
   const log = await getAgentExecutionLogById(req.params["id"] as string);
   if (!log) { res.status(404).json({ error: "Log não encontrado" }); return; }
   res.json({ log });
@@ -349,8 +329,7 @@ router.get("/audit-logs/:id", requireAuth, async (req, res): Promise<void> => {
 // ─── Waitlist / Access Requests ───────────────────────────────────────────────
 
 // GET /api/admin/waitlist — list all waitlist entries
-router.get("/waitlist", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.get("/waitlist", async (req, res): Promise<void> => {
   const rows = await db
     .select()
     .from(waitlistTable)
@@ -359,8 +338,7 @@ router.get("/waitlist", requireAuth, async (req, res): Promise<void> => {
 });
 
 // POST /api/admin/waitlist/:id/approve — generate invite code + mark as notified
-router.post("/waitlist/:id/approve", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.post("/waitlist/:id/approve", async (req, res): Promise<void> => {
   const id = req.params["id"] as string;
   const { planSlug = "solo" } = req.body as { planSlug?: string };
 
@@ -386,8 +364,7 @@ router.post("/waitlist/:id/approve", requireAuth, async (req, res): Promise<void
 });
 
 // DELETE /api/admin/waitlist/:id — remove / reject entry
-router.delete("/waitlist/:id", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.delete("/waitlist/:id", async (req, res): Promise<void> => {
   const id = req.params["id"] as string;
   await db.delete(waitlistTable).where(eq(waitlistTable.id, id));
   res.json({ ok: true });
@@ -395,8 +372,7 @@ router.delete("/waitlist/:id", requireAuth, async (req, res): Promise<void> => {
 
 // ─── Admin: adicionar créditos a qualquer workspace ──────────────────────────
 // POST /api/admin/workspaces/:workspaceId/add-credits { amount: number, note?: string }
-router.post("/workspaces/:workspaceId/add-credits", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.post("/workspaces/:workspaceId/add-credits", async (req, res): Promise<void> => {
   const { workspaceId } = req.params as { workspaceId: string };
   const { amount, note } = req.body as { amount?: number; note?: string };
 
@@ -423,8 +399,7 @@ router.post("/workspaces/:workspaceId/add-credits", requireAuth, async (req, res
 
 // ─── Admin: forçar retry de campanha travada (ignora ownership) ────────────────
 // POST /api/admin/campaigns/:campaignId/force-retry
-router.post("/campaigns/:campaignId/force-retry", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.post("/campaigns/:campaignId/force-retry", async (req, res): Promise<void> => {
   const { campaignId } = req.params as { campaignId: string };
 
   const [campaign] = await db
@@ -473,21 +448,18 @@ router.post("/campaigns/:campaignId/force-retry", requireAuth, async (req, res):
 });
 
 // Operational records are platform-admin only: they can cover multiple tenants.
-router.get("/dead-letters", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.get("/dead-letters", async (req, res): Promise<void> => {
   const limit = Number.parseInt(String(req.query["limit"] ?? "100"), 10);
   res.json({ deadLetters: await listDeadLetters(Number.isFinite(limit) ? limit : 100) });
 });
 
-router.get("/dead-letters/:id", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.get("/dead-letters/:id", async (req, res): Promise<void> => {
   const record = await getDeadLetter(req.params["id"] as string);
   if (!record) throw new NotFoundError("Dead-letter record");
   res.json({ deadLetter: record });
 });
 
-router.post("/dead-letters/:id/replay", requireAuth, async (req, res): Promise<void> => {
-  requireAdmin(req.auth.email);
+router.post("/dead-letters/:id/replay", async (req, res): Promise<void> => {
   const result = await replayDeadLetter(req.params["id"] as string, req.auth.email);
   if (!result.accepted) {
     res.status(409).json({ error: "Replay already claimed or record does not exist", code: "REPLAY_ALREADY_CLAIMED" });

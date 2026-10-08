@@ -15,15 +15,16 @@ if (!plan) throw new Error("a plan is required");
 const [originalOwner] = await db.select({ email: usersTable.email }).from(usersTable).where(eq(usersTable.id, ownerId)).limit(1);
 if (!originalOwner) throw new Error("fixture owner missing");
 
+const previousAdmins = process.env.PLATFORM_ADMIN_USER_IDS;
 try {
-  await db.update(usersTable).set({ email: `${marker}@nexos.ai` }).where(eq(usersTable.id, ownerId));
+  process.env.PLATFORM_ADMIN_USER_IDS = ownerId;
   await db.update(plansTable).set({
     maxWorkspaces: 2,
     allowedSocialNetworks: ["instagram", "facebook", "tiktok", "linkedin", "youtube"],
     maxAccountsPerNetwork: { instagram: 2, facebook: 1, tiktok: 1, linkedin: 1, youtube: 1 },
   }).where(eq(plansTable.id, plan.id));
 
-  // Internal NexOS accounts temporarily bypass commercial workspace capacity.
+  // Explicitly configured UUID administrators bypass commercial workspace capacity.
   const concurrent = await Promise.allSettled([
     createOwnedWorkspace(ownerId, ownerWorkspaceId, `${marker} One`),
     createOwnedWorkspace(ownerId, ownerWorkspaceId, `${marker} Two`),
@@ -55,6 +56,7 @@ try {
     (error: unknown) => (error as { code?: string }).code === "NETWORK_NOT_ALLOWED",
   );
 } finally {
+  if (previousAdmins === undefined) delete process.env.PLATFORM_ADMIN_USER_IDS; else process.env.PLATFORM_ADMIN_USER_IDS = previousAdmins;
   await db.update(plansTable).set({
     maxWorkspaces: plan.maxWorkspaces,
     allowedSocialNetworks: plan.allowedSocialNetworks,

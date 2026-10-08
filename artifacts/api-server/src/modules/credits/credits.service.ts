@@ -1,8 +1,8 @@
+import { isPlatformAdmin } from "../admin/admin-access.js";
 import { eq, desc, sql } from "drizzle-orm";
 import {
   db,
   workspacesTable,
-  usersTable,
   creditTransactionsTable,
   plansTable,
   aiProviderLogsTable,
@@ -13,22 +13,8 @@ import {
 import { InsufficientCreditsError, NotFoundError } from "../../lib/errors.js";
 import type { Logger } from "pino";
 
-// Founder/admin emails always have unlimited credits — checked directly against
-// the users table so it works even if the DB settings flag was never set.
-const ADMIN_EMAILS = new Set([
-  "admin@nexos.ai",
-  "founder@nexos.ai",
-  "admin@agencianexos.vip",
-  "founder@agencianexos.vip",
-]);
-
-async function isAdminWorkspace(workspaceOwnerId: string): Promise<boolean> {
-  const [user] = await db
-    .select({ email: usersTable.email })
-    .from(usersTable)
-    .where(eq(usersTable.id, workspaceOwnerId))
-    .limit(1);
-  return user ? ADMIN_EMAILS.has(user.email) : false;
+function isAdminWorkspace(workspaceOwnerId: string): boolean {
+  return isPlatformAdmin(workspaceOwnerId);
 }
 
 export type CreditAction = string & keyof typeof CREDIT_COSTS;
@@ -64,7 +50,7 @@ export async function deductCredits(
 
   if (!workspace) throw new NotFoundError("Workspace");
 
-  // Unlimited = DB flag OR owner email is an admin email (authoritative, no flag dependency)
+  // Unlimited = DB flag OR owner UUID is a configured platform administrator (authoritative, no flag dependency)
   const adminWorkspace = await isAdminWorkspace(workspace.ownerId);
   let duplicateTx: CreditTransaction | undefined;
   let insertedTx: CreditTransaction | undefined;

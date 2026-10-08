@@ -1,3 +1,4 @@
+import { requirePlatformAdmin } from "../admin/admin.middleware.js";
 import { Router } from "express";
 import { requireAuth } from "../auth/auth.middleware.js";
 import {
@@ -8,17 +9,9 @@ import {
   grantCredits,
   type CreditAction,
 } from "./credits.service.js";
-import { db, usersTable, workspacesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
 import { CREDIT_COSTS } from "@workspace/db";
 import { AppError } from "../../lib/errors.js";
 
-const ADMIN_EMAILS_TOPUP = new Set([
-  "admin@nexos.ai",
-  "founder@nexos.ai",
-  "admin@agencianexos.vip",
-  "founder@agencianexos.vip",
-]);
 
 const router = Router();
 
@@ -73,20 +66,9 @@ router.get("/costs", (_req, res): void => {
 });
 
 // Admin-only free topup — for the product owner, never a customer flow.
-// Guards: must be authenticated + workspace owner email must be in ADMIN_EMAILS set.
-router.post("/admin-topup", async (req, res): Promise<void> => {
-  const { workspaceId, userId } = req.auth;
-
-  const [user] = await db
-    .select({ email: usersTable.email })
-    .from(usersTable)
-    .where(eq(usersTable.id, userId))
-    .limit(1);
-
-  if (!user || !ADMIN_EMAILS_TOPUP.has(user.email)) {
-    res.status(403).json({ error: "Acesso restrito ao fundador.", code: "FORBIDDEN" });
-    return;
-  }
+// Guards: authenticated UUID administrator with a live, owned workspace session.
+router.post("/admin-topup", requirePlatformAdmin, async (req, res): Promise<void> => {
+  const { workspaceId } = req.auth;
 
   const TOPUP_AMOUNT = 2000;
   const tx = await grantCredits(workspaceId, TOPUP_AMOUNT, "admin_grant", req.log, "Recarga do fundador — sem custo");

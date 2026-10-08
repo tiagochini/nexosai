@@ -1,3 +1,4 @@
+import { requirePlatformAdmin } from "../admin/admin.middleware.js";
 import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
@@ -65,9 +66,7 @@ router.post("/no-radar", async (req, res): Promise<void> => {
   const choice = await selectNoRadar(req.auth.workspaceId, req.auth.userId, parsed.data.idempotencyKey);
   res.status(201).json({ choice });
 });
-router.post("/entitlement/admin-activate", async (req, res) => {
-  const adminEmails = new Set(["admin@nexos.ai", "founder@nexos.ai", "admin@agencianexos.vip", "founder@agencianexos.vip"]);
-  if (!adminEmails.has(req.auth.email)) return void res.status(403).json({ error: "Acesso restrito a administradores.", code: "FORBIDDEN" });
+router.post("/entitlement/admin-activate", requirePlatformAdmin, async (req, res) => {
   const parsed = z.object({ package: z.enum(["RADAR_ESSENTIAL", "RADAR_PRO", "RADAR_SCALE", "WAR_ROOM"]), currency: z.enum(["BRL", "USD"]).default("BRL") }).safeParse(req.body);
   if (!parsed.success) return void res.status(400).json({ error: "Ativação Radar inválida.", code: "VALIDATION_ERROR" });
   res.status(201).json({ entitlement: await activateRadarEntitlement(req.auth.workspaceId, parsed.data.package, parsed.data.currency, req.auth.userId) });

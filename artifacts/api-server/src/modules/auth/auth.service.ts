@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { isPlatformAdmin } from "../admin/admin-access.js";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { db, usersTable, workspacesTable, plansTable } from "@workspace/db";
 import { env } from "../../lib/env.js";
@@ -275,13 +276,7 @@ export async function loginUser(
 
   // Auto-guarantee unlimited credits for founder/admin accounts on every login (idempotent).
   // This is the authoritative gate — does not depend on frontend effects.
-  const ADMIN_EMAILS = new Set([
-    "admin@nexos.ai",
-    "founder@nexos.ai",
-    "admin@agencianexos.vip",
-    "founder@agencianexos.vip",
-  ]);
-  if (ADMIN_EMAILS.has(user.email)) {
+  if (isPlatformAdmin(user.id)) {
     const currentSettings = (workspace.settings ?? {}) as Record<
       string,
       unknown

@@ -8,7 +8,7 @@ import {
   usersTable,
   workspacesTable,
 } from "@workspace/db";
-import { isAdminEmail } from "../modules/admin/admin-access.js";
+import { isPlatformAdmin } from "../modules/admin/admin-access.js";
 import {
   captureTerminalOrchestrationFailure,
   getDeadLetter,
@@ -76,8 +76,10 @@ try {
   // Route handlers use this shared gate before any DLQ read/mutation. A user in
   // another workspace is not an administrator and therefore cannot enumerate,
   // view, or replay this cross-tenant operational evidence.
-  assert.equal(isAdminEmail("foreign-workspace-user@example.invalid"), false);
-  assert.equal(isAdminEmail("admin@nexos.ai"), true);
+  assert.equal(isPlatformAdmin("foreign-workspace-user@example.invalid"), false);
+  process.env.PLATFORM_ADMIN_USER_IDS = "00000000-0000-4000-8000-000000000001";
+  assert.equal(isPlatformAdmin("00000000-0000-4000-8000-000000000001"), true);
+  assert.equal(isPlatformAdmin("founder@nexos.ai"), false);
   assert.ok((await listDeadLetters()).some((record) => record.id === original.id), "admin list sees record");
   assert.equal((await getDeadLetter(original.id))?.id, original.id, "admin detail sees record");
 

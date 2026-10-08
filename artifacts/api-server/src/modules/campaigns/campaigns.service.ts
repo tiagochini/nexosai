@@ -1,3 +1,4 @@
+import { isPlatformAdmin } from "../admin/admin-access.js";
 import { eq, desc, and, sql, gte, count } from "drizzle-orm";
 import {
   db,
@@ -188,18 +189,12 @@ export async function transitionCampaignInTransaction(
 }
 
 // Founder/admin accounts have unlimited campaigns — no plan cap applied.
-const FOUNDER_EMAILS = new Set([
-  "founder@nexos.ai",
-  "founder@agencianexos.vip",
-  "admin@nexos.ai",
-  "admin@agencianexos.vip",
-]);
 
 export async function createCampaign(
   workspaceId: string,
   data: Partial<InsertCampaign> & { title: string },
   log: Logger,
-  ownerEmail?: string,
+  ownerUserId?: string,
 ): Promise<Campaign> {
   const [ws] = await db
     .select({ planId: workspacesTable.planId, activeCampaigns: workspacesTable.activeCampaigns })
@@ -209,7 +204,7 @@ export async function createCampaign(
 
   if (!ws) throw new NotFoundError("Workspace");
 
-  const isFounder = ownerEmail ? FOUNDER_EMAILS.has(ownerEmail) : false;
+  const isFounder = ownerUserId ? isPlatformAdmin(ownerUserId) : false;
 
   if (!isFounder) {
     const [plan] = await db

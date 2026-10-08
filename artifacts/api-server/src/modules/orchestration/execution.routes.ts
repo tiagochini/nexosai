@@ -1,3 +1,4 @@
+import { isPlatformAdmin } from "../admin/admin-access.js";
 import { Router } from "express";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { runCrossAgentValidation } from "../campaign-brain/cross-validation.service.js";
@@ -460,12 +461,7 @@ router.post("/:campaignId/execute/retry", async (req, res): Promise<void> => {
       .from(workspacesTable)
       .where(eq(workspacesTable.id, workspaceId))
       .limit(1);
-    const ADMIN_EMAILS_RETRY = new Set(["admin@nexos.ai", "founder@nexos.ai", "admin@agencianexos.vip", "founder@agencianexos.vip"]);
-    let isAdminRetry = false;
-    if (wsOwner?.ownerId) {
-      const [ownerUser] = await db.select({ email: usersTable.email }).from(usersTable).where(eq(usersTable.id, wsOwner.ownerId)).limit(1);
-      isAdminRetry = ownerUser ? ADMIN_EMAILS_RETRY.has(ownerUser.email) : false;
-    }
+    const isAdminRetry = wsOwner?.ownerId ? isPlatformAdmin(wsOwner.ownerId) : false;
 
     // ── Auto-skip de peça problemática após 3 tentativas ──
     // Nunca bloqueia o cliente. Após 3 falhas no mesmo ponto, a peça é adicionada

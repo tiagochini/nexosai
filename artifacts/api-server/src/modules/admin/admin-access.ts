@@ -1,21 +1,13 @@
-const ADMIN_EMAILS = new Set([
-  "admin@nexos.ai",
-  "founder@nexos.ai",
-  "admin@agencianexos.vip",
-  "founder@agencianexos.vip",
-]);
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-/** Kept separate so privileged routes share a single, testable authorization rule. */
-export function isAdminEmail(email: string): boolean {
-  return ADMIN_EMAILS.has(email.trim().toLowerCase());
+/** Server configuration only. Empty or malformed configuration denies all access. */
+export function isPlatformAdmin(userId: string): boolean {
+  const ids = (process.env["PLATFORM_ADMIN_USER_IDS"] ?? "").split(",").map(id => id.trim()).filter(Boolean);
+  return UUID.test(userId) && ids.length > 0 && ids.every(id => UUID.test(id)) &&
+    ids.some(id => id.toLowerCase() === userId.toLowerCase());
 }
 
-/**
- * Temporary commercial gate for creating additional workspaces.
- * This is intentionally narrower than admin access: NexOS staff may create
- * isolated operations without becoming administrators of the platform.
- */
-export function canCreateInternalWorkspace(email: string): boolean {
-  const normalized = email.trim().toLowerCase();
-  return isAdminEmail(normalized) || normalized.endsWith("@nexos.ai");
+/** Workspace creation remains scoped to the authenticated user's own operations. */
+export function canCreateInternalWorkspace(userId: string): boolean {
+  return isPlatformAdmin(userId);
 }

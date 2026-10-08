@@ -1,3 +1,4 @@
+import { hasActivePlatformAdminSession, requirePlatformAdmin } from "../admin/admin.middleware.js";
 import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
@@ -150,8 +151,7 @@ router.get("/bank-transfer", requireAuth, async (_req, res): Promise<void> => {
 
 // ─── Platform access check (logged-in user) ───────────────────────────────────
 router.get("/access", requireAuth, async (req, res): Promise<void> => {
-  const ADMIN_EMAILS = new Set(["admin@nexos.ai", "founder@nexos.ai", "admin@agencianexos.vip", "founder@agencianexos.vip"]);
-  if (ADMIN_EMAILS.has(req.auth.email)) {
+  if (await hasActivePlatformAdminSession(req.auth)) {
     res.json({ hasAccess: true, reason: "admin" });
     return;
   }
@@ -185,12 +185,7 @@ router.get("/access", requireAuth, async (req, res): Promise<void> => {
 });
 
 // ─── Admin: activate unlimited credits for founder/admin accounts ─────────────
-router.post("/admin/unlimited-credits", requireAuth, async (req, res): Promise<void> => {
-  const ADMIN_EMAILS = new Set(["admin@nexos.ai", "founder@nexos.ai", "admin@agencianexos.vip", "founder@agencianexos.vip"]);
-  if (!ADMIN_EMAILS.has(req.auth.email)) {
-    res.status(403).json({ error: "Acesso restrito a administradores.", code: "FORBIDDEN" });
-    return;
-  }
+router.post("/admin/unlimited-credits", requireAuth, requirePlatformAdmin, async (req, res): Promise<void> => {
   const [ws] = await db.select({ settings: workspacesTable.settings })
     .from(workspacesTable)
     .where(eq(workspacesTable.id, req.auth.workspaceId))

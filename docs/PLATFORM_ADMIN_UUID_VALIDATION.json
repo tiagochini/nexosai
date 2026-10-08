@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-10-08T17:39:26.639Z",
+  "checks": {
+    "login": 200,
+    "serverPermission": true,
+    "commandCenter": 200,
+    "logout": 204,
+    "revokedAdminSession": 401
+  },
+  "scope": "UUID authorization for global platform administration; Docker regression fixtures and a temporary founder session on homologation only",
+  "local": {
+    "commandCenterRoutesDenied": 24,
+    "relatedAdminRoutesDenied": 7,
+    "checks": [
+      "fail closed for missing/malformed configuration",
+      "ordinary user with legacy allowlisted email denied",
+      "authorized UUID remains admin after email change",
+      "session bound to UUID and owned active workspace",
+      "expired and revoked sessions denied",
+      "UUID removal immediately denies access",
+      "HTTP session cookie, CSRF, concurrent rotation, replay, workspace switch, expiry and logout",
+      "workspace creation and cross-owner denial",
+      "operational status and dead-letter regression"
+    ],
+    "apiTypecheck": "PASS",
+    "frontendTypecheck": "PASS",
+    "secretScan": "PASS"
+  },
+  "limits": [
+    "Global administrators have intentional platform-wide access. Workspace ownership alone never grants it.",
+    "Academy retains its separate UUID allowlist.",
+    "Ordinary access tokens retain their existing expiry behavior; immediate database revocation in this change covers platform administrative access.",
+    "Production configuration and deployment were not performed."
+  ]
+}

@@ -1,5 +1,14 @@
 # NexOS — Checklist Canônico de Construção
 
+**Administração global por UUID — 08/10/2026:** Command Center e privilégios
+administrativos relacionados usam `PLATFORM_ADMIN_USER_IDS`, sem autorização por
+e-mail. Ações administrativas exigem sessão ativa vinculada ao usuário e workspace;
+frontend consulta a permissão do servidor. Founder habilitado no perfil privado de
+homologação. Regressões Docker e domínio público validados; produção não ativada.
+[Evidência](docs/PLATFORM_ADMIN_UUID_VALIDATION.json) e
+[configuração](docs/PLATFORM_ADMIN_UUID.md). Maturidade geral inalterada.
+Próximo checkpoint: desbloquear o aplicativo Meta e concluir a jornada Asaas sandbox.
+
 **Meta — homologação de 08/10/2026:** credenciais existentes copiadas somente
 para o perfil privado e runtime reiniciado. API pública confirma OAuth habilitado,
 gera retorno Instagram e valida/rejeita assinatura de webhook com evento vazio.

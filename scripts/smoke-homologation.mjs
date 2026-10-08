@@ -44,10 +44,14 @@ try {
   const tokens = await login.json(); assert.equal(typeof tokens.accessToken, 'string'); checks.founderLogin = 'PASS';
   const admin = await fetch(base + '/api/academy/admin/session', { headers: { authorization: `Bearer ${tokens.accessToken}` } });
   assert.equal(admin.status, 200); assert.equal((await admin.json()).userId, credentials.userId); checks.founderUuidAdministration = 'PASS';
+  const platformAdmin = await fetch(`${base}/api/admin/overview`, { headers: { Authorization: `Bearer ${tokens.accessToken}` } });
+  assert.equal(platformAdmin.status, 200); checks.platformUuidAdministration = 'PASS';
   const logout = await fetch(base + '/api/auth/logout', { method: 'POST', headers: { cookie, origin: environment.APP_URL } });
   assert.equal(logout.status, 204); checks.logout = 'PASS';
   const revoked = await fetch(base + '/api/academy/admin/session', { headers: { authorization: `Bearer ${tokens.accessToken}` } });
   assert.equal(revoked.status, 401); checks.revokedSessionDenied = 'PASS';
+  const revokedPlatform = await fetch(base + '/api/admin/overview', { headers: { authorization: `Bearer ${tokens.accessToken}` } });
+  assert.equal(revokedPlatform.status, 401); checks.revokedPlatformAdminSession = 'PASS';
 } finally {
   try {
     if (sessionId) {

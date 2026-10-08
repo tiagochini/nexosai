@@ -81,6 +81,7 @@ export const RegisterResponse = zod.object({
  * @summary Current user
  */
 export const GetMeResponse = zod.object({
+  "isPlatformAdmin": zod.boolean().optional().describe('Server-authorized UUID administrator with an active session.'),
   "user": zod.object({
   "id": zod.string(),
   "email": zod.string(),

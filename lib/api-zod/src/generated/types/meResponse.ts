@@ -9,6 +9,8 @@ import type { User } from './user';
 import type { Workspace } from './workspace';
 
 export interface MeResponse {
+  /** Server-authorized UUID administrator with an active session. */
+  isPlatformAdmin?: boolean;
   user: User;
   workspace: Workspace;
 }

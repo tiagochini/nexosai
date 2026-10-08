@@ -5,7 +5,7 @@ import {
   isStuckCampaign,
   sanitizeOperationalPayload,
 } from "../modules/operations/operational-status.service.js";
-import { isAdminEmail } from "../modules/admin/admin-access.js";
+import { isPlatformAdmin } from "../modules/admin/admin-access.js";
 
 const now = Date.parse("2026-01-01T12:00:00.000Z");
 assert.equal(classifyCredentialExpiry(new Date(now - 1), now), "expired");
@@ -14,8 +14,10 @@ assert.equal(classifyCredentialExpiry(new Date(now + EXPIRY_THRESHOLDS.expiringW
 assert.equal(classifyCredentialExpiry(new Date(now + EXPIRY_THRESHOLDS.expiringWithin7DaysMs), now), "healthy");
 assert.equal(classifyCredentialExpiry(null, now), "unknown");
 
-assert.equal(isAdminEmail("founder@agencianexos.vip"), true);
-assert.equal(isAdminEmail("workspace-user@example.com"), false);
+process.env.PLATFORM_ADMIN_USER_IDS = "00000000-0000-4000-8000-000000000001";
+  assert.equal(isPlatformAdmin("00000000-0000-4000-8000-000000000001"), true);
+  assert.equal(isPlatformAdmin("founder@nexos.ai"), false);
+assert.equal(isPlatformAdmin("workspace-user@example.com"), false);
 
 assert.equal(isStuckCampaign({ status: "generating", updatedAt: new Date(now - EXPIRY_THRESHOLDS.stuckCampaignMs) }, now), true);
 assert.equal(isStuckCampaign({ status: "approved", updatedAt: new Date(now - EXPIRY_THRESHOLDS.stuckCampaignMs * 2) }, now), false);
