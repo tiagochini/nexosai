@@ -142,9 +142,16 @@ desenvolvimento e regressões em PostgreSQL local/Docker. As evidências remotas
   execução local aprovada com 177 tabelas e 73 entradas de schema.
 - [x] Executar auditoria de caminhos sensíveis em todo o histórico alcançável
   no workflow de segurança, com checkout completo e rejeição de clone raso.
-- [ ] Confirmar execução remota dos workflows desta revisão. O GitHub CLI
-  está sem autenticação válida; implementação e evidência local concluídas.
-  Evidência e implantação: [P1_CLOSEOUT.md](./P1_CLOSEOUT.md).
+- [x] Confirmar execução remota dos workflows da implementação original do P1.
+  GitHub CLI autenticado; Quality, Security e Infrastructure concluíram com
+  sucesso no SHA remoto `81b0d3e0`, que contém a implementação P1 `757ec7c0`.
+  Confirmação por SHA, jobs e etapas em 08/10/2026:
+  [evidência remota](./P1_REMOTE_CI_RESULTS.json),
+  [fechamento e implantação](./P1_CLOSEOUT.md).
+- [ ] Confirmar CI remoto das alterações locais posteriores, incluindo ativação
+  de planos `c2bc26d3`. Esses commits não estão no SHA aprovado; publicação
+  continua sujeita à orientação de não fazer push. A prova do P1 original não
+  certifica estas alterações nem implantação de produção.
 
 ### P2 — Infraestrutura e recuperação
 

@@ -9,6 +9,15 @@ produto de homologação desativado; histórico preservado.
 [Evidência](docs/ASAAS_SANDBOX_JOURNEY_RESULTS.json). E-mail efetivamente enviado
 e validações externas adicionais ainda pendentes; maturidade geral inalterada.
 
+**P1: CI remoto confirmado — 08/10/2026:** GitHub CLI autenticado. Quality,
+Security e Infrastructure concluíram com sucesso no SHA remoto `81b0d3e0`,
+que contém a implementação original P1 `757ec7c0`; seis jobs aprovados.
+[Evidência por SHA](docs/P1_REMOTE_CI_RESULTS.json) e
+[fechamento P1](docs/P1_CLOSEOUT.md). Pendência remota do P1 original encerrada.
+Alterações locais posteriores, incluindo `c2bc26d3`, ainda precisam de CI no
+próprio SHA após publicação autorizada; nenhum push realizado. Este fechamento
+não certifica produção nem promove a maturidade das capacidades.
+
 **Planos e créditos corrigidos — 08/10/2026:** ativação transacional e créditos
 incluídos corrigidos após a falha histórica. Reteste em conta comum separada:
 Solo/900 → Agency/2.900 → Agency/3.400 com pack de 500; estornos reais restauraram

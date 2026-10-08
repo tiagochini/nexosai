@@ -1,8 +1,26 @@
-# P1 — implementação e evidência local
+# P1 — implementação, evidência local e CI remoto
 
-Revisão: 06/10/2026. Implementação técnica concluída; confirmação do CI remoto
-pendente porque `gh auth status` informa autenticação inválida. Este documento
-não certifica produção aberta nem encerra as condições externas do P0.
+Revisão original: 06/10/2026. Confirmação remota: 08/10/2026. Autenticação do
+GitHub CLI válida e CI remoto da implementação original confirmado. Este
+documento não certifica produção aberta nem encerra as condições externas do P0.
+
+O commit P1 `757ec7c0adac3ce0dc50bce5661d1da0bafff829` é ancestral do commit
+remoto `81b0d3e0ec32622ae018f92ef04e6f163d531e53`. Nesse SHA, os três workflows
+concluíram com sucesso em 07/10/2026, conforme API do GitHub consultada em
+08/10/2026:
+
+- [Quality checks](https://github.com/tiagochini/nexosai/actions/runs/37702406330):
+  `typecheck-and-build` e `auth-database-tests` aprovados, incluindo conteúdo
+  pago ausente no bundle público, bootstrap/migrações e testes com banco.
+- [Security checks](https://github.com/tiagochini/nexosai/actions/runs/37702406380):
+  scanner atual e auditoria de caminhos sensíveis no histórico aprovados.
+- [Infrastructure recovery](https://github.com/tiagochini/nexosai/actions/runs/37702406303):
+  Docker, persistência/recuperação/carga e jornada P3 isolada aprovados.
+
+[Evidência remota por SHA e job](./P1_REMOTE_CI_RESULTS.json).
+Os dez commits locais posteriores, até `c2bc26d3`, não estão nesse SHA e
+continuam exigindo CI remoto próprio após publicação. Nenhum push nem rerun
+foi realizado nesta verificação; o fechamento abaixo cobre o P1 original.
 
 ## Material pago Academy
 
@@ -78,5 +96,7 @@ Não há mudança de schema nem migração de dados neste P1. Se a implantação
 falhar, suspender temporariamente a área paga e manter a API protegida;
 restaurar o frontend antigo reintroduz a exposição do conteúdo.
 
-O fechamento verificável do P1 ainda exige publicar esta revisão e observar
-sucesso dos workflows `Quality checks` e `Security checks` no GitHub.
+O fechamento verificável do P1 original está confirmado pelos workflows acima.
+As revisões posteriores exigem publicação e sucesso vinculados ao seu próprio
+SHA. Implantação de produção e limpeza dos artefatos antigos mantêm as condições
+de publicação e rollback descritas neste documento.
