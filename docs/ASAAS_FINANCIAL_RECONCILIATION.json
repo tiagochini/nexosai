@@ -1,0 +1,144 @@
+{
+  "checkedAt": "2026-10-09T11:42:32.838Z",
+  "scope": "Read-only sandbox provider queries and PostgreSQL READ ONLY transaction; no login, refund request, webhook replay or session revocation.",
+  "ledger": {
+    "result": "PASS",
+    "baseline": 900,
+    "credits": 2900,
+    "chainConsistent": true,
+    "grantsOnce": {
+      "pix-small": 1,
+      "boleto": 1,
+      "partial": 1,
+      "chargeback": 1
+    },
+    "transactions": [
+      {
+        "type": "credit",
+        "action": "purchase",
+        "amount": 500,
+        "balanceBefore": 900,
+        "balanceAfter": 1400
+      },
+      {
+        "type": "credit",
+        "action": "purchase",
+        "amount": 500,
+        "balanceBefore": 1400,
+        "balanceAfter": 1900
+      },
+      {
+        "type": "credit",
+        "action": "purchase",
+        "amount": 500,
+        "balanceBefore": 1900,
+        "balanceAfter": 2400
+      },
+      {
+        "type": "credit",
+        "action": "purchase",
+        "amount": 500,
+        "balanceBefore": 2400,
+        "balanceAfter": 2900
+      }
+    ],
+    "founderUnchanged": true
+  },
+  "payments": {
+    "count": 5,
+    "partialCard": {
+      "status": "paid",
+      "refundHold": true,
+      "notice": "PENDING",
+      "creditsReversed": 0
+    },
+    "precautionaryPix": {
+      "status": "pending",
+      "noPrematurePlanActivation": true
+    }
+  },
+  "webhooks": {
+    "configuration": [
+      {
+        "name": "NexOS planos e creditos homologacao",
+        "url": "https://agencianexos.vip/api/billing/webhooks/asaas",
+        "enabled": true,
+        "interrupted": false,
+        "eventCount": 9
+      },
+      {
+        "name": "Academy",
+        "url": "https://agencianexos.vip/api/academy/webhook",
+        "enabled": true,
+        "interrupted": false,
+        "eventCount": 10
+      },
+      {
+        "name": "Campanhas",
+        "url": "https://agencianexos.vip/api/products/webhooks/asaas",
+        "enabled": true,
+        "interrupted": false,
+        "eventCount": 48
+      }
+    ],
+    "deliveryLogAccess": "Web interface only",
+    "deliveryLogs": {
+      "source": "Authenticated Asaas sandbox web interface",
+      "scope": "Billing/payment events, all three configured webhooks, last 14 days",
+      "historicalFailures": {
+        "count": 3,
+        "endpoint": "/api/academy/webhook",
+        "httpStatus": 502,
+        "displayedDate": "2026-10-08",
+        "cause": "Cloudflare origin_bad_gateway"
+      },
+      "recovery": {
+        "sameEventIdConfirmed": true,
+        "event": "PAYMENT_CONFIRMED",
+        "httpStatus": 200,
+        "response": {
+          "ok": true
+        },
+        "displayedTime": "2026-10-08 17:36 (panel timezone)"
+      },
+      "currentPenalizedEvents": 0,
+      "latestVisibleDeliveries": [
+        {
+          "endpoint": "/api/products/webhooks/asaas",
+          "httpStatus": 200
+        },
+        {
+          "endpoint": "/api/academy/webhook",
+          "httpStatus": 200
+        },
+        {
+          "endpoint": "/api/billing/webhooks/asaas",
+          "httpStatus": 200
+        }
+      ],
+      "noManualReplay": true
+    }
+  },
+  "pixRefundHistory": [
+    {
+      "status": "CANCELLED",
+      "amountCents": 4250
+    },
+    {
+      "status": "CANCELLED",
+      "amountCents": 4250
+    },
+    {
+      "status": "CANCELLED",
+      "amountCents": 8500
+    },
+    {
+      "status": "CANCELLED",
+      "amountCents": 4250
+    }
+  ],
+  "health": {
+    "/api/healthz": 200,
+    "/api/readyz": 200
+  }
+}

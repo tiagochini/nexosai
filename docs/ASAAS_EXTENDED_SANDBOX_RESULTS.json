@@ -195,5 +195,14 @@
     "https://docs.asaas.com/reference/create-new-payment",
     "https://docs.asaas.com/reference/estornar-cobranca"
   ],
-  "separateCheckpoint": "Actual Academy email delivery remains a separate delivery validation, not a financial Asaas settlement result."
+  "separateCheckpoint": "Actual Academy email delivery remains a separate delivery validation, not a financial Asaas settlement result.",
+  "readOnlyReconciliation": {
+    "checkedAt": "2026-10-09T11:42:32.838Z",
+    "ledger": "PASS 900 + four unique grants of 500 = 2900; consistent balance chain",
+    "refundHold": true,
+    "founderUnchanged": true,
+    "webhookQueues": "Three enabled, none interrupted, zero currently penalized events",
+    "historicalDeliveryFailure": "Three Academy HTTP 502 attempts; same PAYMENT_CONFIRMED event later returned HTTP 200 and ok:true",
+    "evidence": "ASAAS_FINANCIAL_RECONCILIATION.json"
+  }
 }

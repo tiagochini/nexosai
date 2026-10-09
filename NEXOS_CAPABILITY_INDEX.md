@@ -1,5 +1,16 @@
 # NexOS Capability Index
 
+**Conferência financeira e webhooks — 09/10/2026:** consulta somente leitura
+confirmou cadeia do ledger 900 → 1.400 → 1.900 → 2.400 → 2.900, quatro concessões
+únicas e founder inalterado. Reserva de estorno ativa; nenhuma reversão antecipada.
+Três filas habilitadas, sem interrupção e zero eventos penalizados atualmente.
+Três erros históricos Academy HTTP 502 por Cloudflare origin_bad_gateway foram
+localizados; o mesmo evento PAYMENT_CONFIRMED teve entrega posterior HTTP 200
+e resposta ok:true. Saúde/readiness HTTP 200. Estados financeiros pendentes
+permanecem inalterados. [Conferência](docs/ASAAS_FINANCIAL_RECONCILIATION.json).
+Próximo checkpoint: Asaas concluir parcial/PIX e aplicar chargeback/recuperação;
+conferir os benefícios e callbacks canônicos antes do fechamento externo.
+
 **Acompanhamento Asaas — 09/10/2026:** protocolo 1821619 identificado; resposta
 ainda automática. Complemento enviado com autorização explícita ao suporte para
 diagnóstico do PIX cancelado, processamento do parcial de cartão e PIX sob

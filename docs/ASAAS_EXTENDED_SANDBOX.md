@@ -40,6 +40,34 @@ Simulações locais de chargeback não substituem prova canônica externa.
 
 ## Retomada
 
+### Conferência somente leitura de 09/10, 11:42 UTC
+
+[Reconciliação financeira e entregas](./ASAAS_FINANCIAL_RECONCILIATION.json):
+o ledger fecha em 900 + quatro concessões únicas de 500 = 2.900, com todos os
+saldos intermediários consistentes. Há cinco pagamentos; o PIX do plano segue
+pendente sem ativação e o parcial de cartão mantém a reserva de consumo, sem
+reversão antecipada. Founder inalterado. Nenhuma cobrança, estorno, replay ou
+revogação de sessão foi executado nesta conferência.
+
+As três configurações de webhook estão habilitadas, sem fila interrompida e com
+zero eventos penalizados atualmente. Na pesquisa de erros de cobranças dos
+últimos 14 dias, o painel mostrou três tentativas Academy HTTP 502 em 08/10,
+com resposta Cloudflare `origin_bad_gateway`. O mesmo ID do evento
+`PAYMENT_CONFIRMED` teve entrega posterior HTTP 200 e resposta `ok: true`.
+As entregas mais recentes visíveis dos três endpoints retornaram 200, assim como
+`/api/healthz` e `/api/readyz`. Não há indicação de falha atual de entrega nessa
+consulta; isso não conclui os estados financeiros ainda pendentes no provider.
+
+Para o fechamento, consultar novamente o GET canônico e os logs reais após cada
+mudança. Parcial cartão DONE de R$43,99 deve reverter 250 créditos uma vez;
+parcial PIX DONE de R$42,50 deve reverter outros 250. Se ambos concluírem sem
+outros movimentos, saldo esperado 2.400. Chargeback deve afetar os 500 créditos
+da cobrança exata uma vez e recuperá-los uma vez; registrar saldo antes de cada
+etapa, pois concessões de plano ou outros movimentos mudam a referência.
+Conferir encadeamento do ledger, concessões/reversões únicas, reserva resolvida
+somente por prova canônica, callbacks e founder inalterado. Replays pertencem
+à validação posterior autorizada; esta auditoria não os executou.
+
 O atendimento Asaas foi identificado como **1821619**. Em 09/10/2026, a resposta
 disponível era somente uma confirmação automática de recebimento, sem diagnóstico
 ou simulação. Com autorização explícita do usuário, foi enviado um complemento
