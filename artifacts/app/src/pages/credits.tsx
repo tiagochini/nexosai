@@ -564,6 +564,7 @@ export default function CreditsPage() {
   const { plan, planSlug, workspace, isAdmin } = useAuth();
   const workspaceId = workspace?.id;
   const queryClient = useQueryClient();
+  const { data: refundCreditState } = useQuery({ queryKey: ["/api/credits/check/strategy_generation"], queryFn: () => customFetch<{ blockedByRefund: boolean }>("/api/credits/check/strategy_generation"), refetchInterval: 15000 });
   const [activeTab, setActiveTab] = useState<TabId>("agentes");
 
   const { data: balanceData, isLoading: loadingBalance } = useGetCreditsBalance({
@@ -616,7 +617,10 @@ export default function CreditsPage() {
       {loadingBalance ? (
         <Skeleton className="h-44 bg-muted/20" />
       ) : (
-        <CreditGauge balance={balance} included={included} isAdmin={isAdmin} onTopup={() => queryClient.invalidateQueries({ queryKey: getGetCreditsBalanceQueryKey() })} />
+          <>
+          {refundCreditState?.blockedByRefund && <div role="alert" className="border border-yellow-400/40 p-4 text-yellow-400 text-sm">Seus créditos continuam no saldo, mas o consumo está bloqueado enquanto o estorno aguarda aprovação ou processamento. Contate o administrador. A solicitação não pode ser cancelada por aqui.</div>}
+          <CreditGauge balance={balance} included={included} isAdmin={isAdmin} onTopup={() => queryClient.invalidateQueries({ queryKey: getGetCreditsBalanceQueryKey() })} />
+          </>
       )}
 
       {/* Quick stats */}

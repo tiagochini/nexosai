@@ -1,10 +1,11 @@
 {
-  "checkedAt": "2026-10-08T23:30:23.105Z",
+  "checkedAt": "2026-10-09T11:05:44.467Z",
   "scope": "Current source mounted read-only in isolated disposable Docker PostgreSQL; no Supabase or provider credentials; mocked providers with network forbidden by DB tests",
   "checks": {
     "test-billing-settlement": "PASS",
     "test-billing-plan-activation-db": "PASS",
     "test-billing-credit-concurrency-db": "PASS",
-    "test-billing-reversal-db": "PASS"
+    "test-billing-reversal-db": "PASS",
+    "test-platform-admin-db": "PASS"
   }
 }

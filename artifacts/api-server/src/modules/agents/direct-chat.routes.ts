@@ -1,3 +1,4 @@
+import { assertCreditsNotRefundHeld, deductCredits } from "../credits/credits.service.js";
 import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
@@ -837,7 +838,8 @@ router.post("/transcribe", async (req, res): Promise<void> => {
     return;
   }
 
-  const [ws] = await db
+  await assertCreditsNotRefundHeld(req.auth.workspaceId);
+    const [ws] = await db
     .select({ creditsBalance: workspacesTable.creditsBalance })
     .from(workspacesTable)
     .where(eq(workspacesTable.id, req.auth.workspaceId))
@@ -851,10 +853,7 @@ router.post("/transcribe", async (req, res): Promise<void> => {
   try {
     const text = await transcribeAudio(audioBase64, mimeType as string, req.log);
 
-    await db
-      .update(workspacesTable)
-      .set({ creditsBalance: Math.max(0, ws.creditsBalance - 1) })
-      .where(eq(workspacesTable.id, req.auth.workspaceId));
+    await deductCredits(req.auth.workspaceId, "analytics_report", req.log, undefined, undefined, undefined, undefined, undefined, 1);
 
     res.json({ text, creditsCharged: 1 });
   } catch (err) {
@@ -897,6 +896,7 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
   const creditCost = isVideoAnalysis ? 8 : hasImages ? 5 : 3;
 
   try {
+    await assertCreditsNotRefundHeld(req.auth.workspaceId);
     const [ws] = await db
       .select({ creditsBalance: workspacesTable.creditsBalance })
       .from(workspacesTable)
@@ -951,10 +951,7 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
       );
     }
 
-    await db
-      .update(workspacesTable)
-      .set({ creditsBalance: Math.max(0, ws.creditsBalance - creditCost) })
-      .where(eq(workspacesTable.id, req.auth.workspaceId));
+    await deductCredits(req.auth.workspaceId, "analytics_report", req.log, undefined, undefined, undefined, undefined, undefined, creditCost);
 
     await db.insert(auditLogsTable).values({
       workspaceId: req.auth.workspaceId,

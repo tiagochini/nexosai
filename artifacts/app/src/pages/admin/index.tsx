@@ -102,6 +102,7 @@ function saveTeam(t: TeamMember[]) {
 }
 
 interface AdminPaymentRow {
+  refundApprovalUrl: string;
   id: string;
   workspaceId: string;
   workspaceName: string;
@@ -671,6 +672,22 @@ export default function AdminPage() {
     onError: (err: Error) => toast.error(err.message ?? t("Erro ao liberar acesso", "Failed to grant access", "Error al conceder el acceso")),
   });
 
+  const [refundDraft, setRefundDraft] = useState<{ id: string; value: string } | null>(null);
+  const refundMutation = useMutation({
+    mutationFn: async ({ id, value }: { id: string; value: string }) => {
+      const amountCents = Math.round(Number(value.replace(",", ".")) * 100);
+      if (!Number.isSafeInteger(amountCents) || amountCents <= 0) throw new Error("Informe um valor de estorno válido.");
+      return customFetch<{ message: string }>(`/api/admin/payments/${id}/refund`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amountCents }) });
+    },
+    onSuccess: data => { toast.success(data.message); setRefundDraft(null); queryClient.invalidateQueries({ queryKey: ["/api/admin/payments"] }); },
+    onError: (error: Error) => { toast.error(error.message); queryClient.invalidateQueries({ queryKey: ["/api/admin/payments"] }); },
+  });
+  const refreshRefund = useMutation({
+    mutationFn: (id: string) => customFetch<{ message: string }>(`/api/admin/payments/${id}/refund/refresh`, { method: "POST" }),
+    onSuccess: data => { toast.success(data.message); queryClient.invalidateQueries({ queryKey: ["/api/admin/payments"] }); },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const confirmMutation = useMutation({
     mutationFn: async (paymentId: string) => {
       const data = await customFetch<{ message: string }>(`/api/admin/payments/${paymentId}/confirm`, {
@@ -774,6 +791,12 @@ export default function AdminPage() {
       </div>
 
       {/* Tabs */}
+      {paymentsData?.some(p => (p.metadata as { refundHold?: boolean } | null)?.refundHold) && (
+        <div role="alert" className="border border-yellow-400/40 p-3 text-yellow-400 text-sm">
+          Há estornos aguardando aprovação ou processamento. Os créditos estão mantidos no saldo, com consumo bloqueado.
+          <Button variant="link" onClick={() => { setPayFilter("all"); setTab("pagamentos"); }}>Ver estornos nos pagamentos</Button>
+        </div>
+      )}
       <div className="flex gap-0 border-b border-border/40">
         {TABS.map(t => (
           <button
@@ -1121,7 +1144,7 @@ export default function AdminPage() {
                   const statusLabel = p.status === "pending" ? t("Pendente", "Pending", "Pendiente") : p.status === "processing" ? t("Processando", "Processing", "Procesando") : p.status === "paid" ? t("Pago", "Paid", "Pagado") : p.status === "failed" ? t("Falhou", "Failed", "Fallido") : p.status === "cancelled" ? t("Cancelado", "Cancelled", "Cancelado") : p.status === "expired" ? t("Expirado", "Expired", "Vencido") : st.label;
                   const isPending = p.status === "pending";
                   const isExpanded = expandedPayment === p.id;
-                  const meta  = p.metadata as { type?: string; packCredits?: number } | null;
+                  const meta  = p.metadata as { type?: string; packCredits?: number; refundHold?: boolean; refundNotice?: string; refundedAmountCents?: number } | null;
                   return (
                     <div key={p.id} className="hover:bg-muted/5 transition-colors">
                       <div className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_120px_90px_80px_100px_120px] items-center px-5 py-3.5 gap-3">
@@ -1191,6 +1214,27 @@ export default function AdminPage() {
                           )}
                         </div>
                       </div>
+
+                      {(p.status === "paid" || meta?.refundHold) && p.externalId && ["pix", "credit_card"].includes(p.method) && (
+                        <div className="px-5 pb-3 space-y-2">
+                          {meta?.refundHold ? (
+                            <div role="alert" className="border border-yellow-400/40 p-3 text-yellow-400 text-sm">
+                              <strong>Estorno pendente — créditos mantidos, consumo bloqueado.</strong>
+                              <p>Administrador: aprove o estorno no painel Asaas quando exigido e acompanhe a devolução. O usuário não pode cancelar a solicitação.</p>
+                              <a className="underline mr-4" href={p.refundApprovalUrl} target="_blank" rel="noreferrer">Abrir Asaas</a>
+                              <Button size="sm" variant="outline" disabled={refreshRefund.isPending} onClick={() => refreshRefund.mutate(p.id)}>Consultar estorno</Button>
+                            </div>
+                          ) : <Button size="sm" variant="outline" onClick={() => setRefundDraft({ id: p.id, value: ((p.amountCents - (meta?.refundedAmountCents ?? 0)) / 100).toFixed(2) })}>Solicitar estorno</Button>}
+                          {refundDraft?.id === p.id && !meta?.refundHold && (
+                            <form className="flex flex-wrap gap-2 items-center" onSubmit={event => { event.preventDefault(); refundMutation.mutate(refundDraft); }}>
+                              <label>Valor do estorno (R$) <input className="bg-background border p-2 w-28" inputMode="decimal" required value={refundDraft.value} onChange={event => setRefundDraft({ id: p.id, value: event.target.value })} /></label>
+                              <span className="text-xs">A solicitação bloqueia o consumo de créditos até a resolução no Asaas.</span>
+                              <Button type="submit" size="sm" disabled={refundMutation.isPending}>Criar solicitação</Button>
+                              <Button type="button" size="sm" variant="ghost" onClick={() => setRefundDraft(null)}>Fechar</Button>
+                            </form>
+                          )}
+                        </div>
+                      )}
 
                       {/* Expanded payment details */}
                       {isExpanded && (

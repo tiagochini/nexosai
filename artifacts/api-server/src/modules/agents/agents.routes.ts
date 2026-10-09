@@ -1,3 +1,4 @@
+import { assertCreditsNotRefundHeld, deductCredits } from "../credits/credits.service.js";
 import { requireProject } from "../operations/project-access.service.js";
 import { Router } from "express";
 import { z } from "zod/v4";
@@ -340,6 +341,7 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
   try {
     if (campaignId) await requireProject(req.auth.workspaceId, campaignId);
     // Check credits
+    await assertCreditsNotRefundHeld(req.auth.workspaceId);
     const [ws] = await db
       .select({ creditsBalance: workspacesTable.creditsBalance, name: workspacesTable.name })
       .from(workspacesTable)
@@ -389,10 +391,7 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
         );
 
     // Deduct 3 credits per direct chat message (analytics_report cost)
-    await db
-      .update(workspacesTable)
-      .set({ creditsBalance: Math.max(0, ws.creditsBalance - 3) })
-      .where(eq(workspacesTable.id, req.auth.workspaceId));
+    await deductCredits(req.auth.workspaceId, "analytics_report", req.log, undefined, undefined, undefined, undefined, undefined, 3);
 
     // Audit log
     await db.insert(auditLogsTable).values({

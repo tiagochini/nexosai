@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db, subscriptionPaymentsTable as payments, creditTransactionsTable as credits } from "@workspace/db";
+import { db, subscriptionPaymentsTable as payments, creditTransactionsTable as credits, workspacesTable } from "@workspace/db";
 import { parseAsaasSettlement, fetchAsaasSettlement, assertBillingSettlementBinding } from "./billing-settlement.js";
 import { completedRefundCents, isChargebackHold } from "../../lib/asaas-refunds.js";
 import { reversePurchaseCreditsInTransaction } from "../credits/credits.service.js";
@@ -24,6 +24,13 @@ export async function reconcileBillingReversal(externalId: string, lookup: (id: 
     if (candidates.length !== 1 || !payment || payment.id !== snapshot.id) throw new AppError(409, "Pagamento alterado", "PAYMENT_CHANGED_DURING_VERIFICATION");
     assertBillingSettlementBinding(payment, proof);
     const meta = payment.metadata as Record<string, unknown>;
+    // Serialize the reservation with consumption, preserving the visible balance.
+    await trx.select({ id: workspacesTable.id }).from(workspacesTable).where(eq(workspacesTable.id, payment.workspaceId)).for("update");
+    const pendingRefund = proof.refunds?.find(r => !["DONE", "CANCELLED"].includes(r.status));
+    const request = meta.refundRequest as { amountCents: number; baselineCents: number } | undefined;
+    const hasResolution = request ? refunded >= request.baselineCents + request.amountCents : proof.refunds?.some(r => ["DONE", "CANCELLED"].includes(r.status));
+    const refundHold = Boolean(pendingRefund) || (meta.refundHold === true && !hasResolution);
+    const refundNotice = pendingRefund?.status ?? (hasResolution ? "RESOLVED" : meta.refundNotice);
     const priorRefunded = Number(meta.refundedAmountCents ?? 0);
     if (refunded < priorRefunded) throw new AppError(409, "Estorno consultado regrediu", "REFUND_STATE_REGRESSION");
     const full = refunded === payment.amountCents;
@@ -44,10 +51,10 @@ export async function reconcileBillingReversal(externalId: string, lookup: (id: 
     }
     const beforeHold = ["pending", "processing", "paid"].includes(String(meta.financialPreviousStatus)) ? meta.financialPreviousStatus as "pending" | "processing" | "paid" : "paid";
     const status = full ? "refunded" : hold ? "failed" : meta.financialHold && paid ? beforeHold : payment.status;
-    const changed = refunded !== priorRefunded || desired !== prior || (meta.financialHold ?? null) !== (hold ? proof.status : null) || status !== payment.status;
+    const changed = refunded !== priorRefunded || desired !== prior || (meta.financialHold ?? null) !== (hold ? proof.status : null) || status !== payment.status || refundHold !== (meta.refundHold === true) || refundNotice !== meta.refundNotice;
     if (!changed) return { handled: true, changed: false };
     await trx.update(payments).set({ status, updatedAt: new Date(), metadata: {
-      ...meta, refundedAmountCents: refunded, financialHold: hold ? proof.status : null,
+      ...meta, refundHold, refundNotice, refundedAmountCents: refunded, financialHold: hold ? proof.status : null,
       ...(hold && !meta.financialHold ? { financialPreviousStatus: payment.status } : {}),
       creditsReversed: review ? prior : desired, reversalVersion: desired !== prior && !review ? version + 1 : version,
       reversalReview: review, providerFinancialStatus: proof.status,

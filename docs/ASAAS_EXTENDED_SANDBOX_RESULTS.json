@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-09T00:39:39.875Z",
+  "checkedAt": "2026-10-09T11:07:35.946Z",
   "startedAt": "2026-10-08T23:26:46.721Z",
   "environment": "Asaas sandbox + Supabase homologation",
   "scope": "Public authenticated billing checkout, separate ordinary account/workspace, fictitious payer and official sandbox cards. No production calls or real money.",
@@ -41,6 +41,10 @@
       },
       {
         "status": "CANCELLED",
+        "amountCents": 4250
+      },
+      {
+        "status": "CANCELLED",
         "amountCents": 8500
       },
       {
@@ -55,8 +59,13 @@
   },
   "cardPartial": {
     "requestedCents": 4399,
-    "providerResponse": "HTTP 400 invalid_action: Esta transação só pode ser estornada parcialmente no próximo dia.",
-    "result": "PENDING earliest retry 2026-10-09; approved isolated charge preserved"
+    "completedCents": 0,
+    "canonicalRefundStates": [
+      "PENDING"
+    ],
+    "actualCreditsReversed": 0,
+    "previousRestriction": "Next-day restriction on 2026-10-08",
+    "result": "PENDING provider processing; request accepted on 2026-10-09"
   },
   "rejectedCards": {
     "result": "PASS",
@@ -95,10 +104,39 @@
     "planRemains": "Solo",
     "result": "PASS no premature activation; RECEIVED journey for this plan amount pending provider review"
   },
+  "refundHold": {
+    "checkedAt": "2026-10-09T11:07:29.281Z",
+    "result": "PASS",
+    "balancePreserved": true,
+    "consumptionBlocked": true,
+    "ordinaryAdminMutationDenied": 403,
+    "approvalInAsaasOnly": true,
+    "localRegressionsPassed": true,
+    "apiAndFrontendTypesPassed": true,
+    "frontendBuildPassed": true
+  },
+  "keyRotation": {
+    "at": "2026-10-09T10:49:12.493Z",
+    "environment": "sandbox",
+    "credentialsCommitted": false,
+    "providerReadsAuthenticated": true,
+    "pixPartialRequestAccepted": true,
+    "pixAfterCriticalAuthorization": "CANCELLED",
+    "cardPartialRequestAccepted": true,
+    "runtimeRestarted": true,
+    "healthzHttp": 200,
+    "readyzHttp": 200,
+    "permissionRootCauseConfirmed": false
+  },
   "checks": {
     "replays": [
       {
         "at": "2026-10-08T23:38:38.504Z",
+        "result": "PASS",
+        "eventsRepeated": 3
+      },
+      {
+        "at": "2026-10-09T10:48:38.667Z",
         "result": "PASS",
         "eventsRepeated": 3
       }
@@ -136,7 +174,7 @@
   "remaining": [
     "PIX partial refund cancelled after authorization: provider diagnosis required",
     "Provider chargeback simulation and recovery",
-    "Partial credit card refund after the provider next-day restriction",
+    "Complete pending partial credit card refund and verify 250-credit reversal",
     "PIX plan under precautionary hold: wait for RECEIVED/REFUNDED",
     "Actual Academy email delivery"
   ],

@@ -7,10 +7,11 @@ import {
   plansTable,
   aiProviderLogsTable,
   campaignsTable,
+  subscriptionPaymentsTable,
   CREDIT_COSTS,
   type CreditTransaction,
 } from "@workspace/db";
-import { InsufficientCreditsError, NotFoundError } from "../../lib/errors.js";
+import { AppError, InsufficientCreditsError, NotFoundError } from "../../lib/errors.js";
 import type { Logger } from "pino";
 
 function isAdminWorkspace(workspaceOwnerId: string): boolean {
@@ -18,6 +19,12 @@ function isAdminWorkspace(workspaceOwnerId: string): boolean {
 }
 
 export type CreditAction = string & keyof typeof CREDIT_COSTS;
+
+export async function assertCreditsNotRefundHeld(workspaceId: string): Promise<void> {
+  const [hold] = await db.select({ id: subscriptionPaymentsTable.id }).from(subscriptionPaymentsTable)
+    .where(sql`${subscriptionPaymentsTable.workspaceId} = ${workspaceId} AND ${subscriptionPaymentsTable.metadata}->>'refundHold' = 'true'`).limit(1);
+  if (hold) throw new AppError(409, "Créditos bloqueados enquanto o estorno aguarda aprovação ou processamento. Contate o administrador.", "CREDITS_REFUND_HOLD");
+}
 
 export async function getBalance(workspaceId: string): Promise<number> {
   const [ws] = await db
@@ -38,9 +45,11 @@ export async function deductCredits(
   tokensUsed?: number,
   actualCostUsd?: number,
   idempotencyKey?: string,
+  costOverride?: number,
 ): Promise<CreditTransaction> {
-  const cost = CREDIT_COSTS[action];
+  const cost = costOverride ?? CREDIT_COSTS[action];
   if (cost === undefined) throw new Error(`Unknown credit action: ${action}`);
+  if (!Number.isSafeInteger(cost) || cost < 0) throw new Error("Invalid credit cost");
 
   const [workspace] = await db
     .select()
@@ -83,6 +92,9 @@ export async function deductCredits(
     }
 
     if (ws.creditsBalance < 0) throw new InsufficientCreditsError(cost, ws.creditsBalance);
+    const [refundHold] = await trx.select({ id: subscriptionPaymentsTable.id }).from(subscriptionPaymentsTable)
+      .where(sql`${subscriptionPaymentsTable.workspaceId} = ${workspaceId} AND ${subscriptionPaymentsTable.metadata}->>'refundHold' = 'true'`).limit(1);
+    if (refundHold) throw new AppError(409, "Créditos bloqueados enquanto o estorno aguarda aprovação ou processamento. Contate o administrador.", "CREDITS_REFUND_HOLD");
     unlimited = (ws.settings as Record<string, unknown>)?.unlimitedCredits === true || adminWorkspace;
     if (!unlimited && ws.creditsBalance < cost) {
       throw new InsufficientCreditsError(cost, ws.creditsBalance);
@@ -353,7 +365,7 @@ export async function getAgentUsageHistory(
 export async function checkCredits(
   workspaceId: string,
   action: CreditAction,
-): Promise<{ sufficient: boolean; balance: number; required: number; unlimited: boolean }> {
+): Promise<{ sufficient: boolean; balance: number; required: number; unlimited: boolean; blockedByRefund: boolean }> {
   const [ws] = await db
     .select({ creditsBalance: workspacesTable.creditsBalance, settings: workspacesTable.settings, ownerId: workspacesTable.ownerId })
     .from(workspacesTable)
@@ -363,5 +375,7 @@ export async function checkCredits(
   const flagUnlimited = (ws?.settings as Record<string, unknown>)?.unlimitedCredits === true;
   const unlimited = flagUnlimited || (ws?.ownerId ? await isAdminWorkspace(ws.ownerId) : false);
   const required = CREDIT_COSTS[action] ?? 0;
-  return { sufficient: balance >= 0 && (unlimited || balance >= required), balance, required, unlimited: balance >= 0 && unlimited };
+  const [refundHold] = await db.select({ id: subscriptionPaymentsTable.id }).from(subscriptionPaymentsTable)
+    .where(sql`${subscriptionPaymentsTable.workspaceId} = ${workspaceId} AND ${subscriptionPaymentsTable.metadata}->>'refundHold' = 'true'`).limit(1);
+  return { sufficient: !refundHold && balance >= 0 && (unlimited || balance >= required), balance, required, unlimited: !refundHold && balance >= 0 && unlimited, blockedByRefund: Boolean(refundHold) };
 }

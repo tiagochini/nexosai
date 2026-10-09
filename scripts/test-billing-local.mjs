@@ -18,7 +18,7 @@ const compose = (...args) => command(['compose', '-p', project, '-f', 'scripts/c
 const run = (...args) => command(['run', '--rm', '--network', `${project}_default`, '--entrypoint', 'node',
   ...['artifacts/api-server/src', 'lib/db/src', 'lib/db/drizzle', 'lib/db/scripts'].flatMap(dir => ['-v', `${path.join(root, dir)}:/workspace/${dir}:ro`]),
   ...Object.entries(environment).flatMap(([key, value]) => ['-e', `${key}=${value}`]), image, ...args]);
-const checks = ['test-billing-settlement', 'test-billing-plan-activation-db', 'test-billing-credit-concurrency-db', 'test-billing-reversal-db'];
+const checks = ['test-billing-settlement', 'test-billing-plan-activation-db', 'test-billing-credit-concurrency-db', 'test-billing-reversal-db', 'test-platform-admin-db'];
 try {
   await compose('up', '-d', '--wait');
   await run('/workspace/lib/db/scripts/bootstrap-empty-database.mjs', '--execute');

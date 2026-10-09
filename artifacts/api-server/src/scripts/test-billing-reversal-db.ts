@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, pool, usersTable, workspacesTable, plansTable, subscriptionPaymentsTable as payments, creditTransactionsTable as credits } from "@workspace/db";
 import { markPaymentPaid } from "../modules/billing/billing.service.js";
+import { requestBillingRefund, refreshBillingRefund } from "../modules/billing/billing-refund-request.service.js";
 import { reconcileBillingReversal } from "../modules/billing/billing-reversal.service.js";
 import { deductCredits, grantCredits, resetMonthlyCredits, checkCredits } from "../modules/credits/credits.service.js";
 import { logger } from "../lib/logger.js";
@@ -22,6 +23,13 @@ try {
   const partial = async () => proof(p.externalId!, "RECEIVED", [{ status: "DONE", value: 25 }, { status: "PENDING", value: 25 }]);
   await Promise.all(Array.from({ length: 16 }, () => reconcileBillingReversal(p.externalId!, partial)));
   assert.equal(await balance(), 75);
+  assert.equal((await checkCredits(workspaceId, "strategy_generation")).sufficient, false);
+  await Promise.all(Array.from({ length: 4 }, () => assert.rejects(deductCredits(workspaceId, "strategy_generation", logger), /Créditos bloqueados/)));
+  await db.update(workspacesTable).set({ settings: { unlimitedCredits: true } }).where(eq(workspacesTable.id, workspaceId));
+  await assert.rejects(deductCredits(workspaceId, "strategy_generation", logger), /Créditos bloqueados/);
+  assert.equal(await balance(), 75, "Pending refund preserves credits but blocks consumption, including unlimited accounts");
+  await db.update(workspacesTable).set({ settings: {} }).where(eq(workspacesTable.id, workspaceId));
+  await reconcileBillingReversal(p.externalId!, async () => proof(p.externalId!, "RECEIVED", [{ status: "DONE", value: 25 }, { status: "CANCELLED", value: 25 }]));
   await Promise.all(Array.from({ length: 4 }, () => deductCredits(workspaceId, "strategy_generation", logger)));
   assert.equal(await balance(), 15);
   const full = async () => proof(p.externalId!, "REFUNDED", [{ status: "DONE", value: 25 }, { status: "DONE", value: 75 }]);
@@ -38,7 +46,7 @@ try {
   await deductCredits(workspaceId, "strategy_generation", logger); assert.equal(await balance(), 25);
   console.log("PASS: cumulative completed partial/full refunds debit once, retain negative debt and block consumption until replenished");
 
-  const held = await createPayment(); const beforeHold = await balance();
+  const held = await createPayment(); let beforeHold = await balance();
   await reconcileBillingReversal(held.externalId!, async () => proof(held.externalId!, "CHARGEBACK_REQUESTED"));
   assert.equal(await balance(), beforeHold - 100);
   await Promise.all(Array.from({ length: 12 }, () => reconcileBillingReversal(held.externalId!, async () => proof(held.externalId!, "CONFIRMED"))));
@@ -49,6 +57,39 @@ try {
   await assert.rejects(reconcileBillingReversal(held.externalId!, async () => { throw new Error("offline-outage"); }), /offline-outage/);
   assert.equal(await balance(), beforeHold);
   console.log("PASS: chargeback hold/release is idempotent; incomplete proof, mismatch and outage cannot mutate balance");
+
+  const requested = await createPayment(); const beforeRequest = await balance(); let refundPosts = 0;
+  const requests = await Promise.allSettled(Array.from({ length: 10 }, () => requestBillingRefund(requested.id, 2500,
+    async () => proof(requested.externalId!, "CONFIRMED"), async () => { refundPosts++; return {}; })));
+  assert.equal(requests.filter(r => r.status === "fulfilled").length, 1); assert.equal(refundPosts, 1);
+  assert.equal(await balance(), beforeRequest);
+  await assert.rejects(deductCredits(workspaceId, "strategy_generation", logger), /Créditos bloqueados/);
+  await reconcileBillingReversal(requested.externalId!, async () => proof(requested.externalId!, "CONFIRMED"));
+  await assert.rejects(deductCredits(workspaceId, "strategy_generation", logger), /Créditos bloqueados/, "missing provider refund entry cannot release an unresolved request");
+  await reconcileBillingReversal(requested.externalId!, async () => proof(requested.externalId!, "CONFIRMED", [{ status: "DONE", value: 25 }]));
+  assert.equal(await balance(), beforeRequest - 25); assert.equal((await checkCredits(workspaceId, "strategy_generation")).sufficient, true);
+  const uncertain = await createPayment(); const beforeUncertain = await balance(); let uncertainPosts = 0;
+  await assert.rejects(requestBillingRefund(uncertain.id, 10000, async () => proof(uncertain.externalId!, "CONFIRMED"), async () => { uncertainPosts++; throw new Error("ambiguous timeout"); }), /ambiguous timeout/);
+  await assert.rejects(requestBillingRefund(uncertain.id, 10000, async () => proof(uncertain.externalId!, "CONFIRMED"), async () => { uncertainPosts++; return {}; }), /já solicitado/);
+  assert.equal(uncertainPosts, 1); assert.equal(await balance(), beforeUncertain);
+  await assert.rejects(deductCredits(workspaceId, "strategy_generation", logger), /Créditos bloqueados/);
+  const separateId = randomUUID();
+  await db.insert(workspacesTable).values({ id: separateId, ownerId: userId, planId, name: "Separate fixture", slug: separateId, creditsBalance: 100 });
+  await deductCredits(separateId, "strategy_generation", logger);
+  assert.equal((await checkCredits(separateId, "strategy_generation")).sufficient, true);
+  await reconcileBillingReversal(uncertain.externalId!, async () => proof(uncertain.externalId!, "REFUNDED", [{ status: "DONE", value: 100 }]));
+  console.log("PASS: durable refund hold preserves balance, prevents duplicate POST after concurrency/timeout, isolates workspaces and releases on DONE");
+  beforeHold = await balance();
+  const cancelledRequest = await createPayment(); const beforeCancel = await balance();
+  await requestBillingRefund(cancelledRequest.id, 2500, async () => proof(cancelledRequest.externalId!, "CONFIRMED"), async () => ({}));
+  const [reserved] = await db.select().from(payments).where(eq(payments.id, cancelledRequest.id));
+  const requestId = (reserved!.metadata as { refundRequest: { id: string } }).refundRequest.id;
+  await refreshBillingRefund(cancelledRequest.id, async () => proof(cancelledRequest.externalId!, "CONFIRMED"), async () => [{ status: "CANCELLED", description: "NexOS estorno unrelated" }]);
+  await assert.rejects(deductCredits(workspaceId, "strategy_generation", logger), /Créditos bloqueados/);
+  await refreshBillingRefund(cancelledRequest.id, async () => proof(cancelledRequest.externalId!, "CONFIRMED"), async () => [{ status: "CANCELLED", description: "NexOS estorno " + requestId }]);
+  assert.equal(await balance(), beforeCancel); assert.equal((await checkCredits(workspaceId, "strategy_generation")).blockedByRefund, false);
+  console.log("PASS: only canonical cancellation of the exact request releases its hold, without debiting the preserved balance");
+  beforeHold = await balance();
 
   const [legacy] = await db.insert(payments).values({ workspaceId, userId, planId, externalId: `pay_${randomUUID()}`, amountCents: 10000, method: "credit_card", status: "paid", metadata: { type: "pack", packCredits: 100 } }).returning();
   const review = await reconcileBillingReversal(legacy!.externalId!, async () => proof(legacy!.externalId!, "REFUNDED", [{ status: "DONE", value: 100 }]));

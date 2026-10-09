@@ -578,6 +578,7 @@ export async function getCampaignCostBreakdown(limitCampaigns = 50): Promise<{
 // ─── Admin payments list ───────────────────────────────────────────────────────
 
 export interface AdminPaymentRow {
+  refundApprovalUrl: string;
   id: string;
   workspaceId: string;
   workspaceName: string;
@@ -651,5 +652,6 @@ export async function getAdminPayments(opts: {
     paidAt:           r.paidAt?.toISOString() ?? null,
     expiresAt:        r.expiresAt?.toISOString() ?? null,
     metadata:         r.metadata,
+    refundApprovalUrl: process.env.ASAAS_ENV === "production" ? "https://www.asaas.com" : "https://sandbox.asaas.com",
   }));
 }

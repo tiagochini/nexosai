@@ -1,5 +1,32 @@
 # NexOSAI — Fluxo Operacional e de Implementação Canônico
 
+**Estorno com aprovação administrativa e bloqueio — 09/10/2026:** criação e
+consulta restritas ao administrador por UUID. Solicitação durável bloqueia o
+consumo do workspace antes do POST ao Asaas, mantendo o saldo. Painel admin e
+página de créditos exibem avisos; não existe cancelamento pelo usuário. Somente
+refund DONE desconta proporcionalmente uma vez; cancelamento canônico da mesma
+solicitação pode liberar o bloqueio via consulta administrativa. Timeout mantém
+a reserva e impede POST duplicado. Chats/transcrição usam débito central com
+mesmo bloqueio. Tipos API/frontend, build e regressões financeiras Docker
+passaram; conta real de homologação manteve 2.900 créditos bloqueados, com
+mutação administrativa por usuário comum negada (403), founder inalterado.
+[Evidência](docs/ASAAS_EXTENDED_SANDBOX_RESULTS.json) e
+[regressões](docs/BILLING_LOCAL_VALIDATION.json). Próximo checkpoint: aprovação
+manual/processamento do parcial no Asaas e simulação externa de chargeback.
+Fluxo implementado; homologação externa completa e produção continuam abertas.
+
+**Reteste com nova chave Asaas sandbox — 09/10/2026:** chave configurada apenas
+no arquivo privado de homologação; runtime reiniciado, healthz/readyz HTTP 200.
+Consultas autenticadas e solicitações de estorno aceitas. PIX parcial de R$42,50
+voltou a CANCELLED após autorização crítica; troca da chave não resolveu o
+cancelamento nem comprovou causa por permissão. Parcial de cartão de R$43,99
+aceito no próximo dia, ainda PENDING; nenhum DONE, nenhuma reversão antecipada.
+Saldo comum de teste: 2.900; founder inalterado; replays sem duplicação e sessões
+de teste revogadas. Pedido de chargeback já enviado; prova externa pendente.
+[Evidência](docs/ASAAS_EXTENDED_SANDBOX_RESULTS.json). Próximo checkpoint:
+concluir processamento do parcial de cartão e obter diagnóstico/simulação Asaas.
+Homologação completa permanece aberta, sem alteração da maturidade geral.
+
 **Asaas ampliado — 08/10/2026:** PIX e boleto de R$85 liquidados no sandbox
 com callback real e uma concessão de 500 créditos cada; três replays preservaram
 saldo/plano. Cartões rejeitados para plano e pack retornaram 400 com mensagem,

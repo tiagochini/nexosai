@@ -1,3 +1,4 @@
+import { assertCreditsNotRefundHeld, deductCredits } from "../credits/credits.service.js";
 import { Router } from "express";
 import { z } from "zod/v4";
 import { eq, and, asc, desc } from "drizzle-orm";
@@ -59,6 +60,7 @@ router.get("/active", async (req, res): Promise<void> => {
     .orderBy(asc(integrationChatMessagesTable.createdAt));
 
   if (messages.length === 0) {
+    await assertCreditsNotRefundHeld(req.auth.workspaceId);
     const [ws] = await db
       .select({ creditsBalance: workspacesTable.creditsBalance })
       .from(workspacesTable)
@@ -80,10 +82,7 @@ router.get("/active", async (req, res): Promise<void> => {
           .values({ conversationId: conversation.id, role: "assistant", content: result.content })
           .returning();
 
-        await db
-          .update(workspacesTable)
-          .set({ creditsBalance: Math.max(0, ws.creditsBalance - 1) })
-          .where(eq(workspacesTable.id, workspaceId));
+        await deductCredits(workspaceId, "analytics_report", req.log, undefined, undefined, undefined, undefined, undefined, 1);
 
         messages = [saved];
       } catch (err) {
@@ -155,6 +154,7 @@ router.post("/:conversationId/messages", async (req, res): Promise<void> => {
   const creditCost = hasImages ? 5 : 3;
 
   try {
+    await assertCreditsNotRefundHeld(req.auth.workspaceId);
     const [ws] = await db
       .select({ creditsBalance: workspacesTable.creditsBalance })
       .from(workspacesTable)
@@ -222,10 +222,7 @@ router.post("/:conversationId/messages", async (req, res): Promise<void> => {
       .set({ updatedAt: new Date() })
       .where(eq(integrationChatConversationsTable.id, conversationId));
 
-    await db
-      .update(workspacesTable)
-      .set({ creditsBalance: Math.max(0, ws.creditsBalance - creditCost) })
-      .where(eq(workspacesTable.id, workspaceId));
+    await deductCredits(workspaceId, "analytics_report", req.log, undefined, undefined, undefined, undefined, undefined, creditCost);
 
     await db.insert(auditLogsTable).values({
       workspaceId,

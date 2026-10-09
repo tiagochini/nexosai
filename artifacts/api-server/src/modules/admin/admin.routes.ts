@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { z } from "zod";
+import { requestBillingRefund, refreshBillingRefund } from "../billing/billing-refund-request.service.js";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { getAdminOverview, getAdminFinancials, getAdminPayments, getCampaignCostBreakdown, getAdminDRE, getAdminCRM } from "./admin.service.js";
 import { queryAgentExecutionLogs, getAgentExecutionLogById, getAgentExecutionLogsSummary } from "./audit-logs.service.js";
@@ -81,6 +83,18 @@ router.get("/payments", async (req, res): Promise<void> => {
   const limit  = parseInt(req.query["limit"] as string ?? "100", 10);
   const data = await getAdminPayments({ status, limit });
   res.json({ payments: data });
+});
+
+router.post("/payments/:paymentId/refund", async (req, res): Promise<void> => {
+  const parsed = z.object({ paymentId: z.string().uuid(), amountCents: z.number().int().positive().safe() }).safeParse({ ...req.body, paymentId: req.params["paymentId"] });
+  if (!parsed.success) throw new ValidationError("Informe pagamento e valor em centavos válidos");
+  res.status(202).json(await requestBillingRefund(parsed.data.paymentId, parsed.data.amountCents));
+});
+
+router.post("/payments/:paymentId/refund/refresh", async (req, res): Promise<void> => {
+  const paymentId = z.string().uuid().safeParse(req.params["paymentId"]);
+  if (!paymentId.success) throw new ValidationError("Pagamento inválido");
+  res.json(await refreshBillingRefund(paymentId.data));
 });
 
 router.post("/payments/:paymentId/confirm", async (req, res): Promise<void> => {
