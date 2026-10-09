@@ -130,6 +130,9 @@ desenvolvimento e regressões em PostgreSQL local/Docker. As evidências remotas
   estados canônicos e benefícios das etapas restantes. Fluxo administrativo de
   solicitação/consulta implementado em 09/10: créditos mantidos e consumo bloqueado
   até resolução canônica; usuários comuns não podem gerir/cancelar estornos.
+  Protocolo Asaas 1821619: resposta automática conferida e complemento autorizado
+  enviado em 09/10 para diagnóstico/processamento dos bloqueios. Envio comprovado,
+  sem novas solicitações de estorno; estados externos ainda não concluídos.
   [Evidência ampliada](./ASAAS_EXTENDED_SANDBOX_RESULTS.json) e
   [procedimento de retomada](./ASAAS_EXTENDED_SANDBOX.md).
   [Evidência Campanhas/Academy](./ASAAS_SANDBOX_JOURNEY_RESULTS.json),

@@ -1,5 +1,15 @@
 # NexOSAI — Fluxo Operacional e de Implementação Canônico
 
+**Acompanhamento Asaas — 09/10/2026:** protocolo 1821619 identificado; resposta
+ainda automática. Complemento enviado com autorização explícita ao suporte para
+diagnóstico do PIX cancelado, processamento do parcial de cartão e PIX sob
+bloqueio. Gmail confirmou envio; prova privada preservada. Consulta às 11:21 UTC:
+parcial de cartão PENDING, chargeback CONFIRMED, PIX do plano CONFIRMED; saldo
+2.900 e founder inalterados. Nenhum novo estorno solicitado.
+[Evidência](docs/ASAAS_EXTENDED_SANDBOX_RESULTS.json). Maturidade: implementação
+validada, homologação financeira externa aberta. Próximo checkpoint: resposta
+do suporte e estados canônicos para validar reversões e recuperação.
+
 **Estorno com aprovação administrativa e bloqueio — 09/10/2026:** criação e
 consulta restritas ao administrador por UUID. Solicitação durável bloqueia o
 consumo do workspace antes do POST ao Asaas, mantendo o saldo. Painel admin e

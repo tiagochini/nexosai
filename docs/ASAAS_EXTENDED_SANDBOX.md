@@ -40,6 +40,17 @@ Simulações locais de chargeback não substituem prova canônica externa.
 
 ## Retomada
 
+O atendimento Asaas foi identificado como **1821619**. Em 09/10/2026, a resposta
+disponível era somente uma confirmação automática de recebimento, sem diagnóstico
+ou simulação. Com autorização explícita do usuário, foi enviado um complemento
+a `integracoes@asaas.com.br` para diagnosticar o PIX cancelado, concluir o parcial
+de cartão e orientar a liquidação do PIX sob bloqueio preventivo. O Gmail confirmou
+“Mensagem enviada”; comprovante privado: `.local/asaas-followup-sent.jpg`.
+Nova consulta canônica às 11:21 UTC manteve cartão parcial `PENDING`, chargeback
+`CONFIRMED`, PIX do plano `CONFIRMED` e saldo de 2.900; founder inalterado.
+Nenhuma nova solicitação de estorno foi criada. Aguardar orientação do suporte,
+sem repetir operações pendentes; este envio não conclui a homologação financeira.
+
 O journal e as credenciais ficam somente em arquivos ignorados `.local`.
 Consultar `node .local/asaas-advanced-journey.mjs inspect` antes de qualquer
 mutação. Não solicitar outro refund enquanto existir um pendente.
