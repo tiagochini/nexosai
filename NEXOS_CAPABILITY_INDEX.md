@@ -5,16 +5,17 @@ com callback real e uma concessão de 500 créditos cada; três replays preserva
 saldo/plano. Cartões rejeitados para plano e pack retornaram 400 com mensagem,
 sem pagamento ou benefício. Corrigidos coleta/validação/envio de CPF/CNPJ no
 checkout PIX/boleto. Regressões Docker, tipos API/frontend e build passaram.
-Estorno parcial PIX de R$42,50 solicitado, mas aguarda autorização crítica:
-nenhuma reversão foi antecipada. Parcial de cartão exige próximo dia no Asaas.
-Chargeback exige simulação pelo suporte; cobrança e rascunho privados preparados,
-mensagem ainda não enviada. PIX Agency de R$9.990 segue CONFIRMED sob bloqueio,
+Estorno parcial PIX de R$42,50 autorizado após aprovação humana, mas o Asaas
+registrou CANCELLED, inclusive na única retentativa; nenhum DONE e nenhuma
+reversão antecipada. Parcial de cartão exige próximo dia no Asaas.
+Solicitação de chargeback enviada ao suporte com autorização humana; confirmação
+de envio preservada privadamente. Simulação canônica externa ainda pendente. PIX Agency de R$9.990 segue CONFIRMED sob bloqueio,
 sem ativar plano/créditos; liquidação desse valor pendente. Conta comum isolada,
 founder inalterado, leitura cruzada 404 e sessões de teste revogadas.
 [Evidências](docs/ASAAS_EXTENDED_SANDBOX_RESULTS.json) e
 [procedimento de retomada](docs/ASAAS_EXTENDED_SANDBOX.md).
-Próximo checkpoint: autorizar refund PIX e conferir DONE/reversão de 250 créditos;
-depois obter simulação de chargeback no suporte. Homologação completa permanece
+Próximo checkpoint: diagnosticar o cancelamento do refund PIX e obter do suporte
+a simulação de chargeback; somente DONE permite validar a reversão de créditos. Homologação completa permanece
 aberta; sem certificação de produção ou promoção da maturidade geral.
 
 **Asaas sandbox real — 08/10/2026:** Campanhas e Academy concluíram checkout

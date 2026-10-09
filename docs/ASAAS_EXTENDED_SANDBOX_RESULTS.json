@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-08T23:39:18.274Z",
+  "checkedAt": "2026-10-09T00:39:39.875Z",
   "startedAt": "2026-10-08T23:26:46.721Z",
   "environment": "Asaas sandbox + Supabase homologation",
   "scope": "Public authenticated billing checkout, separate ordinary account/workspace, fictitious payer and official sandbox cards. No production calls or real money.",
@@ -33,12 +33,25 @@
     "originalCents": 8500,
     "requestedCents": 4250,
     "completedCents": 0,
-    "canonicalRefundStates": [
-      "AWAITING_CRITICAL_ACTION_AUTHORIZATION"
+    "canonicalRefundStates": [],
+    "historicalRefunds": [
+      {
+        "status": "CANCELLED",
+        "amountCents": 4250
+      },
+      {
+        "status": "CANCELLED",
+        "amountCents": 8500
+      },
+      {
+        "status": "CANCELLED",
+        "amountCents": 4250
+      }
     ],
+    "criticalAuthorizationPerformed": true,
     "expectedCreditsReversed": 250,
     "actualCreditsReversed": 0,
-    "result": "PENDING critical authorization; no premature credit reversal"
+    "result": "BLOCKED provider CANCELLED after critical authorization; no premature credit reversal"
   },
   "cardPartial": {
     "requestedCents": 4399,
@@ -70,7 +83,9 @@
     "localStatus": "paid",
     "support": "integracoes@asaas.com.br",
     "draftPrepared": true,
-    "messageSent": false,
+    "messageSent": true,
+    "sentAt": "2026-10-09T00:38:27.304Z",
+    "authorizedByUser": true,
     "expected": "Block/reverse the original 500 credits once on hold; restore once on canonical recovery"
   },
   "precautionaryPix": {
@@ -119,6 +134,7 @@
     ]
   },
   "remaining": [
+    "PIX partial refund cancelled after authorization: provider diagnosis required",
     "Provider chargeback simulation and recovery",
     "Partial credit card refund after the provider next-day restriction",
     "PIX plan under precautionary hold: wait for RECEIVED/REFUNDED",

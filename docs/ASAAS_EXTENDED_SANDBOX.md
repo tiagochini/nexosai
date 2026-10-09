@@ -9,9 +9,9 @@ dinheiro real nem credenciais de produção. A homologação completa permanece 
 | PIX de R$85 / pack de 500 | Emissão pela API pública, QR Code, confirmação no painel, GET canônico `RECEIVED`, callback real e uma concessão de 500 créditos | Passou |
 | Boleto de R$85 / pack de 500 | Emissão pela API pública, linha digitável, confirmação no painel, GET canônico `RECEIVED`, callback real e uma concessão de 500 créditos | Passou |
 | Cartão rejeitado para plano e pack | Cartões oficiais de rejeição; HTTP 400 com mensagem; nenhuma linha de pagamento e nenhum benefício novo | Passou |
-| Estorno parcial PIX de R$42,50 | Solicitação aceita; refund canônico `AWAITING_CRITICAL_ACTION_AUTHORIZATION`; nenhuma reversão antecipada de créditos | Aguarda autorização crítica |
+| Estorno parcial PIX de R$42,50 | Autorização crítica executada após aprovação humana; histórico canônico `CANCELLED`, inclusive na única retentativa; nenhum refund `DONE` e nenhuma reversão de créditos | Bloqueado pelo provider; motivo não retornado |
 | Estorno parcial de cartão | Asaas retornou HTTP 400 `invalid_action`: disponível somente no próximo dia | Repetir a partir de 09/10/2026 |
-| Chargeback de pack | Cobrança fictícia aprovada e rascunho de solicitação preparados | Aguarda simulação pelo suporte Asaas |
+| Chargeback de pack | Solicitação aprovada pelo usuário enviada a `integracoes@asaas.com.br`; compositor confirmou “Mensagem enviada”; cobrança ainda `CONFIRMED` | Aguarda simulação pelo suporte Asaas |
 | PIX de R$9.990 / plano Agency | Painel produziu `CONFIRMED` com repasse futuro; plano permanece Solo, sem créditos adicionais | Proteção passou; liquidação desse plano ainda pendente |
 
 O teste encontrou e corrigiu a falta de CPF/CNPJ no checkout de PIX/boleto.
@@ -38,17 +38,17 @@ O journal e as credenciais ficam somente em arquivos ignorados `.local`.
 Consultar `node .local/asaas-advanced-journey.mjs inspect` antes de qualquer
 mutação. Não solicitar outro refund enquanto existir um pendente.
 
-1. Autorizar no painel sandbox somente o evento de reembolso PIX de R$42,50
-   da conta fictícia identificada no journal. O código oficial de sandbox é
-   `000000`; não alterar configurações de segurança ou usar esse código em produção.
-2. Esperar refund `DONE`, conferir reversão de 250 créditos, saldo 2.650 e
+1. Diagnosticar com o Asaas o cancelamento do refund PIX após autorização.
+   A retentativa também terminou `CANCELLED`; não repetir indefinidamente.
+   O histórico não retornou motivo. Saldo preservado: 2.900 créditos.
+2. Após resolver o bloqueio, esperar refund `DONE`, conferir reversão de 250 créditos, saldo 2.650 e
    pagamento ainda `paid`. Repetir eventos autenticados e conferir saldo/ledger
    inalterados. A solicitação aceita e o rótulo do painel não bastam como prova.
 3. Repetir estorno parcial de cartão somente após a restrição de próximo dia.
    Cobrança de R$87,98; parcial R$43,99; reversão esperada de 250 créditos.
-4. Revisar o rascunho privado `.local/asaas-chargeback-support-draft.md` e obter
-   autorização humana explícita antes de enviá-lo a `integracoes@asaas.com.br`.
-   O Asaas solicita o ID da cobrança para simular o fluxo; não enviar tokens/chaves.
+4. A solicitação de chargeback já foi enviada com autorização humana explícita.
+   Aguardar resposta do suporte; não reenviar o mesmo pedido. Comprovante privado:
+   `.local/asaas-chargeback-request-sent.jpg`. Nenhuma chave/token foi enviada.
 5. Nas etapas aplicadas pelo Asaas, conferir o GET canônico e o webhook real:
    hold remove os 500 créditos originais uma vez; recuperação restaura uma vez.
    Conferir isolamento, replays e ledger e atualizar as evidências.

@@ -120,9 +120,10 @@ desenvolvimento e regressões em PostgreSQL local/Docker. As evidências remotas
   **Ampliação em 08/10/2026:** PIX e boleto de R$85 chegaram a `RECEIVED` e
   liberaram 500 créditos cada, uma vez, com webhook real; cartões rejeitados de
   plano e pack retornaram 400 sem criar pagamento/benefícios. CPF/CNPJ ausente no
-  checkout foi corrigido. Estorno parcial PIX de R$42,50 aguarda autorização
-  crítica; parcial de cartão foi recusado até o próximo dia. Chargeback depende
-  de simulação pelo suporte; cobrança e rascunho privados preparados. PIX Agency
+  checkout foi corrigido. Estorno parcial PIX de R$42,50 autorizado, mas cancelado
+  pelo provider, inclusive na única retentativa; sem reversão antecipada. Parcial
+  de cartão foi recusado até o próximo dia. Solicitação de chargeback enviada
+  ao suporte com autorização humana; simulação externa ainda pendente. PIX Agency
   sob bloqueio segue `CONFIRMED`, sem ativação antecipada. Envio efetivo do e-mail
   Academy ainda pendente. Não marcar homologação completa antes de conferir os
   estados canônicos e benefícios das etapas restantes.
