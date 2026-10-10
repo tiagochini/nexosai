@@ -1,15 +1,16 @@
 # NexOS — Checklist Canônico de Construção
 
-**Homologação Instagram founder — 09/10/2026:** @agencianexosai autorizado
-para posts e @professorbruceallan para DM/comentário mapa. Supabase e readiness
-autenticado confirmam ausência de integração no workspace founder. Redis isolado
-restaurado; saúde/readiness/login públicos HTTP 200. Permissão de mensagens
-alinhada ao Facebook Login (instagram_manage_messages) nos dois fluxos OAuth
-e na lista de análise. Tipos API passaram; URLs reais Instagram/Facebook
-verificadas com escopo correto. Nenhum post/DM real enviado.
-[Evidência](docs/INSTAGRAM_HOMOLOGATION_RESULTS.json). Próximo checkpoint:
-concluir OAuth no founder e conferir o vínculo de @agencianexosai antes dos
-testes reais. Navegador automatizado indisponível; consentimento externo pendente.
+**Homologação Instagram founder — 09/10/2026:** @agencianexosai conectado e
+verificado no workspace founder. Post autorizado publicado pelo NexOS com ID
+18121984933902161 e consulta independente confirmando o permalink. Aplicativo
+Meta com assinatura Instagram comments/messages/messaging_postbacks ativa e
+instalado na Página vinculada. Duas DMs reais recebidas, encaminhadas para humano
+por ausência de campanha aprovada. MAPA respondido publicamente por sincronização
+manual de comentários reais, sem duplicar no replay; resposta privada confirmada pela Meta.
+Regra limitada ao post de teste. Tipos, contratos de publicação e cinco regressões
+em Docker isolado passaram. [Evidência](docs/INSTAGRAM_HOMOLOGATION_RESULTS.json).
+Próximo checkpoint: comprovar callback autônomo de comentário e resposta de DM
+com campanha/flow aprovado. Nenhum push executado.
 
 **Conferência financeira e webhooks — 09/10/2026:** consulta somente leitura
 confirmou cadeia do ledger 900 → 1.400 → 1.900 → 2.400 → 2.900, quatro concessões

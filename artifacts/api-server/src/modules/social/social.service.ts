@@ -1154,7 +1154,11 @@ export async function publishPost(workspaceId: string, postId: string): Promise<
   // publish a post belonging to another workspace.
   const post = await getPost(workspaceId, postId);
   const approvedDossier = post.campaignId ? await getApprovedMasterplan(workspaceId, post.campaignId) : undefined;
-  if (!matchesApprovedDossier(approvedDossier, post)) {
+  // Manual standalone posts use the authenticated publish action. Any retained
+  // campaign/content binding still requires the approved dossier, even if a
+  // caller removed campaignId from a stale row.
+  const hasCampaignBinding = Boolean(post.campaignId || post.contentPieceId || post.masterplanVersionId || post.contextFingerprint);
+  if (hasCampaignBinding && !matchesApprovedDossier(approvedDossier, post)) {
     throw new AppError(409, "Social post dossier is stale or no longer approved; regenerate it from the current dossier", "MASTERPLAN_CONTEXT_MISMATCH");
   }
   // Campaign publications are only valid when they still point at the

@@ -52,6 +52,8 @@ export interface ModerationConfig {
   enableInstagramPrivateReplies: boolean;
   /** Explicit keyword -> deterministic first response map (no AI in webhook path). */
   immediateKeywordReplies: Record<string, string>;
+  /** Optional provider media IDs limiting deterministic keyword replies. */
+  immediateKeywordReplyPostIds: string[];
 }
 
 export const DEFAULT_CONFIG: ModerationConfig = {
@@ -67,6 +69,7 @@ export const DEFAULT_CONFIG: ModerationConfig = {
   ignoredAuthors: [],
   enableInstagramPrivateReplies: false,
   immediateKeywordReplies: {},
+  immediateKeywordReplyPostIds: [],
 };
 
 // ─── Meta Graph API helper ─────────────────────────────────────────────────
@@ -277,17 +280,24 @@ export async function replyPrivatelyToInstagramComment(
   commentId: string,
   replyText: string,
   accessToken: string,
+  igAccountId: string,
   evidenceId?: string,
 ): Promise<{ id: string | null; error: string | null }> {
   try {
-    if (evidenceId) await recordMetaSendStarted(evidenceId, `/${commentId}/private_replies`, { message: replyText });
-    // Official Instagram Graph API operation: POST /{ig-comment-id}/private_replies.
-    const res = await metaGraph<{ id: string }>(`/${commentId}/private_replies`, {
+    if (!igAccountId) throw new Error("Instagram account is required for a private comment reply");
+    // Facebook Login supplies a Page token. Meta's Instagram sample uses
+    // /me/messages so the Send API resolves that Page token's identity.
+    const endpoint = "/me/messages";
+    const message = { recipient: { comment_id: commentId }, message: { text: replyText } };
+    if (evidenceId) await recordMetaSendStarted(evidenceId, endpoint, message);
+    const res = await metaGraph<{ message_id?: string; id?: string }>(endpoint, {
       method: "POST",
-      body: JSON.stringify({ message: replyText, access_token: accessToken }),
+      body: JSON.stringify({ ...message, access_token: accessToken }),
     });
-    if (evidenceId) await recordMetaSendResult(evidenceId, { providerResponse: res, providerMessageId: res.id });
-    return { id: res.id, error: null };
+    const messageId = res.message_id ?? res.id;
+    if (!messageId) throw new Error("Meta private reply returned no message receipt");
+    if (evidenceId) await recordMetaSendResult(evidenceId, { providerResponse: res, providerMessageId: messageId });
+    return { id: messageId, error: null };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
     if (evidenceId) await recordMetaSendResult(evidenceId, { error });
@@ -315,7 +325,8 @@ export async function likeComment(
 
 export async function fetchPostComments(
   postId: string,
-  accessToken: string
+  accessToken: string,
+  platform: CommentPlatform = "facebook_page"
 ): Promise<
   Array<{
     id: string;
@@ -330,18 +341,23 @@ export async function fetchPostComments(
       data: Array<{
         id: string;
         message: string;
-        from?: { name: string; id: string };
+        text?: string;
+        from?: { name: string; id: string; username?: string };
         parent?: { id: string };
         timestamp: string;
       }>;
     }>(`/${postId}/comments`, {
       params: {
-        fields: "id,message,from,timestamp,parent",
+        fields: platform === "instagram" ? "id,text,from,timestamp" : "id,message,from,timestamp,parent",
         access_token: accessToken,
         limit: "100",
       },
     });
-    return res.data ?? [];
+    return (res.data ?? []).map(comment => ({
+      ...comment,
+      message: platform === "instagram" ? comment.text ?? "" : comment.message,
+      from: comment.from ? { id: comment.from.id, name: comment.from.username ?? comment.from.name } : undefined,
+    }));
   } catch (err) {
     logger.error({ err, postId }, "Failed to fetch comments");
     return [];
@@ -481,9 +497,11 @@ export async function processIncomingComment(opts: {
   // Skip ignored authors
   if (config.ignoredAuthors.includes(authorId)) return;
 
-  const immediateReply = Object.entries(config.immediateKeywordReplies).find(([keyword]) =>
+  const keywordPostAllowed = Array.isArray(config.immediateKeywordReplyPostIds) &&
+    (config.immediateKeywordReplyPostIds.length === 0 || config.immediateKeywordReplyPostIds.includes(postId));
+  const immediateReply = keywordPostAllowed ? Object.entries(config.immediateKeywordReplies).find(([keyword]) =>
     keyword.trim() && commentText.toLocaleLowerCase().includes(keyword.toLocaleLowerCase()),
-  )?.[1]?.trim();
+  )?.[1]?.trim() : undefined;
   if (immediateReply) {
     const publicReplyId = await replyToComment(commentId, immediateReply, accessToken, eventClaim.id);
     let privateReply: Record<string, unknown> | null = null;
@@ -493,7 +511,7 @@ export async function processIncomingComment(opts: {
         eventType: "instagram_comment", actionKey: "private_reply",
       });
       privateReply = privateClaim.claimed
-        ? await replyPrivatelyToInstagramComment(commentId, immediateReply, accessToken, privateClaim.id)
+        ? await replyPrivatelyToInstagramComment(commentId, immediateReply, accessToken, accountId, privateClaim.id)
         : { error: "already_claimed" };
     }
     await db.insert(socialCommentActionsTable).values({
@@ -563,7 +581,7 @@ export async function processIncomingComment(opts: {
         if (platform === "instagram" && config.enableInstagramPrivateReplies) {
           const privateClaim = await claimMetaWebhookEvent({ workspaceId, integrationId, accountId, providerEventId: commentId, eventType: "instagram_comment", actionKey: "private_reply" });
           privateReply = privateClaim.claimed
-            ? { attempted: true, ...(await replyPrivatelyToInstagramComment(commentId, aiReply, accessToken, privateClaim.id)) }
+            ? { attempted: true, ...(await replyPrivatelyToInstagramComment(commentId, aiReply, accessToken, accountId, privateClaim.id)) }
             : { attempted: false, id: null, error: "already_claimed" };
           if (privateReply.error) error = `Private reply failed: ${privateReply.error}`;
         }
@@ -585,7 +603,7 @@ export async function processIncomingComment(opts: {
         if (platform === "instagram" && config.enableInstagramPrivateReplies) {
           const privateClaim = await claimMetaWebhookEvent({ workspaceId, integrationId, accountId, providerEventId: commentId, eventType: "instagram_comment", actionKey: "private_reply" });
           privateReply = privateClaim.claimed
-            ? { attempted: true, ...(await replyPrivatelyToInstagramComment(commentId, aiReply, accessToken, privateClaim.id)) }
+            ? { attempted: true, ...(await replyPrivatelyToInstagramComment(commentId, aiReply, accessToken, accountId, privateClaim.id)) }
             : { attempted: false, id: null, error: "already_claimed" };
           if (privateReply.error) error = `Private reply failed: ${privateReply.error}`;
         }
@@ -606,7 +624,7 @@ export async function processIncomingComment(opts: {
         if (platform === "instagram" && config.enableInstagramPrivateReplies) {
           const privateClaim = await claimMetaWebhookEvent({ workspaceId, integrationId, accountId, providerEventId: commentId, eventType: "instagram_comment", actionKey: "private_reply" });
           privateReply = privateClaim.claimed
-            ? { attempted: true, ...(await replyPrivatelyToInstagramComment(commentId, aiReply, accessToken, privateClaim.id)) }
+            ? { attempted: true, ...(await replyPrivatelyToInstagramComment(commentId, aiReply, accessToken, accountId, privateClaim.id)) }
             : { attempted: false, id: null, error: "already_claimed" };
           if (privateReply.error) error = `Private reply failed: ${privateReply.error}`;
         }
@@ -710,7 +728,7 @@ export async function syncPostComments(opts: {
   campaignId?: string;
 }): Promise<{ processed: number; skipped: number }> {
   const { workspaceId, integrationId, accountId, postId, platform, accessToken, campaignId } = opts;
-  const comments = await fetchPostComments(postId, accessToken);
+  const comments = await fetchPostComments(postId, accessToken, platform);
 
   let processed = 0;
   let skipped = 0;

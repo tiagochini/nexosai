@@ -59,8 +59,8 @@ assert.equal(h.graphCalls.length, 1, "duplicate webhook sends exactly once");
 assert.equal(h.graphCalls[0]!.token, "token-B", "multi-account chooses exact account token");
 
 assert.equal(await h.send("ig-a", "comment-1", "public_reply", "/comment-1/replies", { message: "Resposta pública" }), "sent");
-assert.equal(await h.send("ig-a", "comment-1", "private_reply", "/comment-1/private_replies", { message: "Resposta privada" }), "sent");
-assert.equal(h.graphCalls.at(-1)?.endpoint, "/comment-1/private_replies", "official private reply endpoint");
+assert.equal(await h.send("ig-a", "comment-1", "private_reply", "/me/messages", { recipient: { comment_id: "comment-1" }, message: { text: "Resposta privada" } }), "sent");
+assert.equal(h.graphCalls.at(-1)?.endpoint, "/me/messages", "Facebook Login private reply resolves the Page token identity");
 
 const started = Date.now();
 assert.equal(await h.send("ig-a", "mid-immediate", "sequence_trigger", "/ig-a/messages", { message: "Resposta configurada" }), "sent");

@@ -8,20 +8,30 @@ import { metaGraphFetch } from "../../lib/meta-graph.transport.js";
 import { isOrganicSocialIntegration } from "../integrations/integration-purpose.js";
 
 export const META_INSTAGRAM_WEBHOOK_FIELDS = [
-  "comments",
-  "messages",
-  "messaging_postbacks",
+  "feed",
 ] as const;
 
+export function resolveInstagramWebhookPageId(metadata: Record<string, unknown> | null): string {
+  // Facebook Login stores a Page token, not an Instagram Login token. Both
+  // callback implementations persist the linked Page under these legacy keys.
+  const pageId = metadata?.pageId ?? metadata?.accountId;
+  if (typeof pageId !== "string" || !pageId.trim()) {
+    throw new AppError(409, "Reconnect Instagram with Facebook Login to resolve its linked Page", "META_WEBHOOK_PAGE_REQUIRED");
+  }
+  return pageId;
+}
+
 /**
- * Subscribe one connected Instagram professional account to this Meta app.
+ * Subscribe the linked Page for a Facebook Login Instagram integration.
+ * Instagram comments/messages are configured on the app's Instagram object;
+ * Page messages are Messenger and require a separate pages_messaging grant.
  * This changes provider state, so callers must opt in explicitly.
  */
 export async function ensureInstagramWebhookSubscription(
-  accountId: string,
+  pageId: string,
   accessToken: string,
 ): Promise<void> {
-  const response = await metaGraphFetch(metaGraphUrl(`${accountId}/subscribed_apps`), {
+  const response = await metaGraphFetch(metaGraphUrl(`${pageId}/subscribed_apps`), {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -71,7 +81,7 @@ export async function reconcileInstagramWebhookSubscriptions(): Promise<{
       continue;
     }
     try {
-      await ensureInstagramWebhookSubscription(integration.accountId, integration.accessToken);
+      await ensureInstagramWebhookSubscription(resolveInstagramWebhookPageId(integration.metadata as Record<string, unknown> | null), integration.accessToken);
       subscribed += 1;
       logger.info(
         { accountId: integration.accountId, fields: META_INSTAGRAM_WEBHOOK_FIELDS },

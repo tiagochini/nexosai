@@ -1,27 +1,17 @@
 {
-  "checkedAt": "2026-10-10T02:59:20.156Z",
+  "checkedAt": "2026-10-10T03:46:32.204Z",
   "publisher": "agencianexosai",
   "tester": "professorbruceallan",
   "workspace": "founder",
-  "health": {
-    "/api/healthz": 200,
-    "/api/readyz": 200
-  },
-  "oauth": [
+  "accounts": [
     {
+      "id": "b887461b-916a-4e3f-9372-c8428b3fc260",
       "provider": "instagram",
-      "host": "www.facebook.com",
-      "messagingScope": "instagram_manage_messages",
-      "mixedLoginScopes": false
-    },
-    {
-      "provider": "facebook",
-      "host": "www.facebook.com",
-      "messagingScope": "instagram_manage_messages",
-      "mixedLoginScopes": false
+      "accountId": "17841448570547453",
+      "accountName": "@agencianexosai",
+      "status": "connected"
     }
   ],
-  "accounts": [],
   "checks": [
     {
       "key": "meta_app",
@@ -44,8 +34,8 @@
     {
       "key": "instagram",
       "label": "Professional Instagram account connected",
-      "status": "fail",
-      "detail": "Connect the review Instagram account."
+      "status": "pass",
+      "detail": "At least one connected organic Instagram account is available."
     },
     {
       "key": "facebook",
@@ -56,8 +46,8 @@
     {
       "key": "provider_evidence",
       "label": "Real Meta callback and send evidence",
-      "status": "fail",
-      "detail": "Run a real comment or DM test before recording."
+      "status": "pass",
+      "detail": "A successful provider event is available for recording."
     },
     {
       "key": "conversation_evidence",
@@ -66,9 +56,130 @@
       "detail": "Run a contextual comment or DM test."
     }
   ],
+  "publication": {
+    "status": "published",
+    "providerId": "18121984933902161",
+    "url": "https://www.instagram.com/p/DeTIE6-DjHT/",
+    "independentReadback": true
+  },
+  "webhook": {
+    "callback": "https://agencianexos.vip/api/social-moderation/webhooks/meta",
+    "appSubscriptions": [
+      {
+        "object": "instagram",
+        "active": true,
+        "fields": [
+          "comments",
+          "messages",
+          "messaging_postbacks"
+        ]
+      },
+      {
+        "object": "user",
+        "active": true
+      }
+    ],
+    "pageSubscriptions": [
+      {
+        "appId": "1072027685788533",
+        "fields": [
+          "feed"
+        ]
+      }
+    ]
+  },
+  "localValidation": {
+    "typecheck": "PASS",
+    "publishBoundary": "PASS",
+    "isolatedDocker": [
+      {
+        "test": "test-social-post-ownership",
+        "status": "PASS"
+      },
+      {
+        "test": "test-social-publication-governance",
+        "status": "PASS"
+      },
+      {
+        "test": "test-meta-webhook-routing",
+        "status": "PASS"
+      },
+      {
+        "test": "test-mapa-comment-db",
+        "status": "PASS"
+      },
+      {
+        "test": "test-social-comment-reader",
+        "status": "PASS"
+      }
+    ]
+  },
   "externalTests": {
-    "post": "BLOCKED account not connected",
-    "message": "BLOCKED account not connected",
-    "mapaComment": "BLOCKED account not connected"
-  }
+    "post": "PASS real provider publication and independent readback",
+    "incomingDm": {
+      "received": 2,
+      "decision": "human_handoff",
+      "reason": "campaign_not_resolved"
+    },
+    "mapaComment": {
+      "source": "authenticated manual sync of real Meta comments; autonomous comment webhook not yet evidenced",
+      "publicReplies": [
+        {
+          "commentId": "18135091507637453",
+          "responseId": "17862982371695376"
+        },
+        {
+          "commentId": "17950048644297863",
+          "responseId": "18135399502730315"
+        },
+        {
+          "commentId": "18111605306172992",
+          "responseId": "17926611888420887"
+        },
+        {
+          "commentId": "18072834263741674",
+          "responseId": "18148751968513442"
+        }
+      ],
+      "privateReplies": [
+        {
+          "commentId": "18135091507637453",
+          "status": "sent",
+          "hasReceipt": true,
+          "error": null
+        },
+        {
+          "commentId": "18135091507637453",
+          "status": "dead_letter",
+          "hasReceipt": false,
+          "error": "(#3) Application does not have the capability to make this API call."
+        },
+        {
+          "commentId": "17950048644297863",
+          "status": "dead_letter",
+          "hasReceipt": false,
+          "error": "(#3) Application does not have the capability to make this API call."
+        },
+        {
+          "commentId": "18111605306172992",
+          "status": "dead_letter",
+          "hasReceipt": false,
+          "error": "Unsupported post request. Object with ID '18111605306172992' does not exist, cannot be loaded due to missing permissions, or does not support this operation. Please read the Graph API documentation at https://developers.facebook.com/docs/graph-api"
+        },
+        {
+          "commentId": "18072834263741674",
+          "status": "dead_letter",
+          "hasReceipt": false,
+          "error": "Unsupported post request. Object with ID '18072834263741674' does not exist, cannot be loaded due to missing permissions, or does not support this operation. Please read the Graph API documentation at https://developers.facebook.com/docs/graph-api"
+        }
+      ],
+      "scope": "only provider media 18121984933902161",
+      "repeatSync": "no duplicate sends observed"
+    }
+  },
+  "remaining": [
+    "Prove autonomous delivery of a real comment webhook",
+    "Bind an approved campaign/flow to prove contextual free-form DM response"
+  ],
+  "pushPerformed": false
 }

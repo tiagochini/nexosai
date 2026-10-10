@@ -12,7 +12,7 @@ import {
   type IntegrationPurpose,
 } from "./integration-purpose.js";
 import { assertSocialAccountEntitlement } from "../auth/workspace-entitlements.service.js";
-import { ensureInstagramWebhookSubscription } from "../social/meta-webhook-subscription.service.js";
+import { ensureInstagramWebhookSubscription, resolveInstagramWebhookPageId, META_INSTAGRAM_WEBHOOK_FIELDS } from "../social/meta-webhook-subscription.service.js";
 
 const router = Router();
 
@@ -448,6 +448,7 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
 
         metadataExtra = {
           accountId: pageWithIg.id,          // Facebook Page ID — usado para posting
+          pageId: pageWithIg.id,
           accountName: pageWithIg.name,       // Nome da Página Facebook
           igAccountId: igAccountId,           // Instagram Business Account ID
           userId: me.id,                      // ID pessoal do FB
@@ -695,7 +696,7 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
     // without losing the connected account.
     if (provider === "instagram" && env.META_WEBHOOK_AUTO_SUBSCRIBE && accountId && accessToken) {
       try {
-        await ensureInstagramWebhookSubscription(accountId, accessToken);
+        await ensureInstagramWebhookSubscription(resolveInstagramWebhookPageId(metadata), accessToken);
         logger.info({ workspaceId: stateData.workspaceId, accountId }, "Instagram webhook subscription verified after OAuth");
       } catch (error) {
         logger.warn(
@@ -771,12 +772,12 @@ router.post("/meta-webhook-subscriptions/:integrationId", requireAuth, async (re
   }
 
   try {
-    await ensureInstagramWebhookSubscription(integration.accountId, integration.accessToken);
+    await ensureInstagramWebhookSubscription(resolveInstagramWebhookPageId(integration.metadata as Record<string, unknown> | null), integration.accessToken);
     res.json({
       ok: true,
       integrationId: integration.id,
       accountId: integration.accountId,
-      fields: ["comments", "messages", "messaging_postbacks"],
+      fields: META_INSTAGRAM_WEBHOOK_FIELDS,
     });
   } catch (error) {
     logger.warn(

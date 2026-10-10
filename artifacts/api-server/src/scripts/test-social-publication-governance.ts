@@ -9,6 +9,7 @@ import { AppError, NotFoundError } from "../lib/errors.js";
 import { getMetaE2eGraphCalls, resetMetaE2eGraphCalls } from "../lib/meta-graph.transport.js";
 import { getCampaignPublishPreview, publishCampaignContentPiece, publishPost, schedulePostsForCampaign, syncPostMetrics } from "../modules/social/social.service.js";
 import { cleanupE2eFixtures, markerFromSuffix, seedE2eFixtures } from "./e2e-fixtures.js";
+import { ensureInstagramWebhookSubscription, resolveInstagramWebhookPageId } from "../modules/social/meta-webhook-subscription.service.js";
 
 if (process.env["META_E2E_TEST_MODE"] !== "true" || process.env["NODE_ENV"] === "production") {
   throw new Error("Run with NODE_ENV=test META_E2E_TEST_MODE=true");
@@ -22,6 +23,14 @@ const ownedIntegration = manifest.integrations[2]!;
 const createdPosts: string[] = [];
 let campaignId: string | undefined;
 try {
+  assert.equal(resolveInstagramWebhookPageId({ pageId: "page-current", accountId: "page-legacy" }), "page-current");
+  assert.equal(resolveInstagramWebhookPageId({ accountId: "page-legacy" }), "page-legacy");
+  assert.throws(() => resolveInstagramWebhookPageId({ igAccountId: "instagram-only" }), (error: unknown) => error instanceof AppError && error.code === "META_WEBHOOK_PAGE_REQUIRED");
+  resetMetaE2eGraphCalls();
+  await ensureInstagramWebhookSubscription("linked-page", "E2E_DUMMY_PAGE_TOKEN");
+  const subscription = getMetaE2eGraphCalls()[0]!;
+  assert.match(subscription.path, /\/linked-page\/subscribed_apps$/);
+  assert.equal((subscription.body as Record<string, unknown>).subscribed_fields, "feed");
   const [campaign] = await db.insert(campaignsTable).values({
     workspaceId: workspace, title: `${marker} campaign`, status: "approved",
   }).returning();

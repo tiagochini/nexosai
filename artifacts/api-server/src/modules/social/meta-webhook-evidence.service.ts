@@ -135,7 +135,10 @@ export async function replayDueMetaWebhookEvents(): Promise<void> {
   for (const event of events) {
     try {
       if (!event.outboundEndpoint) throw new Error("Retry event has no outbound endpoint");
+      if (!event.integrationId || !event.workspaceId) throw new Error("Retry event has no tenant/integration binding");
       const rows = await db.select().from(workspaceIntegrationsTable).where(and(
+        eq(workspaceIntegrationsTable.id, event.integrationId),
+        eq(workspaceIntegrationsTable.workspaceId, event.workspaceId),
         eq(workspaceIntegrationsTable.accountId, event.accountId),
         eq(workspaceIntegrationsTable.status, "connected"),
       )).limit(1);
@@ -153,9 +156,9 @@ export async function replayDueMetaWebhookEvents(): Promise<void> {
         body: JSON.stringify({ ...payload, access_token: integration.accessToken }),
         signal: AbortSignal.timeout(10_000),
       });
-      const data = await response.json().catch(() => ({})) as { id?: string; error?: { message?: string } };
+      const data = await response.json().catch(() => ({})) as { id?: string; message_id?: string; error?: { message?: string } };
       if (!response.ok || data.error) throw new Error(data.error?.message ?? `Meta API ${response.status}`);
-      await recordMetaSendResult(event.id, { providerResponse: data, providerMessageId: data.id });
+      await recordMetaSendResult(event.id, { providerResponse: data, providerMessageId: data.message_id ?? data.id });
       sent++;
     } catch (error) {
       failed++;

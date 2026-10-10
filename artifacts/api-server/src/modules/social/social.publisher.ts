@@ -192,7 +192,8 @@ export async function probeSocialIntegration(
   if (!integration.accessToken || !integration.accountId) return { ok: false, error: "integration_credentials_missing" };
   if (platform === "instagram" || platform === "facebook_page") {
     const metadata = (integration.metadata ?? {}) as Record<string, unknown>;
-    const pageId = typeof metadata.pageId === "string" ? metadata.pageId : undefined;
+    const storedPageId = metadata.pageId ?? metadata.accountId;
+    const pageId = typeof storedPageId === "string" ? storedPageId : undefined;
     const probeId = platform === "instagram" && pageId ? pageId : integration.accountId;
     const fields = platform === "instagram" && pageId ? "id,instagram_business_account" : "id";
     const response = await metaGraphFetch(
@@ -205,14 +206,28 @@ export async function probeSocialIntegration(
         return { ok: false, error: "integration_account_mismatch" };
       }
     }
+    if (platform === "instagram") {
+      // tasks is a /me/accounts user-token field, not an IG/Page object field.
+      // This read-only Instagram edge proves the connected account's access
+      // to content publishing without submitting a media container.
+      const quotaResponse = await metaGraphFetch(
+        `https://graph.facebook.com/v22.0/${encodeURIComponent(integration.accountId)}/content_publishing_limit?fields=quota_usage,config&access_token=${encodeURIComponent(integration.accessToken)}`,
+      );
+      if (!quotaResponse.ok) return { ok: false, statusCode: quotaResponse.status, error: "provider_permissions_unproven" };
+      const quota = await quotaResponse.json() as { data?: { quota_usage?: number; config?: { quota_total?: number } }[] };
+      const current = quota.data?.[0];
+      if (!current || !Number.isFinite(current.quota_usage) || !(Number(current.config?.quota_total) > 0)) {
+        return { ok: false, error: "provider_permissions_unproven" };
+      }
+      return { ok: true };
+    }
     const permissionsResponse = await metaGraphFetch(
       `https://graph.facebook.com/v22.0/${encodeURIComponent(pageId ?? integration.accountId!)}?fields=tasks&access_token=${encodeURIComponent(integration.accessToken)}`,
     );
     if (!permissionsResponse.ok) return { ok: false, statusCode: permissionsResponse.status, error: "provider_permissions_unproven" };
     const permissionsBody = await permissionsResponse.json() as { tasks?: string[] };
     const tasks = permissionsBody.tasks;
-    const required = platform === "instagram"
-      ? ["MANAGE"] : ["CREATE_CONTENT"];
+    const required = ["CREATE_CONTENT"];
     if (!tasks || required.some((name) => !tasks.some((task) => task.toUpperCase() === name))) {
       return { ok: false, error: "provider_permissions_unproven" };
     }

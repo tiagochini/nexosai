@@ -130,10 +130,11 @@ try {
    assert.deepEqual(preserved.metrics, baselineMetrics, "metrics provider failure must preserve cache");
 
   resetMetaE2eGraphCalls();
+  await db.update(socialPostsTable).set({ contextFingerprint: `${marker}:orphan` }).where(eq(socialPostsTable.id, publishTarget.id));
   await assert.rejects(() => publishPost(workspaceB, publishTarget.id), (error: unknown) =>
     error instanceof AppError && error.code === "MASTERPLAN_CONTEXT_MISMATCH",
   );
-  assert.equal(getMetaE2eGraphCalls().length, 0, "missing dossier must not reach Graph");
+  assert.equal(getMetaE2eGraphCalls().length, 0, "orphan campaign binding must not reach Graph");
   const confirmed = await db.select().from(executionEvidenceTable).where(and(
     eq(executionEvidenceTable.workspaceId, workspaceB),
     eq(executionEvidenceTable.subjectType, "social_post"),
@@ -141,6 +142,18 @@ try {
     eq(executionEvidenceTable.state, "provider_confirmed"),
   ));
   assert.equal(confirmed.length, 0, "rejected publication must not emit provider-confirmed evidence");
+
+  // The offline transport implements Facebook independent owner readback.
+  // Exercise standalone orchestration with that supported fake provider.
+  await db.update(workspaceIntegrationsTable).set({ provider: "meta_ads" }).where(eq(workspaceIntegrationsTable.id, integration.id));
+  await db.update(socialPostsTable).set({ contextFingerprint: null, platform: "facebook_page", postType: "text", mediaUrls: [] }).where(eq(socialPostsTable.id, publishTarget.id));
+  resetMetaE2eGraphCalls();
+  const manual = await publishPost(workspaceB, publishTarget.id);
+  assert.equal(manual.status, "published", "explicit standalone owner publication must reach independent readback");
+  assert.ok(getMetaE2eGraphCalls().length > 0);
+  const calls = getMetaE2eGraphCalls().length;
+  assert.equal((await publishPost(workspaceB, publishTarget.id)).platformPostId, manual.platformPostId);
+  assert.equal(getMetaE2eGraphCalls().length, calls, "repeating manual publication must not resend");
 
   console.log("social post workspace ownership integration test passed");
 } finally {
@@ -163,7 +176,14 @@ try {
       ));
     }
   } finally {
-    await cleanupE2eFixtures(manifest);
+    try {
+      await cleanupE2eFixtures(manifest);
+    } catch (error) {
+      // Successful sends create append-only evidence; its workspace cannot be
+      // cascade-deleted. The isolated container is removed by the harness.
+      const cause = error as { cause?: { message?: string } };
+      if (!cause.cause?.message?.includes("execution evidence is append-only")) throw error;
+    }
     await pool.end();
   }
 }

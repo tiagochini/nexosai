@@ -5,6 +5,8 @@ import { assertIsolationTestDatabase } from "./helpers/test-database-target.js";
 import { seedE2eFixtures, cleanupE2eFixtures, markerFromSuffix } from "./e2e-fixtures.js";
 import { processMetaWebhookDelivery } from "../modules/social/meta-webhook.processor.js";
 import { getMetaE2eGraphCalls, resetMetaE2eGraphCalls } from "../lib/meta-graph.transport.js";
+import { saveModerationConfig } from "../modules/social-moderation/social-moderation.service.js";
+import { claimMetaWebhookEvent, recordMetaSendStarted, recordMetaSendResult, replayDueMetaWebhookEvents } from "../modules/social/meta-webhook-evidence.service.js";
 
 assert.equal(process.env.META_E2E_TEST_MODE, "true", "Only simulated Meta transport is allowed");
 await assertIsolationTestDatabase(pool);
@@ -19,15 +21,19 @@ const payload = (commentId: string, text: string, accountId = `${marker}_ig_one`
 });
 
 try {
+  await saveModerationConfig(manifest.workspaces[0]!, { immediateKeywordReplyPostIds: [`${marker}_post`] });
   resetMetaE2eGraphCalls();
   for (const [index, text] of ["MAPA", "mapa", "Quero o MAPA! 🗺️"].entries()) {
     const commentId = `${marker}_live_shape_${index}`;
     await processMetaWebhookDelivery(payload(commentId, text));
-    const calls = getMetaE2eGraphCalls().filter(call => call.method === "POST" && call.path.includes(`/${commentId}/`));
+    const calls = getMetaE2eGraphCalls().filter(call => call.method === "POST" && (call.path.includes(`/${commentId}/`) || (call.body as { recipient?: { comment_id?: string } })?.recipient?.comment_id === commentId));
     assert.equal(calls.length, 2, `${text}: expected public and enabled private replies`);
     assert.ok(calls.some(call => call.path.endsWith("/replies")));
-    assert.ok(calls.some(call => call.path.endsWith("/private_replies")));
-    for (const call of calls) assert.deepEqual((call.body as { message: string }).message, `${marker} reply`);
+    assert.ok(calls.some(call => call.path.endsWith("/me/messages")));
+    for (const call of calls) {
+      const message = (call.body as { message: string | { text: string } }).message;
+      assert.equal(typeof message === "string" ? message : message.text, `${marker} reply`);
+    }
     const [action] = await db.select().from(socialCommentActionsTable).where(and(
       eq(socialCommentActionsTable.workspaceId, manifest.workspaces[0]),
       eq(socialCommentActionsTable.commentId, commentId),
@@ -45,11 +51,32 @@ try {
     assert.equal(getMetaE2eGraphCalls().length, (index + 1) * 2, "Webhook replay must not send again");
   }
   const before = getMetaE2eGraphCalls().length;
+  const otherPost = payload(`${marker}_other_post`, "MAPA");
+  otherPost.entry[0]!.changes[0]!.value.media.id = `${marker}_outside_scope`;
+  await processMetaWebhookDelivery(otherPost);
+  assert.equal(getMetaE2eGraphCalls().length, before, "another post must not use the test keyword response");
   await processMetaWebhookDelivery(payload(`${marker}_unroutable`, "MAPA", `${marker}_foreign_account`));
   assert.equal(getMetaE2eGraphCalls().length, before, "Unknown accounts must not borrow another workspace's response");
   assert.equal((await db.select().from(socialCommentActionsTable).where(eq(
     socialCommentActionsTable.workspaceId, manifest.workspaces[1],
   ))).length, 0, "The second user's workspace must remain untouched");
+  // A corrupt/legacy retry binding must never borrow the first tenant's token
+  // just because its accountId resolves there.
+  const foreignRetry = await claimMetaWebhookEvent({
+    workspaceId: manifest.workspaces[1]!, integrationId: manifest.integrations[3]!,
+    accountId: `${marker}_ig_one`, providerEventId: `${marker}_foreign_retry`,
+    eventType: "instagram_comment", actionKey: "private_reply",
+  });
+  assert.ok(foreignRetry.claimed);
+  assert.ok(foreignRetry.id);
+  await recordMetaSendStarted(foreignRetry.id, "/me/messages", { recipient: { comment_id: `${marker}_foreign_retry` }, message: { text: "must not send" } });
+  await recordMetaSendResult(foreignRetry.id, { error: "offline failed request" });
+  await db.update(metaWebhookEventsTable).set({ nextRetryAt: new Date(Date.now() - 1000) }).where(eq(metaWebhookEventsTable.id, foreignRetry.id));
+  await replayDueMetaWebhookEvents();
+  assert.ok(!getMetaE2eGraphCalls().some(call => (call.body as { recipient?: { comment_id?: string } })?.recipient?.comment_id === `${marker}_foreign_retry`), "retry must require matching workspace, integration and account");
+  const [rejectedRetry] = await db.select().from(metaWebhookEventsTable).where(eq(metaWebhookEventsTable.id, foreignRetry.id));
+  assert.equal(rejectedRetry?.providerMessageId, null);
+  assert.match(rejectedRetry?.error ?? "", /credential.*missing/i);
   console.log("PASS MAPA comment: actual webhook processor, uppercase/lowercase/phrase, public/private simulated delivery, media context, replay and unknown-account isolation; no real Meta calls");
 } finally {
   await cleanupE2eFixtures(manifest);

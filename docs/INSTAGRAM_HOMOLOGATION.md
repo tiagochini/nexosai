@@ -27,25 +27,48 @@ foi encerrada pelo logout normal (204).
 [Evidência sanitizada](./INSTAGRAM_HOMOLOGATION_RESULTS.json).
 [Referência Meta: permissões da Conversations API no Facebook Login](https://www.postman.com/meta/messenger-platform-api/folder/22794852-255610cd-47f5-4f4d-b3fa-71aec360be9a).
 
+## Resultado da jornada real
+
+Conexão founder e publicação aprovadas. [Post autorizado](https://www.instagram.com/p/DeTIE6-DjHT/), provider ID 18121984933902161. O NexOS publicou e confirmou por leitura independente. Token de Página, vínculo Page→IG e limite de publicação foram verificados no provider. Corrigidos: alias pageId/accountId do OAuth, consulta inválida de tasks no Instagram, publicação manual sem vínculo de campanha e campos text/username dos comentários. Aprovações e bindings de campanha continuam obrigatórios.
+
+Webhook público verificado pela Meta e objeto Instagram ativo para comments, messages e messaging_postbacks. Página vinculada instalada no aplicativo para feed; mensagens de Página são Messenger e exigem pages_messaging, distinto das permissões Instagram.
+
+Duas DMs reais chegaram ao workspace founder. A ausência de campanha aprovada produziu human_handoff/campaign_not_resolved; isso comprova recebimento e isolamento, não resposta contextual enviada.
+
+Comentários reais MAPA receberam resposta pública pelo sync autenticado. Repetição não enviou novamente. A regra determinística está limitada ao media ID do post de teste. O endpoint legado de private_replies falhou; foi corrigido para Send API com recipient.comment_id e recibo message_id. A nova resposta privada ainda está em validação. Tentativas anteriores falhas permanecem registradas.
+
+Testes locais com provedores simulados em PostgreSQL/Redis isolados: ownership, governance, webhook routing, MAPA (incluindo exclusão de outro post) e leitura Instagram/Facebook. Tipos e boundary contracts passaram. São evidências locais, separadas das chamadas reais.
+
+## Resultado da jornada real
+
+Conexão founder e publicação aprovadas. [Post autorizado](https://www.instagram.com/p/DeTIE6-DjHT/), provider ID 18121984933902161. O NexOS publicou e confirmou por leitura independente. Token de Página, vínculo Page→IG e limite de publicação foram verificados no provider. Corrigidos: alias pageId/accountId do OAuth, consulta inválida de tasks no Instagram, publicação manual sem vínculo de campanha e campos text/username dos comentários. Aprovações e bindings de campanha continuam obrigatórios.
+
+Webhook público verificado pela Meta e objeto Instagram ativo para comments, messages e messaging_postbacks. Página vinculada instalada no aplicativo para feed; mensagens de Página são Messenger e exigem pages_messaging, distinto das permissões Instagram.
+
+Duas DMs reais chegaram ao workspace founder. A ausência de campanha aprovada produziu human_handoff/campaign_not_resolved; isso comprova recebimento e isolamento, não resposta contextual enviada.
+
+Comentários reais MAPA receberam resposta pública pelo sync autenticado. Repetição não enviou novamente. A regra determinística está limitada ao media ID do post de teste. O endpoint legado de private_replies falhou; foi corrigido para Send API com recipient.comment_id e recibo message_id. A nova resposta privada ainda está em validação. Tentativas anteriores falhas permanecem registradas.
+
+Testes locais com provedores simulados em PostgreSQL/Redis isolados: ownership, governance, webhook routing, MAPA (incluindo exclusão de outro post) e leitura Instagram/Facebook. Tipos e boundary contracts passaram. São evidências locais, separadas das chamadas reais.
+
+## Resultado da jornada real
+
+Conexão founder e publicação aprovadas. [Post autorizado](https://www.instagram.com/p/DeTIE6-DjHT/), provider ID 18121984933902161. O NexOS publicou e confirmou por leitura independente. Token de Página, vínculo Page→IG e limite de publicação foram verificados no provider. Corrigidos: alias pageId/accountId do OAuth, consulta inválida de tasks no Instagram, publicação manual sem vínculo de campanha e campos text/username dos comentários. Aprovações e bindings de campanha continuam obrigatórios.
+
+Webhook público verificado pela Meta e objeto Instagram ativo para comments, messages e messaging_postbacks. Página vinculada instalada no aplicativo para feed; mensagens de Página são Messenger e exigem pages_messaging, distinto das permissões Instagram.
+
+Duas DMs reais chegaram ao workspace founder. A ausência de campanha aprovada produziu human_handoff/campaign_not_resolved; isso comprova recebimento e isolamento, não resposta contextual enviada.
+
+Comentários reais MAPA receberam resposta pública pelo sync autenticado. Repetição não enviou novamente. A regra determinística está limitada ao media ID do post de teste. O endpoint legado de private_replies falhou; foi corrigido para Send API com recipient.comment_id e recibo message_id. A nova resposta privada tem recibo real confirmado. Tentativas anteriores falhas permanecem registradas.
+
+Testes locais com provedores simulados em PostgreSQL/Redis isolados: ownership, governance, webhook routing, MAPA (incluindo exclusão de outro post) e leitura Instagram/Facebook. Tipos e boundary contracts passaram. São evidências locais, separadas das chamadas reais.
+
 ## Próximo checkpoint
 
-1. Entrar no NexOS com founder@nexos.ai e abrir Integrações → Instagram Business.
-   Concluir OAuth com a conta administradora da Página vinculada ao Instagram
-   profissional @agencianexosai. Conferir o nome/ID efetivamente salvo antes de
-   publicar: uma conta diferente não está autorizada para o post desta jornada.
-2. Confirmar assinatura do webhook, token válido e vínculo somente ao workspace
-   do founder. A ferramenta de controle do navegador estava indisponível; o
-   consentimento externo ainda precisa ser concluído na interface pelo usuário.
-3. Preparar/publicar o post autorizado “Teste de integração NexOS” pela rota
-   normal de produto, guardar ID/permalink e comprovar publicação no provider.
-4. Validar métricas e configurar a resposta `mapa` limitada à conta/post de teste.
-   @professorbruceallan envia o comentário e a DM; conferir callback real,
-   resposta pública/privada conforme configuração, IDs de envio e idempotência.
-   Não criar eventos falsos para representar chamadas Meta reais.
-5. Conferir os contadores no painel Meta e gravar a jornada quando concluída.
-   A família `instagram_business_*` corresponde a outro fluxo de login; o teste
-   do Facebook Login não deve ser registrado como prova dessa família.
+1. Comprovar entrega autônoma do callback de comentário. Sync manual de comentário real não encerra esse requisito.
+2. Vincular uma campanha/flow aprovado para demonstrar resposta contextual de DM; preservar encaminhamento humano quando falta contexto.
+3. Conferir contadores do painel Meta. Facebook Login não comprova as permissões instagram_business_* de Instagram Login.
 
-Maturidade: preparação de conexão corrigida e verificada; testes externos ainda
-bloqueados por ausência de conta conectada. Publicação do app e aprovações Meta
-não foram alteradas. Nenhum push executado.
+Nenhum push executado.
+
+Referência do fluxo Facebook Login: [exemplo oficial Instagram da Meta](https://github.com/fbsamples/original-coast-clothing-ig/blob/main/services/graph-api.js), com token de Página em `/me/messages` e instalação da Página em `/subscribed_apps` para `feed`. A resposta privada confirmada foi uma recuperação autorizada de comentário real, com claim separado; não representa callback autônomo de comentário nem resposta de IA a DM livre. As retentativas agora exigem workspace, integrationId e accountId correspondentes e aceitam recibos `message_id`.

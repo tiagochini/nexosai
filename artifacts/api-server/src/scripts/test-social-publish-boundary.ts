@@ -101,6 +101,20 @@ const tiktokIntegration = {
 } as WorkspaceIntegration;
 const originalFetch = globalThis.fetch;
 try {
+  const instagramProbePaths: string[] = [];
+  globalThis.fetch = (async (input: string | URL) => {
+    const url = new URL(input.toString()); instagramProbePaths.push(url.pathname);
+    if (url.pathname.endsWith("/content_publishing_limit")) return new Response(JSON.stringify({ data: [{ quota_usage: 0, config: { quota_total: 100 } }] }), { status: 200 });
+    return new Response(JSON.stringify(url.searchParams.get("fields") === "tasks"
+      ? { id: "linked-page", tasks: ["MANAGE"] }
+      : { id: "linked-page", instagram_business_account: { id: "ig-account" } }), { status: 200 });
+  }) as typeof fetch;
+  assert.deepEqual(await checkSocialCredentialReadiness("instagram", {
+    ...baseIntegration, metadata: { accountId: "linked-page" },
+  }), { ok: true });
+  assert.deepEqual(instagramProbePaths, ["/v22.0/linked-page", "/v22.0/ig-account/content_publishing_limit"], "legacy metadata must probe the linked Page and real IG publishing edge");
+  globalThis.fetch = (async () => new Response(JSON.stringify({ id: "linked-page", instagram_business_account: { id: "foreign-ig" } }), { status: 200 })) as typeof fetch;
+  assert.equal((await checkSocialCredentialReadiness("instagram", { ...baseIntegration, metadata: { accountId: "linked-page" } })).ok, false, "legacy alias must preserve account binding");
   globalThis.fetch = (async (input: string | URL) => {
     const url = input.toString();
     if (url.includes("/user/info/")) {
