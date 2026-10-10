@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-10",
+  "timezone": "America/Cuiaba",
+  "appId": "1072027685788533",
+  "callback": "https://agencianexos.vip/api/social-moderation/webhooks/meta",
+  "field": "comments",
+  "dashboardVersion": "v26.0",
+  "receivedAtLocal": "11:04:21",
+  "httpStatus": 200,
+  "responseTimeMs": 1,
+  "signatureValidated": true,
+  "sampleAccountId": "0",
+  "processing": "Ignored: sample account has no authorized workspace integration",
+  "outboundReplyAttempted": false,
+  "source": "User-provided Meta dashboard success screenshot and matching API runtime logs",
+  "realCommentWebhookDelivery": "PENDING",
+  "providerBlock": "Meta dashboard states unpublished apps receive dashboard test webhooks only; production data requires publication",
+  "nextCheckpoint": "Confirm app publication, then a new real MAPA comment without manual synchronization",
+  "pushPerformed": false
+}

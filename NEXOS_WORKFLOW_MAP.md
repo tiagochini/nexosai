@@ -8,8 +8,12 @@ via sincronização autenticada, repetida sem duplicações; callback automátic
 não observado. Tipos e cinco regressões Docker passaram, incluindo falha privada,
 fallback de nome, replay e isolamento. Saúde/prontidão públicas HTTP 200.
 [Evidência](docs/INSTAGRAM_MAPA_PUBLIC_READBACK.json).
-Próximo checkpoint: comprovar recebimento automático do webhook de comentário,
-sem sincronização manual. Nenhum push executado.
+Teste do painel Meta comments v26.0 recebido às 11:04:21 (America/Cuiaba),
+assinatura validada e HTTP 200 em 1 ms. Conta fictícia 0 ignorada sem envio.
+[Evidência do callback](docs/INSTAGRAM_WEBHOOK_DASHBOARD_TEST.json).
+Bloqueio informado pelo painel: app não publicado recebe somente testes do painel.
+Próximo checkpoint: confirmar publicação do app e receber comentário real pelo
+webhook sem sincronização manual. Nenhum push executado.
 
 **Homologação Instagram founder — 09/10/2026:** @agencianexosai conectado e
 verificado no workspace founder. Post autorizado publicado pelo NexOS com ID
