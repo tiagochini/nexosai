@@ -1,0 +1,14 @@
+{
+  "configuredAt": "2026-10-10T15:23:04.997Z",
+  "workspace": "founder",
+  "account": "agencianexosai",
+  "reply": "Que bom! Você quer o mapa do sucesso. Recebi seu pedido por aqui no Direct.",
+  "keyword": "mapa",
+  "authenticatedConfigReadback": "PASS",
+  "localTypecheck": "PASS",
+  "isolatedDockerRegression": "PASS",
+  "realIncomingDmResponse": "PENDING new real DM",
+  "oldDmPreserved": true,
+  "commentRulePreserved": true,
+  "pushPerformed": false
+}

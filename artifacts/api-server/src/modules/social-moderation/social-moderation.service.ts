@@ -52,6 +52,8 @@ export interface ModerationConfig {
   enableInstagramPrivateReplies: boolean;
   /** Templates support {nome} and receipt-dependent {confirmacao_direct}; no AI. */
   immediateKeywordReplies: Record<string, string>;
+  /** Explicit text-only keyword replies for incoming Instagram DMs. */
+  immediateDmKeywordReplies: Record<string, string>;
   /** Optional provider media IDs limiting deterministic keyword replies. */
   immediateKeywordReplyPostIds: string[];
 }
@@ -69,6 +71,7 @@ export const DEFAULT_CONFIG: ModerationConfig = {
   ignoredAuthors: [],
   enableInstagramPrivateReplies: false,
   immediateKeywordReplies: {},
+  immediateDmKeywordReplies: {},
   immediateKeywordReplyPostIds: [],
 };
 

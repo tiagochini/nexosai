@@ -1,5 +1,14 @@
 # NexOSAI — Fluxo Operacional e de Implementação Canônico
 
+**MAPA no Direct founder — 10/10/2026:** DM recebida pelo webhook, porém sem
+fluxo de palavra-chave configurado. Resposta fixa explícita para DMs implementada,
+salva e relida no founder. Claim idempotente, recibo obrigatório, roteamento
+ambíguo bloqueado e prioridade sobre sequência/IA evitam duplicação. Seis
+regressões Docker e tipos passaram; runtime carregado e saúde HTTP 200.
+[Evidência](docs/INSTAGRAM_MAPA_DM.md).
+Próximo checkpoint: nova DM real do tester e recibo da resposta automática.
+Nenhum push executado.
+
 **MAPA automático founder — 10/10/2026:** comentário real “mapa” recebido por
 webhook assinado às 11:08:10 (America/Cuiaba), sem sync manual. Direct com recibo e
 resposta pública personalizada confirmados na Meta; parent_id e conta corretos,

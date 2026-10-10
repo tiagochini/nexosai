@@ -32,7 +32,7 @@ import {
 import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import jwt from "jsonwebtoken";
 import { isOrganicSocialIntegration, metadataForPurpose } from "../integrations/integration-purpose.js";
-import { claimMetaWebhookEvent } from "./meta-webhook-evidence.service.js";
+import { claimMetaWebhookEvent, recordMetaSendStarted, recordMetaSendResult } from "./meta-webhook-evidence.service.js";
 import { getApprovedMasterplan, matchesApprovedDossier } from "../masterplan/masterplan.service.js";
 import { ingestInboundCommunityEvent } from "../community/community.service.js";
 import { orchestrateIntelligentConversation } from "./contextual-conversation.service.js";
@@ -1629,9 +1629,10 @@ export async function processMetaWebhook(body: unknown): Promise<void> {
           : inArray(workspaceIntegrationsTable.provider, ["facebook", "meta_ads"]),
         eq(workspaceIntegrationsTable.status, "connected"),
       )).limit(2);
-      const integration = integrations.find((candidate) =>
+      const routableIntegrations = integrations.filter((candidate) =>
         !!candidate.accessToken?.trim() &&
         isOrganicSocialIntegration(candidate.metadata as Record<string, unknown> | null));
+      const integration = routableIntegrations.length === 1 ? routableIntegrations[0] : undefined;
       if (!integration) {
         logger.warn({ accountId }, "Ignoring unroutable Meta DM webhook account");
         continue;
@@ -1667,6 +1668,51 @@ export async function processMetaWebhook(body: unknown): Promise<void> {
 
       setImmediate(async () => {
         try {
+          const turn = await db.insert(socialConversationTurnsTable).values({
+            workspaceId: integration.workspaceId, integrationId: integration.id,
+            accountId, providerUserId: senderId, providerEventId: msg.message!.mid,
+            providerMessageId: msg.message!.mid,
+            channel: isInstagram ? "instagram_dm" : "facebook_dm",
+            direction: "inbound", inputText: msg.message!.text!, decision: "received",
+          }).onConflictDoNothing().returning({ id: socialConversationTurnsTable.id });
+          if (!turn[0]) return;
+
+          // An explicitly configured fixed DM reply owns this message. It does
+          // not require AI/campaign context and must not race a sequence reply.
+          if (isInstagram) {
+            const { getModerationConfig } = await import("../social-moderation/social-moderation.service.js");
+            const config = await getModerationConfig(integration.workspaceId);
+            const words: string[] = msg.message!.text!.normalize("NFKC").toLocaleLowerCase().match(/[\p{L}\p{N}_]+/gu) ?? [];
+            const reply = Object.entries(config.immediateDmKeywordReplies ?? {}).find(([keyword, text]) =>
+              typeof text === "string" && text.trim() && words.includes(keyword.normalize("NFKC").trim().toLocaleLowerCase())
+            )?.[1]?.trim();
+            if (reply) {
+              const endpoint = "/me/messages"; // Facebook Login Page token.
+              const request = { recipient: { id: senderId }, message: { text: reply } };
+              await recordMetaSendStarted(eventClaim.id!, endpoint, request);
+              let receipt: string | null = null;
+              let error: string | null = null;
+              try {
+                const response = await metaGraphFetch(metaGraphUrl(endpoint), {
+                  method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${integration.accessToken}` },
+                  body: JSON.stringify(request), signal: AbortSignal.timeout(10_000),
+                });
+                const data = await response.json() as { message_id?: string; id?: string; error?: { message?: string } };
+                receipt = response.ok && !data.error ? data.message_id ?? data.id ?? null : null;
+                error = receipt ? null : data.error?.message ?? "Meta DM receipt missing";
+                await recordMetaSendResult(eventClaim.id!, { providerResponse: data, ...(receipt ? { providerMessageId: receipt } : { error: error! }) });
+              } catch (err) {
+                error = err instanceof Error ? err.message : String(err);
+                await recordMetaSendResult(eventClaim.id!, { error });
+              }
+              await db.update(socialConversationTurnsTable).set({
+                decision: "keyword_reply", replyText: reply, providerResponseId: receipt,
+                providerStatus: receipt ? "sent" : "failed", providerError: error,
+                sentAt: receipt ? new Date() : null,
+              }).where(and(eq(socialConversationTurnsTable.id, turn[0].id), eq(socialConversationTurnsTable.workspaceId, integration.workspaceId)));
+              return;
+            }
+          }
           // Sequence handlers run first. Awaiting them prevents a configured
           // keyword response and contextual AI from racing each other.
           if (isInstagram) {
@@ -1674,20 +1720,6 @@ export async function processMetaWebhook(body: unknown): Promise<void> {
             await handleInstagramDmTrigger(accountId, senderId, msg.message!.text!);
             await handleIncomingDmReply(accountId, senderId, msg.message!.text!);
           }
-
-          const turn = await db.insert(socialConversationTurnsTable).values({
-            workspaceId: integration.workspaceId,
-            integrationId: integration.id,
-            accountId,
-            providerUserId: senderId,
-            providerEventId: msg.message!.mid,
-            providerMessageId: msg.message!.mid,
-            channel: isInstagram ? "instagram_dm" : "facebook_dm",
-            direction: "inbound",
-            inputText: msg.message!.text!,
-            decision: "received",
-          }).onConflictDoNothing().returning({ id: socialConversationTurnsTable.id });
-          if (!turn[0]) return;
 
           // A newly-created or existing active sequence owns this message.
           // Do not let the free-form orchestrator produce a second reply.
