@@ -50,7 +50,7 @@ export interface ModerationConfig {
   ignoredAuthors: string[];
   /** Explicit policy gate for Meta's IG Comment Private Replies API. */
   enableInstagramPrivateReplies: boolean;
-  /** Explicit keyword -> deterministic first response map (no AI in webhook path). */
+  /** Templates support {nome} and receipt-dependent {confirmacao_direct}; no AI. */
   immediateKeywordReplies: Record<string, string>;
   /** Optional provider media IDs limiting deterministic keyword replies. */
   immediateKeywordReplyPostIds: string[];
@@ -503,7 +503,12 @@ export async function processIncomingComment(opts: {
     keyword.trim() && commentText.toLocaleLowerCase().includes(keyword.toLocaleLowerCase()),
   )?.[1]?.trim() : undefined;
   if (immediateReply) {
-    const publicReplyId = await replyToComment(commentId, immediateReply, accessToken, eventClaim.id);
+    const name = authorName.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 100) || "amigo(a)";
+    // Callback replacement keeps provider names containing $ or braces literal.
+    const renderReply = (confirmation: string) => immediateReply.replace(
+      /\{nome\}|\{confirmacao_direct\}/g, (placeholder) => placeholder === "{nome}" ? name : confirmation
+    ).trim();
+    const privateText = renderReply("");
     let privateReply: Record<string, unknown> | null = null;
     if (platform === "instagram" && config.enableInstagramPrivateReplies) {
       const privateClaim = await claimMetaWebhookEvent({
@@ -511,14 +516,18 @@ export async function processIncomingComment(opts: {
         eventType: "instagram_comment", actionKey: "private_reply",
       });
       privateReply = privateClaim.claimed
-        ? await replyPrivatelyToInstagramComment(commentId, immediateReply, accessToken, accountId, privateClaim.id)
+        ? await replyPrivatelyToInstagramComment(commentId, privateText, accessToken, accountId, privateClaim.id)
         : { error: "already_claimed" };
     }
+    const publicText = renderReply(
+      privateReply?.id && !privateReply.error ? "Já encaminhei uma mensagem no seu Direct." : ""
+    );
+    const publicReplyId = await replyToComment(commentId, publicText, accessToken, eventClaim.id);
     await db.insert(socialCommentActionsTable).values({
       workspaceId, campaignId: campaignId ?? undefined, platform, postId, commentId,
       parentCommentId: parentCommentId ?? undefined, authorName, authorId, commentText,
       classification: "neutral", confidence: "1", action: publicReplyId ? "replied" : "error",
-      aiReply: immediateReply, platformReplyId: publicReplyId ?? undefined,
+      aiReply: publicText, platformReplyId: publicReplyId ?? undefined,
       processingError: publicReplyId ? undefined : "Immediate reply API call failed",
       processedAt: new Date(),
       metadata: { deterministicKeywordReply: true, privateReply },

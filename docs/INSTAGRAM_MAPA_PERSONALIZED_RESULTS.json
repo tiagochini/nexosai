@@ -1,0 +1,21 @@
+{
+  "verifiedAt": "2026-10-10T14:20:56.049Z",
+  "user": "founder@nexos.ai",
+  "workspaceId": "a03c9141-c1af-46de-a62c-44a2e122646c",
+  "plan": "agency",
+  "workspaceStatus": "active",
+  "creditsBalance": 2000,
+  "postUrl": "https://www.instagram.com/p/DeTIE6-DjHT/",
+  "providerMediaId": "18121984933902161",
+  "replyTemplate": "Que bom, {nome}, que você quer o mapa do sucesso! {confirmacao_direct}",
+  "privateRepliesEnabled": true,
+  "scope": "Founder workspace and authorized test post",
+  "emailDeliveryEnabled": false,
+  "checks": {
+    "configAuthenticatedReadback": "PASS",
+    "typecheck": "PASS",
+    "isolatedDockerRegressions": "PASS"
+  },
+  "livePersonalizedWebhookDelivery": "PENDING new real comment, no manual sync",
+  "historicalEvidence": "INSTAGRAM_HOMOLOGATION_RESULTS.json"
+}

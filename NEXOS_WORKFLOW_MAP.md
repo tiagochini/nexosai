@@ -1,5 +1,15 @@
 # NexOSAI — Fluxo Operacional e de Implementação Canônico
 
+**MAPA personalizado founder — 10/10/2026:** plano Agency e workspace ativos,
+2.000 créditos conferidos no banco e API. Regra MAPA salva e relida, limitada ao
+post autorizado @agencianexosai; nome/usuário personalizado e confirmação pública
+do Direct somente após recibo da Meta. Sem envio de e-mail ou material nesta
+validação. Tipos e cinco regressões Docker passaram, incluindo falha privada,
+fallback de nome, replay e isolamento. Saúde/prontidão públicas HTTP 200.
+[Evidência](docs/INSTAGRAM_MAPA_PERSONALIZED.md).
+Próximo checkpoint: novo comentário real recebido por webhook, sem sincronização
+manual, com resposta personalizada e recibos público/privado. Nenhum push executado.
+
 **Homologação Instagram founder — 09/10/2026:** @agencianexosai conectado e
 verificado no workspace founder. Post autorizado publicado pelo NexOS com ID
 18121984933902161 e consulta independente confirmando o permalink. Aplicativo
