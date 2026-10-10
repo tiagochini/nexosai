@@ -17,7 +17,8 @@
     "hidden": false,
     "parentCommentId": "18371172148209800",
     "publisher": "agencianexosai",
-    "userInterfaceVisibility": "PENDING: tester reports reply absent in Instagram web UI; API reports hidden=false"
+    "userInterfaceVisibility": "PASS: user confirms reply visible in Instagram mobile app with professorbruceallan",
+    "visibilityConfirmationSource": "Direct user reply in this chat: Aparece no celular"
   },
   "privateReply": {
     "status": "sent",
@@ -50,5 +51,11 @@
   "localValidation": {
     "typecheck": "PASS",
     "isolatedDockerRegressions": "PASS including own-comment echo exclusion"
+  },
+  "userJourney": {
+    "realWebhook": "PASS",
+    "publicReply": "PASS Meta readback and user mobile confirmation",
+    "privateReply": "PASS Meta receipt and user Direct confirmation",
+    "manualSyncUsed": false
   }
 }

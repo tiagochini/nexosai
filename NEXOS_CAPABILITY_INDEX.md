@@ -3,13 +3,13 @@
 **MAPA automático founder — 10/10/2026:** comentário real “mapa” recebido por
 webhook assinado às 11:08:10 (America/Cuiaba), sem sync manual. Direct com recibo e
 resposta pública personalizada confirmados na Meta; parent_id e conta corretos,
-hidden=false. Usuário confirma Direct, mas relata resposta ausente na interface
-web: visibilidade na tela permanece pendente. Detectado ciclo por comentários
-da própria conta: cinco respostas próprias processadas antes do bloqueio;
-guard permanente aplicado antes dos claims e testado em Docker. Tipos e cinco
-regressões passaram. [Evidência](docs/INSTAGRAM_MAPA_AUTONOMOUS_RESULTS.json).
-Próximo checkpoint: confirmar a exibição da resposta no Instagram do tester e
-um novo comentário sem duplicações após o bloqueio de eco. Nenhum push executado.
+hidden=false. Usuário confirmou Direct e resposta pública no aplicativo móvel do
+Instagram. Jornada real do post de teste validada. Ciclo por comentários próprios
+detectado e bloqueado; guard permanente antes dos claims aplicado e testado em
+Docker. Tipos e cinco regressões passaram.
+[Evidência](docs/INSTAGRAM_MAPA_AUTONOMOUS_RESULTS.json).
+Próximo checkpoint: consolidar gravação da jornada e conferir os requisitos e
+contadores do Meta App Review. Nenhum push executado.
 
 **Homologação Instagram founder — 09/10/2026:** @agencianexosai conectado e
 verificado no workspace founder. Post autorizado publicado pelo NexOS com ID

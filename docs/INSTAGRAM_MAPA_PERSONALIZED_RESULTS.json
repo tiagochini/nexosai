@@ -25,5 +25,5 @@
     "repeatSync": "No duplicate sends observed",
     "source": "authenticated manual sync"
   },
-  "userInterfaceVisibility": "PENDING: tester reports reply absent in Instagram web UI; API reports hidden=false"
+  "userInterfaceVisibility": "PASS: user confirms reply visible in Instagram mobile app with professorbruceallan"
 }

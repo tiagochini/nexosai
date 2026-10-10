@@ -54,3 +54,15 @@ exclusão dos registros nem dos comentários históricos.
 
 [Evidência atual](INSTAGRAM_MAPA_AUTONOMOUS_RESULTS.json). Próximo checkpoint:
 confirmar exibição para o tester e novo comentário sem ciclo de eco.
+
+## Confirmação final de visibilidade
+
+O usuário confirmou “Aparece no celular” com @professorbruceallan. A jornada real
+de comentário → webhook → resposta pública → Direct está validada no post
+autorizado, sem sincronização manual. A API já havia confirmado o vínculo
+parent_id, autor @agencianexosai e hidden=false. Essa confirmação não determina
+a causa da ausência na interface web nem equivale à aprovação Meta App Review.
+
+Próximo checkpoint: consolidar gravação de tela da jornada e conferir requisitos
+e contadores do painel Meta. Guard contra eco foi implantado e validado por
+regressão isolada; nenhum push executado.
