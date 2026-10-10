@@ -30,8 +30,12 @@ As respostas reais históricas estão em
 [homologação anterior](INSTAGRAM_HOMOLOGATION_RESULTS.json); elas não comprovam
 o novo texto nem callback automático de comentário.
 
-Próximo checkpoint: receber um novo comentário de @professorbruceallan sem
-sincronização manual, conferir evento do webhook no workspace founder, recibos
-público/privado e conteúdo final. Para Meta App Review, coletar captura/gravação
-do comentário, resposta pública e Direct e conferir os contadores no painel Meta.
-Nenhuma aprovação do App Review é inferida a partir das regressões locais.
+Resultado real: dois novos comentários de @professorbruceallan receberam a
+resposta pública personalizada e Direct com recibo. GET dos replies na Meta
+confirmou o texto e IDs públicos; [leitura independente](INSTAGRAM_MAPA_PUBLIC_READBACK.json).
+Foi necessário sync autenticado, repetido sem novos envios. Isso comprova envio
+real público/privado; a Meta ainda não entregou webhook desses comentários ao NexOS.
+
+Próximo checkpoint: comprovar o callback automático de comentário sem sync
+manual. Coletar captura/gravação do comentário, resposta pública e Direct para
+Meta App Review e conferir os contadores no painel. Nenhum push executado.

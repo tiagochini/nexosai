@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-10T14:51:33.256Z",
+  "source": "Authenticated manual sync of real comments; autonomous webhook not received",
+  "postUrl": "https://www.instagram.com/p/DeTIE6-DjHT/",
+  "results": [
+    {
+      "commentId": "17914247352534771",
+      "status": 200,
+      "replies": [
+        {
+          "id": "17919641808446373",
+          "text": "Que bom, professorbruceallan, que você quer o mapa do sucesso! Já encaminhei uma mensagem no seu Direct."
+        }
+      ]
+    },
+    {
+      "commentId": "18177984808446631",
+      "status": 200,
+      "replies": [
+        {
+          "id": "18114328220151826",
+          "text": "Que bom, professorbruceallan, que você quer o mapa do sucesso! Já encaminhei uma mensagem no seu Direct."
+        }
+      ]
+    }
+  ]
+}

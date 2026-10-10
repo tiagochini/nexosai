@@ -16,6 +16,13 @@
     "typecheck": "PASS",
     "isolatedDockerRegressions": "PASS"
   },
-  "livePersonalizedWebhookDelivery": "PENDING new real comment, no manual sync",
-  "historicalEvidence": "INSTAGRAM_HOMOLOGATION_RESULTS.json"
+  "livePersonalizedWebhookDelivery": "PENDING autonomous comment webhook; real public/private replies confirmed through authenticated manual sync",
+  "historicalEvidence": "INSTAGRAM_HOMOLOGATION_RESULTS.json",
+  "publicReplyReadback": "INSTAGRAM_MAPA_PUBLIC_READBACK.json",
+  "livePersonalizedReplies": {
+    "publicReplies": 2,
+    "privateReceipts": 2,
+    "repeatSync": "No duplicate sends observed",
+    "source": "authenticated manual sync"
+  }
 }
