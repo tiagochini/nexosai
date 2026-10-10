@@ -10,7 +10,7 @@ import { isOrganicSocialIntegration } from "../integrations/integration-purpose.
 
 const REQUIRED_PERMISSIONS = [
   { scope: "instagram_basic", useCase: "Connect and identify the professional Instagram account.", recording: "OAuth consent and connected Instagram profile.", status: "required" as const },
-  { scope: "instagram_business_manage_messages", useCase: "Receive and answer Instagram direct messages.", recording: "External account sends a DM and receives the contextual reply.", status: "required" as const },
+  { scope: "instagram_manage_messages", useCase: "Receive and answer Instagram direct messages.", recording: "External account sends a DM and receives the contextual reply.", status: "required" as const },
   { scope: "instagram_manage_comments", useCase: "Read, moderate and answer Instagram comments.", recording: "External account comments and receives a public reply and, if enabled, a private reply.", status: "required" as const },
   { scope: "pages_show_list", useCase: "Let the operator select an authorized Facebook Page.", recording: "OAuth connection lists and saves the selected Page.", status: "required" as const },
   { scope: "pages_read_engagement", useCase: "Read Page posts, comments and engagement.", recording: "Open the Page activity and show the incoming test comment.", status: "required" as const },

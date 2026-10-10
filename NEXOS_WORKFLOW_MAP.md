@@ -1,5 +1,16 @@
 # NexOSAI — Fluxo Operacional e de Implementação Canônico
 
+**Homologação Instagram founder — 09/10/2026:** @agencianexosai autorizado
+para posts e @professorbruceallan para DM/comentário mapa. Supabase e readiness
+autenticado confirmam ausência de integração no workspace founder. Redis isolado
+restaurado; saúde/readiness/login públicos HTTP 200. Permissão de mensagens
+alinhada ao Facebook Login (instagram_manage_messages) nos dois fluxos OAuth
+e na lista de análise. Tipos API passaram; URLs reais Instagram/Facebook
+verificadas com escopo correto. Nenhum post/DM real enviado.
+[Evidência](docs/INSTAGRAM_HOMOLOGATION_RESULTS.json). Próximo checkpoint:
+concluir OAuth no founder e conferir o vínculo de @agencianexosai antes dos
+testes reais. Navegador automatizado indisponível; consentimento externo pendente.
+
 **Conferência financeira e webhooks — 09/10/2026:** consulta somente leitura
 confirmou cadeia do ledger 900 → 1.400 → 1.900 → 2.400 → 2.900, quatro concessões
 únicas e founder inalterado. Reserva de estorno ativa; nenhuma reversão antecipada.

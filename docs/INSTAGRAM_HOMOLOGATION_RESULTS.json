@@ -1,0 +1,74 @@
+{
+  "checkedAt": "2026-10-10T02:59:20.156Z",
+  "publisher": "agencianexosai",
+  "tester": "professorbruceallan",
+  "workspace": "founder",
+  "health": {
+    "/api/healthz": 200,
+    "/api/readyz": 200
+  },
+  "oauth": [
+    {
+      "provider": "instagram",
+      "host": "www.facebook.com",
+      "messagingScope": "instagram_manage_messages",
+      "mixedLoginScopes": false
+    },
+    {
+      "provider": "facebook",
+      "host": "www.facebook.com",
+      "messagingScope": "instagram_manage_messages",
+      "mixedLoginScopes": false
+    }
+  ],
+  "accounts": [],
+  "checks": [
+    {
+      "key": "meta_app",
+      "label": "Meta app credentials configured",
+      "status": "pass",
+      "detail": "App ID and secret are available to the server."
+    },
+    {
+      "key": "public_url",
+      "label": "External HTTPS application URL",
+      "status": "pass",
+      "detail": "https://agencianexos.vip"
+    },
+    {
+      "key": "webhook",
+      "label": "Meta webhook verification configured",
+      "status": "pass",
+      "detail": "Verification token is configured and never returned here."
+    },
+    {
+      "key": "instagram",
+      "label": "Professional Instagram account connected",
+      "status": "fail",
+      "detail": "Connect the review Instagram account."
+    },
+    {
+      "key": "facebook",
+      "label": "Facebook Page connected",
+      "status": "warn",
+      "detail": "Connect a Page if Page permissions are requested."
+    },
+    {
+      "key": "provider_evidence",
+      "label": "Real Meta callback and send evidence",
+      "status": "fail",
+      "detail": "Run a real comment or DM test before recording."
+    },
+    {
+      "key": "conversation_evidence",
+      "label": "Contextual response evidence",
+      "status": "fail",
+      "detail": "Run a contextual comment or DM test."
+    }
+  ],
+  "externalTests": {
+    "post": "BLOCKED account not connected",
+    "message": "BLOCKED account not connected",
+    "mapaComment": "BLOCKED account not connected"
+  }
+}
