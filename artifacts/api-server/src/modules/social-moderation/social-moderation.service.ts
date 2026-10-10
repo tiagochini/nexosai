@@ -462,6 +462,9 @@ export async function processIncomingComment(opts: {
     return;
   }
   const accountId = integrationContext.accountId;
+  // Meta also delivers comments created by this integration's own replies.
+  // Never let our MAPA text trigger another public/private reply recursively.
+  if (authorId === accountId) return;
   if (igAccountId && igAccountId !== accountId) {
     logger.warn({ workspaceId, integrationId, platform, commentId }, "Comment account context mismatch; failing closed");
     return;

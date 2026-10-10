@@ -39,3 +39,18 @@ real público/privado; a Meta ainda não entregou webhook desses comentários ao
 Próximo checkpoint: comprovar o callback automático de comentário sem sync
 manual. Coletar captura/gravação do comentário, resposta pública e Direct para
 Meta App Review e conferir os contadores no painel. Nenhum push executado.
+
+## Webhook real após publicação
+
+Em 10/10/2026, às 11:08:10 (America/Cuiaba), um novo comentário “mapa”
+chegou por webhook assinado. Direct e resposta pública tiveram recibos. A leitura
+independente confirmou @agencianexosai, parent_id correto e hidden=false. O usuário
+confirma Direct, mas não vê a resposta na interface web; exibição permanece pendente.
+
+A entrega real revelou eco das respostas da própria conta, provocando cinco
+processamentos extras antes do bloqueio. Agora o autor da própria integração é
+ignorado antes de criar claims; guard implantado e regressão passou. Não houve
+exclusão dos registros nem dos comentários históricos.
+
+[Evidência atual](INSTAGRAM_MAPA_AUTONOMOUS_RESULTS.json). Próximo checkpoint:
+confirmar exibição para o tester e novo comentário sem ciclo de eco.

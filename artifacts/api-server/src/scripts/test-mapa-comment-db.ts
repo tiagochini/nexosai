@@ -56,6 +56,15 @@ try {
     assert.equal(getMetaE2eGraphCalls().length, (index + 1) * 2, "Webhook replay must not send again");
   }
   const before = getMetaE2eGraphCalls().length;
+  const ownReply = payload(`${marker}_own_reply`, "Que bom, que você quer o mapa do sucesso!");
+  ownReply.entry[0]!.changes[0]!.value.from.id = `${marker}_ig_one`;
+  ownReply.entry[0]!.changes[0]!.value.from.username = "publisher";
+  await processMetaWebhookDelivery(ownReply);
+  assert.equal(getMetaE2eGraphCalls().length, before, "Own public replies must not recursively trigger MAPA");
+  assert.equal((await db.select().from(metaWebhookEventsTable).where(and(
+    eq(metaWebhookEventsTable.workspaceId, manifest.workspaces[0]!),
+    eq(metaWebhookEventsTable.providerEventId, `${marker}_own_reply`),
+  ))).length, 0, "Own comments must not create outbound claims");
   const otherPost = payload(`${marker}_other_post`, "MAPA");
   otherPost.entry[0]!.changes[0]!.value.media.id = `${marker}_outside_scope`;
   await processMetaWebhookDelivery(otherPost);

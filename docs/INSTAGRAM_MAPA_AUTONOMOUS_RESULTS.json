@@ -1,0 +1,54 @@
+{
+  "verifiedAt": "2026-10-10T15:11:38.338Z",
+  "workspace": "founder",
+  "workspaceId": "a03c9141-c1af-46de-a62c-44a2e122646c",
+  "tester": "professorbruceallan",
+  "publisher": "agencianexosai",
+  "commentId": "18371172148209800",
+  "commentText": "mapa",
+  "postUrl": "https://www.instagram.com/p/DeTIE6-DjHT/",
+  "trigger": "Real Meta comment webhook, signed HTTP POST; runtime log 11:08:10 America/Cuiaba",
+  "manualSyncUsed": false,
+  "publicReply": {
+    "status": "sent",
+    "id": "18357116446219967",
+    "text": "Que bom, professorbruceallan, que você quer o mapa do sucesso! Já encaminhei uma mensagem no seu Direct.",
+    "independentMetaReadback": true,
+    "hidden": false,
+    "parentCommentId": "18371172148209800",
+    "publisher": "agencianexosai",
+    "userInterfaceVisibility": "PENDING: tester reports reply absent in Instagram web UI; API reports hidden=false"
+  },
+  "privateReply": {
+    "status": "sent",
+    "hasProviderReceipt": true
+  },
+  "events": [
+    {
+      "action": "private_reply",
+      "status": "sent",
+      "hasReceipt": true,
+      "createdAt": "2026-10-10T15:08:11.602Z",
+      "updatedAt": "2026-10-10T15:08:12.610Z"
+    },
+    {
+      "action": "initial_response",
+      "status": "sent",
+      "hasReceipt": true,
+      "createdAt": "2026-10-10T15:08:11.096Z",
+      "updatedAt": "2026-10-10T15:08:16.330Z"
+    }
+  ],
+  "echoIncident": {
+    "ownReplyActionsBeforeGuard": 5,
+    "temporaryMitigation": "Founder ignoredAuthors includes own IG account",
+    "permanentFix": "Ignore own author before outbound event claims",
+    "localRegression": "Own reply event creates no Graph calls or outbound claims",
+    "permanentFixDeployed": true
+  },
+  "pushPerformed": false,
+  "localValidation": {
+    "typecheck": "PASS",
+    "isolatedDockerRegressions": "PASS including own-comment echo exclusion"
+  }
+}

@@ -1,19 +1,15 @@
 # NexOSAI — Fluxo Operacional e de Implementação Canônico
 
-**MAPA personalizado founder — 10/10/2026:** plano Agency e workspace ativos,
-2.000 créditos conferidos. Dois novos comentários reais receberam resposta pública
-com professorbruceallan e confirmação de Direct; recibos privados presentes e
-leitura independente da Meta confirmou o texto nos comentários. Processamento
-via sincronização autenticada, repetida sem duplicações; callback automático ainda
-não observado. Tipos e cinco regressões Docker passaram, incluindo falha privada,
-fallback de nome, replay e isolamento. Saúde/prontidão públicas HTTP 200.
-[Evidência](docs/INSTAGRAM_MAPA_PUBLIC_READBACK.json).
-Teste do painel Meta comments v26.0 recebido às 11:04:21 (America/Cuiaba),
-assinatura validada e HTTP 200 em 1 ms. Conta fictícia 0 ignorada sem envio.
-[Evidência do callback](docs/INSTAGRAM_WEBHOOK_DASHBOARD_TEST.json).
-Bloqueio informado pelo painel: app não publicado recebe somente testes do painel.
-Próximo checkpoint: confirmar publicação do app e receber comentário real pelo
-webhook sem sincronização manual. Nenhum push executado.
+**MAPA automático founder — 10/10/2026:** comentário real “mapa” recebido por
+webhook assinado às 11:08:10 (America/Cuiaba), sem sync manual. Direct com recibo e
+resposta pública personalizada confirmados na Meta; parent_id e conta corretos,
+hidden=false. Usuário confirma Direct, mas relata resposta ausente na interface
+web: visibilidade na tela permanece pendente. Detectado ciclo por comentários
+da própria conta: cinco respostas próprias processadas antes do bloqueio;
+guard permanente aplicado antes dos claims e testado em Docker. Tipos e cinco
+regressões passaram. [Evidência](docs/INSTAGRAM_MAPA_AUTONOMOUS_RESULTS.json).
+Próximo checkpoint: confirmar a exibição da resposta no Instagram do tester e
+um novo comentário sem duplicações após o bloqueio de eco. Nenhum push executado.
 
 **Homologação Instagram founder — 09/10/2026:** @agencianexosai conectado e
 verificado no workspace founder. Post autorizado publicado pelo NexOS com ID

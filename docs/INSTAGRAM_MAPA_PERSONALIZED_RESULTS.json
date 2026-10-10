@@ -16,7 +16,7 @@
     "typecheck": "PASS",
     "isolatedDockerRegressions": "PASS"
   },
-  "livePersonalizedWebhookDelivery": "PENDING autonomous comment webhook; real public/private replies confirmed through authenticated manual sync",
+  "livePersonalizedWebhookDelivery": "PASS real signed comment webhook, no manual sync; see INSTAGRAM_MAPA_AUTONOMOUS_RESULTS.json",
   "historicalEvidence": "INSTAGRAM_HOMOLOGATION_RESULTS.json",
   "publicReplyReadback": "INSTAGRAM_MAPA_PUBLIC_READBACK.json",
   "livePersonalizedReplies": {
@@ -24,5 +24,6 @@
     "privateReceipts": 2,
     "repeatSync": "No duplicate sends observed",
     "source": "authenticated manual sync"
-  }
+  },
+  "userInterfaceVisibility": "PENDING: tester reports reply absent in Instagram web UI; API reports hidden=false"
 }
