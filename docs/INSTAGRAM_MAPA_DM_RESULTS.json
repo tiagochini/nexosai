@@ -7,8 +7,24 @@
   "authenticatedConfigReadback": "PASS",
   "localTypecheck": "PASS",
   "isolatedDockerRegression": "PASS",
-  "realIncomingDmResponse": "PENDING new real DM",
+  "realIncomingDmResponse": "PASS",
   "oldDmPreserved": true,
   "commentRulePreserved": true,
-  "pushPerformed": false
+  "pushPerformed": false,
+  "realWebhookEvidence": {
+    "receivedAt": "2026-10-10T15:50:45.223Z",
+    "sentAt": "2026-10-10T15:50:46.316Z",
+    "timezone": "America/Cuiaba",
+    "receivedLocalTime": "11:50:45",
+    "sentLocalTime": "11:50:46",
+    "decision": "keyword_reply",
+    "providerStatus": "sent",
+    "providerReceiptPresent": true,
+    "receiptMatchesOutboundAction": true,
+    "matchingConversationTurns": 1,
+    "matchingOutboundActions": 1,
+    "userScreenshotConfirmsDelivery": true,
+    "manualSyncOrResendUsed": false,
+    "privateProviderIdentifiersOmitted": true
+  }
 }

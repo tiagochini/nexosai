@@ -30,8 +30,15 @@ caso/frase, destinatário, vínculo de integração, recibo, falha, replay, cont
 desconhecida e eco. Os seis testes de Instagram passaram e TypeScript passou.
 O novo teste integra `scripts/test-p3-local.mjs`. Configuração foi salva e relida
 pela API autenticada no workspace founder; runtime carregado e saúde/prontidão
-retornaram HTTP 200. [Evidência de preparação](INSTAGRAM_MAPA_DM_RESULTS.json).
+retornaram HTTP 200. [Evidência de validação](INSTAGRAM_MAPA_DM_RESULTS.json).
 
-Próximo checkpoint: nova DM real “mapa teste direct” de @professorbruceallan para
-@agencianexosai recebida via webhook e recibo da resposta. A mensagem antiga não
-foi reenviada nem teve o histórico reescrito. Nenhum push executado.
+A nova DM real do tester recebeu resposta automaticamente pelo webhook às
+11:50:46 de 10/10/2026 (America/Cuiaba). A conversa registra `keyword_reply`,
+status `sent` e recibo da Meta igual ao da ação de envio. Há uma única ação e
+um único turno para esse evento. A captura enviada pelo usuário confirma o texto
+configurado no Direct. Nenhum sync manual ou reenvio foi usado nesta validação;
+os turnos antigos de encaminhamento humano permanecem preservados. IDs privados
+de mensagens não são publicados na evidência.
+
+Próximo checkpoint: consolidar gravação da jornada de comentário e Direct e
+conferir requisitos e contadores no Meta App Review. Nenhum push executado.
