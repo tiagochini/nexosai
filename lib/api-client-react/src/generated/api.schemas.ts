@@ -767,6 +767,8 @@ export const CampaignInputTrack = {
 } as const;
 
 export interface CampaignInput {
+  commercialProductId: string;
+  commercialSubscriptionId: string;
   title: string;
   type: CampaignInputType;
   track: CampaignInputTrack;

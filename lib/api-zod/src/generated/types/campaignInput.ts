@@ -9,6 +9,8 @@ import type { CampaignInputTrack } from './campaignInputTrack';
 import type { CampaignInputType } from './campaignInputType';
 
 export interface CampaignInput {
+  commercialProductId: string;
+  commercialSubscriptionId: string;
   title: string;
   type: CampaignInputType;
   track: CampaignInputTrack;

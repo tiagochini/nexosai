@@ -153,6 +153,8 @@ export const ListCampaignsResponse = zod.object({
  * @summary Create campaign
  */
 export const CreateCampaignBody = zod.object({
+  "commercialProductId": zod.string().uuid(),
+  "commercialSubscriptionId": zod.string().uuid(),
   "title": zod.string(),
   "type": zod.enum(['launch', 'evergreen', 'relaunch', 'perpetual_launch', 'flash_sale', 'live_sale', 'continuous_sales', 'subscription_growth', 'authority', 'audience_growth', 'branding', 'creator_monetization', 'upsell', 'remarketing', 'affiliate', 'scale', 'regional_dominance', 'semente_launch']),
   "track": zod.enum(['six_digits', 'eight_digits', 'ten_digits']),

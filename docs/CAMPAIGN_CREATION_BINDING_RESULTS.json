@@ -1,0 +1,19 @@
+{
+  "verifiedAt": "2026-10-11T14:25:58.164Z",
+  "environment": "homologation",
+  "publicDomain": "https://agencianexos.vip",
+  "founderActiveSubscriptionReadback": "PASS",
+  "deployedExplicitBindingValidation": "PASS",
+  "isolatedHttpCreationAndBindingPersistence": "PASS",
+  "isolatedForeignMismatchedInactiveMissingMalformedRejections": "PASS",
+  "typechecks": "PASS libraries/frontend/API",
+  "frontendBuild": "PASS",
+  "health": {
+    "healthz": 200,
+    "readyz": 200
+  },
+  "realCampaignCreated": false,
+  "providerCalls": 0,
+  "pushPerformed": false,
+  "browserClickValidation": "Pending user retry after refresh"
+}

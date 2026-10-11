@@ -10,6 +10,7 @@ import {
   TrendingUp, Users, RefreshCw, CheckCircle2,
 } from "lucide-react";
 import { useUiText } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
 
 interface GoalOption {
   id: string;
@@ -113,6 +114,9 @@ const GOAL_OPTIONS: GoalOption[] = [
 
 export default function NewCampaign() {
   const t = useUiText();
+  const { workspacesData, workspace, isWorkspacesLoading } = useAuth();
+  const subscription = workspacesData && workspacesData.activeWorkspaceId === workspace?.id
+    ? workspacesData.entitlements.selectedSubscription : null;
   const [, setLocation] = useLocation();
   const [step, setStep]           = useState<1 | 2>(1);
   const [selectedGoal, setSelectedGoal] = useState<GoalOption | null>(null);
@@ -127,8 +131,8 @@ export default function NewCampaign() {
         setLocation(`/campaigns/${data.campaign.id}/intake`);
       },
       onError: (err: unknown) => {
-        const apiErr = err as { status?: number; data?: { error?: string } };
-        if (apiErr?.status === 403 || (err instanceof ApiError && err.status === 403)) {
+        const apiErr = err as { status?: number; data?: { error?: string; code?: string } };
+        if (apiErr?.status === 403 && apiErr.data?.error?.startsWith("Campaign limit reached")) {
            toast.error(t("Limite de campanhas atingido", "Campaign limit reached", "Se alcanzó el límite de campañas"), {
              description: t("Conclua ou arquive uma campanha existente para criar uma nova.", "Complete or archive an existing campaign to create a new one.", "Completa o archiva una campaña existente para crear una nueva."),
             duration: 10000,
@@ -138,7 +142,11 @@ export default function NewCampaign() {
             },
           });
         } else {
-           toast.error(t("Erro ao criar. Tente novamente.", "Error creating campaign. Please try again.", "Error al crear la campaña. Inténtalo de nuevo."));
+           toast.error(t("Não foi possível criar o lançamento.", "Could not create the campaign.", "No se pudo crear la campaña."), {
+             description: err instanceof ApiError && typeof apiErr.data?.error === "string" && apiErr.data?.code !== "VALIDATION_ERROR"
+               ? apiErr.data.error
+               : t("Confira sua assinatura ativa e os dados do lançamento. Se o problema continuar, atualize a página.", "Check your active subscription and campaign details. If the problem persists, refresh the page.", "Revisa tu suscripción activa y los datos de la campaña. Si el problema persiste, actualiza la página."),
+           });
         }
       },
     },
@@ -161,10 +169,15 @@ export default function NewCampaign() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+    if (!subscription) {
+      toast.error(t("Uma assinatura ativa é necessária para criar o lançamento.", "An active subscription is required to create a campaign.", "Se necesita una suscripción activa para crear la campaña."));
+      return;
+    }
     // When in direct mode, use launch/six_digits as defaults — intake AI will refine
     const type  = selectedGoal?.type  ?? ("launch" as CampaignInputType);
     const track = selectedGoal?.track ?? ("six_digits" as CampaignInputTrack);
-    createMutation.mutate({ data: { title: title.trim(), type, track } });
+    createMutation.mutate({ data: { title: title.trim(), type, track,
+      commercialProductId: subscription.productId, commercialSubscriptionId: subscription.id } });
   };
 
   return (
@@ -389,7 +402,7 @@ export default function NewCampaign() {
               </Button>
               <Button
                 type="submit"
-                disabled={createMutation.isPending || !title.trim()}
+                disabled={createMutation.isPending || isWorkspacesLoading || !title.trim()}
                 className="flex-1 rounded-none font-mono uppercase tracking-widest font-bold h-12 px-8 btn-weapon-primary gap-2"
               >
                 {createMutation.isPending

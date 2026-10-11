@@ -41,6 +41,8 @@ router.use(requireAuth);
 
 const createCampaignSchema = z.object({
   title: z.string().min(3),
+  commercialProductId: z.string().uuid(),
+  commercialSubscriptionId: z.string().uuid(),
   type: z
     .enum([
       // Closed-cart / event-driven

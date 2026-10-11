@@ -1,6 +1,15 @@
 # NexOS — Checklist Canônico de Construção
 
-**Vínculo gratuito founder — 11/10/2026:** produto de lançamento e assinatura comercial ativa criados exclusivamente no workspace de founder@nexos.ai em homologação. Valor R, sem chamada ao Asaas; vínculo relido no banco e concessão auditada. Plano e saldo existentes preservados. Evidência: [FOUNDER_FREE_COMMERCIAL_LINK_RESULTS.json](docs/FOUNDER_FREE_COMMERCIAL_LINK_RESULTS.json). Próximo checkpoint: alinhar tela e schema da API para enviar os IDs explícitos de produto/assinatura e validar criação do lançamento. Nenhum push executado.
+**Criação de lançamento founder — 11/10/2026:** tela, schema HTTP, OpenAPI e
+clientes alinhados para enviar produto/assinatura explícitos do workspace ativo.
+Criação e persistência passaram em regressão HTTP Docker; vínculos ausentes,
+inválidos, estrangeiros, divergentes e pausados rejeitados. Tipos e build passaram.
+Runtime atualizado; assinatura gratuita e schema conferidos pelo domínio público;
+healthz/readyz 200. [Evidência](docs/CAMPAIGN_CREATION_BINDING.md).
+Próximo checkpoint: atualizar a página e iniciar o briefing real pelo navegador.
+Nenhum push executado.
+
+**Vínculo gratuito founder — 11/10/2026:** produto de lançamento e assinatura comercial ativa criados exclusivamente no workspace de founder@nexos.ai em homologação. Valor R, sem chamada ao Asaas; vínculo relido no banco e concessão auditada. Plano e saldo existentes preservados. Evidência: [FOUNDER_FREE_COMMERCIAL_LINK_RESULTS.json](docs/FOUNDER_FREE_COMMERCIAL_LINK_RESULTS.json). Contrato de tela/API corrigido e criação validada em banco Docker isolado; conferir a jornada real no navegador. Nenhum push executado.
 
 **MAPA no Direct founder — 10/10/2026:** nova DM real respondida automaticamente
 pelo webhook às 11:50:46 (America/Cuiaba). Turno keyword_reply, status sent e

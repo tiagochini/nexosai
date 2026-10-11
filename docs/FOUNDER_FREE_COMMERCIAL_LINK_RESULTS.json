@@ -12,6 +12,6 @@
   "currency": "BRL",
   "providerCalls": 0,
   "existingPlanAndCreditsChanged": false,
-  "campaignCreation": "Still blocked by UI/API contract mismatch; separate correction required",
+  "campaignCreation": "UI/API contract corrected; positive creation proven in isolated Docker HTTP regression; public runtime and subscription readback verified; browser retry pending",
   "pushPerformed": false
 }

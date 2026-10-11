@@ -2032,6 +2032,12 @@ components:
     CampaignInput:
       type: object
       properties:
+        commercialProductId:
+          type: string
+          format: uuid
+        commercialSubscriptionId:
+          type: string
+          format: uuid
         title:
           type: string
         type:
@@ -2060,7 +2066,7 @@ components:
           enum: [six_digits, eight_digits, ten_digits]
         revenueTarget:
           type: string
-      required: [title, type, track]
+      required: [title, type, track, commercialProductId, commercialSubscriptionId]
 
     CampaignExecuteInput:
       type: object
