@@ -1,0 +1,17 @@
+{
+  "verifiedAt": "2026-10-11T14:19:28.549Z",
+  "environment": "homologation",
+  "email": "founder@nexos.ai",
+  "workspaceId": "a03c9141-c1af-46de-a62c-44a2e122646c",
+  "productId": "1fdd01c4-c1de-4063-86f7-3d010973a937",
+  "subscriptionId": "0977b029-66a1-4942-98b4-971a36ef4c1f",
+  "created": true,
+  "status": "active",
+  "billingMode": "complimentary",
+  "amount": 0,
+  "currency": "BRL",
+  "providerCalls": 0,
+  "existingPlanAndCreditsChanged": false,
+  "campaignCreation": "Still blocked by UI/API contract mismatch; separate correction required",
+  "pushPerformed": false
+}

@@ -1,5 +1,7 @@
 # NexOS — Checklist Canônico de Construção
 
+**Vínculo gratuito founder — 11/10/2026:** produto de lançamento e assinatura comercial ativa criados exclusivamente no workspace de founder@nexos.ai em homologação. Valor R, sem chamada ao Asaas; vínculo relido no banco e concessão auditada. Plano e saldo existentes preservados. Evidência: [FOUNDER_FREE_COMMERCIAL_LINK_RESULTS.json](docs/FOUNDER_FREE_COMMERCIAL_LINK_RESULTS.json). Próximo checkpoint: alinhar tela e schema da API para enviar os IDs explícitos de produto/assinatura e validar criação do lançamento. Nenhum push executado.
+
 **MAPA no Direct founder — 10/10/2026:** nova DM real respondida automaticamente
 pelo webhook às 11:50:46 (America/Cuiaba). Turno keyword_reply, status sent e
 recibo da Meta conferidos; uma ação por evento. Captura do usuário confirma
