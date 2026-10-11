@@ -12,13 +12,12 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
 
-interface Product {
+interface BriefingCampaign {
   id: string;
-  name: string;
-  description?: string;
-  priceCents: number;
-  active: boolean;
+  title: string;
+  commercialProductId?: string | null;
 }
 
 interface Intake {
@@ -46,6 +45,7 @@ interface IntakeResponse {
 export default function IntakeHub() {
   const t = useUiText();
   const { locale } = useUiLocale();
+  const { workspace } = useAuth();
   const [, params] = useRoute("/intake/:productId");
   const productId = params?.productId;
   const search = useSearch();
@@ -56,18 +56,19 @@ export default function IntakeHub() {
     return value === "market_intel" || value === "social_media" || value === "paid_media" ? value : "launch";
   })();
 
-  // Fetch products
-  const { data: productsData, isLoading: loadingProducts } = useQuery({
-    queryKey: ["/api/products"],
-    queryFn: () => customFetch<{ products: Product[] }>("/api/products"),
+  // Briefings belong to workspace campaigns, not checkout products.
+  const { data: campaignsData, isLoading: loadingCampaigns, isError: campaignsError, refetch: refetchCampaigns } = useQuery({
+    queryKey: ["/api/campaigns", workspace?.id],
+    queryFn: () => customFetch<{ campaigns: BriefingCampaign[] }>("/api/campaigns"),
+    enabled: !!workspace?.id,
   });
-  const products = productsData?.products ?? [];
+  const campaigns = campaignsData?.campaigns ?? [];
 
   // Fetch intake for selected product
   const { data: intakeData, isLoading: loadingIntake } = useQuery({
-    queryKey: ["/api/product-intake", productId],
+    queryKey: ["/api/product-intake", productId, workspace?.id],
     queryFn: () => customFetch<IntakeResponse>(`/api/product-intake/${productId}`),
-    enabled: !!productId,
+    enabled: !!productId && !!workspace?.id,
   });
 
   const startMutation = useMutation({
@@ -96,7 +97,7 @@ export default function IntakeHub() {
     onError: (e: any) => toast.error(e.message || t("Erro ao aprovar briefing.", "Error approving briefing.", "Error al aprobar el briefing.")),
   });
 
-  if (loadingProducts) {
+  if (loadingCampaigns) {
     return (
       <div className="max-w-6xl mx-auto space-y-6 p-6">
         <Skeleton className="h-8 w-64 bg-muted/20" />
@@ -119,34 +120,39 @@ export default function IntakeHub() {
       </div>
 
       {!productId ? (
-        // List products
+        // List campaign briefings
         <div className="space-y-4">
           <h2 className="font-mono text-sm uppercase tracking-widest flex items-center gap-2">
-            <Target className="h-4 w-4 text-primary" /> {t("Selecione o produto", "Select a product", "Selecciona un producto")}
+            <Target className="h-4 w-4 text-primary" /> {t("Selecione o lançamento", "Select a launch", "Selecciona un lanzamiento")}
           </h2>
-          {products.length === 0 ? (
+          {campaignsError ? (
+            <div className="border border-border/40 p-6 space-y-3">
+              <p>{t("Não foi possível carregar os briefings.", "Unable to load briefings.", "No se pudieron cargar los briefings.")}</p>
+              <Button variant="outline" onClick={() => refetchCampaigns()}>{t("Tentar novamente", "Try again", "Intentar de nuevo")}</Button>
+            </div>
+          ) : campaigns.length === 0 ? (
             <div className="border border-dashed border-border/40 p-12 text-center space-y-3">
               <FileText className="h-10 w-10 text-muted-foreground/30 mx-auto" />
               <p className="font-mono text-sm text-muted-foreground uppercase tracking-widest">
-                 {t("Nenhum produto encontrado", "No products found", "No se encontraron productos")}
+                 {t("Nenhum lançamento encontrado", "No launches found", "No se encontraron lanzamientos")}
               </p>
-              <Button onClick={() => setLocation("/produtos")} variant="outline" className="rounded-none font-mono uppercase tracking-widest text-xs gap-2">
-                <Plus className="h-3.5 w-3.5" /> {t("Criar produto", "Create product", "Crear producto")}
+              <Button onClick={() => setLocation("/campaigns/new")} variant="outline" className="rounded-none font-mono uppercase tracking-widest text-xs gap-2">
+                <Plus className="h-3.5 w-3.5" /> {t("Criar lançamento", "Create launch", "Crear lanzamiento")}
               </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {products.map(p => (
+              {campaigns.map(p => (
                 <button
                   key={p.id}
-                  onClick={() => setLocation(`/intake/${p.id}`)}
+                  onClick={() => setLocation(`/campaigns/${p.id}/intake`)}
                   className="text-left border border-border/30 bg-card/30 hover:border-primary/50 hover:bg-primary/5 p-5 transition-all group flex flex-col gap-3"
                 >
                   <div className="font-mono text-sm font-bold uppercase tracking-widest text-foreground group-hover:text-primary transition-colors truncate w-full">
-                    {p.name}
+                    {p.title}
                   </div>
                   <div className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest">
-                    {t("Briefing do produto", "Product briefing", "Briefing del producto")}
+                    {t("Continuar briefing com o agente", "Continue briefing with the agent", "Continuar briefing con el agente")}
                   </div>
                 </button>
               ))}
@@ -161,7 +167,7 @@ export default function IntakeHub() {
               <ChevronRight className="h-4 w-4 rotate-180" />
             </Button>
             <h2 className="font-mono text-lg font-bold uppercase tracking-widest truncate">
-              {products.find(p => p.id === productId)?.name}
+              {campaigns.find(p => p.commercialProductId === productId)?.title ?? t("Briefing do produto", "Product briefing", "Briefing del producto")}
             </h2>
           </div>
 

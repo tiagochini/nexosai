@@ -1,0 +1,12 @@
+{
+  "verifiedAt": "2026-10-11T19:31:28.876Z",
+  "environment": "homologation",
+  "campaignsCount": 1,
+  "campaignTitle": "Primeiro Lançamento NexOS 2026",
+  "publicCampaignList": "PASS",
+  "publicFrontend": "PASS correct campaign endpoint and conversation link",
+  "appTypecheck": "PASS",
+  "checkoutFixtures": "Preserved",
+  "realAiConversation": "Pending user continuation",
+  "frontendBuild": "PASS 485.4 KiB initial JavaScript, budget 500 KiB"
+}

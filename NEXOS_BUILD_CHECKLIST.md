@@ -1,5 +1,14 @@
 # NexOS — Checklist Canônico de Construção
 
+**Briefing Central — 11/10/2026:** corrigida a origem da lista: campanhas
+do workspace substituem produtos de checkout. A única campanha founder foi
+confirmada no endpoint público; cards abrem a conversa do lançamento. Cache
+inclui workspace e consulta com falha pode ser repetida. Registros Asaas
+preservados. Tipos e build passaram.
+[Evidência](docs/BRIEFING_CENTRAL_LIST.md).
+Próximo checkpoint: continuar briefing e validar respostas reais da IA.
+Nenhum push executado.
+
 **Entrada no briefing founder — 11/10/2026:** removido redirecionamento para
 aprovação antes da conversa. Histórico/flags não contam como respostas; aprovação
 sem conteúdo e finalização vazia bloqueadas. Campanha em intake recuperada para
