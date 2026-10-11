@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
+import { briefingAnswerCount } from "../modules/product-intake/product-intake.contracts.js";
 import { PRODUCT_INTAKE_ENTRY_POINTS, affectedSurfaceKeys, canonicalIntakeSnapshot, continueDecision, exactProductBinding, intakeResponseSemantics, resolveUnambiguousSubscription, successorVersion } from "../modules/product-intake/product-intake.contracts.js";
 
 // Provider-free contract coverage for the canonical intake boundary.
+assert.equal(briefingAnswerCount({ _conversationHistory: [{ content: "hello" }], _intakeChatComplete: true }), 0);
+assert.equal(briefingAnswerCount({ product: " ", audience: [], offer: { _internal: "ignored" } }), 0);
+assert.equal(briefingAnswerCount({ "product.name": "Course", "audience.pain": "Problem", "product.price": 0 }), 3);
 assert.equal(new Set(PRODUCT_INTAKE_ENTRY_POINTS).size, 4);
 for (const entryPoint of PRODUCT_INTAKE_ENTRY_POINTS) assert.equal(continueDecision(true), "continue_or_review", entryPoint);
 assert.equal(continueDecision(false), "create_other_product_or_start");

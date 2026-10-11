@@ -2,6 +2,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { db, auditLogsTable, campaignsTable, commercialSubscriptionsTable, productIntakesTable, marketIntelReportsTable, socialPostsTable, paidMediaLaunchPlansTable, type ProductIntake } from "@workspace/db";
 import { AppError, NotFoundError } from "../../lib/errors.js";
 import type { Logger } from "pino";
+import { briefingAnswerCount } from "./product-intake.contracts.js";
 
 export type IntakeEntryPoint = "launch" | "market_intel" | "social_media" | "paid_media";
 const mutableStatuses = new Set(["draft"]);
@@ -66,6 +67,9 @@ export async function approveProductIntake(workspaceId: string, intakeId: string
   const [intake] = await db.select().from(productIntakesTable).where(and(eq(productIntakesTable.id, intakeId), eq(productIntakesTable.workspaceId, workspaceId))).limit(1);
   if (!intake) throw new NotFoundError("Product intake");
   if (intake.status !== "draft") return intake;
+  if (briefingAnswerCount((intake.snapshot ?? {}) as Record<string, unknown>) < (intake.entryPoint === "launch" ? 3 : 1)) {
+    throw new AppError(400, "Continue o briefing com o agente antes de aprovar. Histórico de conversa não substitui os dados do produto.", "INTAKE_INCOMPLETE");
+  }
   const [approved] = await db.update(productIntakesTable).set({ status: "approved", approvedAt: new Date(), approvedByUserId: actorId, updatedAt: new Date() }).where(eq(productIntakesTable.id, intakeId)).returning();
   await audit(workspaceId, "product_intake.approved", { intakeId, version: intake.version }, actorId);
   return approved;

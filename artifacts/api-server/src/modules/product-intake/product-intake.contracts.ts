@@ -1,6 +1,19 @@
 export const PRODUCT_INTAKE_ENTRY_POINTS = ["launch", "market_intel", "social_media", "paid_media"] as const;
 export type ProductIntakeEntryPoint = typeof PRODUCT_INTAKE_ENTRY_POINTS[number];
 
+/** Private history and control flags are not collected briefing answers. */
+export function briefingAnswerCount(snapshot: Record<string, unknown>): number {
+  const meaningful = (value: unknown): boolean => {
+    if (typeof value === "string") return value.trim().length > 0;
+    if (typeof value === "number") return Number.isFinite(value);
+    if (typeof value === "boolean") return true;
+    if (Array.isArray(value)) return value.some(meaningful);
+    if (value && typeof value === "object") return Object.entries(value).some(([key, item]) => !key.startsWith("_") && meaningful(item));
+    return false;
+  };
+  return Object.entries(snapshot).filter(([key, value]) => !key.startsWith("_") && meaningful(value)).length;
+}
+
 export function continueDecision(hasDraft: boolean) {
   return hasDraft ? "continue_or_review" : "create_other_product_or_start";
 }

@@ -1,5 +1,15 @@
 # NexOSAI — Fluxo Operacional e de Implementação Canônico
 
+**Entrada no briefing founder — 11/10/2026:** removido redirecionamento para
+aprovação antes da conversa. Histórico/flags não contam como respostas; aprovação
+sem conteúdo e finalização vazia bloqueadas. Campanha em intake recuperada para
+versão sucessora draft, preservando histórico e antiga aprovação em auditoria.
+Regressão HTTP Docker, contratos, tipos e build passaram. Runtime público
+verificado com perguntas 200, aprovação incompleta 400 e saúde 200.
+[Evidência](docs/BRIEFING_ENTRY_RECOVERY.md).
+Próximo checkpoint: founder continuar conversa e validar resposta real da IA.
+Nenhum push executado.
+
 **Criação de lançamento founder — 11/10/2026:** tela, schema HTTP, OpenAPI e
 clientes alinhados para enviar produto/assinatura explícitos do workspace ativo.
 Criação e persistência passaram em regressão HTTP Docker; vínculos ausentes,

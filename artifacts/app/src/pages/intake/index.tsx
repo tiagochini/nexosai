@@ -30,6 +30,7 @@ interface Intake {
   status: "draft" | "approved" | "superseded";
   entryPoint: string;
   snapshot: Record<string, unknown>;
+  sourceCampaignId?: string | null;
   contentHash: string;
   createdAt: string;
   approvedAt: string | null;
@@ -248,12 +249,17 @@ export default function IntakeHub() {
                           </div>
                           <Button 
                             onClick={() => approveMutation.mutate(intakeData.draft!.id)}
-                            disabled={approveMutation.isPending}
+                            disabled={approveMutation.isPending || Object.keys(intakeData.draft.snapshot ?? {}).filter(key => !key.startsWith("_")).length < (intakeData.draft.entryPoint === "launch" ? 3 : 1)}
                             className="rounded-none font-mono uppercase tracking-widest text-[10px] btn-weapon-primary h-8 gap-2 shrink-0"
                           >
                             <CheckCircle2 className="h-3.5 w-3.5" /> {t("Aprovar", "Approve", "Aprobar")}
                           </Button>
                         </div>
+                        {intakeData.draft.sourceCampaignId && (
+                          <Link href={`/campaigns/${intakeData.draft.sourceCampaignId}/intake`}>
+                            <Button variant="outline">{t("Continuar briefing com o agente", "Continue briefing with the agent", "Continuar briefing con el agente")}</Button>
+                          </Link>
+                        )}
                       </div>
                     )}
                   </>

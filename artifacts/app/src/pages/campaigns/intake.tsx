@@ -631,14 +631,8 @@ export default function CampaignIntake() {
     enabled: !!campaignId
   });
 
-  useEffect(() => {
-    if (campaignData?.campaign?.commercialProductId) {
-      setLocation(`/intake/${campaignData.campaign.commercialProductId}`);
-    }
-  }, [campaignData, setLocation]);
-
   const { data, isLoading: loadingIntake } = useGetIntake(campaignId, {
-    query: { enabled: !!campaignId && !campaignData?.campaign?.commercialProductId, queryKey: getGetIntakeQueryKey(campaignId) },
+    query: { enabled: !!campaignId && !!campaignData, queryKey: getGetIntakeQueryKey(campaignId) },
   });
 
   const isLoading = loadingCampaign || loadingIntake;

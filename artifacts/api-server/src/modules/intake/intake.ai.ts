@@ -18,6 +18,7 @@ import {
 } from "./intake.service.js";
 import { recommendTrackFromRevenue } from "./intake.scoring.js";
 import { approveProductIntake, getProductIntake } from "../product-intake/product-intake.service.js";
+import { briefingAnswerCount } from "../product-intake/product-intake.contracts.js";
 import {
   triggerMarketIntelFromIntake,
   buildIntakeMarketIntelContext,
@@ -1107,7 +1108,7 @@ export async function finalizeIntake(
   const intakeData = { ...rawIntakeData, ...intakeDefaults };
 
   const completeness = validateIntakeCompleteness(type, track, intakeData);
-  const fieldsCount = Object.keys(intakeData).length;
+  const fieldsCount = briefingAnswerCount(rawIntakeData);
 
   // Soft validation: require at least 3 fields collected; missing required fields only warn, don't block.
   // The conversational AI decides when it has enough — strict field-key matching would block valid intakes
