@@ -1,5 +1,12 @@
 # NexOS — Checklist Canônico de Construção
 
+**Claude — evidência corrigida, 12/10/2026:** variável de chave antes ausente;
+testes 401 anteriores não validaram as chaves fornecidas. Cadastro corrigido.
+Messages Opus retornou 200 com e sem workspace; geração Haiku real 200.
+Consumo retornado pelo provedor. Jornada do briefing/gateway ainda pendente.
+[Evidência corrigida](docs/CLAUDE_WORKSPACE_VALIDATION.md).
+Próximo checkpoint: briefing real com persistência e consumo pelo gateway. Sem push.
+
 **Claude — nova chave, 12/10/2026:** credencial substituída apenas no
 perfil local ignorado. Consulta real de modelos com workspace retornou 401
 tanto por x-api-key quanto por Bearer. Nenhuma geração executada.
@@ -833,4 +840,3 @@ O estado abaixo será calculado capability por capability. Nenhum estágio é co
 - [ ] Não há política de consentimento/execução versionada, executor de mensagens autorizado, comprovante independente de onboarding, readback, atribuição de resultados, otimização governada ou homologação real. M11 permanece incompleto; M12 não é `production_proven`.
 
 Claude, 12/10/2026: terceira chave substituída no perfil local; autenticação real continua em HTTP 401 nas duas modalidades. Evidência: docs/CLAUDE_KEY_VALIDATION_RESULTS.json. Próximo checkpoint: credencial aceita pela Anthropic. Sem push.
-

@@ -1,0 +1,24 @@
+{
+  "verifiedAt": "2026-10-12T13:17:00.363Z",
+  "integrity": {
+    "hasWhitespace": false,
+    "hasQuotes": false,
+    "expectedPrefix": true,
+    "expectedSuffix": true,
+    "length": 106
+  },
+  "results": [
+    {
+      "workspaceHeader": false,
+      "status": 200,
+      "requestId": "req_011CfxQZ83Kd9UKYpqsVW17c",
+      "validResponse": true
+    },
+    {
+      "workspaceHeader": true,
+      "status": 200,
+      "requestId": "req_011CfxQZDeQk4Aa5ewMVL9Co",
+      "validResponse": true
+    }
+  ]
+}
