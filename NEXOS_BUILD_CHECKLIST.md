@@ -1,5 +1,12 @@
 # NexOS — Checklist Canônico de Construção
 
+**Notas de revisão — 12/10/2026:** substituídos texto antigo + adendo
+por oito tópicos das condições atuais (Etapa 1 / Etapa 2). Versão anterior e
+conversa preservadas; snapshot canônico sincronizado. Prompt orienta reescrever
+o resumo sem acumular adendos. Tipos passaram; campanha segue intake/draft.
+[Evidência](docs/BRIEFING_REVIEW_NOTES_CONSOLIDATION.md).
+Próximo checkpoint: usuário revisar resumo e ajustar. Nenhuma execução/push.
+
 **Histórico legível — 12/10/2026:** área de conversa com altura
 responsiva e sem encolhimento pelo resumo/compositor. Rolagem preservada;
 navegador público mediu 473 px no desktop. Build aprovado. Nenhum dado,

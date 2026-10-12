@@ -1,0 +1,15 @@
+{
+  "verifiedAt": "2026-10-12T18:40:17.642Z",
+  "topics": 8,
+  "previousCharacters": 2057,
+  "currentCharacters": 1146,
+  "priorNotesPreserved": true,
+  "conversationPreserved": true,
+  "canonicalSnapshotSynchronized": true,
+  "campaignStatus": "intake",
+  "canonicalStatus": "draft",
+  "agentsStarted": false,
+  "pushPerformed": false,
+  "publicApi": "PASS consolidated current notes and preserved previous revision",
+  "serverTypecheck": "PASS"
+}
