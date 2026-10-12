@@ -1,5 +1,13 @@
 # NexOSAI — Fluxo Operacional e de Implementação Canônico
 
+**Tela da campanha — 12/10/2026:** corrigido acesso a `type.includes` ausente.
+Mapa e revisão usam `checkpointType` da API; status `pending` aparece para
+revisão. Compatibilidade com respostas antigas preservada. Dois testes,
+renderização do componente, tipos e build passaram. Nenhum dado/aprovação
+alterado. [Evidência](docs/CAMPAIGN_CHECKPOINT_CONTRACT.md).
+Próximo checkpoint: atualizar campanha e conferir agentes. Sem push;
+navegador autenticado e CI remoto pendentes.
+
 **PDF do Master Plan — 12/10/2026:** corrigidos símbolos incompatíveis,
 cartões de KPI sem quebra, colunas de riscos e avanço/paginação de textos.
 Marca d'água sob todos os textos, com 12% de opacidade; ordem dos comandos

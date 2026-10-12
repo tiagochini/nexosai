@@ -1,3 +1,4 @@
+import { checkpointType, checkpointNeedsReview, type CampaignCheckpoint } from "@/lib/campaign-checkpoint";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRoute, Link, useLocation, useSearch } from "wouter";
 import {
@@ -67,13 +68,7 @@ interface AgentRun {
   costUsd?: string;
   errorMessage?: string;
 }
-interface Checkpoint {
-  id: string;
-  type: string;
-  status: string;
-  data: Record<string, unknown>;
-  createdAt: string;
-}
+type Checkpoint = CampaignCheckpoint;
 interface ContentPiece {
   id: string;
   type: string;
@@ -432,7 +427,7 @@ function AgentPlanPanel({
                 <CheckCircle2 className="h-3 w-3" />{t("Checkpoints Aprovados", "Approved Checkpoints", "Puntos de control aprobados")} ({approvedCps.length})
               </div>
               {approvedCps.map(cp => (
-                <PlanBlock key={cp.id} label={cp.type.replace(/_/g, " ")}>
+                <PlanBlock key={cp.id} label={checkpointType(cp).replace(/_/g, " ")}>
                   <div className="text-[11px] font-mono text-muted-foreground/50 mb-2">
                     {t("Aprovado em", "Approved on", "Aprobado el")} {new Date(cp.createdAt).toLocaleString("pt-BR")}
                   </div>
@@ -3692,13 +3687,13 @@ export default function CampaignDetail() {
           )}
 
           {/* ─ Pending checkpoints ─ */}
-          {(agentsData?.checkpoints ?? []).filter(c => c.status === "awaiting_review").map(cp => (
+          {(agentsData?.checkpoints ?? []).filter(checkpointNeedsReview).map(cp => (
             <div key={cp.id} className="border border-yellow-400/30 bg-yellow-400/5 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
                 <div className="text-[11px] font-mono uppercase tracking-widest text-yellow-400 flex items-center gap-2 mb-1">
                   <AlertTriangle className="h-3 w-3" />{t("Aprovação Necessária", "Approval Required", "Se requiere aprobación")}
                 </div>
-                <div className="font-mono text-sm font-bold uppercase tracking-wide">{cp.type.replace(/_/g, " ")}</div>
+                <div className="font-mono text-sm font-bold uppercase tracking-wide">{checkpointType(cp).replace(/_/g, " ")}</div>
                 <div className="text-xs text-muted-foreground font-mono mt-0.5">{new Date(cp.createdAt).toLocaleString("pt-BR")}</div>
               </div>
               <Button

@@ -1,3 +1,4 @@
+import { checkpointType, type CampaignCheckpoint } from "@/lib/campaign-checkpoint";
 import { useState, useCallback } from "react";
 import { Link } from "wouter";
 import {
@@ -34,13 +35,7 @@ interface ContentPiece {
   createdAt: string;
 }
 
-interface Checkpoint {
-  id: string;
-  type: string;
-  status: string;
-  data: Record<string, unknown>;
-  createdAt: string;
-}
+type Checkpoint = CampaignCheckpoint;
 
 interface Campaign {
   id: string;
@@ -315,7 +310,7 @@ function CheckpointNode({ cp, last }: { cp: Checkpoint; last: boolean }) {
             : <Clock className="h-2.5 w-2.5 text-yellow-400 shrink-0" />
           }
           <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground/60">
-            {cp.type.replace(/_/g, " ")}
+            {checkpointType(cp).replace(/_/g, " ")}
           </span>
           <Badge variant="outline" className={`rounded-none px-1 py-0 font-mono text-[9px] ml-auto ${
             cp.status === "approved" ? "border-success/30 text-success" :
@@ -652,9 +647,9 @@ function PhaseNode({
                   return false;
                 });
                 const agentCheckpoints = phaseCheckpoints.filter(cp =>
-                  (agent.agentRole === "strategy" && cp.type.includes("strategy")) ||
-                  (agent.agentRole === "copywriter" && cp.type.includes("content")) ||
-                  (agent.agentRole === "compliance" && cp.type.includes("compliance"))
+                  (agent.agentRole === "strategy" && checkpointType(cp).includes("strategy")) ||
+                  (agent.agentRole === "copywriter" && checkpointType(cp).includes("content")) ||
+                  (agent.agentRole === "compliance" && checkpointType(cp).includes("compliance"))
                 );
 
                 return (
@@ -787,8 +782,8 @@ export function CampaignMindMap({ campaign, agents, checkpoints, pieces, campaig
             return false;
           });
           const phaseCheckpoints = checkpoints.filter(cp => {
-            if (phase.id === "strategy") return cp.type.includes("strategy") || cp.type.includes("compliance");
-            if (phase.id === "content") return cp.type.includes("content") || cp.type.includes("creative");
+            if (phase.id === "strategy") return checkpointType(cp).includes("strategy") || checkpointType(cp).includes("compliance");
+            if (phase.id === "content") return checkpointType(cp).includes("content") || checkpointType(cp).includes("creative");
             return false;
           });
           const st = phaseStatus(campaign.status, phase.statuses);
