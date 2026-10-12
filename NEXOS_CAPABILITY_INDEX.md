@@ -1077,3 +1077,6 @@ Uma capability só conta quando:
 8. não depende de afirmações sem prova.
 
 O fluxo operacional e o índice de maturidade formam um único contrato. Nenhum roadmap paralelo deve ser criado fora dele.
+
+Claude, 12/10/2026: terceira chave substituída no perfil local; autenticação real continua em HTTP 401 nas duas modalidades. Evidência: docs/CLAUDE_KEY_VALIDATION_RESULTS.json. Próximo checkpoint: credencial aceita pela Anthropic. Sem push.
+

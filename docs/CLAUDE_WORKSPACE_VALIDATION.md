@@ -23,3 +23,6 @@ Repetição de GET /v1/models com o workspace: x-api-key retornou 401
 invalid x-api-key; Authorization Bearer retornou 401 Invalid bearer token.
 Nenhuma geração executada. O resultado não confirma acesso ao workspace.
 [Evidência da repetição](./CLAUDE_KEY_VALIDATION_RESULTS.json).
+
+Terceira chave testada em 12/10/2026: GET /v1/models novamente rejeitado com HTTP 401 por x-api-key e Bearer. Nenhuma geração executada. Perfil local atualizado, sem ativação no runtime.
+

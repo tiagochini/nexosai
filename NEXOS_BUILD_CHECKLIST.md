@@ -831,3 +831,6 @@ O estado abaixo será calculado capability por capability. Nenhum estágio é co
 - [x] Sem prova de entrega, ativação manual e elegibilidade consequente para upsell ficam bloqueadas; estágio de comprador não pode ser declarado manualmente.
 - [ ] Transações históricas com evento antigo possivelmente parcial exigem auditoria antes de reparo manual; receita externa fora de product_sales ainda não compartilha a transação atômica. Não inferir fulfillment de status local.
 - [ ] Não há política de consentimento/execução versionada, executor de mensagens autorizado, comprovante independente de onboarding, readback, atribuição de resultados, otimização governada ou homologação real. M11 permanece incompleto; M12 não é `production_proven`.
+
+Claude, 12/10/2026: terceira chave substituída no perfil local; autenticação real continua em HTTP 401 nas duas modalidades. Evidência: docs/CLAUDE_KEY_VALIDATION_RESULTS.json. Próximo checkpoint: credencial aceita pela Anthropic. Sem push.
+

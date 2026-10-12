@@ -841,3 +841,6 @@ Ele unifica:
 - governança, recuperação e produção comprovada.
 
 Toda capability deve possuir ID, estágio, estado, nível de maturidade, ownership, dependências, interfaces, executores, adapters, autorização, evidências, métricas, testes, recovery e limitações.
+
+Claude, 12/10/2026: terceira chave substituída no perfil local; autenticação real continua em HTTP 401 nas duas modalidades. Evidência: docs/CLAUDE_KEY_VALIDATION_RESULTS.json. Próximo checkpoint: credencial aceita pela Anthropic. Sem push.
+
