@@ -1,5 +1,13 @@
 # NexOS — Checklist Canônico de Construção
 
+**PDF do Master Plan — 12/10/2026:** corrigidos símbolos incompatíveis,
+cartões de KPI sem quebra, colunas de riscos e avanço/paginação de textos.
+Marca d'água suavizada, capa preservada. Cópia corrigida de seis páginas,
+renderizada e inspecionada; geometria, tipos e build passaram. Estratégia
+salva e arquivo original preservados; nenhuma nova geração de IA.
+[Evidência](docs/MASTERPLAN_PDF_LAYOUT.md).
+Próximo checkpoint: usuário conferir PDF corrigido. Sem push; CI remoto pendente.
+
 **Notas de revisão — 12/10/2026:** substituídos texto antigo + adendo
 por oito tópicos das condições atuais (Etapa 1 / Etapa 2). Versão anterior e
 conversa preservadas; snapshot canônico sincronizado. Prompt orienta reescrever

@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { pdfText } from "./pdf-text";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -75,10 +76,10 @@ function stegaText(
   doc.setFontSize(fontSize);
   setColor(doc, 40, 40, 40);
 
-  const words = text.split(/\s+/).filter(Boolean);
+  const words = pdfText(text).split(/\s+/).filter(Boolean);
   if (!words.length) return y + 4;
 
-  const lineH = fontSize * 0.38;
+  const lineH = doc.getLineHeight() / doc.internal.scaleFactor;
   const baseSpace = doc.getTextWidth(" ");
   const DELTA = 0.14; // mm deviation — imperceptible but forensically recoverable
 
@@ -92,6 +93,7 @@ function stegaText(
       curX = x;
       curY += lineH;
     }
+    curY = checkBreak(doc, curY, lineH);
     doc.text(word, curX, curY);
     if (wi < words.length - 1) {
       const bit = bits[cursor.i % bits.length];
@@ -147,12 +149,12 @@ function bodyText(doc: Doc, text: string, y: number, maxW = CW, size = 8.5): num
   doc.setFontSize(size);
   setColor(doc, 40, 40, 40);
   const lines = doc.splitTextToSize(text, maxW);
-  doc.text(lines, ML, y);
-  return y + lines.length * (size * 0.38) + 1.5;
+  return flowLines(doc, lines, ML, y) + 1.5;
 }
 
 function labeledText(doc: Doc, label: string, value: string, y: number): number {
   if (!value) return y;
+  y = checkBreak(doc, y, 8);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
   setColor(doc, 140, 100, 210);
@@ -162,8 +164,7 @@ function labeledText(doc: Doc, label: string, value: string, y: number): number 
   doc.setFontSize(8.5);
   setColor(doc, 40, 40, 40);
   const lines = doc.splitTextToSize(value, CW - labelW);
-  doc.text(lines, ML + labelW, y);
-  return y + Math.max(lines.length, 1) * 3.5 + 1;
+  return flowLines(doc, lines, ML + labelW, y) + 1;
 }
 
 function bulletList(doc: Doc, items: string[], y: number, color: [number, number, number] = [80, 80, 80]): number {
@@ -171,18 +172,19 @@ function bulletList(doc: Doc, items: string[], y: number, color: [number, number
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     setColor(doc, ...color);
-    doc.text("▸", ML, y);
+    y = checkBreak(doc, y, doc.getLineHeight() / doc.internal.scaleFactor);
+    doc.text("-", ML, y);
     doc.setFont("helvetica", "normal");
     setColor(doc, 40, 40, 40);
     const lines = doc.splitTextToSize(item, CW - 5);
-    doc.text(lines, ML + 4.5, y);
-    y += lines.length * 3.5 + 1;
+    y = flowLines(doc, lines, ML + 4.5, y) + 1;
   });
   return y;
 }
 
 function numberedList(doc: Doc, items: string[], y: number, color: [number, number, number] = [100, 60, 180]): number {
   items.forEach((item, i) => {
+    y = checkBreak(doc, y, 5);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7.5);
     setColor(doc, ...color);
@@ -191,8 +193,7 @@ function numberedList(doc: Doc, items: string[], y: number, color: [number, numb
     doc.setFontSize(8.5);
     setColor(doc, 40, 40, 40);
     const lines = doc.splitTextToSize(item, CW - 8);
-    doc.text(lines, ML + 7, y);
-    y += lines.length * 3.5 + 1;
+    y = flowLines(doc, lines, ML + 7, y) + 1;
   });
   return y;
 }
@@ -205,15 +206,17 @@ function applyWatermark(doc: Doc, user: PdfUserIdentity, fingerprint: string, pa
   // Diagonal watermark — light gray, 45°
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
-  setColor(doc, 210, 200, 220);
+  setColor(doc, 242, 238, 247);
   doc.text(wText, W / 2, H / 2, { angle: 45, align: "center" });
 
   // Second diagonal (opposite direction for fuller coverage)
-  setColor(doc, 220, 215, 225);
+  setColor(doc, 246, 243, 249);
   doc.setFontSize(7.5);
   doc.text(wText, W / 2, H / 3, { angle: 45, align: "center" });
   doc.text(wText, W / 2, (2 * H) / 3, { angle: 45, align: "center" });
 
+  // The cover already has its own brand header.
+  if (pageNum > 1) {
   // Header bar
   doc.setFillColor(248, 246, 252);
   doc.rect(0, 0, W, 12, "F");
@@ -224,6 +227,7 @@ function applyWatermark(doc: Doc, user: PdfUserIdentity, fingerprint: string, pa
   doc.setFont("helvetica", "normal");
   setColor(doc, 160, 140, 180);
   doc.text(`${fingerprint}`, W - MR, 7.5, { align: "right" });
+  }
 
   // Footer bar
   doc.setFillColor(248, 246, 252);
@@ -248,6 +252,16 @@ function checkBreak(doc: Doc, y: number, needed = 15): number {
   return y;
 }
 
+function flowLines(doc: Doc, lines: string[], x: number, y: number): number {
+  const height = doc.getLineHeight() / doc.internal.scaleFactor;
+  for (const line of lines) {
+    y = checkBreak(doc, y, height);
+    doc.text(line, x, y);
+    y += height;
+  }
+  return y;
+}
+
 // ─── Section renderers ────────────────────────────────────────────────────────
 
 function renderSection(doc: Doc, n: string, title: string, y: number): number {
@@ -268,9 +282,20 @@ function renderSection(doc: Doc, n: string, title: string, y: number): number {
 
 export function generateMasterplanPDF(
   data: MasterplanPdfData,
-  user: PdfUserIdentity
-): { fingerprint: string } {
+  user: PdfUserIdentity,
+  options: { save?: boolean } = {},
+): { fingerprint: string; document: jsPDF } {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  // Normalize before both measurement and drawing so wrapping stays consistent.
+  const originalText = doc.text.bind(doc);
+  doc.text = ((text: string | string[], ...args: unknown[]) => originalText(
+    Array.isArray(text) ? text.map(pdfText) : pdfText(text), ...args as [number, number],
+  )) as typeof doc.text;
+  const originalSplit = doc.splitTextToSize.bind(doc);
+  // Leave a small inset for differences between PDF viewer font metrics.
+  doc.splitTextToSize = (text: string, width: number, opts?: unknown) => originalSplit(pdfText(text), Math.max(1, width - 2), opts);
+  const originalWidth = doc.getTextWidth.bind(doc);
+  doc.getTextWidth = (text: string) => originalWidth(pdfText(text));
   const fingerprint = generateFingerprint(user.userId, data.campaignId);
   const bits = fingerprintToBits(fingerprint);
   const stegaCursor: StegaCursor = { i: 0 };
@@ -466,8 +491,7 @@ export function generateMasterplanPDF(
     doc.setFontSize(8);
     setColor(doc, 40, 30, 60);
     const lines = doc.splitTextToSize(content, CW);
-    doc.text(lines, ML, y);
-    y += lines.length * 3.8 + 6;
+    y = flowLines(doc, lines, ML, y) + 6;
   });
 
   // Identity box on page 2
@@ -530,8 +554,7 @@ export function generateMasterplanPDF(
     doc.setFontSize(10);
     setColor(doc, 30, 15, 55);
     const bdLines = doc.splitTextToSize(`"${data.bigDomino}"`, CW - 6);
-    doc.text(bdLines, ML + 5, y);
-    y += bdLines.length * 4.5 + 8;
+    y = flowLines(doc, bdLines, ML + 5, y) + 8;
   }
 
   // ── M03 — POSICIONAMENTO
@@ -549,8 +572,7 @@ export function generateMasterplanPDF(
       doc.setFontSize(9);
       setColor(doc, 30, 15, 55);
       const uvpLines = doc.splitTextToSize(str(pos["uniqueValueProposition"]), CW);
-      doc.text(uvpLines, ML, y);
-      y += uvpLines.length * 3.8 + 5;
+      y = flowLines(doc, uvpLines, ML, y) + 5;
     }
     if (str(pos["primaryDifferentiator"])) {
       doc.setFont("helvetica", "bold");
@@ -709,8 +731,7 @@ export function generateMasterplanPDF(
       doc.setFontSize(9);
       setColor(doc, 40, 20, 70);
       const cnLines = doc.splitTextToSize(str(arch["coreNarrative"]), CW);
-      doc.text(cnLines, ML, y);
-      y += cnLines.length * 3.8 + 4;
+      y = flowLines(doc, cnLines, ML, y) + 4;
     }
     if (str(arch["emotionalHook"])) {
       y = checkBreak(doc, y, 10);
@@ -838,28 +859,27 @@ export function generateMasterplanPDF(
       ["Horizonte de Lançamento", str(met["launchWindow"])],
     ];
 
-    // KPI grid (2 columns)
-    let kpiX = ML;
-    let kpiY = y;
-    kpis.forEach(([label, value], i) => {
-      if (!value) return;
-      doc.setFillColor(248, 245, 255);
-      doc.setDrawColor(200, 180, 230);
-      doc.setLineWidth(0.2);
-      doc.rect(kpiX, kpiY, CW / 2 - 1, 12, "FD");
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(6.5);
-      setColor(doc, 130, 90, 180);
-      doc.text(label.toUpperCase(), kpiX + 3, kpiY + 4);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      setColor(doc, 30, 15, 60);
-      doc.text(value, kpiX + 3, kpiY + 9);
-
-      if (i % 2 === 0) { kpiX = ML + CW / 2 + 1; }
-      else { kpiX = ML; kpiY += 14; }
-    });
-    y = kpiY + 16;
+    // Wrap values and size both cards in a row to the taller value.
+    const visibleKpis = kpis.filter(([, value]) => value);
+    const cardWidth = CW / 2 - 1;
+    for (let i = 0; i < visibleKpis.length; i += 2) {
+      doc.setFont("helvetica", "bold"); doc.setFontSize(9);
+      const cards = visibleKpis.slice(i, i + 2).map(([label, value]) => ({label, lines: doc.splitTextToSize(value, cardWidth - 6) as string[]}));
+      const lineHeight = doc.getLineHeight() / doc.internal.scaleFactor;
+      const rowHeight = Math.max(14, 9 + Math.max(...cards.map(card => card.lines.length)) * lineHeight);
+      y = checkBreak(doc, y, rowHeight);
+      cards.forEach((card, column) => {
+        const x = ML + column * (CW / 2 + 1);
+        doc.setFillColor(248, 245, 255); doc.setDrawColor(200, 180, 230); doc.setLineWidth(0.2);
+        doc.rect(x, y, cardWidth, rowHeight, "FD");
+        doc.setFontSize(6.5); setColor(doc, 130, 90, 180);
+        doc.text(card.label.toUpperCase(), x + 3, y + 4);
+        doc.setFontSize(9); setColor(doc, 30, 15, 60);
+        doc.text(card.lines, x + 3, y + 9);
+      });
+      y += rowHeight + 3;
+    }
+    y += 2;
 
     const assumptions = arr(met["criticalAssumptions"]);
     if (assumptions.length) {
@@ -913,13 +933,19 @@ export function generateMasterplanPDF(
         doc.setFontSize(8);
         setColor(doc, 160, 60, 70);
         const rLines = risk ? doc.splitTextToSize(`▸ ${risk}`, halfW) : [];
-        doc.text(rLines, ML, y);
-
-        setColor(doc, 40, 140, 90);
         const mLines = mitigation ? doc.splitTextToSize(`▸ ${mitigation}`, halfW) : [];
-        doc.text(mLines, ML + CW / 2 + 2, y);
-
-        y += Math.max(rLines.length, mLines.length, 1) * 3.8 + 2;
+        const lineHeight = doc.getLineHeight() / doc.internal.scaleFactor;
+        const lineCount = Math.max(rLines.length, mLines.length, 1);
+        y = checkBreak(doc, y, Math.min(lineCount * lineHeight + 2, H - MT - MB - 20));
+        for (let line = 0; line < lineCount; line++) {
+          y = checkBreak(doc, y, lineHeight + 2);
+          setColor(doc, 160, 60, 70);
+          if (rLines[line]) doc.text(rLines[line], ML, y);
+          setColor(doc, 40, 140, 90);
+          if (mLines[line]) doc.text(mLines[line], ML + CW / 2 + 2, y);
+          y += lineHeight;
+        }
+        y += 2;
         hline(doc, y - 1, ML, W - MR, 230, 225, 235);
       }
     }
@@ -939,8 +965,7 @@ export function generateMasterplanPDF(
     doc.setFontSize(8.5);
     setColor(doc, 50, 35, 75);
     const snLines = doc.splitTextToSize(data.strategistNotes, CW);
-    doc.text(snLines, ML, y);
-    y += snLines.length * 3.8 + 4;
+    y = flowLines(doc, snLines, ML, y) + 4;
   }
 
   // ── APPLY WATERMARK TO ALL PAGES ──────────────────────────────────────────
@@ -964,6 +989,6 @@ export function generateMasterplanPDF(
   // ── SAVE ──────────────────────────────────────────────────────────────────
 
   const safeName = data.campaignTitle.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase().slice(0, 30);
-  doc.save(`nexos-masterplan-${safeName}-${fingerprint}.pdf`);
-  return { fingerprint };
+  if (options.save !== false) doc.save(`nexos-masterplan-${safeName}-${fingerprint}.pdf`);
+  return { fingerprint, document: doc };
 }
