@@ -1,0 +1,24 @@
+{
+  "verifiedAt": "2026-10-12T13:12:56.014Z",
+  "environment": "homologation",
+  "workspaceConfigured": true,
+  "keyUpdated": true,
+  "results": [
+    {
+      "authenticationMode": "bearer",
+      "httpStatus": 401,
+      "errorType": "authentication_error",
+      "message": "Invalid bearer token",
+      "modelsAvailable": false
+    },
+    {
+      "authenticationMode": "x-api-key",
+      "httpStatus": 401,
+      "errorType": "authentication_error",
+      "message": "invalid x-api-key",
+      "modelsAvailable": false
+    }
+  ],
+  "generationExecuted": false,
+  "runtimeActivated": false
+}

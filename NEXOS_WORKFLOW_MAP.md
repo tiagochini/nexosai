@@ -1,5 +1,12 @@
 # NexOSAI — Fluxo Operacional e de Implementação Canônico
 
+**Claude — nova chave, 12/10/2026:** credencial substituída apenas no
+perfil local ignorado. Consulta real de modelos com workspace retornou 401
+tanto por x-api-key quanto por Bearer. Nenhuma geração executada.
+[Evidência](docs/CLAUDE_KEY_VALIDATION_RESULTS.json).
+Próximo checkpoint: chave válida criada no Claude Console e geração real.
+Sem push.
+
 **Claude — 12/10/2026:** workspace configurado no perfil local;
 gateway nativo envia anthropic-workspace-id. Tipos do servidor passaram.
 Consulta real de modelos retornou 401 invalid x-api-key. Workspace e geração

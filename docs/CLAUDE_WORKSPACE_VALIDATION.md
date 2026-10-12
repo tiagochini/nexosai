@@ -15,3 +15,11 @@ reiniciar o servidor e validar uma resposta real pelo gateway.
 Não houve push.
 
 Referência: https://platform.claude.com/docs/en/get-api-key
+
+## Nova chave — 12/10/2026
+
+A segunda chave enviada foi salva apenas no perfil local ignorado pelo Git.
+Repetição de GET /v1/models com o workspace: x-api-key retornou 401
+invalid x-api-key; Authorization Bearer retornou 401 Invalid bearer token.
+Nenhuma geração executada. O resultado não confirma acesso ao workspace.
+[Evidência da repetição](./CLAUDE_KEY_VALIDATION_RESULTS.json).
