@@ -1,5 +1,13 @@
 # NexOS — Checklist Canônico de Construção
 
+**Documentação organizada — 12/10/2026:** nove documentos transferidos
+para docs/architecture e docs/archive; uma cópia byte a byte idêntica removida.
+Conteúdo preservado; links, instruções de leitura e registro de artefatos
+atualizados. Verificação de 238 arquivos Markdown sem novos links quebrados.
+[Evidência](docs/ROOT_DOCUMENTATION_ORGANIZATION.md).
+Próximo checkpoint: usar [índice da documentação](docs/README.md). Nenhuma
+mudança na aplicação, credenciais ou banco. Sem push.
+
 **Provedores IA — homologação funcional concluída, 12/10/2026:**
 briefing real validado 21/21, 40 mensagens e estratégia persistida; usuário
 refez manualmente e confirmou funcionamento. 77 chamadas reais: Claude 54,

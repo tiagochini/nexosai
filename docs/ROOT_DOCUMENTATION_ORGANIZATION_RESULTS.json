@@ -1,0 +1,76 @@
+{
+  "verifiedAt": "2026-10-12T23:30:15.266Z",
+  "movedDocuments": [
+    {
+      "source": "NEXOS_MASTER_ARCHITECTURE.md",
+      "destination": "docs/architecture/NEXOS_MASTER_ARCHITECTURE.md",
+      "contentPreserved": true,
+      "referencesUpdated": true
+    },
+    {
+      "source": "NEXOS_STATE_MACHINE.md",
+      "destination": "docs/architecture/NEXOS_STATE_MACHINE.md",
+      "contentPreserved": true,
+      "referencesUpdated": false
+    },
+    {
+      "source": "NEXOS_AGENT_CONTRACTS.md",
+      "destination": "docs/architecture/NEXOS_AGENT_CONTRACTS.md",
+      "contentPreserved": true,
+      "referencesUpdated": false
+    },
+    {
+      "source": "NEXOS_GUARDRAILS.md",
+      "destination": "docs/architecture/NEXOS_GUARDRAILS.md",
+      "contentPreserved": true,
+      "referencesUpdated": false
+    },
+    {
+      "source": "INVENTARIO_AGENTES_NEXOS.md",
+      "destination": "docs/archive/agents/INVENTARIO_AGENTES_NEXOS.md",
+      "contentPreserved": true,
+      "referencesUpdated": false
+    },
+    {
+      "source": "PROGRESS.md",
+      "destination": "docs/archive/replit/PROGRESS.md",
+      "contentPreserved": true,
+      "referencesUpdated": false
+    },
+    {
+      "source": "NEXOS_PLANO_CORRECAO.md",
+      "destination": "docs/archive/replit/NEXOS_PLANO_CORRECAO.md",
+      "contentPreserved": true,
+      "referencesUpdated": false
+    },
+    {
+      "source": "NEXOS_AUDITORIA_ARQUITETURA.txt",
+      "destination": "docs/archive/replit/NEXOS_AUDITORIA_ARQUITETURA.txt",
+      "contentPreserved": true,
+      "referencesUpdated": false
+    },
+    {
+      "source": "NEXOS_AUDITORIA_ARQUITETURA_2026.rtf",
+      "destination": "docs/archive/replit/NEXOS_AUDITORIA_ARQUITETURA_2026.rtf",
+      "contentPreserved": true,
+      "referencesUpdated": false
+    }
+  ],
+  "duplicateRemoved": {
+    "file": "INVENTARIO_AGENTES_NEXOS (copy).md",
+    "identicalSha256": "ba2d0b32e846db1452b21bd716ef65dab636067d62663e0adf3cc2fbbfade97d"
+  },
+  "markdownFilesChecked": 238,
+  "newBrokenLinks": 0,
+  "rootMarkdownFiles": [
+    "CLAUDE.md",
+    "NEXOS_BUILD_CHECKLIST.md",
+    "NEXOS_CAPABILITY_INDEX.md",
+    "NEXOS_WORKFLOW_MAP.md",
+    "README.md",
+    "replit.md"
+  ],
+  "applicationChanged": false,
+  "databaseChanged": false,
+  "pushPerformed": false
+}

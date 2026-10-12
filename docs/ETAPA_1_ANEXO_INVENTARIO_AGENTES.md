@@ -15,7 +15,7 @@ primárias são o tipo e o mapa em
 `artifacts/api-server/src/modules/ai-gateway/ai-gateway.service.ts`, os arquivos
 em `artifacts/api-server/src/modules/agents/`, o registro experimental em
 `artifacts/api-server/src/modules/agents/experimental/README.md` e os documentos
-históricos `INVENTARIO_AGENTES_NEXOS.md` e `NEXOS_AGENT_CONTRACTS.md`.
+históricos `docs/archive/agents/INVENTARIO_AGENTES_NEXOS.md` e `docs/architecture/NEXOS_AGENT_CONTRACTS.md`.
 
 O método usa, sem redefinição por classe, a escala soberana: **E0** ausente;
 **E1** declarado; **E2** gera/persiste; **E3** workflow interno; **E4** ação
@@ -257,8 +257,8 @@ não decorrem de `command` apenas por orquestrar.
 Lacunas: Master Plan ainda não é contrato versionado soberano de runtime; não há
 cadeia única comprovada intake→continuidade; prova externa, recovery, CRM/grupos,
 funil, páginas/vídeo, otimização aplicada e perpétuo são desiguais. O
-`INVENTARIO_AGENTES_NEXOS.md` (64) é catálogo intelectual histórico, e
-`NEXOS_AGENT_CONTRACTS.md` é parcial, diverge em provider de `offer` e registra
+`docs/archive/agents/INVENTARIO_AGENTES_NEXOS.md` (64) é catálogo intelectual histórico, e
+`docs/architecture/NEXOS_AGENT_CONTRACTS.md` é parcial, diverge em provider de `offer` e registra
 `item_copy` fora do `AgentRole`; ambos exigem reconciliação documental.
 
 Preservar implementações, hardening, filas, checkpoints, integrações e

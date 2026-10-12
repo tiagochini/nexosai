@@ -560,11 +560,11 @@ doc.y += 44;
 doc.moveDown(0.3);
 subTitle("Documentos a criar (aguardando aprovação):");
 const docs = [
-  "NEXOS_MASTER_ARCHITECTURE.md",
+  "docs/architecture/NEXOS_MASTER_ARCHITECTURE.md",
   "NEXOS_EXPERIENCE_CONTRACT.md",
-  "NEXOS_AGENT_CONTRACTS.md",
+  "docs/architecture/NEXOS_AGENT_CONTRACTS.md",
   "NEXOS_WORKFLOW_MAP.md",
-  "NEXOS_GUARDRAILS.md",
+  "docs/architecture/NEXOS_GUARDRAILS.md",
 ];
 docs.forEach((d) => {
   const dy = doc.y;

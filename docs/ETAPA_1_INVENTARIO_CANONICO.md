@@ -703,7 +703,7 @@ skills, SOPs e gates; uma role isolada pode não preencher capacidade alguma.
 
 ## 6. Estado dos documentos existentes
 
-### `INVENTARIO_AGENTES_NEXOS.md`
+### `docs/archive/agents/INVENTARIO_AGENTES_NEXOS.md`
 
 - é anterior ao congelamento canônico;
 - informa 64 agentes, número que não corresponde às 86 roles atuais;
@@ -713,7 +713,7 @@ skills, SOPs e gates; uma role isolada pode não preencher capacidade alguma.
 - permanece válido como catálogo intelectual, não como inventário operacional
   soberano.
 
-### `NEXOS_AGENT_CONTRACTS.md`
+### `docs/architecture/NEXOS_AGENT_CONTRACTS.md`
 
 - afirma cobrir todos os agentes ativos, mas cobre apenas uma fração;
 - omite market intelligence;
@@ -729,20 +729,20 @@ skills, SOPs e gates; uma role isolada pode não preencher capacidade alguma.
 - não cobre mídia paga, continuidade e recuperação de forma suficiente;
 - deve ser reconciliado na etapa apropriada.
 
-### `NEXOS_MASTER_ARCHITECTURE.md`
+### `docs/architecture/NEXOS_MASTER_ARCHITECTURE.md`
 
 - está conceitualmente subordinado à Etapa 0;
 - sua contagem “70+ roles” é imprecisa diante das 86 roles atuais;
 - declara execução integral em amplitude maior do que a comprovação reunida;
 - permanece válido como visão técnica, com necessidade de atualização factual.
 
-### `NEXOS_STATE_MACHINE.md`
+### `docs/architecture/NEXOS_STATE_MACHINE.md`
 
 - é válido para estado de campanha;
 - não representa estado de ações, agentes, jobs e integrações;
 - não invalida a Etapa 1, mas não comprova autonomia integral.
 
-### `NEXOS_GUARDRAILS.md`
+### `docs/architecture/NEXOS_GUARDRAILS.md`
 
 - contém regras importantes e reconhece riscos reais;
 - sua cobertura não está demonstrada uniformemente nos workflows;

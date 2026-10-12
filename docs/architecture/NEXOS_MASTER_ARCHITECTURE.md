@@ -112,7 +112,7 @@ explícitas.
 
 ## Governança de Estado de Campanha
 
-> **Fonte:** `campaign-state-machine.ts` → `NEXOS_STATE_MACHINE.md`
+> **Fonte:** `campaign-state-machine.ts` → `docs/architecture/NEXOS_STATE_MACHINE.md`
 
 - **Level 3 ativo:** `transitionCampaign()` lança `ValidationError` em transições inválidas
 - **11 status:** intake → analyzing → strategy_ready → generating → awaiting_approval → approved → executing → live → paused → completed | cancelled
@@ -123,7 +123,7 @@ explícitas.
 
 ## Sistema de Agentes
 
-> **Contratos:** `NEXOS_AGENT_CONTRACTS.md`
+> **Contratos:** `docs/architecture/NEXOS_AGENT_CONTRACTS.md`
 > **Agentes experimentais:** `agents/experimental/README.md`
 
 - **70+ AgentRoles** no tipo `AgentRole`
@@ -167,8 +167,8 @@ pnpm --filter @workspace/db run push
 
 | Documento | Conteúdo |
 |-----------|----------|
-| `NEXOS_STATE_MACHINE.md` | Diagrama, tabela de transições, labels, regras Level 3 |
-| `NEXOS_AGENT_CONTRACTS.md` | Contratos de entrada/saída de todos os agentes ativos |
+| `docs/architecture/NEXOS_STATE_MACHINE.md` | Diagrama, tabela de transições, labels, regras Level 3 |
+| `docs/architecture/NEXOS_AGENT_CONTRACTS.md` | Contratos de entrada/saída de todos os agentes ativos |
 | `NEXOS_WORKFLOW_MAP.md` | Fluxos completos com gates, timers e riscos |
-| `NEXOS_GUARDRAILS.md` | Regras obrigatórias, checklist de PR |
+| `docs/architecture/NEXOS_GUARDRAILS.md` | Regras obrigatórias, checklist de PR |
 | `replit.md` | README do projeto, stack, gotchas, preferências do usuário |

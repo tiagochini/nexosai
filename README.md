@@ -151,14 +151,17 @@ o callback do App de produção. Veja [Webhooks Meta no ambiente local](docs/MET
 
 ## Documentação
 
+- [Índice da documentação](docs/README.md)
+- [Checklist de construção](NEXOS_BUILD_CHECKLIST.md)
+- [Índice de capacidades](NEXOS_CAPABILITY_INDEX.md)
 - [Desenvolvimento local](docs/LOCAL_DEVELOPMENT.md)
 - [Webhooks Meta no ambiente local](docs/META_WEBHOOK_LOCAL_DEV.md)
 - [Runbook do Meta App Review](docs/META_APP_REVIEW_TEST_RUNBOOK.md)
-- [Arquitetura mestre](NEXOS_MASTER_ARCHITECTURE.md)
+- [Arquitetura mestre](docs/architecture/NEXOS_MASTER_ARCHITECTURE.md)
 - [Mapa de workflows](NEXOS_WORKFLOW_MAP.md)
-- [Máquina de estados](NEXOS_STATE_MACHINE.md)
-- [Contratos dos agentes](NEXOS_AGENT_CONTRACTS.md)
-- [Guardrails](NEXOS_GUARDRAILS.md)
+- [Máquina de estados](docs/architecture/NEXOS_STATE_MACHINE.md)
+- [Contratos dos agentes](docs/architecture/NEXOS_AGENT_CONTRACTS.md)
+- [Guardrails](docs/architecture/NEXOS_GUARDRAILS.md)
 
-`PROGRESS.md` é um registro histórico do plano de correção do ambiente Replit e
+`docs/archive/replit/PROGRESS.md` é um registro histórico do plano de correção do ambiente Replit e
 não deve ser usado como estado operacional atual.

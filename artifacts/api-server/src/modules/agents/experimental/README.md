@@ -33,12 +33,12 @@ Estão disponíveis exclusivamente via chat direto (`POST /agents/chat`).
 
 ## Como Integrar um Agente Experimental na Pipeline
 
-1. Definir o contrato de entrada/saída em `NEXOS_AGENT_CONTRACTS.md`
+1. Definir o contrato de entrada/saída em `docs/architecture/NEXOS_AGENT_CONTRACTS.md`
 2. Identificar o evento de acionamento (qual fase, qual condição)
 3. Criar o service/worker que chama o agente via `runIsolatedAgent()`
-4. Adicionar gate de aprovação humana se necessário (ver `NEXOS_GUARDRAILS.md`)
+4. Adicionar gate de aprovação humana se necessário (ver `docs/architecture/NEXOS_GUARDRAILS.md`)
 5. Atualizar `NEXOS_WORKFLOW_MAP.md`
-6. Mover este agente para a seção correspondente de `NEXOS_AGENT_CONTRACTS.md`
+6. Mover este agente para a seção correspondente de `docs/architecture/NEXOS_AGENT_CONTRACTS.md`
 
 ---
 

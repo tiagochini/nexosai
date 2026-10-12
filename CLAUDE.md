@@ -95,14 +95,14 @@ Beta fechado com **5–10 pessoas leigas de verdade**, produto real, dinheiro re
 
 **Ao iniciar cada sessão:**
 1. Ler este arquivo + os dois documentos irmãos
-2. Ler `PROGRESS.md` (ver abaixo) para saber onde a última sessão parou
+2. Ler `docs/archive/replit/PROGRESS.md` (ver abaixo) para saber onde a última sessão parou
 3. Anunciar: fase atual, próxima tarefa, e o que precisa de aprovação
 
 **Ao encerrar cada sessão (ou grande bloco de trabalho):**
-- Atualizar `PROGRESS.md` com: data · fase · o que foi verificado (com evidência) · o que está aberto · próximo passo
+- Atualizar `docs/archive/replit/PROGRESS.md` com: data · fase · o que foi verificado (com evidência) · o que está aberto · próximo passo
 - Este arquivo é a memória entre sessões. Sessão sem registro = trabalho perdido.
 
-**Contagem do Ápice:** manter em `PROGRESS.md` o placar explícito das 4 camadas — "C1 execuções limpas: N/3 · C2 escada: degrau X/5 + personas de estresse · C3 caos: cenários passados/total · C4 beta: usuários completos N/5" — e o motivo de qualquer zeragem.
+**Contagem do Ápice:** manter em `docs/archive/replit/PROGRESS.md` o placar explícito das 4 camadas — "C1 execuções limpas: N/3 · C2 escada: degrau X/5 + personas de estresse · C3 caos: cenários passados/total · C4 beta: usuários completos N/5" — e o motivo de qualquer zeragem.
 
 ## 8. STACK & AMBIENTE (referência rápida)
 
