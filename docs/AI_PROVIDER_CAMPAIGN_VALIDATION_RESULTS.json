@@ -1,5 +1,5 @@
 {
-  "verifiedAt": "2026-10-12T23:24:36.564Z",
+  "verifiedAt": "2026-10-12T23:27:00.021Z",
   "scope": "Read-only founder campaign validation; no inference or database writes",
   "briefing": {
     "complete": true,
@@ -62,8 +62,39 @@
     }
   ],
   "limits": [
-    "Cost values are calculated locally, not reconciled with provider invoices",
-    "AI usage log credits are not necessarily ledger debits; reconciliation pending",
-    "Controlled outage/retry/fallback matrix and full content quality review not certified by these records"
-  ]
+    "Costs are local estimates; invoice and full ledger reconciliation belong to Security and Credits",
+    "Outages are simulated; no real provider infrastructure outage tested",
+    "Full content quality matrix belongs to Quality and Closure"
+  ],
+  "savedArtifacts": {
+    "briefingSha256": "5144fcdcad8d54c7f3f85951b5b100f90c9bd37f0cb12ed4292463090445c451",
+    "strategySha256": "cdc433536aa9dbed979b5606606706efc2c1a4cd89490fb79f3a71b7cf19dc61"
+  },
+  "logIntegrity": {
+    "calls": 77,
+    "inconsistent_token_totals": 0,
+    "missing_usage": 0,
+    "first_call": "2026-10-11T17:56:25.144Z",
+    "last_call": "2026-10-12T19:45:00.400Z"
+  },
+  "duplicateIdempotencyKeys": 0,
+  "manualAcceptance": {
+    "source": "User report in this chat",
+    "result": "User repeated the briefing manually and confirmed it worked",
+    "scope": "Functional briefing journey"
+  },
+  "controlledTests": {
+    "canonicalCompletionChain": "PASS",
+    "credentialMatrices": 63,
+    "simulatedFailures": [
+      "429 rate limit",
+      "503 unavailable",
+      "AbortError timeout",
+      "all providers failed",
+      "no credentials configured"
+    ],
+    "projectExecutionIsolation": "PASS",
+    "mode": "Offline injected errors; no real provider outage caused"
+  },
+  "status": "FUNCTIONAL_PROVIDER_HOMOLOGATION_COMPLETE"
 }
