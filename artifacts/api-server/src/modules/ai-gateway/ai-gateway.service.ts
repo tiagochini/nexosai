@@ -357,7 +357,9 @@ function hasGeminiIntegration(): boolean {
 export function getAnthropic(): { client: Anthropic; isNative: boolean } {
   if (!anthropicClient) {
     if (env.ANTHROPIC_API_KEY) {
-      anthropicClient = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+      anthropicClient = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY,
+        ...(env.ANTHROPIC_WORKSPACE_ID ? { defaultHeaders: { "anthropic-workspace-id": env.ANTHROPIC_WORKSPACE_ID } } : {}),
+      });
       anthropicClientIsNative = true;
     } else if (hasAnthropicIntegration()) {
       anthropicClient = new Anthropic({
@@ -503,7 +505,9 @@ async function callAnthropic(
   const apiKey = native ? env.ANTHROPIC_API_KEY : env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
   const baseURL = native ? undefined : env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
   if (!apiKey || (!native && !baseURL)) throw new AICompletionConfigurationError(`Anthropic ${credentialMode} credentials are unavailable`);
-  const client = new Anthropic({ apiKey, ...(baseURL ? { baseURL } : {}) });
+  const client = new Anthropic({ apiKey, ...(baseURL ? { baseURL } : {}),
+    ...(native && env.ANTHROPIC_WORKSPACE_ID ? { defaultHeaders: { "anthropic-workspace-id": env.ANTHROPIC_WORKSPACE_ID } } : {}),
+  });
   const effectiveModel = native ? model : ANTHROPIC_INTEGRATION_MODEL;
   const effectiveSignal = withLLMTimeout(signal, timeoutMs);
   const response = await withRetry(

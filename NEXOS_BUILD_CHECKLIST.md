@@ -1,5 +1,12 @@
 # NexOS — Checklist Canônico de Construção
 
+**Claude — 12/10/2026:** workspace configurado no perfil local;
+gateway nativo envia anthropic-workspace-id. Tipos do servidor passaram.
+Consulta real de modelos retornou 401 invalid x-api-key. Workspace e geração
+ainda não homologados; runtime requer reinício com chave válida.
+[Evidência](docs/CLAUDE_WORKSPACE_VALIDATION.md).
+Próximo checkpoint: chave válida e resposta real pelo gateway. Sem push.
+
 **Briefing Central — 11/10/2026:** corrigida a origem da lista: campanhas
 do workspace substituem produtos de checkout. A única campanha founder foi
 confirmada no endpoint público; cards abrem a conversa do lançamento. Cache

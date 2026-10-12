@@ -16,6 +16,7 @@ export const env = {
   JWT_REFRESH_EXPIRES_IN: process.env["JWT_REFRESH_EXPIRES_IN"] ?? "90d",
   REDIS_URL: process.env["REDIS_URL"] ?? "redis://localhost:6379",
   ANTHROPIC_API_KEY: process.env["ANTHROPIC_API_KEY"] ?? "",
+  ANTHROPIC_WORKSPACE_ID: process.env["ANTHROPIC_WORKSPACE_ID"]?.trim() ?? "",
   OPENAI_API_KEY: process.env["OPENAI_API_KEY"] ?? "",
   NEXOS_OPENAI: process.env["NEXOS_OPENAI"] ?? "",
   GEMINI_API_KEY: process.env["GEMINI_API_KEY"] ?? "",
