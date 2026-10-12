@@ -1,5 +1,13 @@
 # NexOS — Checklist Canônico de Construção
 
+**Criativos — diagnóstico de imagem, 12/10/2026:** consulta do erro real
+confirmou OpenAI 429 por falta de saldo da API. Gerador já usa gpt-image-1;
+mensagem genérica de chave/DALL-E corrigida para distinguir cobrança, limite
+de solicitações, credenciais e acesso. Dois testes, tipos e build passaram.
+[Evidência](docs/CREATIVE_IMAGE_BILLING_DIAGNOSTIC.md). Geração de imagem
+ainda bloqueada pelo saldo externo; nenhum novo débito ou inferência.
+Próximo checkpoint: conferir faturamento OpenAI e repetir preview real. Sem push.
+
 **Documentação organizada — 12/10/2026:** nove documentos transferidos
 para docs/architecture e docs/archive; uma cópia byte a byte idêntica removida.
 Conteúdo preservado; links, instruções de leitura e registro de artefatos
