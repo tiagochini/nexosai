@@ -6,6 +6,8 @@ import { briefingAnswerCount } from "./product-intake.contracts.js";
 
 export type IntakeEntryPoint = "launch" | "market_intel" | "social_media" | "paid_media";
 const mutableStatuses = new Set(["draft"]);
+// Automated compatibility calls have an audit actor, but no user UUID.
+const actorUserId = (actorId: string) => actorId === "system" ? null : actorId;
 
 async function productForWorkspace(workspaceId: string, productId: string) {
   const [row] = await db.select({ id: commercialSubscriptionsTable.id }).from(commercialSubscriptionsTable)
@@ -39,7 +41,7 @@ export async function startProductIntake(workspaceId: string, productId: string,
     .orderBy(desc(productIntakesTable.version)).limit(1);
   const [created] = await db.insert(productIntakesTable).values({
     workspaceId, commercialProductId: productId, version: (latest?.version ?? 0) + 1, entryPoint,
-    sourceCampaignId, createdByUserId: actorId, snapshot: {},
+    sourceCampaignId, createdByUserId: actorUserId(actorId), snapshot: {},
   }).returning();
   await audit(workspaceId, "product_intake.started", { intakeId: created.id, productId, entryPoint }, actorId);
   log?.info({ intakeId: created.id, productId }, "Canonical product intake started");
@@ -53,7 +55,7 @@ export async function updateProductIntake(workspaceId: string, intakeId: string,
     const [latest] = await db.select({ version: productIntakesTable.version }).from(productIntakesTable)
       .where(and(eq(productIntakesTable.workspaceId, workspaceId), eq(productIntakesTable.commercialProductId, intake.commercialProductId)))
       .orderBy(desc(productIntakesTable.version)).limit(1);
-    const [successor] = await db.insert(productIntakesTable).values({ workspaceId, commercialProductId: intake.commercialProductId, version: (latest?.version ?? 0) + 1, status: "draft", snapshot: { ...(intake.snapshot as Record<string, unknown>), ...snapshot }, entryPoint: intake.entryPoint, sourceCampaignId: intake.sourceCampaignId, createdByUserId: actorId }).returning();
+    const [successor] = await db.insert(productIntakesTable).values({ workspaceId, commercialProductId: intake.commercialProductId, version: (latest?.version ?? 0) + 1, status: "draft", snapshot: { ...(intake.snapshot as Record<string, unknown>), ...snapshot }, entryPoint: intake.entryPoint, sourceCampaignId: intake.sourceCampaignId, createdByUserId: actorUserId(actorId) }).returning();
     await audit(workspaceId, "product_intake.successor_created", { previousId: intake.id, intakeId: successor.id }, actorId);
     return successor;
   }
@@ -70,7 +72,7 @@ export async function approveProductIntake(workspaceId: string, intakeId: string
   if (briefingAnswerCount((intake.snapshot ?? {}) as Record<string, unknown>) < (intake.entryPoint === "launch" ? 3 : 1)) {
     throw new AppError(400, "Continue o briefing com o agente antes de aprovar. Histórico de conversa não substitui os dados do produto.", "INTAKE_INCOMPLETE");
   }
-  const [approved] = await db.update(productIntakesTable).set({ status: "approved", approvedAt: new Date(), approvedByUserId: actorId, updatedAt: new Date() }).where(eq(productIntakesTable.id, intakeId)).returning();
+  const [approved] = await db.update(productIntakesTable).set({ status: "approved", approvedAt: new Date(), approvedByUserId: actorUserId(actorId), updatedAt: new Date() }).where(eq(productIntakesTable.id, intakeId)).returning();
   await audit(workspaceId, "product_intake.approved", { intakeId, version: intake.version }, actorId);
   return approved;
 }

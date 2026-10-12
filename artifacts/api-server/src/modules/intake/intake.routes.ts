@@ -135,7 +135,7 @@ router.post("/:campaignId", async (req, res): Promise<void> => {
         valid: completeness.valid,
         missingRequired: completeness.missingRequired,
         progress: Math.round(
-          (Object.keys(parsed.data.intakeData).length / Math.max(questions.length, 1)) * 100,
+          (answeredRequired / Math.max(totalRequired, 1)) * 100,
         ),
         percentage,
         answeredRequired,
@@ -209,7 +209,7 @@ router.get("/:campaignId", async (req, res): Promise<void> => {
         valid: completeness.valid || chatCompletedOnServer,
         missingRequired: chatCompletedOnServer ? [] : completeness.missingRequired,
         progress: chatCompletedOnServer ? 100 : Math.round(
-          (Object.keys(intakeData).length / Math.max(questions.length, 1)) * 100,
+          (answeredRequired / Math.max(totalRequired, 1)) * 100,
         ),
         percentage: chatCompletedOnServer ? 100 : percentage,
         answeredRequired: chatCompletedOnServer ? totalRequired : answeredRequired,

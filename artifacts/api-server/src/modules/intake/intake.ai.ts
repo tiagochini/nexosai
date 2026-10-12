@@ -19,6 +19,7 @@ import {
 import { recommendTrackFromRevenue } from "./intake.scoring.js";
 import { approveProductIntake, getProductIntake } from "../product-intake/product-intake.service.js";
 import { briefingAnswerCount } from "../product-intake/product-intake.contracts.js";
+import { defaultScarcity } from "./intake-context.js";
 import {
   triggerMarketIntelFromIntake,
   buildIntakeMarketIntelContext,
@@ -304,6 +305,11 @@ O usuário acabou de contratar uma agência de lançamento de alto nível. Cada 
 **Walker** (Fase 5 — Execução): Especialista em PLF e sequências. Tom: técnico mas acessível, trata cada detalhe como decisivo.
 
 ## REGRAS DE CONDUÇÃO
+Preserve em extracted["briefing.reviewNotes"] um resumo cumulativo das ressalvas,
+hipóteses, pendências, público prioritário e caminhos de execução declarados pelo usuário.
+Não converta hipóteses em fatos. Registre o prazo de teste em campaign.timeline
+(ex.: "30_days"). Em vendas contínuas, não invente janela de carrinho, escassez,
+ROAS ou prova social. A conclusão da coleta não autoriza venda ou ação externa.
 1. UMA pergunta por turno — a mais estratégica que falta naquela fase
 2. Quando o agente MUDA de fase, apresenta-se brevemente e passa a palavra
 3. Quando CONTINUA na mesma fase, vai direto ao ponto reconhecendo a resposta anterior
@@ -1078,9 +1084,7 @@ export async function finalizeIntake(
   }
 
   // launch.scarcityMechanism — default deadline (most universal for launches)
-  if (!rawIntakeData["launch.scarcityMechanism"]) {
-    intakeDefaults["launch.scarcityMechanism"] = "deadline";
-  }
+  Object.assign(intakeDefaults, defaultScarcity(type, rawIntakeData));
 
   // campaign.hasAffiliate — default false (most creators start solo)
   if (rawIntakeData["campaign.hasAffiliate"] === undefined || rawIntakeData["campaign.hasAffiliate"] === null) {

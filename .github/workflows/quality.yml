@@ -46,6 +46,7 @@ jobs:
           pnpm --filter @workspace/api-server run test:billing-settlement
           pnpm --filter @workspace/api-server run test:orchestration-fallback-race
           pnpm --filter @workspace/api-server run test:boot-recovery-safety
+          pnpm --filter @workspace/api-server exec tsx ../../scripts/test-master-plan-review.ts
           env -u DATABASE_URL -u REDIS_URL pnpm --filter @workspace/api-server run test:operational-health
       - name: Credential security regression tests
         run: |

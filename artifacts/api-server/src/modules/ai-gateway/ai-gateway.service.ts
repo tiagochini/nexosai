@@ -1,4 +1,5 @@
-import { requireProject } from "../operations/project-access.service.js";
+import { projectBriefing } from "../operations/project-access.service.js";
+import { briefingDecisionContext } from "../intake/intake-context.js";
 import { executionSettings, setExecutionSetting, withProjectExecution } from "../operations/project-execution-context.js";
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
@@ -992,7 +993,10 @@ async function completeWithAgentInternal(
   maxTokens?: number,
   timeoutMs?: number,
 ): Promise<AICompletionResult> {
-  if (campaignId) await requireProject(workspaceId, campaignId);
+  if (campaignId) {
+    const context = briefingDecisionContext(await projectBriefing(workspaceId, campaignId));
+    if (context) messages = [{ role: "user", content: context }, ...messages];
+  }
   const agentConfig = AGENT_PROVIDER_MAP[agentRole];
   // providerOverride remains in this public signature for legacy test callers, but
   // production completions always use this canonical chain.

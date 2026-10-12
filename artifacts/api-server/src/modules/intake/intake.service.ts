@@ -8,6 +8,7 @@ import {
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import type { Logger } from "pino";
 import { startProductIntake, updateProductIntake } from "../product-intake/product-intake.service.js";
+import { preserveBriefingContext } from "./intake-context.js";
 
 export type CampaignType =
   | "launch"
@@ -1075,6 +1076,7 @@ export async function saveIntakeData(
 
   // If editing after strategy was generated, reset back to intake so strategy is regenerated
   const resetStatus = campaign.status !== "intake" ? "intake" : undefined;
+  intakeData = preserveBriefingContext((campaign.intakeData ?? {}) as Record<string, unknown>, intakeData);
 
   const [updated] = await db
     .update(campaignsTable)

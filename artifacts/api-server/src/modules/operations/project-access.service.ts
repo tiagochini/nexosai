@@ -8,3 +8,10 @@ export async function requireProject(workspaceId: string, campaignId: string): P
     .where(and(eq(campaignsTable.workspaceId, workspaceId), eq(campaignsTable.id, campaignId))).limit(1);
   if (!project) throw new NotFoundError("Project");
 }
+
+export async function projectBriefing(workspaceId: string, campaignId: string): Promise<Record<string, unknown>> {
+  const [project] = await db.select({ intakeData: campaignsTable.intakeData }).from(campaignsTable)
+    .where(and(eq(campaignsTable.workspaceId, workspaceId), eq(campaignsTable.id, campaignId))).limit(1);
+  if (!project) throw new NotFoundError("Project");
+  return (project.intakeData ?? {}) as Record<string, unknown>;
+}

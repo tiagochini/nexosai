@@ -10,6 +10,10 @@ import { issueTokens } from "../modules/auth/auth.service.js";
 import { AppError } from "../lib/errors.js";
 import intakeRouter from "../modules/intake/intake.routes.js";
 import productIntakeRouter from "../modules/product-intake/product-intake.routes.js";
+import { saveIntakeData } from "../modules/intake/intake.service.js";
+import { projectBriefing } from "../modules/operations/project-access.service.js";
+import { briefingDecisionContext } from "../modules/intake/intake-context.js";
+import { approveProductIntake } from "../modules/product-intake/product-intake.service.js";
 
 await assertIsolationTestDatabase(pool);
 const marker=randomUUID();
@@ -63,6 +67,23 @@ try {
  await db.update(productIntakesTable).set({snapshot:{"product.name":"Course","audience.pain":"Problem","product.price":10}}).where(eq(productIntakesTable.id,draft!.id));
  assert.equal((await scopedRequest(`/product-intake/${draft!.id}/approve`,"POST")).status,200);
  assert.equal((await db.select().from(campaignsTable).where(eq(campaignsTable.id,campaign.id)))[0]!.status,"intake","approval does not execute campaign");
+ const log=pino({level:"silent"});
+ await saveIntakeData(campaign.id,a.ws.id,{"campaign.type":"continuous_sales","campaign.timeline":"30_days","briefing.reviewNotes":"Preço provisório; integrações pendentes",_conversationHistory:[{role:"user",content:"Pesquisa sem oferta"}]},log);
+ await saveIntakeData(campaign.id,a.ws.id,{"campaign.type":"continuous_sales","campaign.timeline":"30_days",_conversationHistory:[{role:"user",content:"Margem desconhecida"}]},log);
+ const saved=await projectBriefing(a.ws.id,campaign.id);
+ const resumed=await scopedRequest(`/intake/${campaign.id}`);assert.equal(resumed.status,200);
+ const resumedData=await resumed.json() as {completeness:{progress:number}};
+ assert.ok(resumedData.completeness.progress>=0&&resumedData.completeness.progress<=100,"notes/history cannot inflate completion above 100%");
+ const context=briefingDecisionContext(saved);
+ for(const note of ["Pesquisa sem oferta","Margem desconhecida","Preço provisório","integrações pendentes"])assert.ok(context.includes(note));
+ await assert.rejects(projectBriefing(b.ws.id,campaign.id),e=>e instanceof AppError&&e.statusCode===404);
+ const current=(await db.select().from(campaignsTable).where(eq(campaignsTable.id,campaign.id)))[0]!;
+ const canonical=(await db.select().from(productIntakesTable).where(eq(productIntakesTable.id,current.productIntakeVersionId!)))[0]!;
+ assert.deepEqual(canonical.snapshot,current.intakeData);assert.equal(current.status,"intake");assert.equal(canonical.status,"draft");
+ const systemApproval=await approveProductIntake(a.ws.id,canonical.id,"system");
+ assert.equal(systemApproval.status,"approved");assert.equal(systemApproval.approvedByUserId,null,"system actor must not be written into UUID user column");
+ assert.equal((await db.select().from(campaignsTable).where(eq(campaignsTable.id,campaign.id)))[0]!.status,"intake");
+ console.log("PASS briefing context: decisions and caveats survive chat rollover, canonical snapshot matches, foreign workspace denied; no agents started");
  console.log("PASS briefing HTTP: bound campaign receives questions; empty finalize/history-only approval blocked; collected answers can be approved without starting campaign");
  console.log("PASS campaign creation HTTP: explicit commercial binding persisted; missing, malformed, foreign, mismatched and inactive bindings rejected (no provider calls)");
 }finally{

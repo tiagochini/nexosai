@@ -1,5 +1,15 @@
 # NexOS Capability Index
 
+**Revisão continuous_sales — 12/10/2026:** período de 30 dias e público
+canônico; fluxo contínuo substitui carrinho/escassez. ROAS presumido removido.
+Ressalvas e decisões preservadas e enviadas ao gateway com escopo de projeto.
+Snapshot founder sincronizado, ainda draft/intake. Progresso e ator UUID
+automático corrigidos. Testes offline, Docker, tipos, build, navegador e
+runtime público verificados. Nenhum agente de execução iniciado.
+[Evidência](docs/CONTINUOUS_MASTERPLAN_REVIEW.md).
+Próximo checkpoint: founder revisar e autorizar a geração para homologar
+estratégia/conteúdo com ressalvas. CI remoto ainda não executado. Sem push.
+
 **Claude — evidência corrigida, 12/10/2026:** variável de chave antes ausente;
 testes 401 anteriores não validaram as chaves fornecidas. Cadastro corrigido.
 Messages Opus retornou 200 com e sem workspace; geração Haiku real 200.

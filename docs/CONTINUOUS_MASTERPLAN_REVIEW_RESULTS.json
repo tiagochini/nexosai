@@ -1,0 +1,27 @@
+{
+  "verifiedAt": "2026-10-12T14:14:18.059Z",
+  "campaignId": "bf683bcb-46cc-421f-adba-19b22f68e224",
+  "status": "intake",
+  "canonicalStatus": "draft",
+  "durationDays": 30,
+  "userDecisionsArchived": 17,
+  "reviewNotesPersisted": true,
+  "canonicalSnapshotSynchronized": true,
+  "agentsStarted": false,
+  "externalActions": 0,
+  "pushPerformed": false,
+  "browserAssertions": {
+    "caveats": true,
+    "continuousTitle": true,
+    "noInventedRoas": true,
+    "noLaunchTimeline": true,
+    "thirtyDays": true,
+    "twoPaths": true
+  },
+  "publicRuntime": "PASS correct model, duration, notes, user decisions, 100% progress and intake status",
+  "isolatedDatabaseTests": "PASS persistence, canonical snapshot, workspace isolation and system UUID compatibility",
+  "offlineReviewTest": "PASS",
+  "appTypecheck": "PASS",
+  "apiTypecheck": "PASS",
+  "appBuild": "PASS 485.4 KiB initial JS under 500 KiB budget"
+}
