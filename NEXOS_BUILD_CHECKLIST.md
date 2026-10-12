@@ -1,5 +1,14 @@
 # NexOS — Checklist Canônico de Construção
 
+**Provedores IA — campanha real, 12/10/2026:** briefing validado 21/21,
+40 mensagens e estratégia persistida. Gateway registra Claude (54 chamadas),
+OpenAI (1) e Gemini (22), todos com tokens e custo/créditos calculados.
+Substitui pendência histórica de geração real/gateway. Conciliação do ledger,
+falhas controladas e qualidade ainda pendentes.
+[Evidência](docs/AI_PROVIDER_CAMPAIGN_VALIDATION.md).
+Próximo checkpoint: conciliar consumo e créditos. Consulta somente leitura;
+sem inferência adicional, aprovação ou push.
+
 **Tela da campanha — 12/10/2026:** corrigido acesso a `type.includes` ausente.
 Mapa e revisão usam `checkpointType` da API; status `pending` aparece para
 revisão. Compatibilidade com respostas antigas preservada. Dois testes,

@@ -1,0 +1,69 @@
+{
+  "verifiedAt": "2026-10-12T23:24:36.564Z",
+  "scope": "Read-only founder campaign validation; no inference or database writes",
+  "briefing": {
+    "complete": true,
+    "required": 21,
+    "answered": 21,
+    "missingRequired": [],
+    "conversationMessages": 40,
+    "campaignType": "continuous_sales",
+    "track": "not_applicable",
+    "timeline": "30_days",
+    "strategySaved": true,
+    "campaignStatus": "awaiting_approval"
+  },
+  "providers": [
+    {
+      "provider": "anthropic",
+      "models": [
+        "claude-opus-4-5"
+      ],
+      "calls": 54,
+      "tokens": 1459144,
+      "costUsd": 32.026740000000004,
+      "creditsCalculated": 4831
+    },
+    {
+      "provider": "openai",
+      "models": [
+        "gpt-5.5"
+      ],
+      "calls": 1,
+      "tokens": 4797,
+      "costUsd": 0.05334,
+      "creditsCalculated": 9
+    },
+    {
+      "provider": "gemini",
+      "models": [
+        "gemini-2.5-flash"
+      ],
+      "calls": 22,
+      "tokens": 498767,
+      "costUsd": 0.134789,
+      "creditsCalculated": 34
+    }
+  ],
+  "creditLedger": [
+    {
+      "type": "debit",
+      "action": "campaign_execution",
+      "ai_provider": "anthropic",
+      "entries": 24,
+      "credits": 3530
+    },
+    {
+      "type": "debit",
+      "action": "campaign_execution",
+      "ai_provider": "gemini",
+      "entries": 6,
+      "credits": 15
+    }
+  ],
+  "limits": [
+    "Cost values are calculated locally, not reconciled with provider invoices",
+    "AI usage log credits are not necessarily ledger debits; reconciliation pending",
+    "Controlled outage/retry/fallback matrix and full content quality review not certified by these records"
+  ]
+}
