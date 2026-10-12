@@ -2,7 +2,8 @@
 
 **PDF do Master Plan — 12/10/2026:** corrigidos símbolos incompatíveis,
 cartões de KPI sem quebra, colunas de riscos e avanço/paginação de textos.
-Marca d'água suavizada, capa preservada. Cópia corrigida de seis páginas,
+Marca d'água sob todos os textos, com 12% de opacidade; ordem dos comandos
+e transparência verificadas nas seis páginas. Capa preservada. Cópia corrigida,
 renderizada e inspecionada; geometria, tipos e build passaram. Estratégia
 salva e arquivo original preservados; nenhuma nova geração de IA.
 [Evidência](docs/MASTERPLAN_PDF_LAYOUT.md).

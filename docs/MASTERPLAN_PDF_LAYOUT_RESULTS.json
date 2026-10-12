@@ -4,5 +4,7 @@
   "riskAndMitigationBounds": "PASS",
   "bodyHorizontalBounds": "PASS",
   "strategyModified": false,
-  "pushPerformed": false
+  "pushPerformed": false,
+  "watermarkLayer": "PASS before all foreground text on six pages",
+  "watermarkOpacity": 0.12
 }

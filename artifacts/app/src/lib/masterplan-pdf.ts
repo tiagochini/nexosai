@@ -1,4 +1,4 @@
-import jsPDF from "jspdf";
+import jsPDF, { GState } from "jspdf";
 import { pdfText } from "./pdf-text";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -203,17 +203,25 @@ function numberedList(doc: Doc, items: string[], y: number, color: [number, numb
 function applyWatermark(doc: Doc, user: PdfUserIdentity, fingerprint: string, pageNum: number, totalPages: number) {
   const wText = `LICENCIADO PARA ${user.name.toUpperCase()} · ${user.email} · ${fingerprint}`;
 
-  // Diagonal watermark — light gray, 45°
+  // Insert the translucent mark before foreground text, after page backgrounds.
+  // Drawing it last would bleach glyphs even when its color is very pale.
+  const commands = (doc.internal as typeof doc.internal & { pages: string[][] }).pages[pageNum];
+  const watermarkStart = commands.length;
+  doc.saveGraphicsState();
+  doc.setGState(new GState({ opacity: 0.12 }));
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
-  setColor(doc, 242, 238, 247);
+  setColor(doc, 180, 160, 210);
   doc.text(wText, W / 2, H / 2, { angle: 45, align: "center" });
 
   // Second diagonal (opposite direction for fuller coverage)
-  setColor(doc, 246, 243, 249);
   doc.setFontSize(7.5);
   doc.text(wText, W / 2, H / 3, { angle: 45, align: "center" });
   doc.text(wText, W / 2, (2 * H) / 3, { angle: 45, align: "center" });
+  doc.restoreGraphicsState();
+  const watermarkCommands = commands.splice(watermarkStart);
+  const firstText = commands.findIndex(command => /^BT\b/.test(command));
+  commands.splice(firstText < 0 ? commands.length : firstText, 0, ...watermarkCommands);
 
   // The cover already has its own brand header.
   if (pageNum > 1) {
