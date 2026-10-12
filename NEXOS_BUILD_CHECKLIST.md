@@ -1,5 +1,14 @@
 # NexOS — Checklist Canônico de Construção
 
+**Edição após conclusão — 12/10/2026:** chat mantém compositor a 100%
+e botão Ajustar briefing. Servidor processa pedidos de correção em vez de
+repetir conclusão fixa. Regressão Docker com Claude simulado verificou orçamento,
+ressalvas, histórico e rascunho canônico sem iniciar execução. Tipos/build e
+navegador verificados; runtime público 200.
+[Evidência](docs/BRIEFING_POST_COMPLETION_EDITING.md).
+Próximo checkpoint: usuário enviar ajuste e conferir revisão. Sem push; CI
+remoto ainda pendente nesta revisão.
+
 **Revisão continuous_sales — 12/10/2026:** período de 30 dias e público
 canônico; fluxo contínuo substitui carrinho/escassez. ROAS presumido removido.
 Ressalvas e decisões preservadas e enviadas ao gateway com escopo de projeto.

@@ -1440,8 +1440,8 @@ export default function CampaignIntake() {
             <div ref={chatEndRef} />
           </div>
 
-          {/* ── Completion CTA — replaces input when briefing is done ── */}
-          {(chatComplete || isComplete) ? (
+          {/* Completion enables review; it must not prevent corrections. */}
+          {(chatComplete || isComplete) && (
             <div className="border border-t-0 border-success/40 bg-success/5 shrink-0">
               {/* Top accent bar */}
               <div className="h-1 w-full bg-gradient-to-r from-success/0 via-success to-success/0" />
@@ -1493,6 +1493,14 @@ export default function CampaignIntake() {
 
                 {/* The big button — opens Master Plan for review first */}
                 <Button
+                  variant="outline"
+                  onClick={() => { inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); inputRef.current?.focus(); }}
+                  disabled={sending || confirmingType}
+                  className="font-mono rounded-none gap-2"
+                >
+                  <MessageSquare className="h-4 w-4" />{t("Ajustar briefing", "Adjust briefing", "Ajustar briefing")}
+                </Button>
+                <Button
                   onClick={() => setShowMasterPlan(true)}
                   className="w-full font-mono uppercase tracking-widest rounded-none gap-2 h-14 text-sm btn-weapon-primary"
                   style={{ fontSize: "0.8rem", letterSpacing: "0.12em" }}
@@ -1505,10 +1513,13 @@ export default function CampaignIntake() {
                 </p>
               </div>
             </div>
-          ) : (
-          /* Input */
-          (
+          )}
+          {/* Input remains available after completion. */}
+          {(
             <div className="border border-t-0 border-border/50 p-3 shrink-0 flex flex-col gap-2">
+              {(chatComplete || isComplete) && (
+                <p className="text-sm text-muted-foreground">{t("Quer corrigir algo? Descreva o ajuste abaixo antes de aprovar o plano.", "Want to correct something? Describe the change below before approving the plan.", "¿Quieres corregir algo? Describe el ajuste abajo antes de aprobar el plan.")}</p>
+              )}
 
               {/* Hidden file inputs */}
               <input ref={fileInputRef} type="file" multiple className="hidden"
@@ -1618,6 +1629,7 @@ export default function CampaignIntake() {
               {/* ── Textarea ── */}
               <textarea
                 ref={inputRef}
+                aria-label={t("Mensagem para ajustar o briefing", "Message to adjust the briefing", "Mensaje para ajustar el briefing")}
                 value={inputValue}
                 onChange={(e) => { setInputValue(e.target.value); if (autoSendSecsLeft > 0) stopAutoSendCountdown(); }}
                 onKeyDown={(e) => {
@@ -1724,7 +1736,7 @@ export default function CampaignIntake() {
                   : t("Enter = enviar · Shift+Enter = nova linha · suporta texto, imagens, PDF, áudio e vídeo", "Enter = send · Shift+Enter = new line · supports text, images, PDF, audio, and video", "Enter = enviar · Shift+Enter = nueva línea · admite texto, imágenes, PDF, audio y video")}
               </p>
             </div>
-          ))}
+          )}
         </div>
       )}
 

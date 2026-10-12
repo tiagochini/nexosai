@@ -727,7 +727,7 @@ export async function processConversationalTurn(
 
   // ── Hard-stop: all required fields already filled ─────────────────────────
   // Don't call the LLM at all — return a deterministic completion message.
-  if (completeness.valid) {
+  if (completeness.valid && /^(iniciar_intake|continuar_intake|Confirmo o modelo:)/.test(userMessage)) {
     // Fire-and-forget psychological profile synthesis (non-blocking)
     if (!currentIntake["_psychologicalProfile"]) {
       setImmediate(() => {
