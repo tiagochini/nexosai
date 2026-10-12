@@ -1381,7 +1381,10 @@ export default function CampaignIntake() {
           )}
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto space-y-3 p-4 border-x border-border/50">
+          <div
+            aria-label={t("Histórico do briefing", "Briefing history", "Historial del briefing")}
+            className="h-[clamp(18rem,50dvh,36rem)] shrink-0 overflow-y-auto space-y-3 p-4 border-x border-border/50"
+          >
             {/* Initial loading state while AI triggers */}
             {messages.length === 0 && sending && (
               <div className="flex gap-3">

@@ -1,5 +1,12 @@
 # NexOS — Checklist Canônico de Construção
 
+**Histórico legível — 12/10/2026:** área de conversa com altura
+responsiva e sem encolhimento pelo resumo/compositor. Rolagem preservada;
+navegador público mediu 473 px no desktop. Build aprovado. Nenhum dado,
+mensagem ou aprovação alterado.
+[Evidência](docs/BRIEFING_HISTORY_LAYOUT.md).
+Próximo checkpoint: usuário ajustar briefing e revisar. Sem push.
+
 **Edição após conclusão — 12/10/2026:** chat mantém compositor a 100%
 e botão Ajustar briefing. Servidor processa pedidos de correção em vez de
 repetir conclusão fixa. Regressão Docker com Claude simulado verificou orçamento,
