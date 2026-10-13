@@ -5,6 +5,7 @@ import { useUiText } from "@/lib/i18n";
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface PreviewPiece {
+  campaignType?: string;
   id: string;
   platform: "instagram" | "facebook" | "tiktok" | "email" | "whatsapp" | "landing" | "ads";
   type: "post" | "story" | "reel" | "email" | "message" | "ad" | "copy" | "native_video";
@@ -70,6 +71,7 @@ function fmtNum(n: number): string {
 function MetricsStrip({ piece }: { piece: PreviewPiece }) {
   const t = useUiText();
   const m = estimatePostMetrics(piece);
+  if (piece.campaignType === "continuous_sales") return null;
   return (
     <div className="flex flex-wrap gap-2 mt-2 px-0.5">
       <div className="flex items-center gap-1 bg-muted/20 border border-border/30 px-2 py-1 rounded-sm">
@@ -415,7 +417,7 @@ export function SocialPostPreview({ piece, showMetrics = true, onApprove, onReje
           </Badge>
         )}
         <span className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest ml-auto">
-           {PHASE_MAP[piece.dayIndex] ?? `${t("Dia", "Day", "Día")} ${piece.dayIndex}`}
+           {piece.campaignType === "continuous_sales" ? t("Aquisição contínua", "Continuous acquisition", "Adquisición continua") : (PHASE_MAP[piece.dayIndex] ?? `${t("Dia", "Day", "Día")} ${piece.dayIndex}`)}
         </span>
       </div>
 

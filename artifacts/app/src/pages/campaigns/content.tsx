@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { ContinuousContentOverview } from "@/components/ContinuousContentOverview";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, Link, useLocation, useSearch } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { customFetch, ApiError } from "@workspace/api-client-react/custom-fetch";
@@ -970,12 +971,12 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
         )}
 
         {/* Metrics row */}
-        <div className="flex flex-wrap gap-3 mb-3">
+        {piece.campaignType !== "continuous_sales" && <div className="flex flex-wrap gap-3 mb-3">
           <span className="font-mono text-[10px] text-muted-foreground/50">{t("Alcance", "Reach", "Alcance")} <span className="text-cyan-400">{m.reach.toLocaleString("pt-BR")}</span></span>
           <span className="font-mono text-[10px] text-muted-foreground/50">Leads <span className="text-success">~{m.leads}</span></span>
           <span className="font-mono text-[10px] text-muted-foreground/50">{t("Eng.", "Eng.", "Inter.")} <span className="text-primary">{m.engagementRate}%</span></span>
           <span className="font-mono text-[10px] text-muted-foreground/50">{t("Conv.", "Conv.", "Conv.")} <span className="text-yellow-400">{m.conversionPct}%</span></span>
-        </div>
+        </div>}
 
         {isRewriting ? (
           <div className="flex items-center gap-2 py-1">
@@ -3875,7 +3876,7 @@ export default function ContentApproval() {
     queryKey: [`/api/campaigns/${campaignId}`],
     queryFn: async () => {
       try {
-        return await customFetch<{ campaign: { id: string; title: string; status: string } }>(`/api/campaigns/${campaignId}`);
+        return await customFetch<{ campaign: { id: string; title: string; status: string; type?: string; intakeData?: Record<string, unknown> } }>(`/api/campaigns/${campaignId}`);
       } catch {
         return null;
       }
@@ -3966,6 +3967,9 @@ export default function ContentApproval() {
   });
 
   const campaign = campaignData?.campaign;
+  const isContinuous = campaign?.type === "continuous_sales";
+  const calendarContent = apiContentData?.pieces?.find(p => p.type === "content_calendar")?.content as Record<string, unknown> | undefined;
+  const generatedCalendarDays = typeof calendarContent?.totalDays === "number" ? calendarContent.totalDays : undefined;
 
   const realPieces: ContentPiece[] | null = (() => {
     if (!apiContentData?.pieces?.length) return null;
@@ -3978,7 +3982,7 @@ export default function ContentApproval() {
     }
   })();
 
-  const pieces: ContentPiece[] = localPieces ?? realPieces ?? [];
+  const pieces: ContentPiece[] = useMemo(() => (localPieces ?? realPieces ?? []).map(piece => ({ ...piece, campaignType: campaign?.type })), [localPieces, realPieces, campaign?.type]);
   const approvedCount = pieces.filter(p => p.status === "approved").length;
   const pendingCount  = pieces.filter(p => p.status === "pending").length;
   const rejectedCount = pieces.filter(p => p.status === "rejected").length;
@@ -4655,7 +4659,7 @@ export default function ContentApproval() {
 
         {/* Tabs */}
         <div className="flex gap-0.5 border border-border/50 bg-card/40 p-1 w-full overflow-x-auto scrollbar-none">
-          {TABS.map(tab => {
+          {TABS.filter(tab => !isContinuous || tab.id !== "por_fase").map(tab => {
             const Icon = tab.icon;
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
@@ -4673,8 +4677,12 @@ export default function ContentApproval() {
           })}
         </div>
 
+        {isContinuous && (activeTab === "masterplan" || activeTab === "flowchart") && (
+          <ContinuousContentOverview title={campaign?.title ?? ""} intake={campaign?.intakeData ?? {}} pieceCount={pieces.length} approvedCount={approvedCount} platformCount={new Set(pieces.map(p => p.platform)).size} calendarDays={generatedCalendarDays} onReview={() => setActiveTab("platform")} />
+        )}
+
         {/* ── Masterplan Tab ── */}
-        {activeTab === "masterplan" && (
+        {activeTab === "masterplan" && !isContinuous && (
           <MasterPlanTab
             pieces={pieces}
             apiPieces={apiContentData?.pieces ?? []}
@@ -4698,7 +4706,7 @@ export default function ContentApproval() {
         )}
 
         {/* ── Flowchart Tab ── */}
-        {activeTab === "flowchart" && (
+        {activeTab === "flowchart" && !isContinuous && (
           <CampaignFlowchart pieces={pieces} />
         )}
 
@@ -4854,6 +4862,7 @@ export default function ContentApproval() {
             {days.map(day => {
               const dayPieces = byDay[day]!;
               const phaseLabel =
+                isContinuous ? t("Aquisição contínua", "Continuous acquisition", "Adquisición continua") :
                 day === 0 ? t("Pré-lançamento — antecipação", "Pre-launch — anticipation", "Prelanzamiento — anticipación") :
                 day <= 2  ? t("Pré-lançamento — autoridade", "Pre-launch — authority", "Prelanzamiento — autoridad") :
                 day <= 4  ? t("Pré-lançamento — desejo", "Pre-launch — desire", "Prelanzamiento — deseo") :
@@ -4873,8 +4882,8 @@ export default function ContentApproval() {
                       <div className="font-mono text-xs font-bold uppercase tracking-widest">{phaseLabel}</div>
                       <div className="flex gap-3 mt-0.5">
                        <span className="font-mono text-[11px] text-muted-foreground/50">{dayPieces.length} {t("peças", "pieces", "piezas")}</span>
-                       <span className="font-mono text-[11px] text-cyan-400/70">~{phaseReach.toLocaleString("pt-BR")} {t("alcance", "reach", "alcance")}</span>
-                        <span className="font-mono text-[11px] text-success/70">~{phaseLeads} leads</span>
+                       {!isContinuous && <span className="font-mono text-[11px] text-cyan-400/70">~{phaseReach.toLocaleString("pt-BR")} {t("alcance", "reach", "alcance")}</span>}
+                        {!isContinuous && <span className="font-mono text-[11px] text-success/70">~{phaseLeads} leads</span>}
                       </div>
                     </div>
                   </div>

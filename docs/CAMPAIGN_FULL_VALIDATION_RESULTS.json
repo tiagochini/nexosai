@@ -1,0 +1,109 @@
+{
+  "verifiedAt": "2026-10-13T16:20:54.699Z",
+  "scope": "Founder campaign read-only audit plus browser inspection; disposable Docker regressions",
+  "verdict": "NOT_YET_HOMOLOGATED_END_TO_END",
+  "briefing": {
+    "complete": true,
+    "required": 21,
+    "answered": 21,
+    "historyMessages": 40,
+    "type": "continuous_sales",
+    "period": "30_days"
+  },
+  "strategy": {
+    "saved": true,
+    "sha256": "cdc433536aa9dbed979b5606606706efc2c1a4cd89490fb79f3a71b7cf19dc61"
+  },
+  "content": {
+    "canonicalGroups": 8,
+    "browserReviewUnits": 77,
+    "approvedGroups": 1,
+    "pendingGroups": 7,
+    "calendarDays": 21,
+    "expectedDays": 30,
+    "groupTypes": [
+      "creative_direction",
+      "email_sequence",
+      "landing_page_structure",
+      "content_calendar",
+      "ad_copy",
+      "targeting_config",
+      "media_buying_plan",
+      "seo_organic_plan"
+    ]
+  },
+  "agents": {
+    "completed": 31,
+    "waitingApproval": 4,
+    "failed": [
+      "stories_sequence",
+      "analytics"
+    ]
+  },
+  "approvalCheckpoints": [
+    {
+      "type": "strategy_approval",
+      "status": "pending"
+    },
+    {
+      "type": "timeline_approval",
+      "status": "pending"
+    },
+    {
+      "type": "budget_approval",
+      "status": "pending"
+    },
+    {
+      "type": "ad_set_approval",
+      "status": "pending"
+    }
+  ],
+  "creatives": {
+    "total": 2,
+    "deliveredPreviews": 0,
+    "deliveredFinals": 0,
+    "errors": 2
+  },
+  "masterplanVersions": 0,
+  "socialPosts": [],
+  "unchangedRealCampaign": {
+    "briefing": true,
+    "strategy": true,
+    "content": true,
+    "checkpoints": true
+  },
+  "corrections": [
+    "Continuous-sales overview uses briefing period and actual calendar coverage",
+    "Launch/cart chapters and synthetic overview forecasts omitted for continuous_sales",
+    "Agent API agentType normalized into display role",
+    "Continuous previews and schedule omit fixed cart labels and synthetic performance strips"
+  ],
+  "tests": {
+    "agentAndCheckpointContract": "PASS 3 tests",
+    "continuousOverviewRender": "PASS",
+    "intakeEditingDocker": "PASS",
+    "checkpointResumeDocker": "PASS",
+    "controlRoomDocker": "PASS",
+    "controlRoomVersionDiffDocker": "PASS",
+    "frontendTypecheck": "PASS",
+    "frontendBuild": "PASS"
+  },
+  "blockers": [
+    "Calendar and media plan cover 21 of 30 days",
+    "stories_sequence and analytics agents failed",
+    "Two creative concepts have no delivered image",
+    "Draft copy contains unsupported research/scarcity assertions requiring review",
+    "Four approval checkpoints pending; seven canonical content groups pending",
+    "No persisted masterplan version for this real campaign"
+  ],
+  "noExternalActions": true,
+  "noAdditionalInference": true,
+  "browser": {
+    "authenticatedFounder": true,
+    "briefingResumed": true,
+    "briefingComposerAvailable": true,
+    "contentOverviewCorrected": true,
+    "landingPreviewOpened": true,
+    "agentRolesAndPendingCheckpointsVisible": true
+  }
+}

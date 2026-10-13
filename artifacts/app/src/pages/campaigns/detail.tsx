@@ -1,4 +1,5 @@
 import { checkpointType, checkpointNeedsReview, type CampaignCheckpoint } from "@/lib/campaign-checkpoint";
+import { campaignAgentRole } from "@/lib/campaign-agent";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRoute, Link, useLocation, useSearch } from "wouter";
 import {
@@ -1474,7 +1475,8 @@ export default function CampaignDetail() {
     enabled: !!campaignId && activeTab === "agentes",
     refetchInterval: isActive ? 5000 : false,
     queryFn: async () => {
-      return customFetch<{ agents: AgentRun[]; checkpoints: Checkpoint[] }>(`/api/campaigns/${campaignId}/agents`)
+      return customFetch<{ agents: (AgentRun & { agentType?: string })[]; checkpoints: Checkpoint[] }>(`/api/campaigns/${campaignId}/agents`)
+        .then(data => ({ ...data, agents: data.agents.map(agent => ({ ...agent, agentRole: campaignAgentRole(agent) })) }))
         .catch(() => ({ agents: [] as AgentRun[], checkpoints: [] as Checkpoint[] }));
     },
   });

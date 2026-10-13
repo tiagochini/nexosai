@@ -1,5 +1,16 @@
 # NexOSAI — Fluxo Operacional e de Implementação Canônico
 
+**Campanha completa — validação parcial, 13/10/2026:** briefing 21/21,
+retomada, estratégia e oito pacotes/77 unidades de revisão confirmados no banco
+e navegador. Corrigidos plano contínuo versus template de carrinho e contrato
+agentType/agentRole. Quatro regressões Docker, contratos, tipos e build passaram.
+Campanha ainda não homologada: calendário 21/30 dias, dois agentes com falha,
+dois criativos sem imagem, afirmações de copy sem comprovação e aprovações
+pendentes. Dados preservados; não houve inferência paga ou execução externa.
+[Evidência](docs/CAMPAIGN_FULL_VALIDATION.md).
+Próximo checkpoint: revisar cobertura/afirmações e recuperar passos com falha.
+Sem push; não promove a campanha à pronta para lançamento.
+
 **Fallback de imagens — 13/10/2026:** preview/final/regeneração agora
 tentam OpenAI nativa → Gemini nativo → integração OpenAI configurada.
 Saldo 429, timeout e indisponibilidade avançam; falha total não aprova final
