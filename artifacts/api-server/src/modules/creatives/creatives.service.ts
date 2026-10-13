@@ -1,5 +1,4 @@
 import { eq, and, desc } from "drizzle-orm";
-import OpenAI from "openai";
 import {
   db,
   campaignCreativesTable,
@@ -12,27 +11,8 @@ import { completeWithAgent } from "../ai-gateway/ai-gateway.service.js";
 import { parseAgentJSON } from "../agents/agent.runner.js";
 import { deductCredits } from "../credits/credits.service.js";
 import { NotFoundError, AppError } from "../../lib/errors.js";
-import { env } from "../../lib/env.js";
+import { generateCreativeImage } from "./image-provider-chain.js";
 import type { Logger } from "pino";
-
-const FORMAT_TO_DALLE_SIZE: Record<string, "1024x1024" | "1536x1024" | "1024x1536"> = {
-  feed_square:    "1024x1024",
-  feed_portrait:  "1024x1536",
-  stories:        "1024x1536",
-  banner:         "1536x1024",
-  carousel_slide: "1024x1024",
-};
-
-function buildOpenAIClient(): OpenAI {
-  if (env.OPENAI_API_KEY) return new OpenAI({ apiKey: env.OPENAI_API_KEY });
-  if (env.AI_INTEGRATIONS_OPENAI_API_KEY && env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
-    return new OpenAI({
-      apiKey: env.AI_INTEGRATIONS_OPENAI_API_KEY,
-      baseURL: env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-    });
-  }
-  throw new AppError(503, "OPENAI_API_KEY não configurado — geração de imagem indisponível", "AI_UNAVAILABLE");
-}
 
 export async function listCreatives(
   campaignId: string,
@@ -164,7 +144,7 @@ export async function approveConceptAndGeneratePreview(
 
   setImmediate(async () => {
     try {
-      const imageUrl = await generateDalleImage(
+      const imageUrl = await generateCreativeImage(
         creative.concept!.dallePrompt,
         creative.format,
         "standard",
@@ -172,10 +152,10 @@ export async function approveConceptAndGeneratePreview(
       );
       await db
         .update(campaignCreativesTable)
-        .set({ status: "preview_ready", previewUrl: imageUrl, imageExpired: false })
+        .set({ status: "preview_ready", previewUrl: imageUrl, imageExpired: false, metadata: { ...((creative.metadata ?? {}) as Record<string, unknown>), imageError: null } })
         .where(eq(campaignCreativesTable.id, creativeId));
     } catch (err) {
-      log.warn({ creativeId, err }, "DALL-E preview generation failed");
+      log.warn({ creativeId, err }, "Creative image preview generation failed");
       await db
         .update(campaignCreativesTable)
         .set({
@@ -217,7 +197,7 @@ export async function approvePreviewAndGenerateFinal(
 
   setImmediate(async () => {
     try {
-      const imageUrl = await generateDalleImage(
+      const imageUrl = await generateCreativeImage(
         creative.concept!.dallePrompt,
         creative.format,
         "hd",
@@ -230,6 +210,7 @@ export async function approvePreviewAndGenerateFinal(
           finalUrl: imageUrl,
           approvedAt: new Date(),
           imageExpired: false,
+          metadata: { ...((creative.metadata ?? {}) as Record<string, unknown>), imageError: null },
         })
         .where(eq(campaignCreativesTable.id, creativeId));
 
@@ -237,13 +218,13 @@ export async function approvePreviewAndGenerateFinal(
       // Social publication remains behind the explicit preview/confirmation route;
       // the scheduler can hydrate an already-persisted scheduled row later.
     } catch (err) {
-      log.warn({ creativeId, err }, "DALL-E HD generation failed");
+      log.warn({ creativeId, err }, "Creative image final generation failed");
       await db
         .update(campaignCreativesTable)
         .set({
-          status: "approved",
+          status: "preview_ready",
           finalUrl: null,
-          approvedAt: new Date(),
+          approvedAt: null,
           metadata: { imageError: err instanceof Error ? err.message : "generation_failed" },
         })
         .where(eq(campaignCreativesTable.id, creativeId));
@@ -304,7 +285,7 @@ export async function regenerateImage(
 
   setImmediate(async () => {
     try {
-      const imageUrl = await generateDalleImage(
+      const imageUrl = await generateCreativeImage(
         creative.concept!.dallePrompt,
         creative.format,
         quality,
@@ -320,7 +301,7 @@ export async function regenerateImage(
         .set(updateData as any)
         .where(eq(campaignCreativesTable.id, creativeId));
     } catch (err) {
-      log.warn({ creativeId, err }, "DALL-E regeneration failed");
+      log.warn({ creativeId, err }, "Creative image regeneration failed");
       const rollback = quality === "hd" ? "preview_ready" : "concept_ready";
       await db
         .update(campaignCreativesTable)
@@ -338,32 +319,4 @@ export async function regenerateImage(
     .where(eq(campaignCreativesTable.id, creativeId))
     .limit(1);
   return updated;
-}
-
-async function generateDalleImage(
-  prompt: string,
-  format: string,
-  quality: "standard" | "hd",
-  log: Logger,
-): Promise<string> {
-  const size = FORMAT_TO_DALLE_SIZE[format] ?? "1024x1024";
-  const gptImageQuality = quality === "hd" ? "high" : "medium";
-  const openai = buildOpenAIClient();
-
-  log.info({ format, size, quality: gptImageQuality }, "Generating image (gpt-image-1)");
-
-  const response = await openai.images.generate({
-    model: "gpt-image-1",
-    prompt: `${prompt}. IMPORTANT: No text, words, letters, or numbers anywhere in the image. Pure visual composition only.`,
-    n: 1,
-    size,
-    quality: gptImageQuality,
-  });
-
-  const b64 = response.data?.[0]?.b64_json;
-  if (!b64) throw new Error("gpt-image-1 returned no image data");
-
-  const dataUrl = `data:image/png;base64,${b64}`;
-  log.info({ bytes: b64.length }, "gpt-image-1 image generated");
-  return dataUrl;
 }

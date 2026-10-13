@@ -3,6 +3,12 @@ type ImageErrorMessage = readonly [string, string, string];
 /** Never expose raw provider errors (which may include account identifiers). */
 export function imageGenerationErrorMessage(error: unknown): ImageErrorMessage {
   const message = typeof error === "string" ? error.toLowerCase() : "";
+  if (message.includes("nenhum provedor de imagens")) {
+    return ["Nenhum provedor de imagens disponível conseguiu gerar o arquivo. Confira saldo, acesso e disponibilidade dos provedores.", "No available image provider could generate the file. Check provider balances, access and availability.", "Ningún proveedor de imágenes disponible pudo generar el archivo. Revisa saldo, acceso y disponibilidad de los proveedores."];
+  }
+  if (message.includes("bloqueado por segurança")) {
+    return ["O pedido foi bloqueado por segurança. Revise o conceito antes de tentar novamente.", "The request was blocked for safety. Review the concept before retrying.", "La solicitud fue bloqueada por seguridad. Revisa el concepto antes de volver a intentarlo."];
+  }
   if (/no credits remaining|insufficient_quota|billing_hard_limit|billing.*limit|quota.*exceeded/.test(message)) {
     return [
       "A conta da API OpenAI está sem saldo ou atingiu o limite de uso. Confira o faturamento da OpenAI; os créditos do NexOS são separados.",

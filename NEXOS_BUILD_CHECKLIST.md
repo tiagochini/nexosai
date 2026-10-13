@@ -1,5 +1,14 @@
 # NexOS — Checklist Canônico de Construção
 
+**Fallback de imagens — 13/10/2026:** preview/final/regeneração agora
+tentam OpenAI nativa → Gemini nativo → integração OpenAI configurada.
+Saldo 429, timeout e indisponibilidade avançam; falha total não aprova final
+sem imagem. Testes de cadeia e adaptadores HTTP com respostas injetadas
+passaram, assim como tipos/builds. Sem inferência paga adicional.
+[Evidência e limites](docs/CREATIVE_IMAGE_FALLBACK.md). Entrega real pelo
+fallback ainda não homologada; conciliação de créditos permanece separada.
+Próximo checkpoint: usuário repetir um preview e conferir a imagem. Sem push.
+
 **Criativos — diagnóstico de imagem, 12/10/2026:** consulta do erro real
 confirmou OpenAI 429 por falta de saldo da API. Gerador já usa gpt-image-1;
 mensagem genérica de chave/DALL-E corrigida para distinguir cobrança, limite
