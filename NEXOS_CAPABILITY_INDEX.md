@@ -1,5 +1,12 @@
 # NexOS Capability Index
 
+**Asaas — pendência de estorno encerrada, 13/10/2026:** pagamento
+pay_gl3wvdoscgq65dt9 REFUNDED, dois DONE de R$43,99; reversões de
+250 + 250 créditos, saldo de teste 3.900, hold liberado. Consulta READ ONLY;
+nenhum novo pedido ou ajuste manual. [Evidência](docs/ASAAS_PARTIAL_REFUND_COMPLETION.json).
+Próximo checkpoint de execução: implementar/homologar agendamento confirmado.
+
+
 **Execução e integrações — homologação parcial, 13/10/2026:** novo
 comentário/Direct MAPA passaram via webhook real, com resposta pública visível
 e mensagem reconsultadas na Meta. PIX/boleto RECEIVED; plano Agency e saldo

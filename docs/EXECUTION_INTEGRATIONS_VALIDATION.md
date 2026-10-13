@@ -43,3 +43,8 @@ Próxima implementação: confirmação de data/horário, peça, conta e payload
 Comando: node scripts/validate-execution-integrations.mjs. API typecheck/build passaram. Evidência estruturada em EXECUTION_INTEGRATIONS_VALIDATION_RESULTS.json. Sem migração ou push. Academy, vídeo/imagem, disparos de e-mail/WhatsApp, novos anúncios e oferta comercial fora desta sessão.
 
 Próximo checkpoint: implementar a confirmação versionada do agendamento. Estorno parcial deve ser reconsultado até o provider concluir; não repetir um refund pendente.
+
+
+## Atualização — estorno concluído em 13/10/2026
+
+API canônica do pagamento pay_gl3wvdoscgq65dt9 agora retorna REFUNDED, com dois refunds DONE de R$43,99, total R$87,98. Não é apenas um parcial concluído: o valor integral foi devolvido em duas partes. Livro do NexOS confirma dois débitos de 250 créditos, com chaves distintas de versão 1/2: saldo 4.400 → 4.150 → 3.900. creditsReversed=500 e refundHold=false. Não solicitamos novo estorno nem editamos saldo; consultas somente leitura. Evidência em ASAAS_PARTIAL_REFUND_COMPLETION.json. Esta prova encerra a pendência financeira desse pagamento; falta implementar/homologar o agendamento.

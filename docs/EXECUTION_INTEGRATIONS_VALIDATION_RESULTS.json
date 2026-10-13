@@ -462,7 +462,7 @@
   "founderCreditsPreserved": true,
   "remaining": {
     "scheduling": "Campaign scheduler intentionally rejects confirmationless jobs; versioned future authorization not implemented",
-    "asaasPartialRefund": "PENDING R$43.99; provider dependency; not resubmitted",
+    "asaasPartialRefund": "RESOLVED: two DONE refunds of R$43.99; two 250-credit reversals, final balance 3900, hold false",
     "chargeback": "Requested historical case is currently REFUNDED/DONE, not proof of chargeback HOLD/RELEASE"
   },
   "noNewPaymentOrPublication": true,
@@ -470,5 +470,6 @@
     "/api/livez": 200,
     "/api/readyz": 200,
     "/": 200
-  }
+  },
+  "refundCompletionEvidence": "ASAAS_PARTIAL_REFUND_COMPLETION.json"
 }

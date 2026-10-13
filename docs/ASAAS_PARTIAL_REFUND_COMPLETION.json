@@ -1,0 +1,48 @@
+{
+  "checkedAt": "2026-10-13T19:54:37.266Z",
+  "paymentId": "pay_gl3wvdoscgq65dt9",
+  "status": "refunded",
+  "refundHold": false,
+  "creditsReversed": 500,
+  "balance": 3900,
+  "reversals": [
+    {
+      "type": "debit",
+      "action": "refund_reversal",
+      "amount": 250,
+      "balance_before": 4400,
+      "balance_after": 4150,
+      "idempotency_key": "billing-reversal:d640ce2a-81c4-4041-b8ea-a8fcd857f390:1",
+      "created_at": "2026-10-13T19:51:01.136Z"
+    },
+    {
+      "type": "debit",
+      "action": "refund_reversal",
+      "amount": 250,
+      "balance_before": 4150,
+      "balance_after": 3900,
+      "idempotency_key": "billing-reversal:d640ce2a-81c4-4041-b8ea-a8fcd857f390:2",
+      "created_at": "2026-10-13T19:51:29.298Z"
+    }
+  ],
+  "providerReversal": null,
+  "provider": {
+    "label": "partial",
+    "providerHttp": 200,
+    "providerStatus": "REFUNDED",
+    "amountCents": 8798,
+    "refunds": [
+      {
+        "status": "DONE",
+        "amountCents": 4399
+      },
+      {
+        "status": "DONE",
+        "amountCents": 4399
+      }
+    ]
+  },
+  "readOnly": true,
+  "noRefundRequested": true,
+  "webhookHttpEvidence": []
+}
