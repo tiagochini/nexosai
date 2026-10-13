@@ -308,3 +308,8 @@ caption: "Você trabalha 12h por dia. Responde mensagem. Resolve problema de cli
 | 21 Jul 2026 | B1: Chunked generation do content_calendar | — |
 | 21 Jul 2026 | B2: Contract violations bloqueiam peça | — |
 | 24 Jul 2026 | C2: Email honesto (failed≠dispatched) + fallback explícito | f9dd37f |
+
+
+## 13/10/2026 — Segurança e créditos
+
+Auditoria parcial: dez regressões no banco descartável + permissões SQL reais READ ONLY + typecheck passaram. Corrigidos replay de débito e campanha alheia. Evidência: docs/SECURITY_CREDITS_VALIDATION.md. Contabilização do runner e recuperação após débito permanecem abertas; não promove produção. Placar do Ápice não incrementado: nenhuma nova execução externa completa ou beta humano nesta sessão. Próximo passo: unificar débito/isenção/compensação das gerações.

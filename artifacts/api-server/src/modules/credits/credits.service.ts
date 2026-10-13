@@ -1,5 +1,5 @@
 import { isPlatformAdmin } from "../admin/admin-access.js";
-import { eq, desc, sql } from "drizzle-orm";
+import { and, eq, desc, sql } from "drizzle-orm";
 import {
   db,
   workspacesTable,
@@ -79,6 +79,12 @@ export async function deductCredits(
 
     if (!ws) throw new NotFoundError("Workspace");
 
+    if (campaignId) {
+      const [campaign] = await trx.select({ id: campaignsTable.id }).from(campaignsTable)
+        .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).limit(1);
+      if (!campaign) throw new NotFoundError("Campaign");
+    }
+
     if (idempotencyKey) {
       const [existing] = await trx
         .select()
@@ -86,6 +92,10 @@ export async function deductCredits(
         .where(eq(creditTransactionsTable.idempotencyKey, idempotencyKey))
         .limit(1);
       if (existing) {
+        if (existing.workspaceId !== workspaceId || existing.campaignId !== (campaignId ?? null)
+          || existing.type !== "debit" || existing.action !== action || existing.amount !== cost) {
+          throw new Error("Credit debit idempotency conflict");
+        }
         duplicateTx = existing;
         return;
       }
@@ -140,7 +150,7 @@ export async function deductCredits(
       await trx
         .update(campaignsTable)
         .set({ creditsCost: sql`${campaignsTable.creditsCost} + ${cost}` })
-        .where(eq(campaignsTable.id, campaignId));
+        .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
     }
   });
 

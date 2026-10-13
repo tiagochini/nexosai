@@ -1,5 +1,18 @@
 # NexOS — Checklist Canônico de Construção
 
+**Segurança e créditos — validação parcial, 13/10/2026:** dez regressões
+Docker passaram (isolamento, HTTP, realtime, concorrência, pagamentos, estornos,
+cookies e logs), assim como typecheck e permissões SQL reais somente leitura.
+Corrigidos replay de débito entre contas/projetos/ações e cobrança de campanha
+alheia. Founder preservado; modo ilimitado ativo, sem chave duplicada.
+[Evidência](docs/SECURITY_CREDITS_VALIDATION.md). Não homologado integralmente:
+runner mantém cobrança independente, saldo baixo apenas informativo e falha
+de débito não fatal; ainda falta conciliar isenção/bloqueio de estorno e provar
+compensação em falha após geração. Imagens/vídeos fora do escopo.
+Próximo checkpoint: unificar contabilização das gerações e testes de recuperação.
+Sem inferência paga, transferências, alterações reais de saldo ou push.
+
+
 **Campanha completa — validação parcial, 13/10/2026:** briefing 21/21,
 retomada, estratégia e oito pacotes/77 unidades de revisão confirmados no banco
 e navegador. Corrigidos plano contínuo versus template de carrinho e contrato

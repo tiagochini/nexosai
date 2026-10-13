@@ -1,0 +1,74 @@
+{
+  "date": "2026-10-13T17:28:30.402Z",
+  "database": "disposable Docker nexos_p3",
+  "realProviderCalls": false,
+  "results": [
+    {
+      "test": "test-project-execution-isolation",
+      "status": "PASS"
+    },
+    {
+      "test": "test-project-isolation-db",
+      "status": "PASS"
+    },
+    {
+      "test": "test-realtime-security-db",
+      "status": "PASS"
+    },
+    {
+      "test": "test-credit-concurrency",
+      "status": "PASS"
+    },
+    {
+      "test": "test-billing-credit-concurrency-db",
+      "status": "PASS"
+    },
+    {
+      "test": "test-billing-reversal-db",
+      "status": "PASS"
+    },
+    {
+      "test": "test-billing-webhook-security",
+      "status": "PASS"
+    },
+    {
+      "test": "test-auth-cookie-security",
+      "status": "PASS"
+    },
+    {
+      "test": "test-log-security",
+      "status": "PASS"
+    },
+    {
+      "test": "test-security-credits-db",
+      "status": "PASS"
+    }
+  ],
+  "verdict": "PARTIAL_PASS_CREDIT_ACCOUNTING_BLOCKERS",
+  "homologationDatabaseSecurity": "PASS_READ_ONLY",
+  "apiTypecheck": "PASS",
+  "founderReadonlyLedger": {
+    "readonly": true,
+    "balance": 0,
+    "unlimitedSetting": true,
+    "entries": 35,
+    "debit_delta_mismatches": 20,
+    "zero_balance_debits": 19,
+    "explicitly_unlimited_entries": 3,
+    "duplicateKeys": 0
+  },
+  "fixes": [
+    "Debit replay validates workspace, campaign, action, amount and transaction type",
+    "Foreign campaign cannot be charged or incremented"
+  ],
+  "remaining": [
+    "Agent runner has independent advisory-only balance policy, clamps debit at zero and catches accounting failures",
+    "Agent runner does not share fixed-cost unlimited/refund-hold policy",
+    "Post-generation persistence failure/compensation and successful provider retry accounting need fault-injection proof"
+  ],
+  "excluded": [
+    "Image and video generation",
+    "Real financial transfers or paid inference",
+    "Production-scale penetration/load testing"
+  ]
+}
