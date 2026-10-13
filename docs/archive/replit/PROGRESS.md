@@ -318,3 +318,8 @@ Auditoria parcial: dez regressões no banco descartável + permissões SQL reais
 ## 13/10/2026 — Segurança/créditos dos runners concluídos
 
 PASS técnico: cobrança compartilhada, persistência atômica, resultado pendente recuperável, isenção e bloqueios; 11 regressões + 3 de campanha + tipos/build; runtime/API/domínio 200. Evidências em docs/AGENT_CREDIT_DELIVERY.md. Founder inalterado. Escopo não certifica imagens/vídeos, SDK direto ou fatura do provedor. Placar do Ápice não incrementado: não houve nova execução externa completa ou beta humano. Próximo checkpoint: materiais completos e aprovação da campanha.
+
+
+## 13/10/2026 — Execução e integrações parcialmente homologadas
+
+Novo MAPA/Direct real por webhook e readback Meta passaram; PIX/boleto/plano conciliados no Asaas sandbox, refund total DONE e parcial PENDING. 16 regressões + tipos/build passaram. Corrigida classificação paid de pagamentos não pagos. Evidências: docs/EXECUTION_INTEGRATIONS_VALIDATION.md. Falta confirmação versionada de agendamento e envio futuro autorizado. Nenhum novo pagamento/post; founder preservado. Ápice não incrementado: não houve campanha externa completa ou beta humano.

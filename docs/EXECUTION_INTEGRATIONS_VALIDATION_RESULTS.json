@@ -1,0 +1,474 @@
+{
+  "checkedAt": "2026-10-13T19:46:38.510Z",
+  "verdict": "PARTIAL_PASS_SCHEDULING_NOT_IMPLEMENTED",
+  "regressions": {
+    "date": "2026-10-13T19:45:24.449Z",
+    "database": "disposable Docker nexos_p3",
+    "realProviderCalls": false,
+    "results": [
+      {
+        "test": "test-social-post-ownership",
+        "status": "PASS"
+      },
+      {
+        "test": "test-social-publication-governance",
+        "status": "PASS"
+      },
+      {
+        "test": "test-social-autopost-routing",
+        "status": "PASS"
+      },
+      {
+        "test": "test-social-publish-boundary",
+        "status": "PASS"
+      },
+      {
+        "test": "test-social-natural-key",
+        "status": "PASS"
+      },
+      {
+        "test": "test-meta-webhook-routing",
+        "status": "PASS"
+      },
+      {
+        "test": "test-meta-webhook-retry",
+        "status": "PASS"
+      },
+      {
+        "test": "test-mapa-comment-db",
+        "status": "PASS"
+      },
+      {
+        "test": "test-mapa-dm-db",
+        "status": "PASS"
+      },
+      {
+        "test": "test-social-comment-reader",
+        "status": "PASS"
+      },
+      {
+        "test": "test-integration-security",
+        "status": "PASS"
+      },
+      {
+        "test": "test-billing-plan-activation-db",
+        "status": "PASS"
+      },
+      {
+        "test": "test-billing-credit-concurrency-db",
+        "status": "PASS"
+      },
+      {
+        "test": "test-asaas-webhook-token-isolation",
+        "status": "PASS"
+      },
+      {
+        "test": "test-conditional-execution-db",
+        "status": "PASS"
+      },
+      {
+        "test": "test-billing-access-reason-db",
+        "status": "PASS"
+      }
+    ]
+  },
+  "liveProviderReadback": {
+    "checkedAt": "2026-10-13T19:40:41.361Z",
+    "scope": "READ ONLY database and GET provider calls",
+    "meta": {
+      "account": {
+        "status": 200,
+        "username": "agencianexosai",
+        "mediaCount": 37
+      },
+      "authorizedPost": {
+        "status": 200,
+        "id": "18121984933902161",
+        "permalink": "https://www.instagram.com/p/DeTIE6-DjHT/",
+        "type": "IMAGE"
+      },
+      "pageSubscriptions": {
+        "status": 200,
+        "apps": [
+          {
+            "id": "1072027685788533",
+            "fields": [
+              "feed"
+            ]
+          }
+        ]
+      },
+      "publicReplies": [
+        {
+          "status": 200,
+          "providerId": "18433752598197423",
+          "hidden": false,
+          "bodyMatches": true,
+          "localAction": "replied",
+          "processedAt": "2026-10-13T19:39:25.666Z"
+        },
+        {
+          "status": 200,
+          "providerId": "18185286766420502",
+          "hidden": false,
+          "bodyMatches": true,
+          "localAction": "replied",
+          "processedAt": "2026-10-12T13:33:33.592Z"
+        },
+        {
+          "status": 200,
+          "providerId": "17910308349304782",
+          "hidden": false,
+          "bodyMatches": true,
+          "localAction": "replied",
+          "processedAt": "2026-10-10T22:20:01.322Z"
+        }
+      ],
+      "inbox": {
+        "status": 200,
+        "conversationCount": 2
+      },
+      "newDirectReadback": {
+        "newInboundSeen": true,
+        "outgoingReceiptSeen": true,
+        "outgoingBodyMatches": true,
+        "messageEndpoints": [
+          {
+            "status": 200
+          },
+          {
+            "status": 200
+          }
+        ]
+      },
+      "webhookStatuses": [
+        {
+          "event_type": "instagram_comment",
+          "status": "claimed",
+          "count": 2,
+          "last_received": "2026-10-12T13:34:58.276Z",
+          "last_sent": null
+        },
+        {
+          "event_type": "instagram_comment",
+          "status": "dead_letter",
+          "count": 4,
+          "last_received": "2026-10-10T03:42:55.531Z",
+          "last_sent": null
+        },
+        {
+          "event_type": "instagram_comment",
+          "status": "sent",
+          "count": 29,
+          "last_received": "2026-10-13T19:39:19.433Z",
+          "last_sent": "2026-10-13T19:39:25.345Z"
+        },
+        {
+          "event_type": "instagram_dm",
+          "status": "claimed",
+          "count": 4,
+          "last_received": "2026-10-10T15:13:03.895Z",
+          "last_sent": null
+        },
+        {
+          "event_type": "instagram_dm",
+          "status": "dead_letter",
+          "count": 1,
+          "last_received": "2026-10-12T13:35:04.079Z",
+          "last_sent": null
+        },
+        {
+          "event_type": "instagram_dm",
+          "status": "sent",
+          "count": 4,
+          "last_received": "2026-10-13T19:38:56.636Z",
+          "last_sent": "2026-10-13T19:38:57.926Z"
+        }
+      ],
+      "latestWebhookDecisions": [
+        {
+          "event_type": "instagram_comment",
+          "status": "sent",
+          "received_at": "2026-10-13T19:39:19.433Z",
+          "sent_at": "2026-10-13T19:39:20.404Z",
+          "retry_count": 0,
+          "rule_ref": null,
+          "hasReceipt": true
+        },
+        {
+          "event_type": "instagram_comment",
+          "status": "sent",
+          "received_at": "2026-10-13T19:39:18.957Z",
+          "sent_at": "2026-10-13T19:39:25.345Z",
+          "retry_count": 0,
+          "rule_ref": null,
+          "hasReceipt": false
+        },
+        {
+          "event_type": "instagram_dm",
+          "status": "sent",
+          "received_at": "2026-10-13T19:38:56.636Z",
+          "sent_at": "2026-10-13T19:38:57.926Z",
+          "retry_count": 0,
+          "rule_ref": null,
+          "hasReceipt": true
+        },
+        {
+          "event_type": "instagram_dm",
+          "status": "dead_letter",
+          "received_at": "2026-10-12T13:35:04.079Z",
+          "sent_at": null,
+          "retry_count": 3,
+          "rule_ref": null,
+          "hasReceipt": false
+        },
+        {
+          "event_type": "instagram_comment",
+          "status": "claimed",
+          "received_at": "2026-10-12T13:34:58.276Z",
+          "sent_at": null,
+          "retry_count": 0,
+          "rule_ref": null,
+          "hasReceipt": false
+        },
+        {
+          "event_type": "instagram_comment",
+          "status": "sent",
+          "received_at": "2026-10-12T13:33:25.898Z",
+          "sent_at": "2026-10-12T13:33:28.158Z",
+          "retry_count": 0,
+          "rule_ref": null,
+          "hasReceipt": true
+        },
+        {
+          "event_type": "instagram_comment",
+          "status": "sent",
+          "received_at": "2026-10-12T13:33:25.418Z",
+          "sent_at": "2026-10-12T13:33:33.279Z",
+          "retry_count": 0,
+          "rule_ref": null,
+          "hasReceipt": false
+        },
+        {
+          "event_type": "instagram_dm",
+          "status": "sent",
+          "received_at": "2026-10-11T09:42:34.177Z",
+          "sent_at": "2026-10-11T09:42:35.791Z",
+          "retry_count": 0,
+          "rule_ref": null,
+          "hasReceipt": true
+        }
+      ],
+      "conversationStatuses": [
+        {
+          "channel": "instagram_comment",
+          "direction": "inbound",
+          "decision": "ignored",
+          "provider_status": "not_sent",
+          "count": 1,
+          "latest": "2026-10-12T13:35:01.135Z"
+        },
+        {
+          "channel": "instagram_dm",
+          "direction": "inbound",
+          "decision": "human_handoff",
+          "provider_status": null,
+          "count": 4,
+          "latest": "2026-10-10T15:13:04.700Z"
+        },
+        {
+          "channel": "instagram_dm",
+          "direction": "inbound",
+          "decision": "keyword_reply",
+          "provider_status": "sent",
+          "count": 4,
+          "latest": "2026-10-13T19:38:56.808Z"
+        }
+      ],
+      "posts": [
+        {
+          "status": "published",
+          "count": 1
+        }
+      ]
+    },
+    "asaas": {
+      "mode": "sandbox",
+      "payments": [
+        {
+          "label": "pix-small",
+          "providerHttp": 200,
+          "providerStatus": "RECEIVED",
+          "amountCents": 8500,
+          "refunds": []
+        },
+        {
+          "label": "boleto",
+          "providerHttp": 200,
+          "providerStatus": "RECEIVED",
+          "amountCents": 8500,
+          "refunds": []
+        },
+        {
+          "label": "partial",
+          "providerHttp": 200,
+          "providerStatus": "CONFIRMED",
+          "amountCents": 8798,
+          "refunds": [
+            {
+              "status": "PENDING",
+              "amountCents": 4399
+            }
+          ]
+        },
+        {
+          "label": "chargeback",
+          "providerHttp": 200,
+          "providerStatus": "REFUNDED",
+          "amountCents": 8798,
+          "refunds": [
+            {
+              "status": "DONE",
+              "amountCents": 8798
+            }
+          ]
+        },
+        {
+          "label": "pix",
+          "providerHttp": 200,
+          "providerStatus": "RECEIVED",
+          "amountCents": 999000,
+          "refunds": []
+        }
+      ],
+      "webhooks": {
+        "status": 200,
+        "items": [
+          {
+            "name": "NexOS planos e creditos homologacao",
+            "url": "https://agencianexos.vip/api/billing/webhooks/asaas",
+            "enabled": true,
+            "interrupted": false,
+            "eventCount": 9
+          },
+          {
+            "name": "Academy",
+            "url": "https://agencianexos.vip/api/academy/webhook",
+            "enabled": true,
+            "interrupted": false,
+            "eventCount": 10
+          },
+          {
+            "name": "Campanhas",
+            "url": "https://agencianexos.vip/api/products/webhooks/asaas",
+            "enabled": true,
+            "interrupted": false,
+            "eventCount": 48
+          }
+        ]
+      },
+      "ledger": {
+        "balance": 4400,
+        "plan": "agency",
+        "entries": 6,
+        "chainConsistent": true,
+        "grants": {
+          "pix-small": 1,
+          "boleto": 1,
+          "partial": 1,
+          "chargeback": 1
+        }
+      },
+      "localPayments": [
+        {
+          "status": "paid",
+          "refund_hold": "true",
+          "credits_reversed": "0",
+          "count": 1
+        },
+        {
+          "status": "paid",
+          "refund_hold": null,
+          "credits_reversed": null,
+          "count": 3
+        },
+        {
+          "status": "refunded",
+          "refund_hold": "false",
+          "credits_reversed": "500",
+          "count": 1
+        }
+      ]
+    },
+    "founder": {
+      "balance": 0
+    },
+    "integrations": [
+      {
+        "provider": "instagram",
+        "status": "connected",
+        "accountName": "@agencianexosai",
+        "hasCredential": true,
+        "expiresAt": null
+      }
+    ]
+  },
+  "liveWebhookChecks": {
+    "checkedAt": "2026-10-13T19:43:17.070Z",
+    "noBusinessEvents": true,
+    "checks": [
+      {
+        "label": "Meta unsigned rejected",
+        "status": 401,
+        "expected": 401,
+        "pass": true
+      },
+      {
+        "label": "Meta signed empty callback",
+        "status": 200,
+        "expected": 200,
+        "pass": true
+      },
+      {
+        "label": "Meta verification",
+        "status": 200,
+        "expected": 200,
+        "pass": true,
+        "challengeMatches": true
+      },
+      {
+        "label": "Asaas unsigned rejected",
+        "status": 401,
+        "expected": 401,
+        "pass": true
+      },
+      {
+        "label": "Asaas authenticated empty callback",
+        "status": 200,
+        "expected": 200,
+        "pass": true
+      }
+    ]
+  },
+  "fix": {
+    "file": "artifacts/api-server/src/modules/billing/billing.routes.ts",
+    "description": "Only paid payment records can report paid access reason; existing plan-assigned/invite/admin policy preserved",
+    "test": "test-billing-access-reason-db",
+    "before": "FAIL",
+    "after": "PASS"
+  },
+  "typecheck": "PASS",
+  "build": "PASS",
+  "founderCreditsPreserved": true,
+  "remaining": {
+    "scheduling": "Campaign scheduler intentionally rejects confirmationless jobs; versioned future authorization not implemented",
+    "asaasPartialRefund": "PENDING R$43.99; provider dependency; not resubmitted",
+    "chargeback": "Requested historical case is currently REFUNDED/DONE, not proof of chargeback HOLD/RELEASE"
+  },
+  "noNewPaymentOrPublication": true,
+  "runtimeAfterRestart": {
+    "/api/livez": 200,
+    "/api/readyz": 200,
+    "/": 200
+  }
+}

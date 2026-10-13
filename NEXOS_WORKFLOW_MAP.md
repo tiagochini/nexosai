@@ -1,5 +1,18 @@
 # NexOSAI — Fluxo Operacional e de Implementação Canônico
 
+**Execução e integrações — homologação parcial, 13/10/2026:** novo
+comentário/Direct MAPA passaram via webhook real, com resposta pública visível
+e mensagem reconsultadas na Meta. PIX/boleto RECEIVED; plano Agency e saldo
+sandbox 4.400 conciliados; estorno total DONE/reversão única. Parcial de cartão
+segue PENDING; chargeback não é comprovado pelo simples refund. 16 regressões,
+tipos/build e probes públicos de assinatura/token passaram. Corrigida reason
+paid para exigir pagamento paid; acessos por plano/convite/admin preservados.
+[Evidência](docs/EXECUTION_INTEGRATIONS_VALIDATION.md). Etapa não encerrada:
+agendamento de campanha segue bloqueado por falta de confirmação versionada.
+Próximo checkpoint: implementar esse fluxo e testar envio futuro aprovado.
+Founder preservado; sem nova publicação, cobrança, pedido de refund ou push.
+
+
 **Segurança e créditos dos agentes — PASS técnico, 13/10/2026:** cobrança
 de runAgent e critique unificada; débito e resultado/aprovação atômicos;
 isenção, dívida e estorno respeitados; repetição e falhas retomam sem nova

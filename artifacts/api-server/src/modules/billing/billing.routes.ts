@@ -12,7 +12,7 @@ import {
   processAsaasWebhook,
 } from "./billing.service.js";
 import { db, inviteCodesTable, workspacesTable, plansTable, subscriptionPaymentsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { matchesAsaasWebhookToken } from "../../lib/asaas-webhook-auth.js";
 import { checkBillingManualConfirmation } from "./billing.security.js";
 
@@ -172,7 +172,7 @@ router.get("/access", requireAuth, async (req, res): Promise<void> => {
   const [paidPayment] = await db
     .select({ id: subscriptionPaymentsTable.id })
     .from(subscriptionPaymentsTable)
-    .where(eq(subscriptionPaymentsTable.workspaceId, req.auth.workspaceId))
+    .where(and(eq(subscriptionPaymentsTable.workspaceId, req.auth.workspaceId), eq(subscriptionPaymentsTable.status, "paid")))
     .limit(1);
   if (paidPayment) { res.json({ hasAccess: true, reason: "paid" }); return; }
 
