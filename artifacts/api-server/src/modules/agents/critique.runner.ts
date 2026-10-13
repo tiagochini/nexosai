@@ -1,12 +1,13 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import {
   db,
   critiqueLogsTable,
-  workspacesTable,
-  creditTransactionsTable,
+  campaignAgentsTable,
 } from "@workspace/db";
 import { completeWithAgent, type AgentRole } from "../ai-gateway/ai-gateway.service.js";
 import { AGENT_CRITIQUE_CHECKLIST } from "../memory/memory.service.js";
+import { assertGenerationCredits, deductCredits } from "../credits/credits.service.js";
+import { requireProject } from "../operations/project-access.service.js";
 import { getRegenIdempotencyKey } from "./regen-context.js";
 import type { AIMessage } from "../ai-gateway/ai-gateway.service.js";
 import type { Logger } from "pino";
@@ -73,9 +74,9 @@ async function saveCheckpoint(opts: {
       campaignId: opts.campaignId,
       agentRole: opts.agentRole,
       iteration: opts.iteration,
-      rawOutput: opts.rawOutput.slice(0, 32000),
+      rawOutput: opts.rawOutput,
       critiqueText: opts.critiqueText.slice(0, 16000),
-      refinedOutput: opts.refinedOutput.slice(0, 32000),
+      refinedOutput: opts.refinedOutput,
       selfScoreBefore: opts.selfScoreBefore ?? 0,
       selfScoreAfter: opts.selfScoreAfter ?? 0,
       improvementDelta: (opts.selfScoreAfter ?? 0) - (opts.selfScoreBefore ?? 0),
@@ -124,6 +125,17 @@ export async function runAgentWithCritique(opts: {
 }): Promise<CritiqueResult> {
   const { campaignId, workspaceId, agentRole, systemPrompt, userMessage, log } = opts;
 
+  await requireProject(workspaceId, campaignId);
+  const operationKey = "critique:" + (getRegenIdempotencyKey() ?? campaignId + ":" + agentRole);
+  const [delivered] = await db.select().from(campaignAgentsTable).where(and(
+    eq(campaignAgentsTable.campaignId, campaignId), eq(campaignAgentsTable.agentType, agentRole as any),
+    sql`${campaignAgentsTable.status} IN ('completed', 'failed')`, sql`${campaignAgentsTable.input}->>'creditOperationKey' = ${operationKey}`,
+  )).orderBy(desc(campaignAgentsTable.completedAt)).limit(1);
+  const persisted = delivered?.output as CritiqueResult | undefined;
+  if (!opts.skipCheckpoint && delivered?.status === "completed" && persisted && typeof persisted.refinedOutput === "string") return { ...persisted, totalCreditsCharged: 0 };
+  await assertGenerationCredits(workspaceId);
+  if (!opts.skipCheckpoint && delivered?.status === "failed" && persisted && typeof persisted.refinedOutput === "string") return settle(persisted);
+
   const profileBlock = opts.profileContext ?? "";
   const enrichedSystemPrompt = buildTemporalBlock() + profileBlock + systemPrompt;
 
@@ -133,19 +145,46 @@ export async function runAgentWithCritique(opts: {
   let totalCredits = 0;
   let totalTokens = 0;
 
+  async function settle(output: CritiqueResult, provider?: string, costUsd?: number): Promise<CritiqueResult> {
+    let replayed = false;
+    try {
+      const charge = await deductCredits(workspaceId, "campaign_execution", log, campaignId,
+        provider, output.totalTokensUsed, costUsd, operationKey, output.totalCreditsCharged,
+        async (trx, debit, duplicate) => {
+          replayed = duplicate;
+          await trx.insert(campaignAgentsTable).values({ campaignId, agentType: agentRole as any,
+            status: "completed", input: { creditOperationKey: operationKey, kind: "critique" },
+            output: { ...output, totalCreditsCharged: duplicate || debit.description?.startsWith("[∞]") ? 0 : debit.amount },
+            creditsUsed: duplicate || debit.description?.startsWith("[∞]") ? 0 : debit.amount, tokensUsed: output.totalTokensUsed,
+            aiProvider: provider, startedAt: new Date(), completedAt: new Date(),
+          });
+        });
+      return { ...output, totalCreditsCharged: replayed || charge.description?.startsWith("[∞]") ? 0 : charge.amount };
+    } catch (error) {
+      await db.insert(campaignAgentsTable).values({ campaignId, agentType: agentRole as any, status: "failed",
+        input: { creditOperationKey: operationKey, kind: "critique" }, output,
+        errorMessage: "Crédito ou gravação pendente; resultado preservado para retomada", creditsUsed: 0,
+        tokensUsed: output.totalTokensUsed, startedAt: new Date(), completedAt: new Date(),
+      }).catch(() => { log.error({ workspaceId, agentRole }, "Unable to preserve unsettled critique result; debit rolled back"); });
+      throw error;
+    }
+  }
+
   // ── Resume check: find latest checkpoint ─────────────────────────────────
   // [#61] skipCheckpoint=true → treat as if no checkpoint exists so all turns
   // run fresh. This is required on CPL retries to actually call the LLM again.
-  const checkpoint = opts.skipCheckpoint ? null : await loadCheckpoint(campaignId, agentRole);
+  const checkpoint = opts.skipCheckpoint || getRegenIdempotencyKey() ? null : await loadCheckpoint(campaignId, agentRole);
   if (opts.skipCheckpoint) {
     log.info({ campaignId, agentRole }, "[#61] skipCheckpoint=true — ignoring existing checkpoint, running all turns fresh");
   }
   const resumeFromIteration = checkpoint?.iteration ?? 0;
+  totalCredits = checkpoint?.creditsCharged ?? 0;
+  totalTokens = checkpoint?.tokensUsed ?? 0;
 
   if (resumeFromIteration >= 3) {
     // All 3 turns already completed — return saved result directly
     log.info({ campaignId, agentRole, resumeFrom: "checkpoint-complete" }, "Critique loop — resuming from completed checkpoint, skipping all turns");
-    return {
+    const cached: CritiqueResult = {
       rawOutput: checkpoint!.rawOutput,
       critiqueText: checkpoint!.critiqueText,
       refinedOutput: checkpoint!.refinedOutput,
@@ -157,6 +196,7 @@ export async function runAgentWithCritique(opts: {
       totalCreditsCharged: checkpoint!.creditsCharged,
       totalTokensUsed: checkpoint!.tokensUsed,
     };
+    return settle(cached);
   }
 
   // ── TURN 1: Generate ──────────────────────────────────────────────────────
@@ -315,81 +355,12 @@ ${critiqueData.improvementInstructions ?? "Corrija os problemas identificados e 
     tokensUsed: totalTokens, creditsCharged: totalCredits,
   }, log);
 
-  // ── [C3] Critique credit idempotency — mirrors agent.runner.ts [C3] guard ──
-  // Key: ${campaignId}:${agentRole} — stable across restarts; same campaign + same
-  // agent role always produces the same key, so a duplicate run triggered by B-4
-  // (concurrent execute/content calls) or a process restart charges only once.
-  //
-  // [C3-REGEN] When called from regeneratePiece(), a per-piece time-bucketed key is
-  // injected via AsyncLocalStorage (regen-context.ts). This key is different from the
-  // initial pipeline key so each user-triggered regeneration is charged exactly once,
-  // while rapid double-clicks within the same 1-minute window share the same key and
-  // are deduplicated by ON CONFLICT DO NOTHING.
-  if (totalCredits > 0) {
-    const idempotencyKey = getRegenIdempotencyKey() ?? `${campaignId}:${agentRole}`;
-
-    const [ws] = await db
-      .select({ creditsBalance: workspacesTable.creditsBalance })
-      .from(workspacesTable)
-      .where(eq(workspacesTable.id, workspaceId))
-      .limit(1);
-
-    if (ws) {
-      const balanceBefore = ws.creditsBalance;
-      const balanceAfter = Math.max(0, balanceBefore - totalCredits);
-      const costUsdTotal = (turn1CostUsd + turn2CostUsd + turn3.costUsd).toString();
-
-      let isDuplicate = false;
-      await db.transaction(async (trx) => {
-        // First writer: INSERT wins → claimed is defined → UPDATE balance in same txn.
-        // Concurrent writer: INSERT conflicts (unique partial index on idempotency_key)
-        // → claimed is undefined → skip UPDATE → txn commits as a no-op.
-        const [claimed] = await trx
-          .insert(creditTransactionsTable)
-          .values({
-            workspaceId,
-            campaignId,
-            type: "debit",
-            action: "campaign_execution",
-            amount: totalCredits,
-            balanceBefore,
-            balanceAfter,
-            aiProvider: turn1Provider,
-            tokensUsed: totalTokens,
-            costUsd: costUsdTotal,
-            idempotencyKey,
-          })
-          .onConflictDoNothing()
-          .returning();
-
-        if (!claimed) { isDuplicate = true; return; }
-
-        await trx
-          .update(workspacesTable)
-          .set({ creditsBalance: balanceAfter })
-          .where(eq(workspacesTable.id, workspaceId));
-      });
-
-      if (isDuplicate) {
-        log.warn(
-          { workspaceId, agentRole, totalCredits, idempotencyKey },
-          "[C3] Critique credit already charged — skipping duplicate deduction (idempotency guard triggered)",
-        );
-      } else {
-        log.info(
-          { workspaceId, agentRole, totalCredits, idempotencyKey, balanceAfter },
-          "[C3] Critique credit deducted (idempotency key registered)",
-        );
-      }
-    }
-  }
-
   log.info(
     { campaignId, agentRole, selfScoreBefore, selfScoreAfter, issues: issues.length, totalCredits },
     "Critique loop completed",
   );
 
-  return {
+  return settle({
     rawOutput,
     critiqueText: turn2Content,
     refinedOutput,
@@ -400,5 +371,5 @@ ${critiqueData.improvementInstructions ?? "Corrija os problemas identificados e 
     critiqueNotes: issues,
     totalCreditsCharged: totalCredits,
     totalTokensUsed: totalTokens,
-  };
+  }, turn3.provider, resumeFromIteration === 0 ? turn1CostUsd + turn2CostUsd + turn3.costUsd : undefined);
 }

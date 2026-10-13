@@ -70,5 +70,7 @@
     "Image and video generation",
     "Real financial transfers or paid inference",
     "Production-scale penetration/load testing"
-  ]
+  ],
+  "historicalSnapshot": true,
+  "supersededForCampaignRunnersBy": "AGENT_CREDIT_DELIVERY_RESULTS.json"
 }

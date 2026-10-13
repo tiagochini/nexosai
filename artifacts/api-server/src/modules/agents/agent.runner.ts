@@ -1,11 +1,12 @@
 import { withProjectExecution, executionSettings, setExecutionSetting } from "../operations/project-execution-context.js";
+import { randomUUID } from "node:crypto";
+import { assertGenerationCredits, deductCredits } from "../credits/credits.service.js";
 import { NotFoundError } from "../../lib/errors.js";
 import { eq, desc, and, gte, lte, ilike, sql, type SQL } from "drizzle-orm";
 import {
   db,
   campaignAgentsTable,
   approvalCheckpointsTable,
-  creditTransactionsTable,
   workspacesTable,
   usersTable,
   auditLogsTable,
@@ -701,21 +702,25 @@ async function runAgentInternal(opts: RunAgentOptions): Promise<RunAgentResult> 
 
   if (!ws) throw new NotFoundError("Workspace");
 
-  // Low-credit advisory only — never block pipeline execution.
-  // Paying customers must always receive their full deliverable regardless of credit balance.
-  // InsufficientCreditsError was removed: a hard throw here aborted entire pipeline phases.
-  const MIN_CREDITS_ADVISORY = 5;
-  if (!ws || ws.creditsBalance < MIN_CREDITS_ADVISORY) {
-    log.warn(
-      { workspaceId, agentRole, balance: ws?.creditsBalance ?? 0, required: MIN_CREDITS_ADVISORY },
-      "[CREDITS] Low credit balance — proceeding with agent run (advisory-only, never blocking)",
-    );
-    // ws must exist for locale lookup; if workspace not found, use empty shell
-    // (agent still runs, credit deduction is best-effort and will simply no-op if ws missing)
-  }
-
-  // Only insert into campaign_agents when we have a real UUID campaign ID
   const isValidCampaignId = campaignId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(campaignId);
+  const creditOperationKey = getRegenIdempotencyKey() ?? opts.idempotencyKeyOverride
+    ?? (isValidCampaignId ? campaignId + ":" + agentRole : "agent:" + workspaceId + ":" + randomUUID());
+  let recoveredCompletion: RouterResult | undefined;
+  // A persisted result is recoverable even if credits were exhausted after its delivery.
+  if (isValidCampaignId) {
+    const [previous] = await db.select().from(campaignAgentsTable)
+      .where(and(eq(campaignAgentsTable.campaignId, campaignId!), eq(campaignAgentsTable.agentType, agentRole as any),
+        sql`${campaignAgentsTable.input}->>'creditOperationKey' = ${creditOperationKey}`,
+        sql`${campaignAgentsTable.status} IN ('completed', 'waiting_approval', 'failed')`)).orderBy(desc(campaignAgentsTable.completedAt)).limit(1);
+    const output = previous?.output as { content?: string; unsettledCompletion?: RouterResult } | undefined;
+    if (previous?.status === "failed" && output?.unsettledCompletion) recoveredCompletion = output.unsettledCompletion;
+    if (previous && previous.status !== "failed" && typeof output?.content === "string") {
+      const [checkpoint] = await db.select({ id: approvalCheckpointsTable.id }).from(approvalCheckpointsTable)
+        .where(and(eq(approvalCheckpointsTable.campaignId, campaignId!), sql`${approvalCheckpointsTable.data}->>'agentId' = ${previous.id}`)).limit(1);
+      return { agentRecord: previous, content: output.content, creditsCharged: 0, checkpointId: checkpoint?.id };
+    }
+  }
+  await assertGenerationCredits(workspaceId);
 
   let agentRecord: CampaignAgent | undefined;
   if (isValidCampaignId) {
@@ -727,7 +732,7 @@ async function runAgentInternal(opts: RunAgentOptions): Promise<RunAgentResult> 
         status: "running",
         startedAt: new Date(),
         // Existing JSON input column preserves context provenance without a migration.
-        input: { campaignActionContext: campaignActionContext.metadata },
+        input: { campaignActionContext: campaignActionContext.metadata, creditOperationKey },
       })
       .returning();
     agentRecord = inserted;
@@ -778,19 +783,9 @@ async function runAgentInternal(opts: RunAgentOptions): Promise<RunAgentResult> 
 
   let content = "";
   let creditsCharged = 0;
-
-  // Detect provider auth errors (no API key configured) for graceful dev fallback
-  function isProviderAuthError(err: unknown): boolean {
-    const msg = err instanceof Error ? err.message : String(err);
-    return (
-      msg.includes("Could not resolve authentication method") ||
-      msg.includes("API key") ||
-      msg.includes("Incorrect API key") ||
-      msg.includes("OPENAI_API_KEY") ||
-      msg.includes("ANTHROPIC_API_KEY") ||
-      msg.includes("GEMINI_API_KEY")
-    );
-  }
+  let deliveryCommitted = false;
+  let generatedCompletion: RouterResult | undefined;
+  let checkpointId: string | undefined;
 
   // ── DRY_RUN_MODE: skip real AI call ──────────────────────────────────────────
   if (env.DRY_RUN_MODE) {
@@ -858,7 +853,9 @@ async function runAgentInternal(opts: RunAgentOptions): Promise<RunAgentResult> 
 
   try {
     let result: RouterResult;
-    if (opts._testForceProviderFallback) {
+    if (recoveredCompletion) {
+      result = recoveredCompletion;
+    } else if (opts._testForceProviderFallback) {
       // TEST-ONLY: calls completeWithAgent directly with a short timeout to force fallback.
       const { provider, timeoutMs } = opts._testForceProviderFallback;
       const cwResult = await completeWithAgent(
@@ -887,6 +884,7 @@ async function runAgentInternal(opts: RunAgentOptions): Promise<RunAgentResult> 
       );
     }
 
+    generatedCompletion = result;
     content = result.content;
     creditsCharged = result.creditsCharged;
 
@@ -911,176 +909,78 @@ async function runAgentInternal(opts: RunAgentOptions): Promise<RunAgentResult> 
       });
     }
 
-    if (creditsCharged > 0) {
-      // Non-fatal block: FK constraint fails when workspace was deleted mid-generation
-      // (e.g. stress test cleanup racing with background AI job). AI output is already
-      // produced — never let credit accounting kill the result.
-      try {
-        // ── [C3] Idempotency guard — prevent double-charge on pipeline restart ─────
-        // Key is stable across restarts: same campaignId + same agentRole = same job.
-        //
-        // ATOMIC IMPLEMENTATION (mirrors deductCredits() post-Task-#41):
-        // INSERT is the claim point — two concurrent workers racing on the same key:
-        //   • One wins the INSERT → proceeds to UPDATE balance in the same db.transaction().
-        //   • The other gets ON CONFLICT DO NOTHING → transaction commits as no-op → skip.
-        // If the balance UPDATE fails, the entire transaction rolls back, releasing the key
-        // so a future retry can claim it cleanly (no "claimed-but-not-charged" state).
-        // ── [C3-ext] Idempotency key resolution ──────────────────────────────────
-        // Priority: regen-context > explicit override > campaign-derived.
-        //
-        // [C3-REGEN] When called from regeneratePiece(), a per-piece time-bucketed key
-        // is injected via AsyncLocalStorage (regen-context.ts). This overrides the
-        // initial pipeline key so each user-triggered regeneration is charged exactly
-        // once, while rapid double-clicks within the same 1-minute window share the
-        // same key and are deduplicated by ON CONFLICT DO NOTHING.
-        const idempotencyKey: string | undefined = getRegenIdempotencyKey()
-          ?? opts.idempotencyKeyOverride
-          ?? ((isValidCampaignId && campaignId)
-            ? `${campaignId}:${agentRole}`
-            : undefined);
-
-        if (idempotencyKey) {
-          // ── [C3] Atomic idempotency and balance mutation ─────────────────────────
-          //
-          // Two concurrent executions of the same agent race through here. Both compute the same
-          // idempotencyKey. Without a transaction, both could pass a SELECT check and then both
-          // UPDATE the workspace balance — double-charging. Instead we:
-          //   1. Open a single Postgres transaction.
-          //   2. Lock the workspace row before reading its balance. Different agent keys
-          //      must serialize too, otherwise each can overwrite the other's debit.
-          //   3. Claim the key and write the balance/ledger entry in the same transaction.
-          let isDuplicate = false;
-          let balanceAfter: number | undefined;
-
-          await db.transaction(async (trx) => {
-            const [lockedWorkspace] = await trx
-              .select({ creditsBalance: workspacesTable.creditsBalance })
-              .from(workspacesTable)
-              .where(eq(workspacesTable.id, workspaceId))
-              .limit(1)
-              .for("update");
-
-            if (!lockedWorkspace) {
-              throw new Error(`Workspace not found while charging credits: ${workspaceId}`);
-            }
-
-            const balanceBefore = lockedWorkspace.creditsBalance;
-            balanceAfter = Math.max(0, balanceBefore - creditsCharged);
-            const [claimed] = await trx
-              .insert(creditTransactionsTable)
-              .values({
-                workspaceId,
-                campaignId,
-                type: "debit",
-                action: "campaign_execution",
-                amount: creditsCharged,
-                balanceBefore,
-                balanceAfter,
-                aiProvider: result.provider,
-                tokensUsed: result.inputTokens + result.outputTokens,
-                costUsd: result.costUsd.toString(),
-                idempotencyKey,
-              })
-              .onConflictDoNothing()
-              .returning();
-
-            if (!claimed) {
-              isDuplicate = true;
-              return; // Early return — txn commits as a no-op, nothing mutated
-            }
-
-
-            await trx
-              .update(workspacesTable)
-              .set({ creditsBalance: balanceAfter })
-              .where(eq(workspacesTable.id, workspaceId));
-          });
-
-          if (isDuplicate) {
-            log.warn(
-              { workspaceId, agentRole, creditsCharged, idempotencyKey },
-              "[C3] Credit already charged for this agent run — skipping duplicate deduction (idempotency guard triggered on pipeline restart)",
-            );
-          } else {
-            log.info(
-              { workspaceId, agentRole, creditsCharged, idempotencyKey, balanceAfter },
-              "[C3] Credit deducted (new charge, idempotency key registered)",
-            );
-          }
-        } else {
-          // Non-campaign/legacy calls still need the row lock: they can race a
-          // keyed agent charge and must record the balance they actually debited.
-          await db.transaction(async (trx) => {
-            const [lockedWorkspace] = await trx
-              .select({ creditsBalance: workspacesTable.creditsBalance })
-              .from(workspacesTable)
-              .where(eq(workspacesTable.id, workspaceId))
-              .limit(1)
-              .for("update");
-
-            if (!lockedWorkspace) {
-              throw new Error(`Workspace not found while charging credits: ${workspaceId}`);
-            }
-
-            const balanceBefore = lockedWorkspace.creditsBalance;
-            const balanceAfter = Math.max(0, balanceBefore - creditsCharged);
-            await trx
-              .update(workspacesTable)
-              .set({ creditsBalance: balanceAfter })
-              .where(eq(workspacesTable.id, workspaceId));
-
-            await trx.insert(creditTransactionsTable).values({
-              workspaceId,
-              campaignId,
-              type: "debit",
-              action: "campaign_execution",
-              amount: creditsCharged,
-              balanceBefore,
-              balanceAfter,
-              aiProvider: result.provider,
-              tokensUsed: result.inputTokens + result.outputTokens,
-              costUsd: result.costUsd.toString(),
-            });
-          });
-        }
-      } catch (creditErr) {
-        log.warn(
-          { creditErr, workspaceId, agentRole, creditsCharged },
-          "Credit deduction failed (non-fatal) — workspace may have been deleted or FK constraint violated; AI output preserved",
-        );
-      }
-    }
-
     const newStatus = requiresApproval ? "waiting_approval" : "completed";
+    let debitReplayed = false;
+    const charge = await deductCredits(workspaceId, "campaign_execution", log,
+      isValidCampaignId ? campaignId! : undefined, result.provider,
+      result.inputTokens + result.outputTokens, result.costUsd, creditOperationKey, creditsCharged,
+      async (trx, settled, replayed) => {
+        debitReplayed = replayed;
+        if (!agentRecord) return;
+        const [saved] = await trx.update(campaignAgentsTable).set({
+          status: newStatus,
+          output: { content, metadata: { creditsCharged: replayed || settled.description?.startsWith("[∞]") ? 0 : settled.amount, creditsConsumed: settled.amount, creditTransactionId: settled.id,
+            exempt: settled.description?.startsWith("[∞]") === true,
+            provider: result.provider, model: result.model,
+            ...(result.usedFallback ? { fallbackUsed: true, fallbackProvider: result.provider, fallbackModel: result.model } : {}) } },
+          completedAt: new Date(), creditsUsed: replayed || settled.description?.startsWith("[∞]") ? 0 : settled.amount,
+          tokensUsed: result.inputTokens + result.outputTokens, aiProvider: result.provider, model: result.model,
+        }).where(eq(campaignAgentsTable.id, agentRecord.id)).returning();
+        if (!saved) throw new NotFoundError("Agent delivery");
+        if (requiresApproval && checkpointType && isValidCampaignId && agentRecord) {
+          const mappedType = (CHECKPOINT_TYPE_MAP[checkpointType] ?? "execution_approval") as
+            | "strategy_approval"
+            | "timeline_approval"
+            | "creative_concept_approval"
+            | "video_concept_approval"
+            | "video_preview_approval"
+            | "landing_page_approval"
+            | "ad_set_approval"
+            | "targeting_approval"
+            | "offer_approval"
+            | "execution_approval"
+            | "budget_approval";
+
+          const [boundMasterplan] = await trx
+            .select({
+              id: masterplanVersionsTable.id,
+              version: masterplanVersionsTable.version,
+              contextFingerprint: masterplanVersionsTable.contextFingerprint,
+            })
+            .from(masterplanVersionsTable)
+            .where(and(
+              eq(masterplanVersionsTable.workspaceId, workspaceId),
+              eq(masterplanVersionsTable.campaignId, campaignId as string),
+            ))
+            .orderBy(desc(masterplanVersionsTable.version))
+            .limit(1);
+
+          const [checkpoint] = await trx
+            .insert(approvalCheckpointsTable)
+            .values({
+              campaignId: campaignId as string,
+              checkpointType: mappedType,
+              status: "pending",
+              data: {
+                content: content.slice(0, 4000),
+                agentRole,
+                agentId: agentRecord.id,
+                masterplanVersionId: boundMasterplan?.id ?? null,
+                masterplanVersion: boundMasterplan?.version ?? null,
+                contextFingerprint: boundMasterplan?.contextFingerprint ?? null,
+              },
+            })
+            .returning();
+
+          checkpointId = checkpoint.id;
+
+        }
+
+      });
+    creditsCharged = debitReplayed || charge.description?.startsWith("[∞]") ? 0 : charge.amount;
+    deliveryCommitted = true;
 
     if (agentRecord) {
-      await db
-        .update(campaignAgentsTable)
-        .set({
-          status: newStatus,
-          output: {
-            content,
-            metadata: {
-              creditsCharged,
-              provider: result.provider,
-              model: result.model,
-              ...(result.usedFallback
-                ? {
-                    fallbackUsed: true,
-                    fallbackProvider: result.provider,
-                    fallbackModel: result.model,
-                  }
-                : {}),
-            },
-          },
-          completedAt: new Date(),
-          creditsUsed: creditsCharged,
-          tokensUsed: result.inputTokens + result.outputTokens,
-          aiProvider: result.provider,
-          model: result.model,
-        })
-        .where(eq(campaignAgentsTable.id, agentRecord.id));
-
       try {
         await db.insert(auditLogsTable).values({
           workspaceId,
@@ -1136,61 +1036,9 @@ async function runAgentInternal(opts: RunAgentOptions): Promise<RunAgentResult> 
       `Agent ${agentRole} completed`,
     );
 
-    let checkpointId: string | undefined;
-
-    if (requiresApproval && checkpointType && isValidCampaignId && agentRecord) {
-      const mappedType = (CHECKPOINT_TYPE_MAP[checkpointType] ?? "execution_approval") as
-        | "strategy_approval"
-        | "timeline_approval"
-        | "creative_concept_approval"
-        | "video_concept_approval"
-        | "video_preview_approval"
-        | "landing_page_approval"
-        | "ad_set_approval"
-        | "targeting_approval"
-        | "offer_approval"
-        | "execution_approval"
-        | "budget_approval";
-
-      const [boundMasterplan] = await db
-        .select({
-          id: masterplanVersionsTable.id,
-          version: masterplanVersionsTable.version,
-          contextFingerprint: masterplanVersionsTable.contextFingerprint,
-        })
-        .from(masterplanVersionsTable)
-        .where(and(
-          eq(masterplanVersionsTable.workspaceId, workspaceId),
-          eq(masterplanVersionsTable.campaignId, campaignId as string),
-        ))
-        .orderBy(desc(masterplanVersionsTable.version))
-        .limit(1);
-
-      const [checkpoint] = await db
-        .insert(approvalCheckpointsTable)
-        .values({
-          campaignId: campaignId as string,
-          checkpointType: mappedType,
-          status: "pending",
-          data: {
-            content: content.slice(0, 4000),
-            agentRole,
-            agentId: agentRecord.id,
-            masterplanVersionId: boundMasterplan?.id ?? null,
-            masterplanVersion: boundMasterplan?.version ?? null,
-            contextFingerprint: boundMasterplan?.contextFingerprint ?? null,
-          },
-        })
-        .returning();
-
-      checkpointId = checkpoint.id;
-
-      emitCheckpointCreated(campaignId as string, checkpointType, {
-        checkpointId: checkpoint.id,
-        agentRole,
-        contentPreview: content.slice(0, 300),
-      });
-    }
+    if (checkpointId && checkpointType && campaignId) emitCheckpointCreated(campaignId, checkpointType, {
+      checkpointId, agentRole, contentPreview: content.slice(0, 300),
+    });
 
     await processClarificationsFromContent(
       content,
@@ -1225,56 +1073,13 @@ async function runAgentInternal(opts: RunAgentOptions): Promise<RunAgentResult> 
       checkpointId,
     };
   } catch (err) {
-    // Graceful degradation when AI provider is not configured (dev environment)
-    if (isProviderAuthError(err)) {
-      log.warn({ agentRole, campaignId }, "AI provider not configured — returning mock response for dev");
-
-      content = `[DEV MODE — ${agentRole}] Resposta simulada. Configure as chaves de API (ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY) para respostas reais.`;
-
-      if (agentRecord) {
-        await db
-          .update(campaignAgentsTable)
-          .set({
-            status: "completed",
-            output: { content, metadata: { mock: true, reason: "no_api_key" } },
-            completedAt: new Date(),
-            creditsUsed: 0,
-          })
-          .where(eq(campaignAgentsTable.id, agentRecord.id));
-      }
-
-      if (execLogId) {
-        await db
-          .update(agentExecutionLogsTable)
-          .set({
-            executionStatus: "completed",
-            outputSummary: "[DEV MODE] Resposta simulada — sem API key",
-            providerUsed: "mock",
-            completedAt: new Date(),
-          })
-          .where(eq(agentExecutionLogsTable.id, execLogId));
-      }
-
-      emitAgentCompleted(campaignId ?? "system", agentRole, `${agentRole} simulado (dev mode — sem API key)`);
-
-      if (agentRecord) {
-        const [updated] = await db
-          .select()
-          .from(campaignAgentsTable)
-          .where(eq(campaignAgentsTable.id, agentRecord.id))
-          .limit(1);
-        agentRecordClosed = true;
-        return { agentRecord: updated!, content, creditsCharged: 0 };
-      }
-
+    // The result and debit already committed atomically: later audit/checkpoint errors
+    // must not erase the deliverable or make a retry invoke/charge the provider again.
+    if (deliveryCommitted) {
+      log.error({ err, workspaceId, agentRole }, "Post-delivery bookkeeping failed; saved result remains recoverable");
       agentRecordClosed = true;
-      return {
-        agentRecord: { id: "none", campaignId: null, agentType: agentRole, status: "completed" } as unknown as CampaignAgent,
-        content,
-        creditsCharged: 0,
-      };
+      throw err;
     }
-
     // Real error — update execution log and campaign agent
     const errMsg = err instanceof Error ? err.message : String(err);
     log.error({ err, campaignId, agentRole }, `Agent ${agentRole} failed`);
@@ -1296,6 +1101,7 @@ async function runAgentInternal(opts: RunAgentOptions): Promise<RunAgentResult> 
         .set({
           status: "failed",
           errorMessage: errMsg,
+          ...(generatedCompletion ? { output: { content: generatedCompletion.content, unsettledCompletion: generatedCompletion } } : {}),
           completedAt: new Date(),
         })
         .where(eq(campaignAgentsTable.id, agentRecord.id));

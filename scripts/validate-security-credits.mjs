@@ -13,7 +13,7 @@ mkdirSync(output, { recursive: true });
 const results = [];
 const tests = ['test-project-execution-isolation', 'test-project-isolation-db', 'test-realtime-security-db',
   'test-credit-concurrency', 'test-billing-credit-concurrency-db', 'test-billing-reversal-db',
-  'test-billing-webhook-security', 'test-auth-cookie-security', 'test-log-security', 'test-security-credits-db'];
+  'test-billing-webhook-security', 'test-auth-cookie-security', 'test-log-security', 'test-security-credits-db', 'test-agent-credit-delivery-db'];
 function docker(args) {
   const result = spawnSync('docker', args, { cwd: root, encoding: 'utf8', windowsHide: true, maxBuffer: 12e6, timeout: 300000 });
   if (result.status !== 0) throw new Error((result.stdout + result.stderr).slice(-4000) || 'Docker command failed');

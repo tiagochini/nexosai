@@ -1,0 +1,88 @@
+{
+  "date": "2026-10-13T18:34:39.145Z",
+  "database": "disposable Docker nexos_p3",
+  "realProviderCalls": false,
+  "results": [
+    {
+      "test": "test-project-execution-isolation",
+      "status": "PASS"
+    },
+    {
+      "test": "test-project-isolation-db",
+      "status": "PASS"
+    },
+    {
+      "test": "test-realtime-security-db",
+      "status": "PASS"
+    },
+    {
+      "test": "test-credit-concurrency",
+      "status": "PASS"
+    },
+    {
+      "test": "test-billing-credit-concurrency-db",
+      "status": "PASS"
+    },
+    {
+      "test": "test-billing-reversal-db",
+      "status": "PASS"
+    },
+    {
+      "test": "test-billing-webhook-security",
+      "status": "PASS"
+    },
+    {
+      "test": "test-auth-cookie-security",
+      "status": "PASS"
+    },
+    {
+      "test": "test-log-security",
+      "status": "PASS"
+    },
+    {
+      "test": "test-security-credits-db",
+      "status": "PASS"
+    },
+    {
+      "test": "test-agent-credit-delivery-db",
+      "status": "PASS"
+    }
+  ],
+  "verdict": "PASS_CAMPAIGN_AGENT_SECURITY_AND_CREDITS",
+  "sourceSha256": {
+    "artifacts/api-server/src/modules/agents/agent.runner.ts": "e61b83243e38c05fc34bb5d246f0aa50d6ee753513d05a28dfb45f5fe529fc5b",
+    "artifacts/api-server/src/modules/agents/critique.runner.ts": "6089af378b2741b808e0dbd8df9de46d19d8f4a28ae2a8e1c8948d2b8d8d1609",
+    "artifacts/api-server/src/modules/credits/credits.service.ts": "a40f59fc63b87b6496954b254e8adc11f30c72edb9746787b66f1bb5ae078b88",
+    "artifacts/api-server/src/scripts/test-agent-credit-delivery-db.ts": "67cab1879a28c0d7a728b7b83a97caf920c50d0733a91711bd6c06955bc6a871"
+  },
+  "finalDeliveryRetest": "PASS",
+  "finalDeliveryLogSha256": "9b7ac0fe94281796c2f043afa55f0559f0814218204f9308c064ef25d3028c62",
+  "campaignRegressions": [
+    {
+      "test": "test-content-checkpoint-resume",
+      "status": "PASS"
+    },
+    {
+      "test": "test-campaign-control-room",
+      "status": "PASS"
+    },
+    {
+      "test": "test-campaign-control-room-version-diff",
+      "status": "PASS"
+    }
+  ],
+  "apiTypecheck": "PASS",
+  "apiBuild": "PASS",
+  "runtime": {
+    "livez": 200,
+    "readyz": 200,
+    "publicDomain": 200,
+    "restarted": true
+  },
+  "founderLedgerUnchanged": true,
+  "limits": [
+    "Image/video excluded",
+    "Direct SDK calls outside campaign runners and provider invoice reconciliation not certified",
+    "No real financial transfers, paid inference, publication or advertising"
+  ]
+}

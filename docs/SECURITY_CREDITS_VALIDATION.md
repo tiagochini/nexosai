@@ -1,6 +1,6 @@
 # Validação de segurança e créditos — 13/10/2026
 
-**Veredito: aprovação parcial.** Isolamento e regressões do livro de créditos passaram; a contabilização completa das gerações de IA ainda tem bloqueadores. Não equivale a auditoria de segurança completa nem aprovação para produção.
+**Registro inicial: aprovação parcial. Os bloqueadores dos runners foram resolvidos e retestados em [AGENT_CREDIT_DELIVERY.md](AGENT_CREDIT_DELIVERY.md).** Isolamento e regressões do livro de créditos passaram; a contabilização completa das gerações de IA ainda tem bloqueadores. Não equivale a auditoria de segurança completa nem aprovação para produção.
 
 ## Evidência executada
 

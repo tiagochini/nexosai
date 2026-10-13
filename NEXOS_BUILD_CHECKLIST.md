@@ -1,5 +1,16 @@
 # NexOS — Checklist Canônico de Construção
 
+**Segurança e créditos dos agentes — PASS técnico, 13/10/2026:** cobrança
+de runAgent e critique unificada; débito e resultado/aprovação atômicos;
+isenção, dívida e estorno respeitados; repetição e falhas retomam sem nova
+inferência/débito. Onze regressões de segurança/créditos + três de campanha,
+typecheck e build passaram. Runtime reiniciado; livez/readyz/domínio 200.
+Founder preservado. [Evidência e limites](docs/AGENT_CREDIT_DELIVERY.md).
+Sem migração, gasto externo ou push. Imagens/vídeos e SDKs fora desses runners
+não são certificados por este resultado. Próximo checkpoint: concluir os
+materiais e a aprovação da campanha de validação.
+
+
 **Segurança e créditos — validação parcial, 13/10/2026:** dez regressões
 Docker passaram (isolamento, HTTP, realtime, concorrência, pagamentos, estornos,
 cookies e logs), assim como typecheck e permissões SQL reais somente leitura.

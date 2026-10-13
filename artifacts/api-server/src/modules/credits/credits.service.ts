@@ -36,6 +36,16 @@ export async function getBalance(workspaceId: string): Promise<number> {
   return ws.creditsBalance;
 }
 
+type CreditDbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export async function assertGenerationCredits(workspaceId: string): Promise<void> {
+  await assertCreditsNotRefundHeld(workspaceId);
+  const [ws] = await db.select().from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
+  if (!ws) throw new NotFoundError("Workspace");
+  const unlimited = (ws.settings as Record<string, unknown>)?.unlimitedCredits === true || isAdminWorkspace(ws.ownerId);
+  if (ws.creditsBalance < 0 || (!unlimited && ws.creditsBalance < 1)) throw new InsufficientCreditsError(1, ws.creditsBalance);
+}
+
 export async function deductCredits(
   workspaceId: string,
   action: CreditAction,
@@ -46,6 +56,7 @@ export async function deductCredits(
   actualCostUsd?: number,
   idempotencyKey?: string,
   costOverride?: number,
+  persistDelivery?: (trx: CreditDbTransaction, charge: CreditTransaction, replayed: boolean) => Promise<void>,
 ): Promise<CreditTransaction> {
   const cost = costOverride ?? CREDIT_COSTS[action];
   if (cost === undefined) throw new Error(`Unknown credit action: ${action}`);
@@ -96,6 +107,7 @@ export async function deductCredits(
           || existing.type !== "debit" || existing.action !== action || existing.amount !== cost) {
           throw new Error("Credit debit idempotency conflict");
         }
+        if (persistDelivery) await persistDelivery(trx, existing, true);
         duplicateTx = existing;
         return;
       }
@@ -144,6 +156,7 @@ export async function deductCredits(
     if (!inserted) {
       throw new Error(`Credit idempotency key is already in use: ${idempotencyKey}`);
     }
+    if (persistDelivery) await persistDelivery(trx, inserted!, false);
     insertedTx = inserted;
 
     if (campaignId) {
@@ -166,7 +179,7 @@ export async function deductCredits(
   return insertedTx!;
 }
 
-type CreditDbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 
 export async function grantCreditsInTransaction(
   trx: CreditDbTransaction,

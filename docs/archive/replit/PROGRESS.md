@@ -313,3 +313,8 @@ caption: "Você trabalha 12h por dia. Responde mensagem. Resolve problema de cli
 ## 13/10/2026 — Segurança e créditos
 
 Auditoria parcial: dez regressões no banco descartável + permissões SQL reais READ ONLY + typecheck passaram. Corrigidos replay de débito e campanha alheia. Evidência: docs/SECURITY_CREDITS_VALIDATION.md. Contabilização do runner e recuperação após débito permanecem abertas; não promove produção. Placar do Ápice não incrementado: nenhuma nova execução externa completa ou beta humano nesta sessão. Próximo passo: unificar débito/isenção/compensação das gerações.
+
+
+## 13/10/2026 — Segurança/créditos dos runners concluídos
+
+PASS técnico: cobrança compartilhada, persistência atômica, resultado pendente recuperável, isenção e bloqueios; 11 regressões + 3 de campanha + tipos/build; runtime/API/domínio 200. Evidências em docs/AGENT_CREDIT_DELIVERY.md. Founder inalterado. Escopo não certifica imagens/vídeos, SDK direto ou fatura do provedor. Placar do Ápice não incrementado: não houve nova execução externa completa ou beta humano. Próximo checkpoint: materiais completos e aprovação da campanha.
