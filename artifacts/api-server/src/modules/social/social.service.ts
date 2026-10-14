@@ -326,7 +326,7 @@ const ANALYTICS_TIMEOUT_MS = 12_000;
 function fetchWithTimeout(url: string, init: RequestInit = {}): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ANALYTICS_TIMEOUT_MS);
-  return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
+  return metaGraphFetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
 }
 
 export interface AccountAnalyticsPost {

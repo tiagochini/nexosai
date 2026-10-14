@@ -42,6 +42,8 @@ export const env = {
   APP_URL:
     process.env["APP_URL"] ??
     `https://${process.env["REPLIT_DEV_DOMAIN"] ?? "localhost"}`,
+  INSTAGRAM_APP_ID: process.env["INSTAGRAM_APP_ID"] ?? "",
+  INSTAGRAM_APP_SECRET: process.env["INSTAGRAM_APP_SECRET"] ?? "",
   META_APP_ID: process.env["META_APP_ID"] ?? "",
   META_APP_SECRET: process.env["META_APP_SECRET"] ?? "",
   // Provider-state mutations are opt-in. This prevents a restored production

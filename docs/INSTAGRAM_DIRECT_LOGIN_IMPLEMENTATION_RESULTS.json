@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-14",
+  "verdict": "TECHNICAL_IMPLEMENTATION_PASS_REAL_META_HOMOLOGATION_PENDING",
+  "mockedProvider": true,
+  "realDirectOAuth": false,
+  "database": "Disposable Docker nexos_p3",
+  "checks": [
+    "OAuth exchange and identity",
+    "encrypted persistence",
+    "one renewal under concurrency",
+    "Graph host and POST body isolation",
+    "HTTP provider-bound state",
+    "existing account reconnect",
+    "4 webhook regressions",
+    "16 execution integration regressions",
+    "API and app typecheck",
+    "API build"
+  ],
+  "blocker": "Meta password reauthentication required to reveal Instagram app secret",
+  "externalActions": false
+}

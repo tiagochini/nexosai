@@ -30,12 +30,13 @@ export function resolveInstagramWebhookPageId(metadata: Record<string, unknown> 
 export async function ensureInstagramWebhookSubscription(
   pageId: string,
   accessToken: string,
+  directLogin = false,
 ): Promise<void> {
   const response = await metaGraphFetch(metaGraphUrl(`${pageId}/subscribed_apps`), {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      subscribed_fields: META_INSTAGRAM_WEBHOOK_FIELDS.join(","),
+      subscribed_fields: (directLogin ? ["comments", "messages", "messaging_postbacks"] : META_INSTAGRAM_WEBHOOK_FIELDS).join(","),
       access_token: accessToken,
     }),
     signal: AbortSignal.timeout(10_000),
@@ -81,7 +82,7 @@ export async function reconcileInstagramWebhookSubscriptions(): Promise<{
       continue;
     }
     try {
-      await ensureInstagramWebhookSubscription(resolveInstagramWebhookPageId(integration.metadata as Record<string, unknown> | null), integration.accessToken);
+      await ensureInstagramWebhookSubscription((integration.metadata as any)?.authType === "instagram_login" ? integration.accountId : resolveInstagramWebhookPageId(integration.metadata as Record<string, unknown> | null), integration.accessToken, (integration.metadata as any)?.authType === "instagram_login");
       subscribed += 1;
       logger.info(
         { accountId: integration.accountId, fields: META_INSTAGRAM_WEBHOOK_FIELDS },

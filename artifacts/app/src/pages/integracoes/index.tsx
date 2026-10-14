@@ -104,7 +104,7 @@ export default function IntegracoesPage() {
     integrations.filter(i => i.status === "connected").map(i => [i.provider, i])
   );
   // When instagram is connected, facebook is also effectively connected (same Meta OAuth)
-  if (connectedMap.has("instagram") && !connectedMap.has("facebook")) {
+  if (connectedMap.has("instagram") && !connectedMap.has("facebook") && connectedMap.get("instagram")?.metadata?.authType !== "instagram_login") {
     connectedMap.set("facebook", connectedMap.get("instagram")!);
   }
 
@@ -147,6 +147,12 @@ export default function IntegracoesPage() {
       setDisconnecting(null);
     }
   };
+
+  const subscribeInstagram = useMutation({
+    mutationFn: (integrationId: string) => customFetch(`/api/integrations/oauth/meta-webhook-subscriptions/${integrationId}`, { method: "POST" }),
+    onSuccess: () => toast.success(t("Inscrição de webhooks confirmada pela Meta.", "Webhook subscription confirmed by Meta.", "Suscripción de webhooks confirmada por Meta.")),
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   const openConnectModal = (providerOrId: string) => {
     const entry = INTEGRATION_CATALOG.find(e => e.provider === providerOrId);
@@ -422,6 +428,16 @@ export default function IntegracoesPage() {
                                       ? <Loader2 className="h-3 w-3 animate-spin" />
                                       : <Plug className="h-3 w-3" />}
                                     {testing === integration?.id ? t("Testando...", "Testing...", "Probando...") : t("Testar conexão", "Test connection", "Probar conexión")}
+                                  </button>
+                                )}
+                                {entry.provider === "instagram" && (
+                                  <button onClick={() => setConnectModal(entry)} className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 hover:text-primary">
+                                    {t("Alterar login", "Change login", "Cambiar inicio de sesión")}
+                                  </button>
+                                )}
+                                {entry.provider === "instagram" && integration?.metadata?.authType === "instagram_login" && (
+                                  <button onClick={() => subscribeInstagram.mutate(integration.id)} disabled={subscribeInstagram.isPending} className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 hover:text-primary">
+                                    {t("Assinar webhooks", "Subscribe webhooks", "Suscribir webhooks")}
                                   </button>
                                 )}
                                 {entry.provider !== "facebook" ? (

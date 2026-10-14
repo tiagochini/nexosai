@@ -1217,7 +1217,7 @@ export function ConnectModal({
   const localizedOauthLabel = entry.oauthPlatform
     ? `${t("Entrar com", "Sign in with", "Iniciar sesión con")} ${
         entry.oauthPlatform === "meta"
-          ? localizedLabel
+          ? (entry.provider === "instagram" ? "Facebook" : localizedLabel)
           : entry.oauthPlatform === "tiktok"
           ? "TikTok"
           : entry.oauthPlatform === "google"
@@ -1242,7 +1242,7 @@ export function ConnectModal({
     finally { setLoading(false); }
   };
 
-  const handleOAuth = async () => {
+  const handleOAuth = async (instagramDirect = false) => {
     setOauthLoading(true);
     setOauthError(null);
     try {
@@ -1253,9 +1253,8 @@ export function ConnectModal({
       // to /integracoes with ?oauth_connected=<provider> or ?oauth_error=<msg>.
       const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-      const startUrl = isMobile
-        ? `/api/integrations/oauth/start/${entry.provider}?redirect_mode=1`
-        : `/api/integrations/oauth/start/${entry.provider}`;
+      const oauthProvider = instagramDirect && entry.provider === "instagram" ? "instagram_login" : entry.provider;
+      const startUrl = `/api/integrations/oauth/start/${oauthProvider}${isMobile ? "?redirect_mode=1" : ""}`;
 
       const body = await customFetch<{ url: string }>(startUrl);
 
@@ -1292,7 +1291,7 @@ export function ConnectModal({
 
       // Path 1: postMessage — works on desktop where window.opener is set.
       const messageHandler = (event: MessageEvent<{ type?: string; success?: boolean; provider?: string; error?: string }>) => {
-        if (event.data?.type !== "oauth_complete") return;
+        if (event.origin !== window.location.origin || event.source !== popup || event.data?.type !== "oauth_complete") return;
         handleResult(!!event.data.success, event.data.error);
       };
       window.addEventListener("message", messageHandler);
@@ -1328,11 +1327,11 @@ export function ConnectModal({
 
         // Check the API once as the final fallback.
         try {
-          const integrations = await customFetch<Array<{ provider: string; status: string }>>(
+          const integrations = await customFetch<Array<{ provider: string; status: string; metadata?: {authType?:string} }>>(
             "/api/workspaces/me/integrations"
           );
           const justConnected = integrations.find(
-            (i) => i.provider === entry.provider && i.status === "connected"
+            (i) => i.provider === entry.provider && i.status === "connected" && (!instagramDirect || i.metadata?.authType === "instagram_login")
           );
           if (justConnected) {
             handleResult(true);
@@ -1352,7 +1351,9 @@ export function ConnectModal({
         if (data?.code === "OAUTH_NOT_CONFIGURED") {
           const isMeta = entry.oauthPlatform === "meta";
           const isTikTok = entry.oauthPlatform === "tiktok";
-          const vars = isMeta
+          const vars = instagramDirect
+            ? "INSTAGRAM_APP_ID e INSTAGRAM_APP_SECRET"
+            : isMeta
             ? "META_APP_ID e META_APP_SECRET"
             : isTikTok
             ? "TIKTOK_CLIENT_KEY e TIKTOK_CLIENT_SECRET"
@@ -1461,7 +1462,7 @@ export function ConnectModal({
                 </div>
               )}
               <button
-                onClick={handleOAuth}
+                onClick={() => handleOAuth()}
                 disabled={oauthLoading}
                 className="w-full flex items-center justify-center gap-3 border-2 px-6 py-3.5 font-mono text-sm font-bold uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 active:scale-[0.99]"
                 style={{ borderColor: brand.border, color: brand.color, background: brand.bg }}
@@ -1470,6 +1471,11 @@ export function ConnectModal({
                 {oauthLoading ? t("Aguardando autorização…", "Waiting for authorisation…", "Esperando autorización…") : localizedOauthLabel}
                 {!oauthLoading && <ExternalLink className="h-3.5 w-3.5 opacity-60" />}
               </button>
+              {entry.provider === "instagram" && (
+                <Button variant="outline" className="w-full" disabled={oauthLoading} onClick={() => handleOAuth(true)}>
+                  <Instagram className="h-4 w-4 mr-2" /> Conectar diretamente pelo Instagram
+                </Button>
+              )}
               <div className="flex items-center gap-3 w-full">
                 <div className="flex-1 h-px bg-border/30" />
                 <button

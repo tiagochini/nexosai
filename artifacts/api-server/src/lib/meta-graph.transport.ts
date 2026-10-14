@@ -1,10 +1,11 @@
+import { directInstagramRequest } from "../modules/integrations/instagram-login.js";
 import { createHash } from "node:crypto";
 import { env } from "./env.js";
 
 /**
  * The sole outbound seam for Graph requests used by product send paths.
  * E2E mode is deliberately process-local: it cannot persist credentials and it
- * never calls fetch.  Keep this module free of database dependencies so it is
+ * never calls fetch.  Keep this module free of eager database dependencies so E2E mode is
  * safe to use while the database is unavailable during harness startup.
  */
 export type SanitizedMetaGraphCall = {
@@ -130,7 +131,29 @@ function fakeBody(call: SanitizedMetaGraphCall): Record<string, unknown> {
 
 /** Fetch Graph normally, or return a deterministic in-memory fake in E2E mode. */
 export async function metaGraphFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
-  if (!isMetaE2eTestMode()) return fetch(input, init);
+  if (!isMetaE2eTestMode()) {
+    const url = new URL(input instanceof Request ? input.url : input.toString());
+    if (env.INSTAGRAM_APP_ID && ["graph.facebook.com", "graph.instagram.com"].includes(url.hostname)) {
+      const requestInit: RequestInit | undefined = input instanceof Request
+        ? { method: input.method, headers: input.headers, signal: input.signal, ...init,
+            ...(!init?.body && !["GET", "HEAD"].includes(input.method) ? { body: await input.clone().text() } : {}) }
+        : init;
+      let token = url.searchParams.get("access_token");
+      const headers=new Headers(requestInit?.headers);
+      token ??= headers.get("authorization")?.replace(/^Bearer /i, "") ?? null;
+      if (!token && requestInit?.body instanceof URLSearchParams) token=requestInit.body.get("access_token");
+      if (!token && typeof requestInit?.body === "string") {try {token=JSON.parse(requestInit.body).access_token??null;} catch {/* not a credential body */}}
+      if (typeof token === "string" && token) {
+        const { resolveDirectInstagramCredential }=await import("../modules/integrations/instagram-graph-credential.js");
+        const credential=await resolveDirectInstagramCredential(token);
+        if(credential) {
+          const request=directInstagramRequest(url,requestInit,credential.token,credential.accountId);
+          return fetch(request.url,request.init);
+        }
+      }
+    }
+    return fetch(input, init);
+  }
   const call = await sanitizedCall(input, init);
   ledger.calls.push(call);
   const trigger = process.env["META_E2E_FAIL_ONCE"];

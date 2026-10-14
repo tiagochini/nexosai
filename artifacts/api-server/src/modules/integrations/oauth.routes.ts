@@ -1,3 +1,5 @@
+import { exchangeInstagramLoginCode, INSTAGRAM_LOGIN_SCOPES } from "./instagram-login.js";
+import { metaGraphFetch } from "../../lib/meta-graph.transport.js";
 import { Router } from "express";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { env } from "../../lib/env.js";
@@ -17,7 +19,7 @@ import { ensureInstagramWebhookSubscription, resolveInstagramWebhookPageId, META
 const router = Router();
 
 // ── Platform configs ─────────────────────────────────────────────────────────
-type OAuthPlatform = "meta" | "tiktok" | "google" | "hubspot" | "rdstation" | "linkedin";
+type OAuthPlatform = "instagram_login" | "meta" | "tiktok" | "google" | "hubspot" | "rdstation" | "linkedin";
 type DbProvider = "instagram" | "facebook" | "meta_ads" | "tiktok_ads" | "google_ads" | "hubspot" | "rd_station" | "linkedin_ads";
 
 interface PlatformConfig {
@@ -29,6 +31,10 @@ interface PlatformConfig {
 }
 
 const PLATFORMS: Record<OAuthPlatform, PlatformConfig> = {
+  instagram_login: {
+    name: "Instagram", authUrl: "https://www.instagram.com/oauth/authorize", tokenUrl: "https://api.instagram.com/oauth/access_token",
+    clientId: () => env.INSTAGRAM_APP_ID, clientSecret: () => env.INSTAGRAM_APP_SECRET,
+  },
   meta: {
     name: "Meta",
     authUrl: "https://www.facebook.com/v20.0/dialog/oauth",
@@ -81,6 +87,7 @@ interface ProviderConfig {
 }
 
 const PROVIDER_MAP: Record<string, ProviderConfig> = {
+  instagram_login: {platform:"instagram_login",scope:INSTAGRAM_LOGIN_SCOPES.join(","),label:"Instagram Business",dbProvider:"instagram"},
   instagram: {
     platform: "meta",
     scope: "public_profile,instagram_basic,instagram_content_publish,instagram_manage_insights,instagram_manage_messages,instagram_manage_comments,pages_show_list,pages_read_engagement,pages_manage_engagement,pages_manage_posts,pages_manage_metadata,business_management",
@@ -187,6 +194,7 @@ function popupPage(success: boolean, message: string, provider?: string): string
 router.get("/providers", requireAuth, (_req, res): void => {
   res.json({
     providers: {
+      instagram_login: !!(env.INSTAGRAM_APP_ID && env.INSTAGRAM_APP_SECRET),
       meta:      !!(env.META_APP_ID && env.META_APP_SECRET),
       tiktok:    !!(env.TIKTOK_CLIENT_KEY && env.TIKTOK_CLIENT_SECRET),
       google:    !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
@@ -209,8 +217,9 @@ router.get("/start/:provider", requireAuth, (req, res): void => {
 
   const platform = PLATFORMS[config.platform];
 
-  if (!platform.clientId()) {
+  if (!platform.clientId() || !platform.clientSecret()) {
     const PLATFORM_VARS: Record<string, string> = {
+      instagram_login: "INSTAGRAM_APP_ID e INSTAGRAM_APP_SECRET",
       meta:      "META_APP_ID e META_APP_SECRET",
       tiktok:    "TIKTOK_CLIENT_KEY e TIKTOK_CLIENT_SECRET",
       google:    "GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET",
@@ -249,6 +258,7 @@ router.get("/start/:provider", requireAuth, (req, res): void => {
   authUrl.searchParams.set("scope", config.scope);
   authUrl.searchParams.set("state", state);
   authUrl.searchParams.set("response_type", "code");
+  if (config.platform === "instagram_login") authUrl.searchParams.set("enable_fb_login", "false");
   // Google only issues a refresh token during an offline consent grant. The
   // paid-media adapter refuses expired production credentials without one.
   if (config.platform === "google") {
@@ -305,6 +315,10 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
     return;
   }
 
+  if (stateData.provider !== provider) {
+    res.status(400).send(popupPage(false, "Provedor OAuth não corresponde à autorização iniciada."));
+    return;
+  }
   // Helper: finish the OAuth callback.
   // On desktop (popup mode): sends the popupPage HTML that postMessages the result back.
   // On mobile (redirect mode): does a 302 redirect to the integrations page with a query param.
@@ -331,7 +345,10 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
     let accountName = config.label;
     let metadataExtra: Record<string, unknown> = {};
 
-    if (config.platform === "meta") {
+    if (config.platform === "instagram_login") {
+      const grant = await exchangeInstagramLoginCode(String(code),platform.clientId(),platform.clientSecret(),redirectUri);
+      accessToken=grant.accessToken; tokenExpiresAt=grant.tokenExpiresAt; accountId=grant.accountId; accountName=grant.accountName; metadataExtra=grant.metadata;
+    } else if (config.platform === "meta") {
       const qs = new URLSearchParams({
         client_id: platform.clientId(),
         client_secret: platform.clientSecret(),
@@ -652,14 +669,14 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
     // remain outside organic social entitlements; the existing account check in
     // the guard keeps OAuth reconnects idempotent.
     if (purpose === "organic_social" &&
-      (provider === "instagram" || provider === "facebook" || provider === "tiktok" || provider === "linkedin")) {
-      await assertSocialAccountEntitlement(stateData.workspaceId, provider, accountId);
+      (config.dbProvider === "instagram" || provider === "facebook" || provider === "tiktok" || provider === "linkedin")) {
+      await assertSocialAccountEntitlement(stateData.workspaceId, config.dbProvider as "instagram" | "facebook" | "tiktok" | "linkedin", accountId);
     }
     const newMetadata = {
       oauthConnected: true,
       connectedAt: new Date().toISOString(),
-      canonicalNetwork: purpose === "organic_social" && ["instagram", "facebook", "tiktok", "linkedin"].includes(provider)
-        ? provider
+      canonicalNetwork: purpose === "organic_social" && ["instagram", "facebook", "tiktok", "linkedin"].includes(config.dbProvider)
+        ? config.dbProvider
         : undefined,
       ...metadataExtra,
     };
@@ -679,8 +696,8 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
       provider: config.dbProvider,
       status: "connected" as const,
       accessToken, refreshToken, tokenExpiresAt, accountId, accountName,
-      canonicalNetwork: purpose === "organic_social" && ["instagram", "facebook", "tiktok", "linkedin"].includes(provider)
-        ? provider
+      canonicalNetwork: purpose === "organic_social" && ["instagram", "facebook", "tiktok", "linkedin"].includes(config.dbProvider)
+        ? config.dbProvider
         : null,
       isPaymentGateway: false, blocksExecution: false, metadata,
     };
@@ -694,9 +711,9 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
     // Registration at Meta is deliberately opt-in. OAuth still succeeds if the
     // provider rejects the subscription; the operator can correct permissions
     // without losing the connected account.
-    if (provider === "instagram" && env.META_WEBHOOK_AUTO_SUBSCRIBE && accountId && accessToken) {
+    if (config.dbProvider === "instagram" && env.META_WEBHOOK_AUTO_SUBSCRIBE && accountId && accessToken) {
       try {
-        await ensureInstagramWebhookSubscription(resolveInstagramWebhookPageId(metadata), accessToken);
+        await ensureInstagramWebhookSubscription(metadata.authType === "instagram_login" ? accountId : resolveInstagramWebhookPageId(metadata), accessToken, metadata.authType === "instagram_login");
         logger.info({ workspaceId: stateData.workspaceId, accountId }, "Instagram webhook subscription verified after OAuth");
       } catch (error) {
         logger.warn(
@@ -772,12 +789,12 @@ router.post("/meta-webhook-subscriptions/:integrationId", requireAuth, async (re
   }
 
   try {
-    await ensureInstagramWebhookSubscription(resolveInstagramWebhookPageId(integration.metadata as Record<string, unknown> | null), integration.accessToken);
+    await ensureInstagramWebhookSubscription((integration.metadata as any)?.authType === "instagram_login" ? integration.accountId : resolveInstagramWebhookPageId(integration.metadata as Record<string, unknown> | null), integration.accessToken, (integration.metadata as any)?.authType === "instagram_login");
     res.json({
       ok: true,
       integrationId: integration.id,
       accountId: integration.accountId,
-      fields: META_INSTAGRAM_WEBHOOK_FIELDS,
+      fields: (integration.metadata as Record<string,unknown>)?.authType === "instagram_login" ? ["comments", "messages", "messaging_postbacks"] : META_INSTAGRAM_WEBHOOK_FIELDS,
     });
   } catch (error) {
     logger.warn(
@@ -807,21 +824,21 @@ router.get("/social-health", requireAuth, async (req, res): Promise<void> => {
     const WARN_DAYS = 14;
 
     // Ping real a cada API para verificar se o token ainda aceita requisições
-    async function pingMeta(token: string, accountId: string): Promise<{
+    async function pingMeta(token: string, accountId: string, direct = false): Promise<{
       ok: boolean; httpStatus: number; accountName?: string; errorMsg?: string;
     }> {
       try {
         // username field deprecated in Graph API v2.0+ — use only id,name
-        const url = `https://graph.facebook.com/v20.0/${accountId}?fields=id,name&access_token=${token}`;
-        const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        const url = `https://graph.facebook.com/v22.0/${accountId}?fields=${direct ? "user_id,username" : "id,name"}&access_token=${encodeURIComponent(token)}`;
+        const r = await metaGraphFetch(url, { signal: AbortSignal.timeout(8000) });
         const body = (await r.json()) as {
-          id?: string; name?: string;
+          id?: string; name?: string; username?: string;
           error?: { message: string; type: string; code: number };
         };
         if (!r.ok || body.error) {
           return { ok: false, httpStatus: r.status, errorMsg: body.error?.message ?? `HTTP ${r.status}` };
         }
-        return { ok: true, httpStatus: r.status, accountName: body.name };
+        return { ok: true, httpStatus: r.status, accountName: body.username ?? body.name };
       } catch (e) {
         return { ok: false, httpStatus: 0, errorMsg: e instanceof Error ? e.message : "timeout" };
       }
@@ -870,7 +887,7 @@ router.get("/social-health", requireAuth, async (req, res): Promise<void> => {
           } else {
             // instagram, facebook, meta_ads — usa Graph API
             const accountId = i.accountId ?? "me";
-            const r = await pingMeta(i.accessToken, accountId);
+            const r = await pingMeta(i.accessToken, accountId, (i.metadata as Record<string,unknown>)?.authType === "instagram_login");
             ping = { ok: r.ok, httpStatus: r.httpStatus, liveAccountName: r.accountName, errorMsg: r.errorMsg };
           }
         }

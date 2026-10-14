@@ -49,7 +49,7 @@ Solicite somente permissões realmente demonstradas. Cada linha mantida na submi
 | Permissão | Caso de uso | Evidência obrigatória |
 | --- | --- | --- |
 | `instagram_basic` | Conectar e identificar a conta profissional | Consentimento OAuth e perfil conectado |
-| `instagram_business_manage_messages` | Receber e responder DMs | DM externa, callback, resposta recebida e ID da mensagem |
+| `instagram_manage_messages` | Receber e responder DMs via Facebook Login | DM externa, callback, resposta recebida e ID da mensagem |
 | `instagram_manage_comments` | Ler, moderar e responder comentários | Comentário externo, resposta pública e IDs reais |
 | `pages_show_list` | Selecionar Página autorizada | Lista/seleção da Página durante OAuth |
 | `pages_read_engagement` | Ler posts, comentários e engajamento | Comentário/atividade real carregado no NexOS |
@@ -157,3 +157,8 @@ O teste local das rotas deve usar `pnpm run dev:local:meta-test`, que mantém as
 chamadas de saída da Graph API em memória. Antes da gravação do App Review,
 reinicie no modo normal e confirme que a conta de teste está explicitamente
 assinada em `subscribed_apps`.
+
+
+## Instagram Login direto (14/10/2026)
+
+O NexOS também implementa `/api/integrations/oauth/start/instagram_login`, com callback `/api/integrations/oauth/callback/instagram_login`. Use a chave do produto Instagram Login (não META_APP_SECRET). Neste método, use instagram_business_basic, instagram_business_content_publish, instagram_business_manage_comments, instagram_business_manage_messages e instagram_business_manage_insights. Nenhuma Página Facebook é necessária, e a inscrição ocorre na conta Instagram para comments/messages/messaging_postbacks. As chamadas históricas via Facebook Login não certificam esses scopes. Homologação real ainda pendente: veja INSTAGRAM_DIRECT_LOGIN_IMPLEMENTATION.md. Likes/exclusão exigem evidências próprias; não remover permissões pois o Founder escolheu manter ambos os métodos.
