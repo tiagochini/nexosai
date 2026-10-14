@@ -718,16 +718,13 @@ export async function processIncomingComment(opts: {
   // envia DM automático em < 30s — exigência do Meta App Review.
   // Funciona apenas para Instagram (DM via Messaging API).
   // handleInstagramDmTrigger já faz deduplicação (não dispara duas vezes pro mesmo user).
-  if (platform === "instagram" && igAccountId) {
-    setImmediate(() => {
-      import("../social-presence/social-presence.service.js")
-        .then(({ handleInstagramDmTrigger }) =>
-          handleInstagramDmTrigger(igAccountId, authorId, commentText)
-        )
-        .catch((err) =>
-          logger.warn({ err, commentId, igAccountId }, "comment→DM trigger error (non-fatal)")
-        );
-    });
+  if (platform === "instagram" && igAccountId && config.enableInstagramPrivateReplies && keywordPostAllowed) {
+    try {
+      const { handleInstagramDmTrigger } = await import("../social-presence/social-presence.service.js");
+      await handleInstagramDmTrigger(igAccountId, authorId, commentText, postId);
+    } catch (err) {
+      logger.warn({ err, commentId, igAccountId }, "comment→DM trigger error (non-fatal)");
+    }
   }
 }
 

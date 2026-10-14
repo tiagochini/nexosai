@@ -4040,6 +4040,7 @@ export async function handleInstagramDmTrigger(
   igAccountId: string,
   recipientId: string,
   messageText: string,
+  sourcePostId?: string,
 ): Promise<void> {
   const log = logger.child({ component: "dm-trigger", igAccountId });
   try {
@@ -4075,6 +4076,7 @@ export async function handleInstagramDmTrigger(
           eq(socialPresencePostsTable.workspaceId, integration.workspaceId),
           eq(socialPresencePostsTable.platform, "instagram"),
           gte(socialPresencePostsTable.publishedAt, since),
+          ...(sourcePostId ? [eq(socialPresencePostsTable.platformPostId, sourcePostId)] : []),
         ),
       )
       .limit(50);
@@ -4124,6 +4126,10 @@ export async function handleInstagramDmTrigger(
       }
       return; // Disparou o primeiro match — sair
     }
+
+    // A comment authorizes only its source post's flow, never another post or
+    // the global incoming-DM fallback. Direct messages keep the existing path.
+    if (sourcePostId) return;
 
     // ── Fallback: keyword global do workspace ──────────────────────────────────
     // Se nenhum post publicado tem um dmResponseFlow com essa keyword,

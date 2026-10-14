@@ -1,5 +1,14 @@
 # NexOS Capability Index
 
+**Correção detectada na validação do push, 13/10/2026:** comentário→DM
+agora respeita configuração de resposta privada e post de origem; sem
+sequências em segundo plano para outro post. Teste cobre ausência dessas
+sequências. Executor P3 encerra processos após asserções/cleanup completos.
+16 regressões, tipos/build e jornada P3 completa passaram localmente.
+[Evidência](docs/PUSH_VALIDATION_FIX.md). Revalidação remota ligada ao SHA
+dos workflows do GitHub. Próximo checkpoint funcional: agendamento confirmado.
+
+
 **Asaas — pendência de estorno encerrada, 13/10/2026:** pagamento
 pay_gl3wvdoscgq65dt9 REFUNDED, dois DONE de R$43,99; reversões de
 250 + 250 créditos, saldo de teste 3.900, hold liberado. Consulta READ ONLY;

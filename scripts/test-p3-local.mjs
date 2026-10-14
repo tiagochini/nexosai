@@ -48,7 +48,12 @@ try {
   await run('/workspace/lib/db/scripts/test-bootstrap-rollback.mjs');
   results.checks.schemaIntegrity = 'PASS repeat-safe forward trigger/scope repair, missing-FK and disabled-trigger rejection and atomic bootstrap rollback';
   for (const check of checks) {
-    console.log(`P3 validation: ${check}`); await run(tsx, `src/scripts/${check}.ts`); results.checks[check] = 'PASS';
+    // Each module awaits its assertions and fixture cleanup at top level. SDK
+    // transports may retain background handles afterward; don't let those keep
+    // the next independent test from starting. Rejected imports still fail CI.
+    console.log(`P3 validation: ${check}`);
+    await run(tsx, '-e', `import('./src/scripts/${check}.ts').then(()=>process.exit(0)).catch(error=>{console.error(error);process.exit(1)})`);
+    results.checks[check] = 'PASS';
   }
   console.log('P3 validation: CPU worker refusal and self-test');
   await command('docker', ['run', '--rm', '--network', 'none', '--entrypoint', 'python3', '-v', `${path.join(root, 'services/native-media-worker')}:/tests:ro`, image, '/tests/test_worker_self_test.py']);

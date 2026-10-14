@@ -323,3 +323,8 @@ PASS técnico: cobrança compartilhada, persistência atômica, resultado penden
 ## 13/10/2026 — Execução e integrações parcialmente homologadas
 
 Novo MAPA/Direct real por webhook e readback Meta passaram; PIX/boleto/plano conciliados no Asaas sandbox, refund total DONE e parcial PENDING. 16 regressões + tipos/build passaram. Corrigida classificação paid de pagamentos não pagos. Evidências: docs/EXECUTION_INTEGRATIONS_VALIDATION.md. Falta confirmação versionada de agendamento e envio futuro autorizado. Nenhum novo pagamento/post; founder preservado. Ápice não incrementado: não houve campanha externa completa ou beta humano.
+
+
+## 13/10/2026 — Validação do push e correção CI
+
+Primeiro push: qualidade/segurança passaram; infra falhou em MAPA por sequência privada indevida de outro post. Corrigidos gating de comentário/DM e executor de processos P3. Asserções preservadas. 16 regressões + tipos/build + P3 completa passaram localmente, com evidência docs/PUSH_VALIDATION_FIX.md e P3_VALIDATION_RESULTS.json. CI da correção será vinculada ao SHA remoto. Nenhuma nova operação financeira/social. Ápice inalterado; próximo checkpoint agendamento confirmado.

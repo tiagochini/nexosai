@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { and, eq } from "drizzle-orm";
-import { db, pool, socialCommentActionsTable, metaWebhookEventsTable, workspaceIntegrationsTable } from "@workspace/db";
+import { db, pool, socialCommentActionsTable, metaWebhookEventsTable, workspaceIntegrationsTable, instagramDmSequencesTable } from "@workspace/db";
 import { assertIsolationTestDatabase } from "./helpers/test-database-target.js";
 import { seedE2eFixtures, cleanupE2eFixtures, markerFromSuffix } from "./e2e-fixtures.js";
 import { processMetaWebhookDelivery } from "../modules/social/meta-webhook.processor.js";
@@ -69,6 +69,9 @@ try {
   otherPost.entry[0]!.changes[0]!.value.media.id = `${marker}_outside_scope`;
   await processMetaWebhookDelivery(otherPost);
   assert.equal(getMetaE2eGraphCalls().length, before, "another post must not use the test keyword response");
+  assert.equal((await db.select().from(instagramDmSequencesTable).where(eq(
+    instagramDmSequencesTable.workspaceId, manifest.workspaces[0]!,
+  ))).length, 0, "A different post must not create a background DM sequence");
   await processMetaWebhookDelivery(payload(`${marker}_unroutable`, "MAPA", `${marker}_foreign_account`));
   assert.equal(getMetaE2eGraphCalls().length, before, "Unknown accounts must not borrow another workspace's response");
   assert.equal((await db.select().from(socialCommentActionsTable).where(eq(
@@ -95,6 +98,9 @@ try {
   noDm.entry[0]!.changes[0]!.value.from.username = "";
   await processMetaWebhookDelivery(noDm);
   assert.equal(getMetaE2eGraphCalls().length, 1);
+  assert.equal((await db.select().from(instagramDmSequencesTable).where(eq(
+    instagramDmSequencesTable.workspaceId, manifest.workspaces[0]!,
+  ))).length, 0, "Disabled private replies must not create a background DM sequence");
   assert.equal((getMetaE2eGraphCalls()[0]?.body as { message: string }).message,
     "Que bom, amigo(a), que você quer o mapa do sucesso!",
     "Disabled private replies use a safe name fallback and no delivery confirmation");
