@@ -1000,3 +1000,7 @@ Ele unifica:
 Toda capability deve possuir ID, estágio, estado, nível de maturidade, ownership, dependências, interfaces, executores, adapters, autorização, evidências, métricas, testes, recovery e limitações.
 
 Claude, 12/10/2026: terceira chave substituída no perfil local; autenticação real continua em HTTP 401 nas duas modalidades. Evidência: docs/CLAUDE_KEY_VALIDATION_RESULTS.json. Próximo checkpoint: credencial aceita pela Anthropic. Sem push.
+
+## 13/10/2026 — Cobertura dos 30 dias do briefing
+
+Duração canônica `campaign.timeline` passa a governar calendário e mídia, com compatibilidade para durationDays/plan.totalDays. Calendário usa blocos de até sete dias e chaves distintas por bloco/tentativa. Cobertura completa é obrigatória: dias faltantes ou fora do período impedem salvar a geração. Retomada detecta pacotes de calendário/mídia incompatíveis com o período atual e regenera a mesma peça antes de reutilizar o checkpoint; aprovação anterior é removida. Teste test-campaign-duration.ts, typecheck e build passaram. Regeneração real concluída e confirmada em leitura fresca do banco: calendário e mídia cobrem dias 1–30 sem lacunas, ambos pending_approval; campanha awaiting_approval. Evidência: docs/CALENDAR_DURATION_CORRECTION_RESULTS.json. Três regressões de retomada/control room passaram; API local e domínio readyz 200. Cobertura validada; qualidade editorial permanece para revisão do Founder. Ápice não incrementado. Não autoriza publicação, gasto ou etapa comercial.

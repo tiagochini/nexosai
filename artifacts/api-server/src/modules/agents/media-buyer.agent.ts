@@ -1,3 +1,4 @@
+import { resolveCampaignDays, assertDayCoverage } from "./campaign-duration.js";
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
@@ -302,7 +303,7 @@ export async function runMediaBuyerAgent(
   targetingAudiences?: { meta: number; google: number; tiktok: number; notes: string },
 ): Promise<MediaBuyerOutput> {
   const totalBudget = Number(intakeData["campaign.budget.traffic"] ?? intakeData["campaign.budget.total"] ?? 0);
-  const totalDays = (launchPlan as Record<string, unknown> | undefined)?.totalDays as number ?? Number(intakeData["campaign.durationDays"] ?? 21);
+  const totalDays = resolveCampaignDays(intakeData, launchPlan);
 
   const segmentsContext = profile?.segments.length
     ? profile.segments.map((s) => `- ${s.name}: CPL estimado R$${s.estimatedCPL}, ${s.budgetAllocationPercent}% do budget`).join("\n")
@@ -312,6 +313,7 @@ export async function runMediaBuyerAgent(
     campaignId,
     workspaceId,
     agentRole: "media_buyer",
+    idempotencyKeyOverride: `${campaignId}:media_buyer:duration:${totalDays}`,
     systemPrompt: COGNITIVE_IDENTITY_MEDIA_BUYER + MEDIA_BUYER_PROMPT,
     skipAllStaticLayers: true,
     messages: [
@@ -378,7 +380,7 @@ Retorne APENAS o JSON.`,
     ],
   });
 
-  return parseAgentJSON<MediaBuyerOutput>(result.content, {
+  const output = parseAgentJSON<MediaBuyerOutput>(result.content, {
     campaignTitle: String(intakeData["product.name"] ?? ""),
     totalBudget,
     budgetByPlatform: [],
@@ -399,4 +401,6 @@ Retorne APENAS o JSON.`,
     confidenceScore: 0,
     mediaBuyerNotes: result.content,
   });
+  assertDayCoverage(output.dailyAllocations, 1, totalDays);
+  return output;
 }

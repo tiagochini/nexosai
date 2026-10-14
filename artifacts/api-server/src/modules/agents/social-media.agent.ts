@@ -1,3 +1,5 @@
+import { resolveCampaignDays, calendarRanges, coversDays, assertDayCoverage } from "./campaign-duration.js";
+import { getRegenIdempotencyKey, withRegenContext } from "./regen-context.js";
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import { buildPsychologicalProfileBlock } from "./profile-injector.js";
 import type { StrategyOutput } from "./strategy.agent.js";
@@ -231,13 +233,13 @@ export async function runSocialMediaAgent(
 **Avatar B2B:** ${hasB2BAvatar ? "Sim — incluir LinkedIn como plataforma relevante" : "Não — LinkedIn secundário"}`
     : `**Pilares de conteúdo:** ${(strategy.campaignArchitecture?.contentPillars ?? []).join(", ")}`;
 
-  const totalDays =
-    (launchPlan as any)?.totalDays ??
-    Number(intakeData["campaign.durationDays"] ?? 21);
+  const totalDays = resolveCampaignDays(intakeData, launchPlan);
+  const ranges = calendarRanges(totalDays);
+  const operationBase = getRegenIdempotencyKey() ?? `${campaignId}:social_media:duration:${totalDays}`;
 
-  // B1 FIX (Bug #02): Generate calendar in 3 chunks of 7 days each.
+  // Generate one independently recoverable chunk for each seven-day range.
   // A single call for 21+ days routinely hits the token ceiling and returns calendar:[].
-  // Each chunk is validated individually — an empty chunk triggers an inline retry.
+  // Each chunk must cover its entire range; incomplete responses retry once.
   // Metadata (platformStrategy, contentPillars, etc.) is derived from chunk 1.
 
   const phasesSummary = JSON.stringify(
@@ -281,13 +283,13 @@ ${phasesSummary}
 
 ${sharedContext}
 
-**CHUNK ${chunkIdx}/3 — APENAS dias ${dayStart}-${dayEnd}**
+**CHUNK ${chunkIdx}/${ranges.length} — APENAS dias ${dayStart}-${dayEnd}**
 ${CALENDAR_CHUNK_REQ}
 
 Retorne APENAS JSON no formato: { "calendar": [ { "day": N, "phase": "...", "phaseName": "...", "platforms": [...], "postType": "...", "caption": "...", "facebookCaption": "...", "tiktokHook": "...", "hashtags": [...], "visualDirection": "...", "postingTime": "...", "engagementTactic": "...", "objective": "...", "kpi": "..." } ] }`;
 
     for (let attempt = 1; attempt <= 2; attempt++) {
-      const r = await runAgent({
+      const r = await withRegenContext(`${operationBase}:days:${dayStart}-${dayEnd}:attempt:${attempt}`, () => runAgent({
         campaignId,
         workspaceId,
         agentRole: "social_media",
@@ -297,19 +299,19 @@ Retorne APENAS JSON no formato: { "calendar": [ { "day": N, "phase": "...", "pha
         log,
         requiresApproval: false,
         thinkingMessages: [
-          `Gerando dias ${dayStart}-${dayEnd} do calendário (${chunkIdx}/3)...`,
+          `Gerando dias ${dayStart}-${dayEnd} do calendário (${chunkIdx}/${ranges.length})...`,
           "Criando captions e direções visuais...",
         ],
-      });
+      }));
 
       interface ChunkResult { calendar?: SocialPost[] }
       const parsed = parseAgentJSON<ChunkResult>(r.content, { calendar: [] });
-      if (parsed.calendar && parsed.calendar.length > 0) {
+      if (parsed.calendar && coversDays(parsed.calendar, dayStart, dayEnd)) {
         return parsed.calendar;
       }
       log.warn({ campaignId, dayStart, dayEnd, attempt }, "B1: calendar chunk %d returned empty — %s", chunkIdx, attempt === 1 ? "retrying" : "giving up");
     }
-    return [];
+    throw new Error(`Calendário incompleto nos dias ${dayStart}-${dayEnd} após duas tentativas.`);
   }
 
   // Chunk 1: days 1-7 + metadata
@@ -318,12 +320,12 @@ Retorne APENAS JSON no formato: { "calendar": [ { "day": N, "phase": "...", "pha
 
 ${sharedContext}
 
-**CHUNK 1/3 — dias 1-${chunk1Days} + metadados**
+**CHUNK 1/${ranges.length} — dias 1-${chunk1Days} + metadados**
 ${CALENDAR_CHUNK_REQ}
 
 Retorne APENAS JSON no formato completo do SocialMediaOutput (com calendar, contentPillars, platformStrategy, hashtagStrategy, highlightPosts, crossPlatformSynergy, socialMediaNotes).`;
 
-  const metaResult = await runAgent({
+  const metaResult = await withRegenContext(`${operationBase}:metadata:1-${chunk1Days}`, () => runAgent({
     campaignId,
     workspaceId,
     agentRole: "social_media",
@@ -337,7 +339,7 @@ Retorne APENAS JSON no formato completo do SocialMediaOutput (com calendar, cont
       `Gerando dias 1-${chunk1Days} do calendário...`,
       "Criando estratégia de hashtags e pilares de conteúdo...",
     ],
-  });
+  }));
 
   const metaOutput = parseAgentJSON<SocialMediaOutput>(metaResult.content, {
     campaignTitle: String(intakeData["product.name"] ?? ""),
@@ -351,24 +353,19 @@ Retorne APENAS JSON no formato completo do SocialMediaOutput (com calendar, cont
   });
 
   // If chunk 1 calendar is empty, run a dedicated retry
-  if (metaOutput.calendar.length === 0) {
+  if (!coversDays(metaOutput.calendar, 1, chunk1Days)) {
     log.warn({ campaignId }, "B1: chunk 1 calendar empty after meta call — running dedicated retry");
     const retryChunk1 = await runCalendarChunk(1, chunk1Days, 1);
     metaOutput.calendar = retryChunk1;
   }
 
-  // Chunks 2 and 3 — only if we have more days
-  if (totalDays > 7) {
-    const day8End = Math.min(14, totalDays);
-    const chunk2 = await runCalendarChunk(8, day8End, 2);
-    metaOutput.calendar = [...metaOutput.calendar, ...chunk2];
+  for (let index = 1; index < ranges.length; index++) {
+    const range = ranges[index];
+    const chunk = await runCalendarChunk(range.start, range.end, index + 1);
+    metaOutput.calendar = [...metaOutput.calendar, ...chunk];
   }
-
-  if (totalDays > 14) {
-    const day15End = totalDays;
-    const chunk3 = await runCalendarChunk(15, day15End, 3);
-    metaOutput.calendar = [...metaOutput.calendar, ...chunk3];
-  }
+  assertDayCoverage(metaOutput.calendar, 1, totalDays);
+  metaOutput.totalDays = totalDays;
 
   log.info({ campaignId, calendarCount: metaOutput.calendar.length, totalDays }, "B1: calendar generated via %d chunks", Math.ceil(totalDays / 7));
 

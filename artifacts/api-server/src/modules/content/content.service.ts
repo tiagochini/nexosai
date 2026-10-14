@@ -1,3 +1,4 @@
+import { resolveCampaignDays, coversDays } from "../agents/campaign-duration.js";
 import { withProjectExecution } from "../operations/project-execution-context.js";
 import { eq, and, desc, ne, count, inArray, sql } from "drizzle-orm";
 import {
@@ -810,9 +811,24 @@ async function generateCampaignContentInternal(
   // skipAgent(): returns true (skip) if the piece already exists, false (run) otherwise.
   // Emits "agent_completed" on skip so the live feed stays accurate.
   const existingPieces = await db
-    .select({ type: contentPiecesTable.type })
+    .select({ id: contentPiecesTable.id, type: contentPiecesTable.type, content: contentPiecesTable.content })
     .from(contentPiecesTable)
     .where(eq(contentPiecesTable.campaignId, campaignId));
+  const expectedDays = resolveCampaignDays(intakeData, launchPlan);
+  // Reuse only packages whose saved day coverage matches the current briefing.
+  // Regeneration updates the existing row and clears its previous approval.
+  for (const piece of existingPieces) {
+    if (skippedPieces.includes(piece.type)) continue;
+    const saved = piece.content as Record<string, unknown> | null;
+    const rows = piece.type === "content_calendar" ? saved?.calendar
+      : piece.type === "media_buying_plan" ? saved?.dailyAllocations : undefined;
+    if (["content_calendar", "media_buying_plan"].includes(piece.type) && !coversDays(rows, 1, expectedDays)) {
+      const regenerated = await regeneratePieceInternal(campaignId, workspaceId, piece.id, log);
+      if (regenerated.status !== "pending_approval") {
+        throw new ValidationError(`O material ${piece.type} precisa de revisão antes de retomar a geração.`);
+      }
+    }
+  }
   const done = new Set<string>(existingPieces.map((p) => p.type));
   // Trava 1 (cont.): also skip user-flagged pieces so deterministic failures
   // don't block the rest of the pipeline on retry.
@@ -3337,7 +3353,7 @@ async function regeneratePieceInternal(
   // the same 1-minute window share the same key → ON CONFLICT DO NOTHING → 1
   // credit charge.  A new regeneration after a minute → fresh key → new charge.
   const regenBucket = Math.floor(Date.now() / 60_000);
-  const regenIdempotencyKey = `${campaignId}:${pieceId}:regen:${regenBucket}`;
+  const regenIdempotencyKey = `${campaignId}:${pieceId}:regen:${regenBucket}:duration:${resolveCampaignDays(intakeData, launchPlan)}`;
 
   log.debug({ campaignId, pieceId, regenIdempotencyKey }, "[C3-REGEN] regeneration idempotency key set");
 
@@ -3567,6 +3583,8 @@ async function regeneratePieceInternal(
     .update(contentPiecesTable)
     .set({
       content: newContent as any,
+      ...(piece.type === "content_calendar" ? { title: `Calendário de Social Media — ${resolveCampaignDays(intakeData, launchPlan)} dias` }
+        : piece.type === "media_buying_plan" ? { title: `Plano de Media Buying — R$${(newContent as Record<string, unknown>).totalBudget} | ${resolveCampaignDays(intakeData, launchPlan)} dias` } : {}),
       status: "pending_approval",
       rejectionReason: null,
       approvedAt: null,
