@@ -10,6 +10,8 @@
  * can still save them but explicitly knows no live check occurred.
  */
 
+import { directInstagramProfileRequest } from "./instagram-login.js";
+
 export type ValidationResult = {
   valid: boolean;
   accountName?: string;
@@ -332,7 +334,7 @@ async function validateMetaGraph(creds: Credentials, providerLabel: string): Pro
   try {
     // 1. Valida o token e pega dados do usuário
     const meRes = await fetchWithTimeout(
-      `https://graph.facebook.com/v20.0/me?fields=id,name&access_token=${encodeURIComponent(creds.accessToken)}`,
+      `https://graph.facebook.com/v26.0/me?fields=id,name&access_token=${encodeURIComponent(creds.accessToken)}`,
       {},
     );
     if (meRes.status === 401 || meRes.status === 400) {
@@ -355,7 +357,7 @@ async function validateMetaGraph(creds: Credentials, providerLabel: string): Pro
     let igAccountId: string | null = null;
     try {
       const pagesRes = await fetchWithTimeout(
-        `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,instagram_business_account&access_token=${encodeURIComponent(creds.accessToken)}`,
+        `https://graph.facebook.com/v26.0/me/accounts?fields=id,name,instagram_business_account&access_token=${encodeURIComponent(creds.accessToken)}`,
         {},
       );
       if (pagesRes.ok) {
@@ -374,7 +376,7 @@ async function validateMetaGraph(creds: Credentials, providerLabel: string): Pro
             // Fetch IG Business profile details (username, picture, followers)
             try {
               const igProfileRes = await fetchWithTimeout(
-                `https://graph.facebook.com/v20.0/${igAccountId}?fields=username,profile_picture_url,followers_count,media_count&access_token=${encodeURIComponent(creds.accessToken ?? "")}`,
+                `https://graph.facebook.com/v26.0/${igAccountId}?fields=username,profile_picture_url,followers_count,media_count&access_token=${encodeURIComponent(creds.accessToken ?? "")}`,
                 {},
               );
               if (igProfileRes.ok) {
@@ -413,7 +415,7 @@ async function validateMetaGraph(creds: Credentials, providerLabel: string): Pro
     // 3. Debug do token — permissões e expiração
     try {
       const debugRes = await fetchWithTimeout(
-        `https://graph.facebook.com/v20.0/debug_token?input_token=${encodeURIComponent(creds.accessToken)}&access_token=${encodeURIComponent(creds.accessToken)}`,
+        `https://graph.facebook.com/v26.0/debug_token?input_token=${encodeURIComponent(creds.accessToken)}&access_token=${encodeURIComponent(creds.accessToken)}`,
         {},
       );
       if (debugRes.ok) {
@@ -476,6 +478,39 @@ async function validateMetaGraph(creds: Credentials, providerLabel: string): Pro
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { valid: false, error: `Erro ao conectar com ${providerLabel}: ${msg}` };
+  }
+}
+
+async function validateInstagramLogin(creds: Credentials): Promise<ValidationResult> {
+  if (!creds.accessToken) return { valid: false, error: "Token obrigatório para Instagram" };
+  try {
+    const request = directInstagramProfileRequest(creds.accessToken);
+    const res = await fetchWithTimeout(request.url.toString(), request.init);
+    const body = (await res.json().catch(() => ({}))) as {
+      user_id?: string | number;
+      id?: string | number;
+      username?: string;
+      error?: unknown;
+    };
+    if (!res.ok || body.error || typeof body.username !== "string" || !body.username) {
+      return { valid: false, error: "Token do Instagram inválido ou sem acesso ao perfil profissional. Reconecte a conta." };
+    }
+
+    const accountId = String(body.user_id ?? body.id ?? creds.accountId ?? "");
+    const accountName = `@${body.username}`;
+    const rows: NonNullable<ValidationResult["rows"]> = [
+      { label: "Instagram", value: accountName, status: "ok" },
+    ];
+
+    return {
+      valid: true,
+      accountName,
+      accountId,
+      detail: `✓ Instagram: ${accountName}`,
+      rows,
+    };
+  } catch {
+    return { valid: false, error: "Não foi possível validar a conta do Instagram. Verifique a conexão e tente novamente." };
   }
 }
 
@@ -555,7 +590,9 @@ export async function testIntegrationCredential(
     case "meta_ads":
       return validateMetaGraph(credentials, "Meta Ads");
     case "instagram":
-      return validateMetaGraph(credentials, "Instagram");
+      return credentials.metadata?.authType === "instagram_login"
+        ? validateInstagramLogin(credentials)
+        : validateMetaGraph(credentials, "Instagram");
     case "facebook":
       return validateMetaGraph(credentials, "Facebook");
     case "whatsapp_business":

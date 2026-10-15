@@ -40,3 +40,10 @@ export function directInstagramRequest(input: string | URL, init: RequestInit | 
   else if(typeof next.body==="string") {try{const body=JSON.parse(next.body);if(body.access_token){body.access_token=token;next.body=JSON.stringify(body);}}catch{/* non-JSON bodies are unchanged */}}
   return {url,init:next};
 }
+
+/** Profile ping for credentials created by Instagram Login (not Facebook Login). */
+export function directInstagramProfileRequest(token: string): {url:URL;init:RequestInit} {
+  const url = new URL(`https://graph.instagram.com/${META_GRAPH_VERSION}/me`);
+  url.search = new URLSearchParams({fields:"user_id,username",access_token:token}).toString();
+  return directInstagramRequest(url, undefined, token);
+}
