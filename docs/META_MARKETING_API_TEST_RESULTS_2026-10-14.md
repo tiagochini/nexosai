@@ -29,7 +29,7 @@ As listas vazias indicam que não há campanhas, conjuntos, anúncios ou métric
 
 Na tela do caso “Manage messaging & content on Instagram”, cinco permissões seguem com 0/1 chamada requerida: `instagram_manage_engagement`, `instagram_manage_contents`, `instagram_business_manage_insights`, `instagram_business_content_publish` e `instagram_business_manage_comments`. `instagram_business_manage_messages` e `instagram_business_basic` aparecem com 0 chamadas de teste, sem requisito 0/1 visível.
 
-A sessão do navegador foi trocada para `@agencianexosai`. O consentimento de login direto pelo Instagram foi concluído para essa conta. O botão “Testar conexão” ainda falhou com `Invalid OAuth access token`. A revisão do código encontrou que o validador usava `graph.facebook.com` mesmo para credenciais marcadas `authType=instagram_login`; tokens do login direto precisam ser verificados pelo Instagram Graph. A correção foi feita localmente e coberta por teste automatizado, mas ainda não foi publicada; portanto, o teste ao vivo permanece pendente.
+A sessão do navegador foi trocada para `@agencianexosai`. O consentimento de login direto pelo Instagram foi concluído para essa conta. O botão “Testar conexão” ainda falhou com `Invalid OAuth access token`. A revisão do código encontrou que o validador usava `graph.facebook.com` mesmo para credenciais marcadas `authType=instagram_login`; tokens do login direto precisam ser verificados pelo Instagram Graph. A correção foi enviada para `main` no commit `b69d230b`, e os workflows de qualidade, segurança e infraestrutura passaram. O backend de produção ainda mostra a resposta antiga: este repositório não tem workflow de publicação do container, então o push não atualizou o servidor.
 
 As cinco consultas registradas acima são testes funcionais pontuais. Não foram repetidas artificialmente para tentar preencher a meta do painel. A contagem deve avançar com chamadas legítimas do uso da integração.
 
@@ -37,7 +37,7 @@ As cinco consultas registradas acima são testes funcionais pontuais. Não foram
 
 As referências do Graph API e do Marketing API usadas pelo NexOS foram atualizadas de v20.0 para v26.0 nos fluxos de OAuth, validação, sincronização de mídia paga e eventos de servidor. A atualização está apenas no workspace local; não foi publicada no servidor.
 
-O validador de credenciais do Instagram agora identifica `authType=instagram_login` e consulta o perfil no host `graph.instagram.com`. O fluxo Facebook Login continua validado pelo Facebook Graph. Após publicar, repetir “Testar conexão” com `@agencianexosai` e então executar chamadas legítimas para cada permissão requerida no painel Meta.
+O validador de credenciais do Instagram agora identifica `authType=instagram_login` e consulta o perfil no host `graph.instagram.com`. O fluxo Facebook Login continua validado pelo Facebook Graph. A correção está no GitHub, mas ainda precisa ser incluída na imagem do serviço e publicada no host de produção. Depois, repetir “Testar conexão” com `@agencianexosai` e executar chamadas legítimas para cada permissão requerida no painel Meta.
 
 Referência técnica conferida: [Login de Empresa no Instagram — documentação da Meta](https://developers.facebook.com/documentation/instagram-platform/instagram-api-with-instagram-login/business-login), atualizada em 13/03/2026. Ela documenta o fluxo de troca do código e token longo, o uso dos hosts `api.instagram.com` e `graph.instagram.com`, e os novos escopos `instagram_business_*`.
 
@@ -50,7 +50,7 @@ Referência técnica conferida: [Login de Empresa no Instagram — documentaçã
 
 ## Pendências para concluir a homologação
 
-1. Publicar a correção local do validador do Instagram Login e repetir “Testar conexão” na aplicação com `@agencianexosai`.
+1. Publicar no host de produção a imagem da API contendo o commit `b69d230b` e repetir “Testar conexão” na aplicação com `@agencianexosai`.
 2. Executar uma chamada legítima de cada uma das cinco permissões Instagram que exigem 1 chamada no painel, confirmar sucesso no webhook/mensagem/comentário ou leitura correspondente e registrar a evidência. Não gerar chamadas artificiais apenas para elevar a contagem.
 3. Usar uma conta de anúncios com campanhas/insights acessíveis para validar retorno de dados reais, respeitando as permissões concedidas.
 4. Aguardar a atualização do painel Meta e confirmar os 500 testes requeridos e a taxa mínima de sucesso de 85% do Marketing API Access Tier. Não há evidência de que essa etapa esteja concluída.
