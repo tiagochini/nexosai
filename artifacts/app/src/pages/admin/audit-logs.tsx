@@ -186,7 +186,7 @@ function LogDetailModal({ log, onClose }: { log: AuditLogRow; onClose: () => voi
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AuditLogsPage() {
-  const { user } = useAuth();
+  const { isAdmin } = useAuth();
   const t = useUiText();
   const { locale } = useUiLocale();
 
@@ -230,7 +230,6 @@ export default function AuditLogsPage() {
     refetchInterval: 30000,
   });
 
-  const isAdmin = ["admin@agencianexos.vip", "founder@agencianexos.vip"].includes(user?.email ?? "");
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">

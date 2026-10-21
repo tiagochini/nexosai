@@ -158,7 +158,7 @@ export async function runAgentWithCritique(opts: {
             creditsUsed: duplicate || debit.description?.startsWith("[∞]") ? 0 : debit.amount, tokensUsed: output.totalTokensUsed,
             aiProvider: provider, startedAt: new Date(), completedAt: new Date(),
           });
-        });
+        }, true);
       return { ...output, totalCreditsCharged: replayed || charge.description?.startsWith("[∞]") ? 0 : charge.amount };
     } catch (error) {
       await db.insert(campaignAgentsTable).values({ campaignId, agentType: agentRole as any, status: "failed",

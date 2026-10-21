@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-10-16",
+  "verdict": "TECHNICAL_QUALITY_PASS_CAMPAIGN_RELEASE_BLOCKED",
+  "campaign": {
+    "stage": "Etapa 1 - validacao/pesquisa",
+    "type": "continuous_sales",
+    "track": "not_applicable",
+    "briefingComplete": true,
+    "timelineDays": 30,
+    "calendarReadbackDays": 30,
+    "calendarAndMediaPlanAwaitingApproval": true
+  },
+  "checks": {
+    "workspaceTypecheck": "PASS",
+    "workspaceBuild": "PASS_WITH_EXISTING_SOURCEMAP_AND_CHUNK_WARNINGS",
+    "appInitialJavaScriptKiB": 486.2,
+    "appBudgetKiB": 500,
+    "aiQualityEvaluatorTests": "PASS_FIXTURE_ONLY_NOT_LIVE_CONTENT_CERTIFICATION",
+    "executionIntegrationRegressions": {
+      "status": "PASS",
+      "passed": 21,
+      "failed": 0,
+      "database": "disposable PostgreSQL 17 and Redis 7.4",
+      "realProviderCalls": false,
+      "includes": [
+        "Facebook-only disconnect preserves Instagram",
+        "WhatsApp Groups API contract and workspace isolation"
+      ]
+    },
+    "campaignAgentCreditSafety": "PASS_WITHIN_CAMPAIGN_RUNNERS; direct SDK paths and provider invoice reconciliation remain outside scope",
+    "campaignDurationRegression": "PASS",
+    "gitDiffCheck": "PASS_WITH_LINE_ENDING_WARNINGS"
+  },
+  "releaseBlockers": [
+    "Hash-bound human review and approval of the real campaign content packages",
+    "Confirm unsupported research/scarcity claims are corrected in the saved versions",
+    "Recover or explicitly resolve stories_sequence and analytics agent failures",
+    "Run one externally controlled scheduled Meta delivery with approved content/account/time and verify readback"
+  ],
+  "externalActions": false,
+  "publicLaunchApproved": false,
+  "commercialOfferApproved": false
+}

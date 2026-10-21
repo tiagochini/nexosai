@@ -56,3 +56,22 @@ Referência técnica conferida: [Login de Empresa no Instagram — documentaçã
 4. Aguardar a atualização do painel Meta e confirmar os 500 testes requeridos e a taxa mínima de sucesso de 85% do Marketing API Access Tier. Não há evidência de que essa etapa esteja concluída.
 
 Tokens, segredos e identificadores completos da conta foram omitidos deste relatório.
+
+## Atualização de status — 15/10/2026
+
+O Founder confirmou que o requisito do Marketing API Access Tier (500 chamadas e
+taxa de sucesso mínima de 85%) foi concluído. A captura `0/500` acima é o estado
+observado em 14/10/2026 e não representa o status atual. Para a homologação
+Instagram, as duas operações já foram executadas pelo fluxo Facebook Login, conforme
+as evidências ao vivo em `docs/META_INSTAGRAM_TEST_FIXTURES.md`: a chamada de curtir
+(`instagram_manage_engagement`) retornou sucesso e a exclusão temporária
+(`instagram_manage_contents`) retornou `success=true`, seguida pela confirmação de
+que a mídia não estava mais disponível. `GET /me/permissions` também mostrou os dois
+escopos como `granted`. `instagram_manage_contents` remove um post, story ou reel;
+não é permissão para apagar comentário.
+
+Resta conferir a atualização assíncrona dos contadores no painel da Meta. Na captura
+imediata após as operações, ambos ainda apareciam como `0/1`; a documentação informa
+que a contabilização pode levar até 24 horas. Portanto, há evidência das chamadas
+reais, mas ainda não há evidência de que os dois contadores do painel mudaram para
+concluídos.

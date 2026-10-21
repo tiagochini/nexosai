@@ -13,6 +13,7 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 const basePath = process.env.BASE_PATH ?? "/";
+const academyProxyTarget = process.env.ACADEMY_PROXY_TARGET ?? `http://127.0.0.1:${port + 1}`;
 
 export default defineConfig({
   base: basePath,
@@ -57,6 +58,11 @@ export default defineConfig({
     host: "0.0.0.0",
     allowedHosts: true,
     proxy: {
+      "/nexos-academy": {
+        target: academyProxyTarget,
+        changeOrigin: true,
+        ws: true,
+      },
       "/api": {
         target: process.env.API_PROXY_TARGET ?? "http://127.0.0.1:8080",
         changeOrigin: true,

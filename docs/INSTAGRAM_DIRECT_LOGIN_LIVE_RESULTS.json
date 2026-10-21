@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-14T18:39:49.217Z",
+  "checks": [
+    {
+      "path": "subscribe",
+      "status": 200,
+      "body": {
+        "success": true
+      }
+    },
+    {
+      "path": "me?fields=user_id,username",
+      "status": 200,
+      "body": {
+        "user_id": "17841448570547453",
+        "username": "agencianexosai",
+        "id": "39253530524262817"
+      }
+    },
+    {
+      "path": "17841448570547453/subscribed_apps",
+      "status": 200,
+      "body": {
+        "data": [
+          {
+            "id": "18065564933619019",
+            "subscribed_fields": [
+              "comments",
+              "messages",
+              "messaging_postbacks"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

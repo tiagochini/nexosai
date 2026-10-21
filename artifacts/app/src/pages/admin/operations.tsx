@@ -165,7 +165,7 @@ function StatusDot({ status }: { status: string }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function OperationsPage() {
-  const { user } = useAuth();
+  const { isAdmin } = useAuth();
   const t = useUiText();
   const { locale } = useUiLocale();
   const queryClient = useQueryClient();
@@ -182,8 +182,6 @@ export default function OperationsPage() {
   });
 
   const [selectedDeadLetterId, setSelectedDeadLetterId] = useState<string | null>(null);
-
-  const isAdmin = ["admin@agencianexos.vip", "founder@agencianexos.vip"].includes(user?.email ?? "");
 
   const params = useMemo(() => {
     const p = new URLSearchParams();

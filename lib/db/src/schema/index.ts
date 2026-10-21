@@ -12,6 +12,7 @@ export * from "./audit-logs";
 export * from "./domains";
 export * from "./pages";
 export * from "./ai-provider-logs";
+export * from "./ai-credit-settings";
 export * from "./content";
 export * from "./metrics";
 export * from "./workspace-memory";

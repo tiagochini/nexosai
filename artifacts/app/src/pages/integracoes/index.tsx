@@ -99,13 +99,29 @@ export default function IntegracoesPage() {
   const integrations = data?.integrations ?? [];
   const connectedProviders = integrations.filter(i => i.status === "connected").map(i => i.provider);
 
-  // Build connected map — facebook shares the instagram token/record in DB
+  // A Facebook Page OAuth record is independent even when Meta returned the
+  // same underlying token for the linked Instagram account. Prefer that row so
+  // the user can disconnect the Page without removing Instagram.
   const connectedMap = new Map(
     integrations.filter(i => i.status === "connected").map(i => [i.provider, i])
   );
-  // When instagram is connected, facebook is also effectively connected (same Meta OAuth)
-  if (connectedMap.has("instagram") && !connectedMap.has("facebook") && connectedMap.get("instagram")?.metadata?.authType !== "instagram_login") {
-    connectedMap.set("facebook", connectedMap.get("instagram")!);
+  const facebookPageRows = integrations.filter(i =>
+    i.provider === "meta_ads" && i.metadata?.integrationPurpose !== "paid_media" && Boolean(i.metadata?.pageId)
+  );
+  const facebookRows = integrations.filter(i => i.provider === "facebook");
+  if (!connectedMap.has("facebook") && facebookPageRows.length > 0) {
+    const connectedFacebookPage = facebookPageRows.find(i => i.status === "connected");
+    if (connectedFacebookPage) connectedMap.set("facebook", connectedFacebookPage);
+    else connectedMap.delete("facebook"); // A disconnected Page row suppresses the legacy Instagram alias.
+  }
+  // Compatibility for older workspaces where Facebook Login only persisted the
+  // linked Instagram row. Disconnecting this alias marks just the Facebook
+  // channel disabled while retaining the Instagram credential.
+  if (!connectedMap.has("facebook") && facebookPageRows.length === 0 && facebookRows.length === 0 && connectedMap.has("instagram")) {
+    const instagram = connectedMap.get("instagram")!;
+    if (instagram.metadata?.authType !== "instagram_login" && instagram.metadata?.facebookPageDisconnected !== true) {
+      connectedMap.set("facebook", instagram);
+    }
   }
 
   const hasMessaging = ["whatsapp_business", "telegram"].some(p => connectedMap.has(p as Provider));
@@ -143,6 +159,25 @@ export default function IntegracoesPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
     } catch {
       toast.error(t("Erro ao desconectar.", "Failed to disconnect.", "Error al desconectar."));
+    } finally {
+      setDisconnecting(null);
+    }
+  };
+
+  const handleDisconnectFacebook = async (integration: WorkspaceIntegration) => {
+    setDisconnecting(integration.id);
+    try {
+      if (integration.provider === "instagram") {
+        await customFetch<unknown>(`/api/social/accounts/${integration.id}/disconnect-facebook`, { method: "POST" });
+      } else {
+        // Explicit Page OAuth records (facebook or organic meta_ads) are stored
+        // independently, so the normal disconnect only removes that Page row.
+        await customFetch<unknown>(`/api/social/accounts/${integration.id}`, { method: "DELETE" });
+      }
+      toast.success(t("Página do Facebook desconectada. O Instagram continua conectado.", "Facebook Page disconnected. Instagram remains connected.", "Página de Facebook desconectada. Instagram sigue conectado."));
+      queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("Erro ao desconectar o Facebook.", "Failed to disconnect Facebook.", "Error al desconectar Facebook."));
     } finally {
       setDisconnecting(null);
     }
@@ -440,7 +475,18 @@ export default function IntegracoesPage() {
                                     {t("Assinar webhooks", "Subscribe webhooks", "Suscribir webhooks")}
                                   </button>
                                 )}
-                                {entry.provider !== "facebook" ? (
+                                {entry.provider === "facebook" ? (
+                                  <button
+                                    onClick={() => integration && handleDisconnectFacebook(integration)}
+                                    disabled={disconnecting === integration?.id}
+                                    className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 hover:text-destructive transition-colors flex items-center gap-1"
+                                  >
+                                    {disconnecting === integration?.id
+                                      ? <Loader2 className="h-3 w-3 animate-spin" />
+                                      : <XCircle className="h-3 w-3" />}
+                                    {t("Desconectar Facebook", "Disconnect Facebook", "Desconectar Facebook")}
+                                  </button>
+                                ) : (
                                   <button
                                     onClick={() => integration && handleDisconnect(integration.id)}
                                     disabled={disconnecting === integration?.id}
@@ -451,10 +497,6 @@ export default function IntegracoesPage() {
                                       : <XCircle className="h-3 w-3" />}
                                     {t("Desconectar", "Disconnect", "Desconectar")}
                                   </button>
-                                ) : (
-                                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/30">
-                                    {t("Desconecte pelo Instagram", "Disconnect through Instagram", "Desconecta desde Instagram")}
-                                  </span>
                                 )}
                               </div>
                             </>

@@ -5,6 +5,7 @@ import { requireAuth } from "../auth/auth.middleware.js";
 import {
   getIntakeQuestions,
   saveIntakeData,
+  assertBriefingEditable,
   validateIntakeCompleteness,
   type CampaignType,
   type CampaignTrack,
@@ -326,6 +327,7 @@ router.post("/:campaignId/conversation", async (req, res): Promise<void> => {
   }
 
   try {
+    await assertBriefingEditable(req.params["campaignId"] as string, req.auth.workspaceId);
     // Limit history to last 12 turns (6 pairs) to avoid context overflow
     const fullHistory = parsed.data.history as ConversationTurn[];
     const trimmedHistory = fullHistory.slice(-12);
@@ -558,6 +560,7 @@ router.post("/:campaignId/confirm-type", async (req, res): Promise<void> => {
   const campaignId = req.params["campaignId"] as string;
 
   try {
+    await assertBriefingEditable(campaignId, req.auth.workspaceId);
     const [campaign] = await db
       .select({ id: campaignsTable.id, workspaceId: campaignsTable.workspaceId })
       .from(campaignsTable)

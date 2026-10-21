@@ -151,7 +151,7 @@ router.post("/:conversationId/messages", async (req, res): Promise<void> => {
     return;
   }
 
-  const creditCost = hasImages ? 5 : 3;
+  const minimumCreditsRequired = hasImages ? 5 : 3;
 
   try {
     await assertCreditsNotRefundHeld(req.auth.workspaceId);
@@ -161,9 +161,9 @@ router.post("/:conversationId/messages", async (req, res): Promise<void> => {
       .where(eq(workspacesTable.id, workspaceId))
       .limit(1);
 
-    if (!ws || ws.creditsBalance < creditCost) {
+    if (!ws || ws.creditsBalance < minimumCreditsRequired) {
       res.status(402).json({
-        error: `Créditos insuficientes (mín ${creditCost} por mensagem${hasImages ? " com imagem" : ""})`,
+        error: `Créditos insuficientes (mínimo de ${minimumCreditsRequired} para iniciar esta geração${hasImages ? " com imagem" : ""})`,
         code: "INSUFFICIENT_CREDITS",
       });
       return;
@@ -222,7 +222,19 @@ router.post("/:conversationId/messages", async (req, res): Promise<void> => {
       .set({ updatedAt: new Date() })
       .where(eq(integrationChatConversationsTable.id, conversationId));
 
-    await deductCredits(workspaceId, "analytics_report", req.log, undefined, undefined, undefined, undefined, undefined, creditCost);
+    await deductCredits(
+      workspaceId,
+      "analytics_report",
+      req.log,
+      undefined,
+      result.provider,
+      result.inputTokens + result.outputTokens,
+      result.costUsd,
+      undefined,
+      result.creditsCharged,
+      undefined,
+      true,
+    );
 
     await db.insert(auditLogsTable).values({
       workspaceId,
@@ -236,7 +248,7 @@ router.post("/:conversationId/messages", async (req, res): Promise<void> => {
       },
     });
 
-    res.json({ userMessage: userMsg, assistantMessage: assistantMsg, creditsCharged: creditCost });
+    res.json({ userMessage: userMsg, assistantMessage: assistantMsg, creditsCharged: result.creditsCharged });
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });

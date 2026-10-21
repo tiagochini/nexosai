@@ -893,7 +893,7 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
     return;
   }
   const isVideoAnalysis = hasImages && images!.length >= 4;
-  const creditCost = isVideoAnalysis ? 8 : hasImages ? 5 : 3;
+  const minimumCreditsRequired = isVideoAnalysis ? 8 : hasImages ? 5 : 3;
 
   try {
     await assertCreditsNotRefundHeld(req.auth.workspaceId);
@@ -903,9 +903,9 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
       .where(eq(workspacesTable.id, req.auth.workspaceId))
       .limit(1);
 
-    if (!ws || ws.creditsBalance < creditCost) {
+    if (!ws || ws.creditsBalance < minimumCreditsRequired) {
       res.status(402).json({
-        error: `Créditos insuficientes (mín ${creditCost} por mensagem${hasImages ? " com imagens" : ""})`,
+        error: `Créditos insuficientes (mínimo de ${minimumCreditsRequired} para iniciar esta geração${hasImages ? " com imagens" : ""})`,
         code: "INSUFFICIENT_CREDITS",
       });
       return;
@@ -951,7 +951,19 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
       );
     }
 
-    await deductCredits(req.auth.workspaceId, "analytics_report", req.log, undefined, undefined, undefined, undefined, undefined, creditCost);
+    await deductCredits(
+      req.auth.workspaceId,
+      "analytics_report",
+      req.log,
+      campaignId,
+      result.provider,
+      result.inputTokens + result.outputTokens,
+      result.costUsd,
+      undefined,
+      result.creditsCharged,
+      undefined,
+      true,
+    );
 
     await db.insert(auditLogsTable).values({
       workspaceId: req.auth.workspaceId,
@@ -974,7 +986,7 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
         : result.content,
       agentRole,
       tokensUsed: result.inputTokens + result.outputTokens,
-      creditsCharged: creditCost,
+      creditsCharged: result.creditsCharged,
       model: result.model,
     });
   } catch (err) {

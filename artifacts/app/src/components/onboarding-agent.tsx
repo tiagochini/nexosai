@@ -177,12 +177,12 @@ const FLOWS: OnboardingFlow[] = [
       {
         id: "add_redirect",
         title: "Adicione as URLs de callback",
-        detail: `No app → Settings → adicione a URL de redirect:\n${window.location.origin}/api/integrations/oauth/callback/tiktok\n${window.location.origin}/api/integrations/oauth/callback/tiktok_ads`,
+        detail: `Login Kit orgânico: ${window.location.origin}/api/integrations/oauth/callback/tiktok\nMarketing API (anúncios): ${window.location.origin}/api/integrations/tiktok-ads/callback`,
       },
       {
         id: "get_credentials",
         title: "Copie o Client Key e Client Secret",
-        detail: "Em 'App Details' você encontra o Client Key e Client Secret. Eles precisam ser configurados no servidor como TIKTOK_CLIENT_KEY e TIKTOK_CLIENT_SECRET para ativar o OAuth.",
+        detail: "Use credenciais separadas: TIKTOK_CLIENT_KEY/TIKTOK_CLIENT_SECRET para Login Kit orgânico; TIKTOK_ADS_APP_ID/TIKTOK_ADS_APP_SECRET para TikTok for Business Marketing API. Configure também TIKTOK_ADS_AUTH_URL com o Advertiser authorization URL gerado pelo portal.",
         important: "Informe essas credenciais ao administrador da plataforma.",
       },
     ],
@@ -346,8 +346,8 @@ const FLOW_COPY: Record<string, LocalizedFlowCopy> = {
       create_account: { title: ["Create an account at developers.tiktok.com", "Crea una cuenta en developers.tiktok.com"], detail: ["Go to developers.tiktok.com and click ‘Login / Register’. Use your TikTok Business account or create a new one.", "Ve a developers.tiktok.com y haz clic en «Login / Register». Usa tu cuenta de TikTok Business o crea una nueva."] },
       create_app: { title: ["Create a new app", "Crea una app nueva"], detail: ["In Developer Portal → ‘Manage Apps’ → ‘Create App’. Enter the name (NexOS), category (Content/Marketing), and website (app URL). Save.", "En Developer Portal → «Manage Apps» → «Create App». Indica el nombre (NexOS), la categoría (Content/Marketing) y el sitio web (URL de la app). Guarda los cambios."] },
       request_scopes: { title: ["Request publishing scopes", "Solicita permisos de publicación"], detail: ["In your app → ‘Add products’ → ‘Content Posting API’. Request: video.publish, video.upload, user.info.basic. For TikTok Ads, also add ‘TikTok for Business Marketing API’.", "En tu app → «Add products» → «Content Posting API». Solicita: video.publish, video.upload, user.info.basic. Para TikTok Ads, añade también «TikTok for Business Marketing API»."], important: ["TikTok reviews apps in 3–7 business days. Submit now.", "TikTok revisa las apps en 3–7 días hábiles. Envíala ahora."] },
-      add_redirect: { title: ["Add callback URLs", "Añade las URL de retorno"], detail: ["In the app → Settings → add the redirect URLs:\n${window.location.origin}/api/integrations/oauth/callback/tiktok\n${window.location.origin}/api/integrations/oauth/callback/tiktok_ads", "En la app → Settings → añade las URL de retorno:\n${window.location.origin}/api/integrations/oauth/callback/tiktok\n${window.location.origin}/api/integrations/oauth/callback/tiktok_ads"] },
-      get_credentials: { title: ["Copy the Client Key and Client Secret", "Copia el Client Key y el Client Secret"], detail: ["Find the Client Key and Client Secret in ‘App Details’. They must be configured on the server as TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET to enable OAuth.", "Encontrarás el Client Key y el Client Secret en «App Details». Deben configurarse en el servidor como TIKTOK_CLIENT_KEY y TIKTOK_CLIENT_SECRET para habilitar OAuth."], important: ["Give these credentials to the platform administrator.", "Entrega estas credenciales al administrador de la plataforma."] },
+      add_redirect: { title: ["Add callback URLs", "Añade las URL de retorno"], detail: [`Organic Login Kit: ${window.location.origin}/api/integrations/oauth/callback/tiktok\nMarketing API (ads): ${window.location.origin}/api/integrations/tiktok-ads/callback`, `Login Kit orgánico: ${window.location.origin}/api/integrations/oauth/callback/tiktok\nMarketing API (anuncios): ${window.location.origin}/api/integrations/tiktok-ads/callback`] },
+      get_credentials: { title: ["Copy the app credentials", "Copia las credenciales de la app"], detail: ["Use separate credentials: TIKTOK_CLIENT_KEY/TIKTOK_CLIENT_SECRET for organic Login Kit; TIKTOK_ADS_APP_ID/TIKTOK_ADS_APP_SECRET for TikTok for Business Marketing API. Also configure TIKTOK_ADS_AUTH_URL with the Advertiser authorization URL from the portal.", "Usa credenciales separadas: TIKTOK_CLIENT_KEY/TIKTOK_CLIENT_SECRET para Login Kit orgánico; TIKTOK_ADS_APP_ID/TIKTOK_ADS_APP_SECRET para TikTok for Business Marketing API. Configura también TIKTOK_ADS_AUTH_URL con la URL de autorización del anunciante del portal."], important: ["Give these credentials to the platform administrator.", "Entrega estas credenciales al administrador de la plataforma."] },
     },
   },
   google_ads_setup: {

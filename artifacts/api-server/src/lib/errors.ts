@@ -38,7 +38,7 @@ export class InsufficientCreditsError extends AppError {
   constructor(
     required: number,
     available: number,
-    extra?: { phaseCost?: number; buffer?: number; shortage?: number; campaignType?: string; estimatedTotal?: number },
+    extra?: { phaseCost?: number; buffer?: number; shortage?: number; campaignType?: string; estimatedTotal?: number; estimateSource?: string; alreadySpent?: number; phase?: string },
   ) {
     const shortage = required - available;
     super(

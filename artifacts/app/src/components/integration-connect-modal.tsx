@@ -1252,13 +1252,16 @@ export function ConnectModal({
       // current tab to the OAuth URL (redirect-mode) and let the callback redirect back
       // to /integracoes with ?oauth_connected=<provider> or ?oauth_error=<msg>.
       const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      // Direct Instagram login uses the current tab so authorization and return
+      // do not depend on popup support or a surviving window.opener.
+      const redirectMode = isMobile || instagramDirect;
 
       const oauthProvider = instagramDirect && entry.provider === "instagram" ? "instagram_login" : entry.provider;
-      const startUrl = `/api/integrations/oauth/start/${oauthProvider}${isMobile ? "?redirect_mode=1" : ""}`;
+      const startUrl = `/api/integrations/oauth/start/${oauthProvider}${redirectMode ? "?redirect_mode=1" : ""}`;
 
       const body = await customFetch<{ url: string }>(startUrl);
 
-      if (isMobile) {
+      if (redirectMode) {
         // Full-page redirect: navigates the current tab to Meta OAuth.
         // The callback will redirect back to /integracoes?oauth_connected=<provider>.
         window.location.href = body.url;

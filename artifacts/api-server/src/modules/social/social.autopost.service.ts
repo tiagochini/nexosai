@@ -5,9 +5,10 @@ import {
   workspaceIntegrationsTable,
   socialPostsTable,
   campaignCreativesTable,
+  executionEvidenceTable,
 } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
-import { publishPost } from "./social.service.js";
+import { getCampaignScheduleItemFingerprint, publishPost } from "./social.service.js";
 import { getApprovedMasterplan } from "../masterplan/masterplan.service.js";
 import { AppError } from "../../lib/errors.js";
 import type { SocialPost } from "@workspace/db";
@@ -263,12 +264,10 @@ export async function createScheduledSocialPosts(
  * If mediaUrls is empty, tries to resolve from campaignCreativesTable before posting.
  * If still no media → skips (retries next tick) rather than failing permanently.
  */
-export async function processScheduledSocialPosts(): Promise<void> {
+export async function processScheduledSocialPosts(now = new Date()): Promise<void> {
   const log = logger.child({ component: "social-post-scheduler" });
   try {
     const { lte, sql: drizzleSql } = await import("drizzle-orm");
-    const now = new Date();
-
     const due = await db
       .select({
         post: socialPostsTable,
@@ -306,24 +305,47 @@ export async function processScheduledSocialPosts(): Promise<void> {
 
     for (const { post } of due) {
       try {
-        // Launch/legacy scheduled rows predate the explicit publication boundary:
-        // there is no durable preview, target authorization, or immutable payload
-        // marker to prove that this row was explicitly confirmed. Do not infer
-        // authorization from a dossier/fingerprint or retry an ambiguous attempt.
-        // Retain the row and its metadata, but make the block terminal before
-        // media hydration or any provider call.
-        if (post.contentPieceId) {
+        // A campaign schedule is executable only when a durable, append-only
+        // confirmation matches the current source, approved plan, target and time.
+        if (post.campaignId && post.contentPieceId) {
+          const [evidence] = await db.select().from(executionEvidenceTable).where(and(
+            eq(executionEvidenceTable.workspaceId, post.workspaceId),
+            eq(executionEvidenceTable.subjectType, "social_post"),
+            eq(executionEvidenceTable.subjectId, post.id),
+            eq(executionEvidenceTable.state, "planned"),
+          )).limit(1);
+          const details = evidence?.details as Record<string, unknown> | undefined;
+          let currentFingerprint: string | undefined;
+          try {
+            if (post.scheduledAt) {
+              currentFingerprint = await getCampaignScheduleItemFingerprint(
+                post.workspaceId, post.campaignId, post.contentPieceId,
+                post.integrationId, post.scheduledAt,
+              );
+            }
+          } catch {
+            currentFingerprint = undefined;
+          }
+          if (details?.kind !== "campaign_schedule_confirmation"
+            || details?.version !== 1
+            || details?.explicitConfirmation !== true
+            || typeof details?.fingerprint !== "string"
+            || details.fingerprint !== currentFingerprint) {
           await db.update(socialPostsTable).set({
             status: "failed",
-            errorMessage: SOCIAL_SCHEDULE_CONFIRMATION_REQUIRED,
+            scheduledAt: null,
+            errorMessage: details?.kind === "campaign_schedule_confirmation"
+              ? "Confirmação do agendamento está desatualizada; gere uma nova prévia"
+              : SOCIAL_SCHEDULE_CONFIRMATION_REQUIRED,
             updatedAt: new Date(),
           }).where(and(
             eq(socialPostsTable.id, post.id),
             eq(socialPostsTable.workspaceId, post.workspaceId),
             eq(socialPostsTable.status, "scheduled"),
           ));
-          log.warn({ postId: post.id }, "processScheduledSocialPosts: scheduled publication lacks explicit confirmation");
+            log.warn({ postId: post.id }, "processScheduledSocialPosts: missing or stale schedule confirmation");
           continue;
+          }
         }
 
         // Hydrate media before handing the durable row to the canonical publisher.

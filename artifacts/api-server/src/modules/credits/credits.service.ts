@@ -1,5 +1,5 @@
 import { isPlatformAdmin } from "../admin/admin-access.js";
-import { and, eq, desc, sql } from "drizzle-orm";
+import { and, eq, desc, sql, sum } from "drizzle-orm";
 import {
   db,
   workspacesTable,
@@ -9,6 +9,9 @@ import {
   campaignsTable,
   subscriptionPaymentsTable,
   CREDIT_COSTS,
+  getCampaignCreditEstimate,
+  calculateRequiredCampaignCredits,
+  type CampaignCreditBudgetPhase,
   type CreditTransaction,
 } from "@workspace/db";
 import { AppError, InsufficientCreditsError, NotFoundError } from "../../lib/errors.js";
@@ -19,6 +22,82 @@ function isAdminWorkspace(workspaceOwnerId: string): boolean {
 }
 
 export type CreditAction = string & keyof typeof CREDIT_COSTS;
+
+export type CampaignCreditPhase = CampaignCreditBudgetPhase;
+
+/**
+ * Blocks a campaign start/phase unless the workspace can cover the expected
+ * campaign average. Once execution has begun, later phases are checked against
+ * the remaining average (with a conservative phase minimum).
+ */
+export async function assertCampaignCreditBudget(
+  workspaceId: string,
+  campaignType: string,
+  phase: CampaignCreditPhase,
+  campaignId?: string,
+) {
+  const [workspace] = await db.select({
+    balance: workspacesTable.creditsBalance,
+    settings: workspacesTable.settings,
+    ownerId: workspacesTable.ownerId,
+  }).from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
+  if (!workspace) throw new NotFoundError("Workspace");
+
+  const unlimited = (workspace.settings as Record<string, unknown>)?.unlimitedCredits === true
+    || isAdminWorkspace(workspace.ownerId);
+  const fallbackEstimate = getCampaignCreditEstimate(campaignType).typical;
+  let averageCampaignCredits = fallbackEstimate;
+  let estimateSource: "historical_average" | "campaign_type_default" = "campaign_type_default";
+
+  const completedCampaigns = await db.select({
+    campaignId: campaignsTable.id,
+    spent: sum(creditTransactionsTable.amount).mapWith(Number),
+  }).from(campaignsTable)
+    .innerJoin(creditTransactionsTable, and(
+      eq(creditTransactionsTable.campaignId, campaignsTable.id),
+      eq(creditTransactionsTable.type, "debit"),
+    ))
+    .where(and(eq(campaignsTable.type, campaignType as typeof campaignsTable.$inferSelect.type), eq(campaignsTable.status, "completed")))
+    .groupBy(campaignsTable.id)
+    .orderBy(desc(sql`max(${creditTransactionsTable.createdAt})`))
+    .limit(30);
+
+  // Require a small sample before replacing the configured estimate. This
+  // avoids a single unusually cheap/expensive campaign skewing the admission gate.
+  if (completedCampaigns.length >= 3) {
+    averageCampaignCredits = Math.ceil(completedCampaigns.reduce((total, item) => total + Number(item.spent ?? 0), 0) / completedCampaigns.length);
+    estimateSource = "historical_average";
+  }
+
+  let alreadySpent = 0;
+  if (campaignId) {
+    const [usage] = await db.select({ spent: sum(creditTransactionsTable.amount).mapWith(Number) })
+      .from(creditTransactionsTable)
+      .where(and(
+        eq(creditTransactionsTable.workspaceId, workspaceId),
+        eq(creditTransactionsTable.campaignId, campaignId),
+        eq(creditTransactionsTable.type, "debit"),
+      ));
+    alreadySpent = Number(usage?.spent ?? 0);
+  }
+
+  const required = calculateRequiredCampaignCredits(averageCampaignCredits, alreadySpent, phase);
+  const phaseMinimum = phase === "start" || phase === "strategy" ? averageCampaignCredits : phase === "content" ? 150 : 37;
+  const balance = workspace.balance ?? 0;
+
+  if (!unlimited && balance < required) {
+    throw new InsufficientCreditsError(required, balance, {
+      phaseCost: phaseMinimum,
+      campaignType,
+      estimatedTotal: averageCampaignCredits,
+      estimateSource,
+      alreadySpent,
+      phase,
+    });
+  }
+
+  return { balance, required, averageCampaignCredits, alreadySpent, estimateSource, phase, campaignType, unlimited };
+}
 
 export async function assertCreditsNotRefundHeld(workspaceId: string): Promise<void> {
   const [hold] = await db.select({ id: subscriptionPaymentsTable.id }).from(subscriptionPaymentsTable)
@@ -57,6 +136,7 @@ export async function deductCredits(
   idempotencyKey?: string,
   costOverride?: number,
   persistDelivery?: (trx: CreditDbTransaction, charge: CreditTransaction, replayed: boolean) => Promise<void>,
+  allowNegativeBalanceForCompletedUsage = false,
 ): Promise<CreditTransaction> {
   const cost = costOverride ?? CREDIT_COSTS[action];
   if (cost === undefined) throw new Error(`Unknown credit action: ${action}`);
@@ -118,7 +198,7 @@ export async function deductCredits(
       .where(sql`${subscriptionPaymentsTable.workspaceId} = ${workspaceId} AND ${subscriptionPaymentsTable.metadata}->>'refundHold' = 'true'`).limit(1);
     if (refundHold) throw new AppError(409, "Créditos bloqueados enquanto o estorno aguarda aprovação ou processamento. Contate o administrador.", "CREDITS_REFUND_HOLD");
     unlimited = (ws.settings as Record<string, unknown>)?.unlimitedCredits === true || adminWorkspace;
-    if (!unlimited && ws.creditsBalance < cost) {
+    if (!unlimited && !allowNegativeBalanceForCompletedUsage && ws.creditsBalance < cost) {
       throw new InsufficientCreditsError(cost, ws.creditsBalance);
     }
 

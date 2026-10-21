@@ -13,6 +13,7 @@ import { logger } from "../../lib/logger.js";
 import { env } from "../../lib/env.js";
 import { recordEngagementEvent } from "../launch-sequence/sequence-analytics.service.js";
 import { emitSequenceEvent } from "../launch-sequence/sequence-realtime.js";
+import nodemailer from "nodemailer";
 
 // ─── Provider API helpers ─────────────────────────────────────────────────────
 
@@ -196,6 +197,66 @@ async function sendViaResend(
   }
   const data = (await res.json()) as { id?: string };
   return { externalCampaignId: data.id, recipientCount: 1, status: "sent" };
+}
+
+async function sendViaCustomSmtp(payload: {
+  subject: string;
+  fromName: string;
+  fromEmail: string;
+  htmlContent: string;
+  listId: string;
+  scheduledAt?: string;
+}): Promise<DispatchResult> {
+  if (!(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASSWORD)) {
+    throw new AppError(
+      503,
+      "SMTP não configurado. Defina SMTP_HOST, SMTP_USER e SMTP_PASSWORD no ambiente do servidor.",
+      "EMAIL_PROVIDER_NOT_CONFIGURED",
+    );
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.listId)) {
+    throw new ValidationError(
+      "O SMTP envia para um destinatário por vez. Informe o e-mail do destinatário em vez de um ID de lista.",
+    );
+  }
+  if (payload.scheduledAt && new Date(payload.scheduledAt).getTime() > Date.now()) {
+    throw new ValidationError(
+      "O SMTP não agenda mensagens. Aguarde o horário programado para enviar.",
+    );
+  }
+
+  const transport = nodemailer.createTransport({
+    host: env.SMTP_HOST,
+    port: env.SMTP_PORT,
+    secure: env.SMTP_SECURE,
+    auth: { user: env.SMTP_USER, pass: env.SMTP_PASSWORD },
+    connectionTimeout: 15_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 30_000,
+  });
+  try {
+    const fromEmail = env.SMTP_FROM_EMAIL || payload.fromEmail || env.SMTP_USER;
+    const receipt = await transport.sendMail({
+      to: payload.listId,
+      from: `${payload.fromName} <${fromEmail}>`,
+      subject: payload.subject,
+      html: payload.htmlContent,
+    });
+    const accepted = receipt.accepted?.some((recipient) =>
+      typeof recipient === "string" && recipient.toLowerCase() === payload.listId.toLowerCase(),
+    );
+    if (!accepted || !receipt.messageId) {
+      throw new AppError(502, "O servidor SMTP não confirmou o destinatário.", "SMTP_RECIPIENT_NOT_ACCEPTED");
+    }
+    return { externalCampaignId: receipt.messageId, recipientCount: 1, status: "sent" };
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    // Avoid storing transport diagnostics that may contain mailbox/server details.
+    logger.warn({ code: (error as NodeJS.ErrnoException)?.code ?? "SMTP_SEND_FAILED" }, "SMTP send failed");
+    throw new AppError(502, "Falha no envio SMTP. Verifique as configurações e a senha da caixa.", "SMTP_SEND_FAILED");
+  } finally {
+    transport.close();
+  }
 }
 
 async function sendViaActiveCampaign(
@@ -388,7 +449,9 @@ export async function sendEmailDispatch(workspaceId: string, dispatchId: string)
     } else if (dispatch.provider === "activecampaign") {
       const { apiKey, accountUrl } = await getActiveCampaignCredentials(workspaceId);
       result = await sendViaActiveCampaign(apiKey, accountUrl, payload);
-    } else if ((dispatch.provider as string) === "resend" || (env.RESEND_API_KEY && ["mailchimp", "sendgrid", "brevo", "custom_smtp"].includes(dispatch.provider))) {
+    } else if (dispatch.provider === "custom_smtp") {
+      result = await sendViaCustomSmtp(payload);
+    } else if ((dispatch.provider as string) === "resend" || (env.RESEND_API_KEY && ["mailchimp", "sendgrid", "brevo"].includes(dispatch.provider))) {
       // Native Resend provider OR fallback when RESEND_API_KEY is configured
       result = await sendViaResend(dispatch.fromName, dispatch.fromEmail, payload);
     } else {

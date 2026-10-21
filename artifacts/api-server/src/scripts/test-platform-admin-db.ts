@@ -66,10 +66,35 @@ try {
   assert.equal(isPlatformAdmin(admin.id), true);
   assert.equal(isPlatformAdmin(ordinary.id), false);
   assert.equal((await request("/admin/overview", session.accessToken)).status, 200);
+  const listedPlansResponse = await request("/admin/plans", session.accessToken);
+  assert.equal(listedPlansResponse.status, 200);
+  const listedPlans = await listedPlansResponse.json() as { plans: typeof plan[] };
+  assert.ok(listedPlans.plans.some((item) => item.id === plan.id));
+  const priceBefore = Number(plan.priceMonthly);
+  const planUpdatePayload = {
+    name: plan.name,
+    priceMonthly: priceBefore + 1,
+    priceOnboarding: Number(plan.priceOnboarding),
+    creditsMonthly: plan.creditsMonthly,
+    maxCampaigns: plan.maxCampaigns,
+    maxWorkspaces: plan.maxWorkspaces,
+    allowedSocialNetworks: plan.allowedSocialNetworks,
+    maxAccountsPerNetwork: plan.maxAccountsPerNetwork,
+    features: plan.features,
+    active: plan.active,
+  };
+  assert.equal((await request(`/admin/plans/${plan.slug}`, undefined, "PATCH", planUpdatePayload)).status, 401, "plan pricing must reject unauthenticated updates");
+  assert.equal((await request(`/admin/plans/${plan.slug}`, other.accessToken, "PATCH", planUpdatePayload)).status, 403, "plan pricing must reject non-admin updates");
+  const savedPlanResponse = await request(`/admin/plans/${plan.slug}`, session.accessToken, "PATCH", planUpdatePayload);
+  assert.equal(savedPlanResponse.status, 200);
+  const savedPlan = await savedPlanResponse.json() as { plan: typeof plan };
+  assert.equal(Number(savedPlan.plan.priceMonthly), priceBefore + 1, "admin pricing changes must persist");
+  assert.equal((await request(`/admin/plans/${plan.slug}`, session.accessToken, "PATCH", { ...planUpdatePayload, active: "yes" })).status, 400, "invalid plan changes must fail validation");
+  await db.update(plansTable).set({ priceMonthly: plan.priceMonthly }).where(eq(plansTable.id, plan.id));
   // Exercise every real Command Center route: denial must precede DB/provider/mutation handlers.
   const routes = (adminRouter as unknown as { stack: Array<{ route?: { path: string; methods: Record<string, boolean> } }> }).stack
     .flatMap(layer => layer.route ? Object.keys(layer.route.methods).map(method => ({ path: layer.route!.path, method })) : []);
-  assert.ok(routes.length >= 20);
+  assert.ok(routes.length >= 22);
   for (const route of routes) {
     const path = `/admin${route.path.replace(/:[A-Za-z]+/g, randomUUID())}`;
     assert.equal((await request(path, undefined, route.method.toUpperCase())).status, 401);

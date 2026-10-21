@@ -390,8 +390,21 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
           campaignId ?? undefined,
         );
 
-    // Deduct 3 credits per direct chat message (analytics_report cost)
-    await deductCredits(req.auth.workspaceId, "analytics_report", req.log, undefined, undefined, undefined, undefined, undefined, 3);
+    // Settle the direct chat at the measured provider cost, with the configured
+    // NexOS margin, instead of charging a fixed amount per message.
+    await deductCredits(
+      req.auth.workspaceId,
+      "analytics_report",
+      req.log,
+      campaignId ?? undefined,
+      result.provider,
+      result.inputTokens + result.outputTokens,
+      result.costUsd,
+      undefined,
+      result.creditsCharged,
+      undefined,
+      true,
+    );
 
     // Audit log
     await db.insert(auditLogsTable).values({
@@ -399,14 +412,14 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
       campaignId: campaignId ?? null,
       action: "agent.direct_chat",
       actor: "user",
-      data: { agentRole, contextMode, tokensUsed: result.inputTokens + result.outputTokens },
+      data: { agentRole, contextMode, tokensUsed: result.inputTokens + result.outputTokens, costUsd: result.costUsd, creditsCharged: result.creditsCharged, provider: result.provider, model: result.model },
     });
 
     res.json({
       response: result.content,
       agentRole,
       tokensUsed: result.inputTokens + result.outputTokens,
-      creditsCharged: 3,
+      creditsCharged: result.creditsCharged,
       model: result.model,
     });
   } catch (err) {

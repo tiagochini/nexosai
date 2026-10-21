@@ -471,6 +471,7 @@ export interface CampaignCostRow {
   totalCalls: number;
   /** Cost breakdown by agent type */
   byAgent: { agentType: string; costUsd: number; credits: number; calls: number }[];
+  byProviderModel: { provider: string; model: string; costUsd: number; credits: number; tokens: number; calls: number }[];
 }
 
 /**
@@ -532,6 +533,19 @@ export async function getCampaignCostBreakdown(limitCampaigns = 50): Promise<{
     .groupBy(aiProviderLogsTable.campaignId, aiProviderLogsTable.agentType)
     .orderBy(aiProviderLogsTable.campaignId, sql`sum(cast(${aiProviderLogsTable.costUsd} as float)) desc`);
 
+  const providerModelBreakdown = await db.select({
+    campaignId: aiProviderLogsTable.campaignId,
+    provider: aiProviderLogsTable.provider,
+    model: aiProviderLogsTable.model,
+    costUsd: sql<number>`coalesce(sum(cast(${aiProviderLogsTable.costUsd} as float)), 0)`,
+    credits: sql<number>`coalesce(sum(${aiProviderLogsTable.creditsCharged}), 0)`,
+    tokens: sql<number>`coalesce(sum(${aiProviderLogsTable.totalTokens}), 0)`,
+    calls: sql<number>`count(*)`,
+  }).from(aiProviderLogsTable)
+    .where(inArray(aiProviderLogsTable.campaignId, campaignIds))
+    .groupBy(aiProviderLogsTable.campaignId, aiProviderLogsTable.provider, aiProviderLogsTable.model)
+    .orderBy(aiProviderLogsTable.campaignId, sql`sum(cast(${aiProviderLogsTable.costUsd} as float)) desc`);
+
   // Group agent breakdown by campaign
   const agentMap = new Map<string, { agentType: string; costUsd: number; credits: number; calls: number }[]>();
   for (const row of agentBreakdown) {
@@ -542,6 +556,20 @@ export async function getCampaignCostBreakdown(limitCampaigns = 50): Promise<{
       costUsd:   Number(row.costUsd),
       credits:   Number(row.credits),
       calls:     Number(row.calls),
+    });
+  }
+
+  const providerModelMap = new Map<string, CampaignCostRow["byProviderModel"]>();
+  for (const row of providerModelBreakdown) {
+    const cid = row.campaignId ?? "";
+    if (!providerModelMap.has(cid)) providerModelMap.set(cid, []);
+    providerModelMap.get(cid)!.push({
+      provider: row.provider,
+      model: row.model,
+      costUsd: Number(row.costUsd),
+      credits: Number(row.credits),
+      tokens: Number(row.tokens),
+      calls: Number(row.calls),
     });
   }
 
@@ -558,6 +586,7 @@ export async function getCampaignCostBreakdown(limitCampaigns = 50): Promise<{
       totalTokens:   Number(r.totalTokens),
       totalCalls:    Number(r.totalCalls),
       byAgent:       agentMap.get(r.campaignId!) ?? [],
+      byProviderModel: providerModelMap.get(r.campaignId!) ?? [],
     };
   });
 

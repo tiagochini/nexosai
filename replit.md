@@ -40,7 +40,7 @@ Local setup and restored-database safety are documented in `README.md` and
 
 **Optional integrations:**
 - `NEXOS_BASE_DOMAIN` — base domain for white-label (default: `nexos.ai`)
-- `CREDIT_MARGIN_MULTIPLIER` — AI cost markup multiplier (default: `1.5`)
+- `CREDIT_MARGIN_MULTIPLIER` — AI cost markup multiplier (default: `3`; with 100 credits/USD, US$0.10 provider cost charges 30 NexOS credits, equivalent to US$0.30)
 - `RESEND_API_KEY` / `RESEND_FROM_EMAIL` — transactional/broadcast email via Resend
 - `HEYGEN_API_KEY` — AI avatar video generation (account exists; not yet connected in production — see Gotchas)
 - `ELEVENLABS_API_KEY` — voice cloning/narration (**not currently set** — voice cloning is non-functional until this secret is added)

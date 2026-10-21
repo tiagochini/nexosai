@@ -1,5 +1,5 @@
 {
-  "testedAt": "2026-10-10T02:57:10.919Z",
+  "testedAt": "2026-10-14T18:42:15.428Z",
   "mode": "redis",
   "host": "db.lwjkykbjynmqnixeoldd.supabase.co",
   "tls": "verify-full with official CA",

@@ -1,8 +1,8 @@
 {
   "date": "2026-10-14",
-  "verdict": "TECHNICAL_IMPLEMENTATION_PASS_REAL_META_HOMOLOGATION_PENDING",
+  "verdict": "DIRECT_LOGIN_PROFILE_WEBHOOK_INSIGHTS_PASS_PUBLICATION_AND_APP_REVIEW_PENDING",
   "mockedProvider": true,
-  "realDirectOAuth": false,
+  "realDirectOAuth": true,
   "database": "Disposable Docker nexos_p3",
   "checks": [
     "OAuth exchange and identity",
@@ -16,6 +16,45 @@
     "API and app typecheck",
     "API build"
   ],
-  "blocker": "Meta password reauthentication required to reveal Instagram app secret",
-  "externalActions": false
+  "blocker": "Remaining evidence: direct publication, Facebook Login likes/deletion permissions, deauthorization/data-deletion callbacks, Meta test counters and App Review recordings",
+  "externalActions": true,
+  "instagramSecretConfigured": true,
+  "secretStorage": "Ignored local homologation environment only",
+  "metaCallbackSavedAndReadBack": true,
+  "productWebhookConfigurationObserved": {
+    "callback": "https://agencianexos.vip/api/social/webhooks/meta",
+    "version": "v26.0",
+    "subscribedFields": ["comments", "messages", "messaging_postbacks"],
+    "realDeliveryWithDirectOAuthVerified": true
+  },
+  "callback": "https://agencianexos.vip/api/integrations/oauth/callback/instagram_login",
+  "runtimeRecovery": {
+    "dockerVersion": "29.8.2",
+    "ipcDirectoryPreserved": true,
+    "volumesRemoved": false,
+    "redisIsolationAndAuthentication": "PASS",
+    "schemaAndSecurity": "PASS",
+    "localReadyz": 200,
+    "publicReadyz": 200
+  },
+  "realDirectOAuthCompleted": true,
+  "realProfileReadback": 200,
+  "realAccountWebhookSubscriptionReadback": 200,
+  "liveEvidence": "docs/INSTAGRAM_DIRECT_LOGIN_LIVE_RESULTS.json",
+  "newSocialPublicationOrMessage": true,
+  "directWebhookEvidence": "docs/INSTAGRAM_DIRECT_WEBHOOK_RESULTS.json",
+  "directInsightsEvidence": "docs/INSTAGRAM_DIRECT_INSIGHTS_RESULTS.json",
+  "insights": {
+    "profileReadback": "PASS_HTTP_200",
+    "accountReach30d": 7,
+    "mediaItemsRead": 9,
+    "mediaInsightsReadback": "PASS_HTTP_200",
+    "unsupportedImpressionsMetric": "REMOVED_FROM_REQUEST; Graph API returned HTTP 400 for this metric"
+  },
+  "commentPublicReplyReadback": "PASS",
+  "commentPrivateReplyMetaReceipt": "PASS",
+  "directMessageDelivery": "PASS_EXTERNAL_MESSAGE_READBACK_200",
+  "commentPrivateReplyReadback": "PASS_EXTERNAL_MESSAGE_READBACK_200",
+  "manualSyncOrResendUsed": false,
+  "metaAppReviewCompleted": false
 }

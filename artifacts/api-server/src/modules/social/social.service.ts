@@ -50,6 +50,8 @@ const META_SCOPES = [
   "instagram_manage_insights",
   "instagram_manage_messages",
   "instagram_manage_comments",
+  "instagram_manage_engagement",
+  "instagram_manage_contents",
   "pages_show_list",
   "pages_read_engagement",
   "pages_manage_engagement",
@@ -196,7 +198,7 @@ export async function handleMetaCallback(
         accountName: ig.name ?? ig.username,
         accessToken: page.access_token,
         tokenExpiresAt: expiresAt,
-        metadata: metadataForPurpose("organic_social", { username: ig.username, pageId: page.id }),
+      metadata: metadataForPurpose("organic_social", { username: ig.username, pageId: page.id, authType: "facebook_login" }),
       });
       savedIntegrations.push(igIntegration);
     }
@@ -297,8 +299,41 @@ export async function disconnectAccount(
     .where(eq(workspaceIntegrationsTable.id, integrationId));
 }
 
+/** Disable only the Facebook Page surface when it is represented by the legacy
+ * shared Instagram/Facebook Login credential. The Instagram token and status
+ * remain intact; this only removes Facebook from NexOS routing. */
+export async function disconnectFacebookChannel(
+  workspaceId: string,
+  integrationId: string,
+): Promise<void> {
+  const [integration] = await db
+    .select()
+    .from(workspaceIntegrationsTable)
+    .where(and(
+      eq(workspaceIntegrationsTable.id, integrationId),
+      eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+      eq(workspaceIntegrationsTable.provider, "instagram"),
+    ))
+    .limit(1);
+
+  const metadata = integration?.metadata as Record<string, unknown> | null;
+  if (!integration || !isOrganicSocialIntegration(metadata) || metadata?.authType === "instagram_login") {
+    throw new NotFoundError("Shared Instagram/Facebook integration not found");
+  }
+
+  await db.update(workspaceIntegrationsTable)
+    .set({
+      metadata: { ...(metadata ?? {}), facebookPageDisconnected: true },
+      updatedAt: new Date(),
+    })
+    .where(and(
+      eq(workspaceIntegrationsTable.id, integrationId),
+      eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+    ));
+}
+
 export async function getConnectedAccounts(workspaceId: string) {
-  return db
+  const accounts = await db
     .select({
       id: workspaceIntegrationsTable.id,
       provider: workspaceIntegrationsTable.provider,
@@ -317,6 +352,7 @@ export async function getConnectedAccounts(workspaceId: string) {
         inArray(workspaceIntegrationsTable.status, ["connected", "expired", "error"])
       )
     );
+  return preferDirectInstagramCredential(accounts);
 }
 
 // ─── Account Analytics ────────────────────────────────────────────────────────
@@ -341,6 +377,8 @@ export interface AccountAnalyticsPost {
   reach: number;
   impressions: number;
   saved?: number;
+  totalInteractions?: number;
+  metricsAvailable?: boolean;
 }
 
 export interface DailyMetricPoint {
@@ -417,8 +455,6 @@ async function fetchInstagramAnalytics(
     if (mediaRes.ok) {
       const mediaData = await mediaRes.json() as { data?: Array<{ id: string; media_type?: string; media_url?: string; thumbnail_url?: string; caption?: string; timestamp?: string }> };
       const recentMedia = (mediaData.data ?? []).slice(0, 9);
-      const posts: AccountAnalyticsPost[] = [];
-
       const mediaIds = recentMedia.map((media) => media.id);
       const cachedMetrics = new Map<string, SocialMetrics>();
       if (mediaIds.length > 0) {
@@ -452,10 +488,10 @@ async function fetchInstagramAnalytics(
         }
       }
 
-      for (const media of recentMedia) {
+      const posts = await Promise.all(recentMedia.map(async (media): Promise<AccountAnalyticsPost> => {
         const cached = cachedMetrics.get(media.id);
         if (cached) {
-          posts.push({
+          return {
             id: media.id,
             mediaUrl: media.media_url,
             thumbnailUrl: media.thumbnail_url,
@@ -466,16 +502,22 @@ async function fetchInstagramAnalytics(
             comments: cached.comments,
             reach: cached.reach,
             impressions: cached.impressions,
-          });
-          continue;
+            totalInteractions: cached.likes + cached.comments + cached.shares,
+            metricsAvailable: true,
+          };
         }
 
         try {
-          const insightUrl = `${metaGraphUrl(`${media.id}/insights`)}?metric=impressions,reach,likes,comments,saved&access_token=${encodeURIComponent(accessToken)}`;
+          // Instagram Login no longer supports `impressions` for media insights.
+          // Request supported metrics individually as a set so one retired metric
+          // cannot turn every value on the post into a false zero.
+          const insightUrl = `${metaGraphUrl(`${media.id}/insights`)}?metric=reach,total_interactions,likes,comments,saved,shares,views&access_token=${encodeURIComponent(accessToken)}`;
           const insightRes = await fetchWithTimeout(insightUrl);
-          let likes = 0, comments = 0, reach = 0, impressions = 0, saved = 0;
+          let likes = 0, comments = 0, reach = 0, impressions = 0, saved = 0, totalInteractions = 0;
+          let metricsAvailable = false;
           if (insightRes.ok) {
             const insightData = await insightRes.json() as { data?: Array<{ name: string; values: Array<{ value: number }> }> };
+            metricsAvailable = Boolean(insightData.data?.length);
             for (const m of insightData.data ?? []) {
               const v = m.values?.[0]?.value ?? 0;
               if (m.name === "impressions") impressions = v;
@@ -483,13 +525,14 @@ async function fetchInstagramAnalytics(
               else if (m.name === "likes") likes = v;
               else if (m.name === "comments") comments = v;
               else if (m.name === "saved") saved = v;
+              else if (m.name === "total_interactions") totalInteractions = v;
             }
           }
-          posts.push({ id: media.id, mediaUrl: media.media_url, thumbnailUrl: media.thumbnail_url, mediaType: media.media_type, caption: media.caption, timestamp: media.timestamp, likes, comments, reach, impressions, saved });
+          return { id: media.id, mediaUrl: media.media_url, thumbnailUrl: media.thumbnail_url, mediaType: media.media_type, caption: media.caption, timestamp: media.timestamp, likes, comments, reach, impressions, saved, totalInteractions, metricsAvailable };
         } catch {
-          posts.push({ id: media.id, mediaUrl: media.media_url, thumbnailUrl: media.thumbnail_url, mediaType: media.media_type, caption: media.caption, timestamp: media.timestamp, likes: 0, comments: 0, reach: 0, impressions: 0 });
+          return { id: media.id, mediaUrl: media.media_url, thumbnailUrl: media.thumbnail_url, mediaType: media.media_type, caption: media.caption, timestamp: media.timestamp, likes: 0, comments: 0, reach: 0, impressions: 0, metricsAvailable: false };
         }
-      }
+      }));
 
       base.recentPosts = posts;
 
@@ -497,7 +540,9 @@ async function fetchInstagramAnalytics(
       try {
         const since = Math.floor((Date.now() - 30 * 86400_000) / 1000);
         const until = Math.floor(Date.now() / 1000);
-        const accInsightUrl = `${metaGraphUrl(`${accountId}/insights`)}?metric=reach,impressions,follower_count&period=day&since=${since}&until=${until}&access_token=${encodeURIComponent(accessToken)}`;
+        // `impressions` is not a supported account-level metric for the current
+        // Instagram API. Its 400 response previously discarded reach history too.
+        const accInsightUrl = `${metaGraphUrl(`${accountId}/insights`)}?metric=reach&period=day&since=${since}&until=${until}&access_token=${encodeURIComponent(accessToken)}`;
         const accInsightRes = await fetchWithTimeout(accInsightUrl);
         if (accInsightRes.ok) {
           const accData = await accInsightRes.json() as { data?: Array<{ name: string; values: Array<{ value: number; end_time: string }> }> };
@@ -505,23 +550,24 @@ async function fetchInstagramAnalytics(
           for (const m of accData.data ?? []) {
             const total = (m.values ?? []).reduce((s, v) => s + (v.value ?? 0), 0);
             if (m.name === "reach") base.totalReach30d = total;
-            if (m.name === "impressions") base.totalImpressions30d = total;
             for (const v of m.values ?? []) {
               const date = v.end_time ? v.end_time.split("T")[0] : "";
               if (!date) continue;
               if (!dailyMap[date]) dailyMap[date] = { date };
               if (m.name === "reach") dailyMap[date].reach = v.value ?? 0;
-              if (m.name === "impressions") dailyMap[date].impressions = v.value ?? 0;
-              if (m.name === "follower_count") dailyMap[date].followers = v.value ?? 0;
             }
           }
           base.dailyMetrics = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
+        } else {
+          base.error = `Graph API ${accInsightRes.status} ao consultar alcance da conta`;
         }
-      } catch { /* non-critical */ }
+      } catch {
+        base.error = "Não foi possível consultar o alcance da conta";
+      }
 
       // 4. Avg engagement
       if (posts.length > 0) {
-        const engSum = posts.reduce((s, p) => s + p.likes + p.comments + (p.saved ?? 0), 0);
+        const engSum = posts.reduce((s, p) => s + (p.totalInteractions ?? p.likes + p.comments + (p.saved ?? 0)), 0);
         base.avgEngagement = Math.round(engSum / posts.length);
       }
     }
@@ -727,7 +773,7 @@ async function fetchTikTokAnalytics(
 
 export async function getAccountsWithAnalytics(workspaceId: string): Promise<AccountAnalytics[]> {
   // Fetch accounts WITH access tokens for live API calls
-  const accounts = (await db
+  const accounts = preferDirectInstagramCredential((await db
     .select({
       id: workspaceIntegrationsTable.id,
       provider: workspaceIntegrationsTable.provider,
@@ -745,7 +791,7 @@ export async function getAccountsWithAnalytics(workspaceId: string): Promise<Acc
         inArray(workspaceIntegrationsTable.provider, ["instagram", "facebook", "meta_ads", "tiktok_ads"]),
         inArray(workspaceIntegrationsTable.status, ["connected", "expired"])
       )
-    )).filter((account) => isOrganicSocialIntegration(account.metadata as Record<string, unknown>));
+    )).filter((account) => isOrganicSocialIntegration(account.metadata as Record<string, unknown>)));
 
   const results = await Promise.allSettled(
     accounts.map(async (acct) => {
@@ -936,7 +982,9 @@ export async function getCampaignPublishPreview(
     eq(workspaceIntegrationsTable.status, "connected"),
   ));
   const labels: Record<string, string> = { instagram: "Instagram", meta_ads: "Facebook", tiktok_ads: "TikTok" };
-  const eligibleIntegrations = integrations.filter((item) => isOrganicSocialIntegration(item.metadata as Record<string, unknown>));
+  const eligibleIntegrations = preferDirectInstagramCredential(
+    integrations.filter((item) => isOrganicSocialIntegration(item.metadata as Record<string, unknown>)),
+  );
   const platforms = eligibleIntegrations.map((item) => ({
       provider: item.provider,
       platform: CAMPAIGN_SOCIAL_PROVIDERS[item.provider]?.platform ?? item.provider,
@@ -982,11 +1030,11 @@ export async function publishCampaignContentPiece(
   const approved = await getApprovedMasterplan(workspaceId, campaignId);
   if (!approved) throw new AppError(409, "Campanha não possui um Master Plan aprovado", "MASTERPLAN_CONTEXT_MISMATCH");
   const providers = campaignProvidersForPiece(piece.type, piece.content);
-  const integrations = (await db.select().from(workspaceIntegrationsTable).where(and(
+  const integrations = preferDirectInstagramCredential((await db.select().from(workspaceIntegrationsTable).where(and(
     eq(workspaceIntegrationsTable.workspaceId, workspaceId),
     inArray(workspaceIntegrationsTable.provider, providers as any),
     eq(workspaceIntegrationsTable.status, "connected"),
-  ))).filter((item) => isOrganicSocialIntegration(item.metadata as Record<string, unknown>));
+  ))).filter((item) => isOrganicSocialIntegration(item.metadata as Record<string, unknown>)));
   const created: Array<{ postId?: string; integrationId: string; platform: string; status: string; confirmed: boolean; providerPostId?: string | null; errorCode?: string }> = [];
   for (const integration of integrations) {
     const mapping = CAMPAIGN_SOCIAL_PROVIDERS[integration.provider];
@@ -1546,20 +1594,209 @@ export async function getDueScheduledPosts(): Promise<SocialPost[]> {
   return posts.concat(recovered.filter((post): post is SocialPost => post !== null && !seen.has(post.id)));
 }
 
-// ─── Auto-schedule from campaign ──────────────────────────────────────────────
+// ─── Confirmed campaign scheduling ────────────────────────────────────────────
+
+export type CampaignScheduleSelection = {
+  contentPieceId: string;
+  integrationId: string;
+  scheduledAt: string;
+};
+
+export type CampaignSchedulePreviewItem = {
+  contentPieceId: string;
+  integrationId: string;
+  provider: string;
+  accountId: string | null;
+  platform: string;
+  caption: string;
+  mediaUrls: string[];
+  masterplanVersionId: string;
+  scheduledAt: string;
+  fingerprint: string;
+};
+
+export type CampaignSchedulePreview = {
+  campaignId: string;
+  items: CampaignSchedulePreviewItem[];
+  fingerprint: string;
+};
+
+async function buildCampaignSchedulePreview(
+  workspaceId: string,
+  campaignId: string,
+  selections: CampaignScheduleSelection[],
+): Promise<CampaignSchedulePreview> {
+  if (selections.length < 1 || selections.length > 50) {
+    throw new AppError(400, "Selecione entre 1 e 50 publicações para agendar", "INVALID_SCHEDULE_SELECTION");
+  }
+  const keys = new Set<string>();
+  const items: CampaignSchedulePreviewItem[] = [];
+  for (const selection of selections) {
+    const scheduledAt = new Date(selection.scheduledAt);
+    if (!Number.isFinite(scheduledAt.getTime()) || scheduledAt.getTime() < Date.now() + 60_000) {
+      throw new AppError(400, "O horário de publicação precisa estar pelo menos 1 minuto no futuro", "INVALID_SCHEDULE_TIME");
+    }
+    const canonicalScheduledAt = scheduledAt.toISOString();
+    const key = `${selection.contentPieceId}:${selection.integrationId}`;
+    if (keys.has(key)) throw new AppError(400, "A mesma peça e conta não podem aparecer duas vezes", "DUPLICATE_SCHEDULE_SELECTION");
+    keys.add(key);
+
+    const preview = await getCampaignPublishPreview(workspaceId, campaignId, selection.contentPieceId);
+    const target = preview.platforms.find((platform) => platform.integrationId === selection.integrationId);
+    if (!target) throw new AppError(409, "A conta selecionada não está conectada ou não aceita este formato", "SCHEDULE_TARGET_UNAVAILABLE");
+    const fingerprint = publicationFingerprint({
+      version: 1,
+      workspaceId,
+      campaignId,
+      contentPieceId: selection.contentPieceId,
+      integrationId: target.integrationId,
+      provider: target.provider,
+      accountId: target.accountId,
+      platform: target.platform,
+      scheduledAt: canonicalScheduledAt,
+      previewFingerprint: preview.fingerprint,
+    });
+    items.push({
+      contentPieceId: selection.contentPieceId,
+      integrationId: target.integrationId,
+      provider: target.provider,
+      accountId: target.accountId,
+      platform: target.platform,
+      caption: preview.caption,
+      mediaUrls: preview.mediaUrls,
+      masterplanVersionId: preview.masterplanVersionId,
+      scheduledAt: canonicalScheduledAt,
+      fingerprint,
+    });
+  }
+  items.sort((a, b) => `${a.contentPieceId}:${a.integrationId}`.localeCompare(`${b.contentPieceId}:${b.integrationId}`));
+  return {
+    campaignId,
+    items,
+    fingerprint: publicationFingerprint({ version: 1, workspaceId, campaignId, items: items.map((item) => item.fingerprint) }),
+  };
+}
+
+export async function getCampaignSchedulePreview(
+  workspaceId: string,
+  campaignId: string,
+  selections: CampaignScheduleSelection[],
+): Promise<CampaignSchedulePreview> {
+  return buildCampaignSchedulePreview(workspaceId, campaignId, selections);
+}
+
+/** Rebuild one confirmed schedule fingerprint at dispatch time. */
+export async function getCampaignScheduleItemFingerprint(
+  workspaceId: string,
+  campaignId: string,
+  contentPieceId: string,
+  integrationId: string,
+  scheduledAt: Date,
+): Promise<string> {
+  const preview = await buildCampaignSchedulePreview(workspaceId, campaignId, [{
+    contentPieceId,
+    integrationId,
+    scheduledAt: scheduledAt.toISOString(),
+  }]);
+  return preview.items[0]!.fingerprint;
+}
 
 export async function schedulePostsForCampaign(
-  _workspaceId: string,
-  _campaignId: string,
-  _contentPieceIds: string[],
-  _integrationIds: string[],
-  _startDate: Date
+  workspaceId: string,
+  campaignId: string,
+  selections: CampaignScheduleSelection[],
+  expectedFingerprint: string,
 ): Promise<SocialPost[]> {
-  throw new AppError(
-    409,
-    "Agendamento de campanha requer uma política versionada e confirmação por prévia",
-    "CAMPAIGN_SCHEDULE_CONFIRMATION_REQUIRED",
-  );
+  if (!/^[a-f0-9]{64}$/.test(expectedFingerprint)) {
+    throw new AppError(409, "Gere e confirme a prévia do agendamento", "SCHEDULE_PREVIEW_REQUIRED");
+  }
+  const preview = await buildCampaignSchedulePreview(workspaceId, campaignId, selections);
+  if (preview.fingerprint !== expectedFingerprint) {
+    throw new AppError(409, "A prévia do agendamento mudou; revise e confirme novamente", "SCHEDULE_PREVIEW_STALE");
+  }
+
+  const scheduled: SocialPost[] = [];
+  for (const item of preview.items) {
+    const mapping = CAMPAIGN_SOCIAL_PROVIDERS[item.provider];
+    if (!mapping) throw new AppError(409, "A plataforma selecionada não pode receber publicações de campanha", "SCHEDULE_PROVIDER_UNSUPPORTED");
+    const [piece] = await db.select().from(contentPiecesTable).where(and(
+      eq(contentPiecesTable.id, item.contentPieceId),
+      eq(contentPiecesTable.campaignId, campaignId),
+      eq(contentPiecesTable.workspaceId, workspaceId),
+      eq(contentPiecesTable.status, "approved"),
+    )).limit(1);
+    if (!piece) throw new AppError(409, "A peça deixou de estar aprovada", "CONTENT_NOT_APPROVED");
+    const approved = await getApprovedMasterplan(workspaceId, campaignId);
+    if (!approved || approved.id !== item.masterplanVersionId) {
+      throw new AppError(409, "O Master Plan aprovado mudou; gere uma nova prévia", "SCHEDULE_PREVIEW_STALE");
+    }
+    const caption = campaignPieceCaption(piece.content);
+    const mediaUrls = campaignPieceMedia(piece.content);
+
+    const post = await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${workspaceId}:${item.contentPieceId}:${item.integrationId}`}))`);
+      const [existing] = await tx.select().from(socialPostsTable).where(and(
+        eq(socialPostsTable.workspaceId, workspaceId),
+        eq(socialPostsTable.campaignId, campaignId),
+        eq(socialPostsTable.contentPieceId, item.contentPieceId),
+        eq(socialPostsTable.integrationId, item.integrationId),
+      )).limit(1);
+      if (existing) {
+        const [evidence] = await tx.select().from(executionEvidenceTable).where(and(
+          eq(executionEvidenceTable.workspaceId, workspaceId),
+          eq(executionEvidenceTable.subjectType, "social_post"),
+          eq(executionEvidenceTable.subjectId, existing.id),
+          eq(executionEvidenceTable.state, "planned"),
+        )).limit(1);
+        const details = evidence?.details as Record<string, unknown> | undefined;
+        if (existing.status === "scheduled" && existing.scheduledAt?.toISOString() === item.scheduledAt
+          && existing.caption === caption && JSON.stringify(existing.mediaUrls) === JSON.stringify(mediaUrls)
+          && details?.kind === "campaign_schedule_confirmation" && details?.fingerprint === item.fingerprint) {
+          return existing;
+        }
+        throw new AppError(409, "Já existe uma publicação para esta peça e conta; cancele-a antes de reagendar", "SOCIAL_POST_ALREADY_EXISTS");
+      }
+      const [created] = await tx.insert(socialPostsTable).values({
+        workspaceId,
+        campaignId,
+        masterplanVersionId: approved.id,
+        contextFingerprint: approved.contextFingerprint,
+        contentPieceId: piece.id,
+        integrationId: item.integrationId,
+        platform: mapping.platform,
+        postType: mapping.postType,
+        status: "scheduled",
+        caption,
+        hashtags: [],
+        mediaUrls,
+        scheduledAt: new Date(item.scheduledAt),
+        aiGenerated: true,
+      }).returning();
+      if (!created) throw new AppError(500, "Falha ao persistir o agendamento", "DB_ERROR");
+      await tx.insert(executionEvidenceTable).values({
+        workspaceId,
+        campaignId,
+        masterplanVersionId: approved.id,
+        contextFingerprint: approved.contextFingerprint,
+        subjectType: "social_post",
+        subjectId: created.id,
+        state: "planned",
+        details: {
+          kind: "campaign_schedule_confirmation",
+          version: 1,
+          explicitConfirmation: true,
+          fingerprint: item.fingerprint,
+          scheduledAt: item.scheduledAt,
+          integrationId: item.integrationId,
+          accountId: item.accountId,
+          contentPieceId: piece.id,
+        },
+      });
+      return created;
+    });
+    scheduled.push(post);
+  }
+  return scheduled;
 }
 
 // ─── Webhook processing ───────────────────────────────────────────────────────
@@ -1620,6 +1857,8 @@ export async function processMetaWebhook(body: unknown): Promise<void> {
        const integrations = await db.select({
         id: workspaceIntegrationsTable.id,
         workspaceId: workspaceIntegrationsTable.workspaceId,
+        provider: workspaceIntegrationsTable.provider,
+        accountId: workspaceIntegrationsTable.accountId,
         accessToken: workspaceIntegrationsTable.accessToken,
         metadata: workspaceIntegrationsTable.metadata,
       }).from(workspaceIntegrationsTable).where(and(
@@ -1628,11 +1867,13 @@ export async function processMetaWebhook(body: unknown): Promise<void> {
           ? eq(workspaceIntegrationsTable.provider, "instagram")
           : inArray(workspaceIntegrationsTable.provider, ["facebook", "meta_ads"]),
         eq(workspaceIntegrationsTable.status, "connected"),
-      )).limit(2);
+      ));
       const routableIntegrations = integrations.filter((candidate) =>
         !!candidate.accessToken?.trim() &&
         isOrganicSocialIntegration(candidate.metadata as Record<string, unknown> | null));
-      const integration = routableIntegrations.length === 1 ? routableIntegrations[0] : undefined;
+      const integration = isInstagram
+        ? preferDirectInstagramCredential(routableIntegrations)[0]
+        : routableIntegrations.length === 1 ? routableIntegrations[0] : undefined;
       if (!integration) {
         logger.warn({ accountId }, "Ignoring unroutable Meta DM webhook account");
         continue;
@@ -1798,6 +2039,26 @@ async function getIntegration(
     : undefined;
 }
 
+/** Keep one canonical Instagram target when both OAuth products are connected.
+ * Prefer Instagram Login for normal publishing, inbox and analytics; retain the
+ * Facebook Login credential as a separate row for its distinct permissions.
+ */
+function preferDirectInstagramCredential<T extends { provider: string; accountId: string | null; metadata: unknown }>(rows: T[]): T[] {
+  const selected = new Map<string, T>();
+  const otherRows: T[] = [];
+  for (const row of rows) {
+    if (row.provider !== "instagram" || !row.accountId) {
+      otherRows.push(row);
+      continue;
+    }
+    const previous = selected.get(row.accountId);
+    const isDirect = (row.metadata as Record<string, unknown> | null)?.authType === "instagram_login";
+    const previousIsDirect = (previous?.metadata as Record<string, unknown> | null)?.authType === "instagram_login";
+    if (!previous || (isDirect && !previousIsDirect)) selected.set(row.accountId, row);
+  }
+  return [...otherRows, ...selected.values()];
+}
+
 async function markFailed(workspaceId: string, postId: string, error: string): Promise<void> {
   await db
     .update(socialPostsTable)
@@ -1843,9 +2104,12 @@ async function upsertIntegration(
         eq(workspaceIntegrationsTable.accountId, data.accountId)
       )
     );
-  const existing = candidates.find((row) =>
-    isOrganicSocialIntegration(row.metadata as Record<string, unknown>),
-  );
+  const existing = candidates.find((row) => {
+    const currentMetadata = row.metadata as Record<string, unknown> | null;
+    const incomingDirect = data.metadata.authType === "instagram_login";
+    const currentDirect = currentMetadata?.authType === "instagram_login";
+    return isOrganicSocialIntegration(currentMetadata) && currentDirect === incomingDirect;
+  });
 
   if (existing) {
     const [updated] = await db

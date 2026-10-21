@@ -36,3 +36,16 @@ Saldo 0; unlimitedCredits ativo; 35 registros; zero chaves duplicadas. Vinte reg
 3. **Falha depois da geração.** Ainda falta injetar falha de persistência após débito e comprovar resultado recuperável ou compensação idempotente; testar sucesso/repetição de geração com resposta de provedor controlada. O teste de ausência de provedor não cobre essa fase posterior.
 
 Imagens/vídeos fora do escopo; Asaas real, inferência paga, publicação e mensagens externas não foram acionados. Próximo checkpoint: unificar reserva/débito/isenção e compensação das gerações e executar testes de falha após geração antes de encerrar esta homologação.
+
+## Atualização de fechamento — 16/10/2026
+
+Os três itens acima são o registro inicial de 13/10 e foram resolvidos no escopo
+dos runners de campanha pelo resultado posterior em
+[AGENT_CREDIT_DELIVERY.md](AGENT_CREDIT_DELIVERY.md). Os onze testes específicos
+e três regressões de controle/retomada passaram; a evidência inclui política
+unificada, `refundHold`/isenção, débito atômico, falha após geração e retomada
+idempotente. Portanto, não os trate como bloqueios atuais para esses runners.
+
+Continuam fora dessa certificação: chamadas diretas a SDKs fora dos runners,
+conciliação com faturas reais dos provedores, vídeo/imagem, tráfego de produção
+e certificação de segurança global.

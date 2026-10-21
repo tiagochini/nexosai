@@ -35,6 +35,7 @@ import clientProfilesRouter from "../modules/client-profiles/client-profiles.rou
 import simulatorRouter from "../modules/simulator/simulator.routes.js";
 import serverEventsRouter from "../modules/server-events/server-events.routes.js";
 import oauthRouter from "../modules/integrations/oauth.routes.js";
+import tiktokAdsOAuthRouter from "../modules/integrations/tiktok-ads-oauth.routes.js";
 import integrationChatRouter from "../modules/integrations/integration-chat.routes.js";
 import integrationValidatorRouter from "../modules/integrations/integration-validator.routes.js";
 import socialModerationRouter from "../modules/social-moderation/social-moderation.routes.js";
@@ -121,6 +122,7 @@ router.use("/client-profiles", clientProfilesRouter);
 router.use("/simulator", simulatorRouter);
 router.use("/events", serverEventsRouter);
 router.use("/integrations/oauth", oauthRouter);
+router.use("/integrations/tiktok-ads", tiktokAdsOAuthRouter);
 router.use("/integrations", integrationValidatorRouter);
 router.use("/paid-media", paidMediaRouter);
 router.use("/realizations", realizationRouter);

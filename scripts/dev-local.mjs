@@ -22,6 +22,7 @@ const sharedEnv = process.argv.includes("--homologation") ? homologationEnvironm
 const metaE2eMode = process.argv.includes("--meta-e2e");
 const apiPort = sharedEnv.DEV_API_PORT || "8080";
 const appPort = sharedEnv.DEV_APP_PORT || "8081";
+const academyPort = sharedEnv.DEV_ACADEMY_PORT || String(Number(appPort) + 1);
 
 // Both loopback addresses serve the same local frontend. Public tunnel origins
 // still require explicit configuration in the selected environment profile.
@@ -49,8 +50,24 @@ const appEnv = {
   PORT: appPort,
   BASE_PATH: sharedEnv.BASE_PATH || "/",
   API_PROXY_TARGET: `http://127.0.0.1:${apiPort}`,
+  ACADEMY_PROXY_TARGET: `http://127.0.0.1:${academyPort}`,
   NODE_ENV: "development",
 };
+const academyEnv = {
+  ...sharedEnv,
+  PORT: academyPort,
+  BASE_PATH: "/nexos-academy/",
+  NODE_ENV: "development",
+};
+let academyAlreadyRunning = false;
+try {
+  const response = await fetch(`http://127.0.0.1:${academyPort}/nexos-academy/`, {
+    signal: AbortSignal.timeout(1_000),
+  });
+  academyAlreadyRunning = response.ok && /<title>NexOS Academy/.test(await response.text());
+} catch {
+  // The Academy Vite server will be started with the rest of the local app.
+}
 
 console.log("Compilando a API...");
 const build = spawnSync(
@@ -77,6 +94,17 @@ const children = [
     { cwd: rootPath, env: appEnv, stdio: "inherit" },
   ),
 ];
+if (!academyAlreadyRunning) {
+  children.push(spawn(
+    process.execPath,
+    [
+      resolveFromRoot("artifacts/nexos-academy/node_modules/vite/bin/vite.js"),
+      "--config",
+      resolveFromRoot("artifacts/nexos-academy/vite.config.ts"),
+    ],
+    { cwd: rootPath, env: academyEnv, stdio: "inherit" },
+  ));
+}
 
 let stopping = false;
 function stop(exitCode = 0) {
@@ -97,7 +125,7 @@ for (const child of children) {
   });
 }
 
-console.log(`NexOS ${process.argv.includes("--homologation") ? "homologação" : "local"}: http://localhost:${appPort} (API: http://localhost:${apiPort}/api)`);
+console.log(`NexOS ${process.argv.includes("--homologation") ? "homologação" : "local"}: http://localhost:${appPort} (API: http://localhost:${apiPort}/api, Academy: http://localhost:${appPort}/nexos-academy/${academyAlreadyRunning ? " — servidor reutilizado" : ""})`);
 if (metaE2eMode) {
   console.log("Meta E2E mode enabled: outbound Graph API calls are simulated in memory.");
 }

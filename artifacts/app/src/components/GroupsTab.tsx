@@ -19,6 +19,8 @@ interface CampaignGroup {
   description: string | null;
   segment: string | null;
   memberCount: number | null;
+  lifecycleStatus?: string;
+  integrationId?: string | null;
   status: "active" | "inactive" | "archived";
   createdAt: string;
 }
@@ -79,6 +81,18 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<AddGroupFormData>(EMPTY_FORM);
 
+  const { data: groupsEligibility, isLoading: isCheckingGroups } = useQuery<{
+    connected: boolean;
+    groupsApiReadAccess: boolean;
+    status: "readable" | "unavailable";
+    reason: string | null;
+  }>({
+    queryKey: ["whatsapp-groups-eligibility"],
+    queryFn: () => customFetch("/api/whatsapp/groups/eligibility"),
+    enabled: showForm && form.platform === "whatsapp",
+    retry: false,
+  });
+
   const { data, isLoading } = useQuery<{ groups: CampaignGroup[] }>({
     queryKey: ["campaign-groups", campaignId],
     queryFn: () => customFetch(`/api/campaigns/${campaignId}/groups`),
@@ -109,6 +123,28 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
       void queryClient.invalidateQueries({ queryKey: ["campaign-groups", campaignId] });
     },
     onError: () => toast.error(t("Erro ao remover grupo", "Failed to remove group", "No se pudo eliminar el grupo")),
+  });
+
+  const createMetaGroupMutation = useMutation({
+    mutationFn: () => customFetch("/api/whatsapp/groups", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        campaignId,
+        groupName: form.groupName.trim(),
+        description: form.description.trim() || undefined,
+        segment: form.segment || undefined,
+        approvalRequired: true,
+      }),
+    }),
+    onSuccess: (result: { note?: string | null }) => {
+      toast.success(result.note ?? t("Grupo oficial criado pela Meta", "Official Meta group created", "Grupo oficial creado por Meta"));
+      void queryClient.invalidateQueries({ queryKey: ["campaign-groups", campaignId] });
+      void queryClient.invalidateQueries({ queryKey: ["whatsapp-groups-eligibility"] });
+      setShowForm(false);
+      setForm(EMPTY_FORM);
+    },
+    onError: (error: Error) => toast.error(error.message || t("Não foi possível criar o grupo pela Meta", "Could not create the group through Meta", "No se pudo crear el grupo mediante Meta")),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -260,6 +296,41 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
             />
           </div>
 
+          {form.platform === "whatsapp" && (
+            <div className="border border-emerald-400/20 bg-emerald-400/5 p-3 space-y-2">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-emerald-300">
+                {t("Criação oficial pela Meta", "Official creation through Meta", "Creación oficial mediante Meta")}
+              </p>
+              {isCheckingGroups ? (
+                <p className="text-xs text-muted-foreground">{t("Verificando acesso à Groups API…", "Checking Groups API access…", "Comprobando acceso a Groups API…")}</p>
+              ) : groupsEligibility?.groupsApiReadAccess ? (
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    {t("A leitura da Groups API funciona neste número. A criação ainda será validada pela Meta quando você solicitar. Grupos oficiais têm até 8 participantes e os convidados entram pelo link.", "Groups API read access works for this number. Creation is still validated by Meta when requested. Official groups have up to 8 participants and invitees join through the link.", "La lectura de Groups API funciona para este número. Meta validará la creación cuando la solicites. Los grupos oficiales tienen hasta 8 participantes y los invitados entran mediante el enlace.")}
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="rounded-none font-mono text-xs h-8"
+                    onClick={() => createMetaGroupMutation.mutate()}
+                    disabled={createMetaGroupMutation.isPending || !form.groupName.trim()}
+                  >
+                    {createMetaGroupMutation.isPending ? t("Criando na Meta…", "Creating through Meta…", "Creando mediante Meta…") : t("Criar grupo da campanha via Meta", "Create campaign group through Meta", "Crear grupo de campaña mediante Meta")}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-amber-200/80">
+                    {groupsEligibility?.reason ?? t("Não foi possível confirmar acesso. A conexão comum não garante elegibilidade para a Groups API.", "Could not confirm access. A standard connection does not guarantee Groups API eligibility.", "No se pudo confirmar el acceso. Una conexión estándar no garantiza la elegibilidad para Groups API.")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("Você ainda pode cadastrar um grupo existente abaixo; o NexOS guardará o link, mas não conseguirá enviar mensagens pela API nele.", "You can still register an existing group below; NexOS will save its link but cannot send API messages to it.", "Aún puedes registrar un grupo existente abajo; NexOS guardará el enlace, pero no podrá enviar mensajes por API allí.")}
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-2 justify-end pt-1">
             <Button
               type="button"
@@ -276,7 +347,7 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
               className="rounded-none font-mono text-xs h-7 px-4"
               disabled={createMutation.isPending || !form.groupName.trim()}
             >
-              {createMutation.isPending ? t("Salvando...", "Saving...", "Guardando...") : t("Salvar grupo", "Save Group", "Guardar grupo")}
+              {createMutation.isPending ? t("Salvando...", "Saving...", "Guardando...") : t("Salvar cadastro manual", "Save manual entry", "Guardar registro manual")}
             </Button>
           </div>
         </form>
@@ -343,6 +414,11 @@ export function GroupsTab({ campaignId }: { campaignId: string }) {
                         }`}
                       >
                         {segmentOptionLabel(group.segment, t)}
+                      </Badge>
+                    )}
+                    {group.groupId && (
+                      <Badge variant="outline" className="rounded-none font-mono text-[10px] px-2 py-0.5 border-emerald-400/40 text-emerald-300">
+                        {t("API Meta", "Meta API", "API Meta")}
                       </Badge>
                     )}
                     {group.memberCount != null && group.memberCount > 0 && (

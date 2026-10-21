@@ -33,11 +33,18 @@ interface CampaignCostRow {
   totalTokens: number;
   totalCalls: number;
   byAgent: { agentType: string; costUsd: number; credits: number; calls: number }[];
+  byProviderModel: { provider: string; model: string; costUsd: number; credits: number; tokens: number; calls: number }[];
 }
 
 interface CostBreakdownResponse {
   campaigns: CampaignCostRow[];
   platformTotals: { totalCostUsd: number; totalCredits: number; totalTokens: number; totalCalls: number };
+}
+
+interface AiCreditPricingResponse {
+  marginMultiplier: number;
+  creditsPerUsd: number;
+  updatedAt: string | null;
 }
 
 interface DREMonthRow {
@@ -473,6 +480,7 @@ export default function AdminPage() {
   const [tab, setTab] = useState<"overview" | "financials" | "users" | "upsell" | "pagamentos" | "convites" | "solicitacoes" | "rastreamento" | "custo" | "crm" | "dre" | "fiscal" | "propostas" | "rh">("pagamentos");
   const [fpSearch, setFpSearch] = useState("");
   const [costWorkspaceFilter, setCostWorkspaceFilter] = useState("");
+  const [aiMarginDraft, setAiMarginDraft] = useState<string | null>(null);
   const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
 
   // CRM state
@@ -568,6 +576,27 @@ export default function AdminPage() {
     enabled: isAdmin && tab === "custo",
     queryFn: () => customFetch<CostBreakdownResponse>("/api/admin/cost-breakdown?limit=100"),
     staleTime: 60_000,
+  });
+
+  const { data: aiPricing, isLoading: loadingAiPricing } = useQuery({
+    queryKey: ["/api/admin/ai-credit-pricing"],
+    enabled: isAdmin && tab === "custo",
+    queryFn: () => customFetch<AiCreditPricingResponse>("/api/admin/ai-credit-pricing"),
+    staleTime: 30_000,
+  });
+
+  const saveAiPricing = useMutation({
+    mutationFn: async (marginMultiplier: number) => customFetch<AiCreditPricingResponse>("/api/admin/ai-credit-pricing", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ marginMultiplier }),
+    }),
+    onSuccess: (data) => {
+      setAiMarginDraft(null);
+      queryClient.setQueryData(["/api/admin/ai-credit-pricing"], data);
+      toast.success(t("Multiplicador de créditos de IA atualizado.", "AI credit multiplier updated.", "Multiplicador de créditos de IA actualizado."));
+    },
+    onError: (err: Error) => toast.error(err.message || t("Falha ao atualizar o multiplicador.", "Could not update the multiplier.", "No se pudo actualizar el multiplicador.")),
   });
 
   const { data: dreData, isLoading: loadingDRE, refetch: refetchDRE } = useQuery({
@@ -2755,6 +2784,52 @@ export default function AdminPage() {
             </Button>
           </div>
 
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.75fr)]">
+            <div className="border border-primary/30 bg-primary/5 p-4 space-y-3">
+              <div>
+                <h3 className="font-mono text-sm font-bold uppercase tracking-wider">{t("Regra de conversão IA → créditos", "AI → credits conversion", "Conversión IA → créditos")}</h3>
+                <p className="font-mono text-xs text-muted-foreground/70 mt-1">
+                  {t("100 créditos equivalem a US$1 de custo-base. O multiplicador define quanto será debitado nas próximas chamadas.", "100 credits equal US$1 of base cost. The multiplier sets the charge for future calls.", "100 créditos equivalen a US$1 de costo base. El multiplicador define el cargo de las próximas llamadas.")}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="space-y-1">
+                  <span className="block font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Multiplicador", "Multiplier", "Multiplicador")}</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      aria-label={t("Multiplicador de créditos de IA", "AI credit multiplier", "Multiplicador de créditos de IA")}
+                      type="number" min="0.1" max="100" step="0.1"
+                      value={aiMarginDraft ?? String(aiPricing?.marginMultiplier ?? 3)}
+                      onChange={(event) => setAiMarginDraft(event.target.value)}
+                      className="w-28 border border-border/50 bg-background px-3 py-2 font-mono text-sm outline-none focus:border-primary"
+                    />
+                    <span className="font-mono text-sm text-muted-foreground">×</span>
+                  </div>
+                </label>
+                <div className="font-mono text-xs text-muted-foreground/70 pb-2">
+                  US$0,10 {t("de custo de IA →", "AI cost →", "de costo IA →")} <strong className="text-foreground">{Math.ceil(10 * (Number(aiMarginDraft ?? aiPricing?.marginMultiplier ?? 3)))} {t("créditos", "credits", "créditos")}</strong>
+                </div>
+                <Button
+                  size="sm"
+                  disabled={loadingAiPricing || saveAiPricing.isPending || !Number.isFinite(Number(aiMarginDraft ?? aiPricing?.marginMultiplier)) || Number(aiMarginDraft ?? aiPricing?.marginMultiplier) < 0.1 || Number(aiMarginDraft ?? aiPricing?.marginMultiplier) > 100}
+                  onClick={() => saveAiPricing.mutate(Number(aiMarginDraft ?? aiPricing?.marginMultiplier ?? 3))}
+                  className="rounded-none font-mono text-xs"
+                >
+                  {saveAiPricing.isPending ? t("Salvando…", "Saving…", "Guardando…") : t("Salvar regra", "Save rule", "Guardar regla")}
+                </Button>
+              </div>
+              <p className="font-mono text-[10px] text-muted-foreground/50">
+                {t("Exemplo: multiplicador 3× = US$0,10 de custo do provedor gera 30 créditos. A mudança vale para novas chamadas; o histórico não é recalculado.", "Example: 3× = US$0.10 provider cost charges 30 credits. Changes apply to new calls; history is not recalculated.", "Ejemplo: 3× = US$0,10 de costo del proveedor cobra 30 créditos. Se aplica a llamadas futuras; el historial no se recalcula.")}
+              </p>
+            </div>
+            <div className="border border-border/30 bg-card/20 p-4">
+              <h3 className="font-mono text-sm font-bold uppercase tracking-wider">{t("O que está medido", "What is measured", "Qué se mide")}</h3>
+              <p className="font-mono text-xs text-muted-foreground/70 mt-2">
+                {t("Chamadas aos provedores de IA ficam registradas por campanha, agente, provedor, modelo, tokens, custo estimado e créditos cobrados. APIs de integração (Meta, WhatsApp, pagamentos) são operações externas e não entram neste custo de IA; seu uso e eventuais tarifas precisam de relatório próprio por integração.", "AI provider calls are logged by campaign, agent, provider, model, tokens, estimated cost and credits charged. External integration APIs (Meta, WhatsApp, payments) are separate operations and are not part of AI cost; their call usage and fees require a separate per-integration report.", "Las llamadas a proveedores de IA se registran por campaña, agente, proveedor, modelo, tokens, costo estimado y créditos cobrados. Las API externas (Meta, WhatsApp, pagos) son operaciones separadas y requieren un informe propio por integración.")}
+              </p>
+            </div>
+          </div>
+
           {loadingCost ? (
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-3">
@@ -2951,6 +3026,26 @@ export default function AdminPage() {
                                   ))}
                                 </div>
                               )}
+                              <div className="pt-3 mt-3 border-t border-border/20">
+                                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 mb-2">
+                                  {t("Consumo por provedor / modelo", "Usage by provider / model", "Consumo por proveedor / modelo")}
+                                </div>
+                                {c.byProviderModel.length ? (
+                                  <div className="space-y-1">
+                                    {c.byProviderModel.map((row) => (
+                                      <div key={`${row.provider}:${row.model}`} className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto_auto] gap-3 items-center font-mono text-[10px]">
+                                        <span className="truncate text-muted-foreground/70">{row.provider} · {row.model}</span>
+                                        <span className="tabular-nums text-right">${row.costUsd.toFixed(5)}</span>
+                                        <span className="tabular-nums text-right text-muted-foreground/60">{row.credits} cr</span>
+                                        <span className="tabular-nums text-right text-muted-foreground/60">{row.tokens.toLocaleString("pt-BR")} tok</span>
+                                        <span className="tabular-nums text-right text-muted-foreground/50">{row.calls}×</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="font-mono text-[10px] text-muted-foreground/40">{t("Sem detalhamento de provedor/modelo.", "No provider/model breakdown.", "Sin desglose por proveedor/modelo.")}</div>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>

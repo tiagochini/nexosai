@@ -7,7 +7,8 @@ import {
 } from "@workspace/db";
 import { AppError, NotFoundError } from "../lib/errors.js";
 import { getMetaE2eGraphCalls, resetMetaE2eGraphCalls } from "../lib/meta-graph.transport.js";
-import { getCampaignPublishPreview, publishCampaignContentPiece, publishPost, schedulePostsForCampaign, syncPostMetrics } from "../modules/social/social.service.js";
+import { getCampaignPublishPreview, getCampaignSchedulePreview, publishCampaignContentPiece, publishPost, schedulePostsForCampaign, syncPostMetrics } from "../modules/social/social.service.js";
+import { processScheduledSocialPosts } from "../modules/social/social.autopost.service.js";
 import { cleanupE2eFixtures, markerFromSuffix, seedE2eFixtures } from "./e2e-fixtures.js";
 import { ensureInstagramWebhookSubscription, resolveInstagramWebhookPageId } from "../modules/social/meta-webhook-subscription.service.js";
 
@@ -49,17 +50,62 @@ try {
   }).returning();
   assert.ok(piece);
 
+  const [scheduledPiece] = await db.insert(contentPiecesTable).values({
+    workspaceId: workspace, campaignId: campaign.id, type: "social_post",
+    status: "approved", title: `${marker} scheduled exact caption`,
+    content: { platform: "facebook_page", caption: `${marker} scheduled exact caption` },
+  }).returning();
+  assert.ok(scheduledPiece);
+  const scheduledAt = new Date(Date.now() + 3 * 60_000).toISOString();
+  const scheduleSelections = [{ contentPieceId: scheduledPiece.id, integrationId: ownedIntegration, scheduledAt }];
   await assert.rejects(
-    () => schedulePostsForCampaign(workspace, campaign.id, [piece.id], [ownedIntegration], new Date()),
-    (err: unknown) => err instanceof AppError && err.code === "CAMPAIGN_SCHEDULE_CONFIRMATION_REQUIRED",
-    "campaign scheduling must fail closed before persisting unverifiable future sends",
+    () => schedulePostsForCampaign(workspace, campaign.id, scheduleSelections, ""),
+    (err: unknown) => err instanceof AppError && err.code === "SCHEDULE_PREVIEW_REQUIRED",
+    "campaign scheduling must fail closed without an explicit preview fingerprint",
   );
-  const unscheduled = await db.select({ id: socialPostsTable.id }).from(socialPostsTable).where(and(
-    eq(socialPostsTable.workspaceId, workspace),
-    eq(socialPostsTable.campaignId, campaign.id),
-    eq(socialPostsTable.contentPieceId, piece.id),
+  const schedulePreview = await getCampaignSchedulePreview(workspace, campaign.id, scheduleSelections);
+  await assert.rejects(
+    () => schedulePostsForCampaign(workspace, campaign.id, scheduleSelections, "0".repeat(64)),
+    (err: unknown) => err instanceof AppError && err.code === "SCHEDULE_PREVIEW_STALE",
+    "confirmation must reject a stale or forged preview fingerprint",
+  );
+  const scheduled = await schedulePostsForCampaign(workspace, campaign.id, scheduleSelections, schedulePreview.fingerprint);
+  const sameScheduled = await schedulePostsForCampaign(workspace, campaign.id, scheduleSelections, schedulePreview.fingerprint);
+  assert.equal(scheduled.length, 1);
+  assert.equal(scheduled[0]!.status, "scheduled");
+  assert.equal(sameScheduled[0]!.id, scheduled[0]!.id, "duplicate confirmation must be idempotent");
+  createdPosts.push(scheduled[0]!.id);
+  const scheduleEvidence = await db.select().from(executionEvidenceTable).where(and(
+    eq(executionEvidenceTable.subjectId, scheduled[0]!.id),
+    eq(executionEvidenceTable.subjectType, "social_post"),
+    eq(executionEvidenceTable.state, "planned"),
   ));
-  assert.equal(unscheduled.length, 0, "blocked campaign scheduling must not persist a row");
+  assert.equal((scheduleEvidence[0]?.details as Record<string, unknown>)?.explicitConfirmation, true);
+  resetMetaE2eGraphCalls();
+  await processScheduledSocialPosts(new Date(new Date(scheduledAt).getTime() + 1));
+  const dispatchedSchedule = await db.select().from(socialPostsTable).where(eq(socialPostsTable.id, scheduled[0]!.id));
+  assert.equal(dispatchedSchedule[0]!.status, "published", "only a valid confirmed schedule reaches the provider");
+  assert.ok(getMetaE2eGraphCalls().length > 0, "confirmed scheduled post uses the safe provider transport");
+
+  const [staleScheduledPiece] = await db.insert(contentPiecesTable).values({
+    workspaceId: workspace, campaignId: campaign.id, type: "social_post", status: "approved",
+    title: `${marker} stale scheduled caption`,
+    content: { platform: "facebook_page", caption: `${marker} stale scheduled caption` },
+  }).returning();
+  assert.ok(staleScheduledPiece);
+  const staleAt = new Date(Date.now() + 3 * 60_000).toISOString();
+  const staleSelections = [{ contentPieceId: staleScheduledPiece.id, integrationId: ownedIntegration, scheduledAt: staleAt }];
+  const stalePreview = await getCampaignSchedulePreview(workspace, campaign.id, staleSelections);
+  const [stalePost] = await schedulePostsForCampaign(workspace, campaign.id, staleSelections, stalePreview.fingerprint);
+  assert.ok(stalePost);
+  createdPosts.push(stalePost.id);
+  await db.update(contentPiecesTable).set({ content: { platform: "facebook_page", caption: "changed after schedule confirmation" } })
+    .where(eq(contentPiecesTable.id, staleScheduledPiece.id));
+  resetMetaE2eGraphCalls();
+  await processScheduledSocialPosts(new Date(new Date(staleAt).getTime() + 1));
+  const blockedStaleSchedule = await db.select().from(socialPostsTable).where(eq(socialPostsTable.id, stalePost.id));
+  assert.equal(blockedStaleSchedule[0]!.status, "failed", "changed source content invalidates the saved schedule confirmation");
+  assert.equal(getMetaE2eGraphCalls().length, 0, "stale scheduled content never calls the provider");
 
   // Text-only social content is Facebook-compatible only; TikTok and
   // Instagram must not appear in the preview or confirmation targets.

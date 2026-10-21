@@ -1,4 +1,4 @@
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import {
   db,
   whatsappDispatchesTable,
@@ -8,10 +8,12 @@ import {
   contentPiecesTable,
   launchSequenceItemsTable,
   sequenceContactsTable,
+  campaignGroupsTable,
 } from "@workspace/db";
 import { NotFoundError, ValidationError, AppError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
 import { metaGraphFetch } from "../../lib/meta-graph.transport.js";
+import { metaGraphUrl } from "../../lib/meta-graph.constants.js";
 import { recordEngagementEvent } from "../launch-sequence/sequence-analytics.service.js";
 import { emitSequenceEvent } from "../launch-sequence/sequence-realtime.js";
 import { runWhatsAppResponseAgent } from "../agents/whatsapp-response.agent.js";
@@ -30,15 +32,17 @@ export function classifyWhatsAppTransportError(error: unknown): AmbiguousWhatsAp
 
 // ─── Meta WhatsApp Business API ───────────────────────────────────────────────
 
-interface WhatsAppCredentials {
+export interface WhatsAppCredentials {
   accessToken: string;
   phoneNumberId: string;
   displayPhoneNumber?: string;
+  integrationId: string;
 }
 
-async function getWhatsAppCredentials(workspaceId: string): Promise<WhatsAppCredentials> {
+export async function getWhatsAppCredentials(workspaceId: string): Promise<WhatsAppCredentials> {
   const [integration] = await db
     .select({
+      id: workspaceIntegrationsTable.id,
       accessToken: workspaceIntegrationsTable.accessToken,
       accountId: workspaceIntegrationsTable.accountId,
       accountName: workspaceIntegrationsTable.accountName,
@@ -60,6 +64,7 @@ async function getWhatsAppCredentials(workspaceId: string): Promise<WhatsAppCred
   }
 
   return {
+    integrationId: integration.id,
     accessToken: integration.accessToken,
     phoneNumberId: integration.accountId,
     displayPhoneNumber: integration.accountName ?? undefined,
@@ -75,9 +80,10 @@ async function sendMetaTextMessage(
   creds: WhatsAppCredentials,
   recipientPhone: string,
   message: string,
+  recipientType: "individual" | "group" = "individual",
 ): Promise<MetaSendResult> {
   const res = await metaGraphFetch(
-    `https://graph.facebook.com/v21.0/${creds.phoneNumberId}/messages`,
+    metaGraphUrl(`${creds.phoneNumberId}/messages`),
     {
       method: "POST",
       headers: {
@@ -86,7 +92,7 @@ async function sendMetaTextMessage(
       },
       body: JSON.stringify({
         messaging_product: "whatsapp",
-        recipient_type: "individual",
+        recipient_type: recipientType,
         to: recipientPhone,
         type: "text",
         text: { preview_url: false, body: message },
@@ -111,6 +117,7 @@ async function sendMetaTemplateMessage(
   recipientPhone: string,
   templateName: string,
   params: Record<string, string>,
+  recipientType: "individual" | "group" = "individual",
 ): Promise<MetaSendResult> {
   const components =
     Object.keys(params).length > 0
@@ -123,7 +130,7 @@ async function sendMetaTemplateMessage(
       : [];
 
   const res = await metaGraphFetch(
-    `https://graph.facebook.com/v21.0/${creds.phoneNumberId}/messages`,
+    metaGraphUrl(`${creds.phoneNumberId}/messages`),
     {
       method: "POST",
       headers: {
@@ -132,6 +139,7 @@ async function sendMetaTemplateMessage(
       },
       body: JSON.stringify({
         messaging_product: "whatsapp",
+        recipient_type: recipientType,
         to: recipientPhone,
         type: "template",
         template: {
@@ -150,6 +158,15 @@ async function sendMetaTemplateMessage(
 
   const data = (await res.json()) as { messages?: Array<{ id: string }> };
   return { messageId: data.messages?.[0]?.id ?? "", recipientPhone };
+}
+
+async function sendMetaGroupTemplateMessage(
+  creds: WhatsAppCredentials,
+  groupId: string,
+  templateName: string,
+  params: Record<string, string>,
+): Promise<MetaSendResult> {
+  return sendMetaTemplateMessage(creds, groupId, templateName, params, "group");
 }
 
 // ─── Service functions ────────────────────────────────────────────────────────
@@ -201,6 +218,9 @@ export async function createWhatsAppDispatch(
   if (input.recipients.length === 0) {
     throw new ValidationError("Informe ao menos um destinatário");
   }
+  if (input.type === "group" && input.recipients.length !== 1) {
+    throw new ValidationError("Envie para um grupo por vez; informe o ID de um grupo criado pela Groups API.");
+  }
   if (input.idempotencyKey) {
     const [existing] = await db.select().from(whatsappDispatchesTable).where(and(
       eq(whatsappDispatchesTable.workspaceId, workspaceId),
@@ -228,6 +248,27 @@ export async function createWhatsAppDispatch(
   }
 
   const creds = await getWhatsAppCredentials(workspaceId);
+
+  if (input.type === "group") {
+    const [group] = await db
+      .select({
+        id: campaignGroupsTable.id,
+        metadata: campaignGroupsTable.metadata,
+        lifecycleStatus: campaignGroupsTable.lifecycleStatus,
+      })
+      .from(campaignGroupsTable)
+      .where(and(
+        eq(campaignGroupsTable.workspaceId, workspaceId),
+        eq(campaignGroupsTable.platform, "whatsapp"),
+        eq(campaignGroupsTable.groupId, input.recipients[0]!),
+        eq(campaignGroupsTable.integrationId, creds.integrationId),
+        ...(input.campaignId ? [eq(campaignGroupsTable.campaignId, input.campaignId)] : []),
+      ))
+      .limit(1);
+    if (group?.metadata.provider !== "meta_whatsapp_groups_api" || group.lifecycleStatus !== "active") {
+      throw new ValidationError("O grupo não está vinculado a esta conexão WhatsApp. Grupos manuais não aceitam envio pela API oficial.");
+    }
+  }
 
   let [dispatch] = await db
     .insert(whatsappDispatchesTable)
@@ -292,6 +333,22 @@ export async function sendWhatsAppDispatch(workspaceId: string, dispatchId: stri
   try {
     const creds = await getWhatsAppCredentials(workspaceId);
     const recipients = dispatch.recipients as string[];
+    if (dispatch.type === "group") {
+      const [group] = await db
+        .select({ metadata: campaignGroupsTable.metadata, lifecycleStatus: campaignGroupsTable.lifecycleStatus })
+        .from(campaignGroupsTable)
+        .where(and(
+          eq(campaignGroupsTable.workspaceId, workspaceId),
+          eq(campaignGroupsTable.platform, "whatsapp"),
+          eq(campaignGroupsTable.groupId, recipients[0] ?? ""),
+          eq(campaignGroupsTable.integrationId, creds.integrationId),
+          ...(dispatch.campaignId ? [eq(campaignGroupsTable.campaignId, dispatch.campaignId)] : []),
+        ))
+        .limit(1);
+      if (group?.metadata.provider !== "meta_whatsapp_groups_api" || group.lifecycleStatus !== "active") {
+        throw new ValidationError("O grupo foi removido ou deixou de estar ativo; o envio foi bloqueado.");
+      }
+    }
     const results: MetaSendResult[] = [];
     const failedCount = { count: 0 };
 
@@ -311,7 +368,16 @@ export async function sendWhatsAppDispatch(workspaceId: string, dispatchId: stri
           action: "whatsapp_dispatch",
         });
         let result: MetaSendResult;
-        if (dispatch.templateName) {
+        if (dispatch.type === "group" && dispatch.templateName) {
+          result = await sendMetaGroupTemplateMessage(
+            creds,
+            phone,
+            dispatch.templateName,
+            (dispatch.templateParams ?? {}) as Record<string, string>,
+          );
+        } else if (dispatch.type === "group") {
+          result = await sendMetaTextMessage(creds, phone, dispatch.message, "group");
+        } else if (dispatch.templateName) {
           result = await sendMetaTemplateMessage(
             creds,
             phone,
@@ -389,11 +455,85 @@ export async function handleWhatsAppWebhook(payload: unknown) {
   const p = payload as Record<string, unknown>;
   const log = logger.child({ component: "whatsapp-webhook" });
 
+  let processed = 0;
+  const entries = Array.isArray(p["entry"]) ? p["entry"] as Array<Record<string, unknown>> : [];
+  for (const webhookEntry of entries) {
+    const changes = Array.isArray(webhookEntry["changes"])
+      ? webhookEntry["changes"] as Array<Record<string, unknown>>
+      : [];
+    for (const change of changes) {
+      const value = change["value"] as Record<string, unknown> | undefined;
+      const field = String(change["field"] ?? "");
+      const groupEvents = Array.isArray(value?.["groups"])
+        ? value["groups"] as Array<Record<string, unknown>>
+        : [];
+      if (!field.startsWith("group_") || groupEvents.length === 0) continue;
+
+      const phoneNumberId = String((value?.["metadata"] as Record<string, unknown> | undefined)?.["phone_number_id"] ?? "");
+      if (!phoneNumberId) continue;
+      const [integration] = await db
+        .select({ id: workspaceIntegrationsTable.id, workspaceId: workspaceIntegrationsTable.workspaceId })
+        .from(workspaceIntegrationsTable)
+        .where(and(
+          eq(workspaceIntegrationsTable.accountId, phoneNumberId),
+          eq(workspaceIntegrationsTable.provider, "whatsapp_business"),
+          eq(workspaceIntegrationsTable.status, "connected"),
+        ))
+        .limit(1);
+      if (!integration) continue;
+
+      for (const event of groupEvents) {
+        const groupId = String(event["group_id"] ?? "");
+        const requestId = String(event["request_id"] ?? "");
+        const eventType = String(event["type"] ?? "");
+        if (!groupId && !requestId) continue;
+
+        const matchConditions = [
+          eq(campaignGroupsTable.workspaceId, integration.workspaceId),
+          eq(campaignGroupsTable.integrationId, integration.id),
+          eq(campaignGroupsTable.platform, "whatsapp" as const),
+          groupId
+            ? eq(campaignGroupsTable.groupId, groupId)
+            : sql`${campaignGroupsTable.metadata}->>'requestId' = ${requestId}`,
+        ];
+        const [campaignGroup] = await db
+          .select({ id: campaignGroupsTable.id, metadata: campaignGroupsTable.metadata })
+          .from(campaignGroupsTable)
+          .where(and(...matchConditions))
+          .limit(1);
+        if (!campaignGroup) continue;
+
+        const failed = eventType.includes("fail");
+        const deleted = eventType.includes("delete");
+        const created = eventType.includes("create") && !failed;
+        const inviteLink = typeof event["invite_link"] === "string" ? event["invite_link"] : undefined;
+        const subject = typeof event["subject"] === "string" ? event["subject"] : undefined;
+        await db
+          .update(campaignGroupsTable)
+          .set({
+            ...(groupId ? { groupId } : {}),
+            ...(inviteLink ? { groupLink: inviteLink } : {}),
+            ...(subject ? { groupName: subject } : {}),
+            lifecycleStatus: failed ? "sync_failed" : deleted ? "deleted" : created ? "active" : eventType,
+            status: failed ? "sync_failed" : deleted ? "archived" : "active",
+            lifecycleError: failed ? String(event["error_message"] ?? "A Meta falhou ao processar a operação do grupo.") : null,
+            lastSyncedAt: new Date(),
+            metadata: {
+              ...campaignGroup.metadata,
+              lastWebhookField: field,
+              lastWebhookType: eventType,
+              lastWebhookAt: new Date().toISOString(),
+            },
+          })
+          .where(eq(campaignGroupsTable.id, campaignGroup.id));
+        processed++;
+      }
+    }
+  }
+
   const entry = (p["entry"] as Array<Record<string, unknown>>)?.[0];
   const changes = (entry?.["changes"] as Array<Record<string, unknown>>)?.[0];
   const value = changes?.["value"] as Record<string, unknown>;
-
-  let processed = 0;
 
   // ── Delivery status updates ──────────────────────────────────────────────
   const statuses = value?.["statuses"] as Array<Record<string, unknown>> | undefined;
@@ -460,6 +600,7 @@ export async function handleWhatsAppWebhook(payload: unknown) {
     for (const msg of messages) {
       const from = String(msg["from"] ?? "");
       const msgType = String(msg["type"] ?? "");
+      const groupId = String(msg["group_id"] ?? msg["groupId"] ?? "");
       const body =
         msgType === "text"
           ? String((msg["text"] as Record<string, unknown>)?.["body"] ?? "")
@@ -503,6 +644,13 @@ export async function handleWhatsAppWebhook(payload: unknown) {
         // Non-text messages are durably retained in the inbox but are not
         // eligible for the text response agent.
         if (!body) continue;
+
+        // Group messages must never trigger the one-to-one response agent or
+        // an unsolicited private reply to the participant who sent them.
+        if (groupId || msg["recipient_type"] === "group") {
+          log.info({ groupId: groupId || undefined }, "WhatsApp group inbound stored without AI auto-response");
+          continue;
+        }
 
       const [contact] = await db
         .select({ id: sequenceContactsTable.id, sequenceId: sequenceContactsTable.sequenceId })
@@ -548,6 +696,7 @@ export async function handleWhatsAppWebhook(payload: unknown) {
           }
 
           const creds: WhatsAppCredentials = {
+            integrationId: integration.integrationId,
             accessToken: integration.accessToken!,
             phoneNumberId,
           };
@@ -581,6 +730,7 @@ export async function sendWhatsAppSystemNotification(
   try {
     const [integration] = await db
       .select({
+        id: workspaceIntegrationsTable.id,
         accessToken: workspaceIntegrationsTable.accessToken,
         accountId: workspaceIntegrationsTable.accountId,
         status: workspaceIntegrationsTable.status,
@@ -600,6 +750,7 @@ export async function sendWhatsAppSystemNotification(
     }
 
     const creds: WhatsAppCredentials = {
+      integrationId: integration.id,
       accessToken: integration.accessToken,
       phoneNumberId: integration.accountId,
     };

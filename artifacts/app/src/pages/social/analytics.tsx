@@ -36,6 +36,8 @@ interface AccountAnalyticsPost {
   reach: number;
   impressions: number;
   saved?: number;
+  totalInteractions?: number;
+  metricsAvailable?: boolean;
 }
 
 interface AccountAnalytics {
@@ -333,7 +335,7 @@ function AccountDrawer({ account, onClose }: { account: AccountAnalytics; onClos
               <div className="text-[11px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-3">{t("Principais publicações por interação", "Top Posts by Engagement", "Publicaciones principales por interacción")}</div>
               <div className="space-y-2">
                 {[...account.recentPosts]
-                  .sort((a, b) => (b.likes + b.comments) - (a.likes + a.comments))
+                  .sort((a, b) => (b.totalInteractions ?? b.likes + b.comments) - (a.totalInteractions ?? a.likes + a.comments))
                   .slice(0, 6)
                   .map(post => (
                     <div key={post.id} className="border border-border/40 bg-background/40 p-3 flex gap-3 items-start">
@@ -353,9 +355,16 @@ function AccountDrawer({ account, onClose }: { account: AccountAnalytics; onClos
                           <p className="text-xs font-mono text-foreground/70 leading-relaxed line-clamp-2 mb-1.5">{post.caption}</p>
                         )}
                         <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-muted-foreground/60">
-                          <span className="flex items-center gap-1"><Heart className="h-2.5 w-2.5 text-pink-400" />{fmt(post.likes, intlLocale(locale))}</span>
-                          <span className="flex items-center gap-1"><MessageCircle className="h-2.5 w-2.5 text-blue-400" />{fmt(post.comments, intlLocale(locale))}</span>
-                          {post.reach > 0 && <span className="flex items-center gap-1"><Eye className="h-2.5 w-2.5" />{fmt(post.reach, intlLocale(locale))}</span>}
+                          {post.metricsAvailable === false ? (
+                            <span className="flex items-center gap-1 text-yellow-400/70"><AlertTriangle className="h-2.5 w-2.5" />{t("Métricas indisponíveis", "Metrics unavailable", "Métricas no disponibles")}</span>
+                          ) : (
+                            <>
+                              <span className="flex items-center gap-1"><Heart className="h-2.5 w-2.5 text-pink-400" />{fmt(post.likes, intlLocale(locale))}</span>
+                              <span className="flex items-center gap-1"><MessageCircle className="h-2.5 w-2.5 text-blue-400" />{fmt(post.comments, intlLocale(locale))}</span>
+                              {post.totalInteractions != null && <span className="flex items-center gap-1"><BarChart3 className="h-2.5 w-2.5" />{fmt(post.totalInteractions, intlLocale(locale))} {t("interações", "interactions", "interacciones")}</span>}
+                              {post.reach > 0 && <span className="flex items-center gap-1"><Eye className="h-2.5 w-2.5" />{fmt(post.reach, intlLocale(locale))}</span>}
+                            </>
+                          )}
                           {post.timestamp && <span className="ml-auto">{relativeTime(post.timestamp, t)}</span>}
                         </div>
                       </div>

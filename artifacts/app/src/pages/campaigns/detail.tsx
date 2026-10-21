@@ -1357,6 +1357,7 @@ export default function CampaignDetail() {
   };
 
   const [activeTab, setActiveTab] = useState<"comando" | "agentes" | "estrategia" | "conteudo" | "metricas" | "grupos" | "galeria">("comando");
+  const [showAiUsageDetails, setShowAiUsageDetails] = useState(false);
   const { isArquiteto, isFundador, setMode } = useMode();
   const { user, workspace } = useAuth();
   const [missingIntegrations, setMissingIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
@@ -1621,7 +1622,8 @@ export default function CampaignDetail() {
         totalCredits: number;
         totalTokens: number;
         totalCostUsd: number;
-        byAgent: { agentRole: string; provider: string; credits: number; tokens: number; costUsd: number; runs: number }[];
+        totalCalls: number;
+        byAgent: { agentType: string; provider: string; model: string; credits: number; tokens: number; costUsd: number; calls: number }[];
       }>(`/api/campaigns/${campaignId}/credit-stats`).catch(() => null);
     },
   });
@@ -3278,38 +3280,62 @@ export default function CampaignDetail() {
         </div>
       </div>
 
-      {/* ── Credit Counter ── */}
-      {creditStatsData && (creditStatsData.totalCredits > 0 || creditStatsData.creditsCost > 0) && (
-        <div className="border border-border/30 bg-card/20 px-4 py-2.5 flex flex-wrap items-center gap-x-6 gap-y-1">
-          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">{t("Custo da Campanha", "Campaign Cost", "Costo de campaña")}</span>
-          <div className="flex items-center gap-1.5">
-            <span className="font-mono text-[11px] text-primary font-bold">
-              {(creditStatsData.totalCredits || creditStatsData.creditsCost).toLocaleString("pt-BR")}
-            </span>
-            <span className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">{t("créditos", "credits", "créditos")}</span>
+      {/* ── Campaign AI usage and provider API costs ── */}
+      {creditStatsData && (
+        <section className="border border-primary/30 bg-card/30 overflow-hidden" aria-label={t("Consumo de IA da campanha", "Campaign AI usage", "Consumo de IA de la campaña")}>
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-border/25">
+            <div>
+              <h2 className="font-mono text-xs font-bold uppercase tracking-widest text-primary">{t("Consumo de IA desta campanha", "AI usage for this campaign", "Consumo de IA de esta campaña")}</h2>
+              <p className="font-mono text-[10px] text-muted-foreground/50 mt-1">{t("Custo estimado das chamadas aos provedores de IA. Atualiza enquanto os agentes executam.", "Estimated cost of AI provider API calls. Refreshes while agents run.", "Costo estimado de las llamadas a proveedores de IA. Se actualiza mientras se ejecutan los agentes.")}</p>
+            </div>
+            <span className="font-mono text-[10px] text-muted-foreground/50">{creditStatsData.totalCalls} {t("chamadas de IA", "AI calls", "llamadas de IA")}</span>
           </div>
-          {creditStatsData.totalTokens > 0 && (
-            <div className="flex items-center gap-1.5">
-              <span className="font-mono text-[11px] text-foreground/70">
-                {creditStatsData.totalTokens.toLocaleString("pt-BR")}
-              </span>
-              <span className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">tokens</span>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-border/20">
+            <div className="p-4">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/45">{t("Custo estimado do provedor", "Estimated provider cost", "Costo estimado del proveedor")}</div>
+              <div className="font-mono text-xl font-bold text-foreground mt-1">US$ {Number(creditStatsData.totalCostUsd).toFixed(4)}</div>
+            </div>
+            <div className="p-4">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/45">{t("Créditos cobrados pela IA", "Credits charged for AI", "Créditos cobrados por IA")}</div>
+              <div className="font-mono text-xl font-bold text-primary mt-1">{creditStatsData.totalCredits.toLocaleString("pt-BR")}</div>
+            </div>
+            <div className="p-4">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/45">{t("Tokens processados", "Tokens processed", "Tokens procesados")}</div>
+              <div className="font-mono text-xl font-bold text-foreground mt-1">{creditStatsData.totalTokens.toLocaleString("pt-BR")}</div>
+            </div>
+            <div className="p-4">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/45">{t("APIs de provedores de IA", "AI provider API calls", "Llamadas API de proveedores de IA")}</div>
+              <div className="font-mono text-xl font-bold text-foreground mt-1">{creditStatsData.totalCalls}</div>
+            </div>
+          </div>
+
+          {creditStatsData.byAgent.length > 0 ? (
+            <>
+              <button type="button" onClick={() => setShowAiUsageDetails(value => !value)} className="w-full px-4 py-2 border-t border-border/20 text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground/65 hover:text-foreground">
+                {showAiUsageDetails ? t("Ocultar detalhamento", "Hide breakdown", "Ocultar detalle") : t("Ver consumo por agente, provedor e modelo", "View usage by agent, provider and model", "Ver consumo por agente, proveedor y modelo")}
+              </button>
+              {showAiUsageDetails && (
+                <div className="border-t border-border/20 divide-y divide-border/15">
+                  {creditStatsData.byAgent.map((usage, index) => (
+                    <div key={`${usage.agentType}:${usage.provider}:${usage.model}:${index}`} className="grid grid-cols-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto_auto_auto] gap-x-4 gap-y-1 px-4 py-2.5 items-center font-mono text-[10px]">
+                      <span className="truncate text-foreground/80">{usage.agentType}</span>
+                      <span className="truncate text-muted-foreground/60">{usage.provider} · {usage.model}</span>
+                      <span className="tabular-nums text-right">US$ {Number(usage.costUsd).toFixed(5)}</span>
+                      <span className="tabular-nums text-right text-primary/80">{usage.credits} cr</span>
+                      <span className="tabular-nums text-right text-muted-foreground/60">{usage.tokens.toLocaleString("pt-BR")} tok</span>
+                      <span className="tabular-nums text-right text-muted-foreground/50">{usage.calls}×</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="border-t border-border/20 px-4 py-3 font-mono text-[10px] text-muted-foreground/50">
+              {t("Nenhuma chamada de IA registrada nesta campanha ainda. APIs externas de publicação, métricas e mensagens não são incluídas neste custo.", "No AI calls recorded for this campaign yet. External publishing, analytics and messaging APIs are not included in this cost.", "Aún no hay llamadas de IA registradas en esta campaña. Las API externas de publicación, métricas y mensajería no están incluidas en este costo.")}
             </div>
           )}
-          {Number(creditStatsData.totalCostUsd) > 0 && (
-            <div className="flex items-center gap-1.5">
-              <span className="font-mono text-[11px] text-foreground/50">
-                ${Number(creditStatsData.totalCostUsd).toFixed(3)}
-              </span>
-              <span className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">USD</span>
-            </div>
-          )}
-          {creditStatsData.byAgent && creditStatsData.byAgent.length > 0 && (
-            <span className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest ml-auto">
-              {creditStatsData.byAgent.length} {t("agentes", "agents", "agentes")}
-            </span>
-          )}
-        </div>
+        </section>
       )}
 
       {/* ── Tabs ── */}

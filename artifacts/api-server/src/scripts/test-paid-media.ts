@@ -111,7 +111,7 @@ await sendMetaCapiRequest("pixel-123", "test-token", capiEvent, async (url, init
   capiRequest = { url, init };
   return new Response(JSON.stringify({ events_received: 1, trace_id: "trace-1" }), { status: 200 });
 });
-assert.equal(capiRequest?.url, "https://graph.facebook.com/v20.0/pixel-123/events");
+assert.equal(capiRequest?.url, "https://graph.facebook.com/v26.0/pixel-123/events");
 const capiBody = JSON.parse(String(capiRequest?.init.body)) as { data: Array<Record<string, unknown>>; access_token: string };
 assert.equal(capiBody.data[0]?.["event_id"], "evt-1");
 assert.equal(capiBody.data[0]?.["action_source"], "website");

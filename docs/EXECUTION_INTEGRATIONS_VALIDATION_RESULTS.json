@@ -1,6 +1,6 @@
 {
-  "checkedAt": "2026-10-13T19:46:38.510Z",
-  "verdict": "PARTIAL_PASS_SCHEDULING_NOT_IMPLEMENTED",
+  "checkedAt": "2026-10-16T23:05:29.599Z",
+  "verdict": "PARTIAL_PASS_EXTERNAL_SCHEDULED_DELIVERY_PENDING",
   "regressions": {
     "date": "2026-10-13T19:45:24.449Z",
     "database": "disposable Docker nexos_p3",
@@ -461,7 +461,7 @@
   "build": "PASS",
   "founderCreditsPreserved": true,
   "remaining": {
-    "scheduling": "Campaign scheduler intentionally rejects confirmationless jobs; versioned future authorization not implemented",
+    "scheduling": "IMPLEMENTED_AND_SIMULATION_TESTED; one controlled external Meta delivery and readback still pending",
     "asaasPartialRefund": "RESOLVED: two DONE refunds of R$43.99; two 250-credit reversals, final balance 3900, hold false",
     "chargeback": "Requested historical case is currently REFUNDED/DONE, not proof of chargeback HOLD/RELEASE"
   },
@@ -471,5 +471,98 @@
     "/api/readyz": 200,
     "/": 200
   },
-  "refundCompletionEvidence": "ASAAS_PARTIAL_REFUND_COMPLETION.json"
+  "refundCompletionEvidence": "ASAAS_PARTIAL_REFUND_COMPLETION.json",
+  "latestRegressionRun": {
+    "date": "2026-10-16T23:05:29.599Z",
+    "database": "disposable Docker nexos_p3",
+    "realProviderCalls": false,
+    "passed": 21,
+    "failed": 0,
+    "results": [
+      {
+        "test": "test-campaign-duration",
+        "status": "PASS"
+      },
+      {
+        "test": "test-masterplan-unit",
+        "status": "PASS"
+      },
+      {
+        "test": "test-social-post-ownership",
+        "status": "PASS"
+      },
+      {
+        "test": "test-social-publication-governance",
+        "status": "PASS"
+      },
+      {
+        "test": "test-social-autopost-routing",
+        "status": "PASS"
+      },
+      {
+        "test": "test-social-publish-boundary",
+        "status": "PASS"
+      },
+      {
+        "test": "test-social-natural-key",
+        "status": "PASS"
+      },
+      {
+        "test": "test-meta-webhook-routing",
+        "status": "PASS"
+      },
+      {
+        "test": "test-meta-webhook-retry",
+        "status": "PASS"
+      },
+      {
+        "test": "test-mapa-comment-db",
+        "status": "PASS"
+      },
+      {
+        "test": "test-mapa-dm-db",
+        "status": "PASS"
+      },
+      {
+        "test": "test-social-comment-reader",
+        "status": "PASS"
+      },
+      {
+        "test": "test-integration-security",
+        "status": "PASS"
+      },
+      {
+        "test": "test-platform-admin-db",
+        "status": "PASS"
+      },
+      {
+        "test": "test-billing-plan-activation-db",
+        "status": "PASS"
+      },
+      {
+        "test": "test-billing-credit-concurrency-db",
+        "status": "PASS"
+      },
+      {
+        "test": "test-asaas-webhook-token-isolation",
+        "status": "PASS"
+      },
+      {
+        "test": "test-conditional-execution-db",
+        "status": "PASS"
+      },
+      {
+        "test": "test-billing-access-reason-db",
+        "status": "PASS"
+      },
+      {
+        "test": "test-facebook-channel-disconnect",
+        "status": "PASS"
+      },
+      {
+        "test": "test-whatsapp-groups",
+        "status": "PASS"
+      }
+    ]
+  }
 }

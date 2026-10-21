@@ -8,6 +8,7 @@ import { markPaymentPaid } from "../billing/billing.service.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { collectOperationalHealth } from "../../routes/health.js";
 import { getOperationalStatus } from "../operations/operational-status.service.js";
+import { getAiCreditMarginMultiplier, setAiCreditMarginMultiplier } from "../ai-gateway/ai-credit-pricing.service.js";
 import { requirePlatformAdmin } from "./admin.middleware.js";
 import { grantCredits } from "../credits/credits.service.js";
 import { triggerStrategyPhase, triggerContentPhase } from "../orchestration/orchestration.service.js";
@@ -16,6 +17,7 @@ import {
   db, inviteCodesTable, usersTable, workspacesTable, plansTable,
   subscriptionPaymentsTable, campaignsTable, creditTransactionsTable,
   waitlistTable,
+  aiCreditSettingsTable,
 } from "@workspace/db";
 import { eq, desc, count, sql } from "drizzle-orm";
 
@@ -56,6 +58,42 @@ router.get("/overview", async (req, res): Promise<void> => {
   res.json(data);
 });
 
+const adminPlanUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  priceMonthly: z.number().finite().min(0).max(1_000_000),
+  priceOnboarding: z.number().finite().min(0).max(1_000_000),
+  creditsMonthly: z.number().int().min(0).max(10_000_000),
+  maxCampaigns: z.number().int().min(1).max(10_000),
+  maxWorkspaces: z.number().int().min(1).max(10_000),
+  allowedSocialNetworks: z.array(z.enum(["instagram", "facebook", "tiktok", "linkedin", "youtube"])).max(5),
+  maxAccountsPerNetwork: z.record(z.string(), z.number().int().min(0).max(10_000)),
+  features: z.array(z.string().trim().min(1).max(160)).max(50),
+  active: z.boolean(),
+}).strict();
+
+router.get("/plans", async (_req, res): Promise<void> => {
+  const plans = await db.select().from(plansTable).orderBy(plansTable.slug);
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ plans });
+});
+
+router.patch("/plans/:slug", async (req, res): Promise<void> => {
+  const parsed = adminPlanUpdateSchema.safeParse(req.body);
+  if (!parsed.success) throw new ValidationError(parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; "));
+  const slug = z.enum(["solo", "agency"]).safeParse(req.params["slug"]);
+  if (!slug.success) throw new ValidationError("Plano inválido");
+
+  const [plan] = await db.update(plansTable).set({
+    ...parsed.data,
+    priceMonthly: parsed.data.priceMonthly.toFixed(2),
+    priceOnboarding: parsed.data.priceOnboarding.toFixed(2),
+  }).where(eq(plansTable.slug, slug.data)).returning();
+  if (!plan) throw new NotFoundError("Plano não encontrado");
+  req.log.info({ planSlug: plan.slug, actorUserId: req.auth.userId }, "admin commercial plan updated");
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ plan });
+});
+
 router.get("/financials", async (req, res): Promise<void> => {
   const data = await getAdminFinancials();
   res.json(data);
@@ -65,6 +103,25 @@ router.get("/cost-breakdown", async (req, res): Promise<void> => {
   const limit = Math.min(parseInt(req.query["limit"] as string ?? "50", 10), 200);
   const data = await getCampaignCostBreakdown(limit);
   res.json(data);
+});
+
+router.get("/ai-credit-pricing", async (_req, res): Promise<void> => {
+  const [settings] = await db.select().from(aiCreditSettingsTable).limit(1);
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    marginMultiplier: settings ? Number(settings.marginMultiplier) : await getAiCreditMarginMultiplier(),
+    creditsPerUsd: 100,
+    updatedAt: settings?.updatedAt ?? null,
+  });
+});
+
+router.patch("/ai-credit-pricing", async (req, res): Promise<void> => {
+  const parsed = z.object({ marginMultiplier: z.number().finite().min(0.1).max(100) }).strict().safeParse(req.body);
+  if (!parsed.success) throw new ValidationError("Multiplicador deve estar entre 0,1x e 100x");
+  const settings = await setAiCreditMarginMultiplier(parsed.data.marginMultiplier, req.auth.userId);
+  req.log.info({ actorUserId: req.auth.userId, marginMultiplier: Number(settings.marginMultiplier) }, "admin AI credit pricing updated");
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ marginMultiplier: Number(settings.marginMultiplier), creditsPerUsd: 100, updatedAt: settings.updatedAt });
 });
 
 router.get("/dre", async (req, res): Promise<void> => {

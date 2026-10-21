@@ -5,6 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { env } from "../../lib/env.js";
+import { getAiCreditMarginMultiplier } from "./ai-credit-pricing.service.js";
 import {
   db,
   aiProviderLogsTable,
@@ -746,7 +747,7 @@ async function callVisionChatOpenAI(
   const outputTokens = response.usage?.completion_tokens ?? 0;
   const latencyMs = Date.now() - startTime;
   const costUsd = calculateCostUsd("openai", actualModel, inputTokens, outputTokens);
-  const creditsCharged = calculateCreditsFromCost(costUsd, env.CREDIT_MARGIN_MULTIPLIER);
+  const creditsCharged = calculateCreditsFromCost(costUsd, await getAiCreditMarginMultiplier());
 
   try {
     await db.insert(aiProviderLogsTable).values({
@@ -835,7 +836,7 @@ export async function callVisionChat(
   const content = response.content[0]?.type === "text" ? response.content[0].text : "";
   const latencyMs = Date.now() - startTime;
   const costUsd = calculateCostUsd("anthropic", effectiveModel, response.usage.input_tokens, response.usage.output_tokens);
-  const creditsCharged = calculateCreditsFromCost(costUsd, env.CREDIT_MARGIN_MULTIPLIER);
+  const creditsCharged = calculateCreditsFromCost(costUsd, await getAiCreditMarginMultiplier());
 
   try {
     await db.insert(aiProviderLogsTable).values({
@@ -1039,10 +1040,7 @@ async function completeWithAgentInternal(
     result.inputTokens,
     result.outputTokens,
   );
-  const creditsCharged = calculateCreditsFromCost(
-    costUsd,
-    env.CREDIT_MARGIN_MULTIPLIER,
-  );
+  const creditsCharged = calculateCreditsFromCost(costUsd, await getAiCreditMarginMultiplier());
 
   try {
     await db.insert(aiProviderLogsTable).values({

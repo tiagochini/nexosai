@@ -40,6 +40,13 @@ async function initialize(project, files) {
 async function smoke() {
   const origin = `http://127.0.0.1:${environment.WEB_PORT}`;
   assert.match(await (await fetch(origin)).text(), /<html/i);
+  const academy = await fetch(`${origin}/nexos-academy/`);
+  assert.equal(academy.status, 200, '/nexos-academy/');
+  const academyHtml = await academy.text();
+  assert.match(academyHtml, /<title>NexOS Academy/);
+  const academyScript = academyHtml.match(/src="([^\"]+\.js)"/)?.[1];
+  assert.ok(academyScript?.startsWith('/nexos-academy/'), 'Academy assets must stay under /nexos-academy/');
+  assert.equal((await fetch(new URL(academyScript, origin))).status, 200, 'Academy JavaScript bundle');
   for (const route of ['/api/livez', '/api/readyz', '/api/plans']) {
     const response = await fetch(origin + route, { signal: AbortSignal.timeout(20_000) }); assert.equal(response.status, 200, route);
   }

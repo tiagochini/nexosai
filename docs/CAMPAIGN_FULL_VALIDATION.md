@@ -38,9 +38,11 @@ operacionais, que continuam pendentes no briefing.
 
 ## Pendências antes da homologação completa
 
-1. Calendário e plano de mídia cobrem 21 dias, diante dos 30 dias do briefing.
-   Completar ou aprovar explicitamente uma cobertura parcial, com plano para
-   os dias 22–30; não mudar o briefing silenciosamente para caber no output.
+1. **Resolvido em 14/10/2026:** o calendário e o plano de mídia foram regenerados
+   e uma leitura nova do banco confirmou os dias 1–30 em ambos. Veja
+   [CALENDAR_DURATION_CORRECTION_RESULTS.json](CALENDAR_DURATION_CORRECTION_RESULTS.json).
+   Os artefatos seguem `pending_approval`; cobertura completa não equivale a
+   aprovação editorial.
 2. stories_sequence e analytics terminaram com indisponibilidade de provedor.
    Recuperar somente os passos com falha, preservando os oito pacotes existentes.
 3. Os dois criativos continuam em concept_ready, sem preview nem final, com
@@ -81,3 +83,13 @@ Captura privada da tela corrigida: .local/campaign-validation/content-continuous
 Próximo checkpoint: corrigir cobertura e afirmações dos materiais para revisão,
 depois recuperar os passos que falharam e conferir os criativos reais.
 Nenhuma publicação, anúncio, mensagem externa, cobrança nova ou push.
+
+## Atualização de qualidade — 16/10/2026
+
+O item de cobertura foi resolvido, conforme a evidência posterior acima. A
+revisão de qualidade e fechamento continua parcial: os materiais reais ainda
+precisam de revisão humana ligada ao hash da versão exata; não há evidência
+posterior de recuperação de `stories_sequence` e `analytics`; e a validação de
+segurança/créditos mantém bloqueios próprios. O fechamento consolidado e os
+resultados de build/regressão estão em
+[LAUNCH_QUALITY_CLOSEOUT_2026-10-16.md](LAUNCH_QUALITY_CLOSEOUT_2026-10-16.md).

@@ -11,8 +11,8 @@ import {metaGraphFetch} from '../lib/meta-graph.transport.js';
 import {instagramTokenFingerprint} from '../modules/integrations/instagram-login.js';
 import {assertIsolationTestDatabase} from './helpers/test-database-target.js';
 await assertIsolationTestDatabase(pool);
-const marker=randomUUID();let userId:string|undefined;const oldFetch=globalThis.fetch;const oldId=env.INSTAGRAM_APP_ID,oldMode=env.META_E2E_TEST_MODE;
-(env as any).INSTAGRAM_APP_ID='fixture';(env as any).META_E2E_TEST_MODE=false;
+const marker=randomUUID();let userId:string|undefined;const oldFetch=globalThis.fetch;const oldId=env.INSTAGRAM_APP_ID,oldMode=env.META_E2E_TEST_MODE,oldMetaId=env.META_APP_ID,oldMetaSecret=env.META_APP_SECRET;
+(env as any).INSTAGRAM_APP_ID='fixture';(env as any).META_APP_ID='fixture-meta';(env as any).META_APP_SECRET='fixture-meta-secret';(env as any).META_E2E_TEST_MODE=false;
 let server: ReturnType<typeof express.application.listen> | undefined;
 let refreshes=0;const calls:URL[]=[];
 globalThis.fetch=async(input,init)=>{
@@ -30,6 +30,8 @@ try{
  const [plan]=await db.select().from(plansTable).limit(1);assert.ok(plan);
  const [user]=await db.insert(usersTable).values({email:`ig-${marker}@example.invalid`,name:'IG fixture',passwordHash:'inert'}).returning();userId=user!.id;
  const [ws]=await db.insert(workspacesTable).values({ownerId:userId,planId:plan.id,name:'IG fixture',slug:marker,creditsBalance:100}).returning();
+ const legacyToken='facebook-page-'+marker;
+ const [legacy]=await db.insert(workspaceIntegrationsTable).values({workspaceId:ws!.id,provider:'instagram',canonicalNetwork:'instagram',status:'connected',accountId:'ig-fixture',accountName:'@fixture',accessToken:legacyToken,tokenExpiresAt:new Date(Date.now()+86400000),metadata:{authType:'facebook_login',pageId:'page-fixture',integrationPurpose:'organic_social'}}).returning();
  const token='direct-'+marker;
  const [integration]=await db.insert(workspaceIntegrationsTable).values({workspaceId:ws!.id,provider:'instagram',canonicalNetwork:'instagram',status:'connected',accountId:'ig-fixture',accessToken:token,tokenExpiresAt:new Date(Date.now()+86400000),metadata:{authType:'instagram_login',tokenFingerprint:instagramTokenFingerprint(token),tokenIssuedAt:new Date(Date.now()-2*86400000).toISOString()}}).returning();
  await Promise.all(Array.from({length:8},()=>metaGraphFetch(`https://graph.facebook.com/v22.0/ig-fixture/media?access_token=${token}`)));
@@ -50,6 +52,10 @@ try{
  const startBody=await start.json() as {url:string};const authorize=new URL(startBody.url);
  assert.equal(authorize.hostname,'www.instagram.com');assert.equal(authorize.searchParams.get('client_id'),'fixture');
  assert.ok(authorize.searchParams.get('scope')?.includes('instagram_business_manage_insights'));
+ const facebookStart=await oldFetch(base+'/oauth/start/instagram',{headers:{authorization:`Bearer ${auth}`}});assert.equal(facebookStart.status,200);
+ const facebookAuthorize=new URL(((await facebookStart.json()) as {url:string}).url);const facebookScopes=new Set(facebookAuthorize.searchParams.get('scope')?.split(',')??[]);
+ assert.ok(facebookScopes.has('instagram_manage_engagement'),'Facebook Login must request its separate engagement permission');
+ assert.ok(facebookScopes.has('instagram_manage_contents'),'Facebook Login must request its separate content-management permission');
  const state=authorize.searchParams.get('state')!;
  const wrong=await oldFetch(base+'/oauth/callback/instagram?code=fixture-code&state='+encodeURIComponent(state));assert.equal(wrong.status,400);
  const callsBefore=calls.length;
@@ -57,9 +63,11 @@ try{
  const noAuth=await oldFetch(base+'/oauth/start/instagram_login');assert.equal(noAuth.status,401);
  const connected=await oldFetch(base+'/oauth/callback/instagram_login?code=fixture-code&state='+encodeURIComponent(state));
  assert.ok((await connected.text()).includes('Conectado com sucesso'));
- const rows=await db.select().from(workspaceIntegrationsTable).where(eq(workspaceIntegrationsTable.workspaceId,ws!.id));assert.equal(rows.length,1,'Reconnect updates the same account; it must not fabricate a Facebook Page');
- const raw=await pool.query('select access_token from workspace_integrations where id=$1',[rows[0]!.id]);assert.ok(raw.rows[0].access_token.startsWith('nexosenc:v1:'));assert.notEqual(raw.rows[0].access_token,rows[0]!.accessToken);
- assert.equal(rows[0]!.canonicalNetwork,'instagram');assert.equal((rows[0]!.metadata as any).authType,'instagram_login');assert.equal(rows[0]!.accessToken,'long-oauth-'+marker);
+ const rows=await db.select().from(workspaceIntegrationsTable).where(eq(workspaceIntegrationsTable.workspaceId,ws!.id));assert.equal(rows.length,2,'The two Instagram OAuth products must retain independent credentials for the same account');
+ const direct=rows.find(row=>(row.metadata as any).authType==='instagram_login');const facebook=rows.find(row=>(row.metadata as any).authType==='facebook_login');
+ assert.ok(direct);assert.ok(facebook);assert.equal(direct!.id,integration!.id);assert.equal(facebook!.id,legacy!.id);
+ const raw=await pool.query('select access_token from workspace_integrations where id=$1',[direct!.id]);assert.ok(raw.rows[0].access_token.startsWith('nexosenc:v1:'));assert.notEqual(raw.rows[0].access_token,direct!.accessToken);
+ assert.equal(direct!.canonicalNetwork,'instagram');assert.equal(direct!.accessToken,'long-oauth-'+marker);assert.equal(facebook!.accessToken,legacyToken,'Direct OAuth reconnect must not overwrite the Facebook Login page token');
 
- console.log('PASS direct IG credential database: encrypted persistence, correct host, one renewal under concurrency, Facebook isolation, expiry fails closed');
-}finally{if(server)await new Promise<void>(resolve=>server!.close(()=>resolve()));globalThis.fetch=oldFetch;(env as any).INSTAGRAM_APP_ID=oldId;(env as any).META_E2E_TEST_MODE=oldMode;if(userId)await db.delete(usersTable).where(eq(usersTable.id,userId));await pool.end();}
+ console.log('PASS dual Instagram OAuth credentials: encrypted persistence, direct-only renewal/host, Facebook Login token preserved on reconnect, expiry fails closed');
+}finally{if(server)await new Promise<void>(resolve=>server!.close(()=>resolve()));globalThis.fetch=oldFetch;(env as any).INSTAGRAM_APP_ID=oldId;(env as any).META_APP_ID=oldMetaId;(env as any).META_APP_SECRET=oldMetaSecret;(env as any).META_E2E_TEST_MODE=oldMode;if(userId)await db.delete(usersTable).where(eq(usersTable.id,userId));await pool.end();}

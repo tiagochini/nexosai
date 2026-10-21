@@ -1,0 +1,188 @@
+{
+  "checkedAt": "2026-10-14T18:48:35.251Z",
+  "integrations": [
+    {
+      "provider": "instagram",
+      "status": "connected",
+      "account_id": "17841448570547453",
+      "account_name": "@agencianexosai",
+      "auth_type": "instagram_login",
+      "token_expires_at": "2026-12-13T18:35:26.896Z"
+    }
+  ],
+  "events": [
+    {
+      "id": "86fdb05d-4f58-4300-b4ad-1923a2506d03",
+      "provider_event_id": "aWdfZAG1faXRlbToxOklHTWVzc2FnZAUlEOjE3ODQxNDQ4NTcwNTQ3NDUzOjM0MDI4MjM2Njg0MTcxMDMwMTI0NDI1OTI0NTA1ODgxMjc2Nzc5NjozMzA1NjYzMzczNTAzMDcxODc0MzM2OTQyNDI5MTQ5NTkzNgZDZD",
+      "event_type": "instagram_dm",
+      "action_key": "sequence_trigger",
+      "status": "sent",
+      "received_at": "2026-10-14T18:48:29.458Z",
+      "sent_at": "2026-10-14T18:48:30.158Z",
+      "outbound_endpoint": "/me/messages",
+      "outbound_request": {
+        "message": {
+          "text": "Que bom! Você quer o mapa do sucesso. Recebi seu pedido por aqui no Direct."
+        },
+        "recipient": {
+          "id": "3763408000484402"
+        }
+      },
+      "provider_message_id": "aWdfZAG1faXRlbToxOklHTWVzc2FnZAUlEOjE3ODQxNDQ4NTcwNTQ3NDUzOjM0MDI4MjM2Njg0MTcxMDMwMTI0NDI1OTI0NTA1ODgxMjc2Nzc5NjozMzA1NjYzMzg1MzUyMzk4ODA0MzM5NzE2MTUxMjA3NTI2NAZDZD",
+      "error": null
+    },
+    {
+      "id": "234854fe-ad27-4145-b213-27c0bd1fc4c6",
+      "provider_event_id": "aWdfZAG1faXRlbToxOklHTWVzc2FnZAUlEOjE3ODQxNDQ4NTcwNTQ3NDUzOjM0MDI4MjM2Njg0MTcxMDMwMTI0NDI1OTI0NTA1ODgxMjc2Nzc5NjozMzA1NjYyOTIzMzM1NzUyMTc0OTk3OTA2MDE4NTg1ODA0OAZDZD",
+      "event_type": "instagram_dm",
+      "action_key": "sequence_trigger",
+      "status": "dead_letter",
+      "received_at": "2026-10-14T18:44:23.802Z",
+      "sent_at": null,
+      "outbound_endpoint": "/me/messages",
+      "outbound_request": {
+        "message": {
+          "text": "Que bom! Você quer o mapa do sucesso. Recebi seu pedido por aqui no Direct."
+        },
+        "recipient": {
+          "id": "3763408000484402"
+        }
+      },
+      "provider_message_id": null,
+      "error": "A ação é inválida porque não é a dona do tópico."
+    },
+    {
+      "id": "29aa1e21-f6c2-422c-a3c9-f048f5735ba0",
+      "provider_event_id": "18094141661405784",
+      "event_type": "instagram_comment",
+      "action_key": "private_reply",
+      "status": "sent",
+      "received_at": "2026-10-14T18:44:12.333Z",
+      "sent_at": "2026-10-14T18:44:13.683Z",
+      "outbound_endpoint": "/me/messages",
+      "outbound_request": {
+        "message": {
+          "text": "Que bom, professorbruceallan, que você quer o mapa do sucesso!"
+        },
+        "recipient": {
+          "comment_id": "18094141661405784"
+        }
+      },
+      "provider_message_id": "aWdfZAG1faXRlbToxOklHTWVzc2FnZAUlEOjE3ODQxNDQ4NTcwNTQ3NDUzOjM0MDI4MjM2Njg0MTcxMDMwMTI0NDI1OTI0NTA1ODgxMjc2Nzc5NjozMzA1NjYyOTExNTI2NDIxNDc1NDk1NzQ5MzQ2MzQxNjgzMgZDZD",
+      "error": null
+    },
+    {
+      "id": "6dc440ae-bed9-4cca-b569-751916a48ca0",
+      "provider_event_id": "18094141661405784",
+      "event_type": "instagram_comment",
+      "action_key": "initial_response",
+      "status": "sent",
+      "received_at": "2026-10-14T18:44:11.871Z",
+      "sent_at": "2026-10-14T18:44:16.348Z",
+      "outbound_endpoint": "/18094141661405784/replies",
+      "outbound_request": {
+        "message": "Que bom, professorbruceallan, que você quer o mapa do sucesso! Já encaminhei uma mensagem no seu Direct."
+      },
+      "provider_message_id": "18111219086177791",
+      "error": null
+    },
+    {
+      "id": "fc997158-077a-499d-8f52-89b64824a4b4",
+      "provider_event_id": "aWdfZAG1faXRlbToxOklHTWVzc2FnZAUlEOjE3ODQxNDQ4NTcwNTQ3NDUzOjM0MDI4MjM2Njg0MTcxMDMwMTI0NDI1OTI0NTA1ODgxMjc2Nzc5NjozMzA1NjYyNTU2MjQ3MTk5NzgxMTIxMjQwNjA2OTY1NzYwMAZDZD",
+      "event_type": "instagram_dm",
+      "action_key": "sequence_trigger",
+      "status": "dead_letter",
+      "received_at": "2026-10-14T18:42:43.447Z",
+      "sent_at": null,
+      "outbound_endpoint": "/me/messages",
+      "outbound_request": {
+        "message": {
+          "text": "Que bom! Você quer o mapa do sucesso. Recebi seu pedido por aqui no Direct."
+        },
+        "recipient": {
+          "id": "3763408000484402"
+        }
+      },
+      "provider_message_id": null,
+      "error": "A ação é inválida porque não é a dona do tópico."
+    }
+  ],
+  "verdict": "PASS_REAL_COMMENT_AND_DIRECT_WEBHOOKS_AFTER_ROUTING_FIX",
+  "routingDefaultApp": "3650700108428384",
+  "routingSavedAndObserved": true,
+  "externalReadback": {
+    "checkedAt": "2026-10-14T18:49:17.664Z",
+    "checks": [
+      {
+        "path": "me?fields=user_id,username",
+        "status": 200,
+        "body": {
+          "user_id": "17841448570547453",
+          "username": "agencianexosai",
+          "id": "39253530524262817"
+        }
+      },
+      {
+        "path": "17841448570547453/subscribed_apps",
+        "status": 200,
+        "body": {
+          "data": [
+            {
+              "id": "18065564933619019",
+              "subscribed_fields": [
+                "comments",
+                "messages",
+                "messaging_postbacks"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "path": "18121984933902161/comments?fields=id,text,username,timestamp,replies{id,text,username}&limit=50",
+        "status": 200,
+        "body": {
+          "data": [
+            {
+              "id": "18094141661405784",
+              "text": "mapa direto ativo 14",
+              "timestamp": "2026-10-14T14:44:08-04:00",
+              "replies": {
+                "data": [
+                  {
+                    "id": "18111219086177791",
+                    "text": "Que bom, professorbruceallan, que você quer o mapa do sucesso! Já encaminhei uma mensagem no seu Direct."
+                  }
+                ]
+              }
+            },
+            {
+              "id": "18119664329055593",
+              "text": "mapa login direto 14",
+              "timestamp": "2026-10-14T14:40:44-04:00"
+            }
+          ]
+        }
+      },
+      {
+        "path": "aWdfZAG1faXRlbToxOklHTWVzc2FnZAUlEOjE3ODQxNDQ4NTcwNTQ3NDUzOjM0MDI4MjM2Njg0MTcxMDMwMTI0NDI1OTI0NTA1ODgxMjc2Nzc5NjozMzA1NjYzMzg1MzUyMzk4ODA0MzM5NzE2MTUxMjA3NTI2NAZDZD?fields=id,message,created_time",
+        "status": 200,
+        "body": {
+          "id": "aWdfZAG1faXRlbToxOklHTWVzc2FnZAUlEOjE3ODQxNDQ4NTcwNTQ3NDUzOjM0MDI4MjM2Njg0MTcxMDMwMTI0NDI1OTI0NTA1ODgxMjc2Nzc5NjozMzA1NjYzMzg1MzUyMzk4ODA0MzM5NzE2MTUxMjA3NTI2NAZDZD",
+          "message": "Que bom! Você quer o mapa do sucesso. Recebi seu pedido por aqui no Direct.",
+          "created_time": "2026-10-14T14:48:31-04:00"
+        }
+      },
+      {
+        "path": "aWdfZAG1faXRlbToxOklHTWVzc2FnZAUlEOjE3ODQxNDQ4NTcwNTQ3NDUzOjM0MDI4MjM2Njg0MTcxMDMwMTI0NDI1OTI0NTA1ODgxMjc2Nzc5NjozMzA1NjYyOTExNTI2NDIxNDc1NDk1NzQ5MzQ2MzQxNjgzMgZDZD?fields=id,message,created_time",
+        "status": 200,
+        "body": {
+          "id": "aWdfZAG1faXRlbToxOklHTWVzc2FnZAUlEOjE3ODQxNDQ4NTcwNTQ3NDUzOjM0MDI4MjM2Njg0MTcxMDMwMTI0NDI1OTI0NTA1ODgxMjc2Nzc5NjozMzA1NjYyOTExNTI2NDIxNDc1NDk1NzQ5MzQ2MzQxNjgzMgZDZD",
+          "message": "Que bom, professorbruceallan, que você quer o mapa do sucesso!",
+          "created_time": "2026-10-14T14:44:15-04:00"
+        }
+      }
+    ]
+  },
+  "manualSyncOrResendUsed": false
+}

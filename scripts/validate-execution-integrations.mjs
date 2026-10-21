@@ -11,7 +11,7 @@ const image = process.env.SECURITY_TEST_IMAGE || 'nexos-api:p3-test';
 const output = path.join(root, '.local', 'execution-integration-evidence');
 mkdirSync(output, { recursive: true });
 const results = [];
-const tests = ['test-social-post-ownership','test-social-publication-governance','test-social-autopost-routing','test-social-publish-boundary','test-social-natural-key','test-meta-webhook-routing','test-meta-webhook-retry','test-mapa-comment-db','test-mapa-dm-db','test-social-comment-reader','test-integration-security','test-billing-plan-activation-db','test-billing-credit-concurrency-db','test-asaas-webhook-token-isolation','test-conditional-execution-db','test-billing-access-reason-db'];
+const tests = ['test-campaign-duration','test-masterplan-unit','test-social-post-ownership','test-social-publication-governance','test-social-autopost-routing','test-social-publish-boundary','test-social-natural-key','test-meta-webhook-routing','test-meta-webhook-retry','test-mapa-comment-db','test-mapa-dm-db','test-social-comment-reader','test-integration-security','test-platform-admin-db','test-billing-plan-activation-db','test-billing-credit-concurrency-db','test-asaas-webhook-token-isolation','test-conditional-execution-db','test-billing-access-reason-db','test-facebook-channel-disconnect','test-whatsapp-groups'];
 function docker(args) {
   const result = spawnSync('docker', args, { cwd: root, encoding: 'utf8', windowsHide: true, maxBuffer: 12e6, timeout: 300000 });
   if (result.status !== 0) throw new Error((result.stdout + result.stderr).slice(-4000) || 'Docker command failed');

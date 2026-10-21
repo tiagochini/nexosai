@@ -10,6 +10,7 @@ import {
   handleMetaCallback,
   handleTikTokCallback,
   disconnectAccount,
+  disconnectFacebookChannel,
   getConnectedAccounts,
   getAccountsWithAnalytics,
   createPost,
@@ -19,6 +20,7 @@ import {
   cancelPost,
   publishPost,
   syncPostMetrics,
+  getCampaignSchedulePreview,
   schedulePostsForCampaign,
   processTikTokWebhook,
   type SupportedPlatform,
@@ -139,6 +141,12 @@ router.delete("/accounts/:integrationId", requireAuth, async (req, res): Promise
   res.json({ success: true });
 });
 
+router.post("/accounts/:integrationId/disconnect-facebook", requireAuth, async (req, res): Promise<void> => {
+  const integrationId = req.params["integrationId"] as string;
+  await disconnectFacebookChannel(req.auth.workspaceId, integrationId);
+  res.json({ success: true, disconnected: "facebook_page" });
+});
+
 // ─── Posts ────────────────────────────────────────────────────────────────────
 
 const createPostSchema = z.object({
@@ -246,14 +254,30 @@ router.post("/posts/:postId/sync-metrics", requireAuth, async (req, res): Promis
 
 // ─── Campaign auto-schedule ───────────────────────────────────────────────────
 
-const scheduleSchema = z.object({
-  contentPieceIds: z.array(z.string().uuid()).min(1),
-  integrationIds: z.array(z.string().uuid()).min(1),
-  startDate: z.string().datetime(),
+const scheduleSelectionSchema = z.object({
+  contentPieceId: z.string().uuid(),
+  integrationId: z.string().uuid(),
+  scheduledAt: z.string().datetime(),
+});
+const schedulePreviewSchema = z.object({ selections: z.array(scheduleSelectionSchema).min(1).max(50) });
+const scheduleConfirmationSchema = schedulePreviewSchema.extend({ previewFingerprint: z.string().regex(/^[a-f0-9]{64}$/) });
+
+router.post("/campaigns/:campaignId/schedule/preview", requireAuth, async (req, res): Promise<void> => {
+  const parsed = schedulePreviewSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+  const preview = await getCampaignSchedulePreview(
+    req.auth.workspaceId,
+    req.params["campaignId"] as string,
+    parsed.data.selections,
+  );
+  res.json({ preview });
 });
 
 router.post("/campaigns/:campaignId/schedule", requireAuth, async (req, res): Promise<void> => {
-  const parsed = scheduleSchema.safeParse(req.body);
+  const parsed = scheduleConfirmationSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
     return;
@@ -262,9 +286,8 @@ router.post("/campaigns/:campaignId/schedule", requireAuth, async (req, res): Pr
   const posts = await schedulePostsForCampaign(
     req.auth.workspaceId,
     req.params["campaignId"] as string,
-    parsed.data.contentPieceIds,
-    parsed.data.integrationIds,
-    new Date(parsed.data.startDate)
+    parsed.data.selections,
+    parsed.data.previewFingerprint,
   );
 
   res.status(201).json({ posts, count: posts.length });

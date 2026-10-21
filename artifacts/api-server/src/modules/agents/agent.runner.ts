@@ -976,7 +976,7 @@ async function runAgentInternal(opts: RunAgentOptions): Promise<RunAgentResult> 
 
         }
 
-      });
+      }, true);
     creditsCharged = debitReplayed || charge.description?.startsWith("[∞]") ? 0 : charge.amount;
     deliveryCommitted = true;
 

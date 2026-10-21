@@ -22,6 +22,7 @@ import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
 import type { Logger } from "pino";
 import { enforceLaunchAutonomyGate, enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
+import { assertCampaignCreditBudget } from "../credits/credits.service.js";
 
 // ── Execution status ──────────────────────────────────────────────────────────
 
@@ -401,7 +402,7 @@ export async function triggerStrategyPhase(
   log: Logger,
 ): Promise<{ queued: boolean; jobId?: string }> {
   const [campaign] = await db
-    .select({ status: campaignsTable.status })
+    .select({ status: campaignsTable.status, type: campaignsTable.type })
     .from(campaignsTable)
     .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
@@ -414,6 +415,8 @@ export async function triggerStrategyPhase(
       `Cannot start strategy phase from status "${campaign.status}"`,
     );
   }
+
+  await assertCampaignCreditBudget(workspaceId, campaign.type, "strategy", campaignId);
 
   // Guard: prevent double-triggering — only block on RECENT running agents (started
   // within 15 min). Older rows are orphaned (pipeline exited before agent returned)
@@ -470,7 +473,7 @@ export async function triggerContentPhase(
   log: Logger,
 ): Promise<{ queued: boolean; jobId?: string }> {
   const [campaign] = await db
-    .select({ status: campaignsTable.status })
+    .select({ status: campaignsTable.status, type: campaignsTable.type })
     .from(campaignsTable)
     .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
@@ -484,6 +487,8 @@ export async function triggerContentPhase(
       `Cannot start content generation from status "${campaign.status}". Allowed: ${[...CONTENT_PHASE_ENTRY_STATUSES].join(", ")}.`,
     );
   }
+
+  await assertCampaignCreditBudget(workspaceId, campaign.type, "content", campaignId);
 
   // Guard: prevent double-triggering — only block on RECENT CONTENT-PHASE running agents
   // (started within 15 min). Strategy-phase agents (strategy, offer, command,
@@ -551,7 +556,7 @@ export async function triggerExecutionPhase(
   actor = "user",
 ): Promise<{ queued: boolean; jobId?: string }> {
   const [campaign] = await db
-    .select({ status: campaignsTable.status })
+    .select({ status: campaignsTable.status, type: campaignsTable.type })
     .from(campaignsTable)
     .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
@@ -564,6 +569,7 @@ export async function triggerExecutionPhase(
       `Cannot launch from status "${campaign.status}". Campaign must be approved first.`,
     );
   }
+  await assertCampaignCreditBudget(workspaceId, campaign.type, "launch", campaignId);
   // Gate only the transition that starts execution. Existing executions remain untouched.
   await enforceLaunchAutonomyGate(workspaceId, campaignId, actor);
   await enforceNoMandatoryPause(workspaceId, {

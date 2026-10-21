@@ -5,10 +5,16 @@ import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useAuth } from "@/lib/auth";
 import { hasSeenWelcome } from "@/lib/welcome-state";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { PublicLanding } from "@/components/public-landing";
 
 const AppLayout = lazy(() =>
   import("@/components/layout/app-layout").then((module) => ({
     default: module.AppLayout,
+  })),
+);
+const AdminLayout = lazy(() =>
+  import("@/components/layout/admin-layout").then((module) => ({
+    default: module.AdminLayout,
   })),
 );
 const AccessWall = lazy(() =>
@@ -45,6 +51,7 @@ const SocialModerationPage = lazy(() => import("@/pages/social/moderation"));
 const AgencyClientsPage = lazy(() => import("@/pages/agency/clients"));
 const AgencyProfilesPage = lazy(() => import("@/pages/agency/profiles"));
 const AdminPage = lazy(() => import("@/pages/admin/index"));
+const AdminPricingPage = lazy(() => import("@/pages/admin/pricing"));
 const AuditLogsPage = lazy(() => import("@/pages/admin/audit-logs"));
 const OperationsPage = lazy(() => import("@/pages/admin/operations"));
 const NexosLaunchRoom = lazy(() => import("@/pages/admin/nexos-launch"));
@@ -124,6 +131,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <AppLayout>{children}</AppLayout>;
 }
 
+function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
+  const { token, isAdmin, isAdminLoading } = useAuth();
+  if (!token) return <Redirect to="/login" />;
+  if (isAdminLoading) return <RouteFallback />;
+  if (!isAdmin) return <Redirect to="/" />;
+  return <AdminLayout>{children}</AdminLayout>;
+}
+
 function VideoEditorProtected() {
   const { token } = useAuth();
   if (!token) return <Redirect to="/login" />;
@@ -132,7 +147,21 @@ function VideoEditorProtected() {
 
 function HomeRoute() {
   const { token } = useAuth();
+  const host = window.location.hostname;
+  const { data: landing, isLoading } = useQuery<{ page: { html: string } }>({
+    queryKey: ["/api/landings/resolve", host, "index"],
+    queryFn: async () => {
+      const response = await fetch(`/api/landings/resolve?host=${encodeURIComponent(host)}&slug=index`);
+      if (!response.ok) throw new Error("No public landing for this host");
+      return response.json();
+    },
+    retry: false,
+    staleTime: 60_000,
+    enabled: !token,
+  });
   if (token) return <AppLayout><Dashboard /></AppLayout>;
+  if (landing?.page.html) return <PublicLanding />;
+  if (isLoading) return <RouteFallback />;
   return <InstitucionalPage />;
 }
 
@@ -166,6 +195,7 @@ export default function AppRoutes() {
       <Route path="/register" component={Register} />
       <Route path="/welcome" component={WelcomeRoute} />
       <Route path="/onboarding" component={OnboardingRoute} />
+      <Route path="/landing/:slug">{params => <PublicLanding slug={params.slug} />}</Route>
       <Route path="/war-room/:id">
         {() => <ProtectedRoute><WarRoom /></ProtectedRoute>}
       </Route>
@@ -288,16 +318,19 @@ export default function AppRoutes() {
         {() => <ProtectedRoute><AgencyProfilesPage /></ProtectedRoute>}
       </Route>
       <Route path="/admin/audit-logs">
-        {() => <ProtectedRoute><AuditLogsPage /></ProtectedRoute>}
+        {() => <ProtectedAdminRoute><AuditLogsPage /></ProtectedAdminRoute>}
       </Route>
       <Route path="/admin/operations">
-        {() => <ProtectedRoute><OperationsPage /></ProtectedRoute>}
+        {() => <ProtectedAdminRoute><OperationsPage /></ProtectedAdminRoute>}
       </Route>
       <Route path="/admin/nexos-launch">
-        {() => <ProtectedRoute><NexosLaunchRoom /></ProtectedRoute>}
+        {() => <ProtectedAdminRoute><NexosLaunchRoom /></ProtectedAdminRoute>}
+      </Route>
+      <Route path="/admin/pricing">
+        {() => <ProtectedAdminRoute><AdminPricingPage /></ProtectedAdminRoute>}
       </Route>
       <Route path="/admin">
-        {() => <ProtectedRoute><AdminPage /></ProtectedRoute>}
+        {() => <ProtectedAdminRoute><AdminPage /></ProtectedAdminRoute>}
       </Route>
       <Route path="/social/moderation">
         {() => <ProtectedRoute><SocialModerationPage /></ProtectedRoute>}

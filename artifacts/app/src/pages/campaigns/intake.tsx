@@ -600,6 +600,7 @@ export default function CampaignIntake() {
   });
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [finalizing, setFinalizing] = useState(false);
+  const [duplicatingBriefing, setDuplicatingBriefing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [answeredRequired, setAnsweredRequired] = useState(0);
   const [totalRequired, setTotalRequired] = useState(0);
@@ -651,6 +652,15 @@ export default function CampaignIntake() {
     queryFn: () => customFetch<{ campaign: any }>(`/api/campaigns/${campaignId}`),
     enabled: !!campaignId
   });
+
+  const { data: masterplanState, isLoading: masterplanStateLoading } = useQuery<{ versions: { status?: string; approvedAt?: string | null }[] }>({
+    queryKey: [`/api/campaigns/${campaignId}/masterplan/versions`],
+    queryFn: () => customFetch(`/api/campaigns/${campaignId}/masterplan/versions`),
+    enabled: !!campaignId,
+    refetchInterval: 15_000,
+  });
+  const approvedMasterplanExists = (masterplanState?.versions ?? []).some(version => version.status === "approved" || !!version.approvedAt);
+  const briefingLocked = loadingCampaign || masterplanStateLoading || approvedMasterplanExists;
 
   const { data, isLoading: loadingIntake } = useGetIntake(campaignId, {
     query: { enabled: !!campaignId && !!campaignData, queryKey: getGetIntakeQueryKey(campaignId) },
@@ -735,7 +745,8 @@ export default function CampaignIntake() {
 
   // ── AI AUTO-TRIGGER on fresh campaign ─────────────────────────────────────────
   useEffect(() => {
-    if (isLoading || !campaignId || aiTriggered.current) return;
+    if (isLoading || masterplanStateLoading || !campaignId || aiTriggered.current) return;
+    if (briefingLocked) { aiTriggered.current = true; return; }
     aiTriggered.current = true;
 
     const intakeD = (data?.intakeData ?? {}) as Record<string, unknown>;
@@ -787,7 +798,7 @@ export default function CampaignIntake() {
     };
 
     void autoTrigger();
-  }, [isLoading, campaignId, data, t]);
+  }, [isLoading, masterplanStateLoading, campaignId, data, t, briefingLocked]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1039,6 +1050,10 @@ export default function CampaignIntake() {
 
   // ── Send message ──────────────────────────────────────────────────────────────
   const handleSend = async () => {
+    if (briefingLocked) {
+      toast.error(t("O briefing foi bloqueado após a aprovação do Master Plan.", "The briefing was locked after Master Plan approval.", "El briefing se bloqueó tras aprobar el plan maestro."));
+      return;
+    }
     if (!inputValue.trim() && pendingFiles.length === 0) return;
     // `sending` state is a stale closure across near-simultaneous invocations
     // (e.g. Enter mashed twice before React commits the re-render) — a plain
@@ -1117,6 +1132,10 @@ export default function CampaignIntake() {
 
   // ── Finalize intake ────────────────────────────────────────────────────────────
   const handleFinalize = async () => {
+    if (briefingLocked) {
+      toast.error(t("O Master Plan já foi aprovado e o briefing está bloqueado.", "The Master Plan is already approved and the briefing is locked.", "El plan maestro ya está aprobado y el briefing está bloqueado."));
+      return;
+    }
     setFinalizing(true);
     try {
       await customFetch(`/api/intake/${campaignId}/finalize`, {
@@ -1153,6 +1172,20 @@ export default function CampaignIntake() {
     }
     setLocation(`/campaigns/${campaignId}/strategy`);
     setFinalizing(false);
+  };
+
+  const handleCreateBriefingCopy = async () => {
+    if (!approvedMasterplanExists || duplicatingBriefing) return;
+    setDuplicatingBriefing(true);
+    try {
+      const result = await customFetch<{ campaign: { id: string } }>(`/api/campaigns/${campaignId}/duplicate`, { method: "POST" });
+      toast.success(t("Nova campanha criada com uma cópia do briefing. Você já pode editar.", "New campaign created with a copy of the briefing. You can edit it now.", "Nueva campaña creada con una copia del briefing. Ya puedes editarlo."));
+      setLocation(`/campaigns/${result.campaign.id}/intake`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("Não foi possível copiar o briefing.", "Couldn't copy the briefing.", "No se pudo copiar el briefing."));
+    } finally {
+      setDuplicatingBriefing(false);
+    }
   };
 
   if (isLoading && messages.length === 0) {
@@ -1498,17 +1531,18 @@ export default function CampaignIntake() {
                 <Button
                   variant="outline"
                   onClick={() => { inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); inputRef.current?.focus(); }}
-                  disabled={sending || confirmingType}
+                  disabled={briefingLocked || sending || confirmingType}
                   className="font-mono rounded-none gap-2"
                 >
                   <MessageSquare className="h-4 w-4" />{t("Ajustar briefing", "Adjust briefing", "Ajustar briefing")}
                 </Button>
                 <Button
                   onClick={() => setShowMasterPlan(true)}
+                  disabled={briefingLocked}
                   className="w-full font-mono uppercase tracking-widest rounded-none gap-2 h-14 text-sm btn-weapon-primary"
                   style={{ fontSize: "0.8rem", letterSpacing: "0.12em" }}
                 >
-                  <Rocket className="h-5 w-5" />{t("Ver e Aprovar Master Plan do Lançamento", "Review and Approve Launch Master Plan", "Ver y aprobar el plan maestro de lanzamiento")}<ChevronRight className="h-5 w-5" />
+                  <Rocket className="h-5 w-5" />{approvedMasterplanExists ? t("Master Plan aprovado", "Master Plan approved", "Plan maestro aprobado") : t("Ver e Aprovar Master Plan do Lançamento", "Review and Approve Launch Master Plan", "Ver y aprobar el plan maestro de lanzamiento")}<ChevronRight className="h-5 w-5" />
                 </Button>
 
                 <p className="font-mono text-[10px] text-center text-muted-foreground/40 uppercase tracking-widest -mt-1">
@@ -1517,11 +1551,21 @@ export default function CampaignIntake() {
               </div>
             </div>
           )}
-          {/* Input remains available after completion. */}
+          {/* Keep the completed brief readable, but lock all editing after approval. */}
           {(
             <div className="border border-t-0 border-border/50 p-3 shrink-0 flex flex-col gap-2">
+              {approvedMasterplanExists && (
+                <div className="flex flex-wrap items-center justify-between gap-3" role="status">
+                  <p className="text-sm text-amber-300">
+                    {t("Master Plan aprovado. Este briefing está bloqueado para edição.", "Master Plan approved. This briefing is locked for editing.", "Plan maestro aprobado. Este briefing está bloqueado para edición.")}
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => void handleCreateBriefingCopy()} disabled={duplicatingBriefing}>
+                    {duplicatingBriefing ? t("Criando cópia…", "Creating copy…", "Creando copia…") : t("Criar campanha para editar uma cópia", "Create campaign to edit a copy", "Crear campaña para editar una copia")}
+                  </Button>
+                </div>
+              )}
               {(chatComplete || isComplete) && (
-                <p className="text-sm text-muted-foreground">{t("Quer corrigir algo? Descreva o ajuste abaixo antes de aprovar o plano.", "Want to correct something? Describe the change below before approving the plan.", "¿Quieres corregir algo? Describe el ajuste abajo antes de aprobar el plan.")}</p>
+                !briefingLocked && <p className="text-sm text-muted-foreground">{t("Quer corrigir algo? Descreva o ajuste abaixo antes de aprovar o plano.", "Want to correct something? Describe the change below before approving the plan.", "¿Quieres corregir algo? Describe el ajuste abajo antes de aprobar el plan.")}</p>
               )}
 
               {/* Hidden file inputs */}
@@ -1643,7 +1687,7 @@ export default function CampaignIntake() {
                   }
                 }}
                 placeholder={voiceMode ? t("Modo voz ativo — clique no microfone para falar, o agente responde e lê a resposta em voz alta", "Voice mode is on — click the microphone to speak; the agent will reply and read its response aloud", "Modo de voz activo: pulsa el micrófono para hablar; el agente responderá y leerá la respuesta en voz alta") : t("Digite sua resposta ou clique no microfone para falar…", "Type your answer or click the microphone to speak…", "Escribe tu respuesta o pulsa el micrófono para hablar…")}
-                disabled={sending || confirmingType}
+                disabled={briefingLocked || sending || confirmingType}
                 rows={isMobile ? 4 : 6}
                 className="w-full font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-3 resize-y text-foreground placeholder:text-muted-foreground/40 transition-all min-h-[90px]"
               />
@@ -1655,6 +1699,7 @@ export default function CampaignIntake() {
                 <button
                   type="button"
                   onClick={() => handleSetVoiceMode(!voiceMode)}
+                  disabled={briefingLocked}
                   title={voiceMode ? t("Desativar modo voz (auto-envio + leitura em voz alta)", "Turn off voice mode (auto-send + read aloud)", "Desactivar modo de voz (envío automático + lectura en voz alta)") : t("Ativar modo voz — fale, o agente responde em voz alta", "Turn on voice mode — speak and the agent replies aloud", "Activar modo de voz: habla y el agente responderá en voz alta")}
                   className={`h-10 px-3 flex items-center gap-2 border-2 font-mono text-[11px] uppercase tracking-widest font-bold transition-all rounded-sm shrink-0 ${
                     voiceMode
@@ -1670,7 +1715,7 @@ export default function CampaignIntake() {
                 <button
                   type="button"
                   onClick={toggleVoice}
-                  disabled={sending || confirmingType || isTranscribing}
+                  disabled={briefingLocked || sending || confirmingType || isTranscribing}
                   title={isListening ? t("Parar gravação", "Stop recording", "Detener grabación") : t("Gravar mensagem por voz (PT-BR)", "Record a voice message (Brazilian Portuguese)", "Grabar mensaje de voz (portugués brasileño)")}
                   aria-label={isListening ? t("Parar gravação", "Stop recording", "Detener grabación") : t("Gravar mensagem por voz", "Record a voice message", "Grabar mensaje de voz")}
                   className={`h-10 px-3 flex items-center gap-2 border font-mono text-[11px] uppercase tracking-widest transition-all rounded-sm shrink-0 ${
@@ -1684,7 +1729,7 @@ export default function CampaignIntake() {
                 </button>
 
                 {/* Attach text/image */}
-                <button type="button" onClick={() => fileInputRef.current?.click()}
+                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={briefingLocked}
                   title={t("Anexar arquivo ou imagem", "Attach a file or image", "Adjuntar archivo o imagen")}
                   className="h-10 px-2.5 flex items-center gap-1.5 border border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-all rounded-sm shrink-0">
                   <Paperclip className="h-4 w-4" />
@@ -1697,7 +1742,7 @@ export default function CampaignIntake() {
                 {/* Attach audio/video → Whisper transcription */}
                 <button type="button"
                   onClick={() => audioInputRef.current?.click()}
-                  disabled={isTranscribing || sending}
+                  disabled={briefingLocked || isTranscribing || sending}
                   title={t("Subir áudio ou vídeo para transcrição automática (MP3, MP4, WAV, WebM…)", "Upload audio or video for automatic transcription (MP3, MP4, WAV, WebM…)", "Sube audio o video para transcripción automática (MP3, MP4, WAV, WebM…)" )}
                   className={`h-10 px-2.5 flex items-center gap-1.5 border transition-all rounded-sm shrink-0
                     ${isTranscribing
@@ -1717,7 +1762,7 @@ export default function CampaignIntake() {
                 {!isMobile && (
                   <Button variant="outline" size="sm" title={t("Nova linha", "New line", "Nueva línea")}
                     onClick={() => { setInputValue(v => v + "\n"); setTimeout(() => inputRef.current?.focus(), 0); }}
-                    disabled={sending || confirmingType}
+                    disabled={briefingLocked || sending || confirmingType}
                     className="font-mono rounded-sm h-10 px-3 border-border/50 text-muted-foreground hover:text-foreground shrink-0">
                     <CornerDownLeft className="h-4 w-4" />
                   </Button>
@@ -1726,7 +1771,7 @@ export default function CampaignIntake() {
                 {/* Send */}
                 <Button
                   onClick={() => { stopAutoSendCountdown(); void handleSend(); }}
-                  disabled={sending || (inputValue.trim() === "" && pendingFiles.length === 0) || confirmingType}
+                  disabled={briefingLocked || sending || (inputValue.trim() === "" && pendingFiles.length === 0) || confirmingType}
                   title={t("Enviar (Enter)", "Send (Enter)", "Enviar (Enter)")}
                   className="font-mono rounded-sm h-10 px-4 btn-weapon-primary shrink-0 gap-1.5">
                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4" /><span className="hidden sm:inline text-[11px] uppercase tracking-widest">{t("Enviar", "Send", "Enviar")}</span></>}
@@ -1747,7 +1792,7 @@ export default function CampaignIntake() {
       {view === "form" && (() => {
         const questions = data?.questions ?? [];
         const campaignStatus = (data as unknown as { status?: string })?.status ?? "";
-        const isLive = !!campaignStatus && !["draft", "analyzing", "strategy_ready", "generating", "awaiting_approval"].includes(campaignStatus);
+        const isLive = briefingLocked || (!!campaignStatus && !["draft", "analyzing", "strategy_ready", "generating", "awaiting_approval"].includes(campaignStatus));
 
         // Group questions by section
         const sections = questions.reduce<Record<string, typeof questions>>((acc, q) => {
@@ -1775,7 +1820,9 @@ export default function CampaignIntake() {
             <div className="border border-border/50 bg-card/30 px-3 py-2 flex items-center gap-2">
               <Database className="h-3.5 w-3.5 text-primary" />
               <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest flex-1">
-                {isLive
+                {briefingLocked
+                  ? t("Briefing bloqueado — Master Plan aprovado", "Briefing locked — Master Plan approved", "Briefing bloqueado — plan maestro aprobado")
+                  : isLive
                   ? t("Briefing — modo somente leitura (campanha em execução)", "Briefing — read-only mode (campaign in progress)", "Briefing: solo lectura (campaña en curso)")
                   : t("Edite campos individuais — sincronizados com o chat em tempo real", "Edit individual fields — synced with chat in real time", "Edita campos individuales; se sincronizan con el chat en tiempo real")}
               </span>

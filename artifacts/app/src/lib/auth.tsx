@@ -72,6 +72,7 @@ interface AuthContextType {
   plan: Plan | null;
   planSlug: string | null;
   isAdmin: boolean;
+  isAdminLoading: boolean;
   logout: () => void;
   silentRefresh: () => Promise<boolean>;
   workspacesData: WorkspacesResponse | null;
@@ -206,7 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })().catch(() => { /* Local sign-out already completed; network may be offline. */ });
   };
 
-  const { data: meData, isError } = useGetMe({
+  const { data: meData, isError, isLoading: isAdminLoading } = useGetMe({
     query: {
       enabled: !!token,
       retry: false,
@@ -269,6 +270,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       plan,
       planSlug,
       isAdmin,
+      isAdminLoading: !!token && (isAdminLoading || isError),
       logout,
       silentRefresh,
       workspacesData: workspacesData ?? null,

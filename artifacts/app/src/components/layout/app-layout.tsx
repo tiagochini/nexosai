@@ -381,11 +381,6 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
                     {item.external && (
                       <ExternalLink className="h-2.5 w-2.5 text-muted-foreground/40 shrink-0" />
                     )}
-                    {item.href === "/admin" && (
-                      <span className="text-[11px] font-mono bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-1.5 py-0.5 rounded-sm shrink-0">
-                        Owner
-                      </span>
-                    )}
                   </div>
                 );
                 return item.external ? (
@@ -507,20 +502,6 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
                 <CreditCard className="h-3.5 w-3.5 mr-2" />{tr.user.credits}
               </Link>
             </DropdownMenuItem>
-            {isAdmin && (
-              <DropdownMenuItem asChild className="cursor-pointer focus:bg-yellow-400/10 focus:text-yellow-400 rounded-none font-mono text-xs uppercase tracking-widest">
-                <Link href="/admin" onClick={onNav}>
-                  <ShieldCheck className="h-3.5 w-3.5 mr-2" />{tr.sidebar.admin}
-                </Link>
-              </DropdownMenuItem>
-            )}
-            {isAdmin && (
-              <DropdownMenuItem asChild className="cursor-pointer focus:bg-red-400/10 focus:text-red-400 rounded-none font-mono text-xs uppercase tracking-widest">
-                <Link href="/admin/nexos-launch" onClick={onNav}>
-               <Rocket className="h-3.5 w-3.5 mr-2" />{t("Sala de lançamento", "Launch room", "Sala de lanzamiento")}
-                </Link>
-              </DropdownMenuItem>
-            )}
             <DropdownMenuSeparator className="bg-border/30" />
             {/* Locale picker */}
             <div className="px-2 py-1.5">

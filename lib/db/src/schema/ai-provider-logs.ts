@@ -125,7 +125,7 @@ export function calculateCostUsd(
 
 export function calculateCreditsFromCost(
   costUsd: number,
-  marginMultiplier = 1.5,
+  marginMultiplier = 3,
 ): number {
   return Math.ceil(costUsd * CREDITS_PER_USD * marginMultiplier);
 }

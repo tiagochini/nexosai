@@ -2,6 +2,8 @@ import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { AppError } from "../../lib/errors.js";
+import { and, desc, eq } from "drizzle-orm";
+import { auditLogsTable, campaignsTable, contentPiecesTable, db, domainsTable, launchSequencesTable, pagesTable, paidMediaDatasetsTable } from "@workspace/db";
 import {
   generateCampaignContent,
   getCampaignContent,
@@ -26,9 +28,128 @@ import {
   getCampaignPublishPreview,
   publishCampaignContentPiece,
 } from "../social/social.service.js";
+import { publishCampaignLanding } from "../landing-publication/landing-publication.service.js";
 
 const router = Router();
 router.use(requireAuth);
+
+const landingSetupSchema = z.object({
+  scheduledAt: z.iso.datetime(),
+  desiredDomain: z.string().trim().min(1).max(253).regex(/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i, "Informe um domínio válido, como lp.seudominio.com"),
+  tracking: z.object({
+    metaDatasetId: z.string().uuid().nullable().default(null),
+    tiktokDatasetId: z.string().uuid().nullable().default(null),
+  }),
+  ctas: z.array(z.object({
+    key: z.string().min(1).max(80),
+    label: z.string().trim().min(1).max(160),
+    action: z.enum(["capture_lead", "url", "whatsapp"]),
+    target: z.string().trim().min(1).max(500),
+  })).min(1).max(20),
+});
+
+async function approvedLandingPiece(campaignId: string, workspaceId: string) {
+  const [piece] = await db.select({ id: contentPiecesTable.id, title: contentPiecesTable.title, status: contentPiecesTable.status })
+    .from(contentPiecesTable)
+    .where(and(
+      eq(contentPiecesTable.campaignId, campaignId),
+      eq(contentPiecesTable.workspaceId, workspaceId),
+      eq(contentPiecesTable.type, "landing_page_structure"),
+      eq(contentPiecesTable.status, "approved"),
+    )).limit(1);
+  return piece ?? null;
+}
+
+// Landing implementation details are collected only after the LP itself is approved.
+router.get("/:campaignId/landing-setup", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+  const [campaign] = await db.select({ landingSetupData: campaignsTable.landingSetupData })
+    .from(campaignsTable).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId))).limit(1);
+  if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "CAMPAIGN_NOT_FOUND" }); return; }
+  const landing = await approvedLandingPiece(campaignId, req.auth.workspaceId);
+  const [sequences, datasets] = await Promise.all([
+    db.select({ id: launchSequencesTable.id, name: launchSequencesTable.name, status: launchSequencesTable.status, leadCaptureEnabled: launchSequencesTable.leadCaptureEnabled })
+      .from(launchSequencesTable).where(and(eq(launchSequencesTable.workspaceId, req.auth.workspaceId), eq(launchSequencesTable.campaignId, campaignId))),
+    db.select({ id: paidMediaDatasetsTable.id, provider: paidMediaDatasetsTable.provider, name: paidMediaDatasetsTable.name, providerDatasetId: paidMediaDatasetsTable.providerDatasetId })
+      .from(paidMediaDatasetsTable).where(eq(paidMediaDatasetsTable.workspaceId, req.auth.workspaceId)),
+  ]);
+  const [published] = await db.select({ publishedUrl: pagesTable.publishedUrl, publishedAt: pagesTable.publishedAt })
+    .from(pagesTable).where(and(eq(pagesTable.campaignId, campaignId), eq(pagesTable.workspaceId, req.auth.workspaceId), eq(pagesTable.status, "published"))).orderBy(desc(pagesTable.publishedAt)).limit(1);
+  res.json({ approved: !!landing, landingTitle: landing?.title ?? null, setup: campaign.landingSetupData ?? {}, sequences, datasets, published: published ?? null });
+});
+
+router.put("/:campaignId/landing-setup", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+  const parsed = landingSetupSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" }); return; }
+  const [campaign] = await db.select({ id: campaignsTable.id }).from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId))).limit(1);
+  if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "CAMPAIGN_NOT_FOUND" }); return; }
+  const [alreadyPublished] = await db.select({ id: pagesTable.id }).from(pagesTable)
+    .where(and(eq(pagesTable.campaignId, campaignId), eq(pagesTable.workspaceId, req.auth.workspaceId), eq(pagesTable.status, "published"))).limit(1);
+  if (alreadyPublished) { res.status(409).json({ error: "Esta landing já foi publicada. Gere uma nova campanha/revisão para alterar a página publicada.", code: "LANDING_ALREADY_PUBLISHED" }); return; }
+  const landing = await approvedLandingPiece(campaignId, req.auth.workspaceId);
+  if (!landing) { res.status(409).json({ error: "Aprove a landing page antes de configurar publicação, CTAs e rastreamento.", code: "LANDING_APPROVAL_REQUIRED" }); return; }
+
+  for (const [provider, datasetId] of [["meta_ads", parsed.data.tracking.metaDatasetId], ["tiktok_ads", parsed.data.tracking.tiktokDatasetId]] as const) {
+    if (!datasetId) continue;
+    const [dataset] = await db.select({ id: paidMediaDatasetsTable.id }).from(paidMediaDatasetsTable)
+      .where(and(eq(paidMediaDatasetsTable.id, datasetId), eq(paidMediaDatasetsTable.workspaceId, req.auth.workspaceId), eq(paidMediaDatasetsTable.provider, provider))).limit(1);
+    if (!dataset) { res.status(400).json({ error: `O dataset selecionado não pertence a esta conta ou não é ${provider}.`, code: "INVALID_TRACKING_DATASET" }); return; }
+  }
+
+  for (const cta of parsed.data.ctas) {
+    if (cta.action === "capture_lead") {
+      const [sequence] = await db.select({ id: launchSequencesTable.id, leadCaptureEnabled: launchSequencesTable.leadCaptureEnabled, status: launchSequencesTable.status }).from(launchSequencesTable)
+        .where(and(eq(launchSequencesTable.id, cta.target), eq(launchSequencesTable.workspaceId, req.auth.workspaceId), eq(launchSequencesTable.campaignId, campaignId))).limit(1);
+      if (!sequence) { res.status(400).json({ error: "A sequência de captura selecionada não pertence a esta campanha.", code: "INVALID_LEAD_SEQUENCE" }); return; }
+      if (!sequence.leadCaptureEnabled || !["active", "scheduled"].includes(sequence.status)) { res.status(409).json({ error: "Ative ou agende a captura de leads na sequência antes de usar este CTA.", code: "LEAD_CAPTURE_NOT_READY" }); return; }
+    } else if (cta.action === "url" && !/^https:\/\//i.test(cta.target)) {
+      res.status(400).json({ error: "O destino do CTA precisa usar HTTPS.", code: "INVALID_CTA_URL" }); return;
+    } else if (cta.action === "whatsapp" && !/^\+?[0-9 ()-]{8,25}$/.test(cta.target)) {
+      res.status(400).json({ error: "Informe um telefone de WhatsApp válido com código do país.", code: "INVALID_WHATSAPP_TARGET" }); return;
+    }
+  }
+
+  const setup = { ...parsed.data, landingPieceId: landing.id, savedAt: new Date().toISOString(), status: "ready_for_implementation" };
+  await db.update(campaignsTable).set({ landingSetupData: setup }).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId)));
+  await db.insert(auditLogsTable).values({ workspaceId: req.auth.workspaceId, campaignId, action: "campaign.landing_setup.saved", actor: req.auth.userId, data: { landingPieceId: landing.id, scheduledAt: setup.scheduledAt, desiredDomain: setup.desiredDomain, ctaCount: setup.ctas.length, metaTrackingConfigured: !!setup.tracking.metaDatasetId, tiktokTrackingConfigured: !!setup.tracking.tiktokDatasetId } });
+  res.json({ setup });
+});
+
+router.post("/:campaignId/landing-publish", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+  const [campaign] = await db.select({ id: campaignsTable.id, landingSetupData: campaignsTable.landingSetupData })
+    .from(campaignsTable).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId))).limit(1);
+  if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "CAMPAIGN_NOT_FOUND" }); return; }
+  const landing = await db.select({ id: contentPiecesTable.id, title: contentPiecesTable.title, content: contentPiecesTable.content })
+    .from(contentPiecesTable).where(and(eq(contentPiecesTable.campaignId, campaignId), eq(contentPiecesTable.workspaceId, req.auth.workspaceId), eq(contentPiecesTable.type, "landing_page_structure"), eq(contentPiecesTable.status, "approved"))).limit(1);
+  if (!landing[0]) { res.status(409).json({ error: "Aprove a landing page antes de publicar.", code: "LANDING_APPROVAL_REQUIRED" }); return; }
+  const setup = campaign.landingSetupData as any;
+  if (setup?.status !== "ready_for_implementation" || !setup.scheduledAt || !setup.desiredDomain || !Array.isArray(setup.ctas) || !setup.tracking) {
+    res.status(409).json({ error: "Salve o plano completo de implementação antes de publicar.", code: "LANDING_SETUP_REQUIRED" }); return;
+  }
+  if (new Date(setup.scheduledAt).getTime() > Date.now()) { res.status(409).json({ error: `Publicação agendada para ${setup.scheduledAt}. Ela só poderá ser ativada a partir desse horário.`, code: "LANDING_NOT_DUE" }); return; }
+  const [domain] = await db.select({ id: domainsTable.id, domain: domainsTable.domain, dnsVerified: domainsTable.dnsVerified })
+    .from(domainsTable).where(and(eq(domainsTable.workspaceId, req.auth.workspaceId), eq(domainsTable.domain, String(setup.desiredDomain).toLowerCase()))).limit(1);
+  if (!domain) { res.status(409).json({ error: "Adicione e verifique este domínio em Domínios antes de publicar a landing.", code: "LANDING_DOMAIN_NOT_CONFIGURED" }); return; }
+  const source = landing[0].content as any;
+  if (!source || !Array.isArray(source.sections)) { res.status(409).json({ error: "A estrutura aprovada da landing está incompleta.", code: "LANDING_SOURCE_INVALID" }); return; }
+  const sequenceId = setup.ctas.find((item: any) => item.action === "capture_lead")?.target;
+  if (setup.ctas.some((item: any) => item.action === "capture_lead") && !sequenceId) { res.status(409).json({ error: "Selecione a sequência para os CTAs de captura de lead.", code: "LANDING_CAPTURE_CTA_REQUIRED" }); return; }
+  const [metaDataset, tiktokDataset] = await Promise.all([
+    setup.tracking.metaDatasetId ? db.select({ providerDatasetId: paidMediaDatasetsTable.providerDatasetId }).from(paidMediaDatasetsTable).where(and(eq(paidMediaDatasetsTable.id, setup.tracking.metaDatasetId), eq(paidMediaDatasetsTable.workspaceId, req.auth.workspaceId), eq(paidMediaDatasetsTable.provider, "meta_ads"))).limit(1).then(rows => rows[0]) : null,
+    setup.tracking.tiktokDatasetId ? db.select({ providerDatasetId: paidMediaDatasetsTable.providerDatasetId }).from(paidMediaDatasetsTable).where(and(eq(paidMediaDatasetsTable.id, setup.tracking.tiktokDatasetId), eq(paidMediaDatasetsTable.workspaceId, req.auth.workspaceId), eq(paidMediaDatasetsTable.provider, "tiktok_ads"))).limit(1).then(rows => rows[0]) : null,
+  ]);
+  if ((setup.tracking.metaDatasetId && !metaDataset) || (setup.tracking.tiktokDatasetId && !tiktokDataset)) { res.status(409).json({ error: "Um dos pixels configurados não está mais disponível. Revise o plano de implementação.", code: "LANDING_TRACKING_DATASET_INVALID" }); return; }
+  const result = await publishCampaignLanding({
+    workspaceId: req.auth.workspaceId, campaignId, title: landing[0].title, domainId: domain.id, domain: domain.domain,
+    source, implementation: { ctas: setup.ctas, tracking: { metaPixelId: metaDataset?.providerDatasetId ?? null, tiktokPixelId: tiktokDataset?.providerDatasetId ?? null } }, ...(sequenceId ? { sequenceId } : {}),
+  });
+  await db.update(campaignsTable).set({ landingSetupData: { ...setup, status: "published", publishedAt: new Date().toISOString(), pageId: result.page.id } })
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId)));
+  res.status(201).json({ url: result.page.publishedUrl, pageId: result.page.id, revisionId: result.revision.id, deploymentId: result.deployment.id, status: result.deployment.status });
+});
 
 // GET /campaigns/:campaignId/content — list all content pieces
 router.get("/:campaignId/content", async (req, res): Promise<void> => {

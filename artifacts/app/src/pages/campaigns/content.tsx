@@ -1,5 +1,5 @@
 import { ContinuousContentOverview } from "@/components/ContinuousContentOverview";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, Link, useLocation, useSearch } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { customFetch, ApiError } from "@workspace/api-client-react/custom-fetch";
@@ -708,6 +708,7 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
   const [generatingVisual, setGeneratingVisual] = useState(false);
   const [visualCreativeId, setVisualCreativeId] = useState<string | null>(null);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [publishLoading, setPublishLoading] = useState(false);
   const [publishPreview, setPublishPreview] = useState<{
     platforms: { provider: string; platform: string; label: string; integrationId: string; accountId: string | null }[];
@@ -717,6 +718,14 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
     fingerprint: string;
   } | null>(null);
   const [publishConfirming, setPublishConfirming] = useState(false);
+  const [scheduleTargetId, setScheduleTargetId] = useState("");
+  const [scheduleLocalDateTime, setScheduleLocalDateTime] = useState("");
+  const [schedulePreview, setSchedulePreview] = useState<{
+    fingerprint: string;
+    items: { provider: string; platform: string; accountId: string | null; caption: string; scheduledAt: string }[];
+  } | null>(null);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleConfirming, setScheduleConfirming] = useState(false);
 
   const needsVisual = VISUAL_PLATFORMS.includes(piece.platform);
   const isSocialPlatform = (["instagram", "facebook", "tiktok"] as Platform[]).includes(piece.platform);
@@ -760,6 +769,69 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
       toast.error(err instanceof ApiError ? err.message : t("Erro ao publicar", "Error publishing", "Error al publicar"));
     } finally {
       setPublishConfirming(false);
+    }
+  }
+
+  async function handleOpenScheduleModal() {
+    if (publishLoading) return;
+    const rootPieceId = piece.id.includes("::") ? piece.id.split("::")[0] : piece.id;
+    setPublishLoading(true);
+    try {
+      const result = await customFetch<{
+        preview: { platforms: { provider: string; platform: string; label: string; integrationId: string; accountId: string | null }[]; pieceType: string; caption: string; mediaUrls: string[]; fingerprint: string };
+      }>(`/api/campaigns/${campaignId}/content/${rootPieceId}/publish-social`, { method: "POST", body: JSON.stringify({ confirmed: false }) });
+      setPublishPreview(result.preview);
+      setScheduleTargetId(result.preview.platforms[0]?.integrationId ?? "");
+      setScheduleLocalDateTime("");
+      setSchedulePreview(null);
+      setScheduleModalOpen(true);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : t("Erro ao verificar integrações", "Error checking integrations", "Error al verificar las integraciones"));
+    } finally {
+      setPublishLoading(false);
+    }
+  }
+
+  async function handleBuildSchedulePreview() {
+    if (scheduleLoading || !publishPreview || !scheduleTargetId || !scheduleLocalDateTime) return;
+    const scheduledAt = new Date(scheduleLocalDateTime);
+    if (!Number.isFinite(scheduledAt.getTime()) || scheduledAt.getTime() < Date.now() + 60_000) {
+      toast.error(t("Escolha um horário pelo menos 1 minuto no futuro.", "Choose a time at least 1 minute in the future.", "Elige una hora al menos 1 minuto en el futuro."));
+      return;
+    }
+    const rootPieceId = piece.id.includes("::") ? piece.id.split("::")[0] : piece.id;
+    setScheduleLoading(true);
+    try {
+      const result = await customFetch<{ preview: { fingerprint: string; items: { provider: string; platform: string; accountId: string | null; caption: string; scheduledAt: string }[] } }>(
+        `/api/social/campaigns/${campaignId}/schedule/preview`,
+        { method: "POST", body: JSON.stringify({ selections: [{ contentPieceId: rootPieceId, integrationId: scheduleTargetId, scheduledAt: scheduledAt.toISOString() }] }) },
+      );
+      setSchedulePreview(result.preview);
+    } catch (err) {
+      setSchedulePreview(null);
+      toast.error(err instanceof ApiError ? err.message : t("Erro ao preparar o agendamento", "Error preparing schedule", "Error al preparar la programación"));
+    } finally {
+      setScheduleLoading(false);
+    }
+  }
+
+  async function handleConfirmSchedule() {
+    if (scheduleConfirming || !schedulePreview || !publishPreview || !scheduleTargetId || !scheduleLocalDateTime) return;
+    const rootPieceId = piece.id.includes("::") ? piece.id.split("::")[0] : piece.id;
+    const selection = { contentPieceId: rootPieceId, integrationId: scheduleTargetId, scheduledAt: new Date(scheduleLocalDateTime).toISOString() };
+    setScheduleConfirming(true);
+    try {
+      const result = await customFetch<{ count: number }>(
+        `/api/social/campaigns/${campaignId}/schedule`,
+        { method: "POST", body: JSON.stringify({ selections: [selection], previewFingerprint: schedulePreview.fingerprint }) },
+      );
+      toast.success(t(`Agendamento confirmado (${result.count} publicação).`, `Schedule confirmed (${result.count} post).`, `Programación confirmada (${result.count} publicación).`));
+      await queryClient.invalidateQueries({ queryKey: ["/api/social/posts"] });
+      setScheduleModalOpen(false);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : t("Erro ao confirmar o agendamento", "Error confirming schedule", "Error al confirmar la programación"));
+    } finally {
+      setScheduleConfirming(false);
     }
   }
 
@@ -1023,6 +1095,7 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
             )}
             {/* A1 FIX (Bug #04): Publicar nas Redes — gate explícito, não automático */}
             {isSocialPlatform && piece.status === "approved" && (
+              <>
               <Button
                 size="sm"
                 variant="ghost"
@@ -1034,6 +1107,17 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
                 {publishLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Share2 className="h-3 w-3" />}
                 {publishLoading ? t("Verificando...", "Checking...", "Verificando...") : t("Publicar", "Publish", "Publicar")}
               </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleOpenScheduleModal}
+                disabled={publishLoading}
+                className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-amber-400 hover:text-amber-300 hover:bg-amber-400/10"
+                title={t("Agendar publicação com prévia e confirmação", "Schedule publication with preview and confirmation", "Programar publicación con vista previa y confirmación")}
+              >
+                <Calendar className="h-3 w-3" />{t("Agendar", "Schedule", "Programar")}
+              </Button>
+              </>
             )}
             <Button
               size="sm"
@@ -1138,6 +1222,61 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
               >
                 {publishConfirming ? <Loader2 className="h-3 w-3 animate-spin" /> : <Share2 className="h-3 w-3" />}
                 {publishConfirming ? t("Publicando...", "Publishing...", "Publicando...") : t("Confirmar e publicar", "Confirm and publish", "Confirmar y publicar")}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={scheduleModalOpen} onOpenChange={(open) => { setScheduleModalOpen(open); if (!open) setSchedulePreview(null); }}>
+        <DialogContent className="max-w-lg rounded-none border border-border/60 bg-card">
+          <DialogHeader>
+            <DialogTitle className="font-mono uppercase tracking-widest text-sm flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-amber-400" />{t("Agendar publicação", "Schedule publication", "Programar publicación")}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground mt-1">
+              {t("Escolha a conta e o horário. Confira a prévia antes de confirmar; o conteúdo será revalidado no envio.", "Choose the account and time. Review the preview before confirming; content is revalidated at dispatch.", "Elige la cuenta y la hora. Revisa la vista previa antes de confirmar; el contenido se volverá a validar al enviarse.")}
+            </DialogDescription>
+          </DialogHeader>
+
+          {publishPreview && (
+            <div className="space-y-3 py-1">
+              {publishPreview.platforms.length === 0 ? (
+                <div className="text-sm text-muted-foreground border border-border/40 p-3 bg-muted/20">
+                  {t("Nenhuma integração conectada aceita este conteúdo.", "No connected integration accepts this content.", "Ninguna integración conectada acepta este contenido.")}
+                </div>
+              ) : (
+                <>
+                  <label className="block space-y-1.5">
+                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-mono">{t("Conta de destino", "Destination account", "Cuenta de destino")}</span>
+                    <select value={scheduleTargetId} onChange={(event) => { setScheduleTargetId(event.target.value); setSchedulePreview(null); }} className="w-full h-9 px-2 text-sm bg-background border border-border/60 rounded-none">
+                      {publishPreview.platforms.map((target) => <option key={target.integrationId} value={target.integrationId}>{target.label} · {target.accountId ?? target.platform}</option>)}
+                    </select>
+                  </label>
+                  <label className="block space-y-1.5">
+                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-mono">{t("Data e hora local", "Local date and time", "Fecha y hora local")}</span>
+                    <input type="datetime-local" value={scheduleLocalDateTime} onChange={(event) => { setScheduleLocalDateTime(event.target.value); setSchedulePreview(null); }} className="w-full h-9 px-2 text-sm bg-background border border-border/60 rounded-none" />
+                  </label>
+                  <Button size="sm" variant="outline" onClick={handleBuildSchedulePreview} disabled={scheduleLoading || !scheduleLocalDateTime || !scheduleTargetId} className="rounded-none font-mono uppercase text-[11px] tracking-widest">
+                    {scheduleLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}{t("Gerar prévia", "Build preview", "Generar vista previa")}
+                  </Button>
+                  {schedulePreview?.items.map((item, index) => (
+                    <div key={`${item.provider}-${index}`} className="border border-amber-400/30 bg-amber-400/5 p-3 space-y-2">
+                      <div className="text-xs text-amber-300 font-mono">{item.platform} · {item.accountId ?? item.provider} · {new Date(item.scheduledAt).toLocaleString()}</div>
+                      <div className="text-xs text-foreground/80 whitespace-pre-wrap line-clamp-5">{item.caption || t("Sem legenda", "No caption", "Sin texto")}</div>
+                      <div className="text-[10px] text-muted-foreground">{t("A confirmação vincula conteúdo, conta e horário. Mudanças invalidam esta prévia.", "Confirmation binds content, account, and time. Changes invalidate this preview.", "La confirmación vincula contenido, cuenta y hora. Los cambios invalidan esta vista previa.")}</div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setScheduleModalOpen(false)} className="rounded-none font-mono uppercase text-[11px] tracking-widest">{t("Cancelar", "Cancel", "Cancelar")}</Button>
+            {schedulePreview && (
+              <Button size="sm" onClick={handleConfirmSchedule} disabled={scheduleConfirming} className="rounded-none font-mono uppercase text-[11px] tracking-widest bg-amber-500/20 border border-amber-400/40 text-amber-300 hover:bg-amber-500/30 gap-1.5">
+                {scheduleConfirming ? <Loader2 className="h-3 w-3 animate-spin" /> : <Calendar className="h-3 w-3" />}{scheduleConfirming ? t("Confirmando...", "Confirming...", "Confirmando...") : t("Confirmar agendamento", "Confirm schedule", "Confirmar programación")}
               </Button>
             )}
           </DialogFooter>
@@ -3025,6 +3164,180 @@ function LandingPagePreview({
         </div>
       )}
     </div>
+  );
+}
+
+type LandingCtaAction = "capture_lead" | "url" | "whatsapp";
+interface LandingSetupCta { key: string; label: string; action: LandingCtaAction; target: string }
+interface LandingSetupResponse {
+  approved: boolean;
+  landingTitle: string | null;
+  setup: {
+    scheduledAt?: string;
+    desiredDomain?: string;
+    tracking?: { metaDatasetId?: string | null; tiktokDatasetId?: string | null };
+    ctas?: LandingSetupCta[];
+    status?: string;
+    savedAt?: string;
+  };
+  sequences: Array<{ id: string; name: string; status: string }>;
+  datasets: Array<{ id: string; provider: string; name: string | null; providerDatasetId: string }>;
+  published?: { publishedUrl: string | null; publishedAt: string | null } | null;
+}
+
+function LandingImplementationForm({ campaignId, data }: { campaignId: string; data: LandingPageData }) {
+  const t = useUiText();
+  const queryClient = useQueryClient();
+  const queryKey = [`/api/campaigns/${campaignId}/landing-setup`];
+  const { data: remote, isLoading } = useQuery({
+    queryKey,
+    queryFn: () => customFetch<LandingSetupResponse>(`/api/campaigns/${campaignId}/landing-setup`),
+    staleTime: 0,
+  });
+  const ctaDefinitions: LandingSetupCta[] = useMemo(() => {
+    const ctas: LandingSetupCta[] = [];
+    const heroLabel = data.aboveFoldAnalysis?.primaryCTA?.trim();
+    if (heroLabel) ctas.push({ key: "hero", label: heroLabel, action: "capture_lead", target: "" });
+    (data.sections ?? []).forEach((section, index) => {
+      const label = section.cta?.text?.trim();
+      if (label) ctas.push({ key: `section-${index + 1}`, label, action: "capture_lead", target: "" });
+    });
+    return ctas.length ? ctas : [{ key: "primary", label: "CTA principal", action: "capture_lead", target: "" }];
+  }, [data]);
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [desiredDomain, setDesiredDomain] = useState("");
+  const [ctas, setCtas] = useState<LandingSetupCta[]>([]);
+  const [metaDatasetId, setMetaDatasetId] = useState("");
+  const [tiktokDatasetId, setTiktokDatasetId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const initialized = useRef(false);
+
+  const toLocalDateTimeInput = (value: string) => {
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return "";
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+    return localDate.toISOString().slice(0, 16);
+  };
+
+  useEffect(() => {
+    if (!remote || initialized.current) return;
+    const saved = remote.setup ?? {};
+    setScheduledAt(saved.scheduledAt ? toLocalDateTimeInput(saved.scheduledAt) : "");
+    setDesiredDomain(saved.desiredDomain ?? "");
+    setCtas(saved.ctas?.length ? saved.ctas : ctaDefinitions);
+    setMetaDatasetId(saved.tracking?.metaDatasetId ?? "");
+    setTiktokDatasetId(saved.tracking?.tiktokDatasetId ?? "");
+    initialized.current = true;
+  }, [remote, ctaDefinitions, initialized]);
+
+  const sequences = remote?.sequences ?? [];
+  const metaDatasets = (remote?.datasets ?? []).filter(item => item.provider === "meta_ads");
+  const tiktokDatasets = (remote?.datasets ?? []).filter(item => item.provider === "tiktok_ads");
+
+  const save = async () => {
+    if (!scheduledAt || !desiredDomain.trim() || !ctas.length || ctas.some(cta => !cta.target.trim())) {
+      toast.error(t("Preencha data, domínio e destino de cada CTA.", "Enter the date, domain, and destination for every CTA.", "Completa la fecha, el dominio y el destino de cada CTA."));
+      return;
+    }
+    setSaving(true);
+    try {
+      await customFetch(`/api/campaigns/${campaignId}/landing-setup`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scheduledAt: new Date(scheduledAt).toISOString(),
+          desiredDomain: desiredDomain.trim().toLowerCase(),
+          tracking: { metaDatasetId: metaDatasetId || null, tiktokDatasetId: tiktokDatasetId || null },
+          ctas,
+        }),
+      });
+      await queryClient.invalidateQueries({ queryKey });
+      toast.success(t("Plano de implementação salvo.", "Implementation plan saved.", "Plan de implementación guardado."));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("Não foi possível salvar a configuração.", "Could not save the setup.", "No se pudo guardar la configuración."));
+    } finally { setSaving(false); }
+  };
+
+  const publish = async () => {
+    setPublishing(true);
+    try {
+      const result = await customFetch<{ url: string }>(`/api/campaigns/${campaignId}/landing-publish`, { method: "POST" });
+      await queryClient.invalidateQueries({ queryKey });
+      toast.success(t("Landing publicada", "Landing published", "Landing publicada"));
+      window.open(result.url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("Não foi possível publicar a landing.", "Could not publish the landing.", "No se pudo publicar la landing."));
+    } finally { setPublishing(false); }
+  };
+
+  const fieldClass = "w-full h-10 bg-background border border-border/50 px-3 text-sm rounded-none focus:outline-none focus:border-primary";
+  const labelClass = "block font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70 mb-1.5";
+
+  return (
+    <section className="border border-primary/30 bg-card/40 p-4 sm:p-5 space-y-5" data-testid="landing-implementation-form">
+      <header>
+        <p className="font-mono text-[10px] uppercase tracking-widest text-primary mb-1">{t("Próxima etapa após aprovação", "Next step after approval", "Siguiente etapa tras la aprobación")}</p>
+        <h3 className="font-mono text-sm font-bold uppercase tracking-wide">{t("Programar publicação, CTAs e rastreamento", "Schedule publication, CTAs, and tracking", "Programar publicación, CTAs y seguimiento")}</h3>
+        <p className="text-xs text-muted-foreground mt-1">{t("Defina como a landing aprovada será publicada e para onde cada botão levará.", "Define how the approved landing page will be published and where each button will send visitors.", "Define cómo se publicará la landing aprobada y adónde llevará cada botón.")}</p>
+      </header>
+
+      {isLoading ? <div className="font-mono text-xs text-muted-foreground">{t("Carregando configuração…", "Loading setup…", "Cargando configuración…")}</div> : (
+        <>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label><span className={labelClass}>{t("Data e hora planejadas", "Planned date and time", "Fecha y hora previstas")}</span><input type="datetime-local" className={fieldClass} value={scheduledAt} onChange={event => setScheduledAt(event.target.value)} data-testid="landing-scheduled-at" /></label>
+            <label><span className={labelClass}>{t("Domínio ou subdomínio", "Domain or subdomain", "Dominio o subdominio")}</span><input className={fieldClass} placeholder="lp.seudominio.com" value={desiredDomain} onChange={event => setDesiredDomain(event.target.value)} data-testid="landing-domain" /><span className="text-[10px] text-muted-foreground">{t("Será necessário verificar o domínio e configurar DNS/HTTPS antes da publicação.", "Verify the domain and configure DNS/HTTPS before publishing.", "Habrá que verificar el dominio y configurar DNS/HTTPS antes de publicar.")}</span></label>
+          </div>
+
+          <div className="space-y-3">
+            <div><h4 className="font-mono text-xs font-bold uppercase tracking-widest">{t("Destino de cada CTA", "Destination for each CTA", "Destino de cada CTA")}</h4><p className="text-[11px] text-muted-foreground mt-1">{t("Os botões encontrados na landing aparecem aqui. Escolha a ação e o destino de cada um.", "Buttons found on the landing page appear here. Choose an action and destination for each.", "Los botones encontrados en la landing aparecen aquí. Elige una acción y un destino para cada uno.")}</p></div>
+            {ctas.map((cta, index) => (
+              <div key={cta.key} className="grid gap-3 border border-border/40 bg-background/40 p-3 md:grid-cols-[1.2fr_1fr_1.5fr]">
+                <label><span className={labelClass}>{t("Texto do botão", "Button label", "Texto del botón")}</span><input className={fieldClass} value={cta.label} onChange={event => setCtas(current => current.map((item, i) => i === index ? { ...item, label: event.target.value } : item))} /></label>
+                <label><span className={labelClass}>{t("Ação", "Action", "Acción")}</span><select className={fieldClass} value={cta.action} onChange={event => setCtas(current => current.map((item, i) => i === index ? { ...item, action: event.target.value as LandingCtaAction, target: "" } : item))}>
+                  <option value="capture_lead">{t("Capturar lead", "Capture lead", "Captar lead")}</option><option value="url">{t("Abrir URL", "Open URL", "Abrir URL")}</option><option value="whatsapp">WhatsApp</option>
+                </select></label>
+                <label><span className={labelClass}>{t("Destino", "Destination", "Destino")}</span>{cta.action === "capture_lead" ? (
+                  <select className={fieldClass} value={cta.target} onChange={event => setCtas(current => current.map((item, i) => i === index ? { ...item, target: event.target.value } : item))}>
+                    <option value="">{t("Selecione a sequência desta campanha", "Select this campaign's sequence", "Selecciona la secuencia de esta campaña")}</option>{sequences.map(sequence => <option key={sequence.id} value={sequence.id}>{sequence.name}</option>)}
+                  </select>
+                ) : <input className={fieldClass} placeholder={cta.action === "url" ? "https://…" : "+55 11 99999-9999"} value={cta.target} onChange={event => setCtas(current => current.map((item, i) => i === index ? { ...item, target: event.target.value } : item))} />}</label>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            <div><h4 className="font-mono text-xs font-bold uppercase tracking-widest">{t("Pixels e eventos da campanha", "Campaign pixels and events", "Píxeles y eventos de campaña")}</h4><p className="text-[11px] text-muted-foreground mt-1">{t("Selecione datasets já cadastrados na área de mídia paga. Os eventos planejados são PageView e Lead; a instalação só será ativada após a publicação da landing.", "Select datasets already registered in paid media. Planned events are PageView and Lead; tracking activates only when the landing page is published.", "Selecciona datasets registrados en medios pagos. Los eventos previstos son PageView y Lead; el seguimiento se activa al publicar la landing.")}</p></div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label><span className={labelClass}>Meta Pixel / Dataset</span><select className={fieldClass} value={metaDatasetId} onChange={event => setMetaDatasetId(event.target.value)}><option value="">{t("Sem dataset Meta selecionado", "No Meta dataset selected", "Sin dataset de Meta seleccionado")}</option>{metaDatasets.map(item => <option key={item.id} value={item.id}>{item.name || item.providerDatasetId} · {item.providerDatasetId}</option>)}</select></label>
+              <label><span className={labelClass}>TikTok Pixel</span><select className={fieldClass} value={tiktokDatasetId} onChange={event => setTiktokDatasetId(event.target.value)}><option value="">{t("Sem dataset TikTok selecionado", "No TikTok dataset selected", "Sin dataset de TikTok seleccionado")}</option>{tiktokDatasets.map(item => <option key={item.id} value={item.id}>{item.name || item.providerDatasetId} · {item.providerDatasetId}</option>)}</select></label>
+            </div>
+            <p className="text-[10px] text-muted-foreground">{t("A configuração respeitará o consentimento de marketing do visitante. Se o dataset não aparecer, cadastre-o primeiro em Mídia paga.", "Tracking will respect visitor marketing consent. If a dataset is missing, register it first in Paid Media.", "El seguimiento respetará el consentimiento de marketing. Si no aparece el dataset, regístralo primero en Medios pagos.")}</p>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/40 pt-4">
+            <p className="max-w-xl text-[10px] text-amber-300/80">{t("Este formulário registra o plano para a equipe/NexOS implementar. Salvar não publica a página nem ativa pixels ou links externos.", "This form records the implementation plan. Saving does not publish the page or activate pixels or external links.", "Este formulario registra el plan de implementación. Guardarlo no publica la página ni activa píxeles o enlaces externos.")}</p>
+            <Button onClick={() => void save()} disabled={saving || isLoading || !!remote?.published} className="rounded-none font-mono uppercase tracking-widest gap-2 btn-weapon-primary h-10 text-xs" data-testid="save-landing-setup">
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}{t("Salvar plano de implementação", "Save implementation plan", "Guardar plan de implementación")}
+            </Button>
+          </div>
+          {remote?.setup?.savedAt && <p className="font-mono text-[10px] text-success">{t("Plano salvo", "Plan saved", "Plan guardado")} · {new Date(remote.setup.savedAt).toLocaleString()}</p>}
+          {remote?.published?.publishedUrl ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 border border-success/30 bg-success/5 p-3 text-xs">
+              <span>{t("Landing publicada", "Landing published", "Landing publicada")}{remote.published.publishedAt ? ` · ${new Date(remote.published.publishedAt).toLocaleString()}` : ""}</span>
+              <a className="text-primary underline" href={remote.published.publishedUrl} target="_blank" rel="noreferrer">{remote.published.publishedUrl}</a>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/40 pt-4">
+              <p className="max-w-xl text-[10px] text-muted-foreground">{t("Publicar ficará disponível após salvar o plano e verificar o domínio. A data agendada impede publicação antecipada; depois dela, a ativação é manual por este botão. A captura exige uma sequência ativa.", "Publishing is available after saving the plan and verifying the domain. The scheduled date blocks early publication; after that, activate it manually with this button. Lead capture requires an active sequence.", "La publicación estará disponible tras guardar el plan y verificar el dominio. La fecha programada impide publicar antes; después, la activación se hace manualmente con este botón. La captura requiere una secuencia activa.")}</p>
+              <Button onClick={() => void publish()} disabled={publishing || saving || isLoading || !remote?.approved || remote.setup?.status !== "ready_for_implementation"} className="rounded-none font-mono uppercase tracking-widest gap-2 btn-weapon-primary h-10 text-xs" data-testid="publish-campaign-landing">
+                {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}{t("Publicar landing", "Publish landing", "Publicar landing")}
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 
@@ -4923,25 +5236,32 @@ export default function ContentApproval() {
         {activeTab === "landing" && (
           <div>
             {landingPageData ? (
-              <LandingPagePreview
-                data={landingPageData}
-                onApprove={rawLandingPiece ? () => void handleApprove(rawLandingPiece.id) : undefined}
-                onReject={rawLandingPiece ? async () => {
-                  setLoadingPiece(rawLandingPiece.id);
-                  try {
-                    await customFetch<{ piece: unknown }>(`/api/campaigns/${campaignId}/content/${rawLandingPiece.id}/reject`, {
-                      method: "POST", headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ reason: "Estrutura rejeitada — gerar nova versão" }),
-                    });
-                    await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
-                     toast.success(t("Estrutura da landing page rejeitada.", "Landing page structure rejected.", "Estructura de página de destino rechazada."));
-                   } catch { toast.error(t("Erro ao rejeitar", "Error rejecting", "Error al rechazar")); }
-                  finally { setLoadingPiece(null); }
-                } : undefined}
-                isApproved={rawLandingPiece?.status === "approved"}
-                isRejected={rawLandingPiece?.status === "rejected"}
-                loading={loadingPiece === rawLandingPiece?.id}
-              />
+              <>
+                <LandingPagePreview
+                  data={landingPageData}
+                  onApprove={rawLandingPiece ? () => void handleApprove(rawLandingPiece.id) : undefined}
+                  onReject={rawLandingPiece ? async () => {
+                    setLoadingPiece(rawLandingPiece.id);
+                    try {
+                      await customFetch<{ piece: unknown }>(`/api/campaigns/${campaignId}/content/${rawLandingPiece.id}/reject`, {
+                        method: "POST", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ reason: "Estrutura rejeitada — gerar nova versão" }),
+                      });
+                      await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
+                      toast.success(t("Estrutura da landing page rejeitada.", "Landing page structure rejected.", "Estructura de página de destino rechazada."));
+                    } catch { toast.error(t("Erro ao rejeitar", "Error rejecting", "Error al rechazar")); }
+                    finally { setLoadingPiece(null); }
+                  } : undefined}
+                  isApproved={rawLandingPiece?.status === "approved"}
+                  isRejected={rawLandingPiece?.status === "rejected"}
+                  loading={loadingPiece === rawLandingPiece?.id}
+                />
+                {rawLandingPiece?.status === "approved" && (
+                  <div className="mt-5">
+                    <LandingImplementationForm campaignId={campaignId} data={landingPageData} />
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-20 font-mono text-sm text-muted-foreground/40 uppercase tracking-widest">
                 {t("A landing page ainda não foi gerada", "Landing page has not been generated yet", "La página de destino aún no se ha generado")}

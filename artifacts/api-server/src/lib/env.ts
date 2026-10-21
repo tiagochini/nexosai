@@ -35,9 +35,15 @@ export const env = {
   RESEND_API_KEY: process.env["RESEND_API_KEY"] ?? "",
   RESEND_FROM_EMAIL:
     process.env["RESEND_FROM_EMAIL"] ?? "lancamento@agencianexos.vip",
+  SMTP_HOST: process.env["SMTP_HOST"] ?? "",
+  SMTP_PORT: Number.parseInt(process.env["SMTP_PORT"] ?? "465", 10),
+  SMTP_SECURE: process.env["SMTP_SECURE"] !== "false",
+  SMTP_USER: process.env["SMTP_USER"] ?? "",
+  SMTP_PASSWORD: process.env["SMTP_PASSWORD"] ?? "",
+  SMTP_FROM_EMAIL: process.env["SMTP_FROM_EMAIL"] ?? "",
   NEXOS_BASE_DOMAIN: process.env["NEXOS_BASE_DOMAIN"] ?? "agencianexos.vip",
   CREDIT_MARGIN_MULTIPLIER: parseFloat(
-    process.env["CREDIT_MARGIN_MULTIPLIER"] ?? "1.5",
+    process.env["CREDIT_MARGIN_MULTIPLIER"] ?? "3",
   ),
   APP_URL:
     process.env["APP_URL"] ??
@@ -55,6 +61,11 @@ export const env = {
     process.env["META_WEBHOOK_PUBLIC_BASE_URL"] ?? "",
   TIKTOK_CLIENT_KEY: process.env["TIKTOK_CLIENT_KEY"] ?? "",
   TIKTOK_CLIENT_SECRET: process.env["TIKTOK_CLIENT_SECRET"] ?? "",
+  // TikTok for Business Marketing API credentials are separate from organic Login Kit.
+  TIKTOK_ADS_APP_ID: process.env["TIKTOK_ADS_APP_ID"] ?? "",
+  TIKTOK_ADS_APP_SECRET: process.env["TIKTOK_ADS_APP_SECRET"] ?? "",
+  // Copy the advertiser authorization URL generated in TikTok for Business My Apps.
+  TIKTOK_ADS_AUTH_URL: process.env["TIKTOK_ADS_AUTH_URL"] ?? "",
   GOOGLE_CLIENT_ID: process.env["GOOGLE_CLIENT_ID"] ?? "",
   GOOGLE_CLIENT_SECRET: process.env["GOOGLE_CLIENT_SECRET"] ?? "",
   GOOGLE_ADS_DEVELOPER_TOKEN: process.env["GOOGLE_ADS_DEVELOPER_TOKEN"] ?? "",

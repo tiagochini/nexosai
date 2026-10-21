@@ -1,11 +1,12 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNotNull } from "drizzle-orm";
 import {
   db,
   campaignsTable,
+  masterplanVersionsTable,
   auditLogsTable,
   type Campaign,
 } from "@workspace/db";
-import { NotFoundError, ValidationError } from "../../lib/errors.js";
+import { AppError, NotFoundError, ValidationError } from "../../lib/errors.js";
 import type { Logger } from "pino";
 import { startProductIntake, updateProductIntake } from "../product-intake/product-intake.service.js";
 import { preserveBriefingContext } from "./intake-context.js";
@@ -1054,6 +1055,8 @@ export async function saveIntakeData(
   intakeData: Record<string, unknown>,
   log: Logger,
 ): Promise<Campaign> {
+  await assertBriefingEditable(campaignId, workspaceId);
+
   const [campaign] = await db
     .select()
     .from(campaignsTable)
@@ -1102,6 +1105,29 @@ export async function saveIntakeData(
 
   log.info({ campaignId, fieldsCount: Object.keys(intakeData).length }, "Intake saved");
   return updated;
+}
+
+/** Once a Master Plan has been approved, the briefing becomes immutable. */
+export async function assertBriefingEditable(campaignId: string, workspaceId: string): Promise<void> {
+  const [campaign] = await db.select({ id: campaignsTable.id })
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!campaign) throw new NotFoundError("Campaign");
+
+  const [approvedMasterplan] = await db
+    .select({ id: masterplanVersionsTable.id })
+    .from(masterplanVersionsTable)
+    .where(and(
+      eq(masterplanVersionsTable.campaignId, campaignId),
+      eq(masterplanVersionsTable.workspaceId, workspaceId),
+      isNotNull(masterplanVersionsTable.approvedAt),
+    ))
+    .limit(1);
+
+  if (approvedMasterplan) {
+    throw new AppError(409, "O briefing está bloqueado porque o Master Plan já foi aprovado.", "BRIEFING_LOCKED_AFTER_MASTERPLAN_APPROVAL");
+  }
 }
 
 export function validateIntakeCompleteness(

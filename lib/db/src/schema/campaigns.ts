@@ -94,6 +94,8 @@ export const campaignsTable = pgTable("campaigns", {
   offerData: jsonb("offer_data").notNull().default({}),
   targetingData: jsonb("targeting_data").notNull().default({}),
   audienceData: jsonb("audience_data").notNull().default({}),
+  /** Customer-approved landing publication, CTA routing, and tracking setup. */
+  landingSetupData: jsonb("landing_setup_data").notNull().default({}),
   memoryData: jsonb("memory_data").notNull().default({}),
   brainData: jsonb("brain_data").notNull().default({}),
   durationDays: integer("duration_days"),

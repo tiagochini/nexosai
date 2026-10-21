@@ -25,8 +25,8 @@ import {
 import { getCampaignControlRoom, getCampaignControlRoomEvidence, getCampaignControlRoomPreviews, getCampaignControlRoomVersionSources, getCampaignControlRoomVersionDiff } from "./control-room.service.js";
 import { triggerStrategyPhase } from "../orchestration/orchestration.service.js";
 import { AppError, ValidationError } from "../../lib/errors.js";
-import { db, workspacesTable, CAMPAIGN_CREDIT_BUFFER } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, workspacesTable, masterplanVersionsTable, CAMPAIGN_CREDIT_BUFFER } from "@workspace/db";
+import { and, eq, isNotNull } from "drizzle-orm";
 import {
   getIntakeQuestions,
   validateIntakeCompleteness,
@@ -162,6 +162,53 @@ router.post("/", async (req, res): Promise<void> => {
 
   try {
     const campaign = await createCampaign(req.auth.workspaceId, parsed.data, req.log, req.auth.userId);
+    res.status(201).json({ campaign });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+router.post("/:id/duplicate", async (req, res): Promise<void> => {
+  const id = Array.isArray(req.params["id"]) ? req.params["id"][0]! : req.params["id"]!;
+  try {
+    const source = await getCampaign(id, req.auth.workspaceId);
+    const [approvedMasterplan] = await db
+      .select({ id: masterplanVersionsTable.id })
+      .from(masterplanVersionsTable)
+      .where(and(
+        eq(masterplanVersionsTable.campaignId, id),
+        eq(masterplanVersionsTable.workspaceId, req.auth.workspaceId),
+        isNotNull(masterplanVersionsTable.approvedAt),
+      ))
+      .limit(1);
+
+    if (!approvedMasterplan) {
+      res.status(409).json({ error: "Só é possível criar uma cópia depois da aprovação do Master Plan.", code: "MASTERPLAN_NOT_APPROVED" });
+      return;
+    }
+    if (!source.commercialProductId || !source.commercialSubscriptionId) {
+      res.status(409).json({ error: "A campanha não possui um produto e uma assinatura ativos para criar outra campanha.", code: "CAMPAIGN_SUBSCRIPTION_REQUIRED" });
+      return;
+    }
+
+    const sourceIntake = (source.intakeData ?? {}) as Record<string, unknown>;
+    const copiedIntake = Object.fromEntries(
+      Object.entries(sourceIntake).filter(([key]) => !["_conversationHistory", "_intakeChatComplete", "_psychologicalProfile"].includes(key)),
+    );
+    const campaign = await createCampaign(req.auth.workspaceId, {
+      title: `${source.title} — revisão`,
+      type: source.type as typeof createCampaignSchema.shape.type._output,
+      track: source.track as typeof createCampaignSchema.shape.track._output,
+      locale: source.locale as typeof createCampaignSchema.shape.locale._output,
+      commercialProductId: source.commercialProductId,
+      commercialSubscriptionId: source.commercialSubscriptionId,
+      intakeData: copiedIntake,
+    }, req.log, req.auth.userId);
+
     res.status(201).json({ campaign });
   } catch (err) {
     if (err instanceof AppError) {
@@ -425,6 +472,7 @@ router.get("/:id/credit-stats", async (req, res): Promise<void> => {
   const totalCredits = aiRows.reduce((s, r) => s + (r.totalCredits ?? 0), 0);
   const totalTokens  = aiRows.reduce((s, r) => s + (r.totalTokens ?? 0), 0);
   const totalCostUsd = aiRows.reduce((s, r) => s + (r.totalCostUsd ?? 0), 0);
+  const totalCalls   = aiRows.reduce((s, r) => s + Number(r.calls ?? 0), 0);
 
   res.json({
     campaignId: id,
@@ -432,6 +480,7 @@ router.get("/:id/credit-stats", async (req, res): Promise<void> => {
     totalCredits,
     totalTokens,
     totalCostUsd,
+    totalCalls,
     byAgent: aiRows
       .map(r => ({
         agentType: r.agentType ?? "desconhecido",

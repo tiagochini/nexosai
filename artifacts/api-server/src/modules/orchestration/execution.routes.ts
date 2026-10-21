@@ -14,12 +14,9 @@ import {
   db,
   campaignsTable,
   workspacesTable,
-  usersTable,
   workspaceIntegrationsTable,
   contentPiecesTable,
   auditLogsTable,
-  getCampaignCreditEstimate,
-  CAMPAIGN_CREDIT_BUFFER,
 } from "@workspace/db";
 import { eq, and, inArray, ne, count } from "drizzle-orm";
 import { env } from "../../lib/env.js";
@@ -34,62 +31,6 @@ router.use(requireAuth);
 // to avoid 502s from the Replit proxy before the server is fully warmed up.
 const MODULE_LOADED_AT = Date.now();
 const SERVER_CONTENT_GRACE_MS = 5_000;
-
-// ── Pre-flight credit advisory ────────────────────────────────────────────────
-// AUDIT FIX (EFFICACY RULE): Credits are advisory — never a hard gate.
-// A paying customer's pipeline must NEVER be stopped by a low-credit state.
-// Previous behavior: threw HTTP 402, permanently blocking execution.
-// New behavior: logs a warning and returns credit state metadata.
-// The route handler can include this in the response headers/body for
-// frontend soft-warnings (toast with action), but the pipeline proceeds.
-interface CreditCheckResult {
-  sufficient: boolean;
-  balance: number;
-  required: number;
-  shortage: number;
-  phaseCost: number;
-}
-
-async function checkCreditsForPhase(
-  workspaceId: string,
-  campaignId: string,
-  phase: "strategy" | "content" | "launch",
-): Promise<CreditCheckResult> {
-  const [workspace] = await db
-    .select({ balance: workspacesTable.creditsBalance })
-    .from(workspacesTable)
-    .where(eq(workspacesTable.id, workspaceId))
-    .limit(1);
-
-  if (!workspace) return { sufficient: true, balance: 0, required: 0, shortage: 0, phaseCost: 0 };
-
-  const [campaign] = await db
-    .select({ type: campaignsTable.type })
-    .from(campaignsTable)
-    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
-    .limit(1);
-
-  const campaignType = campaign?.type ?? "launch";
-  const estimate = getCampaignCreditEstimate(campaignType);
-  void estimate;
-
-  const phaseCost = {
-    strategy: 45,
-    content: 150,
-    launch: 37,
-  }[phase];
-
-  const required = phaseCost + CAMPAIGN_CREDIT_BUFFER;
-  const balance = workspace.balance ?? 0;
-
-  if (balance < required) {
-    const shortage = required - balance;
-    // Advisory-only: log + return deficit data; DO NOT throw.
-    // The pipeline continues. Client shows a soft "low credits" banner.
-    return { sufficient: false, balance, required, shortage, phaseCost };
-  }
-  return { sufficient: true, balance, required, shortage: 0, phaseCost };
-}
 
 /** Single launch gate used by both explicit launch endpoints. Keep all outbound
  * launch checks here so no route can accidentally bypass them. */
@@ -120,9 +61,8 @@ async function launchCampaign(
   if (!validation.isViable) {
     throw new AppError(422, `Validação cruzada de agentes detectou ${validation.blockers.length} conflito(s) crítico(s): ${validation.blockers[0]?.description ?? "verificar agentes"}`, "CROSS_VALIDATION_FAILED", { blockers: validation.blockers, warnings: validation.warnings, metrics: validation.metrics });
   }
-  const creditAdvisory = await checkCreditsForPhase(workspaceId, campaignId, "launch");
   const result = await triggerExecutionPhase(campaignId, workspaceId, log, userId);
-  return { result, creditAdvisory };
+  return { result };
 }
 
 // GET /campaigns/:campaignId/execution/status
@@ -150,8 +90,8 @@ router.post("/:campaignId/execute", async (req, res): Promise<void> => {
 
   try {
     if (parsed.data.phase === "launch") {
-      const { result, creditAdvisory } = await launchCampaign(campaignId, req.auth.workspaceId, req.auth.userId, req.log);
-      res.status(202).json({ message: result.queued ? "Lançamento enfileirado — campanha será ativada em instantes" : "Lançamento iniciado diretamente", campaignId, action: "execute", jobId: result.jobId ?? null, queued: result.queued, creditWarning: creditAdvisory.sufficient ? undefined : { balance: creditAdvisory.balance, required: creditAdvisory.required, shortage: creditAdvisory.shortage } });
+      const { result } = await launchCampaign(campaignId, req.auth.workspaceId, req.auth.userId, req.log);
+      res.status(202).json({ message: result.queued ? "Lançamento enfileirado — campanha será ativada em instantes" : "Lançamento iniciado diretamente", campaignId, action: "execute", jobId: result.jobId ?? null, queued: result.queued });
       return;
     }
     const result = parsed.data.phase === "strategy"
@@ -182,7 +122,6 @@ router.post("/:campaignId/execute/strategy", async (req, res): Promise<void> => 
   const campaignId = req.params["campaignId"] as string;
 
   try {
-    const creditAdvisory = await checkCreditsForPhase(req.auth.workspaceId, campaignId, "strategy");
     const result = await triggerStrategyPhase(campaignId, req.auth.workspaceId, req.log);
     res.status(202).json({
       message: result.queued
@@ -192,11 +131,6 @@ router.post("/:campaignId/execute/strategy", async (req, res): Promise<void> => 
       action: "run_strategy",
       jobId: result.jobId ?? null,
       queued: result.queued,
-      creditWarning: creditAdvisory.sufficient ? undefined : {
-        balance: creditAdvisory.balance,
-        required: creditAdvisory.required,
-        shortage: creditAdvisory.shortage,
-      },
     });
   } catch (err) {
     if (err instanceof AppError) {
@@ -229,7 +163,6 @@ router.post("/:campaignId/execute/content", async (req, res): Promise<void> => {
   }
 
   try {
-    const creditAdvisory = await checkCreditsForPhase(req.auth.workspaceId, campaignId, "content");
     const result = await triggerContentPhase(campaignId, req.auth.workspaceId, req.log);
     res.status(202).json({
       message: result.queued
@@ -239,11 +172,6 @@ router.post("/:campaignId/execute/content", async (req, res): Promise<void> => {
       action: "generate_content",
       jobId: result.jobId ?? null,
       queued: result.queued,
-      creditWarning: creditAdvisory.sufficient ? undefined : {
-        balance: creditAdvisory.balance,
-        required: creditAdvisory.required,
-        shortage: creditAdvisory.shortage,
-      },
     });
   } catch (err) {
     if (err instanceof AppError) {
@@ -740,7 +668,7 @@ router.post("/:campaignId/execute/launch", async (req, res): Promise<void> => {
   const campaignId = req.params["campaignId"] as string;
 
   try {
-    const { result, creditAdvisory } = await launchCampaign(campaignId, req.auth.workspaceId, req.auth.userId, req.log);
+    const { result } = await launchCampaign(campaignId, req.auth.workspaceId, req.auth.userId, req.log);
     res.status(202).json({
       message: result.queued
         ? "Lançamento enfileirado — campanha será ativada em instantes"
@@ -749,11 +677,6 @@ router.post("/:campaignId/execute/launch", async (req, res): Promise<void> => {
       action: "execute",
       jobId: result.jobId ?? null,
       queued: result.queued,
-      creditWarning: creditAdvisory.sufficient ? undefined : {
-        balance: creditAdvisory.balance,
-        required: creditAdvisory.required,
-        shortage: creditAdvisory.shortage,
-      },
     });
   } catch (err) {
     if (err instanceof AppError) {

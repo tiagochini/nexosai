@@ -96,10 +96,11 @@ export type CreditTransaction = typeof creditTransactionsTable.$inferSelect;
 // token usage × CREDIT_MARGIN_MULTIPLIER — these flat values are for auxiliary
 // actions or legacy references only.
 //
-// Calibration basis (1 credit ≈ R$0.002 real AI cost | margin=1.5×):
-//   CREDITS_PER_USD=100 → face: $0.01/credit → actual AI cost: $0.0067/credit
-//   At R$5/USD: actual AI cost ≈ R$0.033/credit
-//   Pack sell price: R$0.17/credit → gross margin ≈ 81%
+// Dynamic campaign AI charges use a 3× markup by default:
+//   CREDITS_PER_USD=100 → face: $0.01/credit
+//   $0.10 provider cost → 30 credits charged → $0.30 face value.
+// Flat values below are legacy/auxiliary estimates and are not guaranteed to
+// match actual provider cost for actions that still use a fixed tariff.
 //
 // Critique-loop agents (copywriter, ad_copy, landing_page, compliance) run 3 AI
 // turns each, which triples their effective credit cost vs. single-turn agents.
@@ -340,4 +341,18 @@ export function getCampaignCreditEstimate(
   return (
     CAMPAIGN_CREDIT_ESTIMATES[campaignType] ?? CAMPAIGN_CREDIT_ESTIMATES.launch
   );
+}
+
+export type CampaignCreditBudgetPhase = "start" | "strategy" | "content" | "launch";
+
+/** Credits to require before starting work, based on the expected remaining campaign cost. */
+export function calculateRequiredCampaignCredits(
+  averageCampaignCredits: number,
+  alreadySpentCredits: number,
+  phase: CampaignCreditBudgetPhase,
+): number {
+  const remainingCampaignAverage = Math.max(0, Math.ceil(averageCampaignCredits) - Math.max(0, alreadySpentCredits));
+  if (phase === "start" || phase === "strategy") return Math.ceil(averageCampaignCredits);
+  const minimumPhaseCredits = phase === "content" ? 150 : 37;
+  return Math.max(minimumPhaseCredits, remainingCampaignAverage);
 }

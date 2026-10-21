@@ -204,7 +204,7 @@ export async function sendMetaCapiRequest(
   pixelId: string, token: string, event: MetaCapiEvent, transport: MetaCapiTransport = metaGraphFetch,
 ): Promise<ProviderConversionResult> {
   if (!pixelId) throw new PaidMediaProviderError("Meta pixel/dataset external ID is required.", "PRECONDITION_FAILED", 409);
-  const response = await transport(`https://graph.facebook.com/v20.0/${encodeURIComponent(pixelId)}/events`, {
+  const response = await transport(`https://graph.facebook.com/v26.0/${encodeURIComponent(pixelId)}/events`, {
     method: "POST", headers: { "Content-Type": "application/json", "X-NexOS-Idempotency-Key": event.eventId },
     body: JSON.stringify({ data: [{ event_name: event.eventName, event_time: Math.floor(event.eventTime.getTime() / 1000), event_id: event.eventId, action_source: "website", user_data: event.userData, ...(Object.keys(event.customData).length ? { custom_data: event.customData } : {}) }], access_token: token }),
   });
@@ -310,7 +310,7 @@ function entityPath(type: PaidMediaEntityKind): string {
 
 class MetaAdsAdapter implements PaidMediaProviderAdapter {
   readonly provider = "meta_ads" as const;
-  private readonly base = "https://graph.facebook.com/v20.0";
+  private readonly base = "https://graph.facebook.com/v26.0";
   capabilities(): PaidMediaProviderCapabilities {
     return {
       launchTreeCreation: "supported",

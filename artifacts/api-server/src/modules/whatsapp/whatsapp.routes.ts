@@ -11,6 +11,10 @@ import {
   handleWhatsAppWebhook,
 } from "./whatsapp.service.js";
 import {
+  checkWhatsAppGroupsEligibility,
+  createWhatsAppCampaignGroup,
+} from "./whatsapp-groups.service.js";
+import {
   constantTimeTokenMatches,
   verifyWhatsAppWebhookSignature,
 } from "./whatsapp-webhook.security.js";
@@ -30,9 +34,32 @@ const createSchema = z.object({
   scheduledAt: z.string().optional(),
 });
 
+const createGroupSchema = z.object({
+  campaignId: z.string().uuid(),
+  groupName: z.string().trim().min(1).max(100),
+  description: z.string().trim().max(2048).optional(),
+  approvalRequired: z.boolean().optional(),
+  segment: z.string().trim().max(50).optional(),
+});
+
 router.get("/status", requireAuth, async (req, res): Promise<void> => {
   const status = await getWhatsAppStatus(req.auth.workspaceId);
   res.json(status);
+});
+
+router.get("/groups/eligibility", requireAuth, async (req, res): Promise<void> => {
+  const status = await checkWhatsAppGroupsEligibility(req.auth.workspaceId);
+  res.json(status);
+});
+
+router.post("/groups", requireAuth, async (req, res): Promise<void> => {
+  const parsed = createGroupSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+  const result = await createWhatsAppCampaignGroup(req.auth.workspaceId, parsed.data);
+  res.status(201).json(result);
 });
 
 router.get("/dispatches", requireAuth, async (req, res): Promise<void> => {
