@@ -1,9 +1,10 @@
+import { newStudentSecret, hashStudentSecret, STUDENT_COOKIE } from "../modules/academy/academy-student-session.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { once } from "node:events";
 import express from "express";
 import { eq, inArray, sql } from "drizzle-orm";
-import { db, pool, usersTable, workspacesTable, plansTable, authRefreshSessionsTable as sessions, academyPurchasesTable as purchases, academyAccessEmailOutboxTable as jobs, academyAdminAuditTable as audits, academyDeliveryReconciliationsTable as reviews } from "@workspace/db";
+import { db, pool, academyStudentAccountsTable as studentAccounts, usersTable, workspacesTable, plansTable, authRefreshSessionsTable as sessions, academyPurchasesTable as purchases, academyAccessEmailOutboxTable as jobs, academyAdminAuditTable as audits, academyDeliveryReconciliationsTable as reviews } from "@workspace/db";
 import { issueTokens } from "../modules/auth/auth.service.js";
 import academyRouter from "../modules/academy/academy.routes.js";
 import { confirmAcademyManually, requestAcademyResend } from "../modules/academy/academy-delivery-intents.service.js";
@@ -61,14 +62,16 @@ try {
   const [receipt] = await db.select().from(jobs).where(eq(jobs.id, uncertain.id)); assert.equal(receipt!.status, "sent");
   const access = await localFetch(`${base}/verify/${(await db.select().from(purchases).where(eq(purchases.id, purchase)))[0]!.accessToken}`);
   assert.equal(access.status, 200); const publicResult = await access.json() as Record<string, unknown>; assert.deepEqual(Object.keys(publicResult).sort(), ["productId", "valid"]);
-  const tutor = (code?: string) => localFetch(`${base}/tutor`, { method: "POST", headers: { "Content-Type": "application/json", ...(code ? { "X-Academy-Access-Code": code } : {}) }, body: "{}" });
-  const [student] = await db.select().from(purchases).where(eq(purchases.id, purchase));
+  const tutor = (cookie?: string) => localFetch(`${base}/tutor`, { method: "POST", headers: { "Content-Type": "application/json", ...(cookie ? { Cookie: cookie } : {}) }, body: "{}" });
+  const secret = newStudentSecret(), studentCookie = `${STUDENT_COOKIE}=${other}.${secret}`;
+  await db.insert(studentAccounts).values({ userId: other, sessionHash: hashStudentSecret(secret), sessionExpiresAt: new Date(Date.now() + 60000) });
+  await db.update(purchases).set({ claimedByUserId: other }).where(eq(purchases.id, purchase));
   assert.equal((await tutor()).status, 401);
-  assert.equal((await tutor(student!.accessToken)).status, 403, "Mini-guide cannot consume complete-course AI tutor");
+  assert.equal((await tutor(studentCookie)).status, 403, "Mini-guide cannot consume complete-course AI tutor");
   await db.update(purchases).set({ productId: "complete-bundle" }).where(eq(purchases.id, purchase));
-  assert.equal((await tutor(student!.accessToken)).status, 400, "Active complete-bundle reaches input validation without calling AI");
+  assert.equal((await tutor(studentCookie)).status, 400, "Active complete-bundle reaches input validation without calling AI");
   await db.update(purchases).set({ revokedAt: new Date() }).where(eq(purchases.id, purchase));
-  assert.equal((await tutor(student!.accessToken)).status, 403, "Revoked students cannot call AI");
+  assert.equal((await tutor(studentCookie)).status, 403, "Revoked students cannot call AI");
   const audit = await db.select().from(audits).where(eq(audits.actorId, owner)); assert.ok(audit.length >= 5); assert.ok(audit.every((a) => !a.action.includes("owned-provider")));
   console.log("PASS P0: explicit owner sessions, ownership, revocation, no production shared-secret fallback, audit, private verification and evidence-based idempotent reconciliation; no real provider calls");
 } finally {

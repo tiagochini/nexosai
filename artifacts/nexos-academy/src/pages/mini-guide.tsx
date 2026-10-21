@@ -1,3 +1,4 @@
+import { academyFetch } from "@/lib/academy-session";
 import { useEffect, useState } from 'react';
 import Watermark from '@/components/Watermark';
 import AntiPiracyModal from '@/components/AntiPiracyModal';
@@ -11,8 +12,8 @@ export default function MiniGuide({ onNavigate, studentName, studentEmail }: Min
   const [showModal, setShowModal] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/api/academy/content/mini-guide', { headers: academyAccessHeaders(), cache: 'no-store', signal: controller.signal })
-      .then(async response => { if (!response.ok) throw new Error('Acesso ao material recusado. Confira seu código ou sessão.'); return response.json(); })
+    academyFetch('/api/academy/content/mini-guide', { headers: academyAccessHeaders(), cache: 'no-store', signal: controller.signal })
+      .then(async response => { if (!response.ok) throw new Error('Acesso ao material recusado. Entre na sua conta e confira seus produtos.'); return response.json(); })
       .then(data => setHtml(data.html)).catch(err => { if (!controller.signal.aborted) setError(err.message); });
     return () => controller.abort();
   }, []);

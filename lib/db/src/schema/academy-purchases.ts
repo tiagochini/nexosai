@@ -1,9 +1,12 @@
-import { pgTable, uuid, varchar, integer, timestamp, text } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, integer, timestamp, text, index } from "drizzle-orm/pg-core";
 import { academyGiftBatchesTable } from "./academy-gift-batches";
+import { usersTable } from "./users";
 
 export const academyPurchasesTable = pgTable("academy_purchases", {
   id: uuid("id").primaryKey().defaultRandom(),
   accessToken: varchar("access_token", { length: 32 }).unique().notNull(),
+  claimedByUserId: uuid("claimed_by_user_id").references(() => usersTable.id, { onDelete: "restrict" }),
+  claimedAt: timestamp("claimed_at", { withTimezone: true }),
   customerEmail: varchar("customer_email", { length: 255 }).notNull(),
   customerName: varchar("customer_name", { length: 255 }),
   productId: varchar("product_id", { length: 50 }).notNull(),
@@ -18,7 +21,7 @@ export const academyPurchasesTable = pgTable("academy_purchases", {
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
   refundedAmountCents: integer("refunded_amount_cents").notNull().default(0),
   financialHold: varchar("financial_hold", { length: 30 }),
-});
+}, table => [index("academy_purchases_claimed_user_idx").on(table.claimedByUserId)]);
 
 export type AcademyPurchase = typeof academyPurchasesTable.$inferSelect;
 export type NewAcademyPurchase = typeof academyPurchasesTable.$inferInsert;

@@ -1,3 +1,4 @@
+import { academyFetch } from "@/lib/academy-session";
 import { useState, useEffect, useRef } from "react";
 import { academyAccessHeaders } from "./owner";
 import { CURRICULUM } from "@/data/curriculum";
@@ -18,8 +19,9 @@ interface LessonProps {
   studentEmail?: string;
 }
 
-const LOG_KEY = (id: string) => `nexos-log-${id}`;
-const TUTOR_KEY = (id: string) => `nexos-tutor-${id}`;
+const studentStorageScope = () => localStorage.getItem("nexos-academy-user-id") ?? "owner";
+const LOG_KEY = (id: string) => `nexos-log-${studentStorageScope()}-${id}`;
+const TUTOR_KEY = (id: string) => `nexos-tutor-${studentStorageScope()}-${id}`;
 
 function loadLog(id: string): string {
   try { return localStorage.getItem(LOG_KEY(id)) ?? ""; } catch { return ""; }
@@ -56,7 +58,7 @@ function getAllLessonsInOrder() {
   );
 }
 
-const QUIZ_KEY = (id: string) => `nexos-quiz-${id}`;
+const QUIZ_KEY = (id: string) => `nexos-quiz-${studentStorageScope()}-${id}`;
 
 interface QuizState {
   answers: Record<number, number>;
@@ -268,7 +270,7 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
     saveTutorHistory(activeLesson!.id, updatedHistory);
 
     try {
-      const res = await fetch(`${API_BASE}/academy/tutor`, {
+      const res = await academyFetch(`${API_BASE}/academy/tutor`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...academyAccessHeaders() },
         body: JSON.stringify({

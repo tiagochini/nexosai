@@ -1,3 +1,5 @@
+import { academyFetch, studentRequest, type StudentSession } from "@/lib/academy-session";
+import AccessForm from "@/components/AccessForm";
 import { useState, useCallback, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Home from "@/pages/home";
@@ -11,7 +13,7 @@ import MiniGuide from "@/pages/mini-guide";
 import MiniGuideSales from "@/pages/mini-guide-sales";
 import FreeGuide from "@/pages/free-guide";
 import LeadMagnet from "@/pages/lead-magnet";
-import { useAntiPiracy, clearSession } from "@/hooks/useAntiPiracy";
+import { useAntiPiracy } from "@/hooks/useAntiPiracy";
 import { academyAccessHeaders } from '@/pages/owner';
 import { setPaidCurriculum, resetPaidCurriculum } from '@/data/curriculum';
 import { setPaidglossary } from '@/data/glossary';
@@ -19,7 +21,7 @@ import { setPaidbibliography } from '@/data/bibliography';
 
 const queryClient = new QueryClient();
 
-type Page = "home" | "modules" | "module" | "lesson" | "products" | "progress" | "glossary" | "owner" | "mini-guide" | "mini-guide-sales" | "free-guide" | "lead-magnet";
+type Page = "login" | "home" | "modules" | "module" | "lesson" | "products" | "progress" | "glossary" | "owner" | "mini-guide" | "mini-guide-sales" | "free-guide" | "lead-magnet";
 
 interface NavState {
   page: Page;
@@ -27,8 +29,6 @@ interface NavState {
 }
 
 const STORAGE_KEY = "nexos-academy-progress";
-const ACCESS_KEY = "nexos-academy-access";
-const PRODUCT_KEY = "nexos-academy-product";
 
 function loadProgress(): Record<string, boolean> {
   try {
@@ -51,7 +51,6 @@ const ALL_NAV_ITEMS = [
   { id: "progress", label: "Progresso", icon: "📊" },
 ];
 
-const PUBLIC_NAV_ITEMS = ALL_NAV_ITEMS.filter(n => ["home", "products"].includes(n.id));
 
 const RESTRICTED_PAGES: Page[] = ["modules", "module", "lesson", "progress", "glossary", "mini-guide"];
 
@@ -63,6 +62,8 @@ function getHashPage(): string {
 function getInitialPage(): NavState {
   if (typeof window !== "undefined") {
     const hashPage = getHashPage();
+    if (hashPage === "#reset-password") return { page: "login", params: {} };
+    if (hashPage === "#login" || hashPage === "#entrar") return { page: "login", params: {} };
     if (hashPage === "#owner") return { page: "owner", params: {} };
     if (hashPage === "#guia") return { page: "lead-magnet", params: {} };
     if (hashPage === "#guia-gratuito") return { page: "free-guide", params: {} };
@@ -83,11 +84,13 @@ function AcademyApp() {
   const [hasAccess, setHasAccess] = useState(false);
   const [verifiedProduct, setVerifiedProduct] = useState<string | null>(null);
   const [brand, setBrand] = useState<BrandConfig>(() => loadBrand());
-  const [sessionConflict, setSessionConflict] = useState(false);
+  const [student, setStudent] = useState<StudentSession["user"] | null>(null);
+  const [sessionMessage, setSessionMessage] = useState("");
+  const [restoringSession, setRestoringSession] = useState(true);
   const [courseReady, setCourseReady] = useState(false);
   const [courseError, setCourseError] = useState('');
-  const [studentName] = useState<string>(() => localStorage.getItem("nexos-student-name") ?? "");
-  const [studentEmail] = useState<string>(() => localStorage.getItem("nexos-student-email") ?? "");
+  const studentName = student?.name ?? "";
+  const studentEmail = student?.email ?? "";
 
   useEffect(() => {
     const onBrandUpdated = () => setBrand(loadBrand());
@@ -95,37 +98,60 @@ function AcademyApp() {
     return () => window.removeEventListener("brand-updated", onBrandUpdated);
   }, []);
 
-  const ACADEMY_TOKEN_KEY = "nexos-academy-token";
-
-  const grantAccess = useCallback((token?: string, productId = "complete-bundle") => {
-    if (!token) return;
-    localStorage.setItem(ACCESS_KEY, "true");
-    localStorage.setItem(PRODUCT_KEY, productId);
-    if (token) localStorage.setItem(ACADEMY_TOKEN_KEY, token);
-    setHasAccess(productId === "complete-bundle"); setVerifiedProduct(productId);
+  const clearStudent = useCallback(() => {
+    setStudent(null); setHasAccess(false); setVerifiedProduct(null); setProgress({});
+    resetPaidCurriculum(); setPaidglossary([]); setPaidbibliography([]);
+    localStorage.removeItem("nexos-academy-user-id"); localStorage.removeItem("nexos-academy-email"); localStorage.removeItem("nexos-academy-name");
   }, []);
-
+  const refreshStudent = useCallback(async () => {
+    try {
+      const response = await fetch("/api/academy/student/session", { credentials: "include", cache: "no-store" });
+      if (!response.ok) {
+        if (response.status === 401) clearStudent();
+        else setSessionMessage("Não foi possível verificar sua conta. Tente novamente.");
+        return;
+      }
+      const result = await response.json() as StudentSession;
+      setStudent(result.user); setProgress(result.progress ?? {}); setSessionMessage("");
+      localStorage.setItem("nexos-academy-user-id", result.user.id); localStorage.setItem("nexos-academy-name", result.user.name); localStorage.setItem("nexos-academy-email", result.user.email);
+      setHasAccess(result.products.some(item => item.productId === "complete-bundle"));
+      setVerifiedProduct(result.products.some(item => item.productId === "complete-bundle") ? "complete-bundle" : result.products.some(item => item.productId === "mini-guide") ? "mini-guide" : null);
+    } catch { setSessionMessage("Não foi possível verificar sua conta. Confira sua conexão."); }
+    finally { setRestoringSession(false); }
+  }, [clearStudent]);
   useEffect(() => {
-    let stopped = false;
-    const verify = async () => {
-      const token = localStorage.getItem(ACADEMY_TOKEN_KEY); if (!token) return;
-      try {
-        const response = await fetch(`/api/academy/verify/${encodeURIComponent(token)}`, { cache: "no-store" });
-        const result = await response.json() as { valid?: boolean; productId?: string };
-        if (stopped) return;
-        if (response.ok && result.valid && result.productId) { setHasAccess(result.productId === "complete-bundle"); setVerifiedProduct(result.productId); }
-        else { setHasAccess(false); setVerifiedProduct(null); if ([403, 404].includes(response.status)) { localStorage.removeItem(ACADEMY_TOKEN_KEY); localStorage.removeItem(ACCESS_KEY); localStorage.removeItem(PRODUCT_KEY); } }
-      } catch { if (!stopped) { setHasAccess(false); setVerifiedProduct(null); } }
+    void refreshStudent();
+    const ended = (event: Event) => {
+      clearStudent(); setSessionMessage((event as CustomEvent<string>).detail || "Sua conta foi acessada em outro dispositivo. Entre novamente para continuar.");
+      setNav({ page: "login", params: {} });
     };
-    void verify(); const timer = window.setInterval(() => void verify(), 5 * 60_000);
-    const ended = () => setOwnerMode(false); window.addEventListener("owner-session-ended", ended);
-    return () => { stopped = true; window.clearInterval(timer); window.removeEventListener("owner-session-ended", ended); };
-  }, []);
+    const ownerEnded = () => setOwnerMode(false);
+    window.addEventListener("academy-session-ended", ended); window.addEventListener("owner-session-ended", ownerEnded);
+    return () => { window.removeEventListener("academy-session-ended", ended); window.removeEventListener("owner-session-ended", ownerEnded); };
+  }, [clearStudent, refreshStudent]);
+  useEffect(() => {
+    if (!student) return;
+    const check = async () => {
+      try { const response = await academyFetch("/api/academy/student/session");
+        if (response.ok) {
+          const result = await response.json() as StudentSession;
+          setStudent(result.user);
+          setHasAccess(result.products.some(item => item.productId === "complete-bundle"));
+          setVerifiedProduct(result.products.some(item => item.productId === "complete-bundle") ? "complete-bundle" : result.products.some(item => item.productId === "mini-guide") ? "mini-guide" : null);
+        }
+      } catch { /* Recheck on focus and the next heartbeat. */ }
+    };
+    const timer = window.setInterval(() => void check(), 15_000);
+    const focus = () => void check(); window.addEventListener("focus", focus);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", focus); };
+  }, [student?.id]);
 
   useEffect(() => {
     function onHashChange() {
       const hash = window.location.hash;
-      if (hash === "#owner") setNav({ page: "owner", params: {} });
+      if (hash.startsWith("#reset-password?")) setNav({ page: "login", params: {} });
+      else if (hash === "#login" || hash === "#entrar") setNav({ page: "login", params: {} });
+      else if (hash === "#owner") setNav({ page: "owner", params: {} });
       else if (hash === "#guia-gratuito") setNav({ page: "free-guide", params: {} });
       else if (hash === "#mini-guide") setNav({ page: "mini-guide", params: {} });
       else if (hash === "#venda" || hash === "#mapa-10k") setNav({ page: "mini-guide-sales", params: {} });
@@ -140,25 +166,20 @@ function AcademyApp() {
     setNav({ page: page as Page, params });
     setMobileMenuOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
-    if (page !== "owner") {
-      history.replaceState(null, "", window.location.pathname);
-    }
+    history.replaceState(null, "", window.location.pathname + window.location.search + (page === "login" ? "#login" : page === "owner" ? "#owner" : ""));
   }, []);
 
   const markComplete = useCallback((lessonId: string) => {
-    setProgress(prev => {
-      const next = { ...prev, [lessonId]: true };
-      saveProgress(next);
-      return next;
-    });
-  }, []);
-
+    if (ownerMode) { setProgress(previous => { const next = { ...previous, [lessonId]: true }; saveProgress(next); return next; }); return; }
+    void studentRequest("progress", { lessonId, complete: true }, "PATCH")
+      .then(result => setProgress(result.progress)).catch(error => setSessionMessage(error.message));
+  }, [ownerMode]);
   const resetProgress = useCallback(() => {
-    if (confirm("Tem certeza? Isso apagará todo o seu progresso.")) {
-      setProgress({});
-      saveProgress({});
-    }
-  }, []);
+    if (!confirm("Tem certeza? Isso apagará todo o seu progresso.")) return;
+    if (ownerMode) { setProgress({}); saveProgress({}); return; }
+    void studentRequest("progress", undefined, "DELETE")
+      .then(() => setProgress({})).catch(error => setSessionMessage(error.message));
+  }, [ownerMode]);
 
   const handleOwnerChange = useCallback((val: boolean) => {
     setOwnerMode(val);
@@ -175,28 +196,30 @@ function AcademyApp() {
     resetPaidCurriculum(); setPaidglossary([]); setPaidbibliography([]);
     if (!canAccess) return;
     const controller = new AbortController();
-    fetch('/api/academy/content/course', { headers: academyAccessHeaders(), cache: 'no-store', signal: controller.signal })
-      .then(async response => { if (!response.ok) throw new Error('Acesso ao curso recusado. Confira seu código ou sessão.'); return response.json(); })
+    academyFetch('/api/academy/content/course', { headers: academyAccessHeaders(), cache: 'no-store', signal: controller.signal })
+      .then(async response => { if (!response.ok) throw new Error('Acesso ao curso recusado. Entre na sua conta e confira seus produtos.'); return response.json(); })
       .then(data => {
         if (controller.signal.aborted) return;
         setPaidCurriculum(data.curriculum); setPaidglossary(data.glossary); setPaidbibliography(data.bibliography); setCourseReady(true);
       }).catch(err => { if (!controller.signal.aborted) setCourseError(err.message); });
     return () => controller.abort();
-  }, [canAccess, ownerMode]);
+  }, [canAccess, ownerMode, student?.id]);
 
   useAntiPiracy({
     studentName,
     studentEmail,
     enabled: canAccess && !ownerMode,
-    onSessionConflict: () => setSessionConflict(true),
+
   });
 
   const isActive = (id: string) =>
     nav.page === id || (id === "modules" && (nav.page === "module" || nav.page === "lesson"));
 
-  const navItems = canAccess ? ALL_NAV_ITEMS : PUBLIC_NAV_ITEMS;
+  const navItems = ALL_NAV_ITEMS;
+  const isLocked = (id: string) => !canAccess && RESTRICTED_PAGES.includes(id as Page) && !(id === "mini-guide" && verifiedProduct === "mini-guide");
 
   function renderPage() {
+    if (restoringSession && RESTRICTED_PAGES.includes(nav.page)) return <p>Verificando seu acesso…</p>;
     if (canAccess && ['modules', 'module', 'lesson', 'progress', 'glossary'].includes(nav.page) && !courseReady) {
       return <p role={courseError ? 'alert' : undefined}>{courseError || 'Carregando material autorizado...'}</p>;
     }
@@ -212,8 +235,8 @@ function AcademyApp() {
             <button className="btn-primary" onClick={() => navigate("products")}>
               Ver Planos e Preços →
             </button>
-            <button className="btn-outline" onClick={() => navigate("home")}>
-              Voltar ao Início
+            <button className="btn-outline" onClick={() => navigate("login")}>
+              Já sou aluno — Entrar
             </button>
           </div>
         </div>
@@ -221,6 +244,14 @@ function AcademyApp() {
     }
 
     switch (nav.page) {
+      case "login":
+        return <div className="max-w-lg mx-auto py-8 space-y-6">
+          <AccessForm key={student?.id ?? "guest"} onNavigate={navigate} onAccountChange={() => void refreshStudent()} />
+          <div className="text-center space-y-3 text-sm">
+            <button className="btn-outline" onClick={() => navigate("products")}>Conhecer os produtos</button>
+            <p><button className="text-[hsl(250_90%_75%)] hover:underline" onClick={() => navigate("owner")}>Acesso administrativo</button></p>
+          </div>
+        </div>;
       case "home":
         return <Home onNavigate={navigate} progress={progress} hasAccess={canAccess} brand={brand} />;
       case "modules":
@@ -229,7 +260,7 @@ function AcademyApp() {
         return <Modules onNavigate={navigate} progress={progress} selectedModule={nav.params.moduleId} />;
       case "lesson":
         return (
-          <Lesson
+          <Lesson key={student?.id ?? "owner"}
             chapterId={nav.params.chapterId ?? ""}
             lessonId={nav.params.lessonId}
             onNavigate={navigate}
@@ -240,7 +271,7 @@ function AcademyApp() {
           />
         );
       case "products":
-        return <Products onNavigate={navigate} hasAccess={canAccess} onAccessGranted={grantAccess} paymentSuccess={nav.params.paymentSuccess === "1"} />;
+        return <Products onNavigate={navigate} hasAccess={canAccess} onAccountChange={() => void refreshStudent()} paymentSuccess={nav.params.paymentSuccess === "1"} />;
       case "progress":
         return <ProgressPage onNavigate={navigate} progress={progress} onReset={resetProgress} />;
       case "glossary":
@@ -248,7 +279,7 @@ function AcademyApp() {
       case "owner":
         return <Owner onNavigate={navigate} onOwnerChange={handleOwnerChange} isOwner={ownerMode} />;
       case "mini-guide":
-        return <MiniGuide onNavigate={navigate} studentName={studentName || (ownerMode ? "Fundador NexOS" : undefined)} studentEmail={studentEmail || (ownerMode ? "founder@nexos.ai" : undefined)} />;
+        return <MiniGuide key={student?.id ?? "owner"} onNavigate={navigate} studentName={studentName || (ownerMode ? "Fundador NexOS" : undefined)} studentEmail={studentEmail || (ownerMode ? "founder@nexos.ai" : undefined)} />;
       case "mini-guide-sales":
         return <MiniGuideSales onNavigate={navigate} />;
       case "free-guide":
@@ -285,7 +316,7 @@ function AcademyApp() {
           </button>
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden xl:flex items-center gap-1">
             {navItems.map(item => (
               <button
                 key={item.id}
@@ -294,12 +325,13 @@ function AcademyApp() {
               >
                 <span>{item.icon}</span>
                 <span>{item.label}</span>
+                {isLocked(item.id) && <span className="text-xs" aria-label="Acesso restrito">🔒</span>}
               </button>
             ))}
           </nav>
 
           {/* Right side */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden xl:flex items-center gap-3">
             {ownerMode && (
               <button
                 onClick={() => navigate("owner")}
@@ -319,6 +351,8 @@ function AcademyApp() {
                 <span className="text-xs text-[hsl(250_90%_75%)] font-semibold">{pct}%</span>
               </div>
             )}
+            {!student && !ownerMode && <button className="btn-outline text-xs px-3 py-1.5" onClick={() => navigate("login")}>Entrar</button>}
+            {student && <button className="btn-outline text-xs px-3 py-1.5" onClick={() => navigate("login")}>Minha conta</button>}
             {!canAccess ? (
               <button
                 className="btn-primary text-xs px-3 py-1.5"
@@ -337,17 +371,24 @@ function AcademyApp() {
           </div>
 
           {/* Mobile menu button */}
+          <div className="xl:hidden flex items-center gap-2">
+          {student && <button className="btn-outline text-xs px-3 py-1.5" onClick={() => navigate("login")}>Minha conta</button>}
+          {!student && !ownerMode && <button className="btn-primary text-xs px-3 py-1.5" onClick={() => navigate("login")}>Entrar</button>}
           <button
-            className="md:hidden btn-outline px-2 py-1.5"
+            className="btn-outline px-2 py-1.5"
+            aria-label={mobileMenuOpen ? "Fechar menu" : "Abrir menu"}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="academy-mobile-menu"
             onClick={() => setMobileMenuOpen(v => !v)}
           >
             {mobileMenuOpen ? "✕" : "☰"}
           </button>
+          </div>
         </div>
 
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-[hsl(220_20%_10%)] bg-[hsl(222_25%_5%)] px-4 py-3 space-y-1">
+          <div id="academy-mobile-menu" className="xl:hidden border-t border-[hsl(220_20%_10%)] bg-[hsl(222_25%_5%)] px-4 py-3 space-y-1">
             {navItems.map(item => (
               <button
                 key={item.id}
@@ -356,8 +397,10 @@ function AcademyApp() {
               >
                 <span>{item.icon}</span>
                 <span>{item.label}</span>
+                {isLocked(item.id) && <span className="text-xs" aria-label="Acesso restrito">🔒</span>}
               </button>
             ))}
+            {!student && !ownerMode && <button className="sidebar-link w-full" onClick={() => navigate("login")}>Entrar na Academy</button>}
             {ownerMode && (
               <button
                 className="sidebar-link w-full text-[hsl(250_90%_75%)]"
@@ -394,6 +437,7 @@ function AcademyApp() {
                 {ALL_NAV_ITEMS.find(n => n.id === nav.page)?.label}
               </span>
             )}
+            {nav.page === "login" && <span className="text-[hsl(250_90%_75%)]">Entrar</span>}
             {nav.page === "owner" && (
               <span className="text-[hsl(250_90%_75%)]">Painel do Dono</span>
             )}
@@ -403,51 +447,9 @@ function AcademyApp() {
 
       {/* Main */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
+        {sessionMessage && <p role="alert" className="max-w-lg mx-auto mb-4 rounded-lg border border-amber-500/30 p-4 text-sm text-amber-200">{sessionMessage}</p>}
         {renderPage()}
       </main>
-
-      {/* Session Conflict Modal */}
-      {sessionConflict && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[hsl(222_25%_7%)] border border-red-500/30 rounded-2xl p-8 max-w-md w-full shadow-2xl text-center space-y-5">
-            <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-3xl mx-auto">
-              🔐
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-white mb-2">Sessão Ativa em Outro Dispositivo</h2>
-              <p className="text-sm text-[hsl(220_10%_55%)] leading-relaxed">
-                Detectamos que sua conta está sendo usada simultaneamente em outro dispositivo ou aba. 
-                Por segurança, apenas uma sessão é permitida por vez.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3">
-              <button
-                className="btn-primary w-full py-3"
-                onClick={() => {
-                  clearSession();
-                  setSessionConflict(false);
-                }}
-              >
-                Assumir esta Sessão
-              </button>
-              <button
-                className="btn-outline w-full py-2 text-sm"
-                onClick={() => {
-                  setHasAccess(false);
-                  localStorage.removeItem(ACCESS_KEY);
-                  setSessionConflict(false);
-                  setNav({ page: "home", params: {} });
-                }}
-              >
-                Sair
-              </button>
-            </div>
-            <p className="text-xs text-[hsl(220_10%_35%)]">
-              Se você não reconhece outra sessão, considere trocar sua senha.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Footer */}
       <footer className="border-t border-[hsl(220_20%_10%)] mt-16">

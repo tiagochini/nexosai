@@ -1,16 +1,17 @@
+import AccessForm from "@/components/AccessForm";
 import { useState } from "react";
 import { PRODUCTS } from "@/data/curriculum";
 
 interface ProductsProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
   hasAccess: boolean;
-  onAccessGranted: (token?: string, productId?: string) => void;
+  onAccountChange: () => void;
   paymentSuccess?: boolean;
 }
 
 const API_BASE = "/api/academy";
 
-export default function Products({ onNavigate, hasAccess, onAccessGranted, paymentSuccess }: ProductsProps) {
+export default function Products({ onNavigate, hasAccess, onAccountChange, paymentSuccess }: ProductsProps) {
   // Checkout modal state (kept for token verification only)
   const [checkoutProduct, setCheckoutProduct] = useState<string | null>(null);
   const [checkoutName, setCheckoutName] = useState("");
@@ -25,11 +26,6 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
   const [leadEmail, setLeadEmail] = useState("");
   const [leadLoading, setLeadLoading] = useState(false);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
-
-  // Token verification state
-  const [token, setToken] = useState("");
-  const [verifying, setVerifying] = useState(false);
-  const [tokenError, setTokenError] = useState("");
 
   // Free guide state
   const [freeEmail, setFreeEmail] = useState("");
@@ -71,35 +67,6 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
       setCheckoutError("Sem conexão. Verifique sua internet e tente novamente.");
     } finally {
       setCheckoutLoading(false);
-    }
-  }
-
-  async function handleVerifyToken(e: React.FormEvent) {
-    e.preventDefault();
-    if (!token.trim()) return;
-    setVerifying(true);
-    setTokenError("");
-    try {
-      const resp = await fetch(`${API_BASE}/verify/${encodeURIComponent(token.trim().toUpperCase())}`);
-      const data = await resp.json() as { valid?: boolean; productId?: string; error?: string; email?: string; name?: string };
-      if (data.valid) {
-        if (data.productId === "mini-guide") {
-          onAccessGranted(token.trim().toUpperCase(), "mini-guide");
-          onNavigate("mini-guide");
-          return;
-        }
-        if (data.productId !== "complete-bundle") {
-          setTokenError("Código inválido para este portal. Verifique o produto adquirido.");
-          return;
-        }
-        onAccessGranted(token.trim().toUpperCase());
-      } else {
-        setTokenError(data.error ?? "Código inválido.");
-      }
-    } catch {
-      setTokenError("Sem conexão. Verifique sua internet.");
-    } finally {
-      setVerifying(false);
     }
   }
 
@@ -162,41 +129,13 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
         <div className="rounded-xl border border-[hsl(168_100%_42%/0.3)] bg-[hsl(168_100%_42%/0.06)] p-6 text-center space-y-3">
           <div className="text-3xl">📧</div>
           <h3 className="text-lg font-bold text-white">Pagamento confirmado — verifique seu e-mail!</h3>
-          <p className="text-sm text-[hsl(220_10%_55%)]">Assim que o pagamento for processado (pode levar alguns minutos), você receberá um e-mail com seu código de acesso. Cole-o abaixo:</p>
+          <p className="text-sm text-[hsl(220_10%_55%)]">Assim que o pagamento for processado (pode levar alguns minutos), você receberá uma chave por e-mail. Entre ou crie sua conta abaixo e use a chave em Ativar produto:</p>
         </div>
       )}
 
       {/* Access code input — shown when no access yet */}
       {!hasAccess && (
-        <div className="card-nexos rounded-2xl p-6">
-          <h3 className="text-base font-bold text-white mb-1">Já adquiriu? Insira seu código de acesso</h3>
-          <p className="text-xs text-[hsl(220_10%_50%)] mb-4">Após o pagamento confirmado, você recebe um código por e-mail. Cole aqui para desbloquear o portal.</p>
-          <form onSubmit={handleVerifyToken} className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="text"
-              value={token}
-              onChange={e => setToken(e.target.value.toUpperCase())}
-              placeholder="Ex: A1B2-C3D4-E5F6"
-              maxLength={16}
-              className="flex-1 px-4 py-2.5 rounded-lg bg-[hsl(222_25%_10%)] border border-[hsl(220_20%_12%)] text-white text-sm font-mono placeholder:text-[hsl(220_10%_30%)] focus:outline-none focus:border-[hsl(250_90%_65%/0.4)] uppercase tracking-widest"
-            />
-            <button
-              type="submit"
-              disabled={verifying || !token.trim()}
-              className="btn-primary shrink-0"
-            >
-              {verifying ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  Verificando...
-                </span>
-              ) : "Ativar Acesso →"}
-            </button>
-          </form>
-          {tokenError && (
-            <p className="text-xs text-red-400 mt-2">{tokenError}</p>
-          )}
-        </div>
+        <AccessForm onNavigate={onNavigate} onAccountChange={onAccountChange} />
       )}
 
       {/* Already has access banner */}

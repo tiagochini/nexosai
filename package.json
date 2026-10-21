@@ -20,6 +20,7 @@
     "security:check-runtime-logging": "node --test scripts/check-runtime-logging.test.mjs && node scripts/check-runtime-logging.mjs",
     "security:audit-dependencies": "pnpm audit --audit-level low",
     "security:audit-history": "node scripts/audit-sensitive-history.mjs",
+    "test:academy-students-local": "node scripts/test-academy-students-local.mjs",
     "test:p1-local": "node scripts/test-p1-local.mjs",
     "test:p2-local": "node scripts/test-p2-local.mjs",
     "test:docker-local": "node scripts/test-docker-deployment.mjs",

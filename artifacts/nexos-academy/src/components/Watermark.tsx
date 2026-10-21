@@ -6,10 +6,9 @@ interface WatermarkProps {
 
 function getUserInfo(): { name: string; email: string } {
   try {
-    const token = localStorage.getItem("nexos-academy-token") ?? "";
     const email = localStorage.getItem("nexos-academy-email") ?? "";
     const name = localStorage.getItem("nexos-academy-name") ?? "";
-    const label = [name, email, token].filter(Boolean).join(" · ");
+    const label = [name, email].filter(Boolean).join(" · ");
     return { name: label || "NexOS Academy", email };
   } catch {
     return { name: "NexOS Academy", email: "" };

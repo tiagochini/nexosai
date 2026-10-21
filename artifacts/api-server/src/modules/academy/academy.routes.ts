@@ -1,3 +1,5 @@
+import studentRouter from "./academy-student.routes.js";
+import { authorizeStudentProduct } from "./academy-student-session.js";
 import { Router } from "express";
 import academyContentRouter from './academy-content.routes.js';
 import { z } from "zod/v4";
@@ -29,6 +31,7 @@ import {
 } from "./academy-funnel.service.js";
 
 const router = Router();
+router.use('/student', studentRouter);
 router.use('/content', academyContentRouter);
 const verificationLimiter = createAcademyVerificationLimiter(
   (process.env["ACADEMY_TRUSTED_PROXY_IPS"] ?? "").split(",").map((ip) => ip.trim()).filter(Boolean),
@@ -143,7 +146,7 @@ router.post("/webhook", createAcademyPaymentWebhook({
 }));
 
 // GET /api/academy/verify/:token
-// Validates an access token — no auth required
+// Legacy diagnostic only; keys no longer authorize content. Account activation is required.
 router.get("/verify/:token", verificationLimiter, async (req, res): Promise<void> => {
   res.setHeader("Cache-Control", "no-store");
   const rawToken = req.params.token;
@@ -357,12 +360,7 @@ router.post("/tutor", tutorLimiter, async (req, res): Promise<void> => {
   if (req.headers.authorization) {
     if (!await checkCrm(req, res)) return;
   } else {
-    const code = req.headers["x-academy-access-code"];
-    if (typeof code !== "string" || !/^[A-Z0-9-]{8,64}$/.test(code)) { res.status(401).json({ error: "Active Academy access required" }); return; }
-    const [purchase] = await db.select().from(academyPurchasesTable).where(eq(academyPurchasesTable.accessToken, code)).limit(1);
-    if (!purchase || purchase.status !== "confirmed" || purchase.productId !== "complete-bundle" || purchase.revokedAt || purchase.financialHold) {
-      res.status(403).json({ error: "Active complete-bundle access required" }); return;
-    }
+    if (!await authorizeStudentProduct(req, res, "complete-bundle")) return;
   }
   let parsed;
   try {

@@ -16,5 +16,5 @@ test("Stored flags and URL owner tokens cannot initialize paid/owner access", as
   const magnet = await readFile(new URL("pages/lead-magnet.tsx", root), "utf8");
   assert.doesNotMatch(app + magnet, /NX-FOUNDER-2026|hasStoredAccess|params\.get\("owner"\)/);
   assert.match(app, /\[hasAccess, setHasAccess\] = useState\(false\)/);
-  assert.match(app, /\/api\/academy\/verify\//);
+  assert.match(app, /\/api\/academy\/student\/session/);
 });

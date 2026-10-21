@@ -63,7 +63,7 @@ interface FunnelStats {
 const OWNER_KEY = "nexos-owner-mode";
 let ownerAccessToken = "";
 export function academyAccessHeaders(): Record<string, string> {
-  return ownerAccessToken ? { Authorization: `Bearer ${ownerAccessToken}` } : { "X-Academy-Access-Code": localStorage.getItem("nexos-academy-token") ?? "" };
+  return ownerAccessToken ? { Authorization: `Bearer ${ownerAccessToken}` } : {};
 }
 async function ownerRequest(url: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers); headers.set("Authorization", `Bearer ${ownerAccessToken}`);
