@@ -1,4 +1,4 @@
-import { and, eq, gte, lte, sql } from "drizzle-orm";
+import { and, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import {
   db, paidMediaAccountsTable, paidMediaAttributionTouchpointsTable,
   paidMediaConversionsTable, paidMediaDatasetsTable, paidMediaEntitiesTable,
@@ -18,26 +18,31 @@ export async function recordDatasetEvent(
 ) {
   const occurredAt = new Date(input.occurredAt);
   if (Number.isNaN(occurredAt.getTime()) || !input.eventId || !input.eventName) throw new Error("eventId, eventName and a valid occurredAt are required.");
+  const consented = input.payload?.["marketingConsent"] === true;
+  const normalized = normalizeMetaCapiEvent({ ...input, matchKeys: consented ? input.matchKeys : {} });
+  const safeKeys = normalized.userData;
+  const safePayload = { ...normalized.customData, marketingConsent: consented };
   const inserted = await db.insert(paidMediaEventReceiptsTable).values({
     workspaceId: dataset.workspaceId, datasetId: dataset.id, source: input.source,
     eventId: input.eventId, eventName: input.eventName, occurredAt,
-    eventMatchKeys: input.matchKeys ?? {}, payload: input.payload ?? {},
-  }).onConflictDoNothing().returning({ id: paidMediaEventReceiptsTable.id, deliveryStatus: paidMediaEventReceiptsTable.deliveryStatus });
-  const [existing] = inserted[0] ? inserted : await db.select({ id: paidMediaEventReceiptsTable.id, deliveryStatus: paidMediaEventReceiptsTable.deliveryStatus })
+    eventMatchKeys: safeKeys, payload: safePayload,
+  }).onConflictDoNothing().returning({ id: paidMediaEventReceiptsTable.id, deliveryStatus: paidMediaEventReceiptsTable.deliveryStatus, eventName: paidMediaEventReceiptsTable.eventName });
+  const [existing] = inserted[0] ? inserted : await db.select({ id: paidMediaEventReceiptsTable.id, deliveryStatus: paidMediaEventReceiptsTable.deliveryStatus, eventName: paidMediaEventReceiptsTable.eventName })
     .from(paidMediaEventReceiptsTable).where(and(eq(paidMediaEventReceiptsTable.datasetId, dataset.id), eq(paidMediaEventReceiptsTable.eventId, input.eventId))).limit(1);
   if (!existing) throw new Error("Event receipt could not be persisted.");
+  if (existing.eventName !== input.eventName) throw new Error("eventId já pertence a outro eventName; use um identificador único por conversão.");
   if (inserted[0]) await db.update(paidMediaDatasetsTable).set({ lastEventAt: occurredAt }).where(eq(paidMediaDatasetsTable.id, dataset.id));
   // Browser receipts are retained for browser/server event_id dedupe. Only a
   // consented server receipt is allowed to cross the CAPI provider boundary.
   if (input.source !== "server") return { accepted: true, duplicate: !inserted[0], receiptId: existing.id, deliveryStatus: inserted[0] ? "pending" : existing.deliveryStatus };
-  const consented = input.payload?.["marketingConsent"] === true;
+  if (existing.deliveryStatus !== "pending") return { accepted: true, duplicate: true, receiptId: existing.id, deliveryStatus: existing.deliveryStatus };
   const capability = paidMediaProviderCapabilities(dataset.provider).conversionsApi;
   if (!consented || capability !== "supported" || !dataset.providerDatasetId) {
     const deliveryStatus = consented ? "capability_blocked" as const : "consent_withheld" as const;
     await db.update(paidMediaEventReceiptsTable).set({
       deliveryStatus, providerErrorCode: consented ? "CAPABILITY_BLOCKED" : "CONSENT_WITHHELD",
       providerErrorMessage: consented ? "Provider conversion transport or dataset external ID is unavailable." : "Marketing consent was not supplied; no provider event was sent.",
-    }).where(and(eq(paidMediaEventReceiptsTable.id, existing.id), eq(paidMediaEventReceiptsTable.deliveryStatus, "pending")));
+    }).where(and(eq(paidMediaEventReceiptsTable.id, existing.id), eq(paidMediaEventReceiptsTable.deliveryStatus, "pending"), isNull(paidMediaEventReceiptsTable.providerAttemptedAt)));
     return { accepted: true, duplicate: !inserted[0], receiptId: existing.id, deliveryStatus };
   }
   let capiEvent;
@@ -45,18 +50,18 @@ export async function recordDatasetEvent(
     capiEvent = normalizeMetaCapiEvent({ eventName: input.eventName, eventId: input.eventId, occurredAt: input.occurredAt, matchKeys: input.matchKeys, payload: input.payload });
     if (!Object.keys(capiEvent.userData).length) {
       await db.update(paidMediaEventReceiptsTable).set({ deliveryStatus: "capability_blocked", providerErrorCode: "MISSING_MATCH_KEYS", providerErrorMessage: "No consented Meta match key was supplied; no provider event was sent." })
-        .where(and(eq(paidMediaEventReceiptsTable.id, existing.id), eq(paidMediaEventReceiptsTable.deliveryStatus, "pending")));
+        .where(and(eq(paidMediaEventReceiptsTable.id, existing.id), eq(paidMediaEventReceiptsTable.deliveryStatus, "pending"), isNull(paidMediaEventReceiptsTable.providerAttemptedAt)));
       return { accepted: true, duplicate: !inserted[0], receiptId: existing.id, deliveryStatus: "capability_blocked" as const };
     }
   } catch (error) {
     await db.update(paidMediaEventReceiptsTable).set({ deliveryStatus: "failed", providerErrorCode: "INVALID_CAPI_EVENT", providerErrorMessage: error instanceof Error ? error.message : "Invalid Meta conversion event." })
-      .where(and(eq(paidMediaEventReceiptsTable.id, existing.id), eq(paidMediaEventReceiptsTable.deliveryStatus, "pending")));
+      .where(and(eq(paidMediaEventReceiptsTable.id, existing.id), eq(paidMediaEventReceiptsTable.deliveryStatus, "pending"), isNull(paidMediaEventReceiptsTable.providerAttemptedAt)));
     return { accepted: true, duplicate: !inserted[0], receiptId: existing.id, deliveryStatus: "failed" as const };
   }
   // Claim pending receipt atomically. Concurrent delivery of the same event_id
   // observes the same receipt but cannot create a second provider request.
-  const [claimed] = await db.update(paidMediaEventReceiptsTable).set({ providerAttemptedAt: new Date() })
-    .where(and(eq(paidMediaEventReceiptsTable.id, existing.id), eq(paidMediaEventReceiptsTable.deliveryStatus, "pending"))).returning({ id: paidMediaEventReceiptsTable.id });
+  const [claimed] = await db.update(paidMediaEventReceiptsTable).set({ providerAttemptedAt: new Date(), source: "server", eventMatchKeys: safeKeys, payload: safePayload })
+    .where(and(eq(paidMediaEventReceiptsTable.id, existing.id), eq(paidMediaEventReceiptsTable.deliveryStatus, "pending"), isNull(paidMediaEventReceiptsTable.providerAttemptedAt))).returning({ id: paidMediaEventReceiptsTable.id });
   if (!claimed) return { accepted: true, duplicate: true, receiptId: existing.id, deliveryStatus: existing.deliveryStatus };
   try {
     const result = await paidMediaProvider(dataset.provider).sendConversionEvent(
@@ -68,7 +73,7 @@ export async function recordDatasetEvent(
   } catch (error) {
     const providerError = error instanceof PaidMediaProviderError ? error : undefined;
     const deliveryStatus = providerError?.code === "AUTH" || providerError?.code === "UNSUPPORTED" ? "capability_blocked" as const : "failed" as const;
-    await db.update(paidMediaEventReceiptsTable).set({ deliveryStatus, providerErrorCode: providerError?.code ?? "PROVIDER_ERROR", providerErrorMessage: error instanceof Error ? error.message : "Provider delivery failed." }).where(eq(paidMediaEventReceiptsTable.id, existing.id));
+    await db.update(paidMediaEventReceiptsTable).set({ deliveryStatus, providerErrorCode: providerError?.code ?? "PROVIDER_ERROR", providerErrorMessage: "Falha no envio ao provedor; consulte o código seguro e reconecte a integração se necessário." }).where(eq(paidMediaEventReceiptsTable.id, existing.id));
     return { accepted: true, duplicate: !inserted[0], receiptId: existing.id, deliveryStatus };
   }
 }
@@ -85,7 +90,7 @@ export async function datasetDiagnostics(workspaceId: string, datasetId: string)
   }).from(paidMediaEventReceiptsTable).where(eq(paidMediaEventReceiptsTable.datasetId, dataset.id));
   await db.update(paidMediaDatasetsTable).set({ lastDiagnosticAt: new Date() }).where(eq(paidMediaDatasetsTable.id, dataset.id));
   const events = stats?.events ?? 0;
-  return { datasetId: dataset.id, lastEventAt: dataset.lastEventAt, eventCount: events, matchKeyEventCount: stats?.matched ?? 0, matchRate: events ? (stats?.matched ?? 0) / events : 0, providerDelivery: { sent: stats?.sent ?? 0, capabilityBlocked: stats?.blocked ?? 0, failed: stats?.failed ?? 0 }, status: events ? "receiving" : "no_events" };
+  return { datasetId: dataset.id, lastEventAt: dataset.lastEventAt, eventCount: events, matchKeyEventCount: stats?.matched ?? 0, matchRate: events ? (stats?.matched ?? 0) / events : 0, localMatchKeyCoverage: events ? (stats?.matched ?? 0) / events : 0, measurementSource: "local_receipts", metaEventMatchQuality: null, browserServerDeduplication: "not_verified", testEvents: "unsupported", providerDelivery: { sent: stats?.sent ?? 0, capabilityBlocked: stats?.blocked ?? 0, failed: stats?.failed ?? 0 }, status: events ? "receiving" : "no_events" };
 }
 
 export async function upsertTouchpoint(workspaceId: string, input: { externalTouchpointId: string; accountId?: string; entityId?: string; provider?: "meta_ads" | "tiktok_ads" | "google_ads"; clickId?: string; utmSource?: string; utmCampaign?: string; occurredAt: string; metadata?: Record<string, unknown> }) {

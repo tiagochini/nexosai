@@ -10,10 +10,17 @@ import { enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import { paidMediaProviderCapabilities, PaidMediaProviderError, type PaidMediaProviderName } from "./providers.js";
 import { isPaidMediaIntegration } from "../integrations/integration-purpose.js";
 
+import { metaAdSetPayload, metaCampaignPayload, validateMetaTree } from "./meta-launch.policy.js";
+
 type Json = Record<string, unknown>;
 const obj = (v: unknown): Json => v && typeof v === "object" && !Array.isArray(v) ? v as Json : {};
 const arr = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
-function validateLaunchReadback(type: string, id: string, readback: Json, payload: Json): void {
+function containsApprovedFields(actual: unknown, expected: unknown): boolean {
+  if (Array.isArray(expected)) return Array.isArray(actual) && deterministicHash(actual) === deterministicHash(expected);
+  if (expected && typeof expected === "object") return Object.entries(expected as Json).every(([key, value]) => value === undefined || containsApprovedFields(obj(actual)[key], value));
+  return actual === expected;
+}
+export function validateLaunchReadback(type: string, id: string, readback: Json, payload: Json): void {
   if (String(readback["id"] ?? "") !== id) throw new AppError(502, "Provider readback id mismatch.", "PROVIDER_READBACK_INVALID");
   // Meta creatives do not have a delivery state that can be paused.  The
   // campaign, ad set, and ad remain the safety boundary.
@@ -36,7 +43,15 @@ function validateLaunchReadback(type: string, id: string, readback: Json, payloa
       throw new AppError(502, `Provider readback ${key} mismatch.`, "PROVIDER_READBACK_INVALID");
     }
   }
-  void type;
+  for (const key of ["objective", "optimization_goal", "billing_event", "destination_type"]) {
+    if (payload[key] != null && readback[key] !== payload[key]) throw new AppError(502, `Provider readback ${key} mismatch.`, "PROVIDER_READBACK_INVALID");
+  }
+  const promoted = obj(payload["promoted_object"]);
+  for (const key of Object.keys(promoted)) if (obj(readback["promoted_object"])[key] !== promoted[key]) throw new AppError(502, "Provider conversion configuration mismatch.", "PROVIDER_READBACK_INVALID");
+  for (const key of ["targeting", "object_story_spec", "special_ad_categories"]) if (payload[key] != null && !containsApprovedFields(readback[key], payload[key])) throw new AppError(502, `Provider readback ${key} differs from approval.`, "PROVIDER_READBACK_INVALID");
+  if (type === "ad" && obj(readback["creative"])["id"] !== obj(payload["creative"])["creative_id"]) throw new AppError(502, "Provider creative binding mismatch.", "PROVIDER_READBACK_INVALID");
+  if (type === "campaign" && payload["daily_budget"] == null && payload["lifetime_budget"] == null && (Number(readback["daily_budget"] ?? 0) !== 0 || Number(readback["lifetime_budget"] ?? 0) !== 0)) throw new AppError(502, "ABO campaign unexpectedly owns a budget.", "PROVIDER_READBACK_INVALID");
+  if (type === "ad_set" && payload["daily_budget"] == null && payload["lifetime_budget"] == null && (Number(readback["daily_budget"] ?? 0) !== 0 || Number(readback["lifetime_budget"] ?? 0) !== 0)) throw new AppError(502, "CBO ad set unexpectedly owns a budget.", "PROVIDER_READBACK_INVALID");
 }
 function allocateApprovedMinorUnits(authorizedMinorUnits: number, adSetCount: number): number[] {
   const count = Math.max(1, Math.floor(adSetCount));
@@ -106,35 +121,48 @@ export function compileMasterplanTree(snapshot: unknown, provider: PaidMediaProv
   const campaign = obj(root.campaign), strategy = obj(root.strategy), targeting = obj(root.targeting);
   const offer = obj(root.offer), timeline = obj(root.timeline);
   const name = String(campaign["title"] ?? "NexOS campaign");
-  const objective = String(strategy["objective"] ?? campaign["objective"] ?? "OUTCOME_SALES");
-  const rawBudget = obj(campaign["budget"] ?? strategy["budget"]);
+  const paidMedia = obj(strategy["paidMedia"]);
+  const objective = String(paidMedia["objective"] ?? strategy["objective"] ?? campaign["objective"] ?? "");
+  const rawBudget = obj(paidMedia["budget"] ?? campaign["budget"] ?? strategy["budget"]);
   const budgetKind: "daily" | "lifetime" | undefined = rawBudget["kind"] === "daily" || rawBudget["kind"] === "lifetime" ? rawBudget["kind"] : undefined;
-  const budget: { amount: number; kind: "daily" | "lifetime" } | null = budgetKind && typeof rawBudget["amount"] === "number" ? { amount: Number(rawBudget["amount"]), kind: budgetKind } : null;
-  const authorizedMinorUnits = budget && Number.isFinite(budget.amount) ? Math.round(budget.amount * 100) : 0;
-  const destination = String(offer["destinationUrl"] ?? offer["url"] ?? campaign["destinationUrl"] ?? root["destinationUrl"] ?? "");
-  const audiences = arr(targeting["audiences"] ?? targeting["segments"] ?? [targeting]);
-  const creatives = arr(root["creatives"] ?? obj(root["content"])["references"] ?? []);
+  const budget: { amount: number; kind: "daily" | "lifetime"; currency: unknown } | null = budgetKind && typeof rawBudget["amount"] === "number" ? { amount: Number(rawBudget["amount"]), kind: budgetKind, currency: rawBudget["currency"] } : null;
+  const authorizedMinorUnits = budget && Number.isFinite(budget.amount) && budget.amount > 0 && Number.isSafeInteger(Math.round(budget.amount * 100)) ? Math.round(budget.amount * 100) : 0;
+  const budgetMode = rawBudget["mode"];
+  const unsupportedConfiguration = [
+    ...Object.keys(rawBudget).filter(key => !["amount", "kind", "mode", "currency"].includes(key)).map(key => `budget.${key}`),
+    ...Object.keys(paidMedia).filter(key => !["objective", "optimizationGoal", "destinationType", "destinationUrl", "specialAdCategories", "budget", "audiences", "creatives", "tracking"].includes(key)),
+  ];
+  const destination = String(paidMedia["destinationUrl"] ?? offer["destinationUrl"] ?? offer["url"] ?? campaign["destinationUrl"] ?? root["destinationUrl"] ?? "");
+  const audiences = arr(paidMedia["audiences"] ?? targeting["audiences"] ?? targeting["segments"] ?? [targeting]);
+  const creatives = arr(paidMedia["creatives"] ?? root["creatives"] ?? obj(root["content"])["references"] ?? []);
   const nodes = audiences.length ? audiences : [{}];
   const budgetAllocationsMinorUnits = allocateApprovedMinorUnits(authorizedMinorUnits, nodes.length);
   if (budgetAllocationsMinorUnits.reduce((sum, value) => sum + value, 0) !== authorizedMinorUnits) {
     throw new AppError(500, "Budget allocation does not equal the approved authorization.", "BUDGET_ALLOCATION_INVALID");
   }
   const tree = {
-    schema: "nexos-paid-media-tree/v1", provider, accountId,
-    campaign: { key: "campaign", name, objective, budget, authorizedMinorUnits, budgetKind, startTime: campaign["startTime"] ?? timeline["startTime"], endTime: campaign["endTime"] ?? timeline["endTime"], durationDays: campaign["durationDays"] ?? root["durationDays"], timeline, destination, tracking: canonicalize(root["tracking"] ?? root["trackingRequirements"]) },
+    schema: "nexos-paid-media-tree/v2", provider, accountId,
+    campaign: { key: "campaign", name, objective, unsupportedConfiguration, destinationType: paidMedia["destinationType"] ?? "WEBSITE", optimizationGoal: paidMedia["optimizationGoal"], specialAdCategories: paidMedia["specialAdCategories"] ?? campaign["specialAdCategories"], budget, budgetMode, authorizedMinorUnits, budgetKind, startTime: campaign["startTime"] ?? timeline["startTime"], endTime: campaign["endTime"] ?? timeline["endTime"], durationDays: campaign["durationDays"] ?? root["durationDays"], timeline, destination, tracking: canonicalize(paidMedia["tracking"] ?? root["tracking"] ?? root["trackingRequirements"]) },
     adGroups: nodes.map((audience, i) => ({
       key: `ad-group-${i + 1}`, targeting: canonicalize(audience),
-      budget: budget ? budgetAllocationsMinorUnits[i]! / 100 : null,
-      budgetMinorUnits: budget ? budgetAllocationsMinorUnits[i]! : null,
+      budget: budget && budgetMode === "abo" ? budgetAllocationsMinorUnits[i]! / 100 : null,
+      budgetMinorUnits: budget && budgetMode === "abo" ? budgetAllocationsMinorUnits[i]! : null,
       ads: (creatives.length ? creatives : [{ reference: null }]).map((creative, j) => ({
         key: `ad-${i + 1}-${j + 1}`, creative: canonicalize(creative), destination,
       })),
     })),
   };
-  const meta = provider === "meta_ads" ? {
-    name, objective, status: "PAUSED", special_ad_categories: [], account_id: accountId,
-  } : {};
-  return { tree, providerPayload: { [provider]: { campaign: meta } }, planHash: deterministicHash({ tree, providerPayload: { [provider]: { campaign: meta } } }) };
+  let meta: Json = {};
+  const validationBlockers: Array<{ code: string; message: string }> = [];
+  if (provider === "meta_ads") {
+    try { validateMetaTree(tree); meta = metaCampaignPayload(tree.campaign); }
+    catch (error) {
+      if (!(error instanceof AppError)) throw error;
+      validationBlockers.push({ code: error.code ?? "META_CONFIGURATION_INVALID", message: error.message });
+    }
+  }
+  const validatedTree = { ...tree, validationBlockers };
+  return { tree: validatedTree, providerPayload: { [provider]: { campaign: meta } }, planHash: deterministicHash({ tree: validatedTree, providerPayload: { [provider]: { campaign: meta } } }) };
 }
 
 export function buildLaunchReadiness(input: {
@@ -151,7 +179,14 @@ export function buildLaunchReadiness(input: {
   if (input.account && (!input.account.currency || !input.account.timezone)) blockers.push({ code: "ACCOUNT_PROFILE_INCOMPLETE", message: "Account currency and timezone are required." });
   if (!input.intake || !["approved", "locked"].includes(input.intake.status)) blockers.push({ code: "PRODUCT_INTAKE_NOT_APPROVED", message: "An approved product intake version is required." });
   const root = obj(input.tree), campaign = obj(root["campaign"]);
+  if (input.provider === "meta_ads") {
+    try { validateMetaTree(root); } catch (error) {
+      if (!(error instanceof AppError)) throw error;
+      blockers.push({ code: error.code ?? "META_CONFIGURATION_INVALID", message: error.message });
+    }
+  }
   const budget = obj(campaign["budget"]);
+  if (input.account && budget["currency"] !== input.account.currency) blockers.push({ code: "BUDGET_CURRENCY_MISMATCH", message: "A moeda aprovada deve corresponder à moeda da conta selecionada." });
   const lifetimeStartMs = Date.parse(String(campaign["startTime"] ?? ""));
   const lifetimeEndMs = Date.parse(String(campaign["endTime"] ?? ""));
   if (typeof budget["amount"] !== "number" || !Number.isFinite(budget["amount"]) || budget["amount"] <= 0 || Math.abs(Math.round(Number(budget["amount"]) * 100) - Number(budget["amount"]) * 100) > 1e-8) blockers.push({ code: "BUDGET_AUTHORIZATION_REQUIRED", message: "A positive finite budget with at most two currency decimals is required." });
@@ -161,7 +196,7 @@ export function buildLaunchReadiness(input: {
   const capabilities = paidMediaProviderCapabilities(input.provider);
   if (input.provider !== "meta_ads" || capabilities.operations?.campaign !== "supported" || capabilities.operations?.adGroup !== "supported" || capabilities.operations?.ad !== "supported") blockers.push({ code: "PROVIDER_CAPABILITY_BLOCKED", message: "Provider cannot create the complete campaign tree." });
   const tracking = obj(root["tracking"] ?? root["trackingRequirements"] ?? campaign["tracking"]);
-  if (!tracking["pixelId"] && !tracking["datasetId"] && !tracking["conversionEvent"]) blockers.push({ code: "TRACKING_REQUIREMENTS_REQUIRED", message: "A tracking pixel/dataset and conversion event are required." });
+  if (campaign["objective"] !== "OUTCOME_TRAFFIC" && (!tracking["pixelId"] || !tracking["conversionEvent"])) blockers.push({ code: "TRACKING_REQUIREMENTS_REQUIRED", message: "A tracking pixel/dataset and conversion event are required." });
   if (arr(obj(root["campaign"])["creatives"] ?? root["creatives"]).length === 0 && arr(obj(root["content"])["references"]).length === 0 && !arr(root["adGroups"]).some((group) => arr(obj(group)["ads"]).some((ad) => Object.values(obj(obj(ad)["creative"])).some((value) => value != null)))) blockers.push({ code: "CREATIVE_READINESS_REQUIRED", message: "At least one approved creative/content reference is required." });
   const constraints = obj(root["operatingMemory"] ?? root["constraints"]);
   if (arr(constraints["prohibitedClaims"]).length || arr(constraints["legalBoundaries"]).length) blockers.push({ code: "POLICY_LEGAL_REVIEW_REQUIRED", message: "Policy and legal constraints require explicit review before activation." });
@@ -276,7 +311,7 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
     const providerConfig = obj(providerPayload[plan.provider]);
     let actualAdSetBudgetMinorUnits = 0;
     const plannedAdSetBudgetMinorUnits = groups.reduce((sum, group) => sum + Number(group["budgetMinorUnits"] ?? 0), 0);
-    if (!Number.isInteger(plannedAdSetBudgetMinorUnits) || plannedAdSetBudgetMinorUnits !== Number(campaign["authorizedMinorUnits"])) {
+    if (!Number.isInteger(plannedAdSetBudgetMinorUnits) || plannedAdSetBudgetMinorUnits !== (campaign["budgetMode"] === "cbo" ? 0 : Number(campaign["authorizedMinorUnits"]))) {
       throw new AppError(500, "Emitted ad-set budgets do not equal the authorized budget.", "BUDGET_ALLOCATION_INVALID");
     }
     const account = (await db.select().from(paidMediaAccountsTable).where(and(
@@ -285,6 +320,10 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
       eq(paidMediaAccountsTable.provider, plan.provider),
     )).limit(1))[0]!;
     if (!account) throw new AppError(409, "Launch account is not owned by this workspace.", "WORKSPACE_SCOPE_REJECTED");
+    validateMetaTree(tree);
+    if (obj(campaign["budget"])["currency"] !== account.currency) throw new AppError(409, "A moeda aprovada difere da conta atual.", "BUDGET_CURRENCY_MISMATCH");
+    if (!adapter.preflightLaunch) throw new AppError(409, "Validação da conta Meta indisponível.", "PROVIDER_CAPABILITY_BLOCKED");
+    await adapter.preflightLaunch(workspaceId, plan.accountId, tree);
     const orderedSteps = await db.select().from(paidMediaLaunchStepsTable).where(eq(paidMediaLaunchStepsTable.attemptId, attempt!.id)).orderBy(paidMediaLaunchStepsTable.sequence);
     const stepsByKey = new Map(orderedSteps.map((step) => [step.stepKey, step]));
     for (const step of orderedSteps) {
@@ -314,7 +353,7 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
         validateLaunchReadback(dependency.entityType, dependency.providerEntityId, dependencyReadback.data, obj(dependency.readback));
       }
       const payload: Json = step.entityType === "campaign" ? obj(providerConfig["campaign"])
-        : step.entityType === "ad_set" ? { name: step.stepKey, billing_event: "IMPRESSIONS", optimization_goal: "LINK_CLICKS", campaign_id: campaignStep?.providerEntityId, targeting: obj(group)?.["targeting"], ...(campaign["budgetKind"] === "daily" ? { daily_budget: Number(group?.["budgetMinorUnits"]) } : { lifetime_budget: Number(group?.["budgetMinorUnits"]), start_time: campaign["startTime"], end_time: campaign["endTime"] }) }
+        : step.entityType === "ad_set" ? metaAdSetPayload(campaign, obj(group), campaignStep?.providerEntityId)
         : step.entityType === "creative" ? { name: ad?.ad?.["key"], object_story_spec: obj(ad?.ad?.["creative"])["object_story_spec"] }
         : { name: ad?.ad?.["key"], adset_id: adSetStep?.providerEntityId, creative: { creative_id: creativeStep?.providerEntityId } };
        const intent = obj(step.providerResponse)["preCreateIntent"];
@@ -329,7 +368,7 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
        if (step.providerEntityId) {
         const readback = await adapter.readLaunchEntity(workspaceId, plan.accountId, step.entityType, step.providerEntityId);
         validateLaunchReadback(step.entityType, step.providerEntityId, readback.data, payload);
-        if (step.entityType === "ad_set") actualAdSetBudgetMinorUnits += Number(readback.data[campaign["budgetKind"] === "daily" ? "daily_budget" : "lifetime_budget"]);
+        if ((campaign["budgetMode"] === "cbo" && step.entityType === "campaign") || (campaign["budgetMode"] === "abo" && step.entityType === "ad_set")) actualAdSetBudgetMinorUnits += Number(readback.data[campaign["budgetKind"] === "daily" ? "daily_budget" : "lifetime_budget"]);
         await db.update(paidMediaLaunchStepsTable).set({ status: "verified", readback: readback.data }).where(eq(paidMediaLaunchStepsTable.id, step.id));
         step.status = "verified";
         step.readback = readback.data;
@@ -355,7 +394,7 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
       await db.update(paidMediaLaunchStepsTable).set({ providerEntityId: result.providerEntityId, status: "created", providerResponse: result.evidence }).where(eq(paidMediaLaunchStepsTable.id, step.id));
       const readback = await adapter.readLaunchEntity(workspaceId, plan.accountId, step.entityType, result.providerEntityId);
       validateLaunchReadback(step.entityType, result.providerEntityId, readback.data, payload);
-      if (step.entityType === "ad_set") actualAdSetBudgetMinorUnits += Number(readback.data[campaign["budgetKind"] === "daily" ? "daily_budget" : "lifetime_budget"]);
+      if ((campaign["budgetMode"] === "cbo" && step.entityType === "campaign") || (campaign["budgetMode"] === "abo" && step.entityType === "ad_set")) actualAdSetBudgetMinorUnits += Number(readback.data[campaign["budgetKind"] === "daily" ? "daily_budget" : "lifetime_budget"]);
       await db.update(paidMediaLaunchStepsTable).set({ status: "verified", readback: readback.data }).where(eq(paidMediaLaunchStepsTable.id, step.id));
       step.providerEntityId = result.providerEntityId;
       step.status = "verified";

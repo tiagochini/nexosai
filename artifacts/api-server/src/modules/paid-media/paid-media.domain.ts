@@ -32,8 +32,8 @@ function metaActionTotal(values: unknown, action = "offsite_conversion.fb_pixel_
 
 export function normalizeMetaInsights(rows: ProviderRow[]): ProviderInsight[] {
   return rows.map((row) => ({
-    providerInsightId: `${row["id"]}:${row["date_start"]}`,
-    providerEntityId: String(row["id"]),
+    providerInsightId: `${row["ad_id"] ?? row["adset_id"] ?? row["campaign_id"] ?? row["id"]}:${row["date_start"]}`,
+    providerEntityId: String(row["ad_id"] ?? row["adset_id"] ?? row["campaign_id"] ?? row["id"]),
     metricDate: String(row["date_start"]),
     attributionWindow: "provider_default",
     currency: String(row["account_currency"] ?? "USD"),

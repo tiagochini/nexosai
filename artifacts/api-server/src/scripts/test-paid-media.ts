@@ -77,6 +77,7 @@ const metaInsight = normalizeMetaInsights([{ id: "ad-1", date_start: "2025-01-01
 assert.equal(metaInsight.conversions, "3");
 assert.equal(metaInsight.conversionValue, "19.99");
 assert.equal(metaInsight.impressions, 10);
+for (const key of ["campaign_id", "adset_id", "ad_id"]) assert.equal(normalizeMetaInsights([{ [key]: "provider-id", date_start: "2026-10-23" }])[0]?.providerEntityId, "provider-id");
 assert.deepEqual(normalizeTikTokInsights([{ campaign_id: "c1", stat_time_day: "2025-01-01", spend: 2, conversion: 1 }], "campaign")[0]?.providerEntityId, "c1");
 
 const policy = { enabled: true, accepted: true, mandatoryPause: false, minimumSampleSize: 100, minimumDataQualityScore: .8, maxDailyBudgetChangePercent: 25, maxBidChangePercent: 10 };
@@ -103,6 +104,7 @@ const capiEvent = normalizeMetaCapiEvent({
   matchKeys: { email: "Customer@Example.test ", phone: "+55 (11) 99999-0000", fbp: "fb.1.x.y" },
   payload: { currency: "BRL", value: 19.9, orderId: "order-1", ignoredSensitiveField: "do-not-send" },
 });
+assert.throws(() => normalizeMetaCapiEvent({ eventName: "Lead", eventId: "test", occurredAt: "2026-10-23", payload: { testEventCode: "TEST123" } }), /teste CAPI/);
 assert.equal(capiEvent.userData.em?.length, 64, "email is hashed before CAPI transport");
 assert.equal(capiEvent.userData.ph?.length, 64, "phone is hashed before CAPI transport");
 assert.equal((capiEvent.customData as Record<string, unknown>)["ignoredSensitiveField"], undefined, "custom data is allowlisted");

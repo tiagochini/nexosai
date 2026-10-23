@@ -18,6 +18,8 @@ import {
 } from "./paid-media.domain.js";
 import { isPaidMediaIntegration } from "../integrations/integration-purpose.js";
 
+import { metaAdSetPayload, metaCampaignPayload, validateMetaAccountBudget, validateMetaTree } from "./meta-launch.policy.js";
+
 export type PaidMediaProviderName = "meta_ads" | "tiktok_ads" | "google_ads";
 export type PaidMediaEntityKind = "campaign" | "ad_set" | "ad" | "creative";
 
@@ -74,6 +76,7 @@ export type MetaLaunchTransport = (path: string, payload: Record<string, unknown
 export async function executeMetaLaunchTree(
   accountId: string, tree: Record<string, unknown>, transport: MetaLaunchTransport,
 ): Promise<LaunchCreateResult[]> {
+  validateMetaTree(tree);
   const created: LaunchCreateResult[] = [];
   const create = async (path: string, payload: Record<string, unknown>, key: string, entityType: PaidMediaEntityKind, parentProviderEntityId?: string) => {
     const body = await transport(path, { ...payload, ...(entityType === "creative" ? {} : { status: "PAUSED" }) }, key);
@@ -85,9 +88,9 @@ export async function executeMetaLaunchTree(
   const campaign = (tree["campaign"] ?? {}) as Record<string, unknown>;
   const key = String(tree["idempotencyKey"] ?? createHash("sha256").update(JSON.stringify(tree)).digest("hex"));
   try {
-    const campaignResult = await create(`${accountId}/campaigns`, { name: campaign["name"], objective: campaign["objective"], special_ad_categories: [] }, `${key}:campaign`, "campaign");
+    const campaignResult = await create(`${accountId}/campaigns`, metaCampaignPayload(campaign), `${key}:campaign`, "campaign");
     for (const group of ((tree["adGroups"] ?? []) as Array<Record<string, unknown>>)) {
-      const groupResult = await create(`${accountId}/adsets`, { name: group["key"], campaign_id: campaignResult.providerEntityId, billing_event: "IMPRESSIONS", optimization_goal: "LINK_CLICKS", daily_budget: campaign["budget"], targeting: group["targeting"] ?? {} }, `${key}:${group["key"]}`, "ad_set", campaignResult.providerEntityId);
+      const groupResult = await create(`${accountId}/adsets`, metaAdSetPayload(campaign, group, campaignResult.providerEntityId), `${key}:${group["key"]}`, "ad_set", campaignResult.providerEntityId);
       for (const ad of ((group["ads"] ?? []) as Array<Record<string, unknown>>)) {
         const creative = (ad["creative"] ?? {}) as Record<string, unknown>;
         const creativeResult = await create(`${accountId}/adcreatives`, { name: ad["key"], object_story_spec: creative["object_story_spec"] ?? {} }, `${key}:${ad["key"]}:creative`, "creative", groupResult.providerEntityId);
@@ -149,6 +152,7 @@ export interface PaidMediaProviderAdapter {
   sendConversionEvent(workspaceId: string, accountId: string, datasetId: string, event: MetaCapiEvent): Promise<ProviderConversionResult>;
   /** @deprecated Launch orchestration uses the ordered single-step methods below. */
   createLaunchTree?(workspaceId: string, accountId: string, tree: Record<string, unknown>, idempotencyKey: string): Promise<LaunchCreateResult[]>;
+  preflightLaunch?(workspaceId: string, accountId: string, tree: Record<string, unknown>): Promise<void>;
   createLaunchEntity?(workspaceId: string, accountId: string, type: PaidMediaEntityKind, payload: Record<string, unknown>, idempotencyKey: string): Promise<LaunchCreateResult>;
   /** Reconcile an intent after the local process crashed after provider acceptance. */
   reconcileLaunchEntity?(workspaceId: string, accountId: string, type: PaidMediaEntityKind, payload: Record<string, unknown>, idempotencyKey: string): Promise<LaunchCreateResult | undefined>;
@@ -178,6 +182,7 @@ export function normalizeMetaCapiEvent(input: {
   eventName: unknown; eventId: unknown; occurredAt: unknown;
   matchKeys?: Record<string, unknown>; payload?: Record<string, unknown>;
 }): MetaCapiEvent {
+  if (input.payload?.["testEventCode"] != null || input.payload?.["test_event_code"] != null) throw new PaidMediaProviderError("Eventos de teste CAPI não estão implementados neste endpoint. Use Test Events no Events Manager; nenhum evento foi enviado.", "UNSUPPORTED", 422);
   if (typeof input.eventName !== "string" || !/^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(input.eventName)
     || typeof input.eventId !== "string" || !input.eventId) throw new PaidMediaProviderError("Meta event name and event_id are invalid.", "PRECONDITION_FAILED", 400);
   const eventTime = new Date(String(input.occurredAt));
@@ -210,7 +215,7 @@ export async function sendMetaCapiRequest(
   });
   const body = await response.json().catch(() => ({})) as Record<string, unknown>;
   if (!response.ok) {
-    const raw = redact(JSON.stringify(body));
+    const raw = "Detalhes da resposta omitidos para proteger identificadores e credenciais.";
     if (response.status === 401 || response.status === 403) throw new PaidMediaProviderError(`Meta Conversions API credential or scope was rejected: ${raw}`, "AUTH", response.status);
     if (response.status === 429) throw new PaidMediaProviderError("Meta Conversions API rate limit exceeded.", "RATE_LIMITED", response.status);
     throw new PaidMediaProviderError(`Meta Conversions API returned HTTP ${response.status}: ${raw}`, "PROVIDER_ERROR", response.status);
@@ -218,7 +223,7 @@ export async function sendMetaCapiRequest(
   if (typeof body["events_received"] !== "number" || body["events_received"] < 1) {
     throw new PaidMediaProviderError("Meta Conversions API did not provide a receipt for the submitted event.", "PROVIDER_ERROR", 502);
   }
-  return { providerRequestId: typeof body["trace_id"] === "string" ? body["trace_id"] : undefined, evidence: body };
+  return { providerRequestId: typeof body["trace_id"] === "string" ? body["trace_id"] : undefined, evidence: { events_received: body["events_received"], trace_id: body["trace_id"], fbtrace_id: body["fbtrace_id"], messageCount: Array.isArray(body["messages"]) ? body["messages"].length : 0 } };
 }
 
 async function credential(workspaceId: string, provider: PaidMediaProviderName, expectedIntegrationId?: string): Promise<Credential> {
@@ -302,6 +307,13 @@ async function request(url: string, init: RequestInit, token?: string, options: 
   return body;
 }
 
+export function metaEntityFields(type: PaidMediaEntityKind): string {
+  if (type === "creative") return "id,name,object_story_spec";
+  if (type === "campaign") return "id,name,status,updated_time,objective,daily_budget,lifetime_budget,bid_strategy,special_ad_categories";
+  if (type === "ad_set") return "id,name,status,updated_time,campaign_id,daily_budget,lifetime_budget,start_time,end_time,bid_amount,optimization_goal,billing_event,destination_type,promoted_object,targeting";
+  return "id,name,status,updated_time,adset_id,creative";
+}
+
 function entityPath(type: PaidMediaEntityKind): string {
   if (type === "ad_set") return "adsets";
   if (type === "creative") return "adcreatives";
@@ -318,7 +330,7 @@ class MetaAdsAdapter implements PaidMediaProviderAdapter {
       pixelDatasetDiagnostics: "supported",
       cboAboObservation: "supported",
       conversionsApi: "supported",
-      operations: { campaign: "supported", adGroup: "supported", ad: "supported" },
+      operations: { campaign: "supported", adGroup: "supported", ad: "supported", audience: "unsupported" },
       reason: "Creative status mutation requires a provider-specific creative executor and is not sent by this adapter.",
     };
   }
@@ -334,39 +346,8 @@ class MetaAdsAdapter implements PaidMediaProviderAdapter {
     if (!account || account.provider !== this.provider) throw new PaidMediaProviderError("Dataset account ownership could not be verified.", "PRECONDITION_FAILED", 409);
     return sendMetaCapiRequest(datasetId, (await credential(workspaceId, this.provider, account.integrationId)).accessToken, event);
   }
-  async createLaunchTree(workspaceId: string, accountId: string, tree: Record<string, unknown>, idempotencyKey: string): Promise<LaunchCreateResult[]> {
-    const [account] = await db.select({ integrationId: paidMediaAccountsTable.integrationId, providerAccountId: paidMediaAccountsTable.providerAccountId }).from(paidMediaAccountsTable).where(and(eq(paidMediaAccountsTable.id, accountId), eq(paidMediaAccountsTable.workspaceId, workspaceId), eq(paidMediaAccountsTable.provider, this.provider))).limit(1);
-    if (!account) throw new PaidMediaProviderError("Selected advertiser account is not owned by this workspace.", "PRECONDITION_FAILED", 409);
-    const token = await this.token(workspaceId, account.integrationId);
-    const advertiserId = account.providerAccountId;
-    const campaign = (tree["campaign"] ?? {}) as Record<string, unknown>;
-    const created: LaunchCreateResult[] = [];
-    const post = async (path: string, payload: Record<string, unknown>, key: string, entityType: PaidMediaEntityKind, parentProviderEntityId?: string) => {
-       const body = await request(this.url(path, token), { method: "POST", headers: { "Content-Type": "application/json", "X-NexOS-Idempotency-Key": key }, body: JSON.stringify({ ...payload, status: "PAUSED", access_token: token }) }, token, { retry: false });
-      const id = String(body["id"] ?? "");
-      if (!id) throw new PaidMediaProviderError("Meta did not return a created entity id.", "PROVIDER_ERROR", 502);
-      const readback = await request(this.url(id, token, { fields: "id,status,name,updated_time" }), {}, token);
-      if (String(readback["id"] ?? "") !== id || String(readback["status"] ?? "PAUSED") !== "PAUSED") throw new PaidMediaProviderError("Meta create readback verification failed.", "PROVIDER_ERROR", 502);
-      const result = { providerEntityId: id, entityType, parentProviderEntityId, evidence: body };
-      created.push(result); return result;
-    };
-    try {
-      const campaignResult = await post(`${advertiserId}/campaigns`, { name: campaign["name"], objective: campaign["objective"], special_ad_categories: [] }, `${idempotencyKey}:campaign`, "campaign");
-      for (const group of ((tree["adGroups"] ?? []) as Array<Record<string, unknown>>)) {
-        const groupResult = await post(`${advertiserId}/adsets`, { name: group["key"], campaign_id: campaignResult.providerEntityId, billing_event: "IMPRESSIONS", optimization_goal: "LINK_CLICKS", ...(campaign["budgetKind"] === "daily" ? { daily_budget: group["budget"] } : {}), targeting: group["targeting"] ?? {} }, `${idempotencyKey}:${group["key"]}`, "ad_set", campaignResult.providerEntityId);
-        for (const ad of ((group["ads"] ?? []) as Array<Record<string, unknown>>)) {
-          const creative = (ad["creative"] ?? {}) as Record<string, unknown>;
-          const creativeResult = await post(`${advertiserId}/adcreatives`, { name: ad["key"], object_story_spec: creative["object_story_spec"] ?? {} }, `${idempotencyKey}:${ad["key"]}:creative`, "creative", groupResult.providerEntityId);
-          await post(`${advertiserId}/ads`, { name: ad["key"], adset_id: groupResult.providerEntityId, creative: { creative_id: creativeResult.providerEntityId } }, `${idempotencyKey}:${ad["key"]}:ad`, "ad", groupResult.providerEntityId);
-        }
-      }
-    } catch (error) {
-      for (const item of [...created].reverse()) {
-        try { await this.deleteEntity(workspaceId, accountId, item.providerEntityId, `${idempotencyKey}:rollback:${item.providerEntityId}`); } catch { /* preserve original provider error */ }
-      }
-      throw error;
-    }
-    return created;
+  async createLaunchTree(_workspaceId: string, _accountId: string, _tree: Record<string, unknown>, _idempotencyKey: string): Promise<LaunchCreateResult[]> {
+    throw new PaidMediaProviderError("Use o plano aprovado e o executor por etapas com leitura de confirmação e compensação.", "UNSUPPORTED", 409);
   }
   async deleteEntity(workspaceId: string, accountId: string, entityId: string, idempotencyKey: string): Promise<ProviderActionResult> {
     const [account] = await db.select({ integrationId: paidMediaAccountsTable.integrationId }).from(paidMediaAccountsTable).where(and(eq(paidMediaAccountsTable.id, accountId), eq(paidMediaAccountsTable.workspaceId, workspaceId), eq(paidMediaAccountsTable.provider, this.provider))).limit(1);
@@ -374,6 +355,25 @@ class MetaAdsAdapter implements PaidMediaProviderAdapter {
     const token = await this.token(workspaceId, account.integrationId);
       const body = await request(this.url(entityId, token), { method: "DELETE", headers: { "X-NexOS-Idempotency-Key": idempotencyKey } }, token, { retry: false });
     return { providerRequestId: entityId, evidence: body };
+  }
+  async preflightLaunch(workspaceId: string, accountId: string, tree: Record<string, unknown>): Promise<void> {
+    validateMetaTree(tree);
+    const [account] = await db.select().from(paidMediaAccountsTable).where(and(eq(paidMediaAccountsTable.id, accountId), eq(paidMediaAccountsTable.workspaceId, workspaceId), eq(paidMediaAccountsTable.provider, this.provider))).limit(1);
+    if (!account) throw new PaidMediaProviderError("Conta Meta indisponível neste workspace.", "PRECONDITION_FAILED", 409);
+    const token = await this.token(workspaceId, account.integrationId);
+    const profile = await request(this.url(account.providerAccountId, token, { fields: "id,currency,account_status" }), {}, token);
+    if (Number(profile["account_status"]) !== 1) throw new PaidMediaProviderError("A conta Meta não está apta para anunciar. Revise o status no Ads Manager.", "PRECONDITION_FAILED", 409);
+    const budgets = await request(this.url(`${account.providerAccountId}/minimum_budgets`, token, { fields: "currency,min_daily_budget_imp" }), {}, token);
+    const minimum = (Array.isArray(budgets["data"]) ? budgets["data"] as Record<string, unknown>[] : []).find(row => row["currency"] === profile["currency"]);
+    validateMetaAccountBudget(tree, String(profile["currency"]), Number(minimum?.["min_daily_budget_imp"]));
+    const campaign = tree["campaign"] as Record<string, unknown>;
+    const pixel = (campaign["tracking"] as Record<string, unknown> | undefined)?.["pixelId"];
+    if (campaign["objective"] !== "OUTCOME_TRAFFIC") {
+      const pixels = await request(this.url(`${account.providerAccountId}/adspixels`, token, { fields: "id", limit: "500" }), {}, token);
+      if (!(Array.isArray(pixels["data"]) ? pixels["data"] as Record<string, unknown>[] : []).some(row => row["id"] === pixel)) throw new PaidMediaProviderError("O pixel aprovado não está disponível na conta Meta selecionada. Verifique acesso e atribuição do ativo.", "PRECONDITION_FAILED", 409);
+    }
+    // Meta validates campaign budget/permissions without creating an asset.
+    await request(this.url(`${account.providerAccountId}/campaigns`, token), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...metaCampaignPayload(campaign), execution_options: ["validate_only"], access_token: token }) }, token, { retry: false });
   }
   async createLaunchEntity(workspaceId: string, accountId: string, type: PaidMediaEntityKind, payload: Record<string, unknown>, idempotencyKey: string): Promise<LaunchCreateResult> {
     const [account] = await db.select({ integrationId: paidMediaAccountsTable.integrationId, providerAccountId: paidMediaAccountsTable.providerAccountId }).from(paidMediaAccountsTable).where(and(eq(paidMediaAccountsTable.id, accountId), eq(paidMediaAccountsTable.workspaceId, workspaceId), eq(paidMediaAccountsTable.provider, this.provider))).limit(1);
@@ -427,7 +427,7 @@ class MetaAdsAdapter implements PaidMediaProviderAdapter {
 
   async listEntities(workspaceId: string, accountId: string, type: PaidMediaEntityKind): Promise<ProviderEntity[]> {
     const token = await this.token(workspaceId);
-    const fields = "id,name,status,updated_time,campaign_id,adset_id,daily_budget,bid_amount,campaign_budget_optimization";
+    const fields = metaEntityFields(type);
     const data = await request(this.url(`${accountId}/${entityPath(type)}`, token, { fields, limit: "500" }), {}, token);
     const rows = Array.isArray(data["data"]) ? data["data"] as Array<Record<string, unknown>> : [];
     return rows.map((row) => ({
@@ -446,7 +446,7 @@ class MetaAdsAdapter implements PaidMediaProviderAdapter {
     const level = type === "ad_set" ? "adset" : type;
     const data = await request(this.url(`${accountId}/insights`, token, {
       level, time_range: JSON.stringify({ since, until }), time_increment: "1",
-      fields: "id,date_start,impressions,clicks,spend,actions,action_values,account_currency",
+      fields: `${type === "campaign" ? "campaign_id" : type === "ad_set" ? "adset_id" : "ad_id"},date_start,impressions,clicks,spend,actions,action_values,account_currency`,
     }), {}, token);
     const rows = Array.isArray(data["data"]) ? data["data"] as Array<Record<string, unknown>> : [];
     return normalizeMetaInsights(rows);
@@ -456,7 +456,7 @@ class MetaAdsAdapter implements PaidMediaProviderAdapter {
     const [account] = await db.select({ integrationId: paidMediaAccountsTable.integrationId }).from(paidMediaAccountsTable).where(and(eq(paidMediaAccountsTable.id, accountId), eq(paidMediaAccountsTable.workspaceId, workspaceId), eq(paidMediaAccountsTable.provider, this.provider))).limit(1);
     if (!account) throw new PaidMediaProviderError("Selected advertiser account is not owned by this workspace.", "PRECONDITION_FAILED", 409);
     const token = await this.token(workspaceId, account.integrationId);
-    const data = await request(this.url(entityId, token, { fields: "id,name,status,daily_budget,lifetime_budget,start_time,end_time,campaign_id,adset_id,bid_amount,updated_time" }), {}, token);
+    const data = await request(this.url(entityId, token, { fields: metaEntityFields(type) }), {}, token);
     return { providerEntityId: String(data["id"]), entityType: type, name: data["name"] as string | undefined, status: data["status"] as string | undefined, version: data["updated_time"] as string | undefined, data };
   }
 

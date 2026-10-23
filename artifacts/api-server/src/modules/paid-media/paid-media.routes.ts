@@ -30,6 +30,8 @@ import { approveLaunchPlan, activateLaunchPlan, compileLaunchPlan } from "./laun
 import { isPaidMediaIntegration } from "../integrations/integration-purpose.js";
 import { datasetDiagnostics, recordDatasetEvent, reconciliationSummary, upsertConversion, upsertTouchpoint } from "./attribution.service.js";
 
+import { AppError } from "../../lib/errors.js";
+
 const router = Router();
 // This is deliberately before requireAuth: browser/server tags identify a
 // dataset by a randomly generated opaque key, never by a workspace id or Ads
@@ -43,6 +45,7 @@ router.post("/events/ingest", async (req, res): Promise<void> => {
   }).from(paidMediaDatasetsTable).where(eq(paidMediaDatasetsTable.ingestionKey, key)).limit(1) : [];
   if (!dataset) { res.status(401).json({ error: "A valid dataset ingestion key is required.", code: "DATASET_AUTH_FAILED" }); return; }
   try {
+    if (req.body?.testEventCode != null || req.body?.test_event_code != null) throw new Error("Eventos de teste não estão suportados neste endpoint; nenhum evento foi enviado.");
     const source = req.body?.source;
     if (source !== "browser" && source !== "server") throw new Error("source must be browser or server.");
     res.status(202).json(await recordDatasetEvent(dataset, { ...req.body, source }));
@@ -131,6 +134,7 @@ function providerFrom(value: unknown): PaidMediaProviderName | undefined {
 }
 
 function sendProviderError(res: Response, error: unknown): void {
+  if (error instanceof AppError) { res.status(error.statusCode).json({ error: error.message, code: error.code, details: error.data }); return; }
   if (error instanceof PaidMediaProviderError) {
     res.status(error.status ?? (error.code === "PRECONDITION_FAILED" ? 409 : error.code === "RATE_LIMITED" ? 429 : 502))
       .json({ error: error.message, code: error.code });

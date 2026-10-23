@@ -28,7 +28,7 @@ import {
   getCampaignPublishPreview,
   publishCampaignContentPiece,
 } from "../social/social.service.js";
-import { publishCampaignLanding } from "../landing-publication/landing-publication.service.js";
+import { landingMeasurementState, publishCampaignLanding } from "../landing-publication/landing-publication.service.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -75,7 +75,9 @@ router.get("/:campaignId/landing-setup", async (req, res): Promise<void> => {
   ]);
   const [published] = await db.select({ publishedUrl: pagesTable.publishedUrl, publishedAt: pagesTable.publishedAt })
     .from(pagesTable).where(and(eq(pagesTable.campaignId, campaignId), eq(pagesTable.workspaceId, req.auth.workspaceId), eq(pagesTable.status, "published"))).orderBy(desc(pagesTable.publishedAt)).limit(1);
-  res.json({ approved: !!landing, landingTitle: landing?.title ?? null, setup: campaign.landingSetupData ?? {}, sequences, datasets, published: published ?? null });
+  const savedSetup = (campaign.landingSetupData ?? {}) as { status?: string; tracking?: { metaDatasetId?: string; tiktokDatasetId?: string } };
+  const measurement = landingMeasurementState(!!landing, savedSetup.status === "ready_for_implementation", !!published, !!(savedSetup.tracking?.metaDatasetId || savedSetup.tracking?.tiktokDatasetId));
+  res.json({ measurement, approved: !!landing, landingTitle: landing?.title ?? null, setup: campaign.landingSetupData ?? {}, sequences, datasets, published: published ?? null });
 });
 
 router.put("/:campaignId/landing-setup", async (req, res): Promise<void> => {
@@ -111,7 +113,7 @@ router.put("/:campaignId/landing-setup", async (req, res): Promise<void> => {
     }
   }
 
-  const setup = { ...parsed.data, landingPieceId: landing.id, savedAt: new Date().toISOString(), status: "ready_for_implementation" };
+  const setup = { ...parsed.data, landingPieceId: landing.id, savedAt: new Date().toISOString(), status: "ready_for_implementation", trackingStatus: parsed.data.tracking.metaDatasetId || parsed.data.tracking.tiktokDatasetId ? "configured_not_verified" : "not_configured" };
   await db.update(campaignsTable).set({ landingSetupData: setup }).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId)));
   await db.insert(auditLogsTable).values({ workspaceId: req.auth.workspaceId, campaignId, action: "campaign.landing_setup.saved", actor: req.auth.userId, data: { landingPieceId: landing.id, scheduledAt: setup.scheduledAt, desiredDomain: setup.desiredDomain, ctaCount: setup.ctas.length, metaTrackingConfigured: !!setup.tracking.metaDatasetId, tiktokTrackingConfigured: !!setup.tracking.tiktokDatasetId } });
   res.json({ setup });
@@ -146,7 +148,7 @@ router.post("/:campaignId/landing-publish", async (req, res): Promise<void> => {
     workspaceId: req.auth.workspaceId, campaignId, title: landing[0].title, domainId: domain.id, domain: domain.domain,
     source, implementation: { ctas: setup.ctas, tracking: { metaPixelId: metaDataset?.providerDatasetId ?? null, tiktokPixelId: tiktokDataset?.providerDatasetId ?? null } }, ...(sequenceId ? { sequenceId } : {}),
   });
-  await db.update(campaignsTable).set({ landingSetupData: { ...setup, status: "published", publishedAt: new Date().toISOString(), pageId: result.page.id } })
+  await db.update(campaignsTable).set({ landingSetupData: { ...setup, status: "published", trackingStatus: metaDataset || tiktokDataset ? "configured_not_verified" : "not_configured", publishedAt: new Date().toISOString(), pageId: result.page.id } })
     .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId)));
   res.status(201).json({ url: result.page.publishedUrl, pageId: result.page.id, revisionId: result.revision.id, deploymentId: result.deployment.id, status: result.deployment.status });
 });

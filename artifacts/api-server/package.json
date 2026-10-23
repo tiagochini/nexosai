@@ -53,6 +53,7 @@
     "test:orchestration-fallback-race": "tsx src/scripts/test-orchestration-fallback-race.ts",
     "test:content-coherence-idor": "cross-env NODE_ENV=test tsx src/scripts/test-content-coherence-idor.ts",
     "test:paid-media": "tsx src/scripts/test-paid-media.ts",
+    "test:paid-media-events": "cross-env NODE_ENV=test tsx src/scripts/test-paid-media-event-receipts.ts",
     "test:instagram-login": "tsx src/scripts/test-instagram-login.ts",
     "test:paid-media-launch": "cross-env NODE_ENV=test tsx src/scripts/test-paid-media-launch.ts",
     "test:meta-app-review": "cross-env NODE_ENV=test META_WEBHOOK_ALLOW_UNSIGNED_TESTS=false tsx src/scripts/test-meta-app-review.ts",

@@ -67,7 +67,7 @@ export function LaunchPlansTab() {
              {t("Nenhum plano de lançamento ativo", "No active launch plans", "No hay planes de lanzamiento activos")}
           </p>
           <p className="font-mono text-xs text-muted-foreground/60 max-w-md mx-auto">
-              {t("Meta Ads, Google Ads e TikTok Ads podem ser conectados desde o primeiro dia para sincronização e diagnóstico. A criação automática da árvore de campanha está homologada apenas para Meta Ads.", "Meta Ads, Google Ads, and TikTok Ads can be connected from day one for syncing and diagnostics. Automatic campaign-tree creation is currently supported only for Meta Ads.", "Meta Ads, Google Ads y TikTok Ads se pueden conectar desde el primer día para sincronización y diagnóstico. La creación automática del árbol de campaña solo está habilitada para Meta Ads.")}
+              {t("Meta Ads, Google Ads e TikTok Ads podem ser conectados desde o primeiro dia para sincronização e diagnóstico. A criação automática da árvore de campanha está implementada para Meta Ads, sujeita à validação da conta e das permissões. A homologação real ainda depende de teste autorizado.", "Meta Ads, Google Ads, and TikTok Ads can be connected from day one for syncing and diagnostics. Automatic campaign-tree creation is currently supported only for Meta Ads.", "Meta Ads, Google Ads y TikTok Ads se pueden conectar desde el primer día para sincronización y diagnóstico. La creación automática del árbol de campaña solo está habilitada para Meta Ads.")}
           </p>
         </div>
       ) : (
@@ -159,7 +159,7 @@ function LaunchPlanDetails({ planId, onClose }: { planId: string, onClose: () =>
   const activateMutation = useMutation({
     mutationFn: () => customFetch(`/api/paid-media/launch-plans/${planId}/activate`, { method: "POST" }),
     onSuccess: () => {
-        toast.success(t("Ativação iniciada.", "Activation started.", "Activación iniciada."));
+        toast.success(t("Criação da estrutura pausada iniciada.", "Paused structure creation started.", "Creación de la estructura pausada iniciada."));
        qc.invalidateQueries({ queryKey: ["/api/paid-media/launch-plans"] });
     },
      onError: (e: any) => toast.error(e.message || t("Erro ao ativar.", "Failed to activate.", "No se pudo activar.")),
@@ -243,6 +243,8 @@ function LaunchPlanDetails({ planId, onClose }: { planId: string, onClose: () =>
               </div>
            </div>
 
+           <p className="text-xs text-muted-foreground">{t("ABO/CBO e objetivos de website: suportados pelo executor, sujeitos à autorização da Meta. Custom/Lookalike, CRM, Advantage+ Audience e placements manuais: não suportados. Eventos CAPI recebidos localmente não comprovam Event Match Quality nem deduplicação no Events Manager. A criação mantém campanha, conjuntos e anúncios pausados.", "Website goals and ABO/CBO are implemented, subject to Meta authorization. Custom/Lookalike, CRM, Advantage+ Audience and manual placements are unsupported. Local CAPI receipts do not prove Event Match Quality or deduplication in Events Manager. Campaigns, ad sets and ads are created paused.", "Objetivos web y ABO/CBO implementados, sujetos a autorización de Meta. Custom/Lookalike, CRM, Advantage+ Audience y placements manuales no están soportados. Recibos locales CAPI no verifican Event Match Quality ni deduplicación. Campaña, conjuntos y anuncios se crean pausados.")}</p>
+           <p className="font-mono text-xs">{String(plan.tree?.campaign?.objective ?? "")} · {String(plan.tree?.campaign?.budgetMode ?? "").toUpperCase()} · {String(plan.tree?.campaign?.budget?.currency ?? "")} · {isActive ? t("Criação pausada confirmada pela Meta", "Paused creation confirmed by Meta", "Creación pausada confirmada por Meta") : t("Aguardando validação da Meta até a execução", "Awaiting Meta validation until execution", "Pendiente de validación de Meta hasta la ejecución")}</p>
            {/* Readiness Blockers */}
            <div className="border border-border/30 bg-card p-4 space-y-3">
               <div className="flex items-center justify-between">
@@ -312,7 +314,7 @@ function LaunchPlanDetails({ planId, onClose }: { planId: string, onClose: () =>
                    disabled={activateMutation.isPending || !canActivate || isActivating}
                    className="font-mono text-xs uppercase tracking-widest gap-2 bg-success hover:bg-success/80 text-success-foreground"
                  >
-                    {isActivating ? t("Ativando...", "Activating...", "Activando...") : t("Ativar Lançamento", "Activate Launch", "Activar lanzamiento")}
+                    {isActivating ? t("Criando...", "Creating...", "Creando...") : t("Criar estrutura pausada", "Create paused structure", "Crear estructura pausada")}
                  </Button>
               )}
 
@@ -359,8 +361,8 @@ function stageLabel(stage: string, t: ReturnType<typeof useUiText>): string {
     case "compiled": return t("Compilado", "Compiled", "Compilado");
     case "simulated": return t("Simulado", "Simulated", "Simulado");
     case "approved": return t("Aprovado", "Approved", "Aprobado");
-    case "active": return t("Ativo", "Active", "Activo");
-    case "activating": return t("Ativando", "Activating", "Activando");
+    case "active": return t("Estrutura criada · pausada", "Structure created · paused", "Estructura creada · pausada");
+    case "activating": return t("Criando estrutura", "Creating structure", "Creando estructura");
     case "executing": return t("Em execução", "Executing", "En ejecución");
     case "failed": return t("Falhou", "Failed", "Fallido");
     case "compensation_failed": return t("Falha na compensação", "Compensation failed", "Falló la compensación");

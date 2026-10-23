@@ -19,6 +19,26 @@ export type LandingImplementation = {
   tracking: { metaPixelId?: string | null; tiktokPixelId?: string | null };
 };
 
+export function landingMeasurementState(approved: boolean, configured: boolean, published: boolean, trackingConfigured: boolean) {
+  return { publication: published ? "published" : configured ? "configured" : approved ? "approved" : "draft",
+    tracking: trackingConfigured ? "configured_not_verified" : "not_configured", trackingVerified: false,
+    capi: "not_connected", browserServerDeduplication: "not_verified", ctaVerification: "not_verified" };
+}
+
+export function validateLandingImplementation(implementation: LandingImplementation, sequenceId?: string): void {
+  if (!implementation.ctas?.length) throw new AppError(422, "Configure ao menos um CTA antes de publicar.", "LANDING_CTA_REQUIRED");
+  for (const cta of implementation.ctas) {
+    let valid = !!cta.key?.trim() && !!cta.label?.trim();
+    if (cta.action === "capture_lead") valid = valid && !!sequenceId && cta.target === sequenceId;
+    else if (cta.action === "whatsapp") valid = valid && /^\+?[0-9 ()-]{8,25}$/.test(cta.target);
+    else if (cta.action === "url") {
+      try { valid = valid && new URL(cta.target).protocol === "https:"; } catch { valid = false; }
+    } else valid = false;
+    if (!valid) throw new AppError(422, "Revise os CTAs. Todos os botões de captura devem usar a mesma sequência; URLs precisam de HTTPS.", "LANDING_CTA_INVALID");
+  }
+  if (implementation.tracking?.metaPixelId && !/^\d+$/.test(implementation.tracking.metaPixelId)) throw new AppError(422, "O ID externo do Meta Pixel deve ser numérico.", "LANDING_PIXEL_INVALID");
+}
+
 const esc = (value: string) => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
 const safeJson = (value: unknown) => JSON.stringify(value).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
 
@@ -66,6 +86,7 @@ export async function publishCampaignLanding(input: {
   workspaceId: string; campaignId: string; title: string; domainId: string; domain: string;
   source: LandingSource; implementation: LandingImplementation; sequenceId?: string;
 }) {
+  validateLandingImplementation(input.implementation, input.sequenceId);
   const errors = validate(input.source); if (errors.length) throw new AppError(400, "Landing inválida", "LANDING_VALIDATION_FAILED", errors);
   const [domain] = await db.select().from(domainsTable).where(and(eq(domainsTable.id, input.domainId), eq(domainsTable.workspaceId, input.workspaceId), eq(domainsTable.domain, input.domain))).limit(1);
   if (!domain) throw new NotFoundError("Domínio configurado");

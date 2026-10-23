@@ -32,9 +32,10 @@ export async function syncPaidMediaAccount(workspaceId: string, accountId: strin
           set: { parentProviderEntityId: entity.parentProviderEntityId, name: entity.name, status: entity.status, version: entity.version, providerData: entity.data, lastSyncedAt: new Date(), updatedAt: new Date() },
         });
         // This is observed provider state, not a budget mutation or campaign
-        // creation. Meta exposes CBO explicitly; an absent/false value is ABO.
+        // creation. Positive campaign budgets identify CBO; zero identifies ABO.
+        // Missing budget fields remain unknown instead of inventing a strategy.
         if (entityType === "campaign" && account.provider === "meta_ads"
-          && typeof entity.data["campaign_budget_optimization"] === "boolean") {
+          && (entity.data["daily_budget"] != null || entity.data["lifetime_budget"] != null)) {
           await db.insert(paidMediaBudgetStrategiesTable).values({
             workspaceId, accountId: account.id,
             campaignEntityId: (await db.select({ id: paidMediaEntitiesTable.id }).from(paidMediaEntitiesTable).where(and(
@@ -42,11 +43,11 @@ export async function syncPaidMediaAccount(workspaceId: string, accountId: strin
               eq(paidMediaEntitiesTable.providerEntityId, entity.providerEntityId),
               eq(paidMediaEntitiesTable.entityType, "campaign"),
             )).limit(1))[0]!.id,
-            strategy: entity.data["campaign_budget_optimization"] ? "cbo" : "abo",
+            strategy: (Number(entity.data["daily_budget"] ?? 0) > 0 || Number(entity.data["lifetime_budget"] ?? 0) > 0) ? "cbo" : "abo",
             providerData: entity.data,
           }).onConflictDoUpdate({
             target: [paidMediaBudgetStrategiesTable.campaignEntityId],
-            set: { strategy: entity.data["campaign_budget_optimization"] ? "cbo" : "abo", providerData: entity.data, observedAt: new Date(), updatedAt: new Date() },
+            set: { strategy: (Number(entity.data["daily_budget"] ?? 0) > 0 || Number(entity.data["lifetime_budget"] ?? 0) > 0) ? "cbo" : "abo", providerData: entity.data, observedAt: new Date(), updatedAt: new Date() },
           });
         }
         entitiesUpserted++;
