@@ -218,7 +218,7 @@ export async function sendMetaCapiRequest(
 ): Promise<ProviderConversionResult> {
   if (!pixelId) throw new PaidMediaProviderError("Meta pixel/dataset external ID is required.", "PRECONDITION_FAILED", 409);
   const response = await transport(`https://graph.facebook.com/v26.0/${encodeURIComponent(pixelId)}/events`, {
-    method: "POST", headers: { "Content-Type": "application/json", "X-NexOS-Idempotency-Key": event.eventId },
+    method: "POST", signal: AbortSignal.timeout(60_000), headers: { "Content-Type": "application/json", "X-NexOS-Idempotency-Key": event.eventId },
     body: JSON.stringify({ data: [{ event_name: event.eventName, event_time: Math.floor(event.eventTime.getTime() / 1000), event_id: event.eventId, action_source: "website", ...(event.eventSourceUrl ? { event_source_url: event.eventSourceUrl } : {}), user_data: event.userData, ...(Object.keys(event.customData).length ? { custom_data: event.customData } : {}) }], access_token: token }),
   });
   const body = await response.json().catch(() => ({})) as Record<string, unknown>;

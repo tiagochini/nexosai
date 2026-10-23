@@ -479,6 +479,10 @@ export const paidMediaEventReceiptsTable = pgTable(
     payload: jsonb("payload").notNull().default({}),
     deliveryStatus: paidMediaEventDeliveryStatusEnum("delivery_status").notNull().default("pending"),
     providerAttemptedAt: timestamp("provider_attempted_at", { withTimezone: true }),
+    retryPayload: text("retry_payload"),
+    deliveryAttempts: integer("delivery_attempts").notNull().default(0),
+    retryAt: timestamp("retry_at", { withTimezone: true }),
+    retryExpiresAt: timestamp("retry_expires_at", { withTimezone: true }),
     providerResponse: jsonb("provider_response"),
     providerErrorCode: text("provider_error_code"),
     providerErrorMessage: text("provider_error_message"),
@@ -487,6 +491,7 @@ export const paidMediaEventReceiptsTable = pgTable(
   (table) => [
     uniqueIndex("paid_media_event_receipts_dataset_event_unique").on(table.datasetId, table.eventId),
     index("paid_media_event_receipts_workspace_occurred_idx").on(table.workspaceId, table.occurredAt),
+    index("paid_media_event_receipts_retry_idx").on(table.retryAt),
   ],
 );
 

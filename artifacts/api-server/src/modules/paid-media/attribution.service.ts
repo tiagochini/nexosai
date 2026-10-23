@@ -4,7 +4,9 @@ import {
   paidMediaConversionsTable, paidMediaDatasetsTable, paidMediaEntitiesTable,
   paidMediaEventReceiptsTable, paidMediaInsightsTable,
 } from "@workspace/db";
-import { paidMediaProvider, paidMediaProviderCapabilities, PaidMediaProviderError, normalizeMetaCapiEvent } from "./providers.js";
+import { paidMediaProvider, paidMediaProviderCapabilities, normalizeMetaCapiEvent } from "./providers.js";
+
+import { capiRetryEnvelope, finishCapiAttempt } from "./capi-retry.service.js";
 
 function finiteNumber(value: unknown, name: string): number {
   const parsed = Number(value);
@@ -22,12 +24,14 @@ export async function recordDatasetEvent(
   const normalized = normalizeMetaCapiEvent({ ...input, matchKeys: consented ? input.matchKeys : {} });
   const { client_ip_address: _ip, client_user_agent: _userAgent, ...safeKeys } = normalized.userData;
   const safePayload = { ...normalized.customData, marketingConsent: consented };
+  const queued = input.source === "server" && consented && dataset.provider === "meta_ads" && dataset.providerDatasetId && Object.keys(normalized.userData).length
+    ? { ...capiRetryEnvelope(dataset, normalized), deliveryAttempts: 0, retryAt: new Date() } : {};
   const inserted = await db.insert(paidMediaEventReceiptsTable).values({
     workspaceId: dataset.workspaceId, datasetId: dataset.id, source: input.source,
     eventId: input.eventId, eventName: input.eventName, occurredAt,
-    eventMatchKeys: safeKeys, payload: safePayload,
-  }).onConflictDoNothing().returning({ id: paidMediaEventReceiptsTable.id, deliveryStatus: paidMediaEventReceiptsTable.deliveryStatus, eventName: paidMediaEventReceiptsTable.eventName });
-  const [existing] = inserted[0] ? inserted : await db.select({ id: paidMediaEventReceiptsTable.id, deliveryStatus: paidMediaEventReceiptsTable.deliveryStatus, eventName: paidMediaEventReceiptsTable.eventName })
+    eventMatchKeys: safeKeys, payload: safePayload, ...queued,
+  }).onConflictDoNothing().returning({ id: paidMediaEventReceiptsTable.id, deliveryStatus: paidMediaEventReceiptsTable.deliveryStatus, eventName: paidMediaEventReceiptsTable.eventName, occurredAt: paidMediaEventReceiptsTable.occurredAt });
+  const [existing] = inserted[0] ? inserted : await db.select({ id: paidMediaEventReceiptsTable.id, deliveryStatus: paidMediaEventReceiptsTable.deliveryStatus, eventName: paidMediaEventReceiptsTable.eventName, occurredAt: paidMediaEventReceiptsTable.occurredAt })
     .from(paidMediaEventReceiptsTable).where(and(eq(paidMediaEventReceiptsTable.datasetId, dataset.id), eq(paidMediaEventReceiptsTable.eventId, input.eventId))).limit(1);
   if (!existing) throw new Error("Event receipt could not be persisted.");
   if (existing.eventName !== input.eventName) throw new Error("eventId já pertence a outro eventName; use um identificador único por conversão.");
@@ -40,27 +44,29 @@ export async function recordDatasetEvent(
   if (!consented || capability !== "supported" || !dataset.providerDatasetId) {
     const deliveryStatus = consented ? "capability_blocked" as const : "consent_withheld" as const;
     await db.update(paidMediaEventReceiptsTable).set({
-      deliveryStatus, providerErrorCode: consented ? "CAPABILITY_BLOCKED" : "CONSENT_WITHHELD",
+      deliveryStatus, retryPayload: null, retryAt: null, providerErrorCode: consented ? "CAPABILITY_BLOCKED" : "CONSENT_WITHHELD",
       providerErrorMessage: consented ? "Provider conversion transport or dataset external ID is unavailable." : "Marketing consent was not supplied; no provider event was sent.",
     }).where(and(eq(paidMediaEventReceiptsTable.id, existing.id), eq(paidMediaEventReceiptsTable.deliveryStatus, "pending"), isNull(paidMediaEventReceiptsTable.providerAttemptedAt)));
     return { accepted: true, duplicate: !inserted[0], receiptId: existing.id, deliveryStatus };
   }
   let capiEvent;
   try {
-    capiEvent = normalizeMetaCapiEvent({ eventName: input.eventName, eventId: input.eventId, occurredAt: input.occurredAt, matchKeys: input.matchKeys, payload: input.payload });
+    capiEvent = normalizeMetaCapiEvent({ eventName: input.eventName, eventId: input.eventId, occurredAt: existing.occurredAt.toISOString(), matchKeys: input.matchKeys, payload: input.payload });
     if (!Object.keys(capiEvent.userData).length) {
-      await db.update(paidMediaEventReceiptsTable).set({ deliveryStatus: "capability_blocked", providerErrorCode: "MISSING_MATCH_KEYS", providerErrorMessage: "No consented Meta match key was supplied; no provider event was sent." })
+      await db.update(paidMediaEventReceiptsTable).set({ deliveryStatus: "capability_blocked", retryPayload: null, retryAt: null, providerErrorCode: "MISSING_MATCH_KEYS", providerErrorMessage: "No consented Meta match key was supplied; no provider event was sent." })
         .where(and(eq(paidMediaEventReceiptsTable.id, existing.id), eq(paidMediaEventReceiptsTable.deliveryStatus, "pending"), isNull(paidMediaEventReceiptsTable.providerAttemptedAt)));
       return { accepted: true, duplicate: !inserted[0], receiptId: existing.id, deliveryStatus: "capability_blocked" as const };
     }
   } catch (error) {
-    await db.update(paidMediaEventReceiptsTable).set({ deliveryStatus: "failed", providerErrorCode: "INVALID_CAPI_EVENT", providerErrorMessage: error instanceof Error ? error.message : "Invalid Meta conversion event." })
+    await db.update(paidMediaEventReceiptsTable).set({ deliveryStatus: "failed", retryPayload: null, retryAt: null, providerErrorCode: "INVALID_CAPI_EVENT", providerErrorMessage: "Invalid Meta conversion event." })
       .where(and(eq(paidMediaEventReceiptsTable.id, existing.id), eq(paidMediaEventReceiptsTable.deliveryStatus, "pending"), isNull(paidMediaEventReceiptsTable.providerAttemptedAt)));
     return { accepted: true, duplicate: !inserted[0], receiptId: existing.id, deliveryStatus: "failed" as const };
   }
   // Claim pending receipt atomically. Concurrent delivery of the same event_id
   // observes the same receipt but cannot create a second provider request.
-  const [claimed] = await db.update(paidMediaEventReceiptsTable).set({ providerAttemptedAt: new Date(), source: "server", eventMatchKeys: safeKeys, payload: safePayload })
+  const attemptedAt = new Date();
+  const envelope = capiRetryEnvelope(dataset, capiEvent, attemptedAt);
+  const [claimed] = await db.update(paidMediaEventReceiptsTable).set({ ...envelope, providerAttemptedAt: attemptedAt, source: "server", eventMatchKeys: safeKeys, payload: safePayload })
     .where(and(eq(paidMediaEventReceiptsTable.id, existing.id), eq(paidMediaEventReceiptsTable.deliveryStatus, "pending"), isNull(paidMediaEventReceiptsTable.providerAttemptedAt))).returning({ id: paidMediaEventReceiptsTable.id });
   if (!claimed) return { accepted: true, duplicate: true, receiptId: existing.id, deliveryStatus: existing.deliveryStatus };
   try {
@@ -68,12 +74,10 @@ export async function recordDatasetEvent(
       dataset.workspaceId, dataset.accountId, dataset.providerDatasetId,
       capiEvent,
     );
-    await db.update(paidMediaEventReceiptsTable).set({ deliveryStatus: "sent", providerResponse: result.evidence, providerErrorCode: null, providerErrorMessage: null }).where(eq(paidMediaEventReceiptsTable.id, existing.id));
+    await finishCapiAttempt(existing.id, attemptedAt, 1, envelope.retryExpiresAt, result);
     return { accepted: true, duplicate: !inserted[0], receiptId: existing.id, deliveryStatus: "sent" as const };
   } catch (error) {
-    const providerError = error instanceof PaidMediaProviderError ? error : undefined;
-    const deliveryStatus = providerError?.code === "AUTH" || providerError?.code === "UNSUPPORTED" ? "capability_blocked" as const : "failed" as const;
-    await db.update(paidMediaEventReceiptsTable).set({ deliveryStatus, providerErrorCode: providerError?.code ?? "PROVIDER_ERROR", providerErrorMessage: "Falha no envio ao provedor; consulte o código seguro e reconecte a integração se necessário." }).where(eq(paidMediaEventReceiptsTable.id, existing.id));
+    const deliveryStatus = await finishCapiAttempt(existing.id, attemptedAt, 1, envelope.retryExpiresAt, undefined, error);
     return { accepted: true, duplicate: !inserted[0], receiptId: existing.id, deliveryStatus };
   }
 }
@@ -86,11 +90,12 @@ export async function datasetDiagnostics(workspaceId: string, datasetId: string)
     matched: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.eventMatchKeys} <> '{}'::jsonb)::int`,
     sent: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.deliveryStatus} = 'sent')::int`,
     blocked: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.deliveryStatus} = 'capability_blocked')::int`,
+    queued: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.retryAt} is not null)::int`,
     failed: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.deliveryStatus} = 'failed')::int`,
   }).from(paidMediaEventReceiptsTable).where(eq(paidMediaEventReceiptsTable.datasetId, dataset.id));
   await db.update(paidMediaDatasetsTable).set({ lastDiagnosticAt: new Date() }).where(eq(paidMediaDatasetsTable.id, dataset.id));
   const events = stats?.events ?? 0;
-  return { datasetId: dataset.id, lastEventAt: dataset.lastEventAt, eventCount: events, matchKeyEventCount: stats?.matched ?? 0, matchRate: events ? (stats?.matched ?? 0) / events : 0, localMatchKeyCoverage: events ? (stats?.matched ?? 0) / events : 0, measurementSource: "local_receipts", metaEventMatchQuality: null, browserServerDeduplication: "not_verified", testEvents: "unsupported", providerDelivery: { sent: stats?.sent ?? 0, capabilityBlocked: stats?.blocked ?? 0, failed: stats?.failed ?? 0 }, status: events ? "receiving" : "no_events" };
+  return { datasetId: dataset.id, lastEventAt: dataset.lastEventAt, eventCount: events, matchKeyEventCount: stats?.matched ?? 0, matchRate: events ? (stats?.matched ?? 0) / events : 0, localMatchKeyCoverage: events ? (stats?.matched ?? 0) / events : 0, measurementSource: "local_receipts", metaEventMatchQuality: null, browserServerDeduplication: "not_verified", testEvents: "unsupported", providerDelivery: { queued: stats?.queued ?? 0, sent: stats?.sent ?? 0, capabilityBlocked: stats?.blocked ?? 0, failed: stats?.failed ?? 0 }, status: events ? "receiving" : "no_events" };
 }
 
 export async function upsertTouchpoint(workspaceId: string, input: { externalTouchpointId: string; accountId?: string; entityId?: string; provider?: "meta_ads" | "tiktok_ads" | "google_ads"; clickId?: string; utmSource?: string; utmCampaign?: string; occurredAt: string; metadata?: Record<string, unknown> }) {
@@ -114,6 +119,8 @@ export async function upsertTouchpoint(workspaceId: string, input: { externalTou
 export async function upsertConversion(workspaceId: string, input: { externalConversionId: string; touchpointExternalId?: string; occurredAt: string; currency: string; value: unknown; metadata?: Record<string, unknown> }) {
   const occurredAt = new Date(input.occurredAt);
   if (!input.externalConversionId || !input.currency || Number.isNaN(occurredAt.getTime())) throw new Error("externalConversionId, currency and valid occurredAt are required.");
+  if (!/^[A-Za-z]{3}$/.test(input.currency)) throw new Error("Informe a moeda com três letras, como BRL ou USD.");
+  input = { ...input, currency: input.currency.toUpperCase() };
   const [touchpoint] = input.touchpointExternalId ? await db.select().from(paidMediaAttributionTouchpointsTable).where(and(eq(paidMediaAttributionTouchpointsTable.workspaceId, workspaceId), eq(paidMediaAttributionTouchpointsTable.externalTouchpointId, input.touchpointExternalId))).limit(1) : [];
   if (input.touchpointExternalId && !touchpoint) throw new Error("Touchpoint not found in this workspace.");
   const status = touchpoint ? "reconciled" as const : "unattributed" as const;
@@ -124,11 +131,21 @@ export async function upsertConversion(workspaceId: string, input: { externalCon
   return row;
 }
 
-export async function reconciliationSummary(workspaceId: string, since: string, until: string) {
-  const from = new Date(`${since}T00:00:00.000Z`); const to = new Date(`${until}T23:59:59.999Z`);
-  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) throw new Error("A valid inclusive since/until date range is required.");
-  const [media] = await db.select({ impressions: sql<number>`coalesce(sum(${paidMediaInsightsTable.impressions}), 0)::float`, clicks: sql<number>`coalesce(sum(${paidMediaInsightsTable.clicks}), 0)::float`, spend: sql<number>`coalesce(sum(${paidMediaInsightsTable.spend}), 0)::float` }).from(paidMediaInsightsTable).where(and(eq(paidMediaInsightsTable.workspaceId, workspaceId), gte(paidMediaInsightsTable.metricDate, since), lte(paidMediaInsightsTable.metricDate, until)));
-  const [crm] = await db.select({ conversions: sql<number>`count(*)::int`, revenue: sql<number>`coalesce(sum(${paidMediaConversionsTable.value}), 0)::float`, unattributed: sql<number>`count(*) filter (where ${paidMediaConversionsTable.reconciliationStatus} = 'unattributed')::int` }).from(paidMediaConversionsTable).where(and(eq(paidMediaConversionsTable.workspaceId, workspaceId), gte(paidMediaConversionsTable.occurredAt, from), lte(paidMediaConversionsTable.occurredAt, to)));
-  const spend = media?.spend ?? 0, conversions = crm?.conversions ?? 0, revenue = crm?.revenue ?? 0;
-  return { since, until, impressions: media?.impressions ?? 0, clicks: media?.clicks ?? 0, spend, crmConversions: conversions, crmRevenue: revenue, unattributedConversions: crm?.unattributed ?? 0, ctr: media?.impressions ? (media.clicks / media.impressions) : null, cpa: conversions ? spend / conversions : null, roas: spend ? revenue / spend : null };
+export async function reconciliationSummary(workspaceId: string, since: string, until: string, accountId?: string) {
+  const { z } = await import("zod/v4");
+  const range = z.object({ since: z.iso.date(), until: z.iso.date(), accountId: z.string().uuid().optional() }).parse({ since, until, accountId });
+  const from = new Date(`${range.since}T00:00:00.000Z`), to = new Date(`${range.until}T23:59:59.999Z`);
+  if (from > to || to.getTime() - from.getTime() > 367 * 86400000) throw new Error("Informe um período de até 366 dias, em ordem.");
+  const media = await db.select({ accountId: paidMediaInsightsTable.accountId, currency: paidMediaInsightsTable.currency, entityId: paidMediaInsightsTable.entityId,
+    metricDate: paidMediaInsightsTable.metricDate, dateGrain: paidMediaInsightsTable.dateGrain, entityType: paidMediaEntitiesTable.entityType, attributionWindow: paidMediaInsightsTable.attributionWindow,
+    spend: paidMediaInsightsTable.spend, impressions: paidMediaInsightsTable.impressions, clicks: paidMediaInsightsTable.clicks, syncedAt: paidMediaInsightsTable.syncedAt })
+    .from(paidMediaInsightsTable).innerJoin(paidMediaEntitiesTable, and(eq(paidMediaEntitiesTable.id, paidMediaInsightsTable.entityId), eq(paidMediaEntitiesTable.workspaceId, workspaceId), eq(paidMediaEntitiesTable.accountId, paidMediaInsightsTable.accountId)))
+    .where(and(eq(paidMediaInsightsTable.workspaceId, workspaceId), accountId ? eq(paidMediaInsightsTable.accountId, accountId) : undefined, gte(paidMediaInsightsTable.metricDate, since), lte(paidMediaInsightsTable.metricDate, until)));
+  const crm = await db.select({ currency: paidMediaConversionsTable.currency, value: paidMediaConversionsTable.value, reconciliationStatus: paidMediaConversionsTable.reconciliationStatus,
+    accountId: sql<string | null>`coalesce(${paidMediaAttributionTouchpointsTable.accountId}, ${paidMediaEntitiesTable.accountId})`, occurredAt: paidMediaConversionsTable.occurredAt, touchpointAt: paidMediaAttributionTouchpointsTable.occurredAt })
+    .from(paidMediaConversionsTable).leftJoin(paidMediaAttributionTouchpointsTable, and(eq(paidMediaConversionsTable.touchpointId, paidMediaAttributionTouchpointsTable.id), eq(paidMediaAttributionTouchpointsTable.workspaceId, workspaceId)))
+    .leftJoin(paidMediaEntitiesTable, and(eq(paidMediaEntitiesTable.id, paidMediaAttributionTouchpointsTable.entityId), eq(paidMediaEntitiesTable.workspaceId, workspaceId)))
+    .where(and(eq(paidMediaConversionsTable.workspaceId, workspaceId), accountId ? sql`coalesce(${paidMediaAttributionTouchpointsTable.accountId}, ${paidMediaEntitiesTable.accountId}) = ${accountId}` : undefined, gte(paidMediaConversionsTable.occurredAt, from), lte(paidMediaConversionsTable.occurredAt, to)));
+  const { summarizeCrmReconciliation } = await import("./crm-reconciliation.domain.js");
+  return { since, until, accountId: accountId ?? null, ...summarizeCrmReconciliation(media, crm) };
 }

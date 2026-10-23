@@ -3214,6 +3214,8 @@ function LandingImplementationForm({ campaignId, data }: { campaignId: string; d
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const initialized = useRef(false);
+  const [dirty, setDirty] = useState(false);
+  const [revisionPreview, setRevisionPreview] = useState<{ revisionId: string; contentHash: string; html: string; revision: number } | null>(null);
 
   const toLocalDateTimeInput = (value: string) => {
     const date = new Date(value);
@@ -3255,6 +3257,7 @@ function LandingImplementationForm({ campaignId, data }: { campaignId: string; d
           ctas,
         }),
       });
+      setDirty(false); setRevisionPreview(null);
       await queryClient.invalidateQueries({ queryKey });
       toast.success(t("Plano de implementação salvo.", "Implementation plan saved.", "Plan de implementación guardado."));
     } catch (error) {
@@ -3265,7 +3268,8 @@ function LandingImplementationForm({ campaignId, data }: { campaignId: string; d
   const publish = async () => {
     setPublishing(true);
     try {
-      const result = await customFetch<{ url: string }>(`/api/campaigns/${campaignId}/landing-publish`, { method: "POST" });
+      const result = await customFetch<{ url: string; status?: string; revisionId: string; contentHash: string; html: string; revision: number }>(`/api/campaigns/${campaignId}/landing-publish`, { method: "POST" });
+      if (result.status === "preview") { setRevisionPreview(result); return; }
       await queryClient.invalidateQueries({ queryKey });
       toast.success(t("Landing publicada", "Landing published", "Landing publicada"));
       window.open(result.url, "_blank", "noopener,noreferrer");
@@ -3274,11 +3278,23 @@ function LandingImplementationForm({ campaignId, data }: { campaignId: string; d
     } finally { setPublishing(false); }
   };
 
+  const publishRevision = async () => {
+    if (!revisionPreview) return;
+    setPublishing(true);
+    try {
+      await customFetch(`/api/campaigns/${campaignId}/landing-revision-publish`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revisionId: revisionPreview.revisionId, contentHash: revisionPreview.contentHash }) });
+      setRevisionPreview(null);
+      await queryClient.invalidateQueries({ queryKey });
+      toast.success(t("Revisão publicada na mesma página.", "Revision published to the same page.", "Revisión publicada en la misma página."));
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Falha ao publicar revisão"); }
+    finally { setPublishing(false); }
+  };
+
   const fieldClass = "w-full h-10 bg-background border border-border/50 px-3 text-sm rounded-none focus:outline-none focus:border-primary";
   const labelClass = "block font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70 mb-1.5";
 
   return (
-    <section className="border border-primary/30 bg-card/40 p-4 sm:p-5 space-y-5" data-testid="landing-implementation-form">
+    <section onChange={() => { setDirty(true); setRevisionPreview(null); }} className="border border-primary/30 bg-card/40 p-4 sm:p-5 space-y-5" data-testid="landing-implementation-form">
       <header>
         <p className="font-mono text-[10px] uppercase tracking-widest text-primary mb-1">{t("Próxima etapa após aprovação", "Next step after approval", "Siguiente etapa tras la aprobación")}</p>
         <h3 className="font-mono text-sm font-bold uppercase tracking-wide">{t("Programar publicação, CTAs e rastreamento", "Schedule publication, CTAs, and tracking", "Programar publicación, CTAs y seguimiento")}</h3>
@@ -3286,7 +3302,7 @@ function LandingImplementationForm({ campaignId, data }: { campaignId: string; d
       </header>
 
       {isLoading ? <div className="font-mono text-xs text-muted-foreground">{t("Carregando configuração…", "Loading setup…", "Cargando configuración…")}</div> : (
-        <>
+        <fieldset disabled={saving || publishing} className="space-y-5">
           <div className="grid gap-4 md:grid-cols-2">
             <label><span className={labelClass}>{t("Data e hora planejadas", "Planned date and time", "Fecha y hora previstas")}</span><input type="datetime-local" className={fieldClass} value={scheduledAt} onChange={event => setScheduledAt(event.target.value)} data-testid="landing-scheduled-at" /></label>
             <label><span className={labelClass}>{t("Domínio ou subdomínio", "Domain or subdomain", "Dominio o subdominio")}</span><input className={fieldClass} placeholder="lp.seudominio.com" value={desiredDomain} onChange={event => setDesiredDomain(event.target.value)} data-testid="landing-domain" /><span className="text-[10px] text-muted-foreground">{t("Será necessário verificar o domínio e configurar DNS/HTTPS antes da publicação.", "Verify the domain and configure DNS/HTTPS before publishing.", "Habrá que verificar el dominio y configurar DNS/HTTPS antes de publicar.")}</span></label>
@@ -3321,7 +3337,7 @@ function LandingImplementationForm({ campaignId, data }: { campaignId: string; d
           <label className="block"><span className={labelClass}>{t("Evento Meta após captura — use o mesmo do anúncio", "Meta capture event — match the ad event", "Evento Meta tras captura — usa el mismo del anuncio")}</span><select className={fieldClass} value={metaLeadEventName} onChange={event => setMetaLeadEventName(event.target.value as "Lead" | "CompleteRegistration")}><option>Lead</option><option>CompleteRegistration</option></select></label>
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/40 pt-4">
             <p className="max-w-xl text-[10px] text-amber-300/80">{t("Este formulário registra o plano para a equipe/NexOS implementar. Salvar não publica a página nem ativa pixels ou links externos.", "This form records the implementation plan. Saving does not publish the page or activate pixels or external links.", "Este formulario registra el plan de implementación. Guardarlo no publica la página ni activa píxeles o enlaces externos.")}</p>
-            <Button onClick={() => void save()} disabled={saving || isLoading || !!remote?.published} className="rounded-none font-mono uppercase tracking-widest gap-2 btn-weapon-primary h-10 text-xs" data-testid="save-landing-setup">
+            <Button onClick={() => void save()} disabled={saving || publishing || isLoading} className="rounded-none font-mono uppercase tracking-widest gap-2 btn-weapon-primary h-10 text-xs" data-testid="save-landing-setup">
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}{t("Salvar plano de implementação", "Save implementation plan", "Guardar plan de implementación")}
             </Button>
           </div>
@@ -3332,15 +3348,19 @@ function LandingImplementationForm({ campaignId, data }: { campaignId: string; d
               <span>{t("Landing publicada", "Landing published", "Landing publicada")}{remote.published.publishedAt ? ` · ${new Date(remote.published.publishedAt).toLocaleString()}` : ""}</span>
               <a className="text-primary underline" href={remote.published.publishedUrl} target="_blank" rel="noreferrer">{remote.published.publishedUrl}</a>
             </div>
-          ) : (
+          ) : null}
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/40 pt-4">
               <p className="max-w-xl text-[10px] text-muted-foreground">{t("Publicar ficará disponível após salvar o plano e verificar o domínio. A data agendada impede publicação antecipada; depois dela, a ativação é manual por este botão. A captura exige uma sequência ativa.", "Publishing is available after saving the plan and verifying the domain. The scheduled date blocks early publication; after that, activate it manually with this button. Lead capture requires an active sequence.", "La publicación estará disponible tras guardar el plan y verificar el dominio. La fecha programada impide publicar antes; después, la activación se hace manualmente con este botón. La captura requiere una secuencia activa.")}</p>
-              <Button onClick={() => void publish()} disabled={publishing || saving || isLoading || !remote?.approved || remote.setup?.status !== "ready_for_implementation"} className="rounded-none font-mono uppercase tracking-widest gap-2 btn-weapon-primary h-10 text-xs" data-testid="publish-campaign-landing">
-                {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}{t("Publicar landing", "Publish landing", "Publicar landing")}
+              <Button onClick={() => void publish()} disabled={publishing || saving || isLoading || !remote?.approved || dirty || remote.setup?.status !== "ready_for_implementation"} className="rounded-none font-mono uppercase tracking-widest gap-2 btn-weapon-primary h-10 text-xs" data-testid="publish-campaign-landing">
+                {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}{remote?.published ? t("Gerar prévia da revisão", "Preview revision", "Generar vista previa") : t("Publicar landing", "Publish landing", "Publicar landing")}
               </Button>
             </div>
-          )}
-        </>
+          {revisionPreview && <div className="space-y-3 border border-primary/40 p-3">
+            <p>{t("Prévia da revisão", "Revision preview", "Vista previa de revisión")} {revisionPreview.revision}. {t("Confira a página antes de aprovar. A publicação mantém o endereço atual e substitui a versão disponível aos visitantes.", "Review before approving. Publishing preserves the URL and replaces the version visitors see.", "Revisa antes de aprobar. Publicar conserva la URL y reemplaza la versión visible para visitantes.")}</p>
+            <iframe title="Landing revision preview" sandbox="" srcDoc={revisionPreview.html} className="w-full h-[600px] bg-white" />
+            <Button disabled={publishing || saving || dirty} onClick={() => void publishRevision()}>{t("Aprovar e publicar esta revisão", "Approve and publish this revision", "Aprobar y publicar esta revisión")}</Button>
+          </div>}
+        </fieldset>
       )}
     </section>
   );

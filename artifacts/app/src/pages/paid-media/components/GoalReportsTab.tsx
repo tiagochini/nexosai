@@ -4,6 +4,8 @@ import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { Button } from "@/components/ui/button";
 import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
+import { CrmReconciliation } from "./CrmReconciliation";
+
 type Group = {
   event: string;
   attributionWindow: string;
@@ -251,6 +253,7 @@ export function GoalReportsTab() {
           </>
         )
       )}
+      {query && <CrmReconciliation query={query} />}
     </section>
   );
 }

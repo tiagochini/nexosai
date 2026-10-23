@@ -270,7 +270,7 @@ router.post("/attribution/conversions", async (req, res): Promise<void> => {
   try { res.status(201).json({ conversion: await upsertConversion(req.auth.workspaceId, req.body ?? {}) }); } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Invalid conversion.", code: "VALIDATION_ERROR" }); }
 });
 router.get("/attribution/reconciliation", async (req, res): Promise<void> => {
-  try { res.json(await reconciliationSummary(req.auth.workspaceId, String(req.query["since"] ?? ""), String(req.query["until"] ?? ""))); } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Invalid reconciliation range.", code: "VALIDATION_ERROR" }); }
+  try { res.json(await reconciliationSummary(req.auth.workspaceId, String(req.query["since"] ?? ""), String(req.query["until"] ?? ""), req.query["accountId"] ? String(req.query["accountId"]) : undefined)); } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Invalid reconciliation range.", code: "VALIDATION_ERROR" }); }
 });
 
 router.post("/accounts/:provider/:accountId/select", async (req, res): Promise<void> => {

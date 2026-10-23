@@ -5,6 +5,8 @@ import { logger } from "../../lib/logger.js";
 import { registerScheduler, runSchedulerTick } from "../operations/scheduler-health.registry.js";
 import { conditionalExecutionTick } from "./conditional-execution.service.js";
 
+import { capiRetryTick } from "./capi-retry.service.js";
+
 let timer: ReturnType<typeof setInterval> | null = null;
 async function tick() {
   await conditionalExecutionTick();
@@ -24,7 +26,9 @@ export const runConditionalExecutionTick = conditionalExecutionTick;
 export function startPaidMediaScheduler() {
   if (!timer) {
     registerScheduler("paid-media", 60_000);
+    registerScheduler("paid-media-capi", 60_000);
     timer = setInterval(() => {
+      void runSchedulerTick("paid-media-capi", () => capiRetryTick()).catch(() => logger.error("CAPI retry scheduler tick failed"));
       void runSchedulerTick("paid-media", tick).catch(() => logger.error("Paid-media scheduler tick failed"));
       }, 60_000);
     logger.info("Paid-media scheduler started");

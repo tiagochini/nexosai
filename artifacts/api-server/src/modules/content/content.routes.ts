@@ -33,6 +33,8 @@ import { landingMeasurementState, publishCampaignLanding } from "../landing-publ
 import { getApprovedMasterplan } from "../masterplan/masterplan.service.js";
 import { assertLandingAdTracking } from "../landing-publication/landing-tracking.service.js";
 
+import { prepareLandingUpgrade, publishLandingUpgrade } from "../landing-publication/landing-upgrade.service.js";
+
 const router = Router();
 router.use(requireAuth);
 
@@ -92,9 +94,6 @@ router.put("/:campaignId/landing-setup", async (req, res): Promise<void> => {
   const [campaign] = await db.select({ id: campaignsTable.id }).from(campaignsTable)
     .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId))).limit(1);
   if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "CAMPAIGN_NOT_FOUND" }); return; }
-  const [alreadyPublished] = await db.select({ id: pagesTable.id }).from(pagesTable)
-    .where(and(eq(pagesTable.campaignId, campaignId), eq(pagesTable.workspaceId, req.auth.workspaceId), eq(pagesTable.status, "published"))).limit(1);
-  if (alreadyPublished) { res.status(409).json({ error: "Esta landing já foi publicada. Gere uma nova campanha/revisão para alterar a página publicada.", code: "LANDING_ALREADY_PUBLISHED" }); return; }
   const landing = await approvedLandingPiece(campaignId, req.auth.workspaceId);
   if (!landing) { res.status(409).json({ error: "Aprove a landing page antes de configurar publicação, CTAs e rastreamento.", code: "LANDING_APPROVAL_REQUIRED" }); return; }
 
@@ -151,6 +150,13 @@ router.post("/:campaignId/landing-publish", async (req, res): Promise<void> => {
   if ((setup.tracking.metaDatasetId && !metaDataset) || (setup.tracking.tiktokDatasetId && !tiktokDataset)) { res.status(409).json({ error: "Um dos pixels configurados não está mais disponível. Revise o plano de implementação.", code: "LANDING_TRACKING_DATASET_INVALID" }); return; }
   const approvedMasterplan = await getApprovedMasterplan(req.auth.workspaceId, campaignId);
   assertLandingAdTracking(approvedMasterplan?.snapshot, domain.domain, { metaPixelId: metaDataset?.providerDatasetId, metaLeadEventName: setup.tracking.metaLeadEventName });
+  const [publishedPage] = await db.select({ id: pagesTable.id }).from(pagesTable).where(and(eq(pagesTable.campaignId, campaignId), eq(pagesTable.workspaceId, req.auth.workspaceId), eq(pagesTable.status, "published"))).limit(1);
+  if (publishedPage) {
+    const revision = await prepareLandingUpgrade(req.auth.workspaceId, campaignId, {
+      source, setup, implementation: { ctas: setup.ctas, tracking: { metaLeadEventName: setup.tracking.metaLeadEventName ?? "Lead", metaDatasetId: setup.tracking.metaDatasetId ?? null, metaPixelId: metaDataset?.providerDatasetId ?? null, tiktokPixelId: tiktokDataset?.providerDatasetId ?? null } }, ...(sequenceId ? { sequenceId } : {}),
+    }, req.auth.userId);
+    res.status(201).json(revision); return;
+  }
   const result = await publishCampaignLanding({
     workspaceId: req.auth.workspaceId, campaignId, title: landing[0].title, domainId: domain.id, domain: domain.domain,
     source, implementation: { ctas: setup.ctas, tracking: { metaLeadEventName: setup.tracking.metaLeadEventName ?? "Lead", metaDatasetId: setup.tracking.metaDatasetId ?? null, metaPixelId: metaDataset?.providerDatasetId ?? null, tiktokPixelId: tiktokDataset?.providerDatasetId ?? null } }, ...(sequenceId ? { sequenceId } : {}),
@@ -158,6 +164,13 @@ router.post("/:campaignId/landing-publish", async (req, res): Promise<void> => {
   await db.update(campaignsTable).set({ landingSetupData: { ...setup, status: "published", trackingStatus: metaDataset || tiktokDataset ? "configured_not_verified" : "not_configured", publishedAt: new Date().toISOString(), pageId: result.page.id } })
     .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId)));
   res.status(201).json({ url: result.page.publishedUrl, pageId: result.page.id, revisionId: result.revision.id, deploymentId: result.deployment.id, status: result.deployment.status });
+});
+
+// Explicit approval publishes the exact immutable preview, preserving the page URL.
+router.post("/:campaignId/landing-revision-publish", async (req, res): Promise<void> => {
+  const parsed = z.object({ revisionId: z.string().uuid(), contentHash: z.string().regex(/^[a-f0-9]{64}$/) }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Informe a revisão e o hash da prévia aprovada.", code: "VALIDATION_ERROR" }); return; }
+  res.json(await publishLandingUpgrade(req.auth.workspaceId, req.params["campaignId"] as string, parsed.data, req.auth.userId));
 });
 
 // GET /campaigns/:campaignId/content — list all content pieces

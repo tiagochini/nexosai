@@ -75,7 +75,8 @@ try {
   await Promise.all(Array.from({ length: 8 }, () => upsertConversion(workspace, { externalConversionId: sale.id, touchpointExternalId: lead.contactId,
     occurredAt, currency: 'BRL', value: sale.amountCents / 100, metadata: { productId: product.id } })));
   const attribution = await reconciliationSummary(workspace, date, date);
-  assert.equal(attribution.crmConversions, 1); assert.equal(attribution.crmRevenue, 25); assert.equal(attribution.unattributedConversions, 0);
+  assert.equal(attribution.groups.length, 0);
+  assert.deepEqual(attribution.excludedFromPaidMetrics, [{ currency: 'BRL', conversions: 1, revenue: 25 }]); // No media account linkage: excluded from paid ROAS.
   assert.equal((await db.select().from(productSalesTable).where(eq(productSalesTable.id, sale.id))).length, 1);
   await assert.rejects(upsertConversion(fixture.workspaces[1]!, { externalConversionId: 'foreign', touchpointExternalId: lead.contactId, occurredAt, currency: 'BRL', value: 25 }));
   console.log('PASS P3 connected local registration, campaign/content fixture, authorized publication/readback, consented lead, checkout and idempotent attribution');

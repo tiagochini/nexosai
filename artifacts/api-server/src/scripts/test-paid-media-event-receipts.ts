@@ -8,6 +8,8 @@ import { paidMediaProvider } from "../modules/paid-media/providers.js";
 // Exercise the real service and its SQL predicates against a memory store.
 // No network, credential or database connection is used.
 const original = { insert: db.insert, select: db.select, update: db.update };
+const oldKey = process.env["INTEGRATION_TOKEN_ENCRYPTION_KEY"];
+process.env["INTEGRATION_TOKEN_ENCRYPTION_KEY"] = Buffer.alloc(32, 7).toString("base64");
 const adapter = paidMediaProvider("meta_ads"), send = adapter.sendConversionEvent;
 const rows = new Map<string, any>();
 const dialect = new PgDialect();
@@ -53,10 +55,11 @@ try {
     providerCalls++;
     assert.equal(value.eventId, event.eventId);
     assert.equal(value.userData.em?.length, 64);
+    assert.equal(value.eventTime.toISOString(), new Date(Date.parse(event.occurredAt) - 1000).toISOString(), "browser-first timestamp remains immutable for server retries");
     await gate;
     return { evidence: { events_received: 1 } };
   };
-  await recordDatasetEvent(dataset, { ...event, source: "browser" });
+  await recordDatasetEvent(dataset, { ...event, source: "browser", occurredAt: new Date(Date.parse(event.occurredAt) - 1000).toISOString() });
   assert.equal(providerCalls, 0);
   const deliveries = [recordDatasetEvent(dataset, event), recordDatasetEvent(dataset, event)];
   // Allow both requests to reach the pending provider response before releasing it.
@@ -80,7 +83,9 @@ try {
   assert.equal(noKeys.deliveryStatus, "capability_blocked");
   assert.equal(providerCalls, 1);
   adapter.sendConversionEvent = async () => { throw new Error("secret echoed by upstream"); };
-  assert.equal((await recordDatasetEvent(dataset, { ...event, eventId: "provider-failure" })).deliveryStatus, "failed");
+  assert.equal((await recordDatasetEvent(dataset, { ...event, eventId: "provider-failure" })).deliveryStatus, "pending");
+  assert.ok(rows.get("provider-failure").retryAt);
+  assert.ok(rows.get("provider-failure").retryPayload);
   assert.equal(JSON.stringify(rows.get("provider-failure")).includes("secret echoed"), false);
   await assert.rejects(() => recordDatasetEvent(dataset, { ...event, eventName: "Purchase" }), /outro eventName/);
   assert.equal(providerCalls, 1);
@@ -102,6 +107,7 @@ try {
   assert.equal(sentLandingEvent.eventId, "pageview:page:visit");
   console.log("Meta receipt service: PASS (consent, hashed persistence, browser/server ordering, concurrent claim, replay, event identity)");
 } finally {
+  if (oldKey === undefined) delete process.env["INTEGRATION_TOKEN_ENCRYPTION_KEY"]; else process.env["INTEGRATION_TOKEN_ENCRYPTION_KEY"] = oldKey;
   Object.assign(db, original);
   adapter.sendConversionEvent = send;
   release?.();
