@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { isIP } from "node:net";
 import { createHash } from "node:crypto";
 import {
   db,
@@ -119,6 +120,7 @@ export type MetaCapiEvent = {
   eventName: string;
   eventId: string;
   eventTime: Date;
+  eventSourceUrl?: string;
   userData: Record<string, string>;
   customData: Record<string, unknown>;
 };
@@ -194,14 +196,20 @@ export function normalizeMetaCapiEvent(input: {
   const phone = raw("phone"); if (phone) userData["ph"] = sha256(phone.replace(/\D/g, ""));
   const externalId = raw("externalId"); if (externalId) userData["external_id"] = sha256(externalId);
   for (const key of ["fbp", "fbc"] as const) { const value = raw(key); if (value) userData[key] = value; }
+  const ip = raw("clientIpAddress"); if (ip && isIP(ip)) userData["client_ip_address"] = ip;
+  const userAgent = raw("clientUserAgent"); if (userAgent) userData["client_user_agent"] = userAgent.slice(0, 500);
   const payload = input.payload ?? {};
+  let eventSourceUrl: string | undefined;
+  if (typeof payload["eventSourceUrl"] === "string") {
+    try { const url = new URL(payload["eventSourceUrl"]); if (["https:", "http:"].includes(url.protocol)) { url.search = ""; url.hash = ""; url.username = ""; url.password = ""; eventSourceUrl = url.toString(); } } catch { /* optional source is omitted */ }
+  }
   const customData: Record<string, unknown> = {};
   if (typeof payload["currency"] === "string" && /^[A-Z]{3}$/.test(payload["currency"])) customData["currency"] = payload["currency"];
   if (typeof payload["value"] === "number" && Number.isFinite(payload["value"]) && payload["value"] >= 0) customData["value"] = payload["value"];
   if (typeof payload["orderId"] === "string") customData["order_id"] = payload["orderId"];
   if (Array.isArray(payload["contentIds"]) && payload["contentIds"].every((item) => typeof item === "string")) customData["content_ids"] = payload["contentIds"];
   if (typeof payload["contentType"] === "string") customData["content_type"] = payload["contentType"];
-  return { eventName: input.eventName, eventId: input.eventId, eventTime, userData, customData };
+  return { eventName: input.eventName, eventId: input.eventId, eventTime, eventSourceUrl, userData, customData };
 }
 
 /** Exported adapter seam: tests can supply a fake transport without touching global fetch. */
@@ -211,7 +219,7 @@ export async function sendMetaCapiRequest(
   if (!pixelId) throw new PaidMediaProviderError("Meta pixel/dataset external ID is required.", "PRECONDITION_FAILED", 409);
   const response = await transport(`https://graph.facebook.com/v26.0/${encodeURIComponent(pixelId)}/events`, {
     method: "POST", headers: { "Content-Type": "application/json", "X-NexOS-Idempotency-Key": event.eventId },
-    body: JSON.stringify({ data: [{ event_name: event.eventName, event_time: Math.floor(event.eventTime.getTime() / 1000), event_id: event.eventId, action_source: "website", user_data: event.userData, ...(Object.keys(event.customData).length ? { custom_data: event.customData } : {}) }], access_token: token }),
+    body: JSON.stringify({ data: [{ event_name: event.eventName, event_time: Math.floor(event.eventTime.getTime() / 1000), event_id: event.eventId, action_source: "website", ...(event.eventSourceUrl ? { event_source_url: event.eventSourceUrl } : {}), user_data: event.userData, ...(Object.keys(event.customData).length ? { custom_data: event.customData } : {}) }], access_token: token }),
   });
   const body = await response.json().catch(() => ({})) as Record<string, unknown>;
   if (!response.ok) {

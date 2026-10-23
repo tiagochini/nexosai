@@ -8,6 +8,8 @@ import { env } from "../../lib/env.js";
 import { isLaunchSource, reserveLaunchSeat } from "../waitlist/launch-reservation.service.js";
 import { captureLead, LeadIdentityConflictError, normalizeLeadPhone } from "./lead-capture.service.js";
 
+import { landingTrackingSchema, trackCapturedLandingLead } from "../landing-publication/landing-tracking.service.js";
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -97,6 +99,7 @@ const leadCaptureSchema = z.object({
   referralCode: z.string().max(20).optional(),
   consentText: z.string().max(500).optional(),
   tags: z.array(z.string()).optional(),
+  landingTracking: landingTrackingSchema.optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -297,6 +300,7 @@ router.post("/:sequenceId", async (req, res): Promise<void> => {
   const referralCode = generateReferralCode();
 
   let contact: { id: string } = { id: "" };
+  let tracking: { deliveryStatus: string; eventId?: string; eventName?: string } | undefined;
   try {
     const captureDependency = (req.app.locals as { captureLead?: typeof captureLead }).captureLead ?? captureLead;
     const captured = await captureDependency({
@@ -305,8 +309,9 @@ router.post("/:sequenceId", async (req, res): Promise<void> => {
       audit: { actor: body.email ?? body.phone ?? "anonymous", ipAddress: captureIp, data: { utm, referralCode, referredBy: refCode ?? null, consentAt, consentText: lgpd.consentText, userAgent: lgpd.userAgent } },
     });
     contact = { id: captured.contactId };
+    if (body.landingTracking) tracking = await trackCapturedLandingLead(body.landingTracking, { origin: req.get("origin"), ip: req.ip, userAgent: req.get("user-agent") }, { ...captured, sequenceId, email: body.email, phone: body.phone });
     if (captured.duplicate) {
-      res.json({ captured: true, duplicate: true, launchReserved, contactId: contact.id, message: "Lead já registrado" });
+      res.json({ tracking, captured: true, duplicate: true, launchReserved, contactId: contact.id, message: "Lead já registrado" });
       return;
     }
   } catch (err) {
@@ -351,6 +356,7 @@ router.post("/:sequenceId", async (req, res): Promise<void> => {
   }
 
   res.status(201).json({
+    tracking,
     captured: true,
     duplicate: false,
     launchReserved,

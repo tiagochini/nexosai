@@ -65,6 +65,7 @@ export function validateMetaAccountBudget(tree: Json, currency: string, minimumD
 export function validateMetaTree(tree: Json): void {
   const campaign = obj(tree.campaign);
   if (Array.isArray(campaign.unsupportedConfiguration) && campaign.unsupportedConfiguration.length) fail("META_CONFIGURATION_UNSUPPORTED", `Configurações não suportadas: ${campaign.unsupportedConfiguration.join(", ")}. Revise o Master Plan antes de aprovar.`);
+  if (campaign.approvedAccountId != null && campaign.approvedAccountId !== tree.accountId) fail("APPROVED_ACCOUNT_MISMATCH", "O plano deve ser compilado para a conta aprovada no briefing de anúncios.");
   metaDelivery(campaign);
   metaBudget(campaign);
   const budget = obj(campaign.budget);

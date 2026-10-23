@@ -4,6 +4,8 @@ import { requireAuth } from "../auth/auth.middleware.js";
 import { AppError } from "../../lib/errors.js";
 import { approveMasterplan, getCurrentMasterplan, listMasterplanVersions, materializeMasterplan } from "./masterplan.service.js";
 
+import { getPaidMediaSetup, savePaidMediaSetup } from "../paid-media/paid-media-setup.service.js";
+
 const router = Router();
 router.use(requireAuth);
 const materializeSchema = z.object({ requestApproval: z.boolean().optional().default(false) });
@@ -13,6 +15,12 @@ function handle(err: unknown, res: Response): void {
   if (err instanceof AppError) res.status(err.statusCode).json({ error: err.message, code: err.code, data: err.data });
   else throw err;
 }
+router.get("/:campaignId/masterplan/paid-media-setup", async (req, res) => {
+  try { res.json(await getPaidMediaSetup(req.auth.workspaceId, req.params["campaignId"] as string)); } catch (err) { handle(err, res); }
+});
+router.put("/:campaignId/masterplan/paid-media-setup", async (req, res) => {
+  try { res.json(await savePaidMediaSetup(req.auth.workspaceId, req.params["campaignId"] as string, req.auth.userId, req.body)); } catch (err) { handle(err, res); }
+});
 router.get("/:campaignId/masterplan/current", async (req, res) => {
   try {
     const masterplan = await getCurrentMasterplan(req.auth.workspaceId, req.params["campaignId"] as string);

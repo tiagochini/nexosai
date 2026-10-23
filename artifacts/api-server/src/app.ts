@@ -13,6 +13,9 @@ import { logger } from "./lib/logger.js";
 import { safeHttpRequest } from "./lib/log-security.js";
 import { AppError } from "./lib/errors.js";
 import { env } from "./lib/env.js";
+import { isVerifiedLandingSameOrigin } from "./lib/public-landing-origin.js";
+import { db, domainsTable } from "@workspace/db";
+import { and, eq } from "drizzle-orm";
 
 const app: Express = express();
 
@@ -48,7 +51,15 @@ const corsOptions: cors.CorsOptions = {
   maxAge: 600,
 };
 
-app.use(cors(corsOptions));
+const applyCors = cors(corsOptions);
+app.use(async (req, res, next) => {
+  const sameOriginLanding = env.NODE_ENV === "production" && await isVerifiedLandingSameOrigin({ path: req.path, origin: req.get("origin"), protocol: req.protocol, host: req.get("host") }, async hostname => {
+    const [domain] = await db.select({ id: domainsTable.id }).from(domainsTable).where(and(eq(domainsTable.domain, hostname), eq(domainsTable.dnsVerified, true))).limit(1);
+    return !!domain;
+  });
+  if (sameOriginLanding) { next(); return; }
+  applyCors(req, res, next);
+});
 
 // ─── Rate limiting ────────────────────────────────────────────────────────────
 const generalLimiter = rateLimit({

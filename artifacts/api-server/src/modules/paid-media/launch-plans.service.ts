@@ -130,7 +130,7 @@ export function compileMasterplanTree(snapshot: unknown, provider: PaidMediaProv
   const budgetMode = rawBudget["mode"];
   const unsupportedConfiguration = [
     ...Object.keys(rawBudget).filter(key => !["amount", "kind", "mode", "currency"].includes(key)).map(key => `budget.${key}`),
-    ...Object.keys(paidMedia).filter(key => !["objective", "optimizationGoal", "destinationType", "destinationUrl", "specialAdCategories", "budget", "audiences", "creatives", "tracking"].includes(key)),
+    ...Object.keys(paidMedia).filter(key => !["accountId", "objective", "optimizationGoal", "destinationType", "destinationUrl", "specialAdCategories", "budget", "audiences", "creatives", "tracking"].includes(key)),
   ];
   const destination = String(paidMedia["destinationUrl"] ?? offer["destinationUrl"] ?? offer["url"] ?? campaign["destinationUrl"] ?? root["destinationUrl"] ?? "");
   const audiences = arr(paidMedia["audiences"] ?? targeting["audiences"] ?? targeting["segments"] ?? [targeting]);
@@ -142,7 +142,7 @@ export function compileMasterplanTree(snapshot: unknown, provider: PaidMediaProv
   }
   const tree = {
     schema: "nexos-paid-media-tree/v2", provider, accountId,
-    campaign: { key: "campaign", name, objective, unsupportedConfiguration, destinationType: paidMedia["destinationType"] ?? "WEBSITE", optimizationGoal: paidMedia["optimizationGoal"], specialAdCategories: paidMedia["specialAdCategories"] ?? campaign["specialAdCategories"], budget, budgetMode, authorizedMinorUnits, budgetKind, startTime: campaign["startTime"] ?? timeline["startTime"], endTime: campaign["endTime"] ?? timeline["endTime"], durationDays: campaign["durationDays"] ?? root["durationDays"], timeline, destination, tracking: canonicalize(paidMedia["tracking"] ?? root["tracking"] ?? root["trackingRequirements"]) },
+    campaign: { key: "campaign", name, objective, approvedAccountId: paidMedia["accountId"], unsupportedConfiguration, destinationType: paidMedia["destinationType"] ?? "WEBSITE", optimizationGoal: paidMedia["optimizationGoal"], specialAdCategories: paidMedia["specialAdCategories"] ?? campaign["specialAdCategories"], budget, budgetMode, authorizedMinorUnits, budgetKind, startTime: campaign["startTime"] ?? timeline["startTime"], endTime: campaign["endTime"] ?? timeline["endTime"], durationDays: campaign["durationDays"] ?? root["durationDays"], timeline, destination, tracking: canonicalize(paidMedia["tracking"] ?? root["tracking"] ?? root["trackingRequirements"]) },
     adGroups: nodes.map((audience, i) => ({
       key: `ad-group-${i + 1}`, targeting: canonicalize(audience),
       budget: budget && budgetMode === "abo" ? budgetAllocationsMinorUnits[i]! / 100 : null,

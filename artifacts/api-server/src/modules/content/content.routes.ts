@@ -30,6 +30,9 @@ import {
 } from "../social/social.service.js";
 import { landingMeasurementState, publishCampaignLanding } from "../landing-publication/landing-publication.service.js";
 
+import { getApprovedMasterplan } from "../masterplan/masterplan.service.js";
+import { assertLandingAdTracking } from "../landing-publication/landing-tracking.service.js";
+
 const router = Router();
 router.use(requireAuth);
 
@@ -37,6 +40,7 @@ const landingSetupSchema = z.object({
   scheduledAt: z.iso.datetime(),
   desiredDomain: z.string().trim().min(1).max(253).regex(/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i, "Informe um domínio válido, como lp.seudominio.com"),
   tracking: z.object({
+    metaLeadEventName: z.enum(["Lead", "CompleteRegistration"]).default("Lead"),
     metaDatasetId: z.string().uuid().nullable().default(null),
     tiktokDatasetId: z.string().uuid().nullable().default(null),
   }),
@@ -73,11 +77,12 @@ router.get("/:campaignId/landing-setup", async (req, res): Promise<void> => {
     db.select({ id: paidMediaDatasetsTable.id, provider: paidMediaDatasetsTable.provider, name: paidMediaDatasetsTable.name, providerDatasetId: paidMediaDatasetsTable.providerDatasetId })
       .from(paidMediaDatasetsTable).where(eq(paidMediaDatasetsTable.workspaceId, req.auth.workspaceId)),
   ]);
-  const [published] = await db.select({ publishedUrl: pagesTable.publishedUrl, publishedAt: pagesTable.publishedAt })
+  const [published] = await db.select({ publishedUrl: pagesTable.publishedUrl, publishedAt: pagesTable.publishedAt, metadata: pagesTable.metadata })
     .from(pagesTable).where(and(eq(pagesTable.campaignId, campaignId), eq(pagesTable.workspaceId, req.auth.workspaceId), eq(pagesTable.status, "published"))).orderBy(desc(pagesTable.publishedAt)).limit(1);
   const savedSetup = (campaign.landingSetupData ?? {}) as { status?: string; tracking?: { metaDatasetId?: string; tiktokDatasetId?: string } };
-  const measurement = landingMeasurementState(!!landing, savedSetup.status === "ready_for_implementation", !!published, !!(savedSetup.tracking?.metaDatasetId || savedSetup.tracking?.tiktokDatasetId));
-  res.json({ measurement, approved: !!landing, landingTitle: landing?.title ?? null, setup: campaign.landingSetupData ?? {}, sequences, datasets, published: published ?? null });
+  const serverConnected = !!(published?.metadata as { implementation?: { tracking?: { metaEventKey?: string } } } | null)?.implementation?.tracking?.metaEventKey;
+  const measurement = landingMeasurementState(!!landing, savedSetup.status === "ready_for_implementation", !!published, !!(savedSetup.tracking?.metaDatasetId || savedSetup.tracking?.tiktokDatasetId), serverConnected);
+  res.json({ measurement, approved: !!landing, landingTitle: landing?.title ?? null, setup: campaign.landingSetupData ?? {}, sequences, datasets, published: published ? { publishedUrl: published.publishedUrl, publishedAt: published.publishedAt } : null });
 });
 
 router.put("/:campaignId/landing-setup", async (req, res): Promise<void> => {
@@ -144,9 +149,11 @@ router.post("/:campaignId/landing-publish", async (req, res): Promise<void> => {
     setup.tracking.tiktokDatasetId ? db.select({ providerDatasetId: paidMediaDatasetsTable.providerDatasetId }).from(paidMediaDatasetsTable).where(and(eq(paidMediaDatasetsTable.id, setup.tracking.tiktokDatasetId), eq(paidMediaDatasetsTable.workspaceId, req.auth.workspaceId), eq(paidMediaDatasetsTable.provider, "tiktok_ads"))).limit(1).then(rows => rows[0]) : null,
   ]);
   if ((setup.tracking.metaDatasetId && !metaDataset) || (setup.tracking.tiktokDatasetId && !tiktokDataset)) { res.status(409).json({ error: "Um dos pixels configurados não está mais disponível. Revise o plano de implementação.", code: "LANDING_TRACKING_DATASET_INVALID" }); return; }
+  const approvedMasterplan = await getApprovedMasterplan(req.auth.workspaceId, campaignId);
+  assertLandingAdTracking(approvedMasterplan?.snapshot, domain.domain, { metaPixelId: metaDataset?.providerDatasetId, metaLeadEventName: setup.tracking.metaLeadEventName });
   const result = await publishCampaignLanding({
     workspaceId: req.auth.workspaceId, campaignId, title: landing[0].title, domainId: domain.id, domain: domain.domain,
-    source, implementation: { ctas: setup.ctas, tracking: { metaPixelId: metaDataset?.providerDatasetId ?? null, tiktokPixelId: tiktokDataset?.providerDatasetId ?? null } }, ...(sequenceId ? { sequenceId } : {}),
+    source, implementation: { ctas: setup.ctas, tracking: { metaLeadEventName: setup.tracking.metaLeadEventName ?? "Lead", metaDatasetId: setup.tracking.metaDatasetId ?? null, metaPixelId: metaDataset?.providerDatasetId ?? null, tiktokPixelId: tiktokDataset?.providerDatasetId ?? null } }, ...(sequenceId ? { sequenceId } : {}),
   });
   await db.update(campaignsTable).set({ landingSetupData: { ...setup, status: "published", trackingStatus: metaDataset || tiktokDataset ? "configured_not_verified" : "not_configured", publishedAt: new Date().toISOString(), pageId: result.page.id } })
     .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId)));

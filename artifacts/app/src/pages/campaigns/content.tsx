@@ -3170,12 +3170,13 @@ function LandingPagePreview({
 type LandingCtaAction = "capture_lead" | "url" | "whatsapp";
 interface LandingSetupCta { key: string; label: string; action: LandingCtaAction; target: string }
 interface LandingSetupResponse {
+  measurement?: { capi: string; trackingVerified: boolean };
   approved: boolean;
   landingTitle: string | null;
   setup: {
     scheduledAt?: string;
     desiredDomain?: string;
-    tracking?: { metaDatasetId?: string | null; tiktokDatasetId?: string | null };
+    tracking?: { metaLeadEventName?: "Lead" | "CompleteRegistration"; metaDatasetId?: string | null; tiktokDatasetId?: string | null };
     ctas?: LandingSetupCta[];
     status?: string;
     savedAt?: string;
@@ -3207,6 +3208,7 @@ function LandingImplementationForm({ campaignId, data }: { campaignId: string; d
   const [scheduledAt, setScheduledAt] = useState("");
   const [desiredDomain, setDesiredDomain] = useState("");
   const [ctas, setCtas] = useState<LandingSetupCta[]>([]);
+  const [metaLeadEventName, setMetaLeadEventName] = useState<"Lead" | "CompleteRegistration">("Lead");
   const [metaDatasetId, setMetaDatasetId] = useState("");
   const [tiktokDatasetId, setTiktokDatasetId] = useState("");
   const [saving, setSaving] = useState(false);
@@ -3227,6 +3229,7 @@ function LandingImplementationForm({ campaignId, data }: { campaignId: string; d
     setDesiredDomain(saved.desiredDomain ?? "");
     setCtas(saved.ctas?.length ? saved.ctas : ctaDefinitions);
     setMetaDatasetId(saved.tracking?.metaDatasetId ?? "");
+    setMetaLeadEventName(saved.tracking?.metaLeadEventName ?? "Lead");
     setTiktokDatasetId(saved.tracking?.tiktokDatasetId ?? "");
     initialized.current = true;
   }, [remote, ctaDefinitions, initialized]);
@@ -3248,7 +3251,7 @@ function LandingImplementationForm({ campaignId, data }: { campaignId: string; d
         body: JSON.stringify({
           scheduledAt: new Date(scheduledAt).toISOString(),
           desiredDomain: desiredDomain.trim().toLowerCase(),
-          tracking: { metaDatasetId: metaDatasetId || null, tiktokDatasetId: tiktokDatasetId || null },
+          tracking: { metaLeadEventName, metaDatasetId: metaDatasetId || null, tiktokDatasetId: tiktokDatasetId || null },
           ctas,
         }),
       });
@@ -3307,7 +3310,7 @@ function LandingImplementationForm({ campaignId, data }: { campaignId: string; d
           </div>
 
           <div className="space-y-3">
-            <div><h4 className="font-mono text-xs font-bold uppercase tracking-widest">{t("Pixels e eventos da campanha", "Campaign pixels and events", "Píxeles y eventos de campaña")}</h4><p className="text-[11px] text-muted-foreground mt-1">{t("Selecione datasets já cadastrados na área de mídia paga. Após publicar, o navegador pode enviar PageView e Lead com consentimento de marketing. Pixel configurado não significa tracking verificado. Esta landing não conecta esses eventos ao CAPI; confirme recebimento no Events Manager.", "Select datasets already registered in paid media. After publication, the browser can send PageView and Lead with marketing consent. A configured pixel does not mean verified tracking. This landing does not connect those events to CAPI; confirm receipt in Events Manager.", "Selecciona datasets registrados en medios pagos. Tras publicar, el navegador puede enviar PageView y Lead con consentimiento. Un píxel configurado no significa seguimiento verificado. Esta landing no conecta estos eventos a CAPI; confirma su recepción en Events Manager.")}</p></div>
+            <div><h4 className="font-mono text-xs font-bold uppercase tracking-widest">{t("Pixels e eventos da campanha", "Campaign pixels and events", "Píxeles y eventos de campaña")}</h4><p className="text-[11px] text-muted-foreground mt-1">{t("Selecione datasets já cadastrados na área de mídia paga. Após publicar, o navegador pode enviar PageView e Lead com consentimento de marketing. Pixel configurado não significa tracking verificado. Novas publicações com dataset Meta conectam PageView e o evento de captura escolhido ao CAPI com o mesmo ID do Pixel. Confirme recebimento e deduplicação no Events Manager; publicações antigas não são atualizadas automaticamente.", "Select datasets already registered in paid media. After publication, the browser can send PageView and Lead with marketing consent. A configured pixel does not mean verified tracking. New publications with a Meta dataset connect PageView and the selected capture event to CAPI using the same Pixel event ID. Confirm receipt and deduplication in Events Manager; existing publications are not updated automatically.", "Selecciona datasets registrados en medios pagos. Tras publicar, el navegador puede enviar PageView y Lead con consentimiento. Un píxel configurado no significa seguimiento verificado. Las nuevas publicaciones con dataset Meta conectan PageView y el evento de captura elegido a CAPI con el mismo ID del píxel. Confirma recepción y deduplicación en Events Manager; las publicaciones anteriores no se actualizan automáticamente.")}</p></div>
             <div className="grid gap-4 md:grid-cols-2">
               <label><span className={labelClass}>Meta Pixel / Dataset</span><select className={fieldClass} value={metaDatasetId} onChange={event => setMetaDatasetId(event.target.value)}><option value="">{t("Sem dataset Meta selecionado", "No Meta dataset selected", "Sin dataset de Meta seleccionado")}</option>{metaDatasets.map(item => <option key={item.id} value={item.id}>{item.name || item.providerDatasetId} · {item.providerDatasetId}</option>)}</select></label>
               <label><span className={labelClass}>TikTok Pixel</span><select className={fieldClass} value={tiktokDatasetId} onChange={event => setTiktokDatasetId(event.target.value)}><option value="">{t("Sem dataset TikTok selecionado", "No TikTok dataset selected", "Sin dataset de TikTok seleccionado")}</option>{tiktokDatasets.map(item => <option key={item.id} value={item.id}>{item.name || item.providerDatasetId} · {item.providerDatasetId}</option>)}</select></label>
@@ -3315,12 +3318,14 @@ function LandingImplementationForm({ campaignId, data }: { campaignId: string; d
             <p className="text-[10px] text-muted-foreground">{t("A configuração respeitará o consentimento de marketing do visitante. Se o dataset não aparecer, cadastre-o primeiro em Mídia paga.", "Tracking will respect visitor marketing consent. If a dataset is missing, register it first in Paid Media.", "El seguimiento respetará el consentimiento de marketing. Si no aparece el dataset, regístralo primero en Medios pagos.")}</p>
           </div>
 
+          <label className="block"><span className={labelClass}>{t("Evento Meta após captura — use o mesmo do anúncio", "Meta capture event — match the ad event", "Evento Meta tras captura — usa el mismo del anuncio")}</span><select className={fieldClass} value={metaLeadEventName} onChange={event => setMetaLeadEventName(event.target.value as "Lead" | "CompleteRegistration")}><option>Lead</option><option>CompleteRegistration</option></select></label>
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/40 pt-4">
             <p className="max-w-xl text-[10px] text-amber-300/80">{t("Este formulário registra o plano para a equipe/NexOS implementar. Salvar não publica a página nem ativa pixels ou links externos.", "This form records the implementation plan. Saving does not publish the page or activate pixels or external links.", "Este formulario registra el plan de implementación. Guardarlo no publica la página ni activa píxeles o enlaces externos.")}</p>
             <Button onClick={() => void save()} disabled={saving || isLoading || !!remote?.published} className="rounded-none font-mono uppercase tracking-widest gap-2 btn-weapon-primary h-10 text-xs" data-testid="save-landing-setup">
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}{t("Salvar plano de implementação", "Save implementation plan", "Guardar plan de implementación")}
             </Button>
           </div>
+          {remote?.published && <p className="text-xs text-muted-foreground">{remote.measurement?.capi === "configured_not_verified" ? t("CAPI configurado nesta publicação. Recebimento e deduplicação na Meta ainda precisam ser verificados.", "CAPI is configured for this publication. Meta receipt and deduplication still need verification.", "CAPI configurado para esta publicación. Falta verificar recepción y deduplicación en Meta.") : t("Esta publicação não possui a conexão CAPI da landing. Ela precisa de uma nova revisão/publicação para receber a integração.", "This publication does not include the landing CAPI connection. A new revision/publication is needed to add it.", "Esta publicación no incluye la conexión CAPI. Se necesita nueva revisión/publicación para incorporarla.")}</p>}
           {remote?.setup?.savedAt && <p className="font-mono text-[10px] text-success">{t("Plano salvo", "Plan saved", "Plan guardado")} · {new Date(remote.setup.savedAt).toLocaleString()}</p>}
           {remote?.published?.publishedUrl ? (
             <div className="flex flex-wrap items-center justify-between gap-3 border border-success/30 bg-success/5 p-3 text-xs">

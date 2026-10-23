@@ -1,3 +1,4 @@
+import { GoalReportsTab } from "./components/GoalReportsTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AccountsTab } from "./components/AccountsTab";
 import { PoliciesTab } from "./components/PoliciesTab";
@@ -26,6 +27,7 @@ export default function PaidMediaPage() {
           <TabsTrigger value="launch-plans" className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest gap-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-none border border-transparent data-[state=active]:border-primary/30">
             <Rocket className="h-3.5 w-3.5" /> {t("Lançamentos (Master Plan)", "Launches (Master Plan)", "Lanzamientos (Master Plan)")}
           </TabsTrigger>
+          <TabsTrigger value="goal-reports" className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest gap-2"><Activity className="h-3.5 w-3.5" />{t("Resultados", "Results", "Resultados")}</TabsTrigger>
           <TabsTrigger value="accounts" className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest gap-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-none border border-transparent data-[state=active]:border-primary/30">
             <Activity className="h-3.5 w-3.5" /> {t("Integrações & Sync", "Integrations & Sync", "Integraciones y sincronización")}
           </TabsTrigger>
@@ -43,6 +45,7 @@ export default function PaidMediaPage() {
         <div className="flex-1 mt-4 bg-card/10 border border-border/30 rounded-sm p-4 overflow-y-auto relative scanline-overlay">
           <div className="relative z-10 h-full">
             <TabsContent value="launch-plans" className="m-0 h-full"><LaunchPlansTab /></TabsContent>
+            <TabsContent value="goal-reports" className="m-0 h-full"><GoalReportsTab /></TabsContent>
             <TabsContent value="accounts" className="m-0 h-full"><AccountsTab /></TabsContent>
             <TabsContent value="policies" className="m-0 h-full"><PoliciesTab /></TabsContent>
             <TabsContent value="proposals" className="m-0 h-full"><ProposalsTab /></TabsContent>

@@ -30,6 +30,7 @@ import { approveLaunchPlan, activateLaunchPlan, compileLaunchPlan } from "./laun
 import { isPaidMediaIntegration } from "../integrations/integration-purpose.js";
 import { datasetDiagnostics, recordDatasetEvent, reconciliationSummary, upsertConversion, upsertTouchpoint } from "./attribution.service.js";
 
+import { paidMediaGoalReport } from "./paid-media-reports.service.js";
 import { AppError } from "../../lib/errors.js";
 
 const router = Router();
@@ -229,6 +230,9 @@ router.get("/setup/:provider/status", async (req, res): Promise<void> => {
       capabilities: paidMediaProviderCapabilities(provider),
     });
   } catch (error) { sendProviderError(res, error); }
+});
+router.get("/reports/goals", async (req, res): Promise<void> => {
+  try { res.json(await paidMediaGoalReport(req.auth.workspaceId, req.query)); } catch (error) { sendProviderError(res, error); }
 });
 router.get("/budget-strategies", async (req, res): Promise<void> => {
   res.json({ strategies: await db.select().from(paidMediaBudgetStrategiesTable).where(eq(paidMediaBudgetStrategiesTable.workspaceId, req.auth.workspaceId)) });

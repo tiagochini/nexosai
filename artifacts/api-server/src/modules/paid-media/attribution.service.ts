@@ -20,7 +20,7 @@ export async function recordDatasetEvent(
   if (Number.isNaN(occurredAt.getTime()) || !input.eventId || !input.eventName) throw new Error("eventId, eventName and a valid occurredAt are required.");
   const consented = input.payload?.["marketingConsent"] === true;
   const normalized = normalizeMetaCapiEvent({ ...input, matchKeys: consented ? input.matchKeys : {} });
-  const safeKeys = normalized.userData;
+  const { client_ip_address: _ip, client_user_agent: _userAgent, ...safeKeys } = normalized.userData;
   const safePayload = { ...normalized.customData, marketingConsent: consented };
   const inserted = await db.insert(paidMediaEventReceiptsTable).values({
     workspaceId: dataset.workspaceId, datasetId: dataset.id, source: input.source,

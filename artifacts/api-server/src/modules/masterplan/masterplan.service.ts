@@ -5,6 +5,8 @@ import { NotFoundError, AppError } from "../../lib/errors.js";
 import { PRODUCT_AUTONOMY_CONTRACT } from "../autonomy/autonomy.service.js";
 import { latestRegionalIntelligenceSummary } from "../market-intel/regional-intelligence.service.js";
 
+import { assertPaidMediaApprovalMatchesCampaign, paidMediaSnapshotFields } from "../paid-media/paid-media-setup.service.js";
+
 type Json = Record<string, unknown>;
 export type ApprovedDossierBinding = {
   campaignId: string | null | undefined;
@@ -96,10 +98,11 @@ export async function materializeMasterplan(workspaceId: string, campaignId: str
     ));
   const memory = object(campaign.memoryData);
   const regionalIntelligence = await latestRegionalIntelligenceSummary(workspaceId, campaignId);
+  const paidMedia = paidMediaSnapshotFields(campaign.strategyData, campaign.intakeData);
   const snapshot = canonicalize({
     schema: "nexos-masterplan/v1",
-    campaign: { id: campaign.id, title: campaign.title, type: campaign.type, track: campaign.track, locale: campaign.locale, timezone: campaign.timezone, durationDays: campaign.durationDays, budgetTotal: campaign.budgetTotal, revenueTarget: campaign.revenueTarget, currentPhase: campaign.currentPhase },
-     intake: intake.snapshot, intakeVersionId: intake.id, strategy: campaign.strategyData, offer: campaign.offerData, targeting: campaign.targetingData,
+    campaign: { id: campaign.id, title: campaign.title, type: campaign.type, track: campaign.track, locale: campaign.locale, timezone: campaign.timezone, durationDays: campaign.durationDays, budgetTotal: campaign.budgetTotal, revenueTarget: campaign.revenueTarget, currentPhase: campaign.currentPhase, ...paidMedia.schedule },
+     intake: intake.snapshot, intakeVersionId: intake.id, strategy: paidMedia.strategy, offer: campaign.offerData, targeting: campaign.targetingData,
     audience: campaign.audienceData, timeline: campaign.timelineData,
     regionalIntelligence: regionalIntelligence ?? { available: false },
     operatingMemory: { permittedPromises: memory["permittedPromises"], prohibitedClaims: memory["prohibitedClaims"], ethicalBoundaries: memory["ethicalBoundaries"], legalBoundaries: memory["legalBoundaries"], approvedDecisions: memory["approvedDecisions"] },
@@ -112,7 +115,10 @@ export async function materializeMasterplan(workspaceId: string, campaignId: str
     .from(masterplanVersionsTable).where(and(eq(masterplanVersionsTable.workspaceId, workspaceId), eq(masterplanVersionsTable.campaignId, campaignId)))
     .orderBy(desc(masterplanVersionsTable.version)).limit(1);
   // Materialization is idempotent while the campaign's canonical data is unchanged.
-  if (latest?.contentHash === contentHash) return getCurrentMasterplan(workspaceId, campaignId);
+  if (latest?.contentHash === contentHash) {
+    const current = await getCurrentMasterplan(workspaceId, campaignId);
+    if (current?.status !== "superseded") return current;
+  }
   const [created] = await db.insert(masterplanVersionsTable).values({
     workspaceId, campaignId, version: (latest?.version ?? 0) + 1, status: requestApproval ? "pending_approval" : "draft",
     snapshot, contentHash, contextFingerprint, readinessScore: score, readinessStatus, readinessBlockers: blockers,
@@ -134,6 +140,12 @@ export async function approveMasterplan(workspaceId: string, campaignId: string,
   if (plan.readinessStatus === "blocked") throw new AppError(428, "Masterplan possui bloqueios de readiness.", "MASTERPLAN_NOT_READY", { blockers: plan.readinessBlockers });
   const now = new Date();
   await db.transaction(async (tx) => {
+    // Serialize with executable briefing edits. Re-read after taking the same
+    // campaign lock so a concurrent approval cannot resurrect a stale version.
+    const [campaign] = await tx.select({ strategyData: campaignsTable.strategyData, intakeData: campaignsTable.intakeData }).from(campaignsTable).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).for("update").limit(1);
+    const [current] = await tx.select().from(masterplanVersionsTable).where(and(eq(masterplanVersionsTable.id, plan.id), eq(masterplanVersionsTable.workspaceId, workspaceId))).limit(1);
+    if (!campaign || !current || current.status === "superseded") throw new AppError(409, "Versão do Master Plan substituída; atualize antes de aprovar.", "MASTERPLAN_SUPERSEDED");
+    assertPaidMediaApprovalMatchesCampaign(campaign.strategyData, campaign.intakeData, current.snapshot);
     await tx.update(masterplanVersionsTable).set({ status: "superseded", supersededAt: now }).where(and(
       eq(masterplanVersionsTable.workspaceId, workspaceId), eq(masterplanVersionsTable.campaignId, campaignId), eq(masterplanVersionsTable.status, "approved"),
     ));

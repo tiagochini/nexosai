@@ -1,3 +1,4 @@
+import { measureMetaInsight, metaMeasurementEvent } from "./meta-reporting.domain.js";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   db, paidMediaAccountsTable, paidMediaEntitiesTable, paidMediaInsightsTable,
@@ -55,9 +56,21 @@ export async function syncPaidMediaAccount(workspaceId: string, accountId: strin
       const entityRows = await db.select({ id: paidMediaEntitiesTable.id, providerEntityId: paidMediaEntitiesTable.providerEntityId })
         .from(paidMediaEntitiesTable).where(and(eq(paidMediaEntitiesTable.workspaceId, workspaceId), eq(paidMediaEntitiesTable.accountId, account.id), eq(paidMediaEntitiesTable.entityType, entityType)));
       const ids = new Map(entityRows.map((value) => [value.providerEntityId, value.id]));
+      const accountEntities = account.provider === "meta_ads" ? await db.select().from(paidMediaEntitiesTable).where(and(eq(paidMediaEntitiesTable.workspaceId, workspaceId), eq(paidMediaEntitiesTable.accountId, account.id))) : [];
+      const entityByKey = new Map(accountEntities.map(row => [`${row.entityType}:${row.providerEntityId}`, row]));
       const insights = await provider.fetchInsights(workspaceId, account.providerAccountId, entityType, since, until);
       for (const insight of insights) {
         const entityId = ids.get(insight.providerEntityId);
+        if (account.provider === "meta_ads") {
+          const entity = entityByKey.get(`${entityType}:${insight.providerEntityId}`);
+          const adSet = entityType === "ad_set" ? entity : entityType === "ad" ? entityByKey.get(`ad_set:${entity?.parentProviderEntityId}`) : undefined;
+          const campaign = entityType === "campaign" ? entity : entityByKey.get(`campaign:${adSet?.parentProviderEntityId}`);
+          const data = campaign?.providerData as Record<string, unknown> | undefined;
+          const measurement = measureMetaInsight(insight.rawMetrics, metaMeasurementEvent(data?.["objective"], adSet?.providerData));
+          insight.conversions = String(measurement.event === "LinkClick" ? 0 : measurement.results ?? 0);
+          insight.conversionValue = String(measurement.conversionValue ?? 0);
+          insight.rawMetrics = { ...insight.rawMetrics, nexosMeasurement: measurement };
+        }
         if (!entityId) continue; // provider returned a deleted/unavailable entity; never fabricate one.
         await db.insert(paidMediaInsightsTable).values({
           workspaceId, accountId: account.id, entityId, provider: account.provider,

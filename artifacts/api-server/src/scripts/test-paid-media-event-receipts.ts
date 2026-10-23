@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { PgDialect } from "drizzle-orm/pg-core";
-import { db, paidMediaDatasetsTable, paidMediaEventReceiptsTable } from "@workspace/db";
+import { db, paidMediaDatasetsTable, paidMediaEventReceiptsTable, pagesTable } from "@workspace/db";
+import { trackCapturedLandingLead, trackLandingPageView } from "../modules/landing-publication/landing-tracking.service.js";
 import { recordDatasetEvent } from "../modules/paid-media/attribution.service.js";
 import { paidMediaProvider } from "../modules/paid-media/providers.js";
 
@@ -25,8 +26,10 @@ try {
       rows.set(values.eventId, row); return [{ ...row }];
     } }) }) };
   }) as any;
-  db.select = (() => ({ from: () => ({ where: (condition: any) => ({ limit: async () => {
+  db.select = (() => ({ from: (table: unknown) => ({ where: (condition: any) => ({ limit: async () => {
     const query = dialect.sqlToQuery(condition);
+    if (table === pagesTable) return [{ id: "page", workspaceId: "workspace", status: "published", publishedUrl: "https://example.test/", leadCaptureSequenceId: "sequence", metadata: { implementation: { tracking: { metaEventKey: "a".repeat(64), metaDatasetId: "dataset" } } } }];
+    if (table === paidMediaDatasetsTable) return [dataset];
     const row = [...rows.values()].find(item => query.params.includes(item.eventId));
     return row ? [{ ...row }] : [];
   } }) }) })) as any;
@@ -81,6 +84,22 @@ try {
   assert.equal(JSON.stringify(rows.get("provider-failure")).includes("secret echoed"), false);
   await assert.rejects(() => recordDatasetEvent(dataset, { ...event, eventName: "Purchase" }), /outro eventName/);
   assert.equal(providerCalls, 1);
+  const trackingInput = { pageId: "page", eventKey: "a".repeat(64), marketingConsent: true };
+  let sentLandingEvent: any;
+  adapter.sendConversionEvent = async (_workspace, _account, _pixel, value) => { sentLandingEvent = value; providerCalls++; return { evidence: { events_received: 1 } }; };
+  const beforeLanding = providerCalls;
+  const tracked = await trackCapturedLandingLead(trackingInput, { origin: "https://example.test", ip: "127.0.0.1", userAgent: "private-agent" }, { contactId: "contact", duplicate: false, sequenceId: "sequence", email: "person@example.test" });
+  assert.equal(tracked.deliveryStatus, "sent");
+  assert.equal(tracked.eventId, sentLandingEvent.eventId);
+  assert.equal(sentLandingEvent.eventSourceUrl, "https://example.test/");
+  assert.equal(sentLandingEvent.userData.client_ip_address, "127.0.0.1");
+  assert.equal(JSON.stringify([...rows.values()]).includes("127.0.0.1"), false);
+  assert.equal(JSON.stringify([...rows.values()]).includes("private-agent"), false);
+  assert.equal((await trackCapturedLandingLead(trackingInput, { origin: "https://example.test" }, { contactId: "contact", duplicate: true, sequenceId: "sequence" })).eventId, tracked.eventId);
+  assert.equal(providerCalls, beforeLanding + 1);
+  const pageView = await trackLandingPageView({ ...trackingInput, eventId: "visit" }, { origin: "https://example.test", ip: "127.0.0.1", userAgent: "private-agent" });
+  assert.equal(pageView.deliveryStatus, "sent");
+  assert.equal(sentLandingEvent.eventId, "pageview:page:visit");
   console.log("Meta receipt service: PASS (consent, hashed persistence, browser/server ordering, concurrent claim, replay, event identity)");
 } finally {
   Object.assign(db, original);

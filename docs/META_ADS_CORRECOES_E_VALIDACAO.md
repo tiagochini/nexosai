@@ -2,6 +2,8 @@
 
 Revisão: 23/10/2026. Sem homologação de criação em conta real nesta tarefa.
 
+Atualização operacional: [configuração no produto, landing/CAPI e relatórios por objetivo](META_ADS_FLUXO_OPERACIONAL.md). As descrições de conexão e relatórios abaixo foram atualizadas para refletir essa etapa.
+
 ## Fluxo e evidências de código
 
 1. `modules/masterplan/masterplan.service.ts`, `materializeMasterplan`: o snapshot contém briefing, campanha, estratégia, oferta, targeting e timeline. A versão aprovada e seu hash são a autoridade. Prosa de estratégia não é configuração executável de anúncios.
@@ -10,13 +12,13 @@ Revisão: 23/10/2026. Sem homologação de criação em conta real nesta tarefa.
 4. O executor cria campanha → conjunto → criativo → anúncio por etapas, com intenção durável, lease, leitura de confirmação e compensação. Campanha, conjuntos e anúncios permanecem **PAUSED**. Criativos não têm estado de veiculação pausável. `launchStage=active` significa estrutura criada e confirmada, não veiculação ativa; a interface foi corrigida. O método legado de criação em lote foi bloqueado.
 5. `providers.ts` solicita campos específicos por tipo de ativo, evitando consultar orçamento/status de criativos. Insights usam `campaign_id`, `adset_id` ou `ad_id`; `paid-media.domain.ts` usa esses IDs para vincular os resultados locais. `sync.service.ts` observa CBO por orçamento positivo na campanha; campos ausentes não provam ABO.
 6. `attribution.service.ts` registra recibos e envia somente eventos server com consentimento e identificadores aceitos. O registro agora guarda hashes dos identificadores, campos permitidos e estado real de entrega. A aquisição atômica exige tentativa anterior nula, evitando duplicação concorrente. Após uma falha ambígua, não há retry automático da mesma ocorrência; o recibo exige recuperação manual para evitar duplicação. Um `eventId` reutilizado com outro nome é rejeitado; o esquema atual exige IDs únicos por ocorrência no dataset.
-7. `content/content.routes.ts` separa aprovação, configuração e publicação de landing. `landing-publication.service.ts` já publica HTML em domínio verificado e valida CTAs/pixel; portanto a afirmação do handoff de que publicação não existia não procede no código atual. O navegador envia PageView/Lead com consentimento. Esses eventos da landing **não estão conectados ao CAPI**, e publicar não comprova recebimento na Meta.
+7. `content/content.routes.ts` separa aprovação, configuração e publicação de landing. `landing-publication.service.ts` já publica HTML em domínio verificado e valida CTAs/pixel; portanto a afirmação do handoff de que publicação não existia não procede no código atual. O navegador envia PageView e Lead/CompleteRegistration com consentimento. Novas publicações com dataset Meta conectam PageView e Lead/CompleteRegistration ao CAPI, com consentimento e ID compartilhado. Publicações antigas não são alteradas automaticamente; publicar não comprova recebimento na Meta.
 
 Os caminhos de módulos acima são relativos a `artifacts/api-server/src/`.
 
 ## Configuração aprovada
 
-O snapshot canônico já preserva `strategy`; use `strategy.paidMedia` para guardar dados executáveis explícitos antes de aprovar o Master Plan. O compilador também aceita os campos legados equivalentes de campanha/targeting/tracking, mas não infere moeda, modo de orçamento ou categorias especiais de texto livre.
+A tela de estratégia agora oferece Configuração dos anúncios Meta. Ela salva dados explícitos no briefing e materializa `strategy.paidMedia` na nova versão do Master Plan, exigindo nova aprovação. O compilador também aceita os campos legados equivalentes de campanha/targeting/tracking, mas não infere moeda, modo de orçamento ou categorias especiais de texto livre.
 
 Exemplo do bloco `strategy.paidMedia` (IDs abaixo são ilustrativos):
 
@@ -66,7 +68,7 @@ O pré-check usa o mínimo de impressões informado pela conta. Para lifetime, e
 
 Deduplicação browser/server exige que a mesma ocorrência compartilhe `event_name` e `event_id`/Pixel `eventID`. A trava local de envio não comprova deduplicação no Events Manager. Os recibos existentes não são reescritos: os hashes/minimização valem para novas gravações. Não foi executada limpeza de dados antigos nesta tarefa.
 
-Os relatórios de insights preservam ações e valores brutos da Meta; o agregado de conversões/valor já existente continua baseado em Purchase e não deve ser interpretado como relatório completo de leads. Janela de atribuição continua `provider_default`; não se impôs 7 dias clique/1 dia visualização. Recomendações de learning phase, EMQ, volume, criativos e orçamento do texto de referência continuam recomendações operacionais, sem garantias no produto.
+Os relatórios preservam ações e valores brutos da Meta. A sincronização agora classifica resultados pelo objetivo/evento observado e a aba Resultados separa cliques, leads, cadastros e compras, usando somente o nível de anúncio; dados antigos exigem nova sincronização. Janela de atribuição continua `provider_default`; não se impôs 7 dias clique/1 dia visualização. Recomendações de learning phase, EMQ, volume, criativos e orçamento do texto de referência continuam recomendações operacionais, sem garantias no produto.
 
 ## Fontes oficiais consultadas
 

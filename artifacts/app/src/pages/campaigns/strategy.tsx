@@ -1,3 +1,4 @@
+import { PaidMediaSetupPanel } from "./components/paid-media-setup-panel";
 import { useState, useEffect, useRef } from "react";
 import { useRoute, useLocation } from "wouter";
 import {
@@ -367,6 +368,7 @@ export default function CampaignStrategyPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  const [paidMediaDirty, setPaidMediaDirty] = useState(false);
   const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
   const eventIdRef = useRef(0);
 
@@ -630,7 +632,7 @@ export default function CampaignStrategyPage() {
               </div>
               <Button
                 onClick={handleApprove}
-                disabled={isApproving}
+                disabled={isApproving || paidMediaDirty}
                 className="shrink-0 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-10 text-xs px-6"
               >
                 {isApproving
@@ -639,6 +641,7 @@ export default function CampaignStrategyPage() {
               </Button>
             </div>
 
+            <PaidMediaSetupPanel key={campaignId} campaignId={campaignId} masterplan={currentMp} onDirtyChange={setPaidMediaDirty} />
             <MasterplanPanel
               currentMp={currentMp}
               versions={mpVersions}
@@ -711,6 +714,7 @@ export default function CampaignStrategyPage() {
               </Button>
             </div>
 
+            <PaidMediaSetupPanel key={campaignId} campaignId={campaignId} masterplan={currentMp} onDirtyChange={setPaidMediaDirty} />
             <MasterplanPanel
               currentMp={currentMp}
               versions={mpVersions}
