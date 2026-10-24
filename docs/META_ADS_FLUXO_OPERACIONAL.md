@@ -2,6 +2,8 @@
 
 Implementação local de 23/10/2026, posterior ao commit `3431da78`. Não inclui homologação, publicação ou operação em conta real.
 
+Atualização posterior: [públicos, Advantage+ Audience, placements e formatos de vídeo/catálogo](META_ADS_PUBLICOS_PLACEMENTS_E_CRIATIVOS.md), com operações de público aprovadas separadamente e nenhuma chamada real executada nesta tarefa.
+
 ## Como usar
 
 1. Abra a estratégia da campanha e expanda **Configuração dos anúncios Meta**. Escolha a conta autorizada, pixel, objetivo/evento, orçamento ABO/CBO diário ou do período, destino, país/idades, Página do Facebook, imagem e texto. A conta precisa estar selecionada em Mídia paga. É possível registrar o ID de um pixel existente na própria tela; esse cadastro é somente local e não instala nem cria ativos na Meta.
@@ -58,7 +60,7 @@ A publicação usa transação e bloqueio de campanha/página, verifica hash/bas
 - Páginas já publicadas precisam de uma revisão aprovada pelo novo fluxo para incorporar o script novo. Esta tarefa não publicou nem alterou páginas reais.
 - Recibos CAPI antigos, falhas definitivas e eventos fora do prazo não são reenviados automaticamente. Uma nova captura duplicada não recria a conversão antiga.
 - A conexão implementada é Meta CAPI. O Pixel TikTok existente permanece browser; ele não ganhou envio server nesta tarefa. Compras não são simuladas a partir de cadastro.
-- Continuam fora do executor: públicos Custom/Lookalike/CRM, Advantage+ Audience configurável, placements manuais, anúncios de vídeo/catálogo, aplicativos, mensagens e categorias especiais.
+- Públicos de website/CRM/Lookalike, Advantage+ Audience, placements Facebook/Instagram e anúncios de vídeo/catálogo têm implementação local descrita na atualização de ativos; ainda precisam de homologação. Aplicativos, mensagens, categorias especiais e demais limites listados naquela documentação continuam fora do contrato.
 - A validação final de permissões, disponibilidade por conta, imagem, domínio/HTTPS e payloads depende da homologação autorizada. O cadastro local do pixel não prova acesso ao ativo.
 
 ## Verificação local

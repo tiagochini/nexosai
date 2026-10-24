@@ -32,6 +32,7 @@ import { datasetDiagnostics, recordDatasetEvent, reconciliationSummary, upsertCo
 
 import { paidMediaGoalReport } from "./paid-media-reports.service.js";
 import { AppError } from "../../lib/errors.js";
+import metaAudienceRouter from "./meta-audience.routes.js";
 
 const router = Router();
 // This is deliberately before requireAuth: browser/server tags identify a
@@ -55,6 +56,7 @@ router.post("/events/ingest", async (req, res): Promise<void> => {
   }
 });
 router.use(requireAuth);
+router.use("/audiences", metaAudienceRouter);
 
 // Approved-Masterplan paid-media launch contract. Organic social has no access
 // to these endpoints or tables.

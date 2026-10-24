@@ -103,7 +103,7 @@ for (const change of [
   { tracking: { pixelId: "12345" } },
   { tracking: { conversionEvent: "Purchase" } },
   { tracking: { pixelId: "12345", conversionEvent: "Lead" } },
-  { targeting: { audiences: [{ geo_locations: { countries: ["BR"] }, targeting_automation: { advantage_audience: 1 } }] } },
+  { targeting: { audiences: [{ geo_locations: { countries: ["BR"] }, targeting_automation: { advantage_audience: 2 } }] } },
   { creatives: [{ id: "reference-only" }] },
   { campaign: { ...base.campaign, budget: { amount: 100, kind: "daily", mode: "other", currency: "USD" } } },
   { campaign: { ...base.campaign, budget: { amount: 100, kind: "daily", mode: "abo", currency: "JPY" } } },
@@ -133,7 +133,7 @@ assert.throws(() => validateLandingImplementation({ ctas: [{ key: "hero", label:
 console.log("Meta corrected contracts: PASS (website goals, no-call rejection, ABO/CBO daily/lifetime, currency/minimums, readback, landing states/CTAs)");
 
 await assert.rejects(() => paidMediaProvider("meta_ads").createLaunchTree!("workspace", "account", tree, "legacy"), /plano aprovado/);
-assert.equal(metaEntityFields("creative"), "id,name,object_story_spec");
+assert.equal(metaEntityFields("creative"), "id,name,object_story_spec,product_set_id");
 assert.equal(metaEntityFields("campaign").includes("adset_id"), false);
 assert.equal(metaEntityFields("ad").includes("daily_budget"), false);
 assert.throws(() => validateLaunchReadback("ad_set", "g", { id: "g", status: "PAUSED", name: "group", targeting: { geo_locations: { countries: ["US"] } } }, { name: "group", targeting: { geo_locations: { countries: ["BR"] } } }), /targeting/);

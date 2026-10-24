@@ -77,3 +77,4 @@ export * from "./academy-access-email-outbox";
 export * from "./academy-gift-batches";
 export * from "./academy-admin-audit";
 export * from "./academy-student-accounts";
+export * from "./meta-audience-operations";

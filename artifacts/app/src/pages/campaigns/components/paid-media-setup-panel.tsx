@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { useUiText } from "@/lib/i18n";
 import { toast } from "sonner";
 import { Link } from "wouter";
+import { MetaAdvancedFields, type MetaAdvancedForm } from "./meta-advanced-fields";
 
-type Form = {
+type Form = MetaAdvancedForm & {
   accountId: string;
   datasetId: string | null;
   objective: string;
@@ -56,6 +57,7 @@ const initial: Form = {
   imageUrl: "",
   message: "",
   specialCategoriesConfirmed: false,
+  audienceMode: "original", placementMode: "automatic", creativeFormat: "image",
 };
 
 export function PaidMediaSetupPanel({
@@ -102,7 +104,7 @@ export function PaidMediaSetupPanel({
   useEffect(() => {
     if (data && !initialized) {
       setForm(
-        data.setup?.form ?? {
+        data.setup?.form ? { ...initial, ...data.setup.form } : {
           ...initial,
           accountId:
             accounts?.accounts.find((account) => account.isSelected)?.id ?? "",
@@ -626,7 +628,7 @@ export function PaidMediaSetupPanel({
               t("Idade mínima", "Minimum age", "Edad mínima"),
               "number",
             )}
-            {input(
+            {form.audienceMode !== "advantage" && input(
               "ageMax",
               t("Idade máxima", "Maximum age", "Edad máxima"),
               "number",
@@ -639,7 +641,7 @@ export function PaidMediaSetupPanel({
                 "ID de Página de Facebook",
               ),
             )}
-            {input(
+            {form.creativeFormat !== "catalog" && input(
               "imageUrl",
               t(
                 "URL HTTPS da imagem aprovada",
@@ -648,6 +650,7 @@ export function PaidMediaSetupPanel({
               ),
               "url",
             )}
+            <MetaAdvancedFields form={form} update={update} />
             <label className="space-y-1 text-xs md:col-span-2">
               <span>
                 {t(

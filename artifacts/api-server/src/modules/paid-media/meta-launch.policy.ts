@@ -1,4 +1,5 @@
 import { AppError } from "../../lib/errors.js";
+import { validateMetaTargeting, validateMetaCreative } from "./meta-assets.policy.js";
 
 type Json = Record<string, unknown>;
 const obj = (value: unknown): Json => value && typeof value === "object" && !Array.isArray(value) ? value as Json : {};
@@ -24,6 +25,11 @@ export function metaDelivery(campaign: Json): Json {
     }
     promoted.pixel_id = tracking.pixelId;
     promoted.custom_event_type = String(tracking.conversionEvent).replace(/([a-z])([A-Z])/g, "$1_$2").toUpperCase();
+  }
+  if (campaign.catalog != null) {
+    const catalog = obj(campaign.catalog);
+    if (campaign.objective !== "OUTCOME_SALES" || Object.keys(catalog).some(key => !["catalogId", "productSetId"].includes(key)) || !/^\d+$/.test(String(catalog.catalogId ?? "")) || !/^\d+$/.test(String(catalog.productSetId ?? ""))) fail("CATALOG_CONFIGURATION_INVALID", "Catálogo exige OUTCOME_SALES, catalogId e productSetId numéricos aprovados.");
+    promoted.product_set_id = catalog.productSetId;
   }
   if (campaign.optimizationGoal != null && campaign.optimizationGoal !== rule.optimization_goal) fail("META_OPTIMIZATION_UNSUPPORTED", "A otimização aprovada não é compatível com o objetivo suportado.");
   return { optimization_goal: rule.optimization_goal, billing_event: "IMPRESSIONS", destination_type: "WEBSITE", ...(rule.events.length ? { promoted_object: promoted } : {}) };
@@ -82,20 +88,11 @@ export function validateMetaTree(tree: Json): void {
   for (const group of groups) {
     metaBudget(campaign, group);
     sum += Number(group.budgetMinorUnits ?? 0);
-    const targeting = obj(group.targeting);
-    // Narrow explicit targeting avoids sending narrative suggestions or silently
-    // discarding unsupported Advantage+, CRM, lookalike and placement settings.
-    const allowed = ["geo_locations", "age_min", "age_max", "genders"];
-    if (Object.keys(targeting).some(key => !allowed.includes(key))) fail("AUDIENCE_CONFIGURATION_UNSUPPORTED", "Este executor aceita geo_locations, age_min, age_max e genders. Criação/uso de Custom/Lookalike, CRM, Advantage+ Audience e placements manuais não estão suportados.");
-    const countries = obj(targeting.geo_locations).countries;
-    if (Object.keys(obj(targeting.geo_locations)).some(key => key !== "countries") || !Array.isArray(countries) || !countries.length || countries.some(country => typeof country !== "string" || !/^[A-Z]{2}$/.test(country))) fail("AUDIENCE_CONFIGURATION_REQUIRED", "Aprove geo_locations.countries com códigos de país de duas letras.");
-    const min = targeting.age_min ?? 18, max = targeting.age_max ?? 65;
-    if (!Number.isInteger(min) || !Number.isInteger(max) || Number(min) < 18 || Number(max) > 65 || Number(min) > Number(max) || (targeting.genders != null && (!Array.isArray(targeting.genders) || !targeting.genders.length || targeting.genders.some(value => value !== 1 && value !== 2)))) fail("AUDIENCE_CONFIGURATION_UNSUPPORTED", "Aprove idades entre 18 e 65 em ordem e genders com valores 1/2; outras configurações não estão suportadas.");
+    validateMetaTargeting(group.targeting);
     const ads = Array.isArray(group.ads) ? group.ads.map(obj) : [];
     if (!ads.length) fail("CREATIVE_READINESS_REQUIRED", "Aprove ao menos um criativo por conjunto.");
     for (const ad of ads) {
-      const story = obj(obj(ad.creative).object_story_spec), link = obj(story.link_data);
-      if (typeof story.page_id !== "string" || !/^\d+$/.test(story.page_id) || link.link !== campaign.destination || (!link.image_hash && !link.picture)) fail("CREATIVE_READINESS_REQUIRED", "Aprove object_story_spec com page_id numérico e link_data com imagem e link igual ao destino aprovado. Referência textual não é criativo publicável.");
+      validateMetaCreative(ad.creative, campaign);
     }
   }
   if (campaign.budgetMode === "abo" && sum !== campaign.authorizedMinorUnits) fail("BUDGET_ALLOCATION_INVALID", "A soma dos conjuntos deve ser igual ao orçamento aprovado.");

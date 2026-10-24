@@ -10,6 +10,7 @@ import {
   paidMediaDatasetsTable,
 } from "@workspace/db";
 import { AppError, NotFoundError } from "../../lib/errors.js";
+import { metaId, metaPlacementKey, placementTargeting, validateMetaTargeting } from "./meta-assets.policy.js";
 
 export const paidMediaSetupSchema = z
   .object({
@@ -38,12 +39,16 @@ export const paidMediaSetupSchema = z
     ageMin: z.number().int().min(18).max(65),
     ageMax: z.number().int().min(18).max(65),
     pageId: z.string().regex(/^\d+$/),
-    imageUrl: z
-      .url()
-      .refine(
-        (value) => new URL(value).protocol === "https:",
-        "Use imagem HTTPS.",
-      ),
+    imageUrl: z.union([z.literal(""), z.url().refine(value => new URL(value).protocol === "https:")]),
+    audienceMode: z.enum(["original", "advantage"]).optional(),
+    includedAudienceIds: z.array(metaId).max(50).optional(),
+    excludedAudienceIds: z.array(metaId).max(50).optional(),
+    placementMode: z.enum(["automatic", "manual"]).optional(),
+    placements: z.array(metaPlacementKey).max(6).optional(),
+    creativeFormat: z.enum(["image", "video", "catalog"]).optional(),
+    videoId: z.union([metaId, z.literal("")]).optional(),
+    catalogId: z.union([metaId, z.literal("")]).optional(),
+    productSetId: z.union([metaId, z.literal("")]).optional(),
     message: z.string().trim().min(1).max(5000),
     specialCategoriesConfirmed: z.literal(true),
   })
@@ -51,6 +56,14 @@ export const paidMediaSetupSchema = z
   .superRefine((value, context) => {
     const issue = (path: string, message: string) =>
       context.addIssue({ code: "custom", path: [path], message });
+    if (value.includedAudienceIds?.some(id => value.excludedAudienceIds?.includes(id))) issue("includedAudienceIds", "Um público não pode ser incluído e excluído simultaneamente.");
+    if (value.placementMode === "manual" && !value.placements?.length) issue("placements", "Escolha ao menos um placement manual.");
+    if (value.placementMode !== "manual" && value.placements?.length) issue("placements", "Remova placements manuais ao usar distribuição automática.");
+    if ((value.creativeFormat ?? "image") !== "catalog" && !value.imageUrl) issue("imageUrl", "Informe imagem HTTPS ou miniatura do vídeo.");
+    if (value.creativeFormat === "video" && !value.videoId) issue("videoId", "Informe o ID do vídeo já carregado na Meta.");
+    if (value.creativeFormat === "catalog" && (value.objective !== "OUTCOME_SALES" || !value.catalogId || !value.productSetId)) issue("productSetId", "Catálogo exige vendas, catálogo e conjunto de produtos.");
+    if (value.creativeFormat !== "video" && value.videoId) issue("videoId", "Remova o vídeo ao usar outro formato.");
+    if (value.creativeFormat !== "catalog" && (value.catalogId || value.productSetId)) issue("catalogId", "Remova o catálogo ao usar outro formato.");
     if (value.ageMin > value.ageMax)
       issue("ageMax", "A idade máxima precisa ser igual ou superior à mínima.");
     if (value.objective !== "OUTCOME_TRAFFIC" && !value.datasetId)
@@ -82,6 +95,18 @@ export const paidMediaSetupSchema = z
       );
   });
 export type PaidMediaSetup = z.infer<typeof paidMediaSetupSchema>;
+
+export function setupTargeting(setup: PaidMediaSetup) {
+  const targeting = {
+    geo_locations: { countries: [setup.country] }, age_min: setup.ageMin,
+    ...(setup.audienceMode === "advantage" ? { targeting_automation: { advantage_audience: 1 } } : { age_max: setup.ageMax, ...(setup.audienceMode === "original" ? { targeting_automation: { advantage_audience: 0 } } : {}) }),
+    ...(setup.includedAudienceIds?.length ? { custom_audiences: [...new Set(setup.includedAudienceIds)].map(id => ({ id })) } : {}),
+    ...(setup.excludedAudienceIds?.length ? { excluded_custom_audiences: [...new Set(setup.excludedAudienceIds)].map(id => ({ id })) } : {}),
+    ...(setup.placementMode === "manual" ? placementTargeting(setup.placements ?? []) : {}),
+  };
+  validateMetaTargeting(targeting);
+  return targeting;
+}
 
 export function executablePaidMediaSetup(
   setup: PaidMediaSetup,
@@ -115,22 +140,20 @@ export function executablePaidMediaSetup(
     tracking: setup.conversionEvent
       ? { pixelId, conversionEvent: setup.conversionEvent }
       : {},
-    audiences: [
-      {
-        geo_locations: { countries: [setup.country] },
-        age_min: setup.ageMin,
-        age_max: setup.ageMax,
-      },
-    ],
+    ...(setup.creativeFormat === "catalog" ? { catalog: { catalogId: setup.catalogId, productSetId: setup.productSetId } } : {}),
+    audiences: [setupTargeting(setup)],
     creatives: [
       {
+        ...(setup.creativeFormat === "catalog" ? { product_set_id: setup.productSetId } : {}),
         object_story_spec: {
           page_id: setup.pageId,
-          link_data: {
+          ...(setup.creativeFormat === "video" ? { video_data: { video_id: setup.videoId, image_url: setup.imageUrl, message: setup.message, call_to_action: { type: "LEARN_MORE", value: { link: setup.destinationUrl } } } }
+          : setup.creativeFormat === "catalog" ? { template_data: { link: setup.destinationUrl, message: setup.message, name: "{{product.name}}", call_to_action: { type: "SHOP_NOW" } } }
+          : { link_data: {
             link: setup.destinationUrl,
             picture: setup.imageUrl,
             message: setup.message,
-          },
+          } }),
         },
       },
     ],

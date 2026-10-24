@@ -20,6 +20,8 @@ import {
 import { isPaidMediaIntegration } from "../integrations/integration-purpose.js";
 
 import { metaAdSetPayload, metaCampaignPayload, validateMetaAccountBudget, validateMetaTree } from "./meta-launch.policy.js";
+import { verifyMetaLaunchAssets } from "./meta-asset-preflight.js";
+import { metaCreativePayload } from "./meta-assets.policy.js";
 
 export type PaidMediaProviderName = "meta_ads" | "tiktok_ads" | "google_ads";
 export type PaidMediaEntityKind = "campaign" | "ad_set" | "ad" | "creative";
@@ -94,7 +96,7 @@ export async function executeMetaLaunchTree(
       const groupResult = await create(`${accountId}/adsets`, metaAdSetPayload(campaign, group, campaignResult.providerEntityId), `${key}:${group["key"]}`, "ad_set", campaignResult.providerEntityId);
       for (const ad of ((group["ads"] ?? []) as Array<Record<string, unknown>>)) {
         const creative = (ad["creative"] ?? {}) as Record<string, unknown>;
-        const creativeResult = await create(`${accountId}/adcreatives`, { name: ad["key"], object_story_spec: creative["object_story_spec"] ?? {} }, `${key}:${ad["key"]}:creative`, "creative", groupResult.providerEntityId);
+        const creativeResult = await create(`${accountId}/adcreatives`, metaCreativePayload(creative, ad["key"]), `${key}:${ad["key"]}:creative`, "creative", groupResult.providerEntityId);
         await create(`${accountId}/ads`, { name: ad["key"], adset_id: groupResult.providerEntityId, creative: { creative_id: creativeResult.providerEntityId } }, `${key}:${ad["key"]}:ad`, "ad", groupResult.providerEntityId);
       }
     }
@@ -315,8 +317,24 @@ async function request(url: string, init: RequestInit, token?: string, options: 
   return body;
 }
 
+/** Internal deterministic asset executor seam. No generic Graph proxy is exposed to routes. */
+export async function metaAccountAssetRequest(workspaceId: string, accountId: string, path: string, options: { method?: "GET" | "POST" | "DELETE"; query?: Record<string, string>; payload?: Record<string, unknown>; idempotencyKey?: string } = {}) {
+  const [account] = await db.select().from(paidMediaAccountsTable).where(and(eq(paidMediaAccountsTable.id, accountId), eq(paidMediaAccountsTable.workspaceId, workspaceId), eq(paidMediaAccountsTable.provider, "meta_ads"), eq(paidMediaAccountsTable.isSelected, true))).limit(1);
+  if (!account) throw new PaidMediaProviderError("Selecione uma conta Meta deste workspace.", "PRECONDITION_FAILED", 409);
+  const token = (await credential(workspaceId, "meta_ads", account.integrationId)).accessToken;
+  const resolved = path.replace(/^account(?=\/|$)/, account.providerAccountId);
+  if (!/^(?:act_)?\d+(?:\/(?:customaudiences|users|adspixels|advideos))?$/.test(resolved)) throw new PaidMediaProviderError("Invalid asset request path", "PRECONDITION_FAILED", 422);
+  const query = new URLSearchParams({ ...options.query, access_token: token });
+  try {
+    return await request(`https://graph.facebook.com/v26.0/${resolved}?${query}`, { method: options.method ?? "GET", headers: { "Content-Type": "application/json", ...(options.idempotencyKey ? { "X-NexOS-Idempotency-Key": options.idempotencyKey } : {}) }, ...(options.payload ? { body: JSON.stringify(options.payload) } : {}) }, token, { retry: false });
+  } catch (error) {
+    // Audience requests can contain personal hashes: never persist reflected errors.
+    throw new PaidMediaProviderError("Falha na operação de ativos Meta; revise permissões e parâmetros aprovados.", error instanceof PaidMediaProviderError ? error.code : "PROVIDER_ERROR", error instanceof PaidMediaProviderError ? error.status : undefined);
+  }
+}
+
 export function metaEntityFields(type: PaidMediaEntityKind): string {
-  if (type === "creative") return "id,name,object_story_spec";
+  if (type === "creative") return "id,name,object_story_spec,product_set_id";
   if (type === "campaign") return "id,name,status,updated_time,objective,daily_budget,lifetime_budget,bid_strategy,special_ad_categories";
   if (type === "ad_set") return "id,name,status,updated_time,campaign_id,daily_budget,lifetime_budget,start_time,end_time,bid_amount,optimization_goal,billing_event,destination_type,promoted_object,targeting";
   return "id,name,status,updated_time,adset_id,creative";
@@ -381,6 +399,7 @@ class MetaAdsAdapter implements PaidMediaProviderAdapter {
       if (!(Array.isArray(pixels["data"]) ? pixels["data"] as Record<string, unknown>[] : []).some(row => row["id"] === pixel)) throw new PaidMediaProviderError("O pixel aprovado não está disponível na conta Meta selecionada. Verifique acesso e atribuição do ativo.", "PRECONDITION_FAILED", 409);
     }
     // Meta validates campaign budget/permissions without creating an asset.
+    await verifyMetaLaunchAssets(tree, account.providerAccountId, (path, params) => request(this.url(path, token, params), {}, token));
     await request(this.url(`${account.providerAccountId}/campaigns`, token), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...metaCampaignPayload(campaign), execution_options: ["validate_only"], access_token: token }) }, token, { retry: false });
   }
   async createLaunchEntity(workspaceId: string, accountId: string, type: PaidMediaEntityKind, payload: Record<string, unknown>, idempotencyKey: string): Promise<LaunchCreateResult> {

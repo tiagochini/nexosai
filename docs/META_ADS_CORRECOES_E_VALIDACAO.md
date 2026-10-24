@@ -4,6 +4,8 @@ Revisão: 23/10/2026. Sem homologação de criação em conta real nesta tarefa.
 
 Atualização operacional: [configuração no produto, landing/CAPI e relatórios por objetivo](META_ADS_FLUXO_OPERACIONAL.md). As descrições de conexão e relatórios abaixo foram atualizadas para refletir essa etapa.
 
+Atualização de ativos: [públicos, Advantage+ Audience, placements e anúncios de vídeo/catálogo](META_ADS_PUBLICOS_PLACEMENTS_E_CRIATIVOS.md). Implementação local com aprovação e execução explícitas; continua sem homologação na Meta.
+
 ## Fluxo e evidências de código
 
 1. `modules/masterplan/masterplan.service.ts`, `materializeMasterplan`: o snapshot contém briefing, campanha, estratégia, oferta, targeting e timeline. A versão aprovada e seu hash são a autoridade. Prosa de estratégia não é configuração executável de anúncios.
@@ -11,7 +13,7 @@ Atualização operacional: [configuração no produto, landing/CAPI e relatório
 3. `activateLaunchPlan` revalida vínculo com o Master Plan, escopo da conta, moeda, integração e política de autonomia. `MetaAdsAdapter.preflightLaunch` consulta status/moeda atual, `/minimum_budgets`, acesso ao pixel e valida a campanha com `execution_options: ["validate_only"]` antes da primeira criação.
 4. O executor cria campanha → conjunto → criativo → anúncio por etapas, com intenção durável, lease, leitura de confirmação e compensação. Campanha, conjuntos e anúncios permanecem **PAUSED**. Criativos não têm estado de veiculação pausável. `launchStage=active` significa estrutura criada e confirmada, não veiculação ativa; a interface foi corrigida. O método legado de criação em lote foi bloqueado.
 5. `providers.ts` solicita campos específicos por tipo de ativo, evitando consultar orçamento/status de criativos. Insights usam `campaign_id`, `adset_id` ou `ad_id`; `paid-media.domain.ts` usa esses IDs para vincular os resultados locais. `sync.service.ts` observa CBO por orçamento positivo na campanha; campos ausentes não provam ABO.
-6. `attribution.service.ts` registra recibos e envia somente eventos server com consentimento e identificadores aceitos. O registro agora guarda hashes dos identificadores, campos permitidos e estado real de entrega. A aquisição atômica exige tentativa anterior nula, evitando duplicação concorrente. Após uma falha ambígua, não há retry automático da mesma ocorrência; o recibo exige recuperação manual para evitar duplicação. Um `eventId` reutilizado com outro nome é rejeitado; o esquema atual exige IDs únicos por ocorrência no dataset.
+6. `attribution.service.ts` registra recibos e envia somente eventos server com consentimento e identificadores aceitos. O registro guarda hashes, campos permitidos e estado real de entrega. Novos eventos elegíveis entram em fila criptografada para reenvio limitado da mesma ocorrência; claims/proprietário e IDs originais evitam envios concorrentes e troca de identidade. Recibos históricos sem envelope não são repetidos automaticamente. Um `eventId` reutilizado com outro nome é rejeitado; o esquema exige IDs únicos por ocorrência no dataset. Consulte o fluxo operacional para prazo e retenção.
 7. `content/content.routes.ts` separa aprovação, configuração e publicação de landing. `landing-publication.service.ts` já publica HTML em domínio verificado e valida CTAs/pixel; portanto a afirmação do handoff de que publicação não existia não procede no código atual. O navegador envia PageView e Lead/CompleteRegistration com consentimento. Novas publicações com dataset Meta conectam PageView e Lead/CompleteRegistration ao CAPI, com consentimento e ID compartilhado. Publicações antigas não são alteradas automaticamente; publicar não comprova recebimento na Meta.
 
 Os caminhos de módulos acima são relativos a `artifacts/api-server/src/`.
@@ -54,11 +56,11 @@ O pré-check usa o mínimo de impressões informado pela conta. Para lifetime, e
 
 | Item | Estado |
 | --- | --- |
-| Objetivos da tabela, ABO/CBO e anúncios de link com imagem | Implementados; dependem de dados explícitos aprovados, acesso e validação da Meta |
-| Públicos | Países, idade 18–65 e gêneros 1/2 aceitos; campos incompatíveis são bloqueados |
-| Custom/Lookalike, uso de listas CRM, Advantage+ Audience, placements manuais | Não suportados por este executor; nenhum upload de CRM ou criação de público foi acrescentado |
+| Objetivos da tabela, ABO/CBO e anúncios de imagem/vídeo/catálogo | Implementados no contrato documentado de ativos; vídeo e catálogo/feed existentes, acesso e validação da Meta são necessários |
+| Públicos | Países, idade 18–65 e gêneros 1/2 no modo original; Advantage+ usa o contrato de idade mínima sem máximo/gênero rígidos |
+| Custom/Lookalike, listas CRM, Advantage+ Audience, placements manuais | Implementados com limites explícitos, aprovação, minimização de CRM e validação por conta; consultar a documentação de ativos. Nenhuma operação real foi executada nesta tarefa |
 | Advantage+ Sales/Leads e Customer Lifecycle | Não são ativados nem certificados pelo NexOS; CBO não comprova ativação do conjunto de automações |
-| Categorias especiais, apps, mensagens, formulários nativos, vídeos e catálogos | Não suportados neste contrato; exigem implementação própria |
+| Categorias especiais, apps, mensagens e formulários nativos | Não suportados neste contrato; exigem implementação própria |
 | Pixel na landing | Configurado quando há dataset; browser condicionado ao consentimento; tracking não verificado |
 | CAPI | `sent` significa recibo `events_received` da Meta, não atribuição/conversão confirmada |
 | EMQ / deduplicação na Meta | Não consultados/verificados. `matchRate` (compatibilidade) e `localMatchKeyCoverage` medem apenas presença local de chaves |
