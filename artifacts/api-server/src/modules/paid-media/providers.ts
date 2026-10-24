@@ -367,7 +367,7 @@ export async function metaAccountAssetRequest(workspaceId: string, accountId: st
 export function metaEntityFields(type: PaidMediaEntityKind): string {
   if (type === "creative") return "id,name,object_story_spec,product_set_id,degrees_of_freedom_spec";
   if (type === "campaign") return "id,name,status,updated_time,objective,daily_budget,lifetime_budget,bid_strategy,special_ad_categories";
-  if (type === "ad_set") return "id,name,status,updated_time,campaign_id,daily_budget,lifetime_budget,start_time,end_time,bid_amount,optimization_goal,billing_event,destination_type,promoted_object,targeting";
+  if (type === "ad_set") return "id,name,status,updated_time,campaign_id,daily_budget,lifetime_budget,start_time,end_time,bid_strategy,bid_amount,bid_constraints,optimization_goal,billing_event,destination_type,promoted_object,targeting";
   return "id,name,status,updated_time,adset_id,creative";
 }
 

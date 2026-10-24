@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { allocateApprovedBudget, buildLaunchReadiness, compileMasterplanTree, redactLaunchEvidence, validateLaunchReadback } from "../modules/paid-media/launch-plans.service.js";
-import { metaAdSetPayload, metaCampaignPayload, validateMetaTree, validateMetaAccountBudget } from "../modules/paid-media/meta-launch.policy.js";
+import { metaAdSetPayload, metaCampaignPayload, metaBid, validateMetaTree, validateMetaAccountBudget } from "../modules/paid-media/meta-launch.policy.js";
 import { landingMeasurementState, validateLandingImplementation } from "../modules/landing-publication/landing-publication.service.js";
 import { executeMetaLaunchTree, metaEntityFields, paidMediaProvider, paidMediaProviderCapabilities } from "../modules/paid-media/providers.js";
 import { policyAllows, requiresHumanApproval, hasConsistentRollbackOwnership } from "../modules/paid-media/paid-media.domain.js";
@@ -94,6 +94,29 @@ for (const mode of ["abo", "cbo"]) for (const kind of ["daily", "lifetime"]) {
   assert.throws(() => validateMetaAccountBudget(compiled.tree, "USD", 100000), /mínimo/);
   assert.throws(() => validateMetaAccountBudget(compiled.tree, "USD", NaN), /mínimo/);
 }
+for (const [bidStrategy, expected, amount] of [
+  ["cost_cap", "COST_CAP", 450],
+  ["bid_cap", "LOWEST_COST_WITH_BID_CAP", 450],
+] as const) {
+  const configured = compileMasterplanTree({
+    ...base,
+    strategy: { objective: "OUTCOME_SALES", paidMedia: { bidStrategy, bidAmountMinorUnits: amount } },
+  }, "meta_ads", "act_123");
+  assert.deepEqual(configured.tree.validationBlockers, []);
+  const adSet = metaAdSetPayload(configured.tree.campaign, configured.tree.adGroups[0]!, "c");
+  assert.equal(adSet.bid_strategy, expected);
+  assert.equal(adSet.bid_amount, amount);
+  validateLaunchReadback("ad_set", "g", {
+    id: "g", status: "PAUSED", name: "ad-group-1", ...adSet,
+  }, adSet);
+  assert.throws(() => validateLaunchReadback("ad_set", "g", {
+    id: "g", status: "PAUSED", name: "ad-group-1", ...adSet,
+    bid_strategy: "LOWEST_COST_WITHOUT_CAP",
+  }, adSet), /bid_strategy/);
+}
+assert.throws(() => metaBid({ budgetMode: "abo", bidStrategy: "cost_cap" }), /limite/);
+assert.throws(() => metaBid({ budgetMode: "cbo", bidStrategy: "bid_cap", bidAmountMinorUnits: 450 }), /ABO/);
+assert.throws(() => metaBid({ budgetMode: "abo", bidStrategy: "lowest_cost", bidAmountMinorUnits: 450 }), /Lowest Cost/);
 for (const change of [
   { strategy: { objective: "OUTCOME_SALES", paidMedia: { advantageAudience: true } } },
   { campaign: { ...base.campaign, budget: { ...base.campaign.budget, daily_budget: 100, lifetime_budget: 200 } } },
@@ -121,6 +144,9 @@ assert.throws(() => validateMetaTree(conflict), /CBO/);
 const readbackPayload = { name: "group", optimization_goal: "OFFSITE_CONVERSIONS", destination_type: "WEBSITE", promoted_object: { pixel_id: "12345", custom_event_type: "PURCHASE" }, daily_budget: 1000 };
 validateLaunchReadback("ad_set", "g", { id: "g", status: "PAUSED", ...readbackPayload }, readbackPayload);
 assert.throws(() => validateLaunchReadback("ad_set", "g", { id: "g", status: "PAUSED", ...readbackPayload, optimization_goal: "LINK_CLICKS" }, readbackPayload), /optimization_goal/);
+const roasReadback = { name: "group", bid_strategy: "LOWEST_COST_WITH_MIN_ROAS", bid_constraints: { roas_average_floor: 20000 } };
+validateLaunchReadback("ad_set", "g", { id: "g", status: "PAUSED", ...roasReadback }, roasReadback);
+assert.throws(() => validateLaunchReadback("ad_set", "g", { id: "g", status: "PAUSED", ...roasReadback, bid_constraints: { roas_average_floor: 15000 } }, roasReadback), /bid_constraints/);
 assert.throws(() => validateLaunchReadback("ad_set", "g", { id: "g", status: "ACTIVE", ...readbackPayload }, readbackPayload), /paused/);
 assert.equal(landingMeasurementState(false, false, false, false).publication, "draft");
 assert.equal(landingMeasurementState(true, false, false, false).publication, "approved");

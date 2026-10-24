@@ -39,6 +39,15 @@ export const paidMediaSetupSchema = z
       ),
     budgetKind: z.enum(["daily", "lifetime"]),
     budgetMode: z.enum(["abo", "cbo"]),
+    bidStrategy: z.enum(["lowest_cost", "cost_cap", "bid_cap", "min_roas"]).default("lowest_cost"),
+    bidAmount: z.number().positive().max(1_000_000_000).refine(
+      (value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-8,
+      "Use até duas casas decimais para o limite de lance.",
+    ).optional(),
+    roasFloor: z.number().positive().max(1000).refine(
+      (value) => Number.isSafeInteger(Math.round(value * 10_000)),
+      "Informe um ROAS-alvo representável em unidades da Meta.",
+    ).optional(),
     startTime: z.iso.datetime().nullable(),
     endTime: z.iso.datetime().nullable(),
     destinationUrl: z
@@ -134,6 +143,20 @@ export const paidMediaSetupSchema = z
       issue("catalogId", "Remova o catálogo ao usar outro formato.");
     if (value.ageMin > value.ageMax)
       issue("ageMax", "A idade máxima precisa ser igual ou superior à mínima.");
+    if (value.budgetMode === "cbo" && value.bidStrategy !== "lowest_cost")
+      issue("bidStrategy", "Cost Cap, Bid Cap e ROAS Goal estão disponíveis apenas em ABO neste fluxo.");
+    if (value.bidStrategy === "lowest_cost" && value.bidAmount != null)
+      issue("bidAmount", "Remova o limite de lance para usar Lowest Cost.");
+    if (["cost_cap", "bid_cap"].includes(value.bidStrategy) && value.bidAmount == null)
+      issue("bidAmount", "Informe um limite de lance para Cost Cap ou Bid Cap.");
+    if (value.bidStrategy === "min_roas" && (value.objective !== "OUTCOME_SALES" || value.conversionEvent !== "Purchase"))
+      issue("bidStrategy", "ROAS Goal exige objetivo de vendas e evento Purchase.");
+    if (value.bidStrategy === "min_roas" && value.roasFloor == null)
+      issue("roasFloor", "Informe um ROAS mínimo, por exemplo 2 para 2,0x.");
+    if (value.bidStrategy !== "min_roas" && value.roasFloor != null)
+      issue("roasFloor", "O ROAS mínimo só se aplica à estratégia ROAS Goal.");
+    if (value.bidStrategy === "min_roas" && value.bidAmount != null)
+      issue("bidAmount", "ROAS Goal usa bid_constraints e não aceita bid_amount.");
     if (value.objective !== "OUTCOME_TRAFFIC" && !value.datasetId)
       issue("datasetId", "Selecione o pixel para otimizar conversões.");
     if (
@@ -235,6 +258,13 @@ export function executablePaidMediaSetup(
       mode: setup.budgetMode,
       currency: account.currency,
     },
+    bidStrategy: setup.bidStrategy,
+    ...(setup.bidAmount != null
+      ? { bidAmountMinorUnits: Math.round(setup.bidAmount * 100) }
+      : {}),
+    ...(setup.roasFloor != null
+      ? { roasFloorBasisPoints: Math.round(setup.roasFloor * 10_000) }
+      : {}),
     tracking: setup.conversionEvent
       ? { pixelId, conversionEvent: setup.conversionEvent }
       : {},

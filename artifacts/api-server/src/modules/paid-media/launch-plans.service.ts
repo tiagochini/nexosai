@@ -45,9 +45,10 @@ export function validateLaunchReadback(type: string, id: string, readback: Json,
       throw new AppError(502, `Provider readback ${key} mismatch.`, "PROVIDER_READBACK_INVALID");
     }
   }
-  for (const key of ["objective", "optimization_goal", "billing_event", "destination_type"]) {
+  for (const key of ["objective", "optimization_goal", "billing_event", "destination_type", "bid_strategy", "bid_amount"]) {
     if (payload[key] != null && readback[key] !== payload[key]) throw new AppError(502, `Provider readback ${key} mismatch.`, "PROVIDER_READBACK_INVALID");
   }
+  if (payload["bid_constraints"] != null && !containsApprovedFields(readback["bid_constraints"], payload["bid_constraints"])) throw new AppError(502, "Provider readback bid_constraints mismatch.", "PROVIDER_READBACK_INVALID");
   const promoted = obj(payload["promoted_object"]);
   for (const key of Object.keys(promoted)) if (obj(readback["promoted_object"])[key] !== promoted[key]) throw new AppError(502, "Provider conversion configuration mismatch.", "PROVIDER_READBACK_INVALID");
   for (const key of ["targeting", "object_story_spec", "special_ad_categories", "product_set_id", "degrees_of_freedom_spec"]) if (payload[key] != null && !containsApprovedFields(readback[key], payload[key])) throw new AppError(502, `Provider readback ${key} differs from approval.`, "PROVIDER_READBACK_INVALID");
@@ -132,7 +133,7 @@ export function compileMasterplanTree(snapshot: unknown, provider: PaidMediaProv
   const budgetMode = rawBudget["mode"];
   const unsupportedConfiguration = [
     ...Object.keys(rawBudget).filter(key => !["amount", "kind", "mode", "currency"].includes(key)).map(key => `budget.${key}`),
-    ...Object.keys(paidMedia).filter(key => !["accountId", "objective", "optimizationGoal", "destinationType", "destinationUrl", "specialAdCategories", "budget", "audiences", "creatives", "tracking", "catalog", "customerLifecycle"].includes(key)),
+    ...Object.keys(paidMedia).filter(key => !["accountId", "objective", "optimizationGoal", "destinationType", "destinationUrl", "specialAdCategories", "budget", "bidStrategy", "bidAmountMinorUnits", "roasFloorBasisPoints", "audiences", "creatives", "tracking", "catalog", "customerLifecycle"].includes(key)),
   ];
   const destination = String(paidMedia["destinationUrl"] ?? offer["destinationUrl"] ?? offer["url"] ?? campaign["destinationUrl"] ?? root["destinationUrl"] ?? "");
   const audiences = arr(paidMedia["audiences"] ?? targeting["audiences"] ?? targeting["segments"] ?? [targeting]);
@@ -144,7 +145,7 @@ export function compileMasterplanTree(snapshot: unknown, provider: PaidMediaProv
   }
   const tree = {
     schema: "nexos-paid-media-tree/v2", provider, accountId,
-    campaign: { key: "campaign", name, objective, approvedAccountId: paidMedia["accountId"], unsupportedConfiguration, destinationType: paidMedia["destinationType"] ?? "WEBSITE", optimizationGoal: paidMedia["optimizationGoal"], specialAdCategories: paidMedia["specialAdCategories"] ?? campaign["specialAdCategories"], budget, budgetMode, authorizedMinorUnits, budgetKind, startTime: campaign["startTime"] ?? timeline["startTime"], endTime: campaign["endTime"] ?? timeline["endTime"], durationDays: campaign["durationDays"] ?? root["durationDays"], timeline, destination, ...(paidMedia["customerLifecycle"] ? { customerLifecycle: canonicalize(paidMedia["customerLifecycle"]) } : {}), ...(paidMedia["catalog"] ? { catalog: canonicalize(paidMedia["catalog"]) } : {}), tracking: canonicalize(paidMedia["tracking"] ?? root["tracking"] ?? root["trackingRequirements"]) },
+    campaign: { key: "campaign", name, objective, approvedAccountId: paidMedia["accountId"], unsupportedConfiguration, destinationType: paidMedia["destinationType"] ?? "WEBSITE", optimizationGoal: paidMedia["optimizationGoal"], specialAdCategories: paidMedia["specialAdCategories"] ?? campaign["specialAdCategories"], budget, budgetMode, bidStrategy: paidMedia["bidStrategy"] ?? "lowest_cost", bidAmountMinorUnits: paidMedia["bidAmountMinorUnits"], roasFloorBasisPoints: paidMedia["roasFloorBasisPoints"], authorizedMinorUnits, budgetKind, startTime: campaign["startTime"] ?? timeline["startTime"], endTime: campaign["endTime"] ?? timeline["endTime"], durationDays: campaign["durationDays"] ?? root["durationDays"], timeline, destination, ...(paidMedia["customerLifecycle"] ? { customerLifecycle: canonicalize(paidMedia["customerLifecycle"]) } : {}), ...(paidMedia["catalog"] ? { catalog: canonicalize(paidMedia["catalog"]) } : {}), tracking: canonicalize(paidMedia["tracking"] ?? root["tracking"] ?? root["trackingRequirements"]) },
     adGroups: nodes.map((audience, i) => ({
       key: `ad-group-${i + 1}`, targeting: canonicalize(audience),
       budget: budget && budgetMode === "abo" ? budgetAllocationsMinorUnits[i]! / 100 : null,

@@ -32,8 +32,10 @@ export function metaDelivery(campaign: Json): Json {
     if (campaign.objective !== "OUTCOME_SALES" || Object.keys(catalog).some(key => !["catalogId", "productSetId"].includes(key)) || !/^\d+$/.test(String(catalog.catalogId ?? "")) || !/^\d+$/.test(String(catalog.productSetId ?? ""))) fail("CATALOG_CONFIGURATION_INVALID", "Catálogo exige OUTCOME_SALES, catalogId e productSetId numéricos aprovados.");
     promoted.product_set_id = catalog.productSetId;
   }
-  if (campaign.optimizationGoal != null && campaign.optimizationGoal !== rule.optimization_goal) fail("META_OPTIMIZATION_UNSUPPORTED", "A otimização aprovada não é compatível com o objetivo suportado.");
-  return { optimization_goal: rule.optimization_goal, billing_event: "IMPRESSIONS", destination_type: "WEBSITE", ...(rule.events.length ? { promoted_object: promoted } : {}) };
+  const optimizationGoal = campaign.bidStrategy === "min_roas" ? "VALUE" : rule.optimization_goal;
+  if (campaign.bidStrategy === "min_roas" && campaign.objective !== "OUTCOME_SALES") fail("META_BID_STRATEGY_UNSUPPORTED", "ROAS Goal exige objetivo de vendas.");
+  if (campaign.optimizationGoal != null && campaign.optimizationGoal !== optimizationGoal) fail("META_OPTIMIZATION_UNSUPPORTED", "A otimização aprovada não é compatível com o objetivo ou estratégia de lance.");
+  return { optimization_goal: optimizationGoal, billing_event: "IMPRESSIONS", destination_type: "WEBSITE", ...(rule.events.length ? { promoted_object: promoted } : {}) };
 }
 
 export function metaBudget(campaign: Json, group?: Json): Json {
@@ -49,6 +51,32 @@ export function metaBudget(campaign: Json, group?: Json): Json {
   return { [campaign.budgetKind === "daily" ? "daily_budget" : "lifetime_budget"]: amount };
 }
 
+const BID_STRATEGIES = {
+  lowest_cost: "LOWEST_COST_WITHOUT_CAP",
+  cost_cap: "COST_CAP",
+  bid_cap: "LOWEST_COST_WITH_BID_CAP",
+  min_roas: "LOWEST_COST_WITH_MIN_ROAS",
+} as const;
+export function metaBid(campaign: Json): Json {
+  const strategy = campaign.bidStrategy ?? "lowest_cost";
+  if (!Object.hasOwn(BID_STRATEGIES, String(strategy)))
+    fail("META_BID_STRATEGY_UNSUPPORTED", "Escolha Lowest Cost, Cost Cap, Bid Cap ou ROAS Goal.");
+  const amount = campaign.bidAmountMinorUnits;
+  const roasFloor = campaign.roasFloorBasisPoints;
+  if (strategy === "lowest_cost") {
+    if (amount != null || roasFloor != null) fail("META_BID_CONFIGURATION_INVALID", "Lowest Cost não aceita limite de lance ou ROAS mínimo neste fluxo.");
+  } else if (strategy === "min_roas") {
+    if (campaign.budgetMode !== "abo" || campaign.objective !== "OUTCOME_SALES") fail("META_BID_STRATEGY_UNSUPPORTED", "ROAS Goal exige vendas com orçamento ABO neste fluxo.");
+    if (!Number.isSafeInteger(roasFloor) || Number(roasFloor) < 1 || Number(roasFloor) > 10_000_000) fail("META_ROAS_FLOOR_REQUIRED", "Aprove um ROAS mínimo positivo em incrementos de 0,0001.");
+    if (amount != null) fail("META_BID_CONFIGURATION_INVALID", "ROAS Goal usa bid_constraints; remova bid_amount.");
+  } else {
+    if (campaign.budgetMode !== "abo") fail("META_BID_STRATEGY_UNSUPPORTED", "Cost Cap e Bid Cap estão disponíveis apenas em ABO neste fluxo.");
+    if (roasFloor != null) fail("META_BID_CONFIGURATION_INVALID", "ROAS mínimo só pode ser usado em ROAS Goal.");
+    if (!Number.isSafeInteger(amount) || Number(amount) <= 0) fail("META_BID_AMOUNT_REQUIRED", "Aprove um limite de lance positivo em unidades monetárias mínimas.");
+  }
+  return { bid_strategy: BID_STRATEGIES[strategy as keyof typeof BID_STRATEGIES], ...(strategy === "cost_cap" || strategy === "bid_cap" ? { bid_amount: amount } : {}), ...(strategy === "min_roas" ? { bid_constraints: { roas_average_floor: roasFloor } } : {}) };
+}
+
 export function metaCampaignPayload(campaign: Json): Json {
   return { name: campaign.name, objective: campaign.objective, special_ad_categories: [], status: "PAUSED", ...metaBudget(campaign),
     ...(campaign.budgetMode === "cbo" ? { bid_strategy: "LOWEST_COST_WITHOUT_CAP" } : { is_adset_budget_sharing_enabled: false }) };
@@ -56,7 +84,7 @@ export function metaCampaignPayload(campaign: Json): Json {
 
 export function metaAdSetPayload(campaign: Json, group: Json, campaignId: unknown): Json {
   return { name: group.key, campaign_id: campaignId, ...metaDelivery(campaign), targeting: group.targeting, ...metaBudget(campaign, group),
-    ...(campaign.budgetMode === "abo" ? { bid_strategy: "LOWEST_COST_WITHOUT_CAP" } : {}),
+    ...(campaign.budgetMode === "abo" ? metaBid(campaign) : {}),
     ...(campaign.budgetKind === "lifetime" ? { start_time: campaign.startTime, end_time: campaign.endTime } : {}) };
 }
 
@@ -71,6 +99,7 @@ export function validateMetaAccountBudget(tree: Json, currency: string, minimumD
 
 export function validateMetaTree(tree: Json): void {
   const campaign = obj(tree.campaign);
+  metaBid(campaign);
   if (Array.isArray(campaign.unsupportedConfiguration) && campaign.unsupportedConfiguration.length) fail("META_CONFIGURATION_UNSUPPORTED", `Configurações não suportadas: ${campaign.unsupportedConfiguration.join(", ")}. Revise o Master Plan antes de aprovar.`);
   if (campaign.approvedAccountId != null && campaign.approvedAccountId !== tree.accountId) fail("APPROVED_ACCOUNT_MISMATCH", "O plano deve ser compilado para a conta aprovada no briefing de anúncios.");
   metaDelivery(campaign);

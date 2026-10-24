@@ -24,6 +24,7 @@ type MetricKey =
   | "costPerLead"
   | "costPerPurchase"
   | "videoPlays"
+  | "video3SecondViews"
   | "video75"
   | "thruPlays";
 type Metrics = Record<MetricKey, number | null> & {
@@ -51,6 +52,7 @@ type Report = {
       until: string;
       weekday: number | null;
       dimensions: Record<string, string>;
+      optimizationReview: string[];
     }
   >;
 };
@@ -62,6 +64,12 @@ export function MetaAdvancedReport() {
     [until, setUntil] = useState(""),
     [breakdown, setBreakdown] = useState("none"),
     [attribution, setAttribution] = useState("account");
+  const [reviewMinImpressions, setReviewMinImpressions] = useState(""),
+    [reviewMaxFrequency, setReviewMaxFrequency] = useState(""),
+    [reviewMinCtrPercent, setReviewMinCtrPercent] = useState(""),
+    [reviewConversion, setReviewConversion] = useState(""),
+    [reviewTargetCost, setReviewTargetCost] = useState(""),
+    [reviewMinConversions, setReviewMinConversions] = useState("");
   const [view, setView] = useState("delivery"),
     [page, setPage] = useState(0);
   const { data: accounts } = useQuery({
@@ -158,6 +166,10 @@ export function MetaAdvancedReport() {
               key: "videoPlays",
               label: t("Reproduções", "Video plays", "Reproducciones"),
             },
+            {
+              key: "video3SecondViews",
+              label: t("Visualizações de 3 s", "3-second views", "Vistas de 3 s"),
+            },
             { key: "video75", label: t("Vídeo 75%", "Video 75%", "Vídeo 75%") },
             { key: "thruPlays", label: "ThruPlay" },
             { key: "qualityRanking", label: "Quality ranking" },
@@ -186,7 +198,15 @@ export function MetaAdvancedReport() {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          const next = { accountId, since, until, breakdown, attribution };
+          const next = Object.fromEntries(Object.entries({
+            accountId, since, until, breakdown, attribution,
+            ...(reviewMinImpressions ? { reviewMinImpressions } : {}),
+            ...(reviewMaxFrequency ? { reviewMaxFrequency } : {}),
+            ...(reviewMinCtrPercent ? { reviewMinCtrPercent } : {}),
+            ...(reviewConversion ? { reviewConversion } : {}),
+            ...(reviewTargetCost ? { reviewTargetCost } : {}),
+            ...(reviewMinConversions ? { reviewMinConversions } : {}),
+          }).map(([key, value]) => [key, String(value)]));
           setPage(0);
           loadReport(next);
         }}
@@ -212,6 +232,34 @@ export function MetaAdvancedReport() {
                   </option>
                 ))}
             </select>
+          </label>
+          <label>
+            {t("Amostra mínima de impressões (revisão)", "Minimum impressions (review)", "Impresiones mínimas (revisión)")}
+            <input className={field} type="number" min="1" value={reviewMinImpressions} onChange={(event) => setReviewMinImpressions(event.target.value)} />
+          </label>
+          <label>
+            {t("Frequência para revisão", "Frequency review limit", "Límite de frecuencia")}
+            <input className={field} type="number" min="0.01" step="0.01" value={reviewMaxFrequency} onChange={(event) => setReviewMaxFrequency(event.target.value)} />
+          </label>
+          <label>
+            {t("CTR mínimo (%)", "Minimum CTR (%)", "CTR mínimo (%)")}
+            <input className={field} type="number" min="0" max="100" step="0.01" value={reviewMinCtrPercent} onChange={(event) => setReviewMinCtrPercent(event.target.value)} />
+          </label>
+          <label>
+            {t("Conversão para custo-alvo", "Conversion for target cost", "Conversión para coste objetivo")}
+            <select className={field} value={reviewConversion} onChange={(event) => setReviewConversion(event.target.value)}>
+              <option value="">{t("Sem avaliação de custo", "No cost review", "Sin revisión de coste")}</option>
+              <option value="leads">Lead</option>
+              <option value="purchases">Purchase</option>
+            </select>
+          </label>
+          <label>
+            {t("Custo-alvo", "Target cost", "Coste objetivo")}
+            <input className={field} type="number" min="0.01" step="0.01" value={reviewTargetCost} onChange={(event) => setReviewTargetCost(event.target.value)} />
+          </label>
+          <label>
+            {t("Conversões mínimas para avaliar custo", "Minimum conversions for cost review", "Conversiones mínimas para evaluar coste")}
+            <input className={field} type="number" min="1" value={reviewMinConversions} onChange={(event) => setReviewMinConversions(event.target.value)} />
           </label>
           <label>
             {t("De", "From", "Desde")}
@@ -403,6 +451,7 @@ export function MetaAdvancedReport() {
                       "Período / segmento",
                     ),
                     ...columns.map((column) => column.label),
+                    t("Sinais para revisão", "Review signals", "Señales para revisar"),
                   ].map((label) => (
                     <th key={label} className="p-3 text-left">
                       {label}
@@ -447,6 +496,11 @@ export function MetaAdvancedReport() {
                           {format(row[column.key], column.key)}
                         </td>
                       ))}
+                      <td className="p-3 whitespace-normal max-w-64">
+                        {row.optimizationReview.length
+                          ? row.optimizationReview.map((signal) => <p key={signal}>{signal.replaceAll("_", " ")}</p>)
+                          : "—"}
+                      </td>
                     </tr>
                   ))}
               </tbody>
@@ -483,9 +537,9 @@ export function MetaAdvancedReport() {
           </div>
           <p className="text-xs text-muted-foreground">
             {t(
-              "— indica métrica indisponível. Rankings são solicitados apenas sem detalhamento. No detalhamento por hora, alcance, frequência e vídeo ficam indisponíveis por linha. Reproduções, vídeo a 75% e ThruPlay são métricas distintas; reproduções não são rotuladas como visualizações de 3 segundos. Segmentos podem ter sobreposição, restrições de privacidade e poucos dados; este relatório não decide pausas ou escala.",
-              "— means unavailable. Rankings are requested only without breakdowns. Hourly rows omit reach, frequency and video. Video plays, 75% views and ThruPlay are distinct; plays are not labeled as 3-second views. Segments may overlap or have privacy restrictions and little data; this report does not decide pauses or scaling.",
-              "— indica métrica no disponible. Rankings solo se solicitan sin desglose. Las filas por hora omiten alcance, frecuencia y vídeo. Reproducciones, 75% y ThruPlay son distintos; reproducciones no se etiquetan como vistas de 3 segundos. Puede haber solapamiento, restricciones de privacidad y pocos datos; no se deciden pausas ni escalado.",
+              "— indica métrica indisponível. Rankings são solicitados apenas sem detalhamento. No detalhamento por hora, alcance, frequência e vídeo ficam indisponíveis por linha. Reproduções, visualizações de 3 segundos, vídeo a 75% e ThruPlay são métricas distintas. Sinais de revisão usam somente os limites preenchidos por você; não pausam nem escalam campanhas e não afirmam tendência ou fadiga comprovada.",
+              "— means unavailable. Rankings are requested only without breakdowns. Hourly rows omit reach, frequency and video. Plays, 3-second views, 75% views and ThruPlay are distinct metrics. Review signals use only thresholds you enter; they do not pause or scale campaigns and do not claim a proven trend or fatigue.",
+              "— indica métrica no disponible. Rankings solo se solicitan sin desglose. Las filas por hora omiten alcance, frecuencia y vídeo. Reproducciones, vistas de 3 segundos, 75% y ThruPlay son métricas distintas. Las señales usan solo los límites ingresados; no pausan ni escalan campañas ni confirman tendencia o fatiga.",
             )}
           </p>
         </>

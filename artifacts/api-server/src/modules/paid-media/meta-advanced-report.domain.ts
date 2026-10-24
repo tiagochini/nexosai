@@ -12,6 +12,12 @@ export const advancedReportQuery = z
     attribution: z
       .enum(["account", "1d_click", "7d_click", "1d_view"])
       .default("account"),
+    reviewMinImpressions: z.coerce.number().int().min(1).max(1_000_000_000).optional(),
+    reviewMaxFrequency: z.coerce.number().positive().max(1000).optional(),
+    reviewMinCtrPercent: z.coerce.number().min(0).max(100).optional(),
+    reviewConversion: z.enum(["leads", "purchases"]).optional(),
+    reviewTargetCost: z.coerce.number().positive().max(1_000_000_000).optional(),
+    reviewMinConversions: z.coerce.number().int().min(1).max(1_000_000).optional(),
   })
   .strict()
   .refine(
@@ -19,7 +25,17 @@ export const advancedReportQuery = z
       value.since <= value.until &&
       (Date.parse(value.until) - Date.parse(value.since)) / 86400000 < 31,
     "Escolha até 31 dias, incluindo as duas datas.",
-  );
+  )
+  .superRefine((value, context) => {
+    const metric = value.reviewConversion;
+    if ((metric || value.reviewTargetCost || value.reviewMinConversions) &&
+      (!metric || value.reviewTargetCost == null || value.reviewMinConversions == null))
+      context.addIssue({ code: "custom", path: ["reviewConversion"], message: "Para revisar CPA, informe evento, custo-alvo e amostra mínima." });
+    if (value.reviewMinCtrPercent != null && value.reviewMinImpressions == null)
+      context.addIssue({ code: "custom", path: ["reviewMinImpressions"], message: "Defina impressões mínimas antes de avaliar CTR." });
+    if (value.reviewMaxFrequency != null && value.reviewMinImpressions == null)
+      context.addIssue({ code: "custom", path: ["reviewMinImpressions"], message: "Defina impressões mínimas antes de avaliar frequência." });
+  });
 export type AdvancedReportQuery = z.infer<typeof advancedReportQuery>;
 type Json = Record<string, any>;
 export const reportBreakdowns = {
@@ -46,6 +62,7 @@ const commonFields = [
 ];
 const videoFields = [
   "video_play_actions",
+  "video_3_sec_watched_actions",
   "video_p75_watched_actions",
   "video_thruplay_watched_actions",
 ];
@@ -198,6 +215,7 @@ export function advancedRowMetrics(
     costPerLead: ratio(spend, metrics.leads),
     costPerPurchase: ratio(spend, metrics.purchases),
     videoPlays: video("video_play_actions"),
+    video3SecondViews: video("video_3_sec_watched_actions"),
     video75: video("video_p75_watched_actions"),
     thruPlays: video("video_thruplay_watched_actions"),
     qualityRanking:
@@ -257,6 +275,21 @@ export function assertReportRow(
     );
 }
 export function advancedReportRow(row: Json, form: AdvancedReportQuery) {
+  const metrics = advancedRowMetrics(row, form);
+  const review: string[] = [];
+  const enoughImpressions = form.reviewMinImpressions != null && metrics.impressions != null && metrics.impressions >= form.reviewMinImpressions;
+  if (form.reviewMinImpressions != null && !enoughImpressions) review.push("sample_below_impression_floor");
+  if (enoughImpressions && form.reviewMaxFrequency != null && metrics.frequency != null && metrics.frequency >= form.reviewMaxFrequency) review.push("frequency_at_or_above_user_limit");
+  if (enoughImpressions && form.reviewMinCtrPercent != null && metrics.ctr != null && metrics.ctr < form.reviewMinCtrPercent) review.push("ctr_below_user_benchmark");
+  if (form.reviewConversion && form.reviewTargetCost != null && form.reviewMinConversions != null) {
+    const conversions = metrics[form.reviewConversion];
+    if (conversions != null && conversions < form.reviewMinConversions) review.push("sample_below_conversion_floor");
+    else {
+      const cost = form.reviewConversion === "leads" ? metrics.costPerLead : metrics.costPerPurchase;
+      if (cost != null && cost > form.reviewTargetCost) review.push("cost_above_user_target");
+    }
+  }
+  if (review.includes("frequency_at_or_above_user_limit") && review.some((item) => item === "ctr_below_user_benchmark" || item === "cost_above_user_target")) review.push("fatigue_review_signal");
   return {
     adId: row.ad_id as string,
     adName: text(row.ad_name),
@@ -273,6 +306,7 @@ export function advancedReportRow(row: Json, form: AdvancedReportQuery) {
     dimensions: Object.fromEntries(
       reportBreakdowns[form.breakdown].map((key) => [key, row[key] as string]),
     ),
-    ...advancedRowMetrics(row, form),
+    ...metrics,
+    optimizationReview: review,
   };
 }

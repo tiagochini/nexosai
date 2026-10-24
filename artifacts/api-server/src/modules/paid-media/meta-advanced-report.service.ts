@@ -150,7 +150,7 @@ export async function paidMediaAdvancedReport(
           : "not_requested_with_breakdown",
       hourlyUniqueAndVideo:
         form.breakdown === "hour" ? "not_requested" : "not_applicable",
-      video3SecondViews: "not_certified_use_named_video_metrics",
+      video3SecondViews: "requested_from_meta_video_3_sec_watched_actions",
       attributionChangesCampaign: false,
     },
   };

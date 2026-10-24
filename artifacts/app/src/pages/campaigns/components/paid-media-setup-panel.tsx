@@ -15,6 +15,9 @@ type Form = MetaAdvancedForm & {
   amount: number;
   budgetKind: string;
   budgetMode: string;
+  bidStrategy: "lowest_cost" | "cost_cap" | "bid_cap" | "min_roas";
+  bidAmount?: number;
+  roasFloor?: number;
   startTime: string | null;
   endTime: string | null;
   destinationUrl: string;
@@ -47,6 +50,7 @@ const initial: Form = {
   amount: 0,
   budgetKind: "daily",
   budgetMode: "abo",
+  bidStrategy: "lowest_cost",
   startTime: null,
   endTime: null,
   destinationUrl: "",
@@ -550,6 +554,47 @@ export function PaidMediaSetupPanel({
                 </option>
               </select>
             </label>
+            <label className="space-y-1 text-xs">
+              <span>{t("Estratégia de lance", "Bid strategy", "Estrategia de puja")}</span>
+              <select
+                className={field}
+                value={form.bidStrategy ?? "lowest_cost"}
+                onChange={(event) => {
+                  const value = event.target.value as Form["bidStrategy"];
+                  update("bidStrategy", value);
+                  if (value === "lowest_cost") update("bidAmount", undefined);
+                  if (value !== "min_roas") update("roasFloor", undefined);
+                  if (value === "min_roas") update("bidAmount", undefined);
+                }}
+              >
+                <option value="lowest_cost">Lowest Cost</option>
+                <option value="cost_cap" disabled={form.budgetMode === "cbo"}>Cost Cap — ABO</option>
+                <option value="bid_cap" disabled={form.budgetMode === "cbo"}>Bid Cap — ABO</option>
+                <option value="min_roas" disabled={form.budgetMode === "cbo" || form.objective !== "OUTCOME_SALES"}>ROAS Goal — vendas ABO</option>
+              </select>
+            </label>
+            {["cost_cap", "bid_cap"].includes(form.bidStrategy) && (
+              <label className="space-y-1 text-xs">
+                <span>{t("Limite por resultado (moeda da conta)", "Bid limit (account currency)", "Límite de puja (moneda de cuenta)")}</span>
+                <input
+                  className={field}
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  value={form.bidAmount ?? ""}
+                  onChange={(event) => update("bidAmount", event.target.value ? Number(event.target.value) : undefined)}
+                />
+                <span className="text-muted-foreground">{t("Cost Cap limita o custo médio; Bid Cap limita o lance. A elegibilidade depende do objetivo e da conta. O valor será enviado em unidades mínimas da moeda.", "Cost Cap limits average cost; Bid Cap limits the bid. Eligibility depends on objective and account. The amount is sent in the currency's minor units.", "Cost Cap limita el coste medio; Bid Cap limita la puja. La elegibilidad depende del objetivo y la cuenta. El importe se envía en unidades mínimas de la moneda.")}</span>
+              </label>
+            )}
+            {form.bidStrategy === "min_roas" && (
+              <label className="space-y-1 text-xs">
+                <span>{t("ROAS mínimo (ex.: 2 = 2,0x)", "Minimum ROAS (e.g. 2 = 2.0x)", "ROAS mínimo (ej.: 2 = 2,0x)")}</span>
+                <input className={field} type="number" min="0.0001" step="0.0001" required value={form.roasFloor ?? ""} onChange={(event) => update("roasFloor", event.target.value ? Number(event.target.value) : undefined)} />
+                <span className="text-muted-foreground">{t("Envia LOWEST_COST_WITH_MIN_ROAS com bid_constraints.roas_average_floor. A Meta ainda valida elegibilidade da conta e do evento de valor.", "Sends LOWEST_COST_WITH_MIN_ROAS with bid_constraints.roas_average_floor. Meta still validates account and value-event eligibility.", "Envía LOWEST_COST_WITH_MIN_ROAS con bid_constraints.roas_average_floor. Meta valida la elegibilidad de cuenta y evento de valor.")}</span>
+              </label>
+            )}
             <label className="space-y-1 text-xs">
               <span>
                 {t(

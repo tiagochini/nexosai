@@ -47,6 +47,8 @@ for (const mode of ["original", "advantage"] as const)
     const form = paidMediaSetupSchema.parse({
       ...base,
       audienceMode: mode,
+      bidStrategy: "cost_cap",
+      bidAmount: 4.5,
       includedAudienceIds: ["111"],
       excludedAudienceIds: ["222"],
       customerLifecycle: { mode: "acquisition", customerAudienceIds: ["222"] },
@@ -76,6 +78,9 @@ for (const mode of ["original", "advantage"] as const)
     );
     assert.deepEqual(compiled.tree.validationBlockers, []);
     const targeting = compiled.tree.adGroups[0]!.targeting as any;
+    const bid = metaAdSetPayload(compiled.tree.campaign, compiled.tree.adGroups[0]!, "campaign");
+    assert.equal(bid.bid_strategy, "COST_CAP");
+    assert.equal(bid.bid_amount, 450);
     assert.equal(
       targeting.targeting_automation.advantage_audience,
       mode === "advantage" ? 1 : 0,
@@ -186,6 +191,19 @@ for (const mode of ["original", "advantage"] as const)
       /ativos/,
     );
   }
+const roasForm = paidMediaSetupSchema.parse({ ...base, bidStrategy: "min_roas", roasFloor: 2 });
+const roasConfiguration = executablePaidMediaSetup(roasForm, { providerAccountId: "act_9", currency: "BRL" }, "12345");
+const roasTree = compileMasterplanTree({ campaign: { title: "ROAS" }, strategy: { paidMedia: roasConfiguration } }, "meta_ads", "act_9").tree;
+assert.deepEqual(roasTree.validationBlockers, []);
+const roasAdSet = metaAdSetPayload(roasTree.campaign, roasTree.adGroups[0]!, "campaign");
+assert.equal(roasAdSet.optimization_goal, "VALUE");
+assert.equal(roasAdSet.bid_strategy, "LOWEST_COST_WITH_MIN_ROAS");
+assert.deepEqual(roasAdSet.bid_constraints, { roas_average_floor: 20000 });
+for (const invalid of [
+  { bidStrategy: "min_roas", roasFloor: 2, objective: "OUTCOME_LEADS", conversionEvent: "Lead" },
+  { bidStrategy: "min_roas", roasFloor: 2, budgetMode: "cbo" },
+  { bidStrategy: "min_roas", roasFloor: 2, bidAmount: 4 },
+]) assert.equal(paidMediaSetupSchema.safeParse({ ...base, ...invalid }).success, false);
 assert.deepEqual(
   placementTargeting(["facebook_feed", "facebook_feed", "instagram_stories"]),
   {
@@ -224,6 +242,9 @@ for (const extra of [
   },
   { placementMode: "manual", placements: [] },
   { includedAudienceIds: ["1"], excludedAudienceIds: ["1"] },
+  { bidStrategy: "cost_cap" },
+  { bidStrategy: "lowest_cost", bidAmount: 4 },
+  { bidStrategy: "bid_cap", bidAmount: 4, budgetMode: "cbo" },
 ])
   assert.equal(
     paidMediaSetupSchema.safeParse({ ...base, ...extra }).success,

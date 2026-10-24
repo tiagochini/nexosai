@@ -10,6 +10,7 @@ import {
   advancedReportQuery,
   advancedInsightsQuery,
   advancedRowMetrics,
+  advancedReportRow,
 } from "../modules/paid-media/meta-advanced-report.domain.js";
 import { paidMediaAdvancedReport } from "../modules/paid-media/meta-advanced-report.service.js";
 import { metaAccountAssetRequest } from "../modules/paid-media/providers.js";
@@ -72,6 +73,7 @@ const sample = {
     },
   ],
   video_play_actions: [{ action_type: "video_view", value: "20" }],
+  video_3_sec_watched_actions: [{ action_type: "video_view", value: "16" }],
   video_p75_watched_actions: [{ action_type: "video_view", value: "5" }],
   quality_ranking: "AVERAGE",
   engagement_rate_ranking: "ABOVE_AVERAGE",
@@ -153,6 +155,24 @@ try {
     advancedReportQuery.safeParse({ ...form, since: "2026-02-30" }).success,
     false,
   );
+  assert.equal(advancedReportQuery.safeParse({
+    ...form, reviewConversion: "purchases", reviewTargetCost: "20",
+  }).success, false, "Cost review requires a user-defined sample floor");
+  const reviewForm = advancedReportQuery.parse({
+    ...form,
+    reviewMinImpressions: "100",
+    reviewMaxFrequency: "1.5",
+    reviewMinCtrPercent: "6",
+    reviewConversion: "purchases",
+    reviewTargetCost: "20",
+    reviewMinConversions: "2",
+  });
+  const reviewed = advancedReportRow({ ...detail, ...sample }, reviewForm);
+  assert.ok(reviewed.optimizationReview.includes("frequency_at_or_above_user_limit"));
+  assert.ok(reviewed.optimizationReview.includes("ctr_below_user_benchmark"));
+  assert.ok(reviewed.optimizationReview.includes("cost_above_user_target"));
+  assert.ok(reviewed.optimizationReview.includes("fatigue_review_signal"));
+  assert.deepEqual(advancedReportRow({ ...detail, ...sample }, form).optimizationReview, []);
   assert.equal(
     advancedRowMetrics(
       {
@@ -183,6 +203,7 @@ try {
   assert.equal(metrics.costPerLead, 20);
   assert.equal(metrics.qualityRanking, "AVERAGE");
   assert.equal(metrics.videoPlays, 20);
+  assert.equal(metrics.video3SecondViews, 16);
   assert.equal(metrics.video75, 5);
   assert.equal(metrics.thruPlays, null);
   const explicit = advancedRowMetrics(sample, {
