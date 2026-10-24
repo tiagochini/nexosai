@@ -56,6 +56,7 @@
     "test:meta-operational-flow": "cross-env NODE_ENV=test tsx src/scripts/test-meta-operational-flow.ts",
     "test:meta-reliability": "cross-env NODE_ENV=test tsx src/scripts/test-meta-reliability.ts && cross-env NODE_ENV=test tsx src/scripts/test-landing-upgrade.ts",
     "test:meta-advanced-report": "cross-env NODE_ENV=test tsx src/scripts/test-meta-advanced-report.ts",
+    "test:meta-capi-local-diagnostics": "cross-env NODE_ENV=test tsx src/scripts/test-meta-capi-local-diagnostics.ts",
     "test:meta-capi-diagnostics": "cross-env NODE_ENV=test tsx src/scripts/test-meta-capi-tests.ts",
     "test:meta-advanced-workflows": "cross-env NODE_ENV=test tsx src/scripts/test-meta-advanced-workflows.ts",
     "test:meta-assets": "cross-env NODE_ENV=test tsx src/scripts/test-meta-assets.ts && cross-env NODE_ENV=test tsx src/scripts/test-meta-audience-operations.ts",

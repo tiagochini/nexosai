@@ -88,14 +88,56 @@ export async function datasetDiagnostics(workspaceId: string, datasetId: string)
   const [stats] = await db.select({
     events: sql<number>`count(*)::int`,
     matched: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.eventMatchKeys} <> '{}'::jsonb)::int`,
+    email: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.eventMatchKeys} ? 'em')::int`,
+    phone: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.eventMatchKeys} ? 'ph')::int`,
+    externalId: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.eventMatchKeys} ? 'external_id')::int`,
+    firstName: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.eventMatchKeys} ? 'fn')::int`,
+    lastName: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.eventMatchKeys} ? 'ln')::int`,
+    city: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.eventMatchKeys} ? 'ct')::int`,
+    state: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.eventMatchKeys} ? 'st')::int`,
+    postalCode: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.eventMatchKeys} ? 'zp')::int`,
+    country: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.eventMatchKeys} ? 'country')::int`,
+    fbp: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.eventMatchKeys} ? 'fbp')::int`,
+    fbc: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.eventMatchKeys} ? 'fbc')::int`,
     sent: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.deliveryStatus} = 'sent')::int`,
     blocked: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.deliveryStatus} = 'capability_blocked')::int`,
     queued: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.retryAt} is not null)::int`,
+    consentWithheld: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.deliveryStatus} = 'consent_withheld')::int`,
     failed: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.deliveryStatus} = 'failed')::int`,
   }).from(paidMediaEventReceiptsTable).where(eq(paidMediaEventReceiptsTable.datasetId, dataset.id));
   await db.update(paidMediaDatasetsTable).set({ lastDiagnosticAt: new Date() }).where(eq(paidMediaDatasetsTable.id, dataset.id));
   const events = stats?.events ?? 0;
-  return { datasetId: dataset.id, lastEventAt: dataset.lastEventAt, eventCount: events, matchKeyEventCount: stats?.matched ?? 0, matchRate: events ? (stats?.matched ?? 0) / events : 0, localMatchKeyCoverage: events ? (stats?.matched ?? 0) / events : 0, measurementSource: "local_receipts", metaEventMatchQuality: null, browserServerDeduplication: "not_verified", testEvents: "separate_authenticated_workflow", providerDelivery: { queued: stats?.queued ?? 0, sent: stats?.sent ?? 0, capabilityBlocked: stats?.blocked ?? 0, failed: stats?.failed ?? 0 }, status: events ? "receiving" : "no_events" };
+  const keyCounts: Array<[string, number]> = [
+    ["email", stats?.email ?? 0], ["phone", stats?.phone ?? 0],
+    ["external_id", stats?.externalId ?? 0], ["first_name", stats?.firstName ?? 0],
+    ["last_name", stats?.lastName ?? 0], ["city", stats?.city ?? 0],
+    ["state", stats?.state ?? 0], ["postal_code", stats?.postalCode ?? 0],
+    ["country", stats?.country ?? 0], ["fbp", stats?.fbp ?? 0], ["fbc", stats?.fbc ?? 0],
+  ];
+  const keyCoverage = keyCounts.map(([key, count]) => ({ key, eventCount: count, rate: events ? count / events : 0 }));
+  const measured = stats?.matched ?? 0;
+  return {
+    datasetId: dataset.id,
+    lastEventAt: dataset.lastEventAt,
+    lastDiagnosticAt: new Date().toISOString(),
+    eventCount: events,
+    matchKeyEventCount: measured,
+    matchRate: events ? measured / events : 0,
+    localMatchKeyCoverage: events ? measured / events : 0,
+    keyCoverage,
+    measurementSource: "local_receipts",
+    metaEventMatchQuality: null,
+    browserServerDeduplication: "not_verified",
+    testEvents: "separate_authenticated_workflow",
+    providerDelivery: {
+      queued: stats?.queued ?? 0,
+      sent: stats?.sent ?? 0,
+      capabilityBlocked: stats?.blocked ?? 0,
+      consentWithheld: stats?.consentWithheld ?? 0,
+      failed: stats?.failed ?? 0,
+    },
+    status: events ? "receiving" : "no_events",
+  };
 }
 
 export async function upsertTouchpoint(workspaceId: string, input: { externalTouchpointId: string; accountId?: string; entityId?: string; provider?: "meta_ads" | "tiktok_ads" | "google_ads"; clickId?: string; utmSource?: string; utmCampaign?: string; occurredAt: string; metadata?: Record<string, unknown> }) {

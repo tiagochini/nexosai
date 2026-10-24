@@ -22,6 +22,26 @@ type Test = {
   };
   evidence: { eventsReceived?: number; errorCode?: string };
 };
+type DatasetDiagnostics = {
+  datasetId: string;
+  lastEventAt: string | null;
+  lastDiagnosticAt: string;
+  eventCount: number;
+  matchKeyEventCount: number;
+  localMatchKeyCoverage: number;
+  keyCoverage: Array<{ key: string; eventCount: number; rate: number }>;
+  measurementSource: "local_receipts";
+  metaEventMatchQuality: null;
+  browserServerDeduplication: "not_verified";
+  providerDelivery: {
+    queued: number;
+    sent: number;
+    capabilityBlocked: number;
+    consentWithheld: number;
+    failed: number;
+  };
+  status: "receiving" | "no_events";
+};
 const root = "/api/paid-media/advanced/capi-tests";
 export function MetaCapiTestsTab() {
   const t = useUiText(),
@@ -67,6 +87,14 @@ export function MetaCapiTestsTab() {
     queryKey: [root],
     queryFn: () => customFetch<{ tests: Test[] }>(root),
     refetchInterval: 60000,
+  });
+  const diagnostics = useQuery({
+    queryKey: ["/api/paid-media/datasets", datasetId, "diagnostics"],
+    enabled: false,
+    queryFn: () =>
+      customFetch<DatasetDiagnostics>(
+        `/api/paid-media/datasets/${encodeURIComponent(datasetId)}/diagnostics`,
+      ),
   });
   const submit = async (path: string, body: unknown) => {
     setBusy(true);
@@ -330,6 +358,63 @@ export function MetaCapiTestsTab() {
           </Button>
         </fieldset>
       </form>
+      <section className="border border-border/40 p-3 space-y-3" data-testid="meta-capi-local-diagnostics">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h4>{t("Diagnóstico local de eventos CAPI", "Local CAPI event diagnostics", "Diagnóstico local de eventos CAPI")}</h4>
+            <p className="text-xs text-muted-foreground">
+              {t(
+                "Conta recibos e identificadores armazenados com hash. Não consulta a EMQ da Meta nem confirma deduplicação no navegador.",
+                "Counts receipts and stored hashed identifiers. It does not query Meta EMQ or confirm browser deduplication.",
+                "Cuenta recibos e identificadores almacenados con hash. No consulta EMQ de Meta ni confirma deduplicación del navegador.",
+              )}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!datasetId || diagnostics.isFetching}
+            onClick={() => void diagnostics.refetch()}
+          >
+            {diagnostics.isFetching
+              ? t("Consultando…", "Loading…", "Consultando…")
+              : t("Atualizar diagnóstico", "Refresh diagnostics", "Actualizar diagnóstico")}
+          </Button>
+        </div>
+        {diagnostics.isError && <p role="alert">{diagnostics.error.message}</p>}
+        {diagnostics.data?.datasetId === datasetId && (
+          <>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 text-xs">
+              <p>{t("Recibos locais", "Local receipts", "Recibos locales")}: <strong>{diagnostics.data.eventCount}</strong></p>
+              <p>{t("Com ao menos uma chave", "With at least one key", "Con al menos una clave")}: <strong>{diagnostics.data.matchKeyEventCount}</strong> ({Math.round(diagnostics.data.localMatchKeyCoverage * 100)}%)</p>
+              <p>{t("Enviados à Meta", "Sent to Meta", "Enviados a Meta")}: <strong>{diagnostics.data.providerDelivery.sent}</strong></p>
+              <p>{t("Na fila", "Queued", "En cola")}: <strong>{diagnostics.data.providerDelivery.queued}</strong></p>
+              <p>{t("Bloqueados por capacidade", "Capability blocked", "Bloqueados por capacidad")}: <strong>{diagnostics.data.providerDelivery.capabilityBlocked}</strong></p>
+              <p>{t("Sem consentimento", "Consent withheld", "Sin consentimiento")}: <strong>{diagnostics.data.providerDelivery.consentWithheld}</strong></p>
+              <p>{t("Falhas", "Failures", "Fallos")}: <strong>{diagnostics.data.providerDelivery.failed}</strong></p>
+              <p>{t("Último evento", "Last event", "Último evento")}: <strong>{diagnostics.data.lastEventAt ? new Date(diagnostics.data.lastEventAt).toLocaleString() : "—"}</strong></p>
+            </div>
+            <div className="space-y-1">
+              <h5 className="text-xs font-semibold">{t("Chaves presentes por recibo", "Keys present per receipt", "Claves presentes por recibo")}</h5>
+              <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+                {diagnostics.data.keyCoverage.map((item) => (
+                  <p className="flex justify-between gap-2 text-xs" key={item.key}>
+                    <span>{item.key}</span>
+                    <span>{item.eventCount} · {Math.round(item.rate * 100)}%</span>
+                  </p>
+                ))}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {t(
+                "Cobertura é calculada somente sobre recibos locais do dataset; identificadores não são exibidos. EMQ Meta: indisponível neste painel. Deduplicação browser/server: não verificada. Consulte Test Events separadamente.",
+                "Coverage is calculated only from local receipts for this dataset; identifiers are never displayed. Meta EMQ: unavailable here. Browser/server deduplication: not verified. Check Test Events separately.",
+                "La cobertura se calcula solo con recibos locales del dataset; los identificadores no se muestran. EMQ de Meta: no disponible aquí. Deduplicación navegador/servidor: no verificada. Consulta Test Events por separado.",
+              )}
+            </p>
+          </>
+        )}
+      </section>
       {data?.tests
         .filter((row) => !accountId || row.accountId === accountId)
         .map((row) => (
