@@ -12,8 +12,6 @@ import { eq } from "drizzle-orm";
 import { fireServerEvent } from "./server-events.service.js";
 import { logger } from "../../lib/logger.js";
 
-const router = Router();
-
 const trackSchema = z.object({
   eventName: z.enum([
     "PageView",
@@ -24,7 +22,8 @@ const trackSchema = z.object({
     "Registration",
     "ViewContent",
   ]),
-  eventId: z.string().optional(),
+  eventId: z.string().trim().min(1).max(200).regex(/^[A-Za-z0-9._:-]+$/),
+  marketingConsent: z.boolean(),
   userData: z.object({
     email: z.email().optional(),
     phone: z.string().max(30).optional(),
@@ -41,6 +40,13 @@ const trackSchema = z.object({
     orderId: z.string().max(100).optional(),
     eventSourceUrl: z.string().max(500).optional(),
   }).optional().default({}),
+}).superRefine((value, context) => {
+  if (!value.marketingConsent && (
+    Object.values(value.userData).some((item) => item !== undefined)
+    || Object.values(value.customData).some((item) => item !== undefined)
+  )) {
+    context.addIssue({ code: "custom", message: "Não envie dados do usuário ou do evento sem consentimento de marketing." });
+  }
 });
 
 function extractClientIp(req: import("express").Request): string | null {
@@ -48,6 +54,9 @@ function extractClientIp(req: import("express").Request): string | null {
   if (fwd) return (Array.isArray(fwd) ? fwd[0] : fwd.split(",")[0])?.trim() ?? null;
   return req.ip ?? null;
 }
+
+export function createServerEventsRouter(dispatch = fireServerEvent) {
+const router = Router();
 
 // POST /api/events/:workspaceId/track — direct workspace ID
 router.post("/:workspaceId/track", async (req, res): Promise<void> => {
@@ -59,13 +68,18 @@ router.post("/:workspaceId/track", async (req, res): Promise<void> => {
     return;
   }
 
-  const { eventName, userData, customData } = parsed.data;
+  if (!parsed.data.marketingConsent) {
+    res.status(202).json({ tracked: false, eventName: parsed.data.eventName, reason: "consent_withheld" });
+    return;
+  }
+
+  const { eventName, eventId, userData, customData } = parsed.data;
   const ip = extractClientIp(req) ?? userData.ip;
   const userAgent = (req.headers["user-agent"] ?? userData.userAgent)?.slice(0, 400);
 
   // Fire-and-forget — never block the response
   setImmediate(() => {
-    fireServerEvent(workspaceId, eventName, { ...userData, ip: ip ?? undefined, userAgent }, customData)
+    dispatch(workspaceId, eventName, eventId, { ...userData, ip: ip ?? undefined, userAgent }, customData)
       .catch((err) => logger.warn({ err, eventName }, "fireServerEvent failed — non-blocking"));
   });
 
@@ -82,6 +96,11 @@ router.post("/sequence/:sequenceId/track", async (req, res): Promise<void> => {
     return;
   }
 
+  if (!parsed.data.marketingConsent) {
+    res.status(202).json({ tracked: false, eventName: parsed.data.eventName, reason: "consent_withheld" });
+    return;
+  }
+
   const [sequence] = await db
     .select({ workspaceId: launchSequencesTable.workspaceId })
     .from(launchSequencesTable)
@@ -93,16 +112,20 @@ router.post("/sequence/:sequenceId/track", async (req, res): Promise<void> => {
     return;
   }
 
-  const { eventName, userData, customData } = parsed.data;
+  const { eventName, eventId, userData, customData } = parsed.data;
   const ip = extractClientIp(req) ?? userData.ip;
   const userAgent = (req.headers["user-agent"] ?? userData.userAgent)?.slice(0, 400);
 
   setImmediate(() => {
-    fireServerEvent(sequence.workspaceId, eventName, { ...userData, ip: ip ?? undefined, userAgent }, customData)
+    dispatch(sequence.workspaceId, eventName, eventId, { ...userData, ip: ip ?? undefined, userAgent }, customData)
       .catch((err) => logger.warn({ err, eventName, sequenceId }, "fireServerEvent failed — non-blocking"));
   });
 
   res.json({ tracked: true, eventName });
 });
 
+return router;
+}
+
+const router = createServerEventsRouter();
 export default router;

@@ -230,6 +230,7 @@ export async function sendTikTokEvent(
 export async function fireServerEvent(
   workspaceId: string,
   eventName: string,
+  eventId: string,
   userData: {
     email?: string;
     phone?: string;
@@ -272,6 +273,7 @@ export async function fireServerEvent(
     metaEvent
       ? sendMetaCAPIEvent(workspaceId, {
           eventName: metaEvent,
+          eventId,
           userData,
           eventSourceUrl: customData?.eventSourceUrl,
           customData: {
@@ -285,6 +287,7 @@ export async function fireServerEvent(
     tikTokEvent
       ? sendTikTokEvent(workspaceId, {
           eventName: tikTokEvent,
+          eventId,
           pageUrl: customData?.eventSourceUrl,
           userData,
           properties: {
