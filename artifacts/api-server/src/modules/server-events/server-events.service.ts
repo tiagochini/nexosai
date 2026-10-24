@@ -53,8 +53,13 @@ export interface MetaEventData {
   userData: {
     email?: string;
     phone?: string;
+    externalId?: string;
     firstName?: string;
     lastName?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
     clientIpAddress?: string;
     clientUserAgent?: string;
     fbp?: string;
@@ -90,6 +95,15 @@ export async function sendMetaCAPIEvent(
   if (event.userData.phone) userData["ph"] = sha256(event.userData.phone.replace(/\D/g, ""));
   if (event.userData.firstName) userData["fn"] = sha256(event.userData.firstName);
   if (event.userData.lastName) userData["ln"] = sha256(event.userData.lastName);
+  if (event.userData.externalId) userData["external_id"] = sha256(event.userData.externalId);
+  const city = event.userData.city?.trim().toLowerCase().replace(/[0-9.\s\-()]/g, "");
+  const state = event.userData.state?.trim().toLowerCase().replace(/[0-9.\s\-()]/g, "");
+  const postalCode = event.userData.postalCode?.trim().toLowerCase().replace(/\s/g, "").split("-")[0];
+  const country = event.userData.country?.trim().toLowerCase();
+  if (city) userData["ct"] = sha256(city);
+  if (state) userData["st"] = sha256(state);
+  if (postalCode) userData["zp"] = sha256(postalCode);
+  if (country && /^[a-z]{2}$/.test(country)) userData["country"] = sha256(country);
   if (event.userData.clientIpAddress) userData["client_ip_address"] = event.userData.clientIpAddress;
   if (event.userData.clientUserAgent) userData["client_user_agent"] = event.userData.clientUserAgent;
   if (event.userData.fbp) userData["fbp"] = event.userData.fbp;
@@ -164,6 +178,8 @@ export interface TikTokEventData {
     email?: string;
     phone?: string;
     externalId?: string;
+    firstName?: string;
+    lastName?: string;
     ip?: string;
     userAgent?: string;
     ttclid?: string;
@@ -200,6 +216,8 @@ export async function sendTikTokEvent(
       ...(event.userData.email ? { email: sha256(event.userData.email) } : {}),
       ...(event.userData.phone ? { phone_number: sha256(event.userData.phone.replace(/\D/g, "")) } : {}),
       ...(event.userData.externalId ? { external_id: sha256(event.userData.externalId) } : {}),
+      ...(event.userData.firstName ? { first_name: sha256(event.userData.firstName) } : {}),
+      ...(event.userData.lastName ? { last_name: sha256(event.userData.lastName) } : {}),
       ...(event.userData.ip ? { ip: event.userData.ip } : {}),
       ...(event.userData.userAgent ? { user_agent: event.userData.userAgent } : {}),
       ...(event.userData.ttclid ? { ttclid: event.userData.ttclid } : {}),
@@ -247,6 +265,13 @@ export async function fireServerEvent(
   userData: {
     email?: string;
     phone?: string;
+    externalId?: string;
+    firstName?: string;
+    lastName?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
     ip?: string;
     userAgent?: string;
     fbp?: string;

@@ -29,6 +29,13 @@ const trackSchema = z.object({
   userData: z.object({
     email: z.email().optional(),
     phone: z.string().max(30).optional(),
+    externalId: z.string().trim().min(1).max(200).optional(),
+    firstName: z.string().max(200).optional(),
+    lastName: z.string().max(200).optional(),
+    city: z.string().max(200).optional(),
+    state: z.string().max(200).optional(),
+    postalCode: z.string().max(200).optional(),
+    country: z.string().regex(/^[A-Za-z]{2}$/).optional(),
     ip: z.string().optional(),
     userAgent: z.string().max(400).optional(),
     fbp: z.string().optional(),

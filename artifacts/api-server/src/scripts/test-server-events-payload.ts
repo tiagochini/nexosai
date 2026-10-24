@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { db, workspaceIntegrationsTable } from "@workspace/db";
 import { fireServerEvent } from "../modules/server-events/server-events.service.js";
@@ -8,6 +9,7 @@ const originalFetch = globalThis.fetch;
 const dialect = new PgDialect();
 const requests: Array<{ url: string; body: Record<string, any> }> = [];
 const tokens = { meta_ads: "meta-secret-fixture", tiktok_ads: "tiktok-secret-fixture" };
+const hash = (value: string) => createHash("sha256").update(value.toLowerCase().trim()).digest("hex");
 
 try {
   db.select = ((fields?: unknown) => ({
@@ -33,7 +35,17 @@ try {
     return new Response(JSON.stringify(url.includes("graph.facebook.com") ? { events_received: 1 } : { code: 0 }), { status: 200 });
   }) as typeof fetch;
 
-  await fireServerEvent("workspace", "AddToCart", "cart:order-123", { email: "person@example.test" }, {
+  await fireServerEvent("workspace", "AddToCart", "cart:order-123", {
+    email: "Person@Example.Test",
+    phone: "+1 (555) 010-2000",
+    externalId: "Customer-42",
+    firstName: "Jane",
+    lastName: "Doe",
+    city: "San Francisco",
+    state: "CA",
+    postalCode: "94105-1234",
+    country: "US",
+  }, {
     currency: "BRL",
     value: 120,
     contentName: "Tênis",
@@ -61,6 +73,17 @@ try {
     num_items: 2,
     order_id: "order-123",
   });
+  assert.deepEqual(metaEvent.user_data, {
+    em: hash("person@example.test"),
+    ph: hash("15550102000"),
+    fn: hash("jane"),
+    ln: hash("doe"),
+    external_id: hash("customer-42"),
+    ct: hash("sanfrancisco"),
+    st: hash("ca"),
+    zp: hash("94105"),
+    country: hash("us"),
+  });
   assert.equal("contentName" in metaEvent.custom_data, false);
   assert.equal(tikTok.body.event, "AddToCart");
   assert.equal(tikTok.body.event_id, "cart:order-123");
@@ -70,7 +93,15 @@ try {
     content_category: "Calçados",
     quantity: 2,
   }]);
-  assert.equal(JSON.stringify(requests).includes("person@example.test"), false);
+  assert.deepEqual(tikTok.body.context.user, {
+    email: hash("person@example.test"),
+    phone_number: hash("15550102000"),
+    external_id: hash("customer-42"),
+    first_name: hash("jane"),
+    last_name: hash("doe"),
+  });
+  for (const raw of ["person@example.test", "15550102000", "Jane", "San Francisco", "94105-1234", "Customer-42"])
+    assert.equal(JSON.stringify(requests).includes(raw), false, `raw identifier leaked: ${raw}`);
 
   requests.length = 0;
   await fireServerEvent("workspace", "CompleteRegistration", "registration:123", {});
@@ -80,7 +111,7 @@ try {
   assert.equal(registrationMeta?.event_id, "registration:123");
   assert.equal(registrationTikTok?.event, "Registration");
   assert.equal(registrationTikTok?.event_id, "registration:123");
-  console.log("Server event payloads: PASS (AddToCart and registration mappings, event_id sharing, standard field names, hashed email)");
+  console.log("Server event payloads: PASS (AddToCart and registration mappings, event_id sharing, standard fields, normalized and hashed identifiers)");
 } finally {
   db.select = originalSelect;
   globalThis.fetch = originalFetch;
