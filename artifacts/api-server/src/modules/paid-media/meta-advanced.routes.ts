@@ -3,6 +3,11 @@ import { z } from "zod/v4";
 import rateLimit from "express-rate-limit";
 import { AppError } from "../../lib/errors.js";
 import {
+  prepareCapiTest,
+  listCapiTests,
+  executeCapiTest,
+} from "./meta-capi-tests.service.js";
+import {
   recordCrmConsent,
   prepareCrmSync,
   listCrmSyncs,
@@ -39,6 +44,33 @@ const key = (id: unknown) => {
     throw new AppError(422, "Identificador inválido.", "VALIDATION_ERROR");
   return String(id);
 };
+router.get("/capi-tests", async (req, res) => {
+  res.json({ tests: await listCapiTests(req.auth.workspaceId) });
+});
+router.post("/capi-tests", async (req, res) => {
+  res
+    .status(201)
+    .json(
+      await prepareCapiTest(req.auth.workspaceId, req.auth.userId, req.body),
+    );
+});
+router.post("/capi-tests/:id/execute", async (req, res) => {
+  const parsed = confirmation.safeParse(req.body);
+  if (!parsed.success)
+    throw new AppError(
+      422,
+      "Confirme o resumo do evento de teste.",
+      "VALIDATION_ERROR",
+    );
+  res.json(
+    await executeCapiTest(
+      req.auth.workspaceId,
+      key(req.params["id"]),
+      parsed.data.hash,
+      req.auth.userId,
+    ),
+  );
+});
 router.post("/crm-consents", async (req, res) => {
   res.json(
     await recordCrmConsent(req.auth.workspaceId, req.auth.userId, req.body),

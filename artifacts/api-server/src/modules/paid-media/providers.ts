@@ -197,6 +197,16 @@ export function normalizeMetaCapiEvent(input: {
   const email = raw("email"); if (email) userData["em"] = sha256(email);
   const phone = raw("phone"); if (phone) userData["ph"] = sha256(phone.replace(/\D/g, ""));
   const externalId = raw("externalId"); if (externalId) userData["external_id"] = sha256(externalId);
+  // Normalization follows Meta's server-side SDK. Do not infer missing identity
+  // fields from a full name, IP address or location. Callers enforce consent.
+  for (const [source, target] of [["firstName", "fn"], ["lastName", "ln"], ["city", "ct"], ["state", "st"], ["postalCode", "zp"], ["country", "country"]] as const) {
+    let value = raw(source)?.trim().toLowerCase();
+    if (!value || value.length > 200) continue;
+    if (target === "ct" || target === "st") value = value.replace(/[0-9.\s\-()]/g, "");
+    if (target === "zp") value = value.replace(/\s/g, "").split("-")[0];
+    if (target === "country" && !/^[a-z]{2}$/.test(value)) continue;
+    if (value) userData[target] = sha256(value);
+  }
   for (const key of ["fbp", "fbc"] as const) { const value = raw(key); if (value) userData[key] = value; }
   const ip = raw("clientIpAddress"); if (ip && isIP(ip)) userData["client_ip_address"] = ip;
   const userAgent = raw("clientUserAgent"); if (userAgent) userData["client_user_agent"] = userAgent.slice(0, 500);
@@ -218,10 +228,23 @@ export function normalizeMetaCapiEvent(input: {
 export async function sendMetaCapiRequest(
   pixelId: string, token: string, event: MetaCapiEvent, transport: MetaCapiTransport = metaGraphFetch,
 ): Promise<ProviderConversionResult> {
+  const diagnostic = event as MetaCapiEvent & { mode?: string; testEventCode?: unknown; test_event_code?: unknown };
+  if (diagnostic.mode === "test" || diagnostic.testEventCode != null || diagnostic.test_event_code != null) throw new PaidMediaProviderError("Eventos de teste exigem o transporte diagnóstico separado; nenhum evento foi enviado.", "PRECONDITION_FAILED", 422);
+  return deliverMetaCapiRequest(pixelId, token, event, transport);
+}
+
+export async function sendMetaCapiTestRequest(
+  pixelId: string, token: string, event: MetaCapiEvent, testEventCode: string, transport: MetaCapiTransport = metaGraphFetch,
+): Promise<ProviderConversionResult> {
+  if (typeof testEventCode !== "string" || !/^[A-Za-z0-9_-]{1,100}$/.test(testEventCode)) throw new PaidMediaProviderError("Informe o código de Test Events; nenhum evento foi enviado.", "PRECONDITION_FAILED", 422);
+  return deliverMetaCapiRequest(pixelId, token, event, transport, testEventCode);
+}
+
+async function deliverMetaCapiRequest(pixelId: string, token: string, event: MetaCapiEvent, transport: MetaCapiTransport, testEventCode?: string): Promise<ProviderConversionResult> {
   if (!pixelId) throw new PaidMediaProviderError("Meta pixel/dataset external ID is required.", "PRECONDITION_FAILED", 409);
   const response = await transport(`https://graph.facebook.com/v26.0/${encodeURIComponent(pixelId)}/events`, {
     method: "POST", signal: AbortSignal.timeout(60_000), headers: { "Content-Type": "application/json", "X-NexOS-Idempotency-Key": event.eventId },
-    body: JSON.stringify({ data: [{ event_name: event.eventName, event_time: Math.floor(event.eventTime.getTime() / 1000), event_id: event.eventId, action_source: "website", ...(event.eventSourceUrl ? { event_source_url: event.eventSourceUrl } : {}), user_data: event.userData, ...(Object.keys(event.customData).length ? { custom_data: event.customData } : {}) }], access_token: token }),
+    body: JSON.stringify({ data: [{ event_name: event.eventName, event_time: Math.floor(event.eventTime.getTime() / 1000), event_id: event.eventId, action_source: "website", ...(event.eventSourceUrl ? { event_source_url: event.eventSourceUrl } : {}), user_data: event.userData, ...(Object.keys(event.customData).length ? { custom_data: event.customData } : {}) }], ...(testEventCode ? { test_event_code: testEventCode } : {}), access_token: token }),
   });
   const body = await response.json().catch(() => ({})) as Record<string, unknown>;
   if (!response.ok) {
@@ -234,6 +257,13 @@ export async function sendMetaCapiRequest(
     throw new PaidMediaProviderError("Meta Conversions API did not provide a receipt for the submitted event.", "PROVIDER_ERROR", 502);
   }
   return { providerRequestId: typeof body["trace_id"] === "string" ? body["trace_id"] : undefined, evidence: { events_received: body["events_received"], trace_id: body["trace_id"], fbtrace_id: body["fbtrace_id"], messageCount: Array.isArray(body["messages"]) ? body["messages"].length : 0 } };
+}
+
+/** Dedicated diagnostic transport. Production receipt/retry paths never call it. */
+export async function sendMetaTestConversion(workspaceId: string, accountId: string, pixelId: string, event: MetaCapiEvent, testEventCode: string) {
+  const [account] = await db.select().from(paidMediaAccountsTable).where(and(eq(paidMediaAccountsTable.id, accountId), eq(paidMediaAccountsTable.workspaceId, workspaceId), eq(paidMediaAccountsTable.provider, "meta_ads"), eq(paidMediaAccountsTable.isSelected, true))).limit(1);
+  if (!account) throw new PaidMediaProviderError("Selecione uma conta Meta deste workspace.", "PRECONDITION_FAILED", 409);
+  return sendMetaCapiTestRequest(pixelId, (await credential(workspaceId, "meta_ads", account.integrationId)).accessToken, event, testEventCode);
 }
 
 async function credential(workspaceId: string, provider: PaidMediaProviderName, expectedIntegrationId?: string): Promise<Credential> {

@@ -66,7 +66,7 @@ Atualização: [CRM recorrente, engajamento, opções de creative e Experiments]
 | Pixel na landing | Configurado quando há dataset; browser condicionado ao consentimento; tracking não verificado |
 | CAPI | `sent` significa recibo `events_received` da Meta, não atribuição/conversão confirmada |
 | EMQ / deduplicação na Meta | Não consultados/verificados. `matchRate` (compatibilidade) e `localMatchKeyCoverage` medem apenas presença local de chaves |
-| Eventos de teste CAPI | Não suportados; testEventCode/test_event_code são rejeitados para evitar envio acidental como produção |
+| Eventos de teste CAPI | Fluxo autenticado e isolado de Test Events implementado; endpoints de produção continuam rejeitando códigos de teste. Ver atualização de tracking e validação no banco remoto |
 | Estado da landing | draft → approved → configured → published, com tracking/CTA não verificados separadamente |
 | Pausa de criativo | Não suportada; campanha/conjunto/anúncio são as fronteiras de segurança |
 
@@ -82,6 +82,8 @@ Os relatórios preservam ações e valores brutos da Meta. A sincronização ago
 - [SDK oficial: evento server](https://github.com/facebook/facebook-python-business-sdk/blob/main/facebook_business/adobjects/serverside/event.py): identidade compartilhada entre browser/server.
 
 As páginas oficiais de referência em developers.facebook.com retornaram HTTP 429 nesta sessão. O SDK oficial confirmou nomes e campos, mas não certifica combinações para uma conta específica. A integração existente usa Graph v26.0; não houve troca de versão nem consulta/criação de ativos reais para homologação.
+
+Atualização de 24/10: [Test Events e validação PostgreSQL](META_ADS_TRACKING_E_VALIDACAO_POSTGRES.md) descreve o diagnóstico server-side, identificadores adicionais e os testes transacionais no banco real.
 
 ## Validação
 

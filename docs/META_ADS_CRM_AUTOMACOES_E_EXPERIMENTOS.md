@@ -63,6 +63,8 @@ Chamadas ambíguas ficam em manual_recovery. Um ID observado pode ser vinculado 
 
 Cancelar um rascunho/aprovação sem ativo é local. Cancelar um estudo existente exige confirmação explícita, validação do vínculo e snapshot antes de DELETE. Exclui apenas o estudo, preservando anúncios. A confirmação consulta a listagem completa de estudos do Business, com paginação por cursor. Após uma exclusão pendente, a operação disponível é conferir a ausência: outro DELETE é bloqueado. Não são seguidas URLs de paginação retornadas pela Meta.
 
+A [atualização de tracking e PostgreSQL](META_ADS_TRACKING_E_VALIDACAO_POSTGRES.md) registra a execução transacional destes serviços no Supabase, com Graph simulado e rollback dos dados fictícios.
+
 ## Implantação e validação
 
 Aplicar 0075_meta_advanced_operations.sql depois de 0074_meta_audience_operations.sql. Esta tarefa apenas criou/revisou os arquivos; SQL, índices, FKs, concorrência e locks ainda precisam ser exercitados em PostgreSQL de homologação. Manter INTEGRATION_TOKEN_ENCRYPTION_KEY e o scheduler ativos. O worker não habilita programas nem aprova experimentos por conta própria.

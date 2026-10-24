@@ -9,6 +9,7 @@ import { capiRetryTick } from "./capi-retry.service.js";
 import { expireAudienceOperations } from "./meta-audience.service.js";
 import { crmSyncTick } from "./meta-crm-sync.service.js";
 import { expireExperimentExecutions } from "./meta-experiments.service.js";
+import { expireCapiTests } from "./meta-capi-tests.service.js";
 
 let timer: ReturnType<typeof setInterval> | null = null;
 async function tick() {
@@ -35,7 +36,7 @@ export function startPaidMediaScheduler() {
     registerScheduler("paid-media-experiment-recovery", 60_000);
     timer = setInterval(() => {
       void runSchedulerTick("paid-media-crm-sync", crmSyncTick).catch(() => logger.error("CRM audience sync tick failed"));
-      void runSchedulerTick("paid-media-experiment-recovery", expireExperimentExecutions).catch(() => logger.error("Experiment recovery tick failed"));
+      void runSchedulerTick("paid-media-experiment-recovery", async () => { await expireExperimentExecutions(); await expireCapiTests(); }).catch(() => logger.error("Diagnostic recovery tick failed"));
       void runSchedulerTick("paid-media-audience-retention", expireAudienceOperations).catch(() => logger.error("Audience retention scheduler tick failed"));
       void runSchedulerTick("paid-media-capi", () => capiRetryTick()).catch(() => logger.error("CAPI retry scheduler tick failed"));
       void runSchedulerTick("paid-media", tick).catch(() => logger.error("Paid-media scheduler tick failed"));

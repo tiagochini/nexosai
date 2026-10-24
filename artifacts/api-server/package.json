@@ -55,6 +55,7 @@
     "test:paid-media": "tsx src/scripts/test-paid-media.ts",
     "test:meta-operational-flow": "cross-env NODE_ENV=test tsx src/scripts/test-meta-operational-flow.ts",
     "test:meta-reliability": "cross-env NODE_ENV=test tsx src/scripts/test-meta-reliability.ts && cross-env NODE_ENV=test tsx src/scripts/test-landing-upgrade.ts",
+    "test:meta-capi-diagnostics": "cross-env NODE_ENV=test tsx src/scripts/test-meta-capi-tests.ts",
     "test:meta-advanced-workflows": "cross-env NODE_ENV=test tsx src/scripts/test-meta-advanced-workflows.ts",
     "test:meta-assets": "cross-env NODE_ENV=test tsx src/scripts/test-meta-assets.ts && cross-env NODE_ENV=test tsx src/scripts/test-meta-audience-operations.ts",
     "test:paid-media-events": "cross-env NODE_ENV=test tsx src/scripts/test-paid-media-event-receipts.ts",

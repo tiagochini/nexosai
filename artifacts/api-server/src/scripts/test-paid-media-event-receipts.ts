@@ -17,7 +17,7 @@ let providerCalls = 0, claimPredicates = 0;
 let release: (() => void) | undefined;
 const gate = new Promise<void>(resolve => { release = resolve; });
 const dataset = { id: "dataset", workspaceId: "workspace", accountId: "account", provider: "meta_ads" as const, providerDatasetId: "12345" };
-const event = { source: "server" as const, eventName: "Lead", eventId: "lead-1", occurredAt: "2026-10-23T12:00:00Z", matchKeys: { email: "person@example.test", phone: "+55 11 99999-0000", secret: "discard" }, payload: { marketingConsent: true, privateNote: "discard" } };
+const event = { source: "server" as const, eventName: "Lead", eventId: "lead-1", occurredAt: "2026-10-23T12:00:00Z", matchKeys: { email: "person@example.test", phone: "+55 11 99999-0000", firstName: "ConsentedNameFixture", country: "BR", secret: "discard" }, payload: { marketingConsent: true, privateNote: "discard" } };
 
 try {
   db.insert = ((table: unknown) => {
@@ -55,6 +55,8 @@ try {
     providerCalls++;
     assert.equal(value.eventId, event.eventId);
     assert.equal(value.userData.em?.length, 64);
+    assert.equal(value.userData.fn?.length, 64);
+    assert.equal(value.userData.country?.length, 64);
     assert.equal(value.eventTime.toISOString(), new Date(Date.parse(event.occurredAt) - 1000).toISOString(), "browser-first timestamp remains immutable for server retries");
     await gate;
     return { evidence: { events_received: 1 } };
@@ -75,6 +77,8 @@ try {
   assert.equal(JSON.stringify([...rows.values()]).includes("person@example.test"), false);
   assert.equal(JSON.stringify([...rows.values()]).includes("+55"), false);
   assert.equal(JSON.stringify([...rows.values()]).includes("discard"), false);
+  assert.equal(JSON.stringify([...rows.values()]).includes("ConsentedNameFixture"), false);
+  assert.equal(rows.get(event.eventId).eventMatchKeys.fn.length, 64);
   const denied = await recordDatasetEvent(dataset, { ...event, eventId: "no-consent", payload: { marketingConsent: false } });
   assert.equal(denied.deliveryStatus, "consent_withheld");
   assert.deepEqual(rows.get("no-consent").eventMatchKeys, {});
