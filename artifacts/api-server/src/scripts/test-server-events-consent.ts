@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { createServerEventsRouter } from "../modules/server-events/server-events.routes.js";
 
-const calls: Array<{ workspaceId: string; eventName: string; eventId: string }> = [];
-const router = createServerEventsRouter(async (workspaceId, eventName, eventId) => {
-  calls.push({ workspaceId, eventName, eventId });
+const calls: Array<{ workspaceId: string; eventName: string; eventId: string; customData?: unknown }> = [];
+const router = createServerEventsRouter(async (workspaceId, eventName, eventId, _userData, customData) => {
+  calls.push({ workspaceId, eventName, eventId, customData });
 });
 type RouteHandler = (req: unknown, res: unknown) => Promise<void>;
 const layers = (router as unknown as { stack: Array<{ route?: { path: string; stack: Array<{ handle: RouteHandler }> } }> }).stack;
@@ -47,8 +47,9 @@ function response() {
   assert.equal(missingEventId.statusCode, 400, "stable event_id is required for cross-channel dedupe");
 
   const accepted = response();
-  await direct(request({ eventName: "Lead", eventId: "lead:stable-3", marketingConsent: true }, { workspaceId: "workspace-id" }), accepted);
+  const cartData = { currency: "BRL", value: 120, contentIds: ["sku-1"], contentType: "product", numItems: 2 };
+  await direct(request({ eventName: "AddToCart", eventId: "cart:stable-3", marketingConsent: true, customData: cartData }, { workspaceId: "workspace-id" }), accepted);
   assert.equal(accepted.statusCode, 200);
   await new Promise((resolve) => setTimeout(resolve, 10));
-  assert.deepEqual(calls, [{ workspaceId: "workspace-id", eventName: "Lead", eventId: "lead:stable-3" }]);
-  console.log("Server events consent boundary: PASS (explicit consent, no-consent dispatch blocked, stable event ID required and forwarded)");
+  assert.deepEqual(calls, [{ workspaceId: "workspace-id", eventName: "AddToCart", eventId: "cart:stable-3", customData: cartData }]);
+  console.log("Server events consent boundary: PASS (explicit consent, no-consent dispatch blocked, stable event ID and AddToCart data forwarded)");

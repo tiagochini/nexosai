@@ -66,6 +66,7 @@ export interface MetaEventData {
     contentName?: string;
     contentCategory?: string;
     contentIds?: string[];
+    contentType?: "product" | "product_group";
     numItems?: number;
     orderId?: string;
   };
@@ -103,7 +104,16 @@ export async function sendMetaCAPIEvent(
         event_source_url: event.eventSourceUrl,
         action_source: "website",
         user_data: userData,
-        custom_data: event.customData,
+        custom_data: event.customData ? {
+          ...(event.customData.currency ? { currency: event.customData.currency } : {}),
+          ...(event.customData.value !== undefined ? { value: event.customData.value } : {}),
+          ...(event.customData.contentName ? { content_name: event.customData.contentName } : {}),
+          ...(event.customData.contentCategory ? { content_category: event.customData.contentCategory } : {}),
+          ...(event.customData.contentIds ? { content_ids: event.customData.contentIds } : {}),
+          ...(event.customData.contentType ? { content_type: event.customData.contentType } : {}),
+          ...(event.customData.numItems !== undefined ? { num_items: event.customData.numItems } : {}),
+          ...(event.customData.orderId ? { order_id: event.customData.orderId } : {}),
+        } : undefined,
       },
     ],
   };
@@ -161,11 +171,14 @@ export interface TikTokEventData {
   properties?: {
     currency?: string;
     value?: number;
-    contentName?: string;
-    contentId?: string;
-    contentCategory?: string;
-    quantity?: number;
-    orderId?: string;
+    content_type?: "product" | "product_group";
+    contents?: Array<{
+      content_id: string;
+      content_name?: string;
+      content_category?: string;
+      quantity?: number;
+    }>;
+    order_id?: string;
   };
 }
 
@@ -244,6 +257,10 @@ export async function fireServerEvent(
     currency?: string;
     value?: number;
     contentName?: string;
+    contentCategory?: string;
+    contentIds?: string[];
+    contentType?: "product" | "product_group";
+    numItems?: number;
     orderId?: string;
     eventSourceUrl?: string;
   },
@@ -253,8 +270,11 @@ export async function fireServerEvent(
     Purchase: "Purchase",
     PageView: "PageView",
     InitiateCheckout: "InitiateCheckout",
+    AddToCart: "AddToCart",
     Subscribe: "Subscribe",
     Registration: "CompleteRegistration",
+    CompleteRegistration: "CompleteRegistration",
+    ViewContent: "ViewContent",
   };
 
   const tikTokEventMap: Record<string, TikTokEventData["eventName"]> = {
@@ -262,8 +282,11 @@ export async function fireServerEvent(
     Purchase: "CompletePayment",
     PageView: "ViewContent",
     InitiateCheckout: "InitiateCheckout",
+    AddToCart: "AddToCart",
     Subscribe: "Subscribe",
     Registration: "Registration",
+    CompleteRegistration: "Registration",
+    ViewContent: "ViewContent",
   };
 
   const metaEvent = metaEventMap[eventName];
@@ -280,6 +303,10 @@ export async function fireServerEvent(
             currency: customData?.currency ?? "BRL",
             value: customData?.value,
             contentName: customData?.contentName,
+            contentCategory: customData?.contentCategory,
+            contentIds: customData?.contentIds,
+            contentType: customData?.contentType,
+            numItems: customData?.numItems,
             orderId: customData?.orderId,
           },
         })
@@ -293,8 +320,16 @@ export async function fireServerEvent(
           properties: {
             currency: customData?.currency ?? "BRL",
             value: customData?.value,
-            contentName: customData?.contentName,
-            orderId: customData?.orderId,
+            content_type: customData?.contentType,
+            ...(customData?.contentIds?.length ? {
+              contents: customData.contentIds.map((contentId) => ({
+                content_id: contentId,
+                ...(customData.contentName ? { content_name: customData.contentName } : {}),
+                ...(customData.contentCategory ? { content_category: customData.contentCategory } : {}),
+                ...(customData.contentIds!.length === 1 && customData.numItems !== undefined ? { quantity: customData.numItems } : {}),
+              })),
+            } : {}),
+            order_id: customData?.orderId,
           },
         })
       : Promise.resolve({ success: false, error: "No TikTok mapping" }),

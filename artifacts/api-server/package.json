@@ -58,6 +58,7 @@
     "test:meta-advanced-report": "cross-env NODE_ENV=test tsx src/scripts/test-meta-advanced-report.ts",
     "test:meta-capi-local-diagnostics": "cross-env NODE_ENV=test tsx src/scripts/test-meta-capi-local-diagnostics.ts",
     "test:server-events-consent": "cross-env NODE_ENV=test tsx src/scripts/test-server-events-consent.ts",
+    "test:server-events-payload": "cross-env NODE_ENV=test tsx src/scripts/test-server-events-payload.ts",
     "test:meta-capi-diagnostics": "cross-env NODE_ENV=test tsx src/scripts/test-meta-capi-tests.ts",
     "test:meta-advanced-workflows": "cross-env NODE_ENV=test tsx src/scripts/test-meta-advanced-workflows.ts",
     "test:meta-assets": "cross-env NODE_ENV=test tsx src/scripts/test-meta-assets.ts && cross-env NODE_ENV=test tsx src/scripts/test-meta-audience-operations.ts",
