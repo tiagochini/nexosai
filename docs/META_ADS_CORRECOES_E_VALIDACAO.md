@@ -54,6 +54,8 @@ O pré-check usa o mínimo de impressões informado pela conta. Para lifetime, e
 
 Atualização: [CRM recorrente, engajamento, opções de creative e Experiments](META_ADS_CRM_AUTOMACOES_E_EXPERIMENTOS.md) documenta o contrato adicional e a migration 0075. Aquisição/retenção usam targeting explícito; Customer Lifecycle nativo continua fora do contrato.
 
+Atualização de 24/10: [relatórios avançados](META_ADS_RELATORIOS_AVANCADOS.md) acrescenta consulta direta de período, alcance/frequência, funil, vídeo, rankings e detalhamentos, sem alterar campanhas ou substituir os relatórios locais.
+
 ## Capacidades e estados reais
 
 | Item | Estado |

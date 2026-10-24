@@ -353,7 +353,8 @@ export async function metaAccountAssetRequest(workspaceId: string, accountId: st
   if (!account) throw new PaidMediaProviderError("Selecione uma conta Meta deste workspace.", "PRECONDITION_FAILED", 409);
   const token = (await credential(workspaceId, "meta_ads", account.integrationId)).accessToken;
   const resolved = path.replace(/^account(?=\/|$)/, account.providerAccountId);
-  if (!/^(?:act_)?\d+(?:\/(?:customaudiences|users|adspixels|advideos|promote_pages|instagram_accounts|ad_studies|cells))?$/.test(resolved)) throw new PaidMediaProviderError("Invalid asset request path", "PRECONDITION_FAILED", 422);
+  if (!/^(?:act_)?\d+(?:\/(?:customaudiences|users|adspixels|advideos|promote_pages|instagram_accounts|ad_studies|cells|insights))?$/.test(resolved)) throw new PaidMediaProviderError("Invalid asset request path", "PRECONDITION_FAILED", 422);
+  if (resolved.endsWith("/insights") && (resolved !== `${account.providerAccountId}/insights` || options.method && options.method !== "GET" || options.payload != null)) throw new PaidMediaProviderError("Insights queries must be read-only and use the selected account", "PRECONDITION_FAILED", 422);
   const query = new URLSearchParams({ ...options.query, access_token: token });
   try {
     return await request(`https://graph.facebook.com/v26.0/${resolved}?${query}`, { method: options.method ?? "GET", headers: { "Content-Type": "application/json", ...(options.idempotencyKey ? { "X-NexOS-Idempotency-Key": options.idempotencyKey } : {}) }, ...(options.payload ? { body: JSON.stringify(options.payload) } : {}) }, token, { retry: false });

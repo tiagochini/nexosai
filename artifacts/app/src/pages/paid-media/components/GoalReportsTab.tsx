@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 import { CrmReconciliation } from "./CrmReconciliation";
+import { MetaAdvancedReport } from "./MetaAdvancedReport";
 
 type Group = {
   event: string;
@@ -254,6 +255,7 @@ export function GoalReportsTab() {
         )
       )}
       {query && <CrmReconciliation query={query} />}
+      <MetaAdvancedReport />
     </section>
   );
 }

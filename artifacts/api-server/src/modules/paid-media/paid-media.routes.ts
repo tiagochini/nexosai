@@ -31,6 +31,8 @@ import { isPaidMediaIntegration } from "../integrations/integration-purpose.js";
 import { datasetDiagnostics, recordDatasetEvent, reconciliationSummary, upsertConversion, upsertTouchpoint } from "./attribution.service.js";
 
 import { paidMediaGoalReport } from "./paid-media-reports.service.js";
+import { paidMediaAdvancedReport } from "./meta-advanced-report.service.js";
+import rateLimit from "express-rate-limit";
 import { AppError } from "../../lib/errors.js";
 import metaAudienceRouter from "./meta-audience.routes.js";
 import metaAdvancedRouter from "./meta-advanced.routes.js";
@@ -237,6 +239,10 @@ router.get("/setup/:provider/status", async (req, res): Promise<void> => {
 });
 router.get("/reports/goals", async (req, res): Promise<void> => {
   try { res.json(await paidMediaGoalReport(req.auth.workspaceId, req.query)); } catch (error) { sendProviderError(res, error); }
+});
+router.get("/reports/meta-advanced", rateLimit({ windowMs: 60000, limit: 10, keyGenerator: req => `${req.auth.workspaceId}:${req.auth.userId}`, standardHeaders: true, legacyHeaders: false }), async (req, res): Promise<void> => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json(await paidMediaAdvancedReport(req.auth.workspaceId, req.query));
 });
 router.get("/budget-strategies", async (req, res): Promise<void> => {
   res.json({ strategies: await db.select().from(paidMediaBudgetStrategiesTable).where(eq(paidMediaBudgetStrategiesTable.workspaceId, req.auth.workspaceId)) });
