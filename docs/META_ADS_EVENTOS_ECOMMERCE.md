@@ -1,6 +1,6 @@
 # Eventos de funil e payloads de conversão
 
-As rotas genéricas de servidor aceitam `AddToCart` e `CompleteRegistration`, além dos eventos que já existiam. Elas continuam exigindo `marketingConsent: true` e um `eventId` opaco e estável. Esse ID é enviado sem alteração aos dois provedores para permitir deduplicação quando o cliente/browser enviar a cópia do mesmo evento.
+As rotas genéricas de servidor aceitam `AddToCart`, `CompleteRegistration`, `Schedule` e `Contact`, além dos eventos que já existiam. Elas continuam exigindo `marketingConsent: true` e um `eventId` opaco e estável. Esse ID é enviado sem alteração aos provedores com mapeamento para permitir deduplicação quando o cliente/browser enviar a cópia do mesmo evento.
 
 ## Campos de evento
 
@@ -13,9 +13,11 @@ Mapeamento dos eventos:
 - `AddToCart` mantém o nome para Meta e TikTok.
 - `CompleteRegistration` mantém esse nome na Meta e usa `Registration` no transporte TikTok.
 - `Registration` preserva seu mapeamento existente (`CompleteRegistration` na Meta e `Registration` no TikTok).
+- `Schedule` é enviado à Meta; o adaptador não inventa um evento equivalente no TikTok.
+- `Contact` é enviado como `Contact` aos dois provedores.
 - `Purchase`, `InitiateCheckout`, `ViewContent` e `PageView` mantêm mapeamentos existentes.
 
-O envio continua assíncrono e legado: `tracked: true` significa que o dispatch foi agendado, não que a Meta/TikTok recebeu ou atribuiu o evento. Este caminho não grava recibo local nem executa retry; Test Events, EMQ e deduplicação observada permanecem fluxos/evidências separados.
+O envio continua assíncrono e legado: `tracked: true` significa que o dispatch foi agendado, não que a Meta/TikTok recebeu ou atribuiu o evento. Este caminho não grava recibo local nem executa retry; Test Events, EMQ e deduplicação observada permanecem fluxos/evidências separados. A aceitação de cada evento pela conta real continua dependendo de homologação autorizada.
 
 ## Validação
 

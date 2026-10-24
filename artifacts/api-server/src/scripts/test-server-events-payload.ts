@@ -111,7 +111,22 @@ try {
   assert.equal(registrationMeta?.event_id, "registration:123");
   assert.equal(registrationTikTok?.event, "Registration");
   assert.equal(registrationTikTok?.event_id, "registration:123");
-  console.log("Server event payloads: PASS (AddToCart and registration mappings, event_id sharing, standard fields, normalized and hashed identifiers)");
+
+  requests.length = 0;
+  await fireServerEvent("workspace", "Schedule", "schedule:123", {});
+  assert.equal(requests.length, 1, "Schedule is only sent to Meta; no unsupported TikTok event is invented");
+  assert.equal(requests[0]!.body.data[0].event_name, "Schedule");
+  assert.equal(requests[0]!.body.data[0].event_id, "schedule:123");
+
+  requests.length = 0;
+  await fireServerEvent("workspace", "Contact", "contact:123", {});
+  const contactMeta = requests.find((item) => item.url.includes("graph.facebook.com"))?.body.data[0];
+  const contactTikTok = requests.find((item) => item.url.includes("tiktok.com"))?.body;
+  assert.equal(contactMeta?.event_name, "Contact");
+  assert.equal(contactTikTok?.event, "Contact");
+  assert.equal(contactMeta?.event_id, "contact:123");
+  assert.equal(contactTikTok?.event_id, "contact:123");
+  console.log("Server event payloads: PASS (commerce and lead funnel mappings, event_id sharing, standard fields, normalized and hashed identifiers)");
 } finally {
   db.select = originalSelect;
   globalThis.fetch = originalFetch;

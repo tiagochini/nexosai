@@ -47,7 +47,9 @@ export interface MetaEventData {
     | "AddToCart"
     | "Purchase"
     | "CompleteRegistration"
-    | "Subscribe";
+    | "Subscribe"
+    | "Schedule"
+    | "Contact";
   eventId?: string;
   eventSourceUrl?: string;
   userData: {
@@ -300,6 +302,8 @@ export async function fireServerEvent(
     Registration: "CompleteRegistration",
     CompleteRegistration: "CompleteRegistration",
     ViewContent: "ViewContent",
+    Schedule: "Schedule",
+    Contact: "Contact",
   };
 
   const tikTokEventMap: Record<string, TikTokEventData["eventName"]> = {
@@ -312,6 +316,7 @@ export async function fireServerEvent(
     Registration: "Registration",
     CompleteRegistration: "Registration",
     ViewContent: "ViewContent",
+    Contact: "Contact",
   };
 
   const metaEvent = metaEventMap[eventName];
@@ -335,7 +340,7 @@ export async function fireServerEvent(
             orderId: customData?.orderId,
           },
         })
-      : Promise.resolve({ success: false, error: "No Meta mapping" }),
+      : Promise.resolve({ success: false, skipped: true as const }),
     tikTokEvent
       ? sendTikTokEvent(workspaceId, {
           eventName: tikTokEvent,
@@ -357,7 +362,7 @@ export async function fireServerEvent(
             order_id: customData?.orderId,
           },
         })
-      : Promise.resolve({ success: false, error: "No TikTok mapping" }),
+      : Promise.resolve({ success: false, skipped: true as const }),
   ]);
 
   const [metaResult, tikTokResult] = results;

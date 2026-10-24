@@ -52,4 +52,14 @@ function response() {
   assert.equal(accepted.statusCode, 200);
   await new Promise((resolve) => setTimeout(resolve, 10));
   assert.deepEqual(calls, [{ workspaceId: "workspace-id", eventName: "AddToCart", eventId: "cart:stable-3", customData: cartData }]);
-  console.log("Server events consent boundary: PASS (explicit consent, no-consent dispatch blocked, stable event ID and AddToCart data forwarded)");
+
+  const schedule = response();
+  await direct(request({ eventName: "Schedule", eventId: "schedule:stable-4", marketingConsent: true }, { workspaceId: "workspace-id" }), schedule);
+  const contact = response();
+  await direct(request({ eventName: "Contact", eventId: "contact:stable-5", marketingConsent: true }, { workspaceId: "workspace-id" }), contact);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(calls.slice(1), [
+    { workspaceId: "workspace-id", eventName: "Schedule", eventId: "schedule:stable-4", customData: {} },
+    { workspaceId: "workspace-id", eventName: "Contact", eventId: "contact:stable-5", customData: {} },
+  ]);
+  console.log("Server events consent boundary: PASS (explicit consent, withheld events blocked, stable IDs and lead funnel events accepted)");

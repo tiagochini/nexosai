@@ -23,6 +23,8 @@ const trackSchema = z.object({
     "Registration",
     "CompleteRegistration",
     "ViewContent",
+    "Schedule",
+    "Contact",
   ]),
   eventId: z.string().trim().min(1).max(200).regex(/^[A-Za-z0-9._:-]+$/),
   marketingConsent: z.boolean(),
