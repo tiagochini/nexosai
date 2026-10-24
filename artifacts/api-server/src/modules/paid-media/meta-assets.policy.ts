@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { AppError } from "../../lib/errors.js";
+import { creativeAutomationSchema } from "./meta-automation.policy.js";
 
 export const metaId = z.string().regex(/^\d+$/);
 const https = z.url().refine((value) => new URL(value).protocol === "https:");
@@ -142,6 +143,7 @@ const template = z
 const creativeSchema = z
   .object({
     product_set_id: metaId.optional(),
+    degrees_of_freedom_spec: creativeAutomationSchema.optional(),
     object_story_spec: z
       .object({
         page_id: metaId,
@@ -167,6 +169,18 @@ export function validateMetaCreative(
   if (!parsed.success) return fail();
   const creative = parsed.data,
     story = creative.object_story_spec;
+  const features = creative.degrees_of_freedom_spec?.creative_features_spec;
+  if (
+    (features?.product_browsing?.enroll_status === "OPT_IN" &&
+      !story.template_data) ||
+    (features?.video_auto_crop?.enroll_status === "OPT_IN" &&
+      !story.video_data) ||
+    (["image_touchups", "image_uncrop"].some(
+      (key) => (features as any)?.[key]?.enroll_status === "OPT_IN",
+    ) &&
+      !story.link_data)
+  )
+    fail();
   if (
     [story.link_data, story.video_data, story.template_data].filter(Boolean)
       .length !== 1
@@ -207,6 +221,9 @@ export function metaCreativePayload(
   return {
     name,
     object_story_spec: creative.object_story_spec,
+    ...(creative.degrees_of_freedom_spec
+      ? { degrees_of_freedom_spec: creative.degrees_of_freedom_spec }
+      : {}),
     ...(creative.product_set_id
       ? { product_set_id: creative.product_set_id }
       : {}),

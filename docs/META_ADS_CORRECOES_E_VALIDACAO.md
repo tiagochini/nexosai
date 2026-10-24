@@ -52,6 +52,8 @@ ABO divide o total aprovado em unidades mínimas inteiras entre conjuntos, prese
 
 O pré-check usa o mínimo de impressões informado pela conta. Para lifetime, exige conservadoramente esse mínimo por dia ou fração do período. Sem mínimo consultável o lançamento é bloqueado. Validações adicionais específicas de objetivo, conjunto, criativo e conta ainda podem ser rejeitadas pela Meta: nesse caso o executor compensa os ativos pausados e não declara sucesso. O pré-check não prova elegibilidade futura nem substitui a leitura após criação.
 
+Atualização: [CRM recorrente, engajamento, opções de creative e Experiments](META_ADS_CRM_AUTOMACOES_E_EXPERIMENTOS.md) documenta o contrato adicional e a migration 0075. Aquisição/retenção usam targeting explícito; Customer Lifecycle nativo continua fora do contrato.
+
 ## Capacidades e estados reais
 
 | Item | Estado |

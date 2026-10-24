@@ -13,6 +13,7 @@ const member = z
     marketingConsent: z.literal(true),
     consentedAt: z.iso.datetime(),
     consentReference: z.string().trim().min(1).max(300),
+    value: z.number().finite().min(0).max(1e12).optional(),
   })
   .strict()
   .refine(
@@ -29,41 +30,82 @@ const common = {
   name: z.string().trim().min(1).max(150),
   dataRightsConfirmed: z.literal(true),
 };
-export const audienceRequestSchema = z.discriminatedUnion("kind", [
-  z
-    .object({
-      ...common,
-      kind: z.literal("website"),
-      pixelId: metaId,
-      retentionDays: z.number().int().min(1).max(180),
-      event: z.enum([
-        "PageView",
-        "Lead",
-        "CompleteRegistration",
-        "Purchase",
-        "AddToCart",
-        "InitiateCheckout",
-      ]),
-      urlContains: z.string().trim().min(1).max(500).optional(),
-    })
-    .strict(),
-  z
-    .object({
-      ...common,
-      kind: z.literal("lookalike"),
-      originAudienceId: metaId,
-      country: z.string().regex(/^[A-Z]{2}$/),
-      ratio: z.number().min(0.01).max(0.2),
-    })
-    .strict(),
-  z
-    .object({
-      ...common,
-      kind: z.literal("crm"),
-      members: z.array(member).min(1).max(1000),
-    })
-    .strict(),
-]);
+export const audienceRequestSchema = z
+  .discriminatedUnion("kind", [
+    z
+      .object({
+        ...common,
+        kind: z.literal("website"),
+        pixelId: metaId,
+        retentionDays: z.number().int().min(1).max(180),
+        event: z.enum([
+          "PageView",
+          "Lead",
+          "CompleteRegistration",
+          "Purchase",
+          "AddToCart",
+          "InitiateCheckout",
+        ]),
+        urlContains: z.string().trim().min(1).max(500).optional(),
+      })
+      .strict(),
+    z
+      .object({
+        ...common,
+        kind: z.literal("lookalike"),
+        originAudienceId: metaId,
+        country: z.string().regex(/^[A-Z]{2}$/),
+        ratio: z.number().min(0.01).max(0.2),
+        valueBased: z.boolean().optional(),
+      })
+      .strict(),
+    z
+      .object({
+        ...common,
+        kind: z.literal("crm"),
+        members: z.array(member).max(1000),
+        syncSeed: z.literal(true).optional(),
+        valueBased: z.boolean().optional(),
+        currency: z
+          .string()
+          .regex(/^[A-Z]{3}$/)
+          .optional(),
+      })
+      .strict(),
+    z
+      .object({
+        ...common,
+        kind: z.literal("engagement"),
+        platform: z.enum(["facebook", "instagram"]),
+        sourceId: metaId,
+        retentionDays: z.number().int().min(1).max(365),
+      })
+      .strict(),
+  ])
+  .superRefine((value, context) => {
+    const fail = (message: string) =>
+      context.addIssue({ code: "custom", message });
+    if (value.kind === "crm") {
+      if (!value.members.length && !value.syncSeed)
+        fail("Lista vazia exige preparação para sincronização.");
+      if (value.syncSeed && (value.members.length || value.valueBased))
+        fail("Uma semente de sincronização precisa ser vazia e sem valores.");
+      if (
+        value.valueBased &&
+        (!value.currency ||
+          value.members.some((row) => row.value === undefined) ||
+          new Set(value.members.map((row) => row.value)).size < 2)
+      )
+        fail(
+          "Lista por valor exige moeda, valores individuais e distribuição de valores.",
+        );
+      if (
+        !value.valueBased &&
+        (value.currency || value.members.some((row) => row.value !== undefined))
+      )
+        fail("Valores exigem lista por valor explícita.");
+    }
+  });
 export type AudienceRequest = z.infer<typeof audienceRequestSchema>;
 export function compileAudienceRequest(input: unknown) {
   const parsed = audienceRequestSchema.safeParse(input);
@@ -76,7 +118,41 @@ export function compileAudienceRequest(input: unknown) {
   const form = parsed.data;
   let payload: Record<string, unknown>,
     members: string[][] = [];
-  if (form.kind === "website") {
+  if (form.kind === "engagement") {
+    payload = {
+      name: form.name,
+      subtype: "ENGAGEMENT",
+      rule: JSON.stringify({
+        inclusions: {
+          operator: "or",
+          rules: [
+            {
+              event_sources: [
+                {
+                  id: form.sourceId,
+                  type: form.platform === "facebook" ? "page" : "ig_business",
+                },
+              ],
+              retention_seconds: form.retentionDays * 86400,
+              filter: {
+                operator: "and",
+                filters: [
+                  {
+                    field: "event",
+                    operator: "eq",
+                    value:
+                      form.platform === "facebook"
+                        ? "page_engaged"
+                        : "ig_business_profile_all",
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      }),
+    };
+  } else if (form.kind === "website") {
     payload = {
       name: form.name,
       subtype: "WEBSITE",
@@ -126,7 +202,10 @@ export function compileAudienceRequest(input: unknown) {
             row.email ? hash(row.email.trim().toLowerCase()) : "",
             row.phone ? hash(row.phone.replace(/\D/g, "")) : "",
           ];
-          return [JSON.stringify(data), data] as const;
+          return [
+            JSON.stringify(data),
+            form.valueBased ? [...data, String(row.value)] : data,
+          ] as const;
         }),
       ).values(),
     ];
@@ -134,7 +213,29 @@ export function compileAudienceRequest(input: unknown) {
       name: form.name,
       subtype: "CUSTOM",
       customer_file_source: "USER_PROVIDED_ONLY",
+      ...(form.valueBased ? { is_value_based: true } : {}),
     };
+    if (form.valueBased)
+      for (const row of form.members) {
+        const identity = JSON.stringify([
+          row.email?.trim().toLowerCase() ?? "",
+          row.phone ?? "",
+        ]);
+        if (
+          form.members.some(
+            (other) =>
+              JSON.stringify([
+                other.email?.trim().toLowerCase() ?? "",
+                other.phone ?? "",
+              ]) === identity && other.value !== row.value,
+          )
+        )
+          throw new AppError(
+            422,
+            "Uma identidade não pode ter valores conflitantes.",
+            "AUDIENCE_REQUEST_INVALID",
+          );
+      }
   }
   // Only hashes and consent evidence are encrypted. Raw CRM identifiers never reach storage.
   const consent =
@@ -149,6 +250,15 @@ export function compileAudienceRequest(input: unknown) {
     payload,
     members,
     consent,
+    ...(form.kind === "crm" && form.valueBased
+      ? { memberSchema: ["EMAIL", "PHONE", "LOOKALIKE_VALUE"] }
+      : {}),
+    ...(form.kind === "lookalike" && form.valueBased
+      ? { requireValueBasedOrigin: true }
+      : {}),
+    ...(form.kind === "engagement"
+      ? { engagementSource: { id: form.sourceId, platform: form.platform } }
+      : {}),
     ...(form.kind === "website" ? { pixelId: form.pixelId } : {}),
     ...(form.kind === "lookalike"
       ? { originAudienceId: form.originAudienceId }
@@ -162,6 +272,23 @@ export function compileAudienceRequest(input: unknown) {
       name: form.name,
       members: members.length,
       dataRightsConfirmed: true,
+      ...(form.kind === "crm"
+        ? {
+            syncSeed: form.syncSeed ?? false,
+            valueBased: form.valueBased ?? false,
+            currency: form.currency ?? null,
+          }
+        : {}),
+      ...(form.kind === "lookalike"
+        ? { valueBased: form.valueBased ?? false }
+        : {}),
+      ...(form.kind === "engagement"
+        ? {
+            platform: form.platform,
+            sourceId: form.sourceId,
+            retentionDays: form.retentionDays,
+          }
+        : {}),
       ...(form.kind === "website"
         ? {
             pixelId: form.pixelId,
@@ -202,6 +329,12 @@ export function assertAudienceReadback(
     throw new AppError(
       502,
       "O público não tem o marcador desta operação.",
+      "AUDIENCE_READBACK_INVALID",
+    );
+  if (payload.is_value_based === true && row.is_value_based !== true)
+    throw new AppError(
+      502,
+      "O público não confirmou suporte a valores.",
       "AUDIENCE_READBACK_INVALID",
     );
   if (payload.lookalike_spec) {

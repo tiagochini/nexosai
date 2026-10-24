@@ -1,5 +1,6 @@
 import { GoalReportsTab } from "./components/GoalReportsTab";
 import { MetaAudiencesTab } from "./components/MetaAudiencesTab";
+import { MetaAdvancedOperationsTab } from "./components/MetaAdvancedOperationsTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AccountsTab } from "./components/AccountsTab";
 import { PoliciesTab } from "./components/PoliciesTab";
@@ -30,6 +31,7 @@ export default function PaidMediaPage() {
           </TabsTrigger>
           <TabsTrigger value="goal-reports" className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest gap-2"><Activity className="h-3.5 w-3.5" />{t("Resultados", "Results", "Resultados")}</TabsTrigger>
           <TabsTrigger value="meta-audiences" className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest gap-2"><Target className="h-3.5 w-3.5" />{t("Públicos Meta", "Meta audiences", "Públicos Meta")}</TabsTrigger>
+          <TabsTrigger value="meta-advanced" className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest gap-2">CRM &amp; Experiments</TabsTrigger>
           <TabsTrigger value="accounts" className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest gap-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-none border border-transparent data-[state=active]:border-primary/30">
             <Activity className="h-3.5 w-3.5" /> {t("Integrações & Sync", "Integrations & Sync", "Integraciones y sincronización")}
           </TabsTrigger>
@@ -49,6 +51,7 @@ export default function PaidMediaPage() {
             <TabsContent value="launch-plans" className="m-0 h-full"><LaunchPlansTab /></TabsContent>
             <TabsContent value="goal-reports" className="m-0 h-full"><GoalReportsTab /></TabsContent>
             <TabsContent value="meta-audiences" className="m-0 h-full"><MetaAudiencesTab /></TabsContent>
+            <TabsContent value="meta-advanced" className="m-0 h-full"><MetaAdvancedOperationsTab /></TabsContent>
             <TabsContent value="accounts" className="m-0 h-full"><AccountsTab /></TabsContent>
             <TabsContent value="policies" className="m-0 h-full"><PoliciesTab /></TabsContent>
             <TabsContent value="proposals" className="m-0 h-full"><ProposalsTab /></TabsContent>

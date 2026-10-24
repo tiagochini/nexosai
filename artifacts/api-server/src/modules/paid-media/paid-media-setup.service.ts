@@ -10,7 +10,16 @@ import {
   paidMediaDatasetsTable,
 } from "@workspace/db";
 import { AppError, NotFoundError } from "../../lib/errors.js";
-import { metaId, metaPlacementKey, placementTargeting, validateMetaTargeting } from "./meta-assets.policy.js";
+import {
+  metaId,
+  metaPlacementKey,
+  placementTargeting,
+  validateMetaTargeting,
+} from "./meta-assets.policy.js";
+import {
+  lifecycleSchema,
+  creativeAutomationSchema,
+} from "./meta-automation.policy.js";
 
 export const paidMediaSetupSchema = z
   .object({
@@ -39,7 +48,10 @@ export const paidMediaSetupSchema = z
     ageMin: z.number().int().min(18).max(65),
     ageMax: z.number().int().min(18).max(65),
     pageId: z.string().regex(/^\d+$/),
-    imageUrl: z.union([z.literal(""), z.url().refine(value => new URL(value).protocol === "https:")]),
+    imageUrl: z.union([
+      z.literal(""),
+      z.url().refine((value) => new URL(value).protocol === "https:"),
+    ]),
     audienceMode: z.enum(["original", "advantage"]).optional(),
     includedAudienceIds: z.array(metaId).max(50).optional(),
     excludedAudienceIds: z.array(metaId).max(50).optional(),
@@ -49,6 +61,8 @@ export const paidMediaSetupSchema = z
     videoId: z.union([metaId, z.literal("")]).optional(),
     catalogId: z.union([metaId, z.literal("")]).optional(),
     productSetId: z.union([metaId, z.literal("")]).optional(),
+    customerLifecycle: lifecycleSchema.optional(),
+    creativeAutomation: creativeAutomationSchema.optional(),
     message: z.string().trim().min(1).max(5000),
     specialCategoriesConfirmed: z.literal(true),
   })
@@ -56,14 +70,68 @@ export const paidMediaSetupSchema = z
   .superRefine((value, context) => {
     const issue = (path: string, message: string) =>
       context.addIssue({ code: "custom", path: [path], message });
-    if (value.includedAudienceIds?.some(id => value.excludedAudienceIds?.includes(id))) issue("includedAudienceIds", "Um público não pode ser incluído e excluído simultaneamente.");
-    if (value.placementMode === "manual" && !value.placements?.length) issue("placements", "Escolha ao menos um placement manual.");
-    if (value.placementMode !== "manual" && value.placements?.length) issue("placements", "Remova placements manuais ao usar distribuição automática.");
-    if ((value.creativeFormat ?? "image") !== "catalog" && !value.imageUrl) issue("imageUrl", "Informe imagem HTTPS ou miniatura do vídeo.");
-    if (value.creativeFormat === "video" && !value.videoId) issue("videoId", "Informe o ID do vídeo já carregado na Meta.");
-    if (value.creativeFormat === "catalog" && (value.objective !== "OUTCOME_SALES" || !value.catalogId || !value.productSetId)) issue("productSetId", "Catálogo exige vendas, catálogo e conjunto de produtos.");
-    if (value.creativeFormat !== "video" && value.videoId) issue("videoId", "Remova o vídeo ao usar outro formato.");
-    if (value.creativeFormat !== "catalog" && (value.catalogId || value.productSetId)) issue("catalogId", "Remova o catálogo ao usar outro formato.");
+    if (
+      value.customerLifecycle?.mode === "retention" &&
+      value.audienceMode !== "original"
+    )
+      issue("audienceMode", "Retenção requer público original, sem expansão.");
+    if (
+      value.customerLifecycle?.mode === "acquisition" &&
+      value.customerLifecycle.customerAudienceIds.some((id) =>
+        value.includedAudienceIds?.includes(id),
+      )
+    )
+      issue(
+        "customerLifecycle",
+        "Não inclua clientes em uma campanha de aquisição.",
+      );
+    if (
+      value.customerLifecycle?.mode === "retention" &&
+      (value.includedAudienceIds?.some(
+        (id) => !value.customerLifecycle!.customerAudienceIds.includes(id),
+      ) ||
+        value.excludedAudienceIds?.some((id) =>
+          value.customerLifecycle!.customerAudienceIds.includes(id),
+        ))
+    )
+      issue("customerLifecycle", "Revise inclusões e exclusões da retenção.");
+    if (
+      value.includedAudienceIds?.some((id) =>
+        value.excludedAudienceIds?.includes(id),
+      )
+    )
+      issue(
+        "includedAudienceIds",
+        "Um público não pode ser incluído e excluído simultaneamente.",
+      );
+    if (value.placementMode === "manual" && !value.placements?.length)
+      issue("placements", "Escolha ao menos um placement manual.");
+    if (value.placementMode !== "manual" && value.placements?.length)
+      issue(
+        "placements",
+        "Remova placements manuais ao usar distribuição automática.",
+      );
+    if ((value.creativeFormat ?? "image") !== "catalog" && !value.imageUrl)
+      issue("imageUrl", "Informe imagem HTTPS ou miniatura do vídeo.");
+    if (value.creativeFormat === "video" && !value.videoId)
+      issue("videoId", "Informe o ID do vídeo já carregado na Meta.");
+    if (
+      value.creativeFormat === "catalog" &&
+      (value.objective !== "OUTCOME_SALES" ||
+        !value.catalogId ||
+        !value.productSetId)
+    )
+      issue(
+        "productSetId",
+        "Catálogo exige vendas, catálogo e conjunto de produtos.",
+      );
+    if (value.creativeFormat !== "video" && value.videoId)
+      issue("videoId", "Remova o vídeo ao usar outro formato.");
+    if (
+      value.creativeFormat !== "catalog" &&
+      (value.catalogId || value.productSetId)
+    )
+      issue("catalogId", "Remova o catálogo ao usar outro formato.");
     if (value.ageMin > value.ageMax)
       issue("ageMax", "A idade máxima precisa ser igual ou superior à mínima.");
     if (value.objective !== "OUTCOME_TRAFFIC" && !value.datasetId)
@@ -97,12 +165,39 @@ export const paidMediaSetupSchema = z
 export type PaidMediaSetup = z.infer<typeof paidMediaSetupSchema>;
 
 export function setupTargeting(setup: PaidMediaSetup) {
+  const customers = setup.customerLifecycle?.customerAudienceIds ?? [];
+  const included =
+    setup.customerLifecycle?.mode === "retention"
+      ? customers
+      : (setup.includedAudienceIds ?? []);
+  const excluded = [
+    ...(setup.excludedAudienceIds ?? []),
+    ...(setup.customerLifecycle?.mode === "acquisition" ? customers : []),
+  ];
   const targeting = {
-    geo_locations: { countries: [setup.country] }, age_min: setup.ageMin,
-    ...(setup.audienceMode === "advantage" ? { targeting_automation: { advantage_audience: 1 } } : { age_max: setup.ageMax, ...(setup.audienceMode === "original" ? { targeting_automation: { advantage_audience: 0 } } : {}) }),
-    ...(setup.includedAudienceIds?.length ? { custom_audiences: [...new Set(setup.includedAudienceIds)].map(id => ({ id })) } : {}),
-    ...(setup.excludedAudienceIds?.length ? { excluded_custom_audiences: [...new Set(setup.excludedAudienceIds)].map(id => ({ id })) } : {}),
-    ...(setup.placementMode === "manual" ? placementTargeting(setup.placements ?? []) : {}),
+    geo_locations: { countries: [setup.country] },
+    age_min: setup.ageMin,
+    ...(setup.audienceMode === "advantage"
+      ? { targeting_automation: { advantage_audience: 1 } }
+      : {
+          age_max: setup.ageMax,
+          ...(setup.audienceMode === "original"
+            ? { targeting_automation: { advantage_audience: 0 } }
+            : {}),
+        }),
+    ...(included.length
+      ? { custom_audiences: [...new Set(included)].map((id) => ({ id })) }
+      : {}),
+    ...(excluded.length
+      ? {
+          excluded_custom_audiences: [...new Set(excluded)].map((id) => ({
+            id,
+          })),
+        }
+      : {}),
+    ...(setup.placementMode === "manual"
+      ? placementTargeting(setup.placements ?? [])
+      : {}),
   };
   validateMetaTargeting(targeting);
   return targeting;
@@ -129,6 +224,9 @@ export function executablePaidMediaSetup(
     accountId: account.providerAccountId,
     objective: setup.objective,
     destinationType: "WEBSITE",
+    ...(setup.customerLifecycle
+      ? { customerLifecycle: setup.customerLifecycle }
+      : {}),
     destinationUrl: setup.destinationUrl,
     specialAdCategories: [],
     budget: {
@@ -140,20 +238,53 @@ export function executablePaidMediaSetup(
     tracking: setup.conversionEvent
       ? { pixelId, conversionEvent: setup.conversionEvent }
       : {},
-    ...(setup.creativeFormat === "catalog" ? { catalog: { catalogId: setup.catalogId, productSetId: setup.productSetId } } : {}),
+    ...(setup.creativeFormat === "catalog"
+      ? {
+          catalog: {
+            catalogId: setup.catalogId,
+            productSetId: setup.productSetId,
+          },
+        }
+      : {}),
     audiences: [setupTargeting(setup)],
     creatives: [
       {
-        ...(setup.creativeFormat === "catalog" ? { product_set_id: setup.productSetId } : {}),
+        ...(setup.creativeAutomation
+          ? { degrees_of_freedom_spec: setup.creativeAutomation }
+          : {}),
+        ...(setup.creativeFormat === "catalog"
+          ? { product_set_id: setup.productSetId }
+          : {}),
         object_story_spec: {
           page_id: setup.pageId,
-          ...(setup.creativeFormat === "video" ? { video_data: { video_id: setup.videoId, image_url: setup.imageUrl, message: setup.message, call_to_action: { type: "LEARN_MORE", value: { link: setup.destinationUrl } } } }
-          : setup.creativeFormat === "catalog" ? { template_data: { link: setup.destinationUrl, message: setup.message, name: "{{product.name}}", call_to_action: { type: "SHOP_NOW" } } }
-          : { link_data: {
-            link: setup.destinationUrl,
-            picture: setup.imageUrl,
-            message: setup.message,
-          } }),
+          ...(setup.creativeFormat === "video"
+            ? {
+                video_data: {
+                  video_id: setup.videoId,
+                  image_url: setup.imageUrl,
+                  message: setup.message,
+                  call_to_action: {
+                    type: "LEARN_MORE",
+                    value: { link: setup.destinationUrl },
+                  },
+                },
+              }
+            : setup.creativeFormat === "catalog"
+              ? {
+                  template_data: {
+                    link: setup.destinationUrl,
+                    message: setup.message,
+                    name: "{{product.name}}",
+                    call_to_action: { type: "SHOP_NOW" },
+                  },
+                }
+              : {
+                  link_data: {
+                    link: setup.destinationUrl,
+                    picture: setup.imageUrl,
+                    message: setup.message,
+                  },
+                }),
         },
       },
     ],
@@ -182,13 +313,29 @@ export function paidMediaSnapshotFields(
   };
 }
 
-export function assertPaidMediaApprovalMatchesCampaign(strategy: unknown, intakeData: unknown, snapshot: unknown): void {
+export function assertPaidMediaApprovalMatchesCampaign(
+  strategy: unknown,
+  intakeData: unknown,
+  snapshot: unknown,
+): void {
   const current = paidMediaSnapshotFields(strategy, intakeData);
-  const saved = snapshot as { strategy?: { paidMedia?: unknown }; campaign?: Record<string, unknown> };
-  const expected = (current.strategy as { paidMedia?: unknown } | null)?.paidMedia;
-  if (!isDeepStrictEqual(expected, saved.strategy?.paidMedia)
-    || Object.entries(current.schedule).some(([key, value]) => saved.campaign?.[key] !== value)) {
-    throw new AppError(409, "A configuração de anúncios mudou. Atualize e revise uma nova versão do Master Plan.", "PAID_MEDIA_SETUP_STALE");
+  const saved = snapshot as {
+    strategy?: { paidMedia?: unknown };
+    campaign?: Record<string, unknown>;
+  };
+  const expected = (current.strategy as { paidMedia?: unknown } | null)
+    ?.paidMedia;
+  if (
+    !isDeepStrictEqual(expected, saved.strategy?.paidMedia) ||
+    Object.entries(current.schedule).some(
+      ([key, value]) => saved.campaign?.[key] !== value,
+    )
+  ) {
+    throw new AppError(
+      409,
+      "A configuração de anúncios mudou. Atualize e revise uma nova versão do Master Plan.",
+      "PAID_MEDIA_SETUP_STALE",
+    );
   }
 }
 
@@ -316,20 +463,18 @@ export async function savePaidMediaSetup(
           ne(masterplanVersionsTable.status, "superseded"),
         ),
       );
-    await tx
-      .insert(auditLogsTable)
-      .values({
-        workspaceId,
-        campaignId,
-        actor,
-        action: "paid_media.setup.saved",
-        data: {
-          accountId: account.id,
-          objective: form.objective,
-          budgetMode: form.budgetMode,
-          newApprovalRequired: true,
-        },
-      });
+    await tx.insert(auditLogsTable).values({
+      workspaceId,
+      campaignId,
+      actor,
+      action: "paid_media.setup.saved",
+      data: {
+        accountId: account.id,
+        objective: form.objective,
+        budgetMode: form.budgetMode,
+        newApprovalRequired: true,
+      },
+    });
     return { setup, newApprovalRequired: true };
   });
 }

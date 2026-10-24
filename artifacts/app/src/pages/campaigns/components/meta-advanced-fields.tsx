@@ -11,6 +11,16 @@ export type MetaAdvancedForm = {
   videoId?: string;
   catalogId?: string;
   productSetId?: string;
+  customerLifecycle?: {
+    mode: "acquisition" | "retention";
+    customerAudienceIds: string[];
+  };
+  creativeAutomation?: {
+    creative_features_spec: Record<
+      string,
+      { enroll_status: "OPT_IN" | "OPT_OUT" }
+    >;
+  };
 };
 export function MetaAdvancedFields<T extends MetaAdvancedForm>({
   form,
@@ -28,6 +38,21 @@ export function MetaAdvancedFields<T extends MetaAdvancedForm>({
     includedAudienceIds: (form.includedAudienceIds ?? []).join(", "),
     excludedAudienceIds: (form.excludedAudienceIds ?? []).join(", "),
   });
+  const [customerText, setCustomerText] = useState(
+    (form.customerLifecycle?.customerAudienceIds ?? []).join(", "),
+  );
+  useEffect(() => {
+    if (
+      customerText
+        .split(/[,\s]+/)
+        .filter(Boolean)
+        .join(",") !==
+      (form.customerLifecycle?.customerAudienceIds ?? []).join(",")
+    )
+      setCustomerText(
+        (form.customerLifecycle?.customerAudienceIds ?? []).join(", "),
+      );
+  }, [form.customerLifecycle?.customerAudienceIds]);
   useEffect(() => {
     setAudienceText((current) => {
       const next = { ...current };
@@ -230,6 +255,141 @@ export function MetaAdvancedFields<T extends MetaAdvancedForm>({
             </p>
           </>
         )}
+      </div>
+      <div className="grid gap-3 md:grid-cols-2 border-t border-border/40 pt-3">
+        <label className="text-xs">
+          {t(
+            "Clientes: aquisição ou retenção",
+            "Customers: acquisition or retention",
+            "Clientes: adquisición o retención",
+          )}
+          <select
+            className={field}
+            value={form.customerLifecycle?.mode ?? "none"}
+            onChange={(event) => {
+              const mode = event.target.value;
+              set(
+                "customerLifecycle",
+                mode === "none"
+                  ? undefined
+                  : {
+                      mode,
+                      customerAudienceIds: customerText
+                        .split(/[,\s]+/)
+                        .filter(Boolean),
+                    },
+              );
+              if (mode === "retention") set("audienceMode", "original");
+            }}
+          >
+            <option value="none">
+              {t(
+                "Sem regra adicional",
+                "No additional rule",
+                "Sin regla adicional",
+              )}
+            </option>
+            <option value="acquisition">
+              {t(
+                "Aquisição — excluir clientes",
+                "Acquisition — exclude customers",
+                "Adquisición — excluir clientes",
+              )}
+            </option>
+            <option value="retention">
+              {t(
+                "Retenção — somente clientes",
+                "Retention — customers only",
+                "Retención — solo clientes",
+              )}
+            </option>
+          </select>
+        </label>
+        {form.customerLifecycle && (
+          <label className="text-xs">
+            {t(
+              "IDs dos públicos de clientes",
+              "Customer audience IDs",
+              "IDs de públicos de clientes",
+            )}
+            <input
+              className={field}
+              required
+              value={customerText}
+              onChange={(event) => {
+                setCustomerText(event.target.value);
+                set("customerLifecycle", {
+                  ...form.customerLifecycle,
+                  customerAudienceIds: event.target.value
+                    .split(/[,\s]+/)
+                    .filter(Boolean),
+                });
+              }}
+            />
+          </label>
+        )}
+        <p className="text-xs md:col-span-2">
+          {t(
+            "Estas são regras explícitas de inclusão/exclusão. Não certificam ativação do recurso nativo Customer Lifecycle da Meta. Retenção exige público original sem expansão.",
+            "These are explicit inclusion/exclusion rules, not certification of Meta's native Customer Lifecycle. Retention requires original audience without expansion.",
+            "Son reglas explícitas de inclusión/exclusión; no certifican Customer Lifecycle nativo de Meta. Retención requiere público original sin expansión.",
+          )}
+        </p>
+        <h4 className="text-xs md:col-span-2">
+          Advantage+ Creative / enhancements
+        </h4>
+        {[
+          "standard_enhancements",
+          "text_optimizations",
+          "image_touchups",
+          "image_uncrop",
+          "video_auto_crop",
+          "product_browsing",
+        ].map((feature) => (
+          <label key={feature} className="text-xs">
+            {feature.replaceAll("_", " ")}
+            <select
+              className={field}
+              value={
+                form.creativeAutomation?.creative_features_spec[feature]
+                  ?.enroll_status ?? "default"
+              }
+              onChange={(event) => {
+                const features = {
+                  ...form.creativeAutomation?.creative_features_spec,
+                };
+                if (event.target.value === "default") delete features[feature];
+                else
+                  features[feature] = {
+                    enroll_status: event.target.value as "OPT_IN" | "OPT_OUT",
+                  };
+                set(
+                  "creativeAutomation",
+                  Object.keys(features).length
+                    ? { creative_features_spec: features }
+                    : undefined,
+                );
+              }}
+            >
+              <option value="default">
+                {t("Padrão da Meta", "Meta default", "Predeterminado Meta")}
+              </option>
+              <option value="OPT_IN">
+                {t("Autorizar", "Opt in", "Autorizar")}
+              </option>
+              <option value="OPT_OUT">
+                {t("Desativar", "Opt out", "Desactivar")}
+              </option>
+            </select>
+          </label>
+        ))}
+        <p className="text-xs md:col-span-2">
+          {t(
+            "A escolha entra no criativo aprovado. Recorte de vídeo exige vídeo; tratamentos de imagem exigem imagem; product browsing exige catálogo. A Meta pode rejeitar recursos indisponíveis na conta.",
+            "Choices are part of the approved creative. Video cropping needs video, image treatments need an image and product browsing needs a catalog. Meta may reject unavailable features.",
+            "Las opciones forman parte del creativo aprobado. Recorte de vídeo requiere vídeo, tratamientos de imagen requieren imagen y product browsing requiere catálogo. Meta puede rechazar funciones no disponibles.",
+          )}
+        </p>
       </div>
     </div>
   );

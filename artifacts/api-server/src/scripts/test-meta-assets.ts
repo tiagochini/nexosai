@@ -49,6 +49,12 @@ for (const mode of ["original", "advantage"] as const)
       audienceMode: mode,
       includedAudienceIds: ["111"],
       excludedAudienceIds: ["222"],
+      customerLifecycle: { mode: "acquisition", customerAudienceIds: ["222"] },
+      creativeAutomation: {
+        creative_features_spec: {
+          standard_enhancements: { enroll_status: "OPT_OUT" },
+        },
+      },
       placementMode: "manual",
       placements: ["facebook_feed", "instagram_reels"],
       creativeFormat: format,
@@ -86,6 +92,28 @@ for (const mode of ["original", "advantage"] as const)
     assert.equal(sent[0].status, "PAUSED");
     assert.equal(sent[1].status, "PAUSED");
     assert.equal(sent[3].status, "PAUSED");
+    assert.deepEqual(sent[2].degrees_of_freedom_spec, form.creativeAutomation);
+    assert.deepEqual(
+      (compiled.tree.campaign as any).customerLifecycle,
+      form.customerLifecycle,
+    );
+    validateLaunchReadback("creative", "88", { id: "88", ...sent[2] }, sent[2]);
+    assert.throws(() =>
+      validateLaunchReadback(
+        "creative",
+        "88",
+        {
+          id: "88",
+          ...sent[2],
+          degrees_of_freedom_spec: {
+            creative_features_spec: {
+              standard_enhancements: { enroll_status: "OPT_IN" },
+            },
+          },
+        },
+        sent[2],
+      ),
+    );
     if (format === "catalog") {
       assert.equal(sent[2].product_set_id, "555");
       assert.equal(

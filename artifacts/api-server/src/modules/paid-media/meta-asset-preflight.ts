@@ -7,7 +7,7 @@ export type MetaAssetReader = (
 export async function requireAccountAssets(
   read: MetaAssetReader,
   account: string,
-  edge: "customaudiences" | "advideos" | "adspixels",
+  edge: "customaudiences" | "advideos" | "adspixels" | "promote_pages" | "instagram_accounts",
   ids: string[],
 ) {
   const missing = new Set(ids);

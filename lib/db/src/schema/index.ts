@@ -78,3 +78,4 @@ export * from "./academy-gift-batches";
 export * from "./academy-admin-audit";
 export * from "./academy-student-accounts";
 export * from "./meta-audience-operations";
+export * from "./meta-advanced-operations";

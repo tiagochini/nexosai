@@ -4,6 +4,7 @@ import {
   db,
   auditLogsTable,
   metaAudienceOperationsTable as operations,
+  metaCrmSyncsTable,
   paidMediaAccountsTable,
   paidMediaPoliciesTable,
 } from "@workspace/db";
@@ -32,7 +33,7 @@ type Request = ReturnType<typeof compileAudienceRequest>["request"] & {
   };
 };
 const fields =
-  "id,name,description,account_id,subtype,rule,lookalike_spec,seed_audience,customer_file_source,delivery_status,operation_status";
+  "id,name,description,account_id,subtype,rule,lookalike_spec,seed_audience,customer_file_source,is_value_based,delivery_status,operation_status";
 function conflict(message: string): never {
   throw new AppError(409, message, "AUDIENCE_OPERATION_BLOCKED");
 }
@@ -73,7 +74,7 @@ async function getOperation(workspaceId: string, id: string) {
   if (!row) throw new NotFoundError("Operação de público");
   return row;
 }
-async function accountFor(workspaceId: string, accountId: string) {
+export async function accountFor(workspaceId: string, accountId: string) {
   const [account] = await db
     .select()
     .from(paidMediaAccountsTable)
@@ -108,7 +109,10 @@ function decode(row: Operation, account: Account): Request {
     );
   return request;
 }
-async function authorize(workspaceId: string, accountId: string) {
+export async function authorizeMetaAsset(
+  workspaceId: string,
+  accountId: string,
+) {
   await enforceNoMandatoryPause(workspaceId, {
     channel: "paid_media",
     action: "paid_media_execute",
@@ -156,19 +160,17 @@ async function audit(
   action: string,
   data: Record<string, unknown> = {},
 ) {
-  await db
-    .insert(auditLogsTable)
-    .values({
-      workspaceId: row.workspaceId,
-      action,
-      actor,
-      data: {
-        operationId: row.id,
-        accountId: row.accountId,
-        requestHash: row.requestHash,
-        ...data,
-      },
-    });
+  await db.insert(auditLogsTable).values({
+    workspaceId: row.workspaceId,
+    action,
+    actor,
+    data: {
+      operationId: row.id,
+      accountId: row.accountId,
+      requestHash: row.requestHash,
+      ...data,
+    },
+  });
 }
 export async function listAudienceOperations(workspaceId: string) {
   return (
@@ -277,7 +279,7 @@ export async function executeAudienceOperation(
   if (row.requestHash !== requestHash)
     conflict("O resumo mudou. Revise a operação.");
   if (row.status === "ready") return audienceOperationView(row);
-  const account = await authorize(workspaceId, row.accountId),
+  const account = await authorizeMetaAsset(workspaceId, row.accountId),
     request = decode(row, account),
     owner = randomUUID();
   const [claimed] = await db
@@ -324,6 +326,15 @@ export async function executeAudienceOperation(
   };
   let mutationStarted = false;
   try {
+    if (request.engagementSource)
+      await requireAccountAssets(
+        (path, query) => send(path, { query }),
+        account.providerAccountId,
+        request.engagementSource.platform === "facebook"
+          ? "promote_pages"
+          : "instagram_accounts",
+        [request.engagementSource.id],
+      );
     if (request.kind === "website")
       await requireAccountAssets(
         (path, query) => send(path, { query }),
@@ -338,7 +349,19 @@ export async function executeAudienceOperation(
         "customaudiences",
         [request.originAudienceId!],
       );
-    decode(row, await authorize(workspaceId, row.accountId));
+    if (request.requireValueBasedOrigin) {
+      const origin = await send(request.originAudienceId!, {
+        query: { fields: "id,is_value_based" },
+      });
+      if (
+        origin.id !== request.originAudienceId ||
+        origin.is_value_based !== true
+      )
+        conflict(
+          "A origem do Lookalike precisa ser uma lista por valor validada.",
+        );
+    }
+    decode(row, await authorizeMetaAsset(workspaceId, row.accountId));
     await save({
       intent: {
         owner,
@@ -370,8 +393,8 @@ export async function executeAudienceOperation(
       providerAudienceId,
     );
     let upload: Record<string, unknown> | undefined;
-    if (request.kind === "crm") {
-      decode(row, await authorize(workspaceId, row.accountId));
+    if (request.kind === "crm" && request.members.length) {
+      decode(row, await authorizeMetaAsset(workspaceId, row.accountId));
       await save({
         intent: {
           owner,
@@ -391,7 +414,10 @@ export async function executeAudienceOperation(
         method: "POST",
         idempotencyKey: `audience:${id}:users`,
         payload: {
-          payload: { schema: ["EMAIL", "PHONE"], data: request.members },
+          payload: {
+            schema: request.memberSchema ?? ["EMAIL", "PHONE"],
+            data: request.members,
+          },
         },
       });
       if (
@@ -452,6 +478,23 @@ export async function rollbackAudienceOperation(
   if (row.requestHash !== requestHash)
     conflict("A confirmação não corresponde à operação.");
   if (row.status === "rolled_back") return audienceOperationView(row);
+  if ((row.intent as any)?.stage === "delete")
+    conflict("Confira a exclusão já solicitada sem repetir o DELETE.");
+  if ((row.summary as any)?.syncSeed === true) {
+    const linked = await db
+      .select()
+      .from(metaCrmSyncsTable)
+      .where(
+        and(
+          eq(metaCrmSyncsTable.workspaceId, workspaceId),
+          eq(metaCrmSyncsTable.seedOperationId, id),
+        ),
+      );
+    if (linked.some((sync) => sync.enabled || sync.leaseOwner))
+      conflict(
+        "Pause a sincronização CRM e aguarde o ciclo atual antes de excluir a semente.",
+      );
+  }
   if (
     !row.providerAudienceId ||
     !["ready", "manual_recovery", "failed"].includes(row.status)
@@ -459,7 +502,7 @@ export async function rollbackAudienceOperation(
     conflict(
       "É necessário um ID confirmado e uma execução encerrada para excluir somente o público criado por esta operação.",
     );
-  const account = await authorize(workspaceId, row.accountId),
+  const account = await authorizeMetaAsset(workspaceId, row.accountId),
     summary = row.summary as { name: string; kind: string; marker: string };
   assertRetainedScope(row, account);
   const [claimed] = await db
@@ -500,11 +543,13 @@ export async function rollbackAudienceOperation(
             ? "CUSTOM"
             : summary.kind === "website"
               ? "WEBSITE"
-              : "LOOKALIKE",
+              : summary.kind === "engagement"
+                ? "ENGAGEMENT"
+                : "LOOKALIKE",
       },
       row.providerAudienceId,
     );
-    await authorize(workspaceId, row.accountId);
+    await authorizeMetaAsset(workspaceId, row.accountId);
     const [intent] = await db
       .update(operations)
       .set({
@@ -644,7 +689,7 @@ export async function recoverAudienceOperation(
     conflict(
       "A recuperação precisa de uma operação interrompida e do ID observado na Meta.",
     );
-  const account = await authorize(workspaceId, row.accountId),
+  const account = await authorizeMetaAsset(workspaceId, row.accountId),
     request = decode(row, account);
   const readback = await transport(
     workspaceId,

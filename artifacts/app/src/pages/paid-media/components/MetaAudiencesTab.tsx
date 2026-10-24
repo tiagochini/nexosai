@@ -19,6 +19,11 @@ type Operation = {
     originAudienceId?: string;
     country?: string;
     ratio?: number;
+    platform?: string;
+    sourceId?: string;
+    valueBased?: boolean;
+    currency?: string;
+    syncSeed?: boolean;
   };
   status: string;
   providerAudienceId: string | null;
@@ -49,6 +54,11 @@ export function MetaAudiencesTab() {
     [recoveryIds, setRecoveryIds] = useState<Record<string, string>>({});
   const [audiences, setAudiences] = useState<Audience[]>([]),
     [after, setAfter] = useState<string | null>(null);
+  const [platform, setPlatform] = useState("facebook"),
+    [sourceId, setSourceId] = useState(""),
+    [valueBased, setValueBased] = useState(false),
+    [currency, setCurrency] = useState("BRL"),
+    [syncSeed, setSyncSeed] = useState(false);
   const queryKey = ["/api/paid-media/audiences/operations"];
   const { data: accounts } = useQuery({
     queryKey: ["/api/paid-media/accounts/meta_ads"],
@@ -92,8 +102,15 @@ export function MetaAudiencesTab() {
                 ...(urlContains ? { urlContains } : {}),
               }
             : kind === "lookalike"
-              ? { originAudienceId, country, ratio }
-              : { members }),
+              ? { originAudienceId, country, ratio, valueBased }
+              : kind === "engagement"
+                ? { platform, sourceId, retentionDays }
+                : {
+                    members: syncSeed ? [] : members,
+                    valueBased,
+                    ...(valueBased ? { currency } : {}),
+                    ...(syncSeed ? { syncSeed: true } : {}),
+                  }),
         }),
       });
       setMembers([]);
@@ -231,6 +248,9 @@ export function MetaAudiencesTab() {
               value={kind}
               onChange={(event) => {
                 setKind(event.target.value);
+                setValueBased(false);
+                setSyncSeed(false);
+                setDays(30);
                 setMembers([]);
                 setFileVersion((value) => value + 1);
                 setRights(false);
@@ -251,6 +271,13 @@ export function MetaAudiencesTab() {
                 )}
               </option>
               <option value="lookalike">Lookalike</option>
+              <option value="engagement">
+                {t(
+                  "Engajamento Facebook/Instagram",
+                  "Facebook/Instagram engagement",
+                  "Interacción Facebook/Instagram",
+                )}
+              </option>
             </select>
           </label>
           <label className="text-xs">
@@ -325,6 +352,97 @@ export function MetaAudiencesTab() {
               </label>
             </>
           )}
+          {kind === "engagement" && (
+            <>
+              <label className="text-xs">
+                {t("Origem", "Source", "Origen")}
+                <select
+                  className={field}
+                  value={platform}
+                  onChange={(event) => setPlatform(event.target.value)}
+                >
+                  <option value="facebook">Facebook Page</option>
+                  <option value="instagram">Instagram Business</option>
+                </select>
+              </label>
+              <label className="text-xs">
+                {t("ID da origem", "Source ID", "ID de origen")}
+                <input
+                  className={field}
+                  required
+                  pattern="[0-9]+"
+                  value={sourceId}
+                  onChange={(event) => setSourceId(event.target.value)}
+                />
+              </label>
+              <label className="text-xs">
+                {t("Retenção — dias", "Retention — days", "Retención — días")}
+                <input
+                  className={field}
+                  type="number"
+                  min={1}
+                  max={365}
+                  required
+                  value={retentionDays}
+                  onChange={(event) => setDays(Number(event.target.value))}
+                />
+              </label>
+            </>
+          )}
+          {(kind === "crm" || kind === "lookalike") && (
+            <label className="text-xs">
+              <input
+                type="checkbox"
+                disabled={syncSeed}
+                checked={valueBased}
+                onChange={(event) => setValueBased(event.target.checked)}
+              />{" "}
+              {t(
+                "Usar valor dos clientes",
+                "Use customer values",
+                "Usar valor de clientes",
+              )}
+              {kind === "crm" && valueBased && (
+                <>
+                  <input
+                    className={field}
+                    required
+                    pattern="[A-Z]{3}"
+                    value={currency}
+                    onChange={(event) =>
+                      setCurrency(event.target.value.toUpperCase())
+                    }
+                  />
+                  <span>
+                    {t(
+                      "Cada contato do JSON precisa de value numérico, na mesma moeda. Use valores distintos; duplicatas com valores conflitantes são rejeitadas.",
+                      "Every JSON contact needs a numeric value in this currency. Use distinct values; conflicting duplicate values are rejected.",
+                      "Cada contacto JSON necesita value numérico en la misma moneda. Valores duplicados conflictivos se rechazan.",
+                    )}
+                  </span>
+                </>
+              )}
+            </label>
+          )}
+          {kind === "crm" && (
+            <label className="text-xs">
+              <input
+                type="checkbox"
+                checked={syncSeed}
+                onChange={(event) => {
+                  setSyncSeed(event.target.checked);
+                  setValueBased(false);
+                  setMembers([]);
+                  setFileVersion((value) => value + 1);
+                }}
+              />{" "}
+              {t(
+                "Criar público vazio para sincronização recorrente do CRM",
+                "Create empty audience for recurring CRM sync",
+                "Crear público vacío para sincronización CRM",
+              )}
+            </label>
+          )}
           {kind === "lookalike" && (
             <>
               <label className="text-xs">
@@ -372,7 +490,7 @@ export function MetaAudiencesTab() {
               </label>
             </>
           )}
-          {kind === "crm" && (
+          {kind === "crm" && !syncSeed && (
             <div className="md:col-span-2 space-y-2 text-xs">
               <label>
                 {t(
@@ -454,7 +572,9 @@ export function MetaAudiencesTab() {
           <Button
             type="submit"
             disabled={
-              !rights || !accountId || (kind === "crm" && !members.length)
+              !rights ||
+              !accountId ||
+              (kind === "crm" && !syncSeed && !members.length)
             }
           >
             {t(
@@ -528,6 +648,27 @@ export function MetaAudiencesTab() {
                   {row.evidence.upload
                     ? ` · ${row.evidence.upload.received} ${t("recebidas, pessoas correspondentes não verificadas", "received, matched people not verified", "recibidas, personas coincidentes no verificadas")}`
                     : ""}
+                </p>
+              )}
+              {row.summary.kind === "engagement" && (
+                <p>
+                  {row.summary.platform} · {row.summary.sourceId} ·{" "}
+                  {row.summary.retentionDays} {t("dias", "days", "días")}
+                </p>
+              )}
+              {row.summary.valueBased && (
+                <p>
+                  {t("Baseado em valor", "Value based", "Basado en valor")}{" "}
+                  {row.summary.currency ?? ""}
+                </p>
+              )}
+              {row.summary.syncSeed && (
+                <p>
+                  {t(
+                    "Semente vazia para autorização recorrente em CRM & Experimentos.",
+                    "Empty seed for recurring authorization in CRM & Experiments.",
+                    "Semilla vacía para autorización recurrente en CRM y Experimentos.",
+                  )}
                 </p>
               )}
               {row.errorCode && <p role="alert">{row.errorCode}</p>}

@@ -323,7 +323,7 @@ export async function metaAccountAssetRequest(workspaceId: string, accountId: st
   if (!account) throw new PaidMediaProviderError("Selecione uma conta Meta deste workspace.", "PRECONDITION_FAILED", 409);
   const token = (await credential(workspaceId, "meta_ads", account.integrationId)).accessToken;
   const resolved = path.replace(/^account(?=\/|$)/, account.providerAccountId);
-  if (!/^(?:act_)?\d+(?:\/(?:customaudiences|users|adspixels|advideos))?$/.test(resolved)) throw new PaidMediaProviderError("Invalid asset request path", "PRECONDITION_FAILED", 422);
+  if (!/^(?:act_)?\d+(?:\/(?:customaudiences|users|adspixels|advideos|promote_pages|instagram_accounts|ad_studies|cells))?$/.test(resolved)) throw new PaidMediaProviderError("Invalid asset request path", "PRECONDITION_FAILED", 422);
   const query = new URLSearchParams({ ...options.query, access_token: token });
   try {
     return await request(`https://graph.facebook.com/v26.0/${resolved}?${query}`, { method: options.method ?? "GET", headers: { "Content-Type": "application/json", ...(options.idempotencyKey ? { "X-NexOS-Idempotency-Key": options.idempotencyKey } : {}) }, ...(options.payload ? { body: JSON.stringify(options.payload) } : {}) }, token, { retry: false });
@@ -334,7 +334,7 @@ export async function metaAccountAssetRequest(workspaceId: string, accountId: st
 }
 
 export function metaEntityFields(type: PaidMediaEntityKind): string {
-  if (type === "creative") return "id,name,object_story_spec,product_set_id";
+  if (type === "creative") return "id,name,object_story_spec,product_set_id,degrees_of_freedom_spec";
   if (type === "campaign") return "id,name,status,updated_time,objective,daily_budget,lifetime_budget,bid_strategy,special_ad_categories";
   if (type === "ad_set") return "id,name,status,updated_time,campaign_id,daily_budget,lifetime_budget,start_time,end_time,bid_amount,optimization_goal,billing_event,destination_type,promoted_object,targeting";
   return "id,name,status,updated_time,adset_id,creative";

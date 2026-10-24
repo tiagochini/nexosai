@@ -1,5 +1,6 @@
 import { AppError } from "../../lib/errors.js";
 import { validateMetaTargeting, validateMetaCreative } from "./meta-assets.policy.js";
+import { assertLifecycle } from "./meta-automation.policy.js";
 
 type Json = Record<string, unknown>;
 const obj = (value: unknown): Json => value && typeof value === "object" && !Array.isArray(value) ? value as Json : {};
@@ -89,6 +90,7 @@ export function validateMetaTree(tree: Json): void {
     metaBudget(campaign, group);
     sum += Number(group.budgetMinorUnits ?? 0);
     validateMetaTargeting(group.targeting);
+    assertLifecycle(campaign.customerLifecycle, obj(group.targeting));
     const ads = Array.isArray(group.ads) ? group.ads.map(obj) : [];
     if (!ads.length) fail("CREATIVE_READINESS_REQUIRED", "Aprove ao menos um criativo por conjunto.");
     for (const ad of ads) {

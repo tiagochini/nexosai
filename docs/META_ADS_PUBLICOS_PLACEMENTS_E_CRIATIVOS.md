@@ -2,6 +2,8 @@
 
 Implementação local de 23/10/2026. Não houve criação/upload/exclusão em conta real, deploy, aplicação de migration ou ativação de anúncios nesta execução. Os contratos foram exercitados com persistência e transporte simulados; a elegibilidade e os retornos concretos da Graph v26.0 precisam de homologação na conta.
 
+A atualização de [CRM, automações e Experiments](META_ADS_CRM_AUTOMACOES_E_EXPERIMENTOS.md) amplia este contrato com engajamento, listas por valor, sincronização recorrente e controles de criativos. Seus limites e requisitos de implantação prevalecem para esses fluxos.
+
 ## Recursos implementados
 
 | Recurso | Contrato implementado |
@@ -48,7 +50,7 @@ O formulário aceita um arquivo JSON de até 1 MB com 1 a 1.000 contatos. Cada c
 ]
 ```
 
-Não inclua contatos cuja autorização não abranja esse uso. A declaração do operador não é inferida de um cadastro, consentimento de contato, captura anterior ou evento CAPI. O registro original de consentimento continua sob responsabilidade do CRM de origem; não há sincronização automática de listas, revogações ou dados de contatos da plataforma nesta etapa.
+Não inclua contatos cuja autorização não abranja esse uso. A declaração do operador não é inferida de um cadastro, consentimento de contato, captura anterior ou evento CAPI. O registro original de consentimento continua sob responsabilidade do CRM de origem; o upload avulso não sincroniza revogações. A sincronização recorrente é um fluxo separado, exige semente vazia e autorização específica, conforme a atualização de CRM.
 
 O servidor normaliza/hasha e-mail e telefone antes da persistência. O envelope criptografado contém hashes, datas de consentimento e hash das referências, nunca os identificadores CRM originais. As colunas públicas e logs não recebem listas de hashes nem credenciais. O envelope usa AES-256-GCM e as chaves atuais/anteriores de `INTEGRATION_TOKEN_ENCRYPTION_KEY`. O arquivo é retirado da tela após preparar.
 
@@ -67,7 +69,7 @@ Campanha, conjuntos e anúncios continuam sendo criados **PAUSED**, com orçamen
 - Aplicar `0074_meta_audience_operations.sql` antes de disponibilizar a aba de públicos. A migration anterior `0073_paid_media_capi_retry.sql` também deve estar aplicada para a fila CAPI.
 - Manter a chave de criptografia e o scheduler `paid-media-audience-retention` ativos. A nova rotina apenas expira dados/execuções; ela nunca aprova públicos nem chama a Meta automaticamente.
 - Vídeos e catálogo/feed precisam existir na Meta. Esta etapa implementa criação de anúncios nesses formatos, sem upload de vídeo, criação de catálogo ou administração de feed.
-- Criação de públicos de engajamento Instagram/Facebook, Lookalike baseado em valor, sincronização contínua/revogação CRM, outras plataformas de placement, Customer Lifecycle Strategy, Advantage+ Creative/enhancements e Experiments não foram acrescentados. Os campos desconhecidos continuam bloqueados.
+- Engajamento, listas por valor, CRM recorrente, opções de creative e registro A/B estão implementados na atualização de CRM, sujeitos aos limites nela documentados. Outras plataformas de placement, Customer Lifecycle nativo, Advantage+ Sales/Leads completo e resultados estatísticos automáticos não estão implementados. Campos desconhecidos continuam bloqueados.
 - Apps, mensagens, formulários nativos e categorias especiais continuam fora do contrato de criação. Não se promete implementar integralmente todas as recomendações operacionais do texto de referência.
 - Para público sem direito de exclusão, com dependências criadas fora do NexOS ou cuja exclusão não seja confirmada, a recuperação permanece manual. Não há promessa de rollback de membros individuais nem remoção de audiências externas.
 - A nova migração e os locks foram revisados no código, mas precisam de validação em PostgreSQL de homologação. Os testes não acessam banco ou conta Meta real.
