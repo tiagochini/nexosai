@@ -190,6 +190,25 @@ export async function listExperiments(workspaceId: string) {
 }
 const studyFields =
   "id,name,description,business,type,start_time,end_time,cells{id,name,ad_ids,treatment_percentage},results_first_available_date";
+
+type MetaInsight = { ad_id?: string; impressions?: string | number; clicks?: string | number; spend?: string | number; actions?: Array<{ action_type?: string; value?: string | number }>; action_values?: Array<{ action_type?: string; value?: string | number }> };
+function sumActions(rows: MetaInsight["actions"], accepted: (type: string) => boolean) {
+  return (rows ?? []).reduce((sum, row) => sum + (accepted(String(row.action_type ?? "")) ? Number(row.value ?? 0) : 0), 0);
+}
+export function compareExperimentInsights(rows: MetaInsight[], adA: string, adB: string) {
+  const one = (id: string) => {
+    const selected = rows.filter(row => row.ad_id === id);
+    const impressions = selected.reduce((n, row) => n + Number(row.impressions ?? 0), 0);
+    const clicks = selected.reduce((n, row) => n + Number(row.clicks ?? 0), 0);
+    const spend = selected.reduce((n, row) => n + Number(row.spend ?? 0), 0);
+    const conversions = selected.reduce((n, row) => n + sumActions(row.actions, type => /purchase|lead|complete_registration/i.test(type)), 0);
+    const conversionValue = selected.reduce((n, row) => n + sumActions(row.action_values, type => /purchase|lead|complete_registration/i.test(type)), 0);
+    return { adId: id, impressions, clicks, spend, conversions, conversionValue, ctr: impressions ? clicks / impressions * 100 : null, cpc: clicks ? spend / clicks : null, cpa: conversions ? spend / conversions : null, roas: spend ? conversionValue / spend : null };
+  };
+  const A = one(adA), B = one(adB);
+  const sufficient = A.impressions > 0 && B.impressions > 0 && A.conversions >= 20 && B.conversions >= 20;
+  return { A, B, method: "descriptive_meta_insights", winner: null, conclusion: sufficient ? "descriptive_comparison_only" : "insufficient_sample", statisticalSignificance: "not_available_for_legacy_split_test", note: "Métricas descritivas de Insights. O NexOS não declara vencedor sem resultados estatísticos oficiais da Meta; 20 conversões por variante é somente um mínimo operacional para leitura, não prova significância." };
+}
 export async function approveExperiment(
   workspaceId: string,
   experimentId: string,
@@ -348,13 +367,26 @@ export async function inspectExperiment(
     { query: { fields: studyFields } },
   );
   assertExperimentReadback(result, config, row.providerStudyId);
+  const since = new Date(config.startAt).toISOString().slice(0, 10),
+    until = new Date(Math.min(Date.parse(config.endAt), Date.now() - 60000)).toISOString().slice(0, 10);
+  let comparison = null;
+  if (until >= since) {
+    const insights = await transport(workspaceId, row.accountId, "account/insights", { query: {
+      fields: "ad_id,impressions,clicks,spend,actions,action_values", level: "ad", time_range: JSON.stringify({ since, until }), limit: "500",
+      filtering: JSON.stringify([{ field: "ad.id", operator: "IN", value: [config.adA, config.adB] }]),
+    } });
+    comparison = compareExperimentInsights(Array.isArray(insights.data) ? insights.data : [], config.adA, config.adB);
+  }
+  await db.update(experiments).set({ evidence: { ...(row.evidence as Record<string, unknown>), comparison, comparisonCheckedAt: new Date().toISOString() } })
+    .where(and(eq(experiments.id, row.id), eq(experiments.workspaceId, workspaceId)));
   return {
     id: row.id,
     providerStudyId: row.providerStudyId,
     registrationVerified: true,
     resultAvailableAt: result.results_first_available_date ?? null,
     winner: null,
-    resultsStatus: "consult_meta_experiments",
+    resultsStatus: comparison?.conclusion ?? "period_not_started",
+    comparison,
   };
 }
 export async function recoverExperiment(

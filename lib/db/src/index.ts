@@ -21,3 +21,4 @@ export * from "./schema";
 // Explicit export keeps newly staged execution tables available to workspace
 // consumers even when incremental TypeScript resolution has a stale barrel.
 export * from "./schema/first-touch-attempts";
+export { paidMediaOptimizationAlertsTable, paidMediaOptimizationRulesTable } from "./schema/meta-advanced-operations";

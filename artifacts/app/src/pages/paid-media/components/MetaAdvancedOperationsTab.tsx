@@ -51,7 +51,8 @@ export function MetaAdvancedOperationsTab() {
     [endAt, setEnd] = useState("");
   const [busy, setBusy] = useState(false),
     [confirmed, setConfirmed] = useState<Record<string, boolean>>({}),
-    [studyIds, setStudyIds] = useState<Record<string, string>>({});
+    [studyIds, setStudyIds] = useState<Record<string, string>>({}),
+    [inspection, setInspection] = useState<Record<string, any>>({});
   const { data: accounts } = useQuery({
     queryKey: ["/api/paid-media/accounts/meta_ads"],
     queryFn: () =>
@@ -103,9 +104,9 @@ export function MetaAdvancedOperationsTab() {
       toast.success(
         read
           ? t(
-              "Registro conferido. Resultados estatísticos devem ser consultados na Meta.",
-              "Registration checked. Consult Meta for statistical results.",
-              "Registro verificado. Consulta Meta para resultados estadísticos.",
+              "Registro conferido e métricas comparativas consultadas.",
+              "Registration checked and comparative metrics retrieved.",
+              "Registro verificado y métricas comparativas consultadas.",
             )
           : t(
               "Operação registrada.",
@@ -562,7 +563,7 @@ export function MetaAdvancedOperationsTab() {
                       `experiments/${row.id}/inspection`,
                       undefined,
                       true,
-                    )
+                    ).then(result => { if (result) setInspection(current => ({ ...current, [row.id]: result })); })
                   }
                 >
                   {t(
@@ -590,6 +591,14 @@ export function MetaAdvancedOperationsTab() {
                 </Button>
               )}
             </div>
+            {(inspection[row.id]?.comparison ?? row.evidence?.["comparison"]) && <div className="rounded border border-border/40 p-3 space-y-1">
+              {(() => { const comparison = inspection[row.id]?.comparison ?? row.evidence?.["comparison"] as any; return <>
+              <strong>{t("Comparação descritiva (sem declaração estatística de vencedor)", "Descriptive comparison (no statistical winner declaration)", "Comparación descriptiva (sin declarar ganador estadístico)")}</strong>
+              <p>{t("Anúncio A", "Ad A", "Anuncio A")}: {JSON.stringify(comparison.A)} </p>
+              <p>{t("Anúncio B", "Ad B", "Anuncio B")}: {JSON.stringify(comparison.B)}</p>
+              <p className="text-muted-foreground">{comparison.note}</p>
+              </>; })()}
+            </div>}
             {row.status === "manual_recovery" && !row.providerStudyId && (
               <div className="flex gap-2">
                 <input

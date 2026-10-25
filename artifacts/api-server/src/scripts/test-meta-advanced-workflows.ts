@@ -46,6 +46,7 @@ import {
   verifyExperimentDeletion,
   recoverExperiment,
   experimentPayload,
+  compareExperimentInsights,
   assertExperimentReadback,
 } from "../modules/paid-media/meta-experiments.service.js";
 
@@ -661,6 +662,15 @@ try {
     startAt: new Date(Date.now() + 3600000).toISOString(),
     endAt: new Date(Date.now() + 86400000).toISOString(),
   };
+const comparison = compareExperimentInsights([
+  { ad_id: "11", impressions: "1000", clicks: "50", spend: "100", actions: [{ action_type: "purchase", value: "25" }], action_values: [{ action_type: "purchase", value: "500" }] },
+  { ad_id: "12", impressions: "1000", clicks: "40", spend: "100", actions: [{ action_type: "purchase", value: "12" }], action_values: [{ action_type: "purchase", value: "300" }] },
+], "11", "12");
+assert.equal(comparison.A.ctr, 5);
+assert.equal(comparison.A.cpa, 4);
+assert.equal(comparison.B.roas, 3);
+assert.equal(comparison.winner, null, "descriptive metrics must not imply statistical winner");
+assert.equal(comparison.conclusion, "insufficient_sample");
   const experiment = await prepareExperiment(workspaceId, "actor", input),
     row = store.get(experiments)![0]!;
   const remoteStudy = (id: string) => ({

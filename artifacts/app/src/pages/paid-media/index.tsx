@@ -2,6 +2,7 @@ import { GoalReportsTab } from "./components/GoalReportsTab";
 import { MetaAudiencesTab } from "./components/MetaAudiencesTab";
 import { MetaAdvancedOperationsTab } from "./components/MetaAdvancedOperationsTab";
 import { MetaCapiTestsTab } from "./components/MetaCapiTestsTab";
+import { OptimizationRulesTab } from "./components/OptimizationRulesTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AccountsTab } from "./components/AccountsTab";
 import { PoliciesTab } from "./components/PoliciesTab";
@@ -43,6 +44,7 @@ export default function PaidMediaPage() {
           <TabsTrigger value="proposals" className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest gap-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-none border border-transparent data-[state=active]:border-primary/30">
             <FileText className="h-3.5 w-3.5" /> {t("Otimização", "Optimization", "Optimización")}
           </TabsTrigger>
+          <TabsTrigger value="optimization-rules" className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest">Regras e alertas</TabsTrigger>
           <TabsTrigger value="attempts" className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest gap-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-none border border-transparent data-[state=active]:border-primary/30">
             <GitCommit className="h-3.5 w-3.5" /> {t("Auditoria", "Audit", "Auditoría")}
           </TabsTrigger>
@@ -58,6 +60,7 @@ export default function PaidMediaPage() {
             <TabsContent value="accounts" className="m-0 h-full"><AccountsTab /></TabsContent>
             <TabsContent value="policies" className="m-0 h-full"><PoliciesTab /></TabsContent>
             <TabsContent value="proposals" className="m-0 h-full"><ProposalsTab /></TabsContent>
+            <TabsContent value="optimization-rules" className="m-0 h-full"><OptimizationRulesTab /></TabsContent>
             <TabsContent value="attempts" className="m-0 h-full"><AttemptsTab /></TabsContent>
           </div>
         </div>

@@ -29,6 +29,7 @@ import { generateProposal } from "./proposals.service.js";
 import { approveLaunchPlan, activateLaunchPlan, compileLaunchPlan } from "./launch-plans.service.js";
 import { isPaidMediaIntegration } from "../integrations/integration-purpose.js";
 import { datasetDiagnostics, recordDatasetEvent, reconciliationSummary, upsertConversion, upsertTouchpoint } from "./attribution.service.js";
+import { createOptimizationRule, listOptimizationRules, listOptimizationAlerts, markOptimizationAlertRead, optimizationRuleSchema, setOptimizationRuleEnabled } from "./optimization-rules.service.js";
 
 import { paidMediaGoalReport } from "./paid-media-reports.service.js";
 import { paidMediaAdvancedReport } from "./meta-advanced-report.service.js";
@@ -239,6 +240,29 @@ router.get("/setup/:provider/status", async (req, res): Promise<void> => {
 });
 router.get("/reports/goals", async (req, res): Promise<void> => {
   try { res.json(await paidMediaGoalReport(req.auth.workspaceId, req.query)); } catch (error) { sendProviderError(res, error); }
+});
+router.get("/optimization-rules", async (req, res): Promise<void> => {
+  res.json({ rules: await listOptimizationRules(req.auth.workspaceId) });
+});
+router.post("/optimization-rules", async (req, res): Promise<void> => {
+  const parsed = optimizationRuleSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(422).json({ error: "Configure critérios e janela de avaliação válidos.", code: "OPTIMIZATION_RULE_INVALID", details: parsed.error.flatten() }); return; }
+  try { res.status(201).json({ rule: await createOptimizationRule(req.auth.workspaceId, req.auth.userId, parsed.data) }); }
+  catch (error) { sendProviderError(res, error); }
+});
+router.post("/optimization-rules/:ruleId/enable", async (req, res): Promise<void> => {
+  if (req.body?.confirm !== true || typeof req.body?.enabled !== "boolean") { res.status(422).json({ error: "Confirme explicitamente a ativação ou pausa desta regra.", code: "CONFIRMATION_REQUIRED" }); return; }
+  const rule = await setOptimizationRuleEnabled(req.auth.workspaceId, req.params["ruleId"]!, req.body.enabled);
+  if (!rule) { res.status(404).json({ error: "Regra não encontrada.", code: "OPTIMIZATION_RULE_NOT_FOUND" }); return; }
+  res.json({ rule });
+});
+router.get("/optimization-alerts", async (req, res): Promise<void> => {
+  res.json({ alerts: await listOptimizationAlerts(req.auth.workspaceId, req.query["unread"] === "true") });
+});
+router.post("/optimization-alerts/:alertId/read", async (req, res): Promise<void> => {
+  const alert = await markOptimizationAlertRead(req.auth.workspaceId, req.params["alertId"]!);
+  if (!alert) { res.status(404).json({ error: "Alerta não encontrado ou já lido.", code: "OPTIMIZATION_ALERT_NOT_FOUND" }); return; }
+  res.json({ alert });
 });
 router.get("/reports/meta-advanced", rateLimit({ windowMs: 60000, limit: 10, keyGenerator: req => `${req.auth.workspaceId}:${req.auth.userId}`, standardHeaders: true, legacyHeaders: false }), async (req, res): Promise<void> => {
   res.setHeader("Cache-Control", "no-store");
