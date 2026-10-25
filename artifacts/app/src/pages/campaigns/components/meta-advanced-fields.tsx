@@ -342,6 +342,7 @@ export function MetaAdvancedFields<T extends MetaAdvancedForm>({
           "standard_enhancements",
           "text_optimizations",
           "image_touchups",
+          "image_animation",
           "image_uncrop",
           "video_auto_crop",
           "product_browsing",

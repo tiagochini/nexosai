@@ -383,6 +383,13 @@ try {
   );
   assert.equal(
     creativeAutomationSchema.safeParse({
+      creative_features_spec: { image_animation: { enroll_status: "OPT_IN" } },
+    }).success,
+    true,
+    "Meta-native image animation must be an explicit supported opt-in",
+  );
+  assert.equal(
+    creativeAutomationSchema.safeParse({
       creative_features_spec: { unknown_feature: { enroll_status: "OPT_IN" } },
     }).success,
     false,
