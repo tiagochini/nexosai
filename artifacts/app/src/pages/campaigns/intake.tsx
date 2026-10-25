@@ -312,6 +312,7 @@ const EXEC_AGENTS = [
 ];
 
 function MasterPlanView({
+  campaignId,
   formData,
   campaignType,
   campaignTrack,
@@ -319,6 +320,7 @@ function MasterPlanView({
   onBack,
   finalizing,
 }: {
+  campaignId: string;
   formData: Record<string, string>;
   campaignType?: string;
   campaignTrack?: string;
@@ -329,6 +331,51 @@ function MasterPlanView({
   const t = useUiText();
   const { locale } = useUiLocale();
   const numberLocale = intlLocale(locale);
+  const needsSocialDiagnosis = ["launch", "perpetual_launch", "semente_launch", "flash_sale", "live_sale"].includes(campaignType ?? "launch");
+  const [socialPlatform, setSocialPlatform] = useState("instagram");
+  const [socialHandle, setSocialHandle] = useState(formData["social.handle"] ?? formData["social.instagram"] ?? "");
+  const [socialDiagnosis, setSocialDiagnosis] = useState<Record<string, unknown> | null>(null);
+  const [socialDiagnosisLoading, setSocialDiagnosisLoading] = useState(false);
+  const [socialDiagnosisApproved, setSocialDiagnosisApproved] = useState(false);
+  useEffect(() => {
+    if (!needsSocialDiagnosis || !campaignId) return;
+    customFetch<{ diagnosis: Record<string, unknown> | null }>(`/api/campaigns/${campaignId}/social-diagnosis`)
+      .then(({ diagnosis }) => {
+        if (!diagnosis) return;
+        setSocialDiagnosis(diagnosis);
+        setSocialDiagnosisApproved(diagnosis.status === "approved");
+        if (typeof diagnosis.handle === "string") setSocialHandle(diagnosis.handle);
+        if (typeof diagnosis.platform === "string") setSocialPlatform(diagnosis.platform);
+      }).catch(() => undefined);
+  }, [campaignId, needsSocialDiagnosis]);
+  const runSocialDiagnosis = async () => {
+    if (!socialHandle.trim()) { toast.error(t("Informe o perfil público da marca.", "Enter the brand's public profile.", "Ingresa el perfil público de la marca.")); return; }
+    setSocialDiagnosisLoading(true);
+    setSocialDiagnosisApproved(false);
+    try {
+      const result = await customFetch<{ diagnosis: Record<string, unknown> }>(`/api/campaigns/${campaignId}/social-diagnosis`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ platform: socialPlatform, handle: socialHandle.trim() }),
+      });
+      setSocialDiagnosis(result.diagnosis);
+      if (result.diagnosis.status === "generated") toast.success(t("Diagnóstico social gerado. Revise as fontes e limitações.", "Social diagnosis generated. Review its sources and limitations.", "Diagnóstico social generado. Revisa las fuentes y limitaciones."));
+      else toast.warning(t("Não há evidência verificável suficiente para concluir. Veja os próximos passos no diagnóstico.", "There is not enough verifiable evidence to complete this diagnosis. See next steps in the report.", "No hay suficiente evidencia verificable para completar el diagnóstico. Consulta los próximos pasos."));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("Não foi possível gerar o diagnóstico.", "Could not generate the diagnosis.", "No se pudo generar el diagnóstico."));
+    } finally { setSocialDiagnosisLoading(false); }
+  };
+  const approveSocialDiagnosis = async () => {
+    try {
+      const result = await customFetch<{ diagnosis: Record<string, unknown> }>(`/api/campaigns/${campaignId}/social-diagnosis/approve`, { method: "POST" });
+      setSocialDiagnosis(result.diagnosis);
+      setSocialDiagnosisApproved(true);
+      toast.success(t("Diagnóstico confirmado. A estratégia pode começar.", "Diagnosis confirmed. Strategy can begin.", "Diagnóstico confirmado. La estrategia puede comenzar."));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("Não foi possível confirmar o diagnóstico.", "Could not confirm the diagnosis.", "No se pudo confirmar el diagnóstico."));
+    }
+  };
+  const publicAnalysis = (socialDiagnosis?.publicProfileAnalysis ?? {}) as Record<string, any>;
+  const accountEvidence = (socialDiagnosis?.accountEvidence ?? null) as Record<string, any> | null;
   const productName   = formData["product.name"]  || formData["product.nome"]  || t("Produto", "Product", "Producto");
   const review = masterPlanReview(formData, campaignType, campaignTrack);
   const rawPrice      = Number(formData["product.price"] || formData["product.preco"] || 0);
@@ -548,6 +595,35 @@ function MasterPlanView({
       </div>
 
       }
+      {needsSocialDiagnosis && <section className="border border-cyan-400/40 bg-cyan-400/5 p-5 mb-6 space-y-4" aria-labelledby="social-diagnosis-heading">
+        <div>
+          <h2 id="social-diagnosis-heading" className="font-mono text-sm font-bold uppercase tracking-wider">{t("Diagnóstico de Presença Social", "Social Presence Diagnosis", "Diagnóstico de presencia social")}</h2>
+          <p className="text-xs text-muted-foreground mt-1">{t("Etapa anterior à estratégia: contexto da campanha, presença pública, dados disponíveis e lacunas. Nenhuma métrica será presumida quando a plataforma não a fornecer.", "Required before strategy: campaign context, public presence, available data, and gaps. Metrics will not be assumed when the platform does not provide them.", "Antes de la estrategia: contexto de campaña, presencia pública, datos disponibles y brechas. No se supondrán métricas que la plataforma no proporcione.")}</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-[150px_1fr_auto] gap-2">
+          <select value={socialPlatform} onChange={(event) => { setSocialPlatform(event.target.value); setSocialDiagnosis(null); setSocialDiagnosisApproved(false); }} disabled={socialDiagnosisLoading} className="h-10 border border-border/50 bg-background px-3 text-sm">
+            <option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="tiktok">TikTok</option>
+          </select>
+          <input value={socialHandle} onChange={(event) => { setSocialHandle(event.target.value); setSocialDiagnosis(null); setSocialDiagnosisApproved(false); }} disabled={socialDiagnosisLoading} placeholder="@perfil ou URL pública" aria-label={t("Perfil social da marca", "Brand social profile", "Perfil social de la marca")} className="h-10 border border-border/50 bg-background px-3 text-sm" />
+          <Button variant="outline" onClick={() => void runSocialDiagnosis()} disabled={socialDiagnosisLoading || finalizing} className="rounded-none font-mono text-xs uppercase">
+            {socialDiagnosisLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t("Analisando", "Analyzing", "Analizando")}</> : t("Gerar diagnóstico", "Generate diagnosis", "Generar diagnóstico")}
+          </Button>
+        </div>
+        {socialDiagnosis && <div className="border border-border/40 bg-background/50 p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2"><p className="font-mono text-xs font-bold">@{String(socialDiagnosis.handle ?? socialHandle)} · {String(socialDiagnosis.platform ?? socialPlatform)}</p><Badge variant="outline" className="rounded-none">{String(publicAnalysis.method ?? "análise pública")}</Badge></div>
+          {accountEvidence ? <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+            {[[t("Seguidores", "Followers", "Seguidores"), accountEvidence.followers], [t("Seguindo", "Following", "Siguiendo"), accountEvidence.following], [t("Publicações", "Posts", "Publicaciones"), accountEvidence.mediaCount], [t("Alcance 30 dias", "30-day reach", "Alcance 30 días"), accountEvidence.reachLast30Days]].map(([label, value]) => <div key={String(label)} className="border border-border/30 p-2"><span className="block text-muted-foreground">{label}</span><strong>{value == null ? t("Indisponível", "Unavailable", "No disponible") : new Intl.NumberFormat(numberLocale).format(Number(value))}</strong></div>)}
+          </div> : <p className="text-xs text-amber-300">{t("Insights oficiais não disponíveis para este perfil. O relatório usa somente evidência pública assistida por IA e sinaliza suas limitações.", "Official insights are unavailable for this profile. The report uses AI-assisted public evidence and flags its limitations.", "Los insights oficiales no están disponibles. El informe usa evidencia pública asistida por IA y señala sus límites.")}</p>}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <div><p className="font-bold mb-1">{t("Forças", "Strengths", "Fortalezas")}</p><ul className="list-disc pl-5">{(publicAnalysis.strategicAnalysis?.strengths ?? []).slice(0, 4).map((item: string, index: number) => <li key={index}>{item}</li>)}</ul></div>
+            <div><p className="font-bold mb-1">{t("Lacunas e oportunidades", "Gaps and opportunities", "Brechas y oportunidades")}</p><ul className="list-disc pl-5">{[...(publicAnalysis.strategicAnalysis?.weaknesses ?? []), ...(publicAnalysis.strategicAnalysis?.opportunities ?? [])].slice(0, 5).map((item: string, index: number) => <li key={index}>{item}</li>)}</ul></div>
+          </div>
+          {(publicAnalysis.actionPlan?.immediate?.length || publicAnalysis.actionPlan?.shortTerm?.length) ? <div className="text-xs"><p className="font-bold mb-1">{t("Ações recomendadas", "Recommended actions", "Acciones recomendadas")}</p><ul className="list-disc pl-5">{[...(publicAnalysis.actionPlan?.immediate ?? []), ...(publicAnalysis.actionPlan?.shortTerm ?? [])].slice(0, 6).map((item: string, index: number) => <li key={index}>{item}</li>)}</ul></div> : null}
+          {Array.isArray(publicAnalysis.sources) && publicAnalysis.sources.length > 0 && <div className="text-xs"><p className="font-bold mb-1">{t("Fontes públicas consultadas", "Public sources checked", "Fuentes públicas consultadas")}</p><ul className="list-disc pl-5">{publicAnalysis.sources.slice(0, 6).map((source: { title?: string; url: string }, index: number) => <li key={index}><a href={source.url} target="_blank" rel="noreferrer" className="text-cyan-300 underline">{source.title || source.url}</a></li>)}</ul></div>}
+          <p className="text-[11px] text-muted-foreground">{((socialDiagnosis.evidenceLimitations ?? []) as string[]).join(" · ")}</p>
+          {socialDiagnosisApproved ? <div className="text-emerald-400 font-mono text-xs">✓ {t("Diagnóstico revisado e confirmado", "Diagnosis reviewed and confirmed", "Diagnóstico revisado y confirmado")}</div> : socialDiagnosis.status !== "generated" ? <p className="text-amber-300 font-mono text-xs">{t("Dados verificáveis insuficientes. Conecte a conta correspondente ou gere novamente quando houver fontes públicas citadas; a estratégia permanece bloqueada até existir evidência.", "Insufficient verifiable data. Connect the matching account or retry when cited public sources are available; strategy remains blocked until evidence exists.", "Datos verificables insuficientes. Conecta la cuenta correspondiente o vuelve a intentarlo cuando haya fuentes públicas citadas; la estrategia sigue bloqueada hasta tener evidencia.")}</p> : <Button variant="outline" onClick={() => void approveSocialDiagnosis()} disabled={socialDiagnosisLoading || finalizing} className="rounded-none font-mono text-xs uppercase">{t("Confirmar diagnóstico e seguir", "Confirm diagnosis and continue", "Confirmar diagnóstico y continuar")}</Button>}
+        </div>}
+      </section>}
       {/* ── CTA de aprovação ── */}
       <div className="border border-primary/30 bg-primary/5 p-6 flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
@@ -560,7 +636,7 @@ function MasterPlanView({
         </div>
         <Button
           onClick={() => void onApprove()}
-          disabled={finalizing}
+          disabled={finalizing || (needsSocialDiagnosis && !socialDiagnosisApproved)}
           className="font-mono uppercase tracking-widest rounded-none gap-2 h-14 px-8 text-sm btn-weapon-primary whitespace-nowrap shrink-0"
         >
           {finalizing
@@ -1206,6 +1282,7 @@ export default function CampaignIntake() {
   if (showMasterPlan) {
     return (
       <MasterPlanView
+          campaignId={campaignId}
         formData={formData}
         campaignType={campaignData?.campaign?.type}
         campaignTrack={campaignData?.campaign?.track}

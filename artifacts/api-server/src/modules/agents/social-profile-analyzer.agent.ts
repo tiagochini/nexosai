@@ -60,6 +60,7 @@ export interface SocialProfileAnalysis {
   // Dados brutos do Gemini para debug
   rawGeminiText?: string;
   searchSourced: boolean;         // true se Gemini usou Google Search
+  sources: Array<{ title?: string; url: string }>;
 }
 
 // ─── Análise de Perfil via Gemini + Google Search ────────────────────────────
@@ -86,6 +87,7 @@ export async function analyzeSocialProfile(
 
   let rawText = "";
   let searchSourced = false;
+  let sources: Array<{ title?: string; url: string }> = [];
 
   if (geminiKey) {
     for (const modelId of searchModels) {
@@ -113,6 +115,10 @@ export async function analyzeSocialProfile(
         if (geminiResp.ok) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const data = await geminiResp.json() as any;
+          sources = (data?.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [])
+            .map((chunk: any) => ({ title: chunk?.web?.title, url: chunk?.web?.uri }))
+            .filter((source: { url?: string }) => typeof source.url === "string")
+            .slice(0, 10);
           const parts = data?.candidates?.[0]?.content?.parts ?? [];
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const textPart = parts.find((p: any) => typeof p.text === "string");
@@ -163,6 +169,7 @@ export async function analyzeSocialProfile(
 
   const parsed = parseAnalysisJSON(rawText, platform, cleanHandle);
   parsed.searchSourced = searchSourced;
+  parsed.sources = sources;
   parsed.rawGeminiText = rawText.slice(0, 2000); // truncar para debug
   return parsed;
 }
@@ -267,6 +274,7 @@ function parseAnalysisJSON(rawText: string, platform: string, handle: string): S
     gapAnalysis: { alignmentScore: 0, criticalGaps: [], quickWins: [] },
     actionPlan: { immediate: [], shortTerm: [], longTerm: [], contentCalendarHint: "" },
     searchSourced: false,
+    sources: [],
   };
 
   if (!rawText) return base;

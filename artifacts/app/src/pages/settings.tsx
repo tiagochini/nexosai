@@ -1891,6 +1891,7 @@ function IdentidadeTab() {
 
   // ── Trejeitos / persona form state ───────────────────────────────────────
   const [voiceName,      setVoiceName]      = useState("");
+  const [voiceScriptCopied, setVoiceScriptCopied] = useState(false);
   const [heygenAvatarId, setHeygenAvatarId] = useState("");
   const [energia,        setEnergia]        = useState("");
   const [velocidade,     setVelocidade]     = useState("");
@@ -2065,6 +2066,21 @@ function IdentidadeTab() {
       setRecState("recorded");
     }
   }, [audioBase64, audioMime, t, voiceName]);
+
+  const copyVoiceSampleScript = async () => {
+    const script = t(
+      "Olá! Estou gravando esta amostra para configurar minha voz no NexOS. Hoje quero compartilhar uma ideia de forma clara, natural e tranquila. Às vezes falo mais devagar para explicar um ponto; em outros momentos, demonstro entusiasmo quando o assunto me interessa. Também faço pequenas pausas, mudo a entonação e faço perguntas para conversar melhor. Este texto é apenas um exemplo: posso adaptar as palavras ao meu jeito de falar. O importante é falar com conforto, sem pressa, em um ambiente silencioso. Obrigado por ouvir.",
+      "Hello! I’m recording this sample to set up my voice in NexOS. Today I’d like to share an idea clearly, naturally, and at an easy pace. Sometimes I speak more slowly to explain a point; at other times, I sound more enthusiastic when a subject interests me. I also pause briefly, vary my intonation, and ask questions to make the conversation feel natural. This is only a sample text, so I can adapt the words to sound like myself. The important thing is to speak comfortably, without rushing, in a quiet place. Thanks for listening.",
+      "¡Hola! Estoy grabando esta muestra para configurar mi voz en NexOS. Hoy quiero compartir una idea de forma clara, natural y tranquila. A veces hablo más despacio para explicar un punto; en otros momentos, muestro entusiasmo cuando un tema me interesa. También hago pequeñas pausas, cambio la entonación y hago preguntas para que la conversación suene natural. Este texto es solo un ejemplo: puedo adaptar las palabras a mi manera de hablar. Lo importante es hablar con comodidad, sin prisa y en un lugar silencioso. Gracias por escuchar.",
+    );
+    try {
+      await navigator.clipboard.writeText(script);
+      setVoiceScriptCopied(true);
+      window.setTimeout(() => setVoiceScriptCopied(false), 1800);
+    } catch {
+      toast.error(t("Não foi possível copiar o texto.", "Couldn't copy the text.", "No se pudo copiar el texto."));
+    }
+  };
 
   // ── Save persona form ────────────────────────────────────────────────────
   const handleSavePersona = async () => {
@@ -2299,6 +2315,31 @@ function IdentidadeTab() {
                   <div className="font-mono text-[10px] text-red-400">{cloneError}</div>
                 </div>
               )}
+
+              <div className="border border-primary/20 bg-primary/5 p-4 space-y-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="font-mono text-[10px] font-bold uppercase tracking-widest text-primary">
+                    {t("Texto sugerido para gravar", "Suggested recording text", "Texto sugerido para grabar")}
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => void copyVoiceSampleScript()}
+                    className="h-7 shrink-0 rounded-none px-2 font-mono text-[9px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                  >
+                    {voiceScriptCopied ? <CheckCircle2 className="mr-1.5 h-3 w-3 text-green-400" /> : <Copy className="mr-1.5 h-3 w-3" />}
+                    {voiceScriptCopied ? t("Copiado", "Copied", "Copiado") : t("Copiar texto", "Copy text", "Copiar texto")}
+                  </Button>
+                </div>
+                <p className="font-mono text-[10px] leading-relaxed text-muted-foreground/80">
+                  {t(
+                    "Olá! Estou gravando esta amostra para configurar minha voz no NexOS. Hoje quero compartilhar uma ideia de forma clara, natural e tranquila. Às vezes falo mais devagar para explicar um ponto; em outros momentos, demonstro entusiasmo quando o assunto me interessa. Também faço pequenas pausas, mudo a entonação e faço perguntas para conversar melhor. Este texto é apenas um exemplo: posso adaptar as palavras ao meu jeito de falar. O importante é falar com conforto, sem pressa, em um ambiente silencioso. Obrigado por ouvir.",
+                    "Hello! I’m recording this sample to set up my voice in NexOS. Today I’d like to share an idea clearly, naturally, and at an easy pace. Sometimes I speak more slowly to explain a point; at other times, I sound more enthusiastic when a subject interests me. I also pause briefly, vary my intonation, and ask questions to make the conversation feel natural. This is only a sample text, so I can adapt the words to sound like myself. The important thing is to speak comfortably, without rushing, in a quiet place. Thanks for listening.",
+                    "¡Hola! Estoy grabando esta muestra para configurar mi voz en NexOS. Hoy quiero compartir una idea de forma clara, natural y tranquila. A veces hablo más despacio para explicar un punto; en otros momentos, muestro entusiasmo cuando un tema me interesa. También hago pequeñas pausas, cambio la entonación y hago preguntas para que la conversación suene natural. Este texto es solo un ejemplo: puedo adaptar las palabras a mi manera de hablar. Lo importante es hablar con comodidad, sin prisa y en un lugar silencioso. Gracias por escuchar.",
+                  )}
+                </p>
+              </div>
 
               <div className="font-mono text-[9px] text-muted-foreground/30 leading-relaxed">
                  {t("Fale naturalmente por 30–120s. Inclua variações de tom, pausas, entusiasmo. Evite ruído de fundo. Seu Voice ID é armazenado com segurança e usado apenas em vídeos desta conta.", "Speak naturally for 30–120 seconds. Vary your tone, pauses, and energy. Avoid background noise. Your Voice ID is stored securely and used only in videos for this account.", "Habla con naturalidad durante 30–120 segundos. Varía el tono, las pausas y la energía. Evita el ruido de fondo. Tu Voice ID se almacena de forma segura y solo se usa en videos de esta cuenta.")}

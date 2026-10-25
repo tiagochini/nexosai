@@ -1080,10 +1080,14 @@ export async function saveIntakeData(
   // If editing after strategy was generated, reset back to intake so strategy is regenerated
   const resetStatus = campaign.status !== "intake" ? "intake" : undefined;
   intakeData = preserveBriefingContext((campaign.intakeData ?? {}) as Record<string, unknown>, intakeData);
+  const brainData = { ...((campaign.brainData ?? {}) as Record<string, unknown>) };
+  // Any briefing edit makes the prior diagnosis stale against the changed
+  // product, audience, objective, budget, or timing.
+  delete brainData.socialDiagnosis;
 
   const [updated] = await db
     .update(campaignsTable)
-    .set({ intakeData, ...(resetStatus ? { status: resetStatus, updatedAt: new Date() } : {}) })
+    .set({ intakeData, brainData: brainData as any, ...(resetStatus ? { status: resetStatus, updatedAt: new Date() } : {}) })
     .where(eq(campaignsTable.id, campaignId))
     .returning();
 

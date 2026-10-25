@@ -23,6 +23,7 @@ import { logger } from "../../lib/logger.js";
 import type { Logger } from "pino";
 import { enforceLaunchAutonomyGate, enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import { assertCampaignCreditBudget } from "../credits/credits.service.js";
+import { assertSocialDiagnosisApproved } from "../campaigns/social-diagnosis.policy.js";
 
 // ── Execution status ──────────────────────────────────────────────────────────
 
@@ -402,12 +403,15 @@ export async function triggerStrategyPhase(
   log: Logger,
 ): Promise<{ queued: boolean; jobId?: string }> {
   const [campaign] = await db
-    .select({ status: campaignsTable.status, type: campaignsTable.type })
+    .select({ status: campaignsTable.status, type: campaignsTable.type, brainData: campaignsTable.brainData })
     .from(campaignsTable)
     .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
 
   if (!campaign) throw new NotFoundError("Campaign");
+
+  // Check this before charging credits or enqueueing the strategy phase.
+  assertSocialDiagnosisApproved(campaign.type, campaign.brainData);
 
   // PIPELINE_KERNEL: single source of truth
   if (!(STRATEGY_PHASE_ENTRY_STATUSES as readonly string[]).includes(campaign.status)) {

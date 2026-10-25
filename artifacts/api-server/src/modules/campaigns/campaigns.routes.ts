@@ -25,8 +25,11 @@ import {
 import { getCampaignControlRoom, getCampaignControlRoomEvidence, getCampaignControlRoomPreviews, getCampaignControlRoomVersionSources, getCampaignControlRoomVersionDiff } from "./control-room.service.js";
 import { triggerStrategyPhase } from "../orchestration/orchestration.service.js";
 import { AppError, ValidationError } from "../../lib/errors.js";
-import { db, workspacesTable, masterplanVersionsTable, CAMPAIGN_CREDIT_BUFFER } from "@workspace/db";
+import { db, campaignsTable, auditLogsTable, workspacesTable, masterplanVersionsTable, CAMPAIGN_CREDIT_BUFFER } from "@workspace/db";
 import { and, eq, isNotNull } from "drizzle-orm";
+import { analyzeSocialProfile } from "../agents/social-profile-analyzer.agent.js";
+import { getAccountsWithAnalytics } from "../social/social.service.js";
+import { determineSocialDiagnosisStatus, SOCIAL_DIAGNOSIS_CAMPAIGN_TYPES } from "./social-diagnosis.policy.js";
 import {
   getIntakeQuestions,
   validateIntakeCompleteness,
@@ -38,6 +41,124 @@ const REORIENT_STRATEGY_COST = 45;
 
 const router = Router();
 router.use(requireAuth);
+
+router.get("/:id/social-diagnosis", async (req, res): Promise<void> => {
+  const id = String(req.params["id"]);
+  const [campaign] = await db.select({ brainData: campaignsTable.brainData })
+    .from(campaignsTable).where(and(eq(campaignsTable.id, id), eq(campaignsTable.workspaceId, req.auth.workspaceId))).limit(1);
+  if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "NOT_FOUND" }); return; }
+  const brain = (campaign.brainData ?? {}) as Record<string, unknown>;
+  res.json({ diagnosis: brain.socialDiagnosis ?? null });
+});
+
+function cleanSocialHandle(value: string): string {
+  return value.trim().replace(/^@/, "").replace(/^https?:\/\/(www\.)?[^/]+\//i, "").replace(/\/$/, "");
+}
+
+// A campaign-specific pre-strategy diagnosis. Public analysis is clearly labeled
+// as AI-assisted; connected account metrics are included only for an exact handle match.
+router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
+  const id = String(req.params["id"]);
+  const parsed = z.object({
+    platform: z.enum(["instagram", "facebook", "tiktok"]),
+    handle: z.string().min(1).max(200),
+  }).safeParse(req.body ?? {});
+  if (!parsed.success) { res.status(400).json({ error: "Informe a rede e o perfil público.", code: "VALIDATION_ERROR" }); return; }
+
+  const [campaign] = await db.select({ type: campaignsTable.type, status: campaignsTable.status, intakeData: campaignsTable.intakeData, brainData: campaignsTable.brainData })
+    .from(campaignsTable).where(and(eq(campaignsTable.id, id), eq(campaignsTable.workspaceId, req.auth.workspaceId))).limit(1);
+  if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "NOT_FOUND" }); return; }
+  if (!SOCIAL_DIAGNOSIS_CAMPAIGN_TYPES.has(campaign.type)) {
+    res.status(422).json({ error: "O diagnóstico obrigatório se aplica a campanhas de lançamento e vendas com data definida.", code: "SOCIAL_DIAGNOSIS_NOT_REQUIRED" }); return;
+  }
+  if (campaign.status !== "intake") { res.status(409).json({ error: "O diagnóstico só pode ser gerado enquanto o briefing estiver em edição.", code: "SOCIAL_DIAGNOSIS_PHASE_CLOSED" }); return; }
+
+  const handle = cleanSocialHandle(parsed.data.handle);
+  const intake = (campaign.intakeData ?? {}) as Record<string, unknown>;
+  const businessContext = Object.entries(intake)
+    .filter(([key]) => !key.startsWith("_"))
+    .map(([key, value]) => `${key}: ${String(value).slice(0, 300)}`)
+    .join("\n").slice(0, 6000);
+  const analysis = await analyzeSocialProfile(parsed.data.platform, handle, businessContext, req.log);
+  const accounts = await getAccountsWithAnalytics(req.auth.workspaceId);
+  const normalizedHandle = handle.toLowerCase().replace(/^@/, "");
+  const connected = accounts.find((account) => account.provider === parsed.data.platform && account.accountName.toLowerCase().replace(/^@/, "") === normalizedHandle);
+  const accountEvidence = connected ? {
+    source: "connected_account_insights",
+    account: connected.accountName,
+    fetchedAt: new Date().toISOString(),
+    followers: connected.followers,
+    following: connected.following,
+    mediaCount: connected.mediaCount,
+    averageInteractionsRecentPosts: connected.avgEngagement,
+    reachLast30Days: connected.totalReach30d,
+    recentPosts: connected.recentPosts.slice(0, 9).map((post) => ({
+      id: post.id, mediaType: post.mediaType, timestamp: post.timestamp,
+      likes: post.likes, comments: post.comments, reach: post.reach,
+      interactions: post.totalInteractions ?? null, metricsAvailable: post.metricsAvailable ?? false,
+    })),
+    apiError: connected.error ?? null,
+  } : null;
+  const hasAccountMetrics = accountEvidence != null && [accountEvidence.followers, accountEvidence.mediaCount, accountEvidence.reachLast30Days].some((value) => value != null);
+  const hasCitedPublicResearch = analysis.searchSourced && analysis.sources.length > 0;
+  const evidenceStatus = determineSocialDiagnosisStatus({ accountMetricsAvailable: hasAccountMetrics, citedPublicResearchAvailable: hasCitedPublicResearch });
+  const diagnosis = {
+    version: 1,
+    status: evidenceStatus,
+    platform: parsed.data.platform,
+    handle,
+    generatedAt: new Date().toISOString(),
+    campaignContext: {
+      product: intake["product.name"] ?? intake["product.nome"] ?? null,
+      audience: intake["audience.description"] ?? intake["audience.profile"] ?? null,
+      objective: intake["campaign.revenueTarget"] ?? intake["campaign.objective"] ?? null,
+      budget: intake["campaign.budget.total"] ?? intake["campaign.budget"] ?? null,
+      urgency: intake["launch.cartOpenDate"] ?? intake["campaign.durationDays"] ?? null,
+    },
+    accountEvidence,
+    publicProfileAnalysis: {
+      method: analysis.searchSourced ? "AI-assisted web search" : "AI-assisted analysis; web search unavailable",
+      overview: analysis.overview,
+      contentAnalysis: analysis.contentAnalysis,
+      strategicAnalysis: analysis.strategicAnalysis,
+      gapAnalysis: analysis.gapAnalysis,
+      actionPlan: analysis.actionPlan,
+      searchSourced: analysis.searchSourced,
+      sources: analysis.sources,
+    },
+    evidenceLimitations: [
+      "Análise pública assistida por IA é indicativa; valide fatos e referências antes de investir.",
+      ...(accountEvidence ? [] : ["Insights oficiais da conta não foram incluídos: conecte a conta correspondente ou use esta análise pública como referência limitada."]),
+      "A API não permite inferir identidade, qualidade individual de seguidores ou tamanho de públicos personalizados nesta etapa.",
+      "Projeções de CPM, CPA e conversão são hipóteses de planejamento, não garantias.",
+      ...(evidenceStatus === "insufficient_data" ? ["Não há métricas oficiais ou fontes públicas verificáveis suficientes para concluir o diagnóstico. Conecte o perfil correspondente ou tente novamente quando houver fontes disponíveis."] : []),
+    ],
+    approvedAt: null,
+    approvedBy: null,
+  };
+  const brainData = (campaign.brainData ?? {}) as Record<string, unknown>;
+  await db.update(campaignsTable).set({ brainData: { ...brainData, socialDiagnosis: diagnosis } as any, updatedAt: new Date() })
+    .where(and(eq(campaignsTable.id, id), eq(campaignsTable.workspaceId, req.auth.workspaceId)));
+  await db.insert(auditLogsTable).values({ workspaceId: req.auth.workspaceId, campaignId: id, action: "campaign.social_diagnosis.generated", actor: req.auth.userId, data: { platform: diagnosis.platform, handle: diagnosis.handle, status: diagnosis.status, accountMetricsIncluded: Boolean(accountEvidence), publicSearchCited: hasCitedPublicResearch } });
+  res.json({ diagnosis });
+});
+
+router.post("/:id/social-diagnosis/approve", async (req, res): Promise<void> => {
+  const id = String(req.params["id"]);
+  const [campaign] = await db.select({ type: campaignsTable.type, status: campaignsTable.status, brainData: campaignsTable.brainData })
+    .from(campaignsTable).where(and(eq(campaignsTable.id, id), eq(campaignsTable.workspaceId, req.auth.workspaceId))).limit(1);
+  if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "NOT_FOUND" }); return; }
+  if (!SOCIAL_DIAGNOSIS_CAMPAIGN_TYPES.has(campaign.type)) { res.status(422).json({ error: "Diagnóstico não obrigatório para este tipo de campanha.", code: "SOCIAL_DIAGNOSIS_NOT_REQUIRED" }); return; }
+  if (campaign.status !== "intake") { res.status(409).json({ error: "O diagnóstico só pode ser confirmado enquanto o briefing estiver em edição.", code: "SOCIAL_DIAGNOSIS_PHASE_CLOSED" }); return; }
+  const brainData = (campaign.brainData ?? {}) as Record<string, unknown>;
+  const current = brainData.socialDiagnosis as Record<string, unknown> | undefined;
+  if (!current || current.status !== "generated") { res.status(409).json({ error: "Gere o diagnóstico antes de confirmá-lo.", code: "SOCIAL_DIAGNOSIS_MISSING" }); return; }
+  const diagnosis = { ...current, status: "approved", approvedAt: new Date().toISOString(), approvedBy: req.auth.userId };
+  await db.update(campaignsTable).set({ brainData: { ...brainData, socialDiagnosis: diagnosis } as any, updatedAt: new Date() })
+    .where(and(eq(campaignsTable.id, id), eq(campaignsTable.workspaceId, req.auth.workspaceId)));
+  await db.insert(auditLogsTable).values({ workspaceId: req.auth.workspaceId, campaignId: id, action: "campaign.social_diagnosis.approved", actor: req.auth.userId, data: { platform: current.platform, handle: current.handle } });
+  res.json({ diagnosis });
+});
 
 const createCampaignSchema = z.object({
   title: z.string().min(3),
