@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { z } from "zod";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   db, pool, campaignsTable, masterplanVersionsTable, pagesTable, landingRevisionsTable,
@@ -56,25 +57,25 @@ try {
   ids.push(...revisions.map(x => x.id));
 
   const before = await db.select({ id: masterplanVersionsTable.id, hash: masterplanVersionsTable.contentHash, updatedAt: masterplanVersionsTable.updatedAt }).from(masterplanVersionsTable).where(inArray(masterplanVersionsTable.id, masters.map(x => x.id)));
-  const catalog = GetCampaignControlRoomVersionSourcesResponse.parse(await getCampaignControlRoomVersionSources(campaign!.id, workspaceId));
-  const masterSource = catalog.sources.find(x => x.kind === "masterplan")!;
-  assert.deepEqual(masterSource.versions!.map(x => x.version), [4, 3, 2, 1]);
+  const catalog: z.infer<typeof GetCampaignControlRoomVersionSourcesResponse> = GetCampaignControlRoomVersionSourcesResponse.parse(await getCampaignControlRoomVersionSources(campaign!.id, workspaceId));
+  const masterSource = catalog.sources.find((x: { kind: string }) => x.kind === "masterplan")!;
+  assert.deepEqual(masterSource.versions!.map((x: { version?: number }) => x.version), [4, 3, 2, 1]);
   assert.equal(masterSource.historyAvailable, true); assert.equal(masterSource.comparable, true); assert.equal(masterSource.versionCount, 4);
-  const pageSource = catalog.sources.find(x => x.id === page!.id)!;
-  assert.deepEqual(pageSource.versions!.map(x => x.revision), [2, 1]); assert.equal(pageSource.versionCount, 2);
-  assert.ok(catalog.sources.some(x => x.kind === "content_piece" && !x.historyAvailable && x.reason === "history_not_persisted"));
+  const pageSource = catalog.sources.find((x: { id: string }) => x.id === page!.id)!;
+  assert.deepEqual(pageSource.versions!.map((x: { revision?: number }) => x.revision), [2, 1]); assert.equal(pageSource.versionCount, 2);
+  assert.ok(catalog.sources.some((x: { kind: string; historyAvailable: boolean; reason?: string }) => x.kind === "content_piece" && !x.historyAvailable && x.reason === "history_not_persisted"));
 
   const diffInput = { resource: "masterplan" as const, baseId: masters[0]!.id, targetId: masters[2]!.id, maxChanges: 500 };
-  const diff = GetCampaignControlRoomVersionDiffResponse.parse(await getCampaignControlRoomVersionDiff(campaign!.id, workspaceId, diffInput));
+  const diff: z.infer<typeof GetCampaignControlRoomVersionDiffResponse> = GetCampaignControlRoomVersionDiffResponse.parse(await getCampaignControlRoomVersionDiff(campaign!.id, workspaceId, diffInput));
   const repeat = await getCampaignControlRoomVersionDiff(campaign!.id, workspaceId, diffInput);
   assert.deepEqual(diff, repeat); assert.ok(diff.summary.added > 0 && diff.summary.removed > 0 && diff.summary.changed > 0);
-  assert.ok(diff.changes.some(x => x.category === "cta") && diff.changes.some(x => x.category === "media") && diff.changes.some(x => x.category === "rules") && diff.changes.some(x => x.category === "phase") && diff.changes.some(x => x.category === "text"));
+  assert.ok(diff.changes.some((x: { category: string }) => x.category === "cta") && diff.changes.some((x: { category: string }) => x.category === "media") && diff.changes.some((x: { category: string }) => x.category === "rules") && diff.changes.some((x: { category: string }) => x.category === "phase") && diff.changes.some((x: { category: string }) => x.category === "text"));
   assert.ok(diff.warnings.includes("values_truncated_to_preview_limit")); assert.ok(!JSON.stringify(diff).includes(secret));
-  const hiddenOnlyDiff = GetCampaignControlRoomVersionDiffResponse.parse(await getCampaignControlRoomVersionDiff(campaign!.id, workspaceId, { resource: "masterplan", baseId: masters[1]!.id, targetId: masters[2]!.id, maxChanges: 20 }));
+  const hiddenOnlyDiff: z.infer<typeof GetCampaignControlRoomVersionDiffResponse> = GetCampaignControlRoomVersionDiffResponse.parse(await getCampaignControlRoomVersionDiff(campaign!.id, workspaceId, { resource: "masterplan", baseId: masters[1]!.id, targetId: masters[2]!.id, maxChanges: 20 }));
   assert.ok(hiddenOnlyDiff.summary.changed >= 3);
-  assert.ok(hiddenOnlyDiff.changes.some(x => x.path === "/text"));
-  assert.ok(hiddenOnlyDiff.changes.some(x => x.path === "/sensitive"));
-  assert.ok(hiddenOnlyDiff.changes.some(x => x.path === "/url"));
+  assert.ok(hiddenOnlyDiff.changes.some((x: { path: string }) => x.path === "/text"));
+  assert.ok(hiddenOnlyDiff.changes.some((x: { path: string }) => x.path === "/sensitive"));
+  assert.ok(hiddenOnlyDiff.changes.some((x: { path: string }) => x.path === "/url"));
   assert.ok(!JSON.stringify(hiddenOnlyDiff).includes("tail-a"));
   assert.ok(!JSON.stringify(hiddenOnlyDiff).includes("tail-b"));
   assert.ok(!JSON.stringify(hiddenOnlyDiff).includes("token=one"));

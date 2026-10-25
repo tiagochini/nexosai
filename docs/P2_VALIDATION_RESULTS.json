@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-06T12:16:11.945Z",
+  "generatedAt": "2026-10-25T13:26:04.441Z",
   "scope": "Owned local containers and inert fixtures; no external provider calls",
   "checks": {
     "redisPolicy": "PASS authenticated, persistent AOF, noeviction, monitored health",
@@ -17,11 +17,11 @@
       "concurrency": 1,
       "requests": 96,
       "errors": 0,
-      "elapsedMs": 145,
-      "requestsPerSecond": 661,
-      "p50Ms": 1,
-      "p95Ms": 2,
-      "maxMs": 5,
+      "elapsedMs": 255,
+      "requestsPerSecond": 376,
+      "p50Ms": 2,
+      "p95Ms": 5,
+      "maxMs": 7,
       "peakPoolWaiting": 0
     },
     {
@@ -29,35 +29,35 @@
       "concurrency": 1,
       "requests": 64,
       "errors": 0,
-      "elapsedMs": 616,
+      "elapsedMs": 861,
+      "requestsPerSecond": 74,
+      "p50Ms": 12,
+      "p95Ms": 20,
+      "maxMs": 32,
+      "peakPoolWaiting": 0
+    },
+    {
+      "route": "/balance",
+      "concurrency": 8,
+      "requests": 96,
+      "errors": 0,
+      "elapsedMs": 89,
+      "requestsPerSecond": 1081,
+      "p50Ms": 6,
+      "p95Ms": 25,
+      "maxMs": 27,
+      "peakPoolWaiting": 0
+    },
+    {
+      "route": "/deduct",
+      "concurrency": 8,
+      "requests": 64,
+      "errors": 0,
+      "elapsedMs": 614,
       "requestsPerSecond": 104,
-      "p50Ms": 9,
-      "p95Ms": 11,
-      "maxMs": 19,
-      "peakPoolWaiting": 0
-    },
-    {
-      "route": "/balance",
-      "concurrency": 8,
-      "requests": 96,
-      "errors": 0,
-      "elapsedMs": 52,
-      "requestsPerSecond": 1838,
-      "p50Ms": 3,
-      "p95Ms": 16,
-      "maxMs": 17,
-      "peakPoolWaiting": 0
-    },
-    {
-      "route": "/deduct",
-      "concurrency": 8,
-      "requests": 64,
-      "errors": 0,
-      "elapsedMs": 344,
-      "requestsPerSecond": 186,
-      "p50Ms": 16,
-      "p95Ms": 219,
-      "maxMs": 331,
+      "p50Ms": 29,
+      "p95Ms": 290,
+      "maxMs": 587,
       "peakPoolWaiting": 0
     },
     {
@@ -65,23 +65,23 @@
       "concurrency": 32,
       "requests": 96,
       "errors": 0,
-      "elapsedMs": 51,
-      "requestsPerSecond": 1881,
-      "p50Ms": 15,
-      "p95Ms": 22,
-      "maxMs": 48,
-      "peakPoolWaiting": 8
+      "elapsedMs": 91,
+      "requestsPerSecond": 1060,
+      "p50Ms": 24,
+      "p95Ms": 41,
+      "maxMs": 86,
+      "peakPoolWaiting": 11
     },
     {
       "route": "/deduct",
       "concurrency": 32,
       "requests": 64,
       "errors": 0,
-      "elapsedMs": 367,
-      "requestsPerSecond": 174,
-      "p50Ms": 166,
-      "p95Ms": 201,
-      "maxMs": 220,
+      "elapsedMs": 566,
+      "requestsPerSecond": 113,
+      "p50Ms": 250,
+      "p95Ms": 290,
+      "maxMs": 314,
       "peakPoolWaiting": 22
     },
     {
@@ -89,39 +89,39 @@
       "concurrency": 32,
       "requests": 64,
       "errors": 0,
-      "elapsedMs": 1065,
+      "elapsedMs": 1067,
       "requestsPerSecond": 60,
       "p50Ms": 456,
-      "p95Ms": 606,
-      "maxMs": 608,
+      "p95Ms": 605,
+      "maxMs": 606,
       "peakPoolWaiting": 22
     }
   ],
   "redisVersion": "7.4.9",
-  "dockerResources": "20 CPUs / 12468797440 bytes RAM",
-  "dockerStats": "nexos-p2-tests-postgres-1: CPU=0.06% RAM=92.07MiB / 11.61GiB\nnexos-p2-tests-redis-1: CPU=3.55% RAM=5.316MiB / 768MiB\nnexos-p2-tests-redis-restore-1: CPU=0.31% RAM=7.117MiB / 11.61GiB",
-  "redisCrashRecoveryMs": 6666,
-  "redisOutageRecoveryMs": 6753,
-  "postgresOutageRecoveryMs": 3177,
+  "dockerResources": "20 CPUs / 12447821824 bytes RAM",
+  "dockerStats": "nexos-p2-tests-postgres-1: CPU=5.17% RAM=97.11MiB / 11.59GiB\nnexos-p2-tests-redis-1: CPU=0.40% RAM=5.152MiB / 768MiB\nnexos-p2-tests-redis-restore-1: CPU=3.05% RAM=3.836MiB / 11.59GiB",
+  "redisCrashRecoveryMs": 6742,
+  "redisOutageRecoveryMs": 6250,
+  "postgresOutageRecoveryMs": 3311,
   "providerFailures": {
     "rejected": 8,
-    "elapsedMs": 10029
+    "elapsedMs": 10037
   },
   "backup": {
-    "tables": 177,
-    "rows": 288,
+    "tables": 186,
+    "rows": 299,
     "redisKeys": 25,
     "archives": {
       "postgres": {
-        "bytes": 679717,
-        "sha256": "5b102b496e6425a79013585a09316b448ac1310176814b37ac1b02f28a5a2290"
+        "bytes": 751070,
+        "sha256": "5b82eba72e85a86f984ddb215e76ecf4098970dba9184587637fcd3a2fb06d26"
       },
       "redis": {
         "bytes": 2713,
-        "sha256": "121f1d03949420c7fda488c85543c5e5e713017e1cb2b76de85c2b77c36159e0"
+        "sha256": "95b4a3116508b8096a57c65de6df368b230ff891a78cfb8064ba7b89b27dfbbb"
       }
     },
-    "restoreMs": 7997,
+    "restoreMs": 8966,
     "encryptedTransport": "AES-256-GCM; wrong-key and tamper rejection passed"
   }
 }
