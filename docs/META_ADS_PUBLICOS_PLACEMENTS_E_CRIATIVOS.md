@@ -78,7 +78,7 @@ Campanha, conjuntos e anúncios continuam sendo criados **PAUSED**, com orçamen
 
 ```powershell
 $env:pnpm_config_verify_deps_before_run='false'
-$env:DATABASE_URL='postgresql://test:test@127.0.0.1:1/meta_unit_tests'
+$env:DATABASE_URL='postgres://postgres:postgres@127.0.0.1:5432/meta_unit_tests'
 pnpm --filter @workspace/api-server test:meta-assets
 pnpm --filter @workspace/api-server test:paid-media-launch
 pnpm --filter @workspace/api-server test:meta-operational-flow

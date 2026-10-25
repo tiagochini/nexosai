@@ -92,7 +92,7 @@ Atualização de 24/10: [Test Events e validação PostgreSQL](META_ADS_TRACKING
 Testes com mocks e URL de banco fictícia em porta local inválida, sem conexão com banco ou conta Meta:
 
 ```powershell
-$env:DATABASE_URL='postgresql://test:test@127.0.0.1:1/meta_unit_tests'
+$env:DATABASE_URL='postgres://postgres:postgres@127.0.0.1:5432/meta_unit_tests'
 $env:pnpm_config_verify_deps_before_run='false'
 pnpm --filter @workspace/api-server test:paid-media
 pnpm --filter @workspace/api-server test:paid-media-launch

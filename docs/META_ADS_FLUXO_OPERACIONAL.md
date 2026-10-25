@@ -69,7 +69,7 @@ Usar as dependências instaladas e banco fictício, sem conexão com a Meta:
 
 ```powershell
 $env:pnpm_config_verify_deps_before_run='false'
-$env:DATABASE_URL='postgresql://test:test@127.0.0.1:1/meta_unit_tests'
+$env:DATABASE_URL='postgres://postgres:postgres@127.0.0.1:5432/meta_unit_tests'
 pnpm --filter @workspace/api-server test:meta-operational-flow
 pnpm --filter @workspace/api-server test:meta-reliability
 pnpm --filter @workspace/api-server test:paid-media-events
