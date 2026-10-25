@@ -38,9 +38,9 @@ export const LoginResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "plan": zod.string().optional(),
-  "creditsBalance": zod.number().int().optional(),
-  "campaignsUsed": zod.number().int().optional(),
-  "campaignsLimit": zod.number().int().optional()
+  "creditsBalance": zod.int().optional(),
+  "campaignsUsed": zod.int().optional(),
+  "campaignsLimit": zod.int().optional()
 }).optional()
 })
 
@@ -70,9 +70,9 @@ export const RegisterResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "plan": zod.string().optional(),
-  "creditsBalance": zod.number().int().optional(),
-  "campaignsUsed": zod.number().int().optional(),
-  "campaignsLimit": zod.number().int().optional()
+  "creditsBalance": zod.int().optional(),
+  "campaignsUsed": zod.int().optional(),
+  "campaignsLimit": zod.int().optional()
 }).optional()
 })
 
@@ -94,9 +94,9 @@ export const GetMeResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "plan": zod.string().optional(),
-  "creditsBalance": zod.number().int().optional(),
-  "campaignsUsed": zod.number().int().optional(),
-  "campaignsLimit": zod.number().int().optional()
+  "creditsBalance": zod.int().optional(),
+  "campaignsUsed": zod.int().optional(),
+  "campaignsLimit": zod.int().optional()
 })
 })
 
@@ -141,9 +141,9 @@ export const ListCampaignsResponse = zod.object({
   "createdAt": zod.string().optional(),
   "updatedAt": zod.string().optional(),
   "intakeCompleteness": zod.object({
-  "answeredRequired": zod.number().int().optional(),
-  "totalRequired": zod.number().int().optional(),
-  "percentage": zod.number().int().optional()
+  "answeredRequired": zod.int().optional(),
+  "totalRequired": zod.int().optional(),
+  "percentage": zod.int().optional()
 }).optional().describe('Only present for campaigns in `intake` status — mirrors the exact percentage shown on the intake page itself.')
 }))
 })
@@ -153,8 +153,8 @@ export const ListCampaignsResponse = zod.object({
  * @summary Create campaign
  */
 export const CreateCampaignBody = zod.object({
-  "commercialProductId": zod.string().uuid(),
-  "commercialSubscriptionId": zod.string().uuid(),
+  "commercialProductId": zod.uuid(),
+  "commercialSubscriptionId": zod.uuid(),
   "title": zod.string(),
   "type": zod.enum(['launch', 'evergreen', 'relaunch', 'perpetual_launch', 'flash_sale', 'live_sale', 'continuous_sales', 'subscription_growth', 'authority', 'audience_growth', 'branding', 'creator_monetization', 'upsell', 'remarketing', 'affiliate', 'scale', 'regional_dominance', 'semente_launch']),
   "track": zod.enum(['six_digits', 'eight_digits', 'ten_digits']),
@@ -172,9 +172,9 @@ export const CreateCampaignResponse = zod.object({
   "createdAt": zod.string().optional(),
   "updatedAt": zod.string().optional(),
   "intakeCompleteness": zod.object({
-  "answeredRequired": zod.number().int().optional(),
-  "totalRequired": zod.number().int().optional(),
-  "percentage": zod.number().int().optional()
+  "answeredRequired": zod.int().optional(),
+  "totalRequired": zod.int().optional(),
+  "percentage": zod.int().optional()
 }).optional().describe('Only present for campaigns in `intake` status — mirrors the exact percentage shown on the intake page itself.')
 })
 })
@@ -198,9 +198,9 @@ export const GetCampaignResponse = zod.object({
   "createdAt": zod.string().optional(),
   "updatedAt": zod.string().optional(),
   "intakeCompleteness": zod.object({
-  "answeredRequired": zod.number().int().optional(),
-  "totalRequired": zod.number().int().optional(),
-  "percentage": zod.number().int().optional()
+  "answeredRequired": zod.int().optional(),
+  "totalRequired": zod.int().optional(),
+  "percentage": zod.int().optional()
 }).optional().describe('Only present for campaigns in `intake` status — mirrors the exact percentage shown on the intake page itself.')
 })
 })
@@ -226,7 +226,7 @@ export const GetCampaignControlRoomApprovalsResponse = zod.object({
   "pendingItems": zod.array(zod.object({
   "subjectType": zod.string(),
   "subjectId": zod.string(),
-  "subjectVersion": zod.number().int().nullish(),
+  "subjectVersion": zod.int().nullish(),
   "status": zod.string().optional(),
   "snapshotHash": zod.string(),
   "contextFingerprint": zod.string().nullish(),
@@ -253,22 +253,22 @@ export const GetCampaignControlRoomApprovalsResponse = zod.object({
   "decidedAt": zod.string(),
   "actorUserId": zod.string(),
   "resolvedSnapshotHash": zod.string(),
-  "subjectVersion": zod.number().int().nullish(),
+  "subjectVersion": zod.int().nullish(),
   "contextFingerprint": zod.string().nullish()
 })).optional(),
   "unavailableSources": zod.array(zod.object({
   "sourceType": zod.string().optional(),
   "reason": zod.string().optional()
 })).optional(),
-  "total": zod.number().int().optional(),
+  "total": zod.int().optional(),
   "catalogTruncated": zod.boolean().optional(),
   "catalogWarnings": zod.array(zod.string()).optional(),
   "counts": zod.object({
-  "pending": zod.number().int().optional(),
-  "slaScheduled": zod.number().int().optional(),
-  "slaDueSoon": zod.number().int().optional(),
-  "slaOverdue": zod.number().int().optional(),
-  "slaExpired": zod.number().int().optional()
+  "pending": zod.int().optional(),
+  "slaScheduled": zod.int().optional(),
+  "slaDueSoon": zod.int().optional(),
+  "slaOverdue": zod.int().optional(),
+  "slaExpired": zod.int().optional()
 })
 })
 
@@ -289,7 +289,7 @@ export const DecideCampaignControlRoomApprovalParams = zod.object({
 export const DecideCampaignControlRoomApprovalBody = zod.object({
   "decision": zod.enum(['approved', 'rejected', 'revision_requested']),
   "expectedSnapshotHash": zod.string().min(1),
-  "expectedVersion": zod.number().int().min(1).optional(),
+  "expectedVersion": zod.int().min(1).optional(),
   "reason": zod.string().optional(),
   "idempotencyKey": zod.string()
 })
@@ -304,7 +304,7 @@ export const DecideCampaignControlRoomApprovalResponse = zod.object({
   "decidedAt": zod.string(),
   "actorUserId": zod.string(),
   "resolvedSnapshotHash": zod.string(),
-  "subjectVersion": zod.number().int().nullish(),
+  "subjectVersion": zod.int().nullish(),
   "contextFingerprint": zod.string().nullish()
 }).optional()
 })
@@ -349,7 +349,7 @@ export const GetConditionalExecutionPolicyParams = zod.object({
 
 export const GetConditionalExecutionPolicyResponse = zod.object({
   "policy": zod.object({
-  "version": zod.number().int(),
+  "version": zod.int(),
   "enabled": zod.boolean(),
   "revokedAt": zod.string().nullish(),
   "expiresAt": zod.string(),
@@ -362,7 +362,7 @@ export const GetConditionalExecutionPolicyResponse = zod.object({
   "provider": zod.string().optional(),
   "accountId": zod.string().optional(),
   "entityId": zod.string().optional(),
-  "maxActionsPerDay": zod.number().int().optional()
+  "maxActionsPerDay": zod.int().optional()
 }).optional(),
   "approvedBinding": zod.object({
   "masterplanVersionId": zod.string().optional(),
@@ -385,8 +385,8 @@ export const GetConditionalExecutionPolicyResponse = zod.object({
 })).optional(),
   "events": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "counts": zod.object({
-  "intents": zod.number().int().optional(),
-  "attempts": zod.number().int().optional()
+  "intents": zod.int().optional(),
+  "attempts": zod.int().optional()
 }).optional()
 })
 
@@ -423,7 +423,7 @@ export const ListConditionalExecutionsParams = zod.object({
 
 export const ListConditionalExecutionsResponse = zod.object({
   "policy": zod.object({
-  "version": zod.number().int(),
+  "version": zod.int(),
   "enabled": zod.boolean(),
   "revokedAt": zod.string().nullish(),
   "expiresAt": zod.string(),
@@ -436,7 +436,7 @@ export const ListConditionalExecutionsResponse = zod.object({
   "provider": zod.string().optional(),
   "accountId": zod.string().optional(),
   "entityId": zod.string().optional(),
-  "maxActionsPerDay": zod.number().int().optional()
+  "maxActionsPerDay": zod.int().optional()
 }).optional(),
   "approvedBinding": zod.object({
   "masterplanVersionId": zod.string().optional(),
@@ -459,8 +459,8 @@ export const ListConditionalExecutionsResponse = zod.object({
 })).optional(),
   "events": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "counts": zod.object({
-  "intents": zod.number().int().optional(),
-  "attempts": zod.number().int().optional()
+  "intents": zod.int().optional(),
+  "attempts": zod.int().optional()
 }).optional()
 })
 
@@ -477,22 +477,22 @@ export const createRealizationContractBodyMaxAttemptsMax = 10;
 
 
 export const CreateRealizationContractBody = zod.object({
-  "campaignId": zod.string().uuid(),
-  "masterplanVersionId": zod.string().uuid(),
-  "subjectId": zod.string().uuid(),
+  "campaignId": zod.uuid(),
+  "masterplanVersionId": zod.uuid(),
+  "subjectId": zod.uuid(),
   "contextFingerprint": zod.string().min(1),
   "snapshotHash": zod.string().min(1),
   "action": zod.enum(['paid_media_pause', 'paid_media_launch']),
   "idempotencyKey": zod.string().min(1),
-  "maxAttempts": zod.number().int().min(1).max(createRealizationContractBodyMaxAttemptsMax).default(createRealizationContractBodyMaxAttemptsDefault),
+  "maxAttempts": zod.int().min(1).max(createRealizationContractBodyMaxAttemptsMax).default(createRealizationContractBodyMaxAttemptsDefault),
   "target": zod.record(zod.string(), zod.unknown()).optional()
 })
 
 export const CreateRealizationContractResponse = zod.object({
-  "id": zod.string().uuid(),
-  "campaignId": zod.string().uuid(),
-  "masterplanVersionId": zod.string().uuid(),
-  "subjectId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "campaignId": zod.uuid(),
+  "masterplanVersionId": zod.uuid(),
+  "subjectId": zod.uuid(),
   "subjectType": zod.string().optional(),
   "action": zod.enum(['paid_media_pause', 'paid_media_launch']),
   "state": zod.string(),
@@ -502,9 +502,9 @@ export const CreateRealizationContractResponse = zod.object({
   "contextFingerprint": zod.string().optional(),
   "snapshotHash": zod.string().optional(),
   "binding": zod.record(zod.string(), zod.unknown()).optional(),
-  "maxAttempts": zod.number().int(),
-  "attemptsUsed": zod.number().int(),
-  "createdByUserId": zod.string().uuid().optional(),
+  "maxAttempts": zod.int(),
+  "attemptsUsed": zod.int(),
+  "createdByUserId": zod.uuid().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -514,14 +514,14 @@ export const CreateRealizationContractResponse = zod.object({
  * @summary List realization contracts
  */
 export const ListRealizationContractsQueryParams = zod.object({
-  "campaignId": zod.coerce.string().uuid().optional()
+  "campaignId": zod.uuid().optional()
 })
 
 export const ListRealizationContractsResponseItem = zod.object({
-  "id": zod.string().uuid(),
-  "campaignId": zod.string().uuid(),
-  "masterplanVersionId": zod.string().uuid(),
-  "subjectId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "campaignId": zod.uuid(),
+  "masterplanVersionId": zod.uuid(),
+  "subjectId": zod.uuid(),
   "subjectType": zod.string().optional(),
   "action": zod.enum(['paid_media_pause', 'paid_media_launch']),
   "state": zod.string(),
@@ -531,9 +531,9 @@ export const ListRealizationContractsResponseItem = zod.object({
   "contextFingerprint": zod.string().optional(),
   "snapshotHash": zod.string().optional(),
   "binding": zod.record(zod.string(), zod.unknown()).optional(),
-  "maxAttempts": zod.number().int(),
-  "attemptsUsed": zod.number().int(),
-  "createdByUserId": zod.string().uuid().optional(),
+  "maxAttempts": zod.int(),
+  "attemptsUsed": zod.int(),
+  "createdByUserId": zod.uuid().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -544,15 +544,15 @@ export const ListRealizationContractsResponse = zod.array(ListRealizationContrac
  * @summary Get contract
  */
 export const GetRealizationContractParams = zod.object({
-  "id": zod.coerce.string().uuid()
+  "id": zod.uuid()
 })
 
 export const GetRealizationContractResponse = zod.object({
   "contract": zod.object({
-  "id": zod.string().uuid(),
-  "campaignId": zod.string().uuid(),
-  "masterplanVersionId": zod.string().uuid(),
-  "subjectId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "campaignId": zod.uuid(),
+  "masterplanVersionId": zod.uuid(),
+  "subjectId": zod.uuid(),
   "subjectType": zod.string().optional(),
   "action": zod.enum(['paid_media_pause', 'paid_media_launch']),
   "state": zod.string(),
@@ -562,16 +562,16 @@ export const GetRealizationContractResponse = zod.object({
   "contextFingerprint": zod.string().optional(),
   "snapshotHash": zod.string().optional(),
   "binding": zod.record(zod.string(), zod.unknown()).optional(),
-  "maxAttempts": zod.number().int(),
-  "attemptsUsed": zod.number().int(),
-  "createdByUserId": zod.string().uuid().optional(),
+  "maxAttempts": zod.int(),
+  "attemptsUsed": zod.int(),
+  "createdByUserId": zod.uuid().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 }),
   "attempts": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "contractId": zod.string().uuid(),
-  "number": zod.number().int(),
+  "id": zod.uuid(),
+  "contractId": zod.uuid(),
+  "number": zod.int(),
   "state": zod.string(),
   "receipt": zod.record(zod.string(), zod.unknown()).nullish(),
   "readback": zod.record(zod.string(), zod.unknown()).nullish(),
@@ -586,9 +586,9 @@ export const GetRealizationContractResponse = zod.object({
   "leaseExpiresAt": zod.coerce.date().nullish()
 })),
   "events": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "contractId": zod.string().uuid(),
-  "attemptId": zod.string().uuid().nullish(),
+  "id": zod.uuid(),
+  "contractId": zod.uuid(),
+  "attemptId": zod.uuid().nullish(),
   "type": zod.string(),
   "details": zod.record(zod.string(), zod.unknown()),
   "createdAt": zod.coerce.date()
@@ -600,14 +600,14 @@ export const GetRealizationContractResponse = zod.object({
  * @summary Preflight realization
  */
 export const PreflightRealizationParams = zod.object({
-  "id": zod.coerce.string().uuid()
+  "id": zod.uuid()
 })
 
 export const PreflightRealizationResponse = zod.object({
-  "id": zod.string().uuid(),
-  "campaignId": zod.string().uuid(),
-  "masterplanVersionId": zod.string().uuid(),
-  "subjectId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "campaignId": zod.uuid(),
+  "masterplanVersionId": zod.uuid(),
+  "subjectId": zod.uuid(),
   "subjectType": zod.string().optional(),
   "action": zod.enum(['paid_media_pause', 'paid_media_launch']),
   "state": zod.string(),
@@ -617,9 +617,9 @@ export const PreflightRealizationResponse = zod.object({
   "contextFingerprint": zod.string().optional(),
   "snapshotHash": zod.string().optional(),
   "binding": zod.record(zod.string(), zod.unknown()).optional(),
-  "maxAttempts": zod.number().int(),
-  "attemptsUsed": zod.number().int(),
-  "createdByUserId": zod.string().uuid().optional(),
+  "maxAttempts": zod.int(),
+  "attemptsUsed": zod.int(),
+  "createdByUserId": zod.uuid().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -629,16 +629,16 @@ export const PreflightRealizationResponse = zod.object({
  * @summary Execute realization
  */
 export const ExecuteRealizationParams = zod.object({
-  "id": zod.coerce.string().uuid()
+  "id": zod.uuid()
 })
 
 export const ExecuteRealizationResponse = zod.object({
   "success": zod.boolean(),
   "contract": zod.object({
-  "id": zod.string().uuid(),
-  "campaignId": zod.string().uuid(),
-  "masterplanVersionId": zod.string().uuid(),
-  "subjectId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "campaignId": zod.uuid(),
+  "masterplanVersionId": zod.uuid(),
+  "subjectId": zod.uuid(),
   "subjectType": zod.string().optional(),
   "action": zod.enum(['paid_media_pause', 'paid_media_launch']),
   "state": zod.string(),
@@ -648,16 +648,16 @@ export const ExecuteRealizationResponse = zod.object({
   "contextFingerprint": zod.string().optional(),
   "snapshotHash": zod.string().optional(),
   "binding": zod.record(zod.string(), zod.unknown()).optional(),
-  "maxAttempts": zod.number().int(),
-  "attemptsUsed": zod.number().int(),
-  "createdByUserId": zod.string().uuid().optional(),
+  "maxAttempts": zod.int(),
+  "attemptsUsed": zod.int(),
+  "createdByUserId": zod.uuid().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 }),
   "attempt": zod.object({
-  "id": zod.string().uuid(),
-  "contractId": zod.string().uuid(),
-  "number": zod.number().int(),
+  "id": zod.uuid(),
+  "contractId": zod.uuid(),
+  "number": zod.int(),
   "state": zod.string(),
   "receipt": zod.record(zod.string(), zod.unknown()).nullish(),
   "readback": zod.record(zod.string(), zod.unknown()).nullish(),
@@ -678,14 +678,14 @@ export const ExecuteRealizationResponse = zod.object({
  * @summary Retry realization
  */
 export const RetryRealizationParams = zod.object({
-  "id": zod.coerce.string().uuid()
+  "id": zod.uuid()
 })
 
 export const RetryRealizationResponse = zod.object({
-  "id": zod.string().uuid(),
-  "campaignId": zod.string().uuid(),
-  "masterplanVersionId": zod.string().uuid(),
-  "subjectId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "campaignId": zod.uuid(),
+  "masterplanVersionId": zod.uuid(),
+  "subjectId": zod.uuid(),
   "subjectType": zod.string().optional(),
   "action": zod.enum(['paid_media_pause', 'paid_media_launch']),
   "state": zod.string(),
@@ -695,9 +695,9 @@ export const RetryRealizationResponse = zod.object({
   "contextFingerprint": zod.string().optional(),
   "snapshotHash": zod.string().optional(),
   "binding": zod.record(zod.string(), zod.unknown()).optional(),
-  "maxAttempts": zod.number().int(),
-  "attemptsUsed": zod.number().int(),
-  "createdByUserId": zod.string().uuid().optional(),
+  "maxAttempts": zod.int(),
+  "attemptsUsed": zod.int(),
+  "createdByUserId": zod.uuid().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -707,14 +707,14 @@ export const RetryRealizationResponse = zod.object({
  * @summary QC realization
  */
 export const QcRealizationParams = zod.object({
-  "id": zod.coerce.string().uuid()
+  "id": zod.uuid()
 })
 
 export const QcRealizationResponse = zod.object({
-  "id": zod.string().uuid(),
-  "campaignId": zod.string().uuid(),
-  "masterplanVersionId": zod.string().uuid(),
-  "subjectId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "campaignId": zod.uuid(),
+  "masterplanVersionId": zod.uuid(),
+  "subjectId": zod.uuid(),
   "subjectType": zod.string().optional(),
   "action": zod.enum(['paid_media_pause', 'paid_media_launch']),
   "state": zod.string(),
@@ -724,9 +724,9 @@ export const QcRealizationResponse = zod.object({
   "contextFingerprint": zod.string().optional(),
   "snapshotHash": zod.string().optional(),
   "binding": zod.record(zod.string(), zod.unknown()).optional(),
-  "maxAttempts": zod.number().int(),
-  "attemptsUsed": zod.number().int(),
-  "createdByUserId": zod.string().uuid().optional(),
+  "maxAttempts": zod.int(),
+  "attemptsUsed": zod.int(),
+  "createdByUserId": zod.uuid().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -736,14 +736,14 @@ export const QcRealizationResponse = zod.object({
  * @summary Monitor realization
  */
 export const MonitorRealizationParams = zod.object({
-  "id": zod.coerce.string().uuid()
+  "id": zod.uuid()
 })
 
 export const MonitorRealizationResponse = zod.object({
-  "id": zod.string().uuid(),
-  "campaignId": zod.string().uuid(),
-  "masterplanVersionId": zod.string().uuid(),
-  "subjectId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "campaignId": zod.uuid(),
+  "masterplanVersionId": zod.uuid(),
+  "subjectId": zod.uuid(),
   "subjectType": zod.string().optional(),
   "action": zod.enum(['paid_media_pause', 'paid_media_launch']),
   "state": zod.string(),
@@ -753,9 +753,9 @@ export const MonitorRealizationResponse = zod.object({
   "contextFingerprint": zod.string().optional(),
   "snapshotHash": zod.string().optional(),
   "binding": zod.record(zod.string(), zod.unknown()).optional(),
-  "maxAttempts": zod.number().int(),
-  "attemptsUsed": zod.number().int(),
-  "createdByUserId": zod.string().uuid().optional(),
+  "maxAttempts": zod.int(),
+  "attemptsUsed": zod.int(),
+  "createdByUserId": zod.uuid().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -765,14 +765,14 @@ export const MonitorRealizationResponse = zod.object({
  * @summary Compensate realization
  */
 export const CompensateRealizationParams = zod.object({
-  "id": zod.coerce.string().uuid()
+  "id": zod.uuid()
 })
 
 export const CompensateRealizationResponse = zod.object({
-  "id": zod.string().uuid(),
-  "campaignId": zod.string().uuid(),
-  "masterplanVersionId": zod.string().uuid(),
-  "subjectId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "campaignId": zod.uuid(),
+  "masterplanVersionId": zod.uuid(),
+  "subjectId": zod.uuid(),
   "subjectType": zod.string().optional(),
   "action": zod.enum(['paid_media_pause', 'paid_media_launch']),
   "state": zod.string(),
@@ -782,9 +782,9 @@ export const CompensateRealizationResponse = zod.object({
   "contextFingerprint": zod.string().optional(),
   "snapshotHash": zod.string().optional(),
   "binding": zod.record(zod.string(), zod.unknown()).optional(),
-  "maxAttempts": zod.number().int(),
-  "attemptsUsed": zod.number().int(),
-  "createdByUserId": zod.string().uuid().optional(),
+  "maxAttempts": zod.int(),
+  "attemptsUsed": zod.int(),
+  "createdByUserId": zod.uuid().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -807,7 +807,7 @@ export const GetCampaignControlRoomEvidenceQueryParams = zod.object({
   "cursor": zod.coerce.string().optional(),
   "state": zod.enum(['planned', 'attempted', 'provider_confirmed', 'artifact_qc']).optional(),
   "subjectType": zod.enum(['social_post', 'paid_media_attempt', 'paid_media_launch_plan', 'paid_media_proposal', 'product_sale', 'revenue_event']).optional(),
-  "subjectId": zod.coerce.string().uuid().optional(),
+  "subjectId": zod.uuid().optional(),
   "from": zod.date().optional().describe('Inclusive UTC lower bound.'),
   "to": zod.date().optional().describe('Exclusive UTC upper bound.')
 })
@@ -822,12 +822,12 @@ export const getCampaignControlRoomEvidenceResponseFacetsSubjectTypesItemCountMi
 
 export const GetCampaignControlRoomEvidenceResponse = zod.object({
   "records": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "subjectType": zod.string(),
-  "subjectId": zod.string().uuid(),
+  "subjectId": zod.uuid(),
   "state": zod.enum(['planned', 'attempted', 'provider_confirmed', 'artifact_qc']),
   "createdAt": zod.coerce.date(),
-  "masterplanVersionId": zod.string().uuid().nullable(),
+  "masterplanVersionId": zod.uuid().nullable(),
   "contextFingerprint": zod.string().nullable().describe('Sanitized opaque prefix only.'),
   "details": zod.unknown().describe('Recursively sanitized, size-bounded evidence details.'),
   "source": zod.union([zod.object({
@@ -839,7 +839,7 @@ export const GetCampaignControlRoomEvidenceResponse = zod.object({
   "pageInfo": zod.object({
   "nextCursor": zod.string().nullable(),
   "hasNextPage": zod.boolean(),
-  "limit": zod.number().int()
+  "limit": zod.int()
 }),
   "appliedFilters": zod.object({
   "state": zod.string().nullable(),
@@ -848,15 +848,15 @@ export const GetCampaignControlRoomEvidenceResponse = zod.object({
   "from": zod.string().nullable(),
   "to": zod.string().nullable()
 }),
-  "total": zod.number().int().min(getCampaignControlRoomEvidenceResponseTotalMin),
+  "total": zod.int().min(getCampaignControlRoomEvidenceResponseTotalMin),
   "facets": zod.object({
   "states": zod.array(zod.object({
   "value": zod.string(),
-  "count": zod.number().int().min(getCampaignControlRoomEvidenceResponseFacetsStatesItemCountMin)
+  "count": zod.int().min(getCampaignControlRoomEvidenceResponseFacetsStatesItemCountMin)
 })),
   "subjectTypes": zod.array(zod.object({
   "value": zod.string(),
-  "count": zod.number().int().min(getCampaignControlRoomEvidenceResponseFacetsSubjectTypesItemCountMin)
+  "count": zod.int().min(getCampaignControlRoomEvidenceResponseFacetsSubjectTypesItemCountMin)
 }))
 })
 })
@@ -891,7 +891,7 @@ export const GetCampaignControlRoomPreviewsResponse = zod.object({
   "records": zod.array(zod.object({
   "source": zod.object({
   "kind": zod.enum(['content_piece', 'media_brief', 'creative', 'social_post', 'campaign_asset', 'page', 'video_project']),
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "type": zod.string(),
   "status": zod.string(),
   "title": zod.string(),
@@ -908,7 +908,7 @@ export const GetCampaignControlRoomPreviewsResponse = zod.object({
   "pageInfo": zod.object({
   "nextCursor": zod.string().nullable(),
   "hasNextPage": zod.boolean(),
-  "limit": zod.number().int()
+  "limit": zod.int()
 }),
   "appliedFilters": zod.object({
   "kind": zod.union([zod.enum(['content_piece', 'media_brief', 'creative', 'social_post', 'campaign_asset', 'page', 'video_project']),zod.null()]),
@@ -916,7 +916,7 @@ export const GetCampaignControlRoomPreviewsResponse = zod.object({
   "updatedFrom": zod.string().nullable(),
   "updatedTo": zod.string().nullable()
 }),
-  "total": zod.number().int().min(getCampaignControlRoomPreviewsResponseTotalMin)
+  "total": zod.int().min(getCampaignControlRoomPreviewsResponseTotalMin)
 })
 
 
@@ -939,20 +939,20 @@ export const GetCampaignControlRoomVersionSourcesResponse = zod.object({
   "label": zod.string(),
   "historyAvailable": zod.boolean(),
   "comparable": zod.boolean(),
-  "versionCount": zod.number().int().min(getCampaignControlRoomVersionSourcesResponseSourcesItemVersionCountMin),
+  "versionCount": zod.int().min(getCampaignControlRoomVersionSourcesResponseSourcesItemVersionCountMin),
   "catalogTruncated": zod.boolean(),
   "reason": zod.string().optional(),
   "versions": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "label": zod.string(),
   "status": zod.string(),
   "createdAt": zod.coerce.date(),
   "contentHash": zod.string(),
-  "version": zod.number().int().optional(),
-  "revision": zod.number().int().optional()
+  "version": zod.int().optional(),
+  "revision": zod.int().optional()
 })).optional(),
   "current": zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "status": zod.string(),
   "updatedAt": zod.coerce.date()
 }).optional()
@@ -974,9 +974,9 @@ export const getCampaignControlRoomVersionDiffQueryMaxChangesMax = 1000;
 
 export const GetCampaignControlRoomVersionDiffQueryParams = zod.object({
   "resource": zod.enum(['masterplan', 'page']),
-  "sourceId": zod.coerce.string().uuid().optional(),
-  "baseId": zod.coerce.string().uuid(),
-  "targetId": zod.coerce.string().uuid(),
+  "sourceId": zod.uuid().optional(),
+  "baseId": zod.uuid(),
+  "targetId": zod.uuid(),
   "maxChanges": zod.coerce.number().int().min(1).max(getCampaignControlRoomVersionDiffQueryMaxChangesMax).default(getCampaignControlRoomVersionDiffQueryMaxChangesDefault)
 })
 
@@ -998,28 +998,28 @@ export const GetCampaignControlRoomVersionDiffResponse = zod.object({
   "id": zod.string()
 }).optional(),
   "base": zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "label": zod.string(),
   "status": zod.string(),
   "createdAt": zod.coerce.date(),
   "contentHash": zod.string(),
-  "version": zod.number().int().optional(),
-  "revision": zod.number().int().optional()
+  "version": zod.int().optional(),
+  "revision": zod.int().optional()
 }),
   "target": zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "label": zod.string(),
   "status": zod.string(),
   "createdAt": zod.coerce.date(),
   "contentHash": zod.string(),
-  "version": zod.number().int().optional(),
-  "revision": zod.number().int().optional()
+  "version": zod.int().optional(),
+  "revision": zod.int().optional()
 }),
   "summary": zod.object({
-  "added": zod.number().int().min(getCampaignControlRoomVersionDiffResponseSummaryAddedMin),
-  "removed": zod.number().int().min(getCampaignControlRoomVersionDiffResponseSummaryRemovedMin),
-  "changed": zod.number().int().min(getCampaignControlRoomVersionDiffResponseSummaryChangedMin),
-  "unchanged": zod.number().int().min(getCampaignControlRoomVersionDiffResponseSummaryUnchangedMin),
+  "added": zod.int().min(getCampaignControlRoomVersionDiffResponseSummaryAddedMin),
+  "removed": zod.int().min(getCampaignControlRoomVersionDiffResponseSummaryRemovedMin),
+  "changed": zod.int().min(getCampaignControlRoomVersionDiffResponseSummaryChangedMin),
+  "unchanged": zod.int().min(getCampaignControlRoomVersionDiffResponseSummaryUnchangedMin),
   "truncated": zod.boolean()
 }),
   "changes": zod.array(zod.object({
@@ -1370,7 +1370,7 @@ export const GetIntakeParams = zod.object({
 
 export const GetIntakeResponse = zod.object({
   "intakeData": zod.record(zod.string(), zod.unknown()),
-  "completeness": zod.number().int(),
+  "completeness": zod.int(),
   "missingRequired": zod.array(zod.string()).optional(),
   "questions": zod.array(zod.object({
   "key": zod.string(),
@@ -1395,7 +1395,7 @@ export const SaveIntakeBody = zod.object({
 
 export const SaveIntakeResponse = zod.object({
   "intakeData": zod.record(zod.string(), zod.unknown()),
-  "completeness": zod.number().int(),
+  "completeness": zod.int(),
   "missingRequired": zod.array(zod.string()).optional(),
   "questions": zod.array(zod.object({
   "key": zod.string(),
@@ -1415,7 +1415,7 @@ export const GetIntakeScoreParams = zod.object({
 })
 
 export const GetIntakeScoreResponse = zod.object({
-  "score": zod.number().int(),
+  "score": zod.int(),
   "label": zod.string(),
   "details": zod.record(zod.string(), zod.unknown()).optional()
 })
@@ -1430,7 +1430,7 @@ export const ListSequencesResponse = zod.object({
   "name": zod.string(),
   "model": zod.string(),
   "status": zod.string(),
-  "totalDays": zod.number().int(),
+  "totalDays": zod.int(),
   "productName": zod.string().optional(),
   "productPrice": zod.string().optional(),
   "revenueTarget": zod.string().optional(),
@@ -1448,7 +1448,7 @@ export const ListSequencesResponse = zod.object({
 export const CreateSequenceBody = zod.object({
   "name": zod.string(),
   "model": zod.enum(['plf', 'formula_de_lancamento', 'semente', 'afiliado', 'perpetual', 'custom']),
-  "totalDays": zod.number().int(),
+  "totalDays": zod.int(),
   "productName": zod.string().optional(),
   "productPrice": zod.string().optional(),
   "revenueTarget": zod.string().optional(),
@@ -1462,7 +1462,7 @@ export const CreateSequenceResponse = zod.object({
   "name": zod.string(),
   "model": zod.string(),
   "status": zod.string(),
-  "totalDays": zod.number().int(),
+  "totalDays": zod.int(),
   "productName": zod.string().optional(),
   "productPrice": zod.string().optional(),
   "revenueTarget": zod.string().optional(),
@@ -1486,7 +1486,7 @@ export const GetSequenceResponse = zod.object({
   "name": zod.string(),
   "model": zod.string(),
   "status": zod.string(),
-  "totalDays": zod.number().int(),
+  "totalDays": zod.int(),
   "productName": zod.string().optional(),
   "productPrice": zod.string().optional(),
   "revenueTarget": zod.string().optional(),
@@ -1500,7 +1500,7 @@ export const GetSequenceResponse = zod.object({
   "phase": zod.string(),
   "name": zod.string(),
   "description": zod.string().optional(),
-  "dayIndex": zod.number().int(),
+  "dayIndex": zod.int(),
   "channel": zod.string(),
   "mentalTrigger": zod.string().optional(),
   "status": zod.string(),
@@ -1521,13 +1521,13 @@ export const GenerateSequencePlanParams = zod.object({
 })
 
 export const GenerateSequencePlanResponse = zod.object({
-  "itemsCreated": zod.number().int().optional(),
+  "itemsCreated": zod.int().optional(),
   "sequence": zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "model": zod.string(),
   "status": zod.string(),
-  "totalDays": zod.number().int(),
+  "totalDays": zod.int(),
   "productName": zod.string().optional(),
   "productPrice": zod.string().optional(),
   "revenueTarget": zod.string().optional(),
@@ -1541,7 +1541,7 @@ export const GenerateSequencePlanResponse = zod.object({
   "phase": zod.string(),
   "name": zod.string(),
   "description": zod.string().optional(),
-  "dayIndex": zod.number().int(),
+  "dayIndex": zod.int(),
   "channel": zod.string(),
   "mentalTrigger": zod.string().optional(),
   "status": zod.string(),
@@ -1574,7 +1574,7 @@ export const ActivateSequenceResponse = zod.object({
   "name": zod.string(),
   "model": zod.string(),
   "status": zod.string(),
-  "totalDays": zod.number().int(),
+  "totalDays": zod.int(),
   "productName": zod.string().optional(),
   "productPrice": zod.string().optional(),
   "revenueTarget": zod.string().optional(),
@@ -1588,7 +1588,7 @@ export const ActivateSequenceResponse = zod.object({
   "phase": zod.string(),
   "name": zod.string(),
   "description": zod.string().optional(),
-  "dayIndex": zod.number().int(),
+  "dayIndex": zod.int(),
   "channel": zod.string(),
   "mentalTrigger": zod.string().optional(),
   "status": zod.string(),
@@ -1610,7 +1610,7 @@ export const GetSequenceCalendarParams = zod.object({
 
 export const GetSequenceCalendarResponse = zod.object({
   "days": zod.array(zod.object({
-  "dayIndex": zod.number().int(),
+  "dayIndex": zod.int(),
   "date": zod.string().nullish(),
   "phaseLabel": zod.string(),
   "items": zod.array(zod.object({
@@ -1618,7 +1618,7 @@ export const GetSequenceCalendarResponse = zod.object({
   "phase": zod.string(),
   "name": zod.string(),
   "description": zod.string().optional(),
-  "dayIndex": zod.number().int(),
+  "dayIndex": zod.int(),
   "channel": zod.string(),
   "mentalTrigger": zod.string().optional(),
   "status": zod.string(),
@@ -1641,16 +1641,16 @@ export const GetSequenceTodayParams = zod.object({
 })
 
 export const GetSequenceTodayResponse = zod.object({
-  "currentDayIndex": zod.number().int(),
+  "currentDayIndex": zod.int(),
   "currentPhaseLabel": zod.string().optional(),
-  "progress": zod.number().int(),
+  "progress": zod.int(),
   "today": zod.object({
   "items": zod.array(zod.object({
   "id": zod.string(),
   "phase": zod.string(),
   "name": zod.string(),
   "description": zod.string().optional(),
-  "dayIndex": zod.number().int(),
+  "dayIndex": zod.int(),
   "channel": zod.string(),
   "mentalTrigger": zod.string().optional(),
   "status": zod.string(),
@@ -1664,7 +1664,7 @@ export const GetSequenceTodayResponse = zod.object({
   "phase": zod.string(),
   "name": zod.string(),
   "description": zod.string().optional(),
-  "dayIndex": zod.number().int(),
+  "dayIndex": zod.int(),
   "channel": zod.string(),
   "mentalTrigger": zod.string().optional(),
   "status": zod.string(),
@@ -1673,7 +1673,7 @@ export const GetSequenceTodayResponse = zod.object({
 })).optional()
 }).optional(),
   "nextSevenDays": zod.array(zod.object({
-  "dayIndex": zod.number().int(),
+  "dayIndex": zod.int(),
   "date": zod.string().nullish(),
   "phaseLabel": zod.string(),
   "items": zod.array(zod.object({
@@ -1681,7 +1681,7 @@ export const GetSequenceTodayResponse = zod.object({
   "phase": zod.string(),
   "name": zod.string(),
   "description": zod.string().optional(),
-  "dayIndex": zod.number().int(),
+  "dayIndex": zod.int(),
   "channel": zod.string(),
   "mentalTrigger": zod.string().optional(),
   "status": zod.string(),
@@ -1706,15 +1706,15 @@ export const GetSequenceAnalyticsResponse = zod.object({
   "analytics": zod.object({
   "sequenceId": zod.string(),
   "segments": zod.object({
-  "hot": zod.number().int(),
-  "warm": zod.number().int(),
-  "cold": zod.number().int(),
-  "converted": zod.number().int(),
-  "unsubscribed": zod.number().int()
+  "hot": zod.int(),
+  "warm": zod.int(),
+  "cold": zod.int(),
+  "converted": zod.int(),
+  "unsubscribed": zod.int()
 }),
   "byItem": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "adaptiveSuggestions": zod.array(zod.string()).optional(),
-  "healthScore": zod.number().int(),
+  "healthScore": zod.int(),
   "engagementTrend": zod.string().optional()
 })
 })
@@ -1734,13 +1734,13 @@ export const ListSequenceContactsResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string().nullish(),
   "segment": zod.string(),
-  "engagementScore": zod.number().int().optional(),
-  "itemsReceived": zod.number().int().optional(),
-  "itemsOpened": zod.number().int().optional(),
-  "conversions": zod.number().int().optional(),
+  "engagementScore": zod.int().optional(),
+  "itemsReceived": zod.int().optional(),
+  "itemsOpened": zod.int().optional(),
+  "conversions": zod.int().optional(),
   "createdAt": zod.string().optional()
 })),
-  "total": zod.number().int()
+  "total": zod.int()
 })
 
 
@@ -1766,13 +1766,13 @@ export const AddSequenceContactsResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string().nullish(),
   "segment": zod.string(),
-  "engagementScore": zod.number().int().optional(),
-  "itemsReceived": zod.number().int().optional(),
-  "itemsOpened": zod.number().int().optional(),
-  "conversions": zod.number().int().optional(),
+  "engagementScore": zod.int().optional(),
+  "itemsReceived": zod.int().optional(),
+  "itemsOpened": zod.int().optional(),
+  "conversions": zod.int().optional(),
   "createdAt": zod.string().optional()
 })).optional(),
-  "total": zod.number().int().optional()
+  "total": zod.int().optional()
 })
 
 
@@ -1794,7 +1794,7 @@ export const GenerateItemCopyResponse = zod.object({
   "phase": zod.string(),
   "name": zod.string(),
   "description": zod.string().optional(),
-  "dayIndex": zod.number().int(),
+  "dayIndex": zod.int(),
   "channel": zod.string(),
   "mentalTrigger": zod.string().optional(),
   "status": zod.string(),
@@ -1808,9 +1808,9 @@ export const GenerateItemCopyResponse = zod.object({
  * @summary Get workspace credits balance
  */
 export const GetCreditsBalanceResponse = zod.object({
-  "balance": zod.number().int(),
-  "used": zod.number().int().optional(),
-  "limit": zod.number().int().optional()
+  "balance": zod.int(),
+  "used": zod.int().optional(),
+  "limit": zod.int().optional()
 })
 
 
@@ -1835,7 +1835,7 @@ export const ListPaidMediaAccountsParams = zod.object({
 
 export const ListPaidMediaAccountsResponse = zod.object({
   "accounts": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "providerAccountId": zod.string(),
   "accountName": zod.string().nullish(),
   "currency": zod.string(),
@@ -1847,18 +1847,18 @@ export const ListPaidMediaAccountsResponse = zod.object({
 
 export const SelectPaidMediaAccountParams = zod.object({
   "provider": zod.enum(['meta_ads', 'tiktok_ads', 'google_ads']),
-  "accountId": zod.coerce.string().uuid()
+  "accountId": zod.uuid()
 })
 
 export const SelectPaidMediaAccountResponse = zod.object({
-  "accountId": zod.string().uuid(),
+  "accountId": zod.uuid(),
   "providerAccountId": zod.string(),
   "selected": zod.boolean()
 })
 
 
 export const SyncPaidMediaAccountParams = zod.object({
-  "accountId": zod.coerce.string().uuid()
+  "accountId": zod.uuid()
 })
 
 export const SyncPaidMediaAccountBody = zod.object({
@@ -1867,9 +1867,9 @@ export const SyncPaidMediaAccountBody = zod.object({
 })
 
 export const SyncPaidMediaAccountResponse = zod.object({
-  "accountId": zod.string().uuid(),
-  "entitiesUpserted": zod.number().int(),
-  "insightsUpserted": zod.number().int(),
+  "accountId": zod.uuid(),
+  "entitiesUpserted": zod.int(),
+  "insightsUpserted": zod.int(),
   "errors": zod.array(zod.object({
   "entityType": zod.enum(['campaign', 'ad_set', 'ad', 'creative']),
   "message": zod.string()
@@ -1879,14 +1879,14 @@ export const SyncPaidMediaAccountResponse = zod.object({
 
 export const GetPaidMediaSyncStatusResponse = zod.object({
   "cursors": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "workspaceId": zod.string().uuid(),
-  "accountId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "workspaceId": zod.uuid(),
+  "accountId": zod.uuid(),
   "entityType": zod.enum(['campaign', 'ad_set', 'ad', 'creative']),
   "cursor": zod.string().nullish(),
   "syncedThrough": zod.coerce.date().nullish(),
   "claimedAt": zod.coerce.date().nullish(),
-  "claimToken": zod.string().uuid().nullish(),
+  "claimToken": zod.uuid().nullish(),
   "lastError": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -1896,22 +1896,22 @@ export const GetPaidMediaSyncStatusResponse = zod.object({
 
 export const ListPaidMediaPoliciesResponse = zod.object({
   "policies": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "workspaceId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "workspaceId": zod.uuid(),
   "provider": zod.union([zod.literal('meta_ads'),zod.literal('tiktok_ads'),zod.literal('google_ads'),zod.literal(null)]).nullish(),
-  "accountId": zod.string().uuid().nullish(),
+  "accountId": zod.uuid().nullish(),
   "enabled": zod.boolean(),
   "autoExecute": zod.boolean(),
   "mandatoryPause": zod.boolean(),
   "mandatoryPauseReason": zod.string().nullish(),
-  "minimumSampleSize": zod.number().int(),
+  "minimumSampleSize": zod.int(),
   "minimumDataQualityScore": zod.string(),
   "maxDailyBudgetChangePercent": zod.string().nullish(),
   "maxDailyBudgetChangeAbsolute": zod.string().nullish(),
   "maxBidChangePercent": zod.string().nullish(),
   "acceptedAt": zod.coerce.date().nullish(),
   "acceptanceExpiresAt": zod.coerce.date().nullish(),
-  "acceptedBy": zod.string().uuid().nullish(),
+  "acceptedBy": zod.uuid().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 }))
@@ -1919,7 +1919,7 @@ export const ListPaidMediaPoliciesResponse = zod.object({
 
 
 export const UpdatePaidMediaPolicyParams = zod.object({
-  "policyId": zod.coerce.string().uuid()
+  "policyId": zod.uuid()
 })
 
 export const updatePaidMediaPolicyBodyMinimumSampleSizeMin = 0;
@@ -1939,7 +1939,7 @@ export const UpdatePaidMediaPolicyBody = zod.object({
   "enabled": zod.boolean().optional(),
   "mandatoryPause": zod.boolean().optional(),
   "mandatoryPauseReason": zod.string().nullish(),
-  "minimumSampleSize": zod.number().int().min(updatePaidMediaPolicyBodyMinimumSampleSizeMin).optional(),
+  "minimumSampleSize": zod.int().min(updatePaidMediaPolicyBodyMinimumSampleSizeMin).optional(),
   "minimumDataQualityScore": zod.number().min(updatePaidMediaPolicyBodyMinimumDataQualityScoreMin).max(updatePaidMediaPolicyBodyMinimumDataQualityScoreMax).optional(),
   "maxDailyBudgetChangePercent": zod.number().min(updatePaidMediaPolicyBodyMaxDailyBudgetChangePercentMin).nullish(),
   "maxDailyBudgetChangeAbsolute": zod.number().min(updatePaidMediaPolicyBodyMaxDailyBudgetChangeAbsoluteMin).nullish(),
@@ -1949,22 +1949,22 @@ export const UpdatePaidMediaPolicyBody = zod.object({
 
 export const UpdatePaidMediaPolicyResponse = zod.object({
   "policy": zod.object({
-  "id": zod.string().uuid(),
-  "workspaceId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "workspaceId": zod.uuid(),
   "provider": zod.union([zod.literal('meta_ads'),zod.literal('tiktok_ads'),zod.literal('google_ads'),zod.literal(null)]).nullish(),
-  "accountId": zod.string().uuid().nullish(),
+  "accountId": zod.uuid().nullish(),
   "enabled": zod.boolean(),
   "autoExecute": zod.boolean(),
   "mandatoryPause": zod.boolean(),
   "mandatoryPauseReason": zod.string().nullish(),
-  "minimumSampleSize": zod.number().int(),
+  "minimumSampleSize": zod.int(),
   "minimumDataQualityScore": zod.string(),
   "maxDailyBudgetChangePercent": zod.string().nullish(),
   "maxDailyBudgetChangeAbsolute": zod.string().nullish(),
   "maxBidChangePercent": zod.string().nullish(),
   "acceptedAt": zod.coerce.date().nullish(),
   "acceptanceExpiresAt": zod.coerce.date().nullish(),
-  "acceptedBy": zod.string().uuid().nullish(),
+  "acceptedBy": zod.uuid().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -1972,8 +1972,8 @@ export const UpdatePaidMediaPolicyResponse = zod.object({
 
 
 export const GeneratePaidMediaProposalBody = zod.object({
-  "accountId": zod.string().uuid(),
-  "entityId": zod.string().uuid(),
+  "accountId": zod.uuid(),
+  "entityId": zod.uuid(),
   "actionType": zod.enum(['pause', 'resume', 'update_daily_budget', 'update_bid']),
   "proposedChange": zod.record(zod.string(), zod.unknown()),
   "optimizationOutput": zod.record(zod.string(), zod.unknown()).optional(),
@@ -1982,10 +1982,10 @@ export const GeneratePaidMediaProposalBody = zod.object({
 
 export const GeneratePaidMediaProposalResponse = zod.object({
   "proposal": zod.object({
-  "id": zod.string().uuid(),
-  "workspaceId": zod.string().uuid(),
-  "accountId": zod.string().uuid().nullish(),
-  "entityId": zod.string().uuid().nullish(),
+  "id": zod.uuid(),
+  "workspaceId": zod.uuid(),
+  "accountId": zod.uuid().nullish(),
+  "entityId": zod.uuid().nullish(),
   "provider": zod.enum(['meta_ads', 'tiktok_ads', 'google_ads']),
   "actionType": zod.enum(['pause', 'resume', 'update_daily_budget', 'update_bid', 'update_creative_status', 'update_creative_rotation', 'cross_platform_budget_move']),
   "status": zod.enum(['pending_approval', 'approved', 'rejected', 'expired', 'executing', 'verified', 'failed', 'rolled_back']),
@@ -2004,10 +2004,10 @@ export const GeneratePaidMediaProposalResponse = zod.object({
 
 export const ListPaidMediaProposalsResponse = zod.object({
   "proposals": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "workspaceId": zod.string().uuid(),
-  "accountId": zod.string().uuid().nullish(),
-  "entityId": zod.string().uuid().nullish(),
+  "id": zod.uuid(),
+  "workspaceId": zod.uuid(),
+  "accountId": zod.uuid().nullish(),
+  "entityId": zod.uuid().nullish(),
   "provider": zod.enum(['meta_ads', 'tiktok_ads', 'google_ads']),
   "actionType": zod.enum(['pause', 'resume', 'update_daily_budget', 'update_bid', 'update_creative_status', 'update_creative_rotation', 'cross_platform_budget_move']),
   "status": zod.enum(['pending_approval', 'approved', 'rejected', 'expired', 'executing', 'verified', 'failed', 'rolled_back']),
@@ -2025,15 +2025,15 @@ export const ListPaidMediaProposalsResponse = zod.object({
 
 
 export const GetPaidMediaProposalParams = zod.object({
-  "proposalId": zod.coerce.string().uuid()
+  "proposalId": zod.uuid()
 })
 
 export const GetPaidMediaProposalResponse = zod.object({
   "proposal": zod.object({
-  "id": zod.string().uuid(),
-  "workspaceId": zod.string().uuid(),
-  "accountId": zod.string().uuid().nullish(),
-  "entityId": zod.string().uuid().nullish(),
+  "id": zod.uuid(),
+  "workspaceId": zod.uuid(),
+  "accountId": zod.uuid().nullish(),
+  "entityId": zod.uuid().nullish(),
   "provider": zod.enum(['meta_ads', 'tiktok_ads', 'google_ads']),
   "actionType": zod.enum(['pause', 'resume', 'update_daily_budget', 'update_bid', 'update_creative_status', 'update_creative_rotation', 'cross_platform_budget_move']),
   "status": zod.enum(['pending_approval', 'approved', 'rejected', 'expired', 'executing', 'verified', 'failed', 'rolled_back']),
@@ -2051,7 +2051,7 @@ export const GetPaidMediaProposalResponse = zod.object({
 
 
 export const ApprovePaidMediaProposalParams = zod.object({
-  "proposalId": zod.coerce.string().uuid()
+  "proposalId": zod.uuid()
 })
 
 export const ApprovePaidMediaProposalBody = zod.object({
@@ -2060,10 +2060,10 @@ export const ApprovePaidMediaProposalBody = zod.object({
 })
 
 export const ApprovePaidMediaProposalResponse = zod.object({
-  "id": zod.string().uuid(),
-  "workspaceId": zod.string().uuid(),
-  "accountId": zod.string().uuid().nullish(),
-  "entityId": zod.string().uuid().nullish(),
+  "id": zod.uuid(),
+  "workspaceId": zod.uuid(),
+  "accountId": zod.uuid().nullish(),
+  "entityId": zod.uuid().nullish(),
   "provider": zod.enum(['meta_ads', 'tiktok_ads', 'google_ads']),
   "actionType": zod.enum(['pause', 'resume', 'update_daily_budget', 'update_bid', 'update_creative_status', 'update_creative_rotation', 'cross_platform_budget_move']),
   "status": zod.enum(['pending_approval', 'approved', 'rejected', 'expired', 'executing', 'verified', 'failed', 'rolled_back']),
@@ -2080,7 +2080,7 @@ export const ApprovePaidMediaProposalResponse = zod.object({
 
 
 export const RejectPaidMediaProposalParams = zod.object({
-  "proposalId": zod.coerce.string().uuid()
+  "proposalId": zod.uuid()
 })
 
 export const RejectPaidMediaProposalBody = zod.object({
@@ -2089,10 +2089,10 @@ export const RejectPaidMediaProposalBody = zod.object({
 })
 
 export const RejectPaidMediaProposalResponse = zod.object({
-  "id": zod.string().uuid(),
-  "workspaceId": zod.string().uuid(),
-  "accountId": zod.string().uuid().nullish(),
-  "entityId": zod.string().uuid().nullish(),
+  "id": zod.uuid(),
+  "workspaceId": zod.uuid(),
+  "accountId": zod.uuid().nullish(),
+  "entityId": zod.uuid().nullish(),
   "provider": zod.enum(['meta_ads', 'tiktok_ads', 'google_ads']),
   "actionType": zod.enum(['pause', 'resume', 'update_daily_budget', 'update_bid', 'update_creative_status', 'update_creative_rotation', 'cross_platform_budget_move']),
   "status": zod.enum(['pending_approval', 'approved', 'rejected', 'expired', 'executing', 'verified', 'failed', 'rolled_back']),
@@ -2109,14 +2109,14 @@ export const RejectPaidMediaProposalResponse = zod.object({
 
 
 export const ExecutePaidMediaProposalParams = zod.object({
-  "proposalId": zod.coerce.string().uuid()
+  "proposalId": zod.uuid()
 })
 
 export const ExecutePaidMediaProposalResponse = zod.object({
-  "id": zod.string().uuid(),
-  "proposalId": zod.string().uuid(),
-  "workspaceId": zod.string().uuid(),
-  "attemptNumber": zod.number().int(),
+  "id": zod.uuid(),
+  "proposalId": zod.uuid(),
+  "workspaceId": zod.uuid(),
+  "attemptNumber": zod.int(),
   "status": zod.enum(['pending', 'executing', 'succeeded', 'failed', 'verification_failed', 'rolled_back']),
   "idempotencyKey": zod.string(),
   "beforeSnapshot": zod.record(zod.string(), zod.unknown()),
@@ -2134,10 +2134,10 @@ export const ExecutePaidMediaProposalResponse = zod.object({
 
 export const ListPaidMediaActionAttemptsResponse = zod.object({
   "attempts": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "proposalId": zod.string().uuid(),
-  "workspaceId": zod.string().uuid(),
-  "attemptNumber": zod.number().int(),
+  "id": zod.uuid(),
+  "proposalId": zod.uuid(),
+  "workspaceId": zod.uuid(),
+  "attemptNumber": zod.int(),
   "status": zod.enum(['pending', 'executing', 'succeeded', 'failed', 'verification_failed', 'rolled_back']),
   "idempotencyKey": zod.string(),
   "beforeSnapshot": zod.record(zod.string(), zod.unknown()),
@@ -2155,15 +2155,15 @@ export const ListPaidMediaActionAttemptsResponse = zod.object({
 
 
 export const GetPaidMediaActionAttemptParams = zod.object({
-  "attemptId": zod.coerce.string().uuid()
+  "attemptId": zod.uuid()
 })
 
 export const GetPaidMediaActionAttemptResponse = zod.object({
   "attempt": zod.object({
-  "id": zod.string().uuid(),
-  "proposalId": zod.string().uuid(),
-  "workspaceId": zod.string().uuid(),
-  "attemptNumber": zod.number().int(),
+  "id": zod.uuid(),
+  "proposalId": zod.uuid(),
+  "workspaceId": zod.uuid(),
+  "attemptNumber": zod.int(),
   "status": zod.enum(['pending', 'executing', 'succeeded', 'failed', 'verification_failed', 'rolled_back']),
   "idempotencyKey": zod.string(),
   "beforeSnapshot": zod.record(zod.string(), zod.unknown()),
@@ -2181,7 +2181,7 @@ export const GetPaidMediaActionAttemptResponse = zod.object({
 
 
 export const RollbackPaidMediaActionAttemptParams = zod.object({
-  "attemptId": zod.coerce.string().uuid()
+  "attemptId": zod.uuid()
 })
 
 export const RollbackPaidMediaActionAttemptResponse = zod.object({
@@ -2198,8 +2198,8 @@ export const createOperationalCouncilCycleBodyIdempotencyKeyMax = 200;
 
 
 export const CreateOperationalCouncilCycleBody = zod.object({
-  "campaignId": zod.string().uuid(),
-  "masterplanVersionId": zod.string().uuid(),
+  "campaignId": zod.uuid(),
+  "masterplanVersionId": zod.uuid(),
   "contextFingerprint": zod.string(),
   "snapshotHash": zod.string(),
   "idempotencyKey": zod.string().max(createOperationalCouncilCycleBodyIdempotencyKeyMax)
@@ -2209,7 +2209,7 @@ export const CreateOperationalCouncilCycleResponse = zod.record(zod.string(), zo
 
 
 export const ListOperationalCouncilCyclesParams = zod.object({
-  "campaignId": zod.coerce.string().uuid()
+  "campaignId": zod.uuid()
 })
 
 export const ListOperationalCouncilCyclesResponseItem = zod.record(zod.string(), zod.unknown())
@@ -2217,7 +2217,7 @@ export const ListOperationalCouncilCyclesResponse = zod.array(ListOperationalCou
 
 
 export const GetOperationalCouncilCycleParams = zod.object({
-  "id": zod.coerce.string().uuid()
+  "id": zod.uuid()
 })
 
 export const GetOperationalCouncilCycleResponse = zod.object({
@@ -2230,7 +2230,7 @@ export const GetOperationalCouncilCycleResponse = zod.object({
 
 
 export const AppendOperationalCouncilMinutesParams = zod.object({
-  "id": zod.coerce.string().uuid()
+  "id": zod.uuid()
 })
 
 export const appendOperationalCouncilMinutesBodySummaryMax = 4000;
@@ -2241,16 +2241,16 @@ export const appendOperationalCouncilMinutesBodyEvidenceRefsMax = 50;
 
 export const AppendOperationalCouncilMinutesBody = zod.object({
   "summary": zod.string().max(appendOperationalCouncilMinutesBodySummaryMax),
-  "evidenceRefs": zod.array(zod.object({
+  "evidenceRefs": zod.array(zod.looseObject({
 
-}).passthrough()).max(appendOperationalCouncilMinutesBodyEvidenceRefsMax).optional()
+})).max(appendOperationalCouncilMinutesBodyEvidenceRefsMax).optional()
 })
 
 export const AppendOperationalCouncilMinutesResponse = zod.record(zod.string(), zod.unknown())
 
 
 export const CreateOperationalCouncilDecisionParams = zod.object({
-  "id": zod.coerce.string().uuid()
+  "id": zod.uuid()
 })
 
 export const createOperationalCouncilDecisionBodyRationaleSummaryMax = 4000;
@@ -2261,30 +2261,30 @@ export const createOperationalCouncilDecisionBodyEvidenceRefsMax = 50;
 
 export const CreateOperationalCouncilDecisionBody = zod.object({
   "rationaleSummary": zod.string().max(createOperationalCouncilDecisionBodyRationaleSummaryMax),
-  "target": zod.object({
+  "target": zod.looseObject({
 
-}).passthrough(),
-  "baseline": zod.object({
+}),
+  "baseline": zod.looseObject({
 
-}).passthrough(),
-  "threshold": zod.object({
+}),
+  "threshold": zod.looseObject({
 
-}).passthrough(),
-  "window": zod.object({
+}),
+  "window": zod.looseObject({
 
-}).passthrough(),
+}),
   "dueAt": zod.coerce.date(),
   "actionRequired": zod.boolean().optional(),
-  "evidenceRefs": zod.array(zod.object({
+  "evidenceRefs": zod.array(zod.looseObject({
 
-}).passthrough()).max(createOperationalCouncilDecisionBodyEvidenceRefsMax).optional()
+})).max(createOperationalCouncilDecisionBodyEvidenceRefsMax).optional()
 })
 
 export const CreateOperationalCouncilDecisionResponse = zod.record(zod.string(), zod.unknown())
 
 
 export const LinkOperationalCouncilActionParams = zod.object({
-  "id": zod.coerce.string().uuid()
+  "id": zod.uuid()
 })
 
 export const linkOperationalCouncilActionBodyIdempotencyKeyMax = 200;
@@ -2293,7 +2293,7 @@ export const linkOperationalCouncilActionBodyIdempotencyKeyMax = 200;
 
 export const LinkOperationalCouncilActionBody = zod.object({
   "family": zod.enum(['paid_media_pause', 'paid_media_launch']),
-  "realizationContractId": zod.string().uuid(),
+  "realizationContractId": zod.uuid(),
   "idempotencyKey": zod.string().max(linkOperationalCouncilActionBodyIdempotencyKeyMax)
 })
 
@@ -2301,11 +2301,11 @@ export const LinkOperationalCouncilActionResponse = zod.record(zod.string(), zod
 
 
 export const VerifyOperationalCouncilOutcomeParams = zod.object({
-  "id": zod.coerce.string().uuid()
+  "id": zod.uuid()
 })
 
 export const VerifyOperationalCouncilOutcomeBody = zod.object({
-  "nextCycleId": zod.string().uuid()
+  "nextCycleId": zod.uuid()
 })
 
 export const VerifyOperationalCouncilOutcomeResponse = zod.record(zod.string(), zod.unknown())
@@ -2318,7 +2318,7 @@ export const listSocialIntelligenceInboxQueryLimitMax = 100;
 export const ListSocialIntelligenceInboxQueryParams = zod.object({
   "from": zod.date().optional(),
   "to": zod.date().optional(),
-  "campaignId": zod.coerce.string().uuid().optional(),
+  "campaignId": zod.uuid().optional(),
   "cursor": zod.coerce.string().optional(),
   "limit": zod.coerce.number().int().min(1).max(listSocialIntelligenceInboxQueryLimitMax).optional()
 })
@@ -2333,8 +2333,8 @@ export const ListSocialIntelligenceInboxResponse = zod.object({
 
 export const ListSocialIntelligenceReportsResponse = zod.object({
   "reports": zod.array(zod.object({
-  "id": zod.string().uuid(),
-  "workspaceId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "workspaceId": zod.uuid(),
   "periodFrom": zod.coerce.date(),
   "periodTo": zod.coerce.date(),
   "filters": zod.record(zod.string(), zod.unknown()),
@@ -2348,12 +2348,12 @@ export const ListSocialIntelligenceReportsResponse = zod.object({
 export const SaveSocialIntelligenceReportBody = zod.object({
   "from": zod.coerce.date().optional(),
   "to": zod.coerce.date().optional(),
-  "campaignId": zod.string().uuid().optional()
+  "campaignId": zod.uuid().optional()
 })
 
 export const SaveSocialIntelligenceReportResponse = zod.object({
-  "id": zod.string().uuid(),
-  "workspaceId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "workspaceId": zod.uuid(),
   "periodFrom": zod.coerce.date(),
   "periodTo": zod.coerce.date(),
   "filters": zod.record(zod.string(), zod.unknown()),
@@ -2364,12 +2364,12 @@ export const SaveSocialIntelligenceReportResponse = zod.object({
 
 
 export const GetSocialIntelligenceReportParams = zod.object({
-  "id": zod.coerce.string().uuid()
+  "id": zod.uuid()
 })
 
 export const GetSocialIntelligenceReportResponse = zod.object({
-  "id": zod.string().uuid(),
-  "workspaceId": zod.string().uuid(),
+  "id": zod.uuid(),
+  "workspaceId": zod.uuid(),
   "periodFrom": zod.coerce.date(),
   "periodTo": zod.coerce.date(),
   "filters": zod.record(zod.string(), zod.unknown()),
@@ -2383,8 +2383,8 @@ export const GetSocialIntelligenceReportResponse = zod.object({
  * @summary Preview or confirm governed social publication
  */
 export const PublishSocialContentParams = zod.object({
-  "campaignId": zod.coerce.string().uuid(),
-  "pieceId": zod.coerce.string().uuid()
+  "campaignId": zod.uuid(),
+  "pieceId": zod.uuid()
 })
 
 export const publishSocialContentBodyConfirmedDefault = false;
@@ -2402,20 +2402,20 @@ export const PublishSocialContentResponse = zod.object({
   "fingerprint": zod.string().optional(),
   "caption": zod.string().optional(),
   "mediaUrls": zod.array(zod.string()).optional(),
-  "masterplanVersionId": zod.string().uuid().optional(),
+  "masterplanVersionId": zod.uuid().optional(),
   "platforms": zod.array(zod.record(zod.string(), zod.unknown())).optional()
 }),
   "posts": zod.array(zod.object({
-  "postId": zod.string().uuid().optional(),
-  "integrationId": zod.string().uuid(),
+  "postId": zod.uuid().optional(),
+  "integrationId": zod.uuid(),
   "platform": zod.string(),
   "status": zod.string(),
   "confirmed": zod.boolean(),
   "providerPostId": zod.string().nullish(),
   "errorCode": zod.string().optional()
 })).optional(),
-  "publishedCount": zod.number().int().optional(),
-  "unresolvedCount": zod.number().int().optional()
+  "publishedCount": zod.int().optional(),
+  "unresolvedCount": zod.int().optional()
 })
 
 
@@ -2428,12 +2428,12 @@ export const getLifecycleOverviewResponseLtvContactsMin = 0;
 
 
 export const GetLifecycleOverviewResponse = zod.object({
-  "contactStages": zod.record(zod.string(), zod.number().int().min(getLifecycleOverviewResponseContactStagesMinOne)),
-  "actions": zod.record(zod.string(), zod.record(zod.string(), zod.number().int().min(getLifecycleOverviewResponseActionsMinTwo))),
+  "contactStages": zod.record(zod.string(), zod.int().min(getLifecycleOverviewResponseContactStagesMinOne)),
+  "actions": zod.record(zod.string(), zod.record(zod.string(), zod.int().min(getLifecycleOverviewResponseActionsMinTwo))),
   "referrals": zod.record(zod.string(), zod.unknown()),
   "ltv": zod.object({
-  "contacts": zod.number().int().min(getLifecycleOverviewResponseLtvContactsMin),
-  "recordedLifetimeValueCents": zod.number().int(),
+  "contacts": zod.int().min(getLifecycleOverviewResponseLtvContactsMin),
+  "recordedLifetimeValueCents": zod.int(),
   "attribution": zod.literal("recorded_local_ledger_not_externally_attributed_kpi")
 })
 })
@@ -2456,19 +2456,19 @@ export const ListLifecycleActionsQueryParams = zod.object({
 
 export const ListLifecycleActionsResponse = zod.object({
   "actions": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "type": zod.enum(['recovery', 'onboarding', 'retention', 'upsell']),
   "status": zod.enum(['pending', 'claimed', 'completed', 'failed', 'suppressed']),
   "channel": zod.string().optional(),
   "reason": zod.string().nullish(),
-  "riskScore": zod.number().int().nullish(),
+  "riskScore": zod.int().nullish(),
   "createdAt": zod.coerce.date(),
   "completedAt": zod.coerce.date().nullish()
 })),
   "pagination": zod.object({
-  "limit": zod.number().int(),
-  "offset": zod.number().int(),
-  "total": zod.number().int()
+  "limit": zod.int(),
+  "offset": zod.int(),
+  "total": zod.int()
 })
 })
 
@@ -2493,22 +2493,22 @@ export const listLifecycleContactsResponseContactsItemChurnRiskMax = 100;
 
 export const ListLifecycleContactsResponse = zod.object({
   "contacts": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "displayLabel": zod.string(),
   "email": zod.string().nullable(),
   "stage": zod.string(),
-  "churnRisk": zod.number().int().min(listLifecycleContactsResponseContactsItemChurnRiskMin).max(listLifecycleContactsResponseContactsItemChurnRiskMax),
+  "churnRisk": zod.int().min(listLifecycleContactsResponseContactsItemChurnRiskMin).max(listLifecycleContactsResponseContactsItemChurnRiskMax),
   "lastActivityAt": zod.coerce.date().nullable()
 })),
   "pagination": zod.object({
-  "limit": zod.number().int(),
-  "offset": zod.number().int()
+  "limit": zod.int(),
+  "offset": zod.int()
 })
 })
 
 
 export const GetLifecycleTimelineParams = zod.object({
-  "contactId": zod.coerce.string().uuid()
+  "contactId": zod.uuid()
 })
 
 export const getLifecycleTimelineQueryLimitDefault = 25;
@@ -2531,35 +2531,35 @@ export const getLifecycleTimelineResponseContactChurnRiskMax = 100;
 
 export const GetLifecycleTimelineResponse = zod.object({
   "contact": zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "displayLabel": zod.string(),
   "email": zod.string().nullable(),
   "stage": zod.string(),
-  "churnRisk": zod.number().int().min(getLifecycleTimelineResponseContactChurnRiskMin).max(getLifecycleTimelineResponseContactChurnRiskMax),
+  "churnRisk": zod.int().min(getLifecycleTimelineResponseContactChurnRiskMin).max(getLifecycleTimelineResponseContactChurnRiskMax),
   "lastActivityAt": zod.coerce.date().nullable()
 }),
   "events": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "type": zod.string(),
   "status": zod.string(),
   "occurredAt": zod.coerce.date(),
   "processedAt": zod.coerce.date().nullable()
 })),
   "onboarding": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "status": zod.string(),
   "activatedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })),
   "recovery": zod.array(zod.object({
-  "id": zod.string().uuid(),
+  "id": zod.uuid(),
   "status": zod.string(),
   "channel": zod.string(),
   "createdAt": zod.coerce.date(),
   "completedAt": zod.coerce.date().nullable()
 })),
   "pagination": zod.object({
-  "limit": zod.number().int(),
-  "offset": zod.number().int()
+  "limit": zod.int(),
+  "offset": zod.int()
 })
 })
