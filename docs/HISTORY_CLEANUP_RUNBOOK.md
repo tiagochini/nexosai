@@ -46,7 +46,7 @@ Não adicione `--force` até confirmar que o clone é descartável, está sem mu
 locais e possui um mirror de recuperação verificado.
 
 Uma execução isolada deste procedimento foi validada em 02/10/2026. Consulte
-`docs/HISTORY_REWRITE_VALIDATION.md` para as evidências e a ressalva de corrupção
+`docs/evidence/HISTORY_REWRITE_VALIDATION.md` para as evidências e a ressalva de corrupção
 encontrada no checkout local.
 
 ## Validação antes do push

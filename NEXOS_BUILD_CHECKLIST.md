@@ -5,14 +5,14 @@ agora respeita configuração de resposta privada e post de origem; sem
 sequências em segundo plano para outro post. Teste cobre ausência dessas
 sequências. Executor P3 encerra processos após asserções/cleanup completos.
 16 regressões, tipos/build e jornada P3 completa passaram localmente.
-[Evidência](docs/PUSH_VALIDATION_FIX.md). Revalidação remota ligada ao SHA
+[Evidência](docs/evidence/PUSH_VALIDATION_FIX.md). Revalidação remota ligada ao SHA
 dos workflows do GitHub. Próximo checkpoint funcional: agendamento confirmado.
 
 
 **Asaas — pendência de estorno encerrada, 13/10/2026:** pagamento
 pay_gl3wvdoscgq65dt9 REFUNDED, dois DONE de R$43,99; reversões de
 250 + 250 créditos, saldo de teste 3.900, hold liberado. Consulta READ ONLY;
-nenhum novo pedido ou ajuste manual. [Evidência](docs/ASAAS_PARTIAL_REFUND_COMPLETION.json).
+nenhum novo pedido ou ajuste manual. [Evidência](docs/evidence/ASAAS_PARTIAL_REFUND_COMPLETION.json).
 Próximo checkpoint de execução: implementar/homologar agendamento confirmado.
 
 
@@ -23,7 +23,7 @@ sandbox 4.400 conciliados; estorno total DONE/reversão única. Parcial de cart�
 segue PENDING; chargeback não é comprovado pelo simples refund. 16 regressões,
 tipos/build e probes públicos de assinatura/token passaram. Corrigida reason
 paid para exigir pagamento paid; acessos por plano/convite/admin preservados.
-[Evidência](docs/EXECUTION_INTEGRATIONS_VALIDATION.md). Etapa não encerrada:
+[Evidência](docs/evidence/EXECUTION_INTEGRATIONS_VALIDATION.md). Etapa não encerrada:
 agendamento de campanha segue bloqueado por falta de confirmação versionada.
 Próximo checkpoint: implementar esse fluxo e testar envio futuro aprovado.
 Founder preservado; sem nova publicação, cobrança, pedido de refund ou push.
@@ -45,7 +45,7 @@ Docker passaram (isolamento, HTTP, realtime, concorrência, pagamentos, estornos
 cookies e logs), assim como typecheck e permissões SQL reais somente leitura.
 Corrigidos replay de débito entre contas/projetos/ações e cobrança de campanha
 alheia. Founder preservado; modo ilimitado ativo, sem chave duplicada.
-[Evidência](docs/SECURITY_CREDITS_VALIDATION.md). Não homologado integralmente:
+[Evidência](docs/evidence/SECURITY_CREDITS_VALIDATION.md). Não homologado integralmente:
 runner mantém cobrança independente, saldo baixo apenas informativo e falha
 de débito não fatal; ainda falta conciliar isenção/bloqueio de estorno e provar
 compensação em falha após geração. Imagens/vídeos fora do escopo.
@@ -60,7 +60,7 @@ agentType/agentRole. Quatro regressões Docker, contratos, tipos e build passara
 Campanha ainda não homologada: calendário 21/30 dias, dois agentes com falha,
 dois criativos sem imagem, afirmações de copy sem comprovação e aprovações
 pendentes. Dados preservados; não houve inferência paga ou execução externa.
-[Evidência](docs/CAMPAIGN_FULL_VALIDATION.md).
+[Evidência](docs/evidence/CAMPAIGN_FULL_VALIDATION.md).
 Próximo checkpoint: revisar cobertura/afirmações e recuperar passos com falha.
 Sem push; não promove a campanha à pronta para lançamento.
 
@@ -85,7 +85,7 @@ Próximo checkpoint: conferir faturamento OpenAI e repetir preview real. Sem pus
 para docs/architecture e docs/archive; uma cópia byte a byte idêntica removida.
 Conteúdo preservado; links, instruções de leitura e registro de artefatos
 atualizados. Verificação de 238 arquivos Markdown sem novos links quebrados.
-[Evidência](docs/ROOT_DOCUMENTATION_ORGANIZATION.md).
+[Evidência](docs/evidence/ROOT_DOCUMENTATION_ORGANIZATION.md).
 Próximo checkpoint: usar [índice da documentação](docs/README.md). Nenhuma
 mudança na aplicação, credenciais ou banco. Sem push.
 
@@ -95,7 +95,7 @@ refez manualmente e confirmou funcionamento. 77 chamadas reais: Claude 54,
 OpenAI 1, Gemini 22. Totais de tokens íntegros; consumo calculado registrado;
 nenhuma chave de débito idempotente duplicada na campanha. Cadeia canônica
 (63 combinações, timeout/429/503/falha total simulados) e isolamento passaram.
-[Evidência e limites](docs/AI_PROVIDER_CAMPAIGN_VALIDATION.md).
+[Evidência e limites](docs/evidence/AI_PROVIDER_CAMPAIGN_VALIDATION.md).
 Conciliação financeira permanece em Segurança e créditos; matriz de conteúdo
 em Qualidade e fechamento. Sem inferência adicional ou alteração da campanha.
 Próximo checkpoint: homologar a jornada da campanha completa. Sem push.
@@ -154,13 +154,13 @@ estratégia/conteúdo com ressalvas. CI remoto ainda não executado. Sem push.
 testes 401 anteriores não validaram as chaves fornecidas. Cadastro corrigido.
 Messages Opus retornou 200 com e sem workspace; geração Haiku real 200.
 Consumo retornado pelo provedor. Jornada do briefing/gateway ainda pendente.
-[Evidência corrigida](docs/CLAUDE_WORKSPACE_VALIDATION.md).
+[Evidência corrigida](docs/evidence/CLAUDE_WORKSPACE_VALIDATION.md).
 Próximo checkpoint: briefing real com persistência e consumo pelo gateway. Sem push.
 
 **Claude — nova chave, 12/10/2026:** credencial substituída apenas no
 perfil local ignorado. Consulta real de modelos com workspace retornou 401
 tanto por x-api-key quanto por Bearer. Nenhuma geração executada.
-[Evidência](docs/CLAUDE_KEY_VALIDATION_RESULTS.json).
+[Evidência](docs/evidence/CLAUDE_KEY_VALIDATION_RESULTS.json).
 Próximo checkpoint: chave válida criada no Claude Console e geração real.
 Sem push.
 
@@ -168,7 +168,7 @@ Sem push.
 gateway nativo envia anthropic-workspace-id. Tipos do servidor passaram.
 Consulta real de modelos retornou 401 invalid x-api-key. Workspace e geração
 ainda não homologados; runtime requer reinício com chave válida.
-[Evidência](docs/CLAUDE_WORKSPACE_VALIDATION.md).
+[Evidência](docs/evidence/CLAUDE_WORKSPACE_VALIDATION.md).
 Próximo checkpoint: chave válida e resposta real pelo gateway. Sem push.
 
 **Briefing Central — 11/10/2026:** corrigida a origem da lista: campanhas
@@ -199,7 +199,7 @@ healthz/readyz 200. [Evidência](docs/CAMPAIGN_CREATION_BINDING.md).
 Próximo checkpoint: atualizar a página e iniciar o briefing real pelo navegador.
 Nenhum push executado.
 
-**Vínculo gratuito founder — 11/10/2026:** produto de lançamento e assinatura comercial ativa criados exclusivamente no workspace de founder@nexos.ai em homologação. Valor R, sem chamada ao Asaas; vínculo relido no banco e concessão auditada. Plano e saldo existentes preservados. Evidência: [FOUNDER_FREE_COMMERCIAL_LINK_RESULTS.json](docs/FOUNDER_FREE_COMMERCIAL_LINK_RESULTS.json). Contrato de tela/API corrigido e criação validada em banco Docker isolado; conferir a jornada real no navegador. Nenhum push executado.
+**Vínculo gratuito founder — 11/10/2026:** produto de lançamento e assinatura comercial ativa criados exclusivamente no workspace de founder@nexos.ai em homologação. Valor R, sem chamada ao Asaas; vínculo relido no banco e concessão auditada. Plano e saldo existentes preservados. Evidência: [FOUNDER_FREE_COMMERCIAL_LINK_RESULTS.json](docs/evidence/FOUNDER_FREE_COMMERCIAL_LINK_RESULTS.json). Contrato de tela/API corrigido e criação validada em banco Docker isolado; conferir a jornada real no navegador. Nenhum push executado.
 
 **MAPA no Direct founder — 10/10/2026:** nova DM real respondida automaticamente
 pelo webhook às 11:50:46 (America/Cuiaba). Turno keyword_reply, status sent e
@@ -218,7 +218,7 @@ hidden=false. Usuário confirmou Direct e resposta pública no aplicativo móvel
 Instagram. Jornada real do post de teste validada. Ciclo por comentários próprios
 detectado e bloqueado; guard permanente antes dos claims aplicado e testado em
 Docker. Tipos e cinco regressões passaram.
-[Evidência](docs/INSTAGRAM_MAPA_AUTONOMOUS_RESULTS.json).
+[Evidência](docs/evidence/INSTAGRAM_MAPA_AUTONOMOUS_RESULTS.json).
 Próximo checkpoint: consolidar gravação da jornada e conferir os requisitos e
 contadores do Meta App Review. Nenhum push executado.
 
@@ -230,7 +230,7 @@ instalado na Página vinculada. Duas DMs reais recebidas, encaminhadas para huma
 por ausência de campanha aprovada. MAPA respondido publicamente por sincronização
 manual de comentários reais, sem duplicar no replay; resposta privada confirmada pela Meta.
 Regra limitada ao post de teste. Tipos, contratos de publicação e cinco regressões
-em Docker isolado passaram. [Evidência](docs/INSTAGRAM_HOMOLOGATION_RESULTS.json).
+em Docker isolado passaram. [Evidência](docs/evidence/INSTAGRAM_HOMOLOGATION_RESULTS.json).
 Próximo checkpoint: comprovar callback autônomo de comentário e resposta de DM
 com campanha/flow aprovado. Nenhum push executado.
 
@@ -241,7 +241,7 @@ Três filas habilitadas, sem interrupção e zero eventos penalizados atualmente
 Três erros históricos Academy HTTP 502 por Cloudflare origin_bad_gateway foram
 localizados; o mesmo evento PAYMENT_CONFIRMED teve entrega posterior HTTP 200
 e resposta ok:true. Saúde/readiness HTTP 200. Estados financeiros pendentes
-permanecem inalterados. [Conferência](docs/ASAAS_FINANCIAL_RECONCILIATION.json).
+permanecem inalterados. [Conferência](docs/evidence/ASAAS_FINANCIAL_RECONCILIATION.json).
 Próximo checkpoint: Asaas concluir parcial/PIX e aplicar chargeback/recuperação;
 conferir os benefícios e callbacks canônicos antes do fechamento externo.
 
@@ -251,7 +251,7 @@ diagnóstico do PIX cancelado, processamento do parcial de cartão e PIX sob
 bloqueio. Gmail confirmou envio; prova privada preservada. Consulta às 11:21 UTC:
 parcial de cartão PENDING, chargeback CONFIRMED, PIX do plano CONFIRMED; saldo
 2.900 e founder inalterados. Nenhum novo estorno solicitado.
-[Evidência](docs/ASAAS_EXTENDED_SANDBOX_RESULTS.json). Maturidade: implementação
+[Evidência](docs/evidence/ASAAS_EXTENDED_SANDBOX_RESULTS.json). Maturidade: implementação
 validada, homologação financeira externa aberta. Próximo checkpoint: resposta
 do suporte e estados canônicos para validar reversões e recuperação.
 
@@ -265,8 +265,8 @@ a reserva e impede POST duplicado. Chats/transcrição usam débito central com
 mesmo bloqueio. Tipos API/frontend, build e regressões financeiras Docker
 passaram; conta real de homologação manteve 2.900 créditos bloqueados, com
 mutação administrativa por usuário comum negada (403), founder inalterado.
-[Evidência](docs/ASAAS_EXTENDED_SANDBOX_RESULTS.json) e
-[regressões](docs/BILLING_LOCAL_VALIDATION.json). Próximo checkpoint: aprovação
+[Evidência](docs/evidence/ASAAS_EXTENDED_SANDBOX_RESULTS.json) e
+[regressões](docs/evidence/BILLING_LOCAL_VALIDATION.json). Próximo checkpoint: aprovação
 manual/processamento do parcial no Asaas e simulação externa de chargeback.
 Fluxo implementado; homologação externa completa e produção continuam abertas.
 
@@ -278,7 +278,7 @@ cancelamento nem comprovou causa por permissão. Parcial de cartão de R$43,99
 aceito no próximo dia, ainda PENDING; nenhum DONE, nenhuma reversão antecipada.
 Saldo comum de teste: 2.900; founder inalterado; replays sem duplicação e sessões
 de teste revogadas. Pedido de chargeback já enviado; prova externa pendente.
-[Evidência](docs/ASAAS_EXTENDED_SANDBOX_RESULTS.json). Próximo checkpoint:
+[Evidência](docs/evidence/ASAAS_EXTENDED_SANDBOX_RESULTS.json). Próximo checkpoint:
 concluir processamento do parcial de cartão e obter diagnóstico/simulação Asaas.
 Homologação completa permanece aberta, sem alteração da maturidade geral.
 
@@ -294,7 +294,7 @@ Solicitação de chargeback enviada ao suporte com autorização humana; confirm
 de envio preservada privadamente. Simulação canônica externa ainda pendente. PIX Agency de R$9.990 segue CONFIRMED sob bloqueio,
 sem ativar plano/créditos; liquidação desse valor pendente. Conta comum isolada,
 founder inalterado, leitura cruzada 404 e sessões de teste revogadas.
-[Evidências](docs/ASAAS_EXTENDED_SANDBOX_RESULTS.json) e
+[Evidências](docs/evidence/ASAAS_EXTENDED_SANDBOX_RESULTS.json) e
 [procedimento de retomada](docs/ASAAS_EXTENDED_SANDBOX.md).
 Próximo checkpoint: diagnosticar o cancelamento do refund PIX e obter do suporte
 a simulação de chargeback; somente DONE permite validar a reversão de créditos. Homologação completa permanece
@@ -306,19 +306,19 @@ estorno integral. Academy liberou acesso (200) e revogou após estorno (403), co
 um único job de entrega; Campanhas registrou um único evento pago e um estornado.
 Corrigida compatibilidade com `refunds: null` da API real. Cobranças estornadas e
 produto de homologação desativado; histórico preservado.
-[Evidência](docs/ASAAS_SANDBOX_JOURNEY_RESULTS.json). E-mail efetivamente enviado
+[Evidência](docs/evidence/ASAAS_SANDBOX_JOURNEY_RESULTS.json). E-mail efetivamente enviado
 e validações externas adicionais ainda pendentes; maturidade geral inalterada.
 
 **P1: CI remoto confirmado — 08/10/2026:** GitHub CLI autenticado. Quality,
 Security e Infrastructure concluíram com sucesso no SHA remoto `81b0d3e0`,
 que contém a implementação original P1 `757ec7c0`; seis jobs aprovados.
-[Evidência por SHA](docs/P1_REMOTE_CI_RESULTS.json) e
-[fechamento P1](docs/P1_CLOSEOUT.md). Pendência remota do P1 original encerrada.
+[Evidência por SHA](docs/evidence/P1_REMOTE_CI_RESULTS.json) e
+[fechamento P1](docs/evidence/P1_CLOSEOUT.md). Pendência remota do P1 original encerrada.
 **Revisão atual publicada e aprovada — 08/10/2026:** push autorizado de 11 commits
 em `93a5db75`, incluindo ativação de planos `c2bc26d3`. Quality, Security e
 Infrastructure passaram nos seis jobs. Regressão de planos comprovada nos logs
 do job de banco e no artefato P3; artefatos Docker/P2/P3 baixados e checks
-verificados. [Evidência atual](docs/P1_CURRENT_REMOTE_CI_RESULTS.json).
+verificados. [Evidência atual](docs/evidence/P1_CURRENT_REMOTE_CI_RESULTS.json).
 Pendência de publicação/CI dessa implementação encerrada; o commit seguinte
 registra a evidência e tem CI acompanhado separadamente. Próximo checkpoint:
 homologações externas remanescentes e implantação, com suas próprias provas.
@@ -333,8 +333,8 @@ retornaram 401; pagamento de outro workspace retornou 404 inclusive para founder
 Consulta de assinatura exclui packs e respeita acesso vitalício. Regressões
 Docker e tipos passaram; CI/P3 incluem a regressão de ativação. Histórico
 preservado, sessões de teste revogadas e plano/saldo founder inalterados.
-[Reteste billing](docs/ASAAS_BILLING_SANDBOX_RETEST_RESULTS.json),
-[regressões locais](docs/BILLING_LOCAL_VALIDATION.json) e
+[Reteste billing](docs/evidence/ASAAS_BILLING_SANDBOX_RETEST_RESULTS.json),
+[regressões locais](docs/evidence/BILLING_LOCAL_VALIDATION.json) e
 [política de ativação/reversão](docs/BILLING_PLAN_ACTIVATION.md).
 Próximo checkpoint: entrega real Academy e conexão Meta/MAPA. PIX/boleto,
 estorno parcial, chargeback e rejeição de cartão ainda exigem prova externa.
@@ -345,7 +345,7 @@ e Academy configurados somente no perfil privado de homologação. Overrides
 `ASAAS_PRODUCT_WEBHOOK_TOKEN` e `ASAAS_ACADEMY_WEBHOOK_TOKEN` isolam os endpoints;
 valor ausente mantém compatibilidade, valor explicitamente vazio bloqueia acesso.
 HTTP público: token próprio 200; token cruzado/ausente 401. Eventos de verificação
-ignorados, sem cobrança ou concessão. [Evidência](docs/ASAAS_WEBHOOK_CONFIGURATION.json).
+ignorados, sem cobrança ou concessão. [Evidência](docs/evidence/ASAAS_WEBHOOK_CONFIGURATION.json).
 Próximo checkpoint: salvar as configurações no Asaas sandbox e verificar entrega
 real e liquidação ponta a ponta. Maturidade geral inalterada.
 
@@ -354,34 +354,34 @@ administrativos relacionados usam `PLATFORM_ADMIN_USER_IDS`, sem autorização p
 e-mail. Ações administrativas exigem sessão ativa vinculada ao usuário e workspace;
 frontend consulta a permissão do servidor. Founder habilitado no perfil privado de
 homologação. Regressões Docker e domínio público validados; produção não ativada.
-[Evidência](docs/PLATFORM_ADMIN_UUID_VALIDATION.json) e
+[Evidência](docs/evidence/PLATFORM_ADMIN_UUID_VALIDATION.json) e
 [configuração](docs/PLATFORM_ADMIN_UUID.md). Maturidade geral inalterada.
 Próximo checkpoint: desbloquear o aplicativo Meta e concluir a jornada Asaas sandbox.
 
 **Meta — homologação de 08/10/2026:** credenciais existentes copiadas somente
 para o perfil privado e runtime reiniciado. API pública confirma OAuth habilitado,
 gera retorno Instagram e valida/rejeita assinatura de webhook com evento vazio.
-[Evidência](docs/META_HOMOLOGATION_CONFIGURATION.json). Nenhuma conexão/publicação
+[Evidência](docs/evidence/META_HOMOLOGATION_CONFIGURATION.json). Nenhuma conexão/publicação
 real; maturidade inalterada. Próximo checkpoint: cadastrar retorno no painel Meta,
 autorizar a conta e verificar recebimento real do comentário MAPA.
 
 **Asaas sandbox — 07/10/2026:** chave de homologação autenticada com HTTP 200,
 perfil privado configurado em sandbox e runtime reiniciado. Produção permanece
 separada; nenhuma criação de cliente/cobrança/webhook nesta validação.
-[Evidência](docs/ASAAS_SANDBOX_AUTHENTICATION.json). Maturidade inalterada;
+[Evidência](docs/evidence/ASAAS_SANDBOX_AUTHENTICATION.json). Maturidade inalterada;
 próximo checkpoint: jornada sandbox de checkout, liquidação e webhook público.
 
 **APIs de IA — homologação de 07/10/2026:** autenticação/listagem de modelos
 OpenAI e Gemini passou; chaves nativas guardadas somente no perfil privado e
 runtime reiniciado. Anthropic exige ID de workspace, ainda não informado.
-[Evidência sem segredos](docs/AI_PROVIDER_HOMOLOGATION_RESULTS.json).
+[Evidência sem segredos](docs/evidence/AI_PROVIDER_HOMOLOGATION_RESULTS.json).
 Nenhuma geração/inferência real certificada; maturidade inalterada. Próximo
 checkpoint: resolver escopo Anthropic e validar a jornada de IA na homologação.
 
 **Login de homologação — 07/10/2026:** Sonner montado e erro persistente no
 formulário; launcher autoriza os dois endereços loopback da interface.
 TypeScript/UI negativa e bloqueio de origem externa verificados; API reiniciada
-e pronta. [Evidência](docs/LOGIN_HOMOLOGATION_VALIDATION.md). Maturidade inalterada;
+e pronta. [Evidência](docs/evidence/LOGIN_HOMOLOGATION_VALIDATION.md). Maturidade inalterada;
 `https://agencianexos.vip` configurado: prontidão/login/administração por UUID
 passaram pelo domínio público; sessão de verificação encerrada. Próximo checkpoint:
 retornos/permissões Meta e recebimento real do comentário MAPA.
@@ -389,7 +389,7 @@ retornos/permissões Meta e recebimento real do comentário MAPA.
 **Comentário MAPA — 07/10/2026:** corrigida leitura de `id/text/media.id` no
 webhook Instagram. Testes Linux/Docker passaram para resposta imediata configurada,
 envio público/privado simulado e repetição/conta desconhecida. Supabase preservado.
-[Evidência e limites](docs/MAPA_COMMENT_VALIDATION.md). Maturidade inalterada;
+[Evidência e limites](docs/evidence/MAPA_COMMENT_VALIDATION.md). Maturidade inalterada;
 próximo checkpoint: recebimento real em conta Meta autorizada na homologação.
 
 **CI P3 — correção de 07/10/2026:** reproduzida em Linux a ausência de TypeScript
@@ -401,7 +401,7 @@ Linux; execução remota do novo commit permanece pendente. Supabase não foi ac
 **Dados padrão Supabase — 07/10/2026:** esquema e privilégios verificados;
 planos Solo/Agency carregados, founder preservado e duas pastas padrão criadas
 no seu workspace. Nenhuma fixture ou memória compartilhada entre projetos foi
-inserida. [Carga verificada](docs/SUPABASE_HOMOLOGATION_DEFAULT_DATA.json).
+inserida. [Carga verificada](docs/evidence/SUPABASE_HOMOLOGATION_DEFAULT_DATA.json).
 Próximo checkpoint: jornada de navegador e provedores sandbox na homologação.
 Maturidade inalterada; desenvolvimento/regressões permanecem locais/Docker.
 
@@ -431,7 +431,7 @@ Maturidade permanece inalterada; implantação pública não foi feita.
 - **Estágio operacional em foco:** transversal — Control Room e governança de capacidades;
 - **Nível de maturidade em foco:** M11 — fechamento das autorizações Content/Social; fundamentos M12 continuam locais;
 - **Último nível concluído:** M10 — Council operacional;
-- **Checkpoint atual:** P3 local: jornada simulada, entrega Academy, concessões de objetos, integridade do schema e framework de qualidade de IA; evidência e limites em [P3_CLOSEOUT](./docs/P3_CLOSEOUT.md). M11/M12 seguem incompletos; M10 é o último nível concluído.
+- **Checkpoint atual:** P3 local: jornada simulada, entrega Academy, concessões de objetos, integridade do schema e framework de qualidade de IA; evidência e limites em [P3_CLOSEOUT](./docs/evidence/P3_CLOSEOUT.md). M11/M12 seguem incompletos; M10 é o último nível concluído.
 - **Próximo checkpoint:** homologação externa do P3 com contas próprias, GPU/pesos aprovados, matriz real de IA e CI remoto; concluir os vínculos de aprovação/autorização pendentes antes da operação autônoma.
 
 ## Checkpoint transversal — isolamento de usuários e projetos (06/10/2026)
@@ -463,12 +463,12 @@ Próximo checkpoint deste reparo: reexecutar o CI remoto com a revisão corrigid
 
 - [x] P1: material pago Academy autorizado pelo servidor; dependências, CI
   crítico, bootstrap/rollback e auditoria de histórico preparados e validados
-  localmente. Evidência: [P1_CLOSEOUT.md](./docs/P1_CLOSEOUT.md).
+  localmente. Evidência: [P1_CLOSEOUT.md](./docs/evidence/P1_CLOSEOUT.md).
 - [x] P2: Redis 7.4 autenticado/AOF, restauração cifrada integral, quedas reais
   de Redis/PostgreSQL, recuperação de produtores/workers, falhas de provedores
   em loopback e carga transacional concorrente passaram em containers isolados.
-  Evidência: [P2_CLOSEOUT.md](./docs/P2_CLOSEOUT.md) e
-  [resultados medidos](./docs/P2_VALIDATION_RESULTS.json).
+  Evidência: [P2_CLOSEOUT.md](./docs/evidence/P2_CLOSEOUT.md) e
+  [resultados medidos](./docs/evidence/P2_VALIDATION_RESULTS.json).
 - **Limite:** escopo local; CI remoto, ativação/backup externo e jornada real
   continuam pendentes. M10 permanece o último nível concluído; M11/M12 e os
   estados de capacidades GLP22 não são promovidos por estes testes.
@@ -485,7 +485,7 @@ Próximo checkpoint deste reparo: reexecutar o CI remoto com a revisão corrigid
 - [x] API sem root e gravações persistentes após recriação; build das imagens,
   typecheck, scanner de segredos e guard de logging aprovados.
 - **Evidência:** [guia Docker](./docs/DOCKER_DEPLOYMENT.md) e
-  [resultado local](./docs/DOCKER_DEPLOYMENT_RESULTS.json).
+  [resultado local](./docs/evidence/DOCKER_DEPLOYMENT_RESULTS.json).
 - **Limite:** simulação de infraestrutura externa em stack isolado; provedor,
   domínio HTTPS e CI remotos ainda não ativados. Workers/schedulers continuam
   no processo atual; não há promoção de maturidade ou certificação de vídeo.
@@ -502,8 +502,8 @@ Próximo checkpoint deste reparo: reexecutar o CI remoto com a revisão corrigid
   detecta triggers desativados e chaves ausentes/não validadas.
 - [x] Dataset de cinco artefatos, mínimo 85/100 e revisão humana vinculada;
   referências sintéticas não certificam qualidade de modelos reais.
-- **Evidência:** [P3_CLOSEOUT](./docs/P3_CLOSEOUT.md) e
-  [resultados locais](./docs/P3_VALIDATION_RESULTS.json).
+- **Evidência:** [P3_CLOSEOUT](./docs/evidence/P3_CLOSEOUT.md) e
+  [resultados locais](./docs/evidence/P3_VALIDATION_RESULTS.json).
 - **Limite:** vídeo GPU/modelos reais, Meta externo e launch Google/TikTok
   continuam sem certificação. M10 permanece o último nível concluído.
 - **Próximo checkpoint:** executar o roteiro de homologação externa do P3 com
@@ -989,11 +989,11 @@ O estado abaixo será calculado capability por capability. Nenhum estágio é co
 - [ ] Transações históricas com evento antigo possivelmente parcial exigem auditoria antes de reparo manual; receita externa fora de product_sales ainda não compartilha a transação atômica. Não inferir fulfillment de status local.
 - [ ] Não há política de consentimento/execução versionada, executor de mensagens autorizado, comprovante independente de onboarding, readback, atribuição de resultados, otimização governada ou homologação real. M11 permanece incompleto; M12 não é `production_proven`.
 
-Claude, 12/10/2026: terceira chave substituída no perfil local; autenticação real continua em HTTP 401 nas duas modalidades. Evidência: docs/CLAUDE_KEY_VALIDATION_RESULTS.json. Próximo checkpoint: credencial aceita pela Anthropic. Sem push.
+Claude, 12/10/2026: terceira chave substituída no perfil local; autenticação real continua em HTTP 401 nas duas modalidades. Evidência: docs/evidence/CLAUDE_KEY_VALIDATION_RESULTS.json. Próximo checkpoint: credencial aceita pela Anthropic. Sem push.
 
 ## 13/10/2026 — Cobertura dos 30 dias do briefing
 
-Duração canônica `campaign.timeline` passa a governar calendário e mídia, com compatibilidade para durationDays/plan.totalDays. Calendário usa blocos de até sete dias e chaves distintas por bloco/tentativa. Cobertura completa é obrigatória: dias faltantes ou fora do período impedem salvar a geração. Retomada detecta pacotes de calendário/mídia incompatíveis com o período atual e regenera a mesma peça antes de reutilizar o checkpoint; aprovação anterior é removida. Teste test-campaign-duration.ts, typecheck e build passaram. Regeneração real concluída e confirmada em leitura fresca do banco: calendário e mídia cobrem dias 1–30 sem lacunas, ambos pending_approval; campanha awaiting_approval. Evidência: docs/CALENDAR_DURATION_CORRECTION_RESULTS.json. Três regressões de retomada/control room passaram; API local e domínio readyz 200. Cobertura validada; qualidade editorial permanece para revisão do Founder. Ápice não incrementado. Não autoriza publicação, gasto ou etapa comercial.
+Duração canônica `campaign.timeline` passa a governar calendário e mídia, com compatibilidade para durationDays/plan.totalDays. Calendário usa blocos de até sete dias e chaves distintas por bloco/tentativa. Cobertura completa é obrigatória: dias faltantes ou fora do período impedem salvar a geração. Retomada detecta pacotes de calendário/mídia incompatíveis com o período atual e regenera a mesma peça antes de reutilizar o checkpoint; aprovação anterior é removida. Teste test-campaign-duration.ts, typecheck e build passaram. Regeneração real concluída e confirmada em leitura fresca do banco: calendário e mídia cobrem dias 1–30 sem lacunas, ambos pending_approval; campanha awaiting_approval. Evidência: docs/evidence/CALENDAR_DURATION_CORRECTION_RESULTS.json. Três regressões de retomada/control room passaram; API local e domínio readyz 200. Cobertura validada; qualidade editorial permanece para revisão do Founder. Ápice não incrementado. Não autoriza publicação, gasto ou etapa comercial.
 
 ## 14/10/2026 — Instagram Login direto (homologação aberta)
 
@@ -1002,14 +1002,14 @@ Implementado OAuth separado com Instagram App ID/secret, scopes instagram_busine
 
 ## 14/10/2026 — Login direto conectado e inscrito na Meta
 
-OAuth real concluído: banco confirma @agencianexosai com authType instagram_login e token até 13/12/2026. Graph Instagram respondeu 200 com identidade correspondente. Inscrição comments/messages/messaging_postbacks confirmou success e leitura externa retornou os três campos. Evidência: docs/INSTAGRAM_DIRECT_LOGIN_LIVE_RESULTS.json. Login direto agora navega na mesma aba; evita dependência de popup, após duas interrupções do Brave. Typecheck app passou. Falta nova interação MAPA/Direct pelo token direto, insights/publicação e testes likes/exclusão; App Review permanece aberto. Ápice não incrementado.
+OAuth real concluído: banco confirma @agencianexosai com authType instagram_login e token até 13/12/2026. Graph Instagram respondeu 200 com identidade correspondente. Inscrição comments/messages/messaging_postbacks confirmou success e leitura externa retornou os três campos. Evidência: docs/evidence/INSTAGRAM_DIRECT_LOGIN_LIVE_RESULTS.json. Login direto agora navega na mesma aba; evita dependência de popup, após duas interrupções do Brave. Typecheck app passou. Falta nova interação MAPA/Direct pelo token direto, insights/publicação e testes likes/exclusão; App Review permanece aberto. Ápice não incrementado.
 
 
 ## 14/10/2026 — Webhook direto: comentário passou; Direct em reteste
 
-Após recuperar Docker/Redis/API novamente, evento real de comentário 18094141661405784 respondeu publicamente (18111219086177791, confirmado por leitura Graph) e enviou resposta privada com ID Meta. Direct chegou por webhook, mas envio falhou por ausência de controle da conversa; não marcado como entregue. Founder autorizou definir NexOS AI Integration-IG 3650700108428384 como app padrão: Meta confirmou alteração na Página DasKapital.io. Aguardando novo Direct após ajuste. Evidência docs/INSTAGRAM_DIRECT_WEBHOOK_RESULTS.json. Sem publicação nova ou cobrança; Ápice não incrementado.
+Após recuperar Docker/Redis/API novamente, evento real de comentário 18094141661405784 respondeu publicamente (18111219086177791, confirmado por leitura Graph) e enviou resposta privada com ID Meta. Direct chegou por webhook, mas envio falhou por ausência de controle da conversa; não marcado como entregue. Founder autorizou definir NexOS AI Integration-IG 3650700108428384 como app padrão: Meta confirmou alteração na Página DasKapital.io. Aguardando novo Direct após ajuste. Evidência docs/evidence/INSTAGRAM_DIRECT_WEBHOOK_RESULTS.json. Sem publicação nova ou cobrança; Ápice não incrementado.
 
 
 ## 14/10/2026 — MAPA e Direct por Instagram Login: PASS real
 
-Após roteamento autorizado para NexOS IG, nova DM recebida às 14:48:29 (America/Cuiaba) respondeu automaticamente às 14:48:30. Leitura externa Graph retornou 200 com texto da DM; resposta privada ao comentário também confirmada por leitura externa, além da resposta pública já confirmada. Nenhum sync manual ou reenvio nesta validação; falhas anteriores de propriedade permanecem preservadas. Evidência docs/INSTAGRAM_DIRECT_WEBHOOK_RESULTS.json. Login direto, perfil, assinatura e jornada comentário/Direct validados; insights/publicação pelo token direto, likes/exclusão, callbacks de desautorização/exclusão e gravações/App Review continuam abertos. Ápice não incrementado; nenhum push executado.
+Após roteamento autorizado para NexOS IG, nova DM recebida às 14:48:29 (America/Cuiaba) respondeu automaticamente às 14:48:30. Leitura externa Graph retornou 200 com texto da DM; resposta privada ao comentário também confirmada por leitura externa, além da resposta pública já confirmada. Nenhum sync manual ou reenvio nesta validação; falhas anteriores de propriedade permanecem preservadas. Evidência docs/evidence/INSTAGRAM_DIRECT_WEBHOOK_RESULTS.json. Login direto, perfil, assinatura e jornada comentário/Direct validados; insights/publicação pelo token direto, likes/exclusão, callbacks de desautorização/exclusão e gravações/App Review continuam abertos. Ápice não incrementado; nenhum push executado.

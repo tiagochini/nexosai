@@ -14,12 +14,15 @@ que uma capacidade está homologada hoje.
 
 - [Desenvolvimento local](LOCAL_DEVELOPMENT.md)
 - [Ambiente de homologação](SUPABASE_HOMOLOGATION.md)
-- [Provedores de IA](AI_PROVIDER_CAMPAIGN_VALIDATION.md)
-- [Instagram](INSTAGRAM_HOMOLOGATION.md)
 - [Meta App Review](META_APP_REVIEW_TEST_RUNBOOK.md)
+- [Homologação de Meta Ads](META_ADS_HOMOLOGACAO.md)
 
-Os demais relatórios e resultados continuam nesta pasta, com nomes específicos
-para cada revisão ou teste.
+Relatórios concluídos, resultados JSON e comprovantes ficam em
+[evidence/](evidence/README.md). Eles registram validações históricas; consulte
+os índices do projeto para o estado atual das capacidades.
+
+Prompts para continuar implementações em outro chat ficam em
+[handoffs/](handoffs/README.md).
 
 ## Referências de arquitetura
 
@@ -38,7 +41,5 @@ para cada revisão ou teste.
 
 ## Organização
 
-README, instruções das ferramentas (`CLAUDE.md` e `replit.md`), configurações
-e os três documentos canônicos permanecem na raiz. Referências detalhadas ficam
-em `docs/architecture`; registros antigos ficam em `docs/archive`.
-[Registro da reorganização](ROOT_DOCUMENTATION_ORGANIZATION.md).
+Referências detalhadas ficam em `docs/architecture`; materiais históricos ficam
+em `docs/archive`; provas e validações ficam em `docs/evidence`.
