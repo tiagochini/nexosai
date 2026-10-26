@@ -25,6 +25,7 @@ assert.equal(matchesApprovedDossier(plan, { campaignId: "campaign", masterplanVe
 assert.equal(matchesApprovedDossier(plan, { campaignId: "campaign", masterplanVersionId: "mp", contextFingerprint: "stale" }), false);
 assert.equal(hasConsistentRollbackOwnership("workspace", { workspaceId: "other", proposalId: "p" }, { id: "p", workspaceId: "workspace", accountId: "a", entityId: "e", provider: "meta_ads" }, { id: "a", workspaceId: "workspace", provider: "meta_ads" }, { id: "e", workspaceId: "workspace", accountId: "a", provider: "meta_ads" }), false);
 assert.equal(buildLaunchReadiness({ masterplan: plan, account, intake, tree, provider: "meta_ads" }).status, "ready");
+assert.ok(buildLaunchReadiness({ masterplan: plan, account, intake, metaSetupDiagnostic: { status: "incomplete" }, tree, provider: "meta_ads" }).blockers.some((x) => x.code === "META_SETUP_DIAGNOSIS_INCOMPLETE"));
 assert.ok(buildLaunchReadiness({ masterplan: plan, account, intake, tree: compileMasterplanTree({ ...base, campaign: { ...base.campaign, budget: {} } }, "meta_ads", "act_123").tree, provider: "meta_ads" }).blockers.some((x) => x.code === "BUDGET_SEMANTICS_REQUIRED"));
 assert.equal(buildLaunchReadiness({ masterplan: { ...plan, contextFingerprint: "stale" }, account, intake, tree, provider: "meta_ads" }).status, "ready"); // stale is rejected at DB binding boundary, never normalized here
 

@@ -12,6 +12,7 @@
 
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { Logger } from "pino";
+import { applyMetaSetupReadinessGate, buildMetaSetupDiagnostic, META_ADS_SETUP_ARCHITECT_GUIDANCE, type MetaSetupDiagnostic } from "./meta-ads-setup-architect.js";
 
 // ─── Output Types ────────────────────────────────────────────────────────────
 
@@ -105,6 +106,22 @@ export interface OperationalRisk {
 }
 
 export interface TrafficIntelligenceOutput {
+  metaSetupArchitect: {
+    diagnostic: MetaSetupDiagnostic;
+    preliminaryPlan: boolean;
+    sections: {
+      executiveSummary: string[];
+      campaignArchitecture: Record<string, unknown>;
+      campaignAdSetAdConfiguration: Record<string, unknown>;
+      audiencesAndExclusions: Record<string, unknown>;
+      advantageCreative: Record<string, unknown>;
+      optimizationAndLearning: Record<string, unknown>;
+      implementationChecklist: string[];
+      risks: string[];
+      nextStepsDay7: string[];
+      nextStepsDay14: string[];
+    };
+  };
   // ── PRE-PUBLISH VALIDATION (11 checkpoints — human approves ALL before launch) ──
   prePublishValidation: {
     campaignObjective: PrePublishCheck;
@@ -305,8 +322,8 @@ Regras de distribuição de budget:
 ## ETAPA 3 — PÚBLICOS AUTORIZADOS
 
 Prospecting (frio): interesse + comportamento agregado. Nunca inferência de dados sensíveis.
-Lookalike: requer seed de qualidade (mínimo 1.000 pessoas na fonte — preferência 5.000+).
-Remarketing: janelas específicas (visitantes 30d, engajamento 60d, abandonos de carrinho 14d).
+Lookalike: só sugerir quando houver fonte autorizada e dados suficientes segundo a capacidade disponível na conta; não inventar requisito universal de seed.
+Remarketing: propor janelas a partir do ciclo de venda e da disponibilidade de público.
 Exclusões SEMPRE ativas: compradores recentes, descadastros, listas de supressão.
 
 Documente explicitamente o que é proibido usar como segmentação.
@@ -315,18 +332,12 @@ Documente explicitamente o que é proibido usar como segmentação.
 
 ## ETAPA 4 — RECOMENDAÇÃO DE INVESTIMENTO (engenharia reversa)
 
-Você CALCULA o budget necessário a partir da meta de resultado, não distribui um budget pré-definido.
-
-Se "trafficBudgetBrl" for 0 ou ausente nos dados da campanha:
-1. Leia o "revenueTarget" e o preço do produto
-2. Estime vendas necessárias (revenueTarget / preço)
-3. Estime leads necessários com taxa de conversão realista para o nicho/público
-4. Calcule o budget recomendado por plataforma usando CPL de mercado para este ticket
-5. Apresente como "investimento recomendado" — o usuário configura esse valor nas plataformas, não na NexOS
+Não invente orçamento, conversões, vendas ou CPL de mercado quando os dados estiverem ausentes.
+Peça esclarecimentos antes de apresentar um setup final; estimativas devem ser identificadas como hipóteses.
 
 Se "trafficBudgetBrl" já informado pelo usuário:
-- Valide se é suficiente para atingir o revenueTarget com os CPLs de mercado
-- Se insuficiente: sinalize no prePublishValidation (checkpoint "budget" → "needs_review") e mostre quanto faltaria
+- Só compare com CPL de fonte fornecida ou benchmark explicitamente identificado como hipótese
+- Se não houver base de comparação, sinalize no prePublishValidation (checkpoint "budget" → "needs_review") e peça os dados necessários
 - Se suficiente: distribua por fase normalmente
 
 Por fase (aquecimento → abertura → carrinho aberto → fechamento → remarketing pós-evento):
@@ -334,11 +345,7 @@ Por fase (aquecimento → abertura → carrinho aberto → fechamento → remark
 - Plataforma prioritária por fase
 - Objetivo e entrega esperada por fase
 
-Hard rules:
-- ROAS mínimo: se cair abaixo, pausa automática (requer autorização para retomar)
-- CPA máximo: se ultrapassar, pausa imediata (requer decisão humana)
-- Todo aumento de budget acima de 20% requer autorização explícita
-- Budget é configurado pelo usuário nas plataformas (Meta Ads Manager, TikTok Ads, Google Ads) — nunca na NexOS
+Limites de CPA/ROAS e mudanças de orçamento são recomendações contextualizadas, não regras universais nem ações automáticas. Execução continua sujeita às autorizações e aprovações humanas existentes.
 
 ---
 
@@ -352,7 +359,7 @@ Proibido: testar promessas ilegais, urgência fabricada, claims não-verificáve
 
 ## ETAPA 6 — BENCHMARKS E MÉTRICAS DE OTIMIZAÇÃO
 
-Para este produto, nicho e ticket, defina faixas realistas (não wishful thinking) para:
+Para este produto, nicho e ticket, use dados fornecidos para definir faixas; qualquer hipótese deve ser rotulada como tal. Não invente benchmarks de mercado. Considere:
 - CPM, CTR, CPC, CPA, ROAS, frequência, retenção de vídeo, taxa de conversão, qualidade de lead
 
 Fadiga criativa: CTR cai X% do pico histórico = alerta de troca de criativo.
@@ -360,10 +367,9 @@ Frequência: acima de Y impressões/pessoa/dia = reduzir ou trocar público.
 
 ---
 
-## ETAPA 7 — CRITÉRIOS DE PAUSA (hard rules, não-negociáveis)
+## ETAPA 7 — CRITÉRIOS DE PAUSA E ALERTA
 
-Liste pelo menos 5 situações que disparam pausa automática ou alerta humano imediato.
-Inclua: qual métrica, qual threshold, qual ação, se requer aprovação humana.
+Defina situações relevantes para este contexto, separando alerta, recomendação de pausa e ação autorizada. Inclua métrica, evidência, janela, ação proposta e requisito de aprovação.
 
 ---
 
@@ -376,16 +382,13 @@ Sem exceções. Sem "parece estar indo bem". Somente dados comprovados.
 
 ## ETAPA 9 — JANELA DE APRENDIZADO
 
-Mínimo de conversões por ad set antes de sair do learning.
-O que NÃO fazer durante o learning (mudanças que reiniciam a fase).
-O que monitorar mas não agir.
+Descrever a aprendizagem como estado dependente da configuração e dos dados da plataforma. Não fixar número universal de conversões nem garantir saída em determinada janela.
 
 ---
 
 ## ETAPA 10 — RISCOS OPERACIONAIS
 
-Para cada risco: plataforma, probabilidade, impacto, mitigação.
-Inclua: aprovação de anúncios, suspensão de conta, pixel inválido, budget em fogo, CPM explodindo, performance drop repentino.
+Liste riscos que se aplicam à campanha, com plataforma, probabilidade, impacto e mitigação. Não inclua riscos genéricos sem relação com os dados disponíveis.
 
 ---
 
@@ -402,6 +405,18 @@ Retorne APENAS JSON válido. Zero texto fora do bloco.
 
 \`\`\`json
 {
+  "metaSetupArchitect": {
+    "preliminaryPlan": true,
+    "sections": {
+      "executiveSummary": ["string"],
+      "campaignArchitecture": { "campaigns": [{ "name": "string", "objective": "string", "budgetLevel": "campaign|ad_set|unknown", "rationale": "string", "adSets": [{ "name": "string", "audience": "string", "budget": "string", "optimizationEvent": "string", "rationale": "string", "ads": [{ "creativeConcept": "string", "format": "string", "hypothesis": "string", "status": "proposed_only" }] }] }] },
+      "campaignAdSetAdConfiguration": { "campaign": {}, "adSet": {}, "ad": {}, "unsupportedOrUnverified": ["string"] },
+      "audiencesAndExclusions": { "recommendations": ["string"], "excluded": ["string"], "limitations": ["string"] },
+      "advantageCreative": { "use": "selective|not_recommended|unknown", "options": ["string"], "rationale": "string" },
+      "optimizationAndLearning": { "hypothesis": "string", "primaryMetric": "string", "observationWindow": "string", "sampleOrDecisionLimit": "string", "decisionRule": "string", "learningCaveat": "string" },
+      "implementationChecklist": ["string"], "risks": ["string"], "nextStepsDay7": ["string"], "nextStepsDay14": ["string"]
+    }
+  },
   "prePublishValidation": {
     "campaignObjective": { "status": "approved|needs_review|blocked", "note": "string" },
     "conversionEvent":   { "status": "approved|needs_review|blocked", "note": "string" },
@@ -603,6 +618,18 @@ Retorne APENAS JSON válido. Zero texto fora do bloco.
 function defaultOutput(): TrafficIntelligenceOutput {
   const check: PrePublishCheck = { status: "needs_review", note: "" };
   return {
+    metaSetupArchitect: {
+      diagnostic: buildMetaSetupDiagnostic({}),
+      preliminaryPlan: true,
+      sections: {
+        executiveSummary: [], campaignArchitecture: { campaigns: [] },
+        campaignAdSetAdConfiguration: { campaign: {}, adSet: {}, ad: {}, unsupportedOrUnverified: [] },
+        audiencesAndExclusions: { recommendations: [], excluded: [], limitations: [] },
+        advantageCreative: { use: "unknown", options: [], rationale: "" },
+        optimizationAndLearning: { hypothesis: "", primaryMetric: "", observationWindow: "", sampleOrDecisionLimit: "", decisionRule: "", learningCaveat: "" },
+        implementationChecklist: [], risks: [], nextStepsDay7: [], nextStepsDay14: [],
+      },
+    },
     prePublishValidation: {
       campaignObjective: { ...check },
       conversionEvent:   { ...check },
@@ -638,18 +665,18 @@ function defaultOutput(): TrafficIntelligenceOutput {
     budgetPlan: {
       dailyBudgetBrl: 0,
       totalBudgetBrl: 0,
-      reserveBudgetPercent: 20,
+      reserveBudgetPercent: 0,
       phases: [],
-      minimumRoasThreshold: 1.5,
+      minimumRoasThreshold: 0,
       maximumCpaThreshold: 0,
       budgetAuthorizationRequired: true,
     },
     testPlan: {
       variables: [],
-      testBudgetPercent: 20,
-      minimumImpressionsBeforeDecision: 10000,
-      statisticalSignificanceTarget: 0.95,
-      testDurationDays: 7,
+      testBudgetPercent: 0,
+      minimumImpressionsBeforeDecision: 0,
+      statisticalSignificanceTarget: 0,
+      testDurationDays: 0,
       decisionCriteria: "",
       prohibitedManipulations: [],
     },
@@ -658,20 +685,20 @@ function defaultOutput(): TrafficIntelligenceOutput {
       ctr: { min: 0, target: 0 },
       cpc: { min: 0, max: 0 },
       cpa: { min: 0, max: 0 },
-      roas: { min: 1.5, target: 3 },
+      roas: { min: 0, target: 0 },
       conversionRate: { min: 0, target: 0 },
-      frequencyDailyMax: 3,
-      creativeRetentionFloor: 25,
-      creativeFatigueAlertAt: 30,
+      frequencyDailyMax: 0,
+      creativeRetentionFloor: 0,
+      creativeFatigueAlertAt: 0,
       leadQualityFloor: "",
     },
     pauseCriteria: [],
     scaleCriteria: [],
     learningWindow: {
-      minimumConversions: 50,
-      minimumDays: 7,
-      doNotTouchPeriod: "7 dias após o lançamento de cada ad set",
-      expectedExitDays: 14,
+      minimumConversions: 0,
+      minimumDays: 0,
+      doNotTouchPeriod: "Definir com base nos dados e no estado real informado pela plataforma.",
+      expectedExitDays: 0,
       prohibitedActionsDuringLearning: [],
       monitoringOnly: [],
     },
@@ -717,6 +744,7 @@ export async function runTrafficIntelligenceAgent(
 
   const contextJson = JSON.stringify(
     {
+      metaSetupDiagnostic: buildMetaSetupDiagnostic(intakeData),
       campaign: {
         type: campaignType,
         revenueTarget,
@@ -762,7 +790,7 @@ export async function runTrafficIntelligenceAgent(
     campaignId,
     workspaceId,
     agentRole: "traffic_intelligence",
-    systemPrompt: TRAFFIC_INTELLIGENCE_PROMPT,
+    systemPrompt: `${TRAFFIC_INTELLIGENCE_PROMPT}\n\n${META_ADS_SETUP_ARCHITECT_GUIDANCE}`,
     memoryContext,
     thinkingMessages: [
       "Executando pré-validação — 11 checkpoints antes de qualquer publicação...",
@@ -779,7 +807,7 @@ export async function runTrafficIntelligenceAgent(
       {
         role: "user",
         content: `Execute o planejamento completo de tráfego pago para esta campanha.
-Percorra as 11 etapas na sequência. Seja técnico, conservador e auditável.
+Percorra as etapas aplicáveis. Seja técnico, contextual e auditável.
 
 **Dados da campanha:**
 \`\`\`json
@@ -791,10 +819,13 @@ Regras absolutas:
 - Toda escala de budget: requer critério comprovado, nunca achismo
 - Segmentação: apenas dados permitidos pelas políticas das plataformas
 - Nenhuma campanha sobe sem aprovação humana explícita
-- Benchmarks: realistas para o nicho e ticket — sem wishful thinking
-- Critérios de pausa: pelo menos 6 situações distintas
-- Critérios de escala: pelo menos 4, todos devem ser atingidos simultaneamente
-- Contingências: pelo menos 5 cenários com fallback definido
+- Benchmarks só podem vir de fonte fornecida ou ser identificados como hipótese; não invente benchmark de mercado
+- Preencha as dez seções exigidas em metaSetupArchitect.sections
+- Para cada pergunta diagnóstica ausente, registre o gap e faça uma pergunta direta; mantenha preliminaryPlan=true
+- EMQ sem fonte verificável da Meta deve ser null e not_verified; não calcule uma pontuação substituta
+- Se dados obrigatórios estiverem incompletos, bloqueie a prontidão para setup final e execução
+- Quantidade de critérios e recomendações depende do contexto; não crie regras artificiais para preencher listas
+- Recomendações não são configurações executadas. Não afirme que ativo ou recurso foi configurado
 
 Retorne APENAS o JSON válido.`,
       },
@@ -806,6 +837,14 @@ Retorne APENAS o JSON válido.`,
 
   const parsed = parseAgentJSON<TrafficIntelligenceOutput>(result.content, defaultOutput());
   const output: TrafficIntelligenceOutput = { ...defaultOutput(), ...parsed };
+  const deterministicDiagnostic = buildMetaSetupDiagnostic(intakeData);
+  output.metaSetupArchitect = {
+    ...defaultOutput().metaSetupArchitect,
+    ...parsed.metaSetupArchitect,
+    diagnostic: deterministicDiagnostic,
+    preliminaryPlan: deterministicDiagnostic.status === "incomplete" || parsed.metaSetupArchitect?.preliminaryPlan === true,
+    sections: { ...defaultOutput().metaSetupArchitect.sections, ...(parsed.metaSetupArchitect?.sections ?? {}) },
+  };
 
   // Ensure nested objects are intact
   if (!output.prePublishValidation?.overallClearance) {
@@ -837,6 +876,13 @@ Retorne APENAS o JSON válido.`,
   // Clamp
   output.confidenceScore = Math.min(1, Math.max(0, output.confidenceScore ?? 0));
   output.campaignReadinessScore = Math.min(100, Math.max(0, output.campaignReadinessScore ?? 0));
+
+  // The model cannot override source-based diagnostic gaps or declare a final
+  // setup ready when any required answer is absent.
+  applyMetaSetupReadinessGate(output, deterministicDiagnostic);
+  if (deterministicDiagnostic.emq.status !== "verified") {
+    output.metaSetupArchitect.diagnostic.emq = { value: null, status: "not_verified", source: null };
+  }
 
   log.info(
     {

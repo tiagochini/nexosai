@@ -172,11 +172,13 @@ export function buildLaunchReadiness(input: {
   masterplan: { status: string; id: string; contextFingerprint: string } | null;
   account: { id: string; isSelected: boolean; currency: string; timezone: string; provider: string } | null;
   intake: { id: string; status: string } | null;
+  metaSetupDiagnostic?: { status: string } | null;
   tree: unknown; provider: PaidMediaProviderName;
   requiredApprovals?: string[];
 }) {
   const blockers: Array<{ code: string; message: string }> = [];
   if (!input.masterplan || input.masterplan.status !== "approved") blockers.push({ code: "MASTERPLAN_APPROVAL_REQUIRED", message: "Approved Master Plan is required." });
+  if (input.metaSetupDiagnostic?.status === "incomplete") blockers.push({ code: "META_SETUP_DIAGNOSIS_INCOMPLETE", message: "The Meta setup diagnosis must be completed before compiling a launch plan." });
   if (!input.account) blockers.push({ code: "ACCOUNT_NOT_FOUND", message: "Advertiser account is not available in this workspace." });
   else if (!input.account.isSelected) blockers.push({ code: "PRODUCTION_ACCOUNT_SELECTION_REQUIRED", message: "A production advertiser account must be selected." });
   if (input.account && (!input.account.currency || !input.account.timezone)) blockers.push({ code: "ACCOUNT_PROFILE_INCOMPLETE", message: "Account currency and timezone are required." });
@@ -220,7 +222,18 @@ export async function compileLaunchPlan(workspaceId: string, actorId: string, in
   if (campaign.productIntakeVersionId !== input.productIntakeVersionId || plan.productIntakeVersionId !== input.productIntakeVersionId) throw new AppError(409, "Canonical product intake binding does not match.", "INTAKE_BINDING_MISMATCH");
   if (!intake || !["approved", "locked"].includes(intake.status) || intake.commercialProductId !== campaign.commercialProductId) throw new AppError(409, "Canonical intake must be approved for the campaign product.", "INTAKE_PRODUCT_MISMATCH");
   const compiled = compileMasterplanTree(plan.snapshot, input.provider, account.providerAccountId);
-  const readiness = buildLaunchReadiness({ masterplan: plan, account, intake: intake ?? null, tree: compiled.tree, provider: input.provider });
+  const targetingData = obj(campaign.targetingData);
+  const trafficPlan = obj(targetingData["trafficPlan"]);
+  const metaSetupArchitect = obj(trafficPlan["metaSetupArchitect"]);
+  const metaSetupDiagnostic = obj(metaSetupArchitect["diagnostic"]);
+  const readiness = buildLaunchReadiness({
+    masterplan: plan,
+    account,
+    intake: intake ?? null,
+    metaSetupDiagnostic: typeof metaSetupDiagnostic["status"] === "string" ? { status: metaSetupDiagnostic["status"] } : null,
+    tree: compiled.tree,
+    provider: input.provider,
+  });
   const values = { workspaceId, commercialProductId: plan.commercialProductId, commercialSubscriptionId: plan.commercialSubscriptionId, campaignId: input.campaignId, masterplanVersionId: plan.id, contextFingerprint: plan.contextFingerprint, accountId: account.id, productIntakeVersionId: input.productIntakeVersionId, provider: input.provider, planHash: compiled.planHash, tree: compiled.tree, providerPayload: compiled.providerPayload, readiness, createdByUserId: actorId };
   const [created] = await db.insert(paidMediaLaunchPlansTable).values(values).onConflictDoNothing().returning();
   const result = created ?? (await db.select().from(paidMediaLaunchPlansTable).where(and(eq(paidMediaLaunchPlansTable.workspaceId, workspaceId), eq(paidMediaLaunchPlansTable.planHash, compiled.planHash))).limit(1))[0];

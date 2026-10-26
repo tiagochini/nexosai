@@ -111,6 +111,30 @@ function BulletList({ items, icon: Icon, color = "primary" }: {
   );
 }
 
+function MetaPlanFields({ value, depth = 0 }: { value: unknown; depth?: number }) {
+  if (value == null || typeof value === "boolean" || typeof value === "number" || typeof value === "string") {
+    return <span className="text-xs font-mono text-foreground/80">{value == null ? "—" : String(value)}</span>;
+  }
+  if (Array.isArray(value)) {
+    return value.length ? (
+      <ul className="space-y-1">
+        {value.map((item, index) => <li key={index} className="text-xs font-mono text-foreground/80"><MetaPlanFields value={item} depth={depth + 1} /></li>)}
+      </ul>
+    ) : <span className="text-xs font-mono text-muted-foreground">—</span>;
+  }
+  if (typeof value !== "object") return null;
+  return (
+    <div className={depth ? "space-y-2 border-l border-border/40 pl-3" : "space-y-3"}>
+      {Object.entries(value as Record<string, unknown>).map(([key, child]) => (
+        <div key={key} className="space-y-1">
+          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{key.replace(/([A-Z])/g, " $1").replace(/_/g, " ")}</div>
+          <MetaPlanFields value={child} depth={depth + 1} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Credit investment block ────────────────────────────────────────────────────
 function InvestmentBlock({
   campaignType, creditEstimate,
@@ -264,6 +288,14 @@ export function CampaignBrief({
 
   const positioning = (targetingD["positioning"] ?? {}) as Record<string, unknown>;
   const marketIntelligence = (targetingD["marketIntelligence"] ?? {}) as Record<string, unknown>;
+  const trafficPlan = (targetingD["trafficPlan"] ?? {}) as Record<string, unknown>;
+  const metaArchitect = (trafficPlan["metaSetupArchitect"] ?? {}) as Record<string, unknown>;
+  const metaDiagnostic = (metaArchitect["diagnostic"] ?? {}) as Record<string, unknown>;
+  const metaSections = (metaArchitect["sections"] ?? {}) as Record<string, unknown>;
+  const metaQuestions = Array.isArray(metaDiagnostic["clarifyingQuestions"])
+    ? (metaDiagnostic["clarifyingQuestions"] as unknown[]).filter((question): question is string => typeof question === "string")
+    : [];
+  const hasMetaDiagnostic = Object.keys(metaDiagnostic).length > 0;
 
   const phases = (timelineD["phases"] ?? timelineRaw["phases"] ?? []) as unknown[];
   const totalDays = (timelineD["totalDays"] ?? timelineRaw["totalDays"] ?? 0) as number;
@@ -339,6 +371,63 @@ export function CampaignBrief({
           {revenueTarget && <span>{t("Meta:", "Target:", "Meta:")} <span className="text-green-400 font-bold">{revenueTarget}</span></span>}
         </div>
       </div>
+
+      {hasMetaDiagnostic && (
+        <div className={`border p-4 ${metaDiagnostic["status"] === "complete" ? "border-green-500/30 bg-green-500/5" : "border-amber-500/40 bg-amber-500/5"}`}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-foreground">
+              {t("Setup Meta Ads", "Meta Ads setup", "Setup de Meta Ads")}
+            </h3>
+            <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              {metaDiagnostic["status"] === "complete"
+                ? t("Diagnóstico completo", "Diagnosis complete", "Diagnóstico completo")
+                : t("Preliminar · aguardando dados", "Preliminary · awaiting data", "Preliminar · faltan datos")}
+            </span>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {metaDiagnostic["status"] === "complete"
+              ? t("EMQ", "EMQ", "EMQ")
+              : t("EMQ não verificado", "EMQ not verified", "EMQ no verificado")}
+            {metaDiagnostic["emq"] && ((metaDiagnostic["emq"] as Record<string, unknown>)["status"] === "verified")
+              ? `: ${String((metaDiagnostic["emq"] as Record<string, unknown>)["value"])}`
+              : metaDiagnostic["status"] === "complete" ? `: ${t("não verificado", "not verified", "no verificado")}` : ""}
+          </p>
+          {metaDiagnostic["trackingStatus"] === "weak" && (
+            <p className="mt-2 text-xs text-amber-300">
+              {t("Tracking fraco: corrigir antes de recomendar escala agressiva.", "Weak tracking: fix it before recommending aggressive scaling.", "Tracking débil: corrígelo antes de recomendar una escala agresiva.")}
+            </p>
+          )}
+          {metaQuestions.length > 0 && (
+            <div className="mt-3">
+              <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-amber-300">
+                {t("Responda para liberar a recomendação final", "Answer to complete the recommendation", "Responde para completar la recomendación")}
+              </p>
+              <ul className="space-y-1 text-xs text-muted-foreground">
+                {metaQuestions.map((question, index) => <li key={`${index}-${question}`}>• {question}</li>)}
+              </ul>
+            </div>
+          )}
+          <details className="mt-3 border-t border-border/40 pt-3">
+            <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-widest text-primary">
+              {t("Ver diagnóstico e plano de setup", "View diagnosis and setup plan", "Ver diagnóstico y plan de setup")}
+            </summary>
+            <div className="mt-4 space-y-5">
+              {Array.isArray(metaDiagnostic["answers"]) && (
+                <div className="space-y-2">
+                  <h4 className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Diagnóstico", "Diagnosis", "Diagnóstico")}</h4>
+                  <MetaPlanFields value={metaDiagnostic["answers"]} />
+                </div>
+              )}
+              {Object.entries(metaSections).map(([key, value]) => (
+                <div key={key} className="space-y-2">
+                  <h4 className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{key.replace(/([A-Z])/g, " $1").replace(/_/g, " ")}</h4>
+                  <MetaPlanFields value={value} />
+                </div>
+              ))}
+            </div>
+          </details>
+        </div>
+      )}
 
       {/* ── 1. Executive Summary ── */}
       {executiveSummary && (

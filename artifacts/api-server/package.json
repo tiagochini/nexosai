@@ -53,6 +53,7 @@
     "test:orchestration-fallback-race": "tsx src/scripts/test-orchestration-fallback-race.ts",
     "test:content-coherence-idor": "cross-env NODE_ENV=test tsx src/scripts/test-content-coherence-idor.ts",
     "test:paid-media": "tsx src/scripts/test-paid-media.ts",
+    "test:meta-ads-setup-architect": "tsx src/scripts/test-meta-ads-setup-architect.ts",
     "test:meta-operational-flow": "cross-env NODE_ENV=test tsx src/scripts/test-meta-operational-flow.ts",
     "test:meta-reliability": "cross-env NODE_ENV=test tsx src/scripts/test-meta-reliability.ts && cross-env NODE_ENV=test tsx src/scripts/test-landing-upgrade.ts",
     "test:meta-advanced-report": "cross-env NODE_ENV=test tsx src/scripts/test-meta-advanced-report.ts",
