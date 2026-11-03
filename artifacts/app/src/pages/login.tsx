@@ -17,6 +17,8 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [, setLocation] = useLocation();
+  const nextPath = new URLSearchParams(window.location.search).get("next");
+  const safeNextPath = nextPath?.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/";
   const { setToken } = useAuth();
   const tr = useAppI18n();
   const t = tr.login;
@@ -27,7 +29,7 @@ export default function Login() {
         setLoginError(null);
         setToken(data.accessToken);
         toast.success(t.success);
-        setLocation("/");
+        setLocation(safeNextPath);
       },
       onError: (error: Error) => {
         const apiError = error as Error & { status?: number; data?: { code?: string; error?: string } };

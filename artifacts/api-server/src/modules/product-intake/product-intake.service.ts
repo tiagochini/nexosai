@@ -3,6 +3,7 @@ import { db, auditLogsTable, campaignsTable, commercialSubscriptionsTable, produ
 import { AppError, NotFoundError } from "../../lib/errors.js";
 import type { Logger } from "pino";
 import { briefingAnswerCount } from "./product-intake.contracts.js";
+import { resolveSocialMediaEntitlement } from "../billing/commercial-entitlements.service.js";
 
 export type IntakeEntryPoint = "launch" | "market_intel" | "social_media" | "paid_media";
 const mutableStatuses = new Set(["draft"]);
@@ -34,6 +35,12 @@ export async function getProductIntake(workspaceId: string, productId: string) {
 
 export async function startProductIntake(workspaceId: string, productId: string, entryPoint: IntakeEntryPoint, actorId: string, sourceCampaignId?: string, log?: Logger) {
   await productForWorkspace(workspaceId, productId);
+  if (entryPoint === "social_media") {
+    const entitlement = await resolveSocialMediaEntitlement(workspaceId);
+    if (!entitlement.active || entitlement.productId !== productId) {
+      throw new AppError(403, "A current Social Media contract is required to start this briefing", "SOCIAL_MEDIA_ENTITLEMENT_REQUIRED");
+    }
+  }
   const existing = await getProductIntake(workspaceId, productId);
   if (existing.draft) return { intake: existing.draft, canonicalCurrent: existing.canonicalCurrent, draft: existing.draft, decision: "continue_or_review", created: false };
   const [latest] = await db.select({ version: productIntakesTable.version }).from(productIntakesTable)
@@ -46,6 +53,16 @@ export async function startProductIntake(workspaceId: string, productId: string,
   await audit(workspaceId, "product_intake.started", { intakeId: created.id, productId, entryPoint }, actorId);
   log?.info({ intakeId: created.id, productId }, "Canonical product intake started");
   return { intake: created, canonicalCurrent: existing.canonicalCurrent, draft: created, decision: "continue_or_review", created: true };
+}
+
+export async function getSocialMediaBriefingAccess(workspaceId: string) {
+  const entitlement = await resolveSocialMediaEntitlement(workspaceId);
+  return {
+    entitlement,
+    briefingUrl: entitlement.active && entitlement.productId
+      ? `/intake/${entitlement.productId}?entryPoint=social_media`
+      : null,
+  };
 }
 
 export async function updateProductIntake(workspaceId: string, intakeId: string, snapshot: Record<string, unknown>, actorId: string, log?: Logger): Promise<ProductIntake> {

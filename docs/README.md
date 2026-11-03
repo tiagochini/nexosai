@@ -13,6 +13,8 @@ que uma capacidade está homologada hoje.
 ## Execução e homologação
 
 - [Desenvolvimento local](LOCAL_DEVELOPMENT.md)
+- [Implantação na AWS — passo a passo](AWS_DEPLOYMENT.md)
+- [Pacote de preparação AWS e recursos necessários](../ops/aws/README.md)
 - [Ambiente de homologação](SUPABASE_HOMOLOGATION.md)
 - [Meta App Review](META_APP_REVIEW_TEST_RUNBOOK.md)
 - [Homologação de Meta Ads](META_ADS_HOMOLOGACAO.md)

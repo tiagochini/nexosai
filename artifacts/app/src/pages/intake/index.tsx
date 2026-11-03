@@ -42,6 +42,19 @@ interface IntakeResponse {
   decision: string;
 }
 
+interface SocialMediaBriefingAccess {
+  entitlement: {
+    active: boolean;
+    status: "active" | "not_included" | "not_started" | "expired";
+    productId: string | null;
+    productName: string | null;
+    startsAt: string | null;
+    endsAt: string | null;
+    durationDays: number | null;
+  };
+  briefingUrl: string | null;
+}
+
 export default function IntakeHub() {
   const t = useUiText();
   const { locale } = useUiLocale();
@@ -63,6 +76,12 @@ export default function IntakeHub() {
     enabled: !!workspace?.id,
   });
   const campaigns = campaignsData?.campaigns ?? [];
+
+  const socialMediaAccess = useQuery({
+    queryKey: ["/api/product-intake/available", workspace?.id],
+    queryFn: () => customFetch<SocialMediaBriefingAccess>("/api/product-intake/available"),
+    enabled: !!workspace?.id && !productId,
+  });
 
   // Fetch intake for selected product
   const { data: intakeData, isLoading: loadingIntake } = useQuery({
@@ -122,6 +141,34 @@ export default function IntakeHub() {
       {!productId ? (
         // List campaign briefings
         <div className="space-y-4">
+          {socialMediaAccess.data?.entitlement.active && socialMediaAccess.data.briefingUrl && (
+            <section className="border border-cyan-400/30 bg-cyan-400/5 p-5 space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <h2 className="font-mono text-sm uppercase tracking-widest flex items-center gap-2">
+                    <Megaphone className="h-4 w-4 text-cyan-300" /> {t("Briefing de Social Media", "Social Media briefing", "Briefing de Social Media")}
+                  </h2>
+                  <p className="font-mono text-xs text-muted-foreground">
+                    {socialMediaAccess.data.entitlement.productName} — {socialMediaAccess.data.entitlement.durationDays
+                      ? t(`Contrato de ${socialMediaAccess.data.entitlement.durationDays} dias`, `${socialMediaAccess.data.entitlement.durationDays}-day contract`, `Contrato de ${socialMediaAccess.data.entitlement.durationDays} días`)
+                      : t("Contrato vigente", "Active contract", "Contrato vigente")}
+                    {socialMediaAccess.data.entitlement.endsAt ? ` · ${t("até", "until", "hasta")} ${new Date(socialMediaAccess.data.entitlement.endsAt).toLocaleDateString(intlLocale(locale))}` : ""}
+                  </p>
+                  <p className="font-mono text-[10px] text-muted-foreground/70">
+                    {t("Este briefing é liberado pelo contrato e seu prazo, independentemente do tipo de campanha.", "This briefing is enabled by the contract and its term, regardless of campaign type.", "Este briefing se habilita por el contrato y su vigencia, independientemente del tipo de campaña.")}
+                  </p>
+                </div>
+                <Button onClick={() => setLocation(socialMediaAccess.data!.briefingUrl!)} className="rounded-none font-mono uppercase tracking-widest text-xs gap-2">
+                  <Plus className="h-3.5 w-3.5" /> {t("Abrir briefing", "Open briefing", "Abrir briefing")}
+                </Button>
+              </div>
+            </section>
+          )}
+          {socialMediaAccess.isError && (
+            <p role="status" className="border border-amber-400/30 p-3 font-mono text-xs text-amber-200">
+              {t("Não foi possível consultar o contrato Social Media. Atualize a tela para verificar o acesso.", "Could not check the Social Media contract. Refresh to verify access.", "No se pudo consultar el contrato Social Media. Actualiza la pantalla para verificar el acceso.")}
+            </p>
+          )}
           <h2 className="font-mono text-sm uppercase tracking-widest flex items-center gap-2">
             <Target className="h-4 w-4 text-primary" /> {t("Selecione o lançamento", "Select a launch", "Selecciona un lanzamiento")}
           </h2>

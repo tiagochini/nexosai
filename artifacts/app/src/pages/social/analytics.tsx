@@ -471,13 +471,21 @@ export function SocialAnalyticsTab() {
   const [selectedAccount, setSelectedAccount] = useState<AccountAnalytics | null>(null);
   const [addingMeta, setAddingMeta] = useState(false);
 
-  const { data, isLoading, refetch, isFetching } = useQuery({
+  const { data: entitlementData, isLoading: entitlementLoading, isError: entitlementError } = useQuery({
+    queryKey: ["/api/social/entitlement"],
+    queryFn: () => customFetch<{ entitlement: { active: boolean; endsAt: string | null; productName: string | null } }>("/api/social/entitlement"),
+    staleTime: 60_000,
+  });
+  const socialMediaActive = entitlementData?.entitlement.active === true;
+
+  const { data, isLoading, refetch, isFetching, dataUpdatedAt } = useQuery({
     queryKey: ["/api/social/accounts/analytics"],
     queryFn: () =>
       customFetch<{ analytics: AccountAnalytics[] }>("/api/social/accounts/analytics").catch(
         () => ({ analytics: [] as AccountAnalytics[] })
       ),
     staleTime: 5 * 60_000, // 5 min cache
+    enabled: socialMediaActive,
   });
 
   const analytics = data?.analytics ?? [];
@@ -499,6 +507,17 @@ export function SocialAnalyticsTab() {
         <AccountDrawer account={selectedAccount} onClose={() => setSelectedAccount(null)} />
       )}
 
+      {entitlementLoading ? (
+        <div role="status" className="border border-border/40 p-4 text-xs font-mono text-muted-foreground">{t("Verificando o contrato de Social Media…", "Checking the Social Media contract…", "Verificando el contrato de Social Media…")}</div>
+      ) : entitlementError ? (
+        <div role="alert" className="border border-red-400/40 bg-red-400/5 p-4 text-xs text-red-200">{t("Não foi possível verificar o contrato de Social Media. Atualize a tela antes de tentar novamente.", "Could not verify the Social Media contract. Refresh before trying again.", "No se pudo verificar el contrato de Social Media. Actualiza la pantalla e inténtalo de nuevo.")}</div>
+      ) : !socialMediaActive ? (
+        <div className="border border-amber-400/40 bg-amber-400/5 p-5 space-y-2">
+          <p className="font-mono text-xs font-bold uppercase tracking-wider text-amber-200">{t("Social Media não está ativo neste workspace", "Social Media is not active for this workspace", "Social Media no está activo en este espacio")}</p>
+          <p className="text-xs text-muted-foreground">{t("O monitoramento de métricas é liberado por um contrato Social Media vigente, independentemente do tipo de campanha. A conexão e as permissões da Meta também precisam estar ativas.", "Metrics monitoring is enabled by an active Social Media contract, regardless of campaign type. The Meta connection and permissions must also be active.", "El monitoreo de métricas se habilita con un contrato vigente de Social Media, independientemente del tipo de campaña. La conexión y los permisos de Meta también deben estar activos.")}</p>
+        </div>
+      ) : null}
+
       {/* Header row */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
@@ -510,7 +529,7 @@ export function SocialAnalyticsTab() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {analytics.length > 0 && (
+          {socialMediaActive && analytics.length > 0 && (
             <Button
               size="sm"
               variant="outline"
@@ -522,21 +541,27 @@ export function SocialAnalyticsTab() {
               {t("Adicionar conta", "Add Account", "Añadir cuenta")}
             </Button>
           )}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2 h-8"
-          >
-            <RefreshCw className={`h-3 w-3 ${isFetching ? "animate-spin" : ""}`} />
-            {t("Atualizar", "Refresh", "Actualizar")}
-          </Button>
+          {socialMediaActive && <Button
+              size="sm"
+              variant="outline"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2 h-8"
+            >
+              <RefreshCw className={`h-3 w-3 ${isFetching ? "animate-spin" : ""}`} />
+              {t("Atualizar", "Refresh", "Actualizar")}
+            </Button>}
         </div>
       </div>
 
+      {socialMediaActive && <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border border-emerald-400/20 bg-emerald-400/5 px-3 py-2 text-[10px] font-mono text-emerald-200/80">
+        <span>{entitlementData.entitlement.productName ?? t("Contrato Social Media ativo", "Active Social Media contract", "Contrato Social Media activo")}</span>
+        {entitlementData.entitlement.endsAt && <span>{t("Vigente até", "Active through", "Vigente hasta")} {new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium" }).format(new Date(entitlementData.entitlement.endsAt))}</span>}
+        {dataUpdatedAt > 0 && <span>{t("Métricas consultadas", "Metrics checked", "Métricas consultadas")} {new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "short", timeStyle: "short" }).format(new Date(dataUpdatedAt))}</span>}
+      </div>}
+
       {/* Loading state */}
-      {isLoading ? (
+      {socialMediaActive && (isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[1, 2, 3].map(i => (
             <div key={i} className="border border-border/30 bg-card/30 p-4 space-y-3">
@@ -634,7 +659,7 @@ export function SocialAnalyticsTab() {
             ))}
           </div>
         </>
-      )}
+      ))}
     </div>
   );
 }

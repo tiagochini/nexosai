@@ -206,9 +206,21 @@ export async function deductCredits(
     newBalance = unlimited ? balanceBefore : balanceBefore - cost;
 
     if (!unlimited) {
+      // Spend the expiring monthly allowance first; preserve purchased credits
+      // for a later campaign. If completed provider work overruns the balance,
+      // the remainder is recorded against the purchased bucket as debt.
+      const monthlyBefore = ws.creditsMonthlyBalance ?? 0;
+      const purchasedBefore = ws.creditsPurchasedBalance ?? 0;
+      const monthlyDebit = Math.min(Math.max(monthlyBefore, 0), cost);
+      const monthlyAfter = monthlyBefore - monthlyDebit;
+      const purchasedAfter = purchasedBefore - (cost - monthlyDebit);
       await trx
         .update(workspacesTable)
-        .set({ creditsBalance: newBalance })
+        .set({
+          creditsBalance: newBalance,
+          creditsMonthlyBalance: monthlyAfter,
+          creditsPurchasedBalance: purchasedAfter,
+        })
         .where(eq(workspacesTable.id, workspaceId));
     }
 
@@ -290,12 +302,16 @@ export async function grantCreditsInTransaction(
     }
   }
 
-  const newBalance = ws.creditsBalance + amount;
+  const purchasedBefore = ws.creditsPurchasedBalance ?? 0;
+  const monthlyBefore = ws.creditsMonthlyBalance ?? 0;
+  const purchasedAfter = action === "monthly_reset" ? purchasedBefore : purchasedBefore + amount;
+  const monthlyAfter = action === "monthly_reset" ? amount : monthlyBefore;
+  const newBalance = purchasedAfter + monthlyAfter;
   if (!Number.isSafeInteger(newBalance) || newBalance > 2_147_483_647) throw new Error("Credit balance exceeds supported range");
 
   await trx
     .update(workspacesTable)
-    .set({ creditsBalance: newBalance })
+    .set({ creditsBalance: newBalance, creditsPurchasedBalance: purchasedAfter, creditsMonthlyBalance: monthlyAfter })
     .where(eq(workspacesTable.id, workspaceId));
 
   const [tx] = await trx
@@ -340,12 +356,21 @@ export async function resetMonthlyCredits(
     if (alreadyReset) return;
     const [plan] = await trx.select().from(plansTable).where(eq(plansTable.id, ws.planId));
     if (!plan) throw new NotFoundError("Plan");
-    // New monthly allocation repays debt; renewal must never erase refund debt.
-    const balanceAfter = ws.creditsBalance < 0 ? ws.creditsBalance + plan.creditsMonthly : plan.creditsMonthly;
-    await trx.update(workspacesTable).set({ creditsBalance: balanceAfter, creditsLastReset: new Date() }).where(eq(workspacesTable.id, workspaceId));
-    await trx.insert(creditTransactionsTable).values({ workspaceId, type: "credit", action: "monthly_reset", amount: plan.creditsMonthly, balanceBefore: ws.creditsBalance, balanceAfter, description: "Monthly credit renewal", idempotencyKey: resetKey });
+    // Replace only the monthly bucket. Acquired credits remain in the purchased
+    // bucket and are never erased by monthly renewal. Monthly leftovers expire.
+    const purchasedBalance = ws.creditsPurchasedBalance ?? 0;
+    const balanceAfter = purchasedBalance + plan.creditsMonthly;
+    if (!Number.isSafeInteger(balanceAfter) || balanceAfter > 2_147_483_647) {
+      throw new Error("Credit balance exceeds supported range during monthly renewal");
+    }
+    await trx.update(workspacesTable).set({
+      creditsBalance: balanceAfter,
+      creditsMonthlyBalance: plan.creditsMonthly,
+      creditsLastReset: new Date(),
+    }).where(eq(workspacesTable.id, workspaceId));
+    await trx.insert(creditTransactionsTable).values({ workspaceId, type: "credit", action: "monthly_reset", amount: plan.creditsMonthly, balanceBefore: ws.creditsBalance, balanceAfter, description: "Monthly credit renewal; acquired balance retained", idempotencyKey: resetKey });
   });
-  log.info({ workspaceId }, "Monthly credits reset with debt preserved");
+  log.info({ workspaceId }, "Monthly credits renewed; purchased credits retained");
 }
 
 export async function reversePurchaseCreditsInTransaction(trx: CreditDbTransaction, workspaceId: string, delta: number, key: string): Promise<void> {
@@ -354,9 +379,10 @@ export async function reversePurchaseCreditsInTransaction(trx: CreditDbTransacti
   if (!ws) throw new NotFoundError("Workspace");
   const [prior] = await trx.select().from(creditTransactionsTable).where(eq(creditTransactionsTable.idempotencyKey, key));
   if (prior) throw new Error("Reversal ledger key already used");
-  const balanceAfter = ws.creditsBalance - delta;
+  const purchasedAfter = (ws.creditsPurchasedBalance ?? 0) - delta;
+  const balanceAfter = (ws.creditsMonthlyBalance ?? 0) + purchasedAfter;
   if (!Number.isSafeInteger(balanceAfter) || balanceAfter < -2147483648 || balanceAfter > 2147483647) throw new Error("Reversal balance exceeds supported range");
-  await trx.update(workspacesTable).set({ creditsBalance: balanceAfter }).where(eq(workspacesTable.id, workspaceId));
+  await trx.update(workspacesTable).set({ creditsBalance: balanceAfter, creditsPurchasedBalance: purchasedAfter }).where(eq(workspacesTable.id, workspaceId));
   await trx.insert(creditTransactionsTable).values({ workspaceId, type: delta > 0 ? "debit" : "credit", action: "refund_reversal", amount: Math.abs(delta), balanceBefore: ws.creditsBalance, balanceAfter, idempotencyKey: key, description: delta > 0 ? "Verified payment reversal" : "Verified chargeback release" });
 }
 

@@ -66,6 +66,8 @@ export default function Register() {
   const [plan, setPlan]                   = useState("solo");
   const [referralCode, setReferralCode]   = useState("");
   const [inviteCode, setInviteCode]       = useState("");
+  const [offerKey, setOfferKey]           = useState("");
+  const [salePlanSlug, setSalePlanSlug]   = useState<"solo" | "agency" | "">("");
 
   const [reqName, setReqName]   = useState("");
   const [reqEmail, setReqEmail] = useState("");
@@ -94,6 +96,18 @@ export default function Register() {
     const inv = params.get("invite") || params.get("code");
     if (inv) {
       setInviteCode(inv.toUpperCase().trim());
+      setMode("code-form");
+    }
+    const offer = params.get("offer");
+    if (offer) {
+      setOfferKey(offer.trim());
+      setMode("code-form");
+      return;
+    }
+    const salePlan = params.get("plan");
+    if (salePlan === "solo" || salePlan === "agency") {
+      setSalePlanSlug(salePlan);
+      setPlan(salePlan);
       setMode("code-form");
     }
   }, []);
@@ -125,7 +139,7 @@ export default function Register() {
       onSuccess: (data) => {
         setToken(data.accessToken);
         toast.success(t.success);
-        setLocation("/welcome");
+        setLocation(offerKey ? `/billing?offer=${encodeURIComponent(offerKey)}` : salePlanSlug ? `/billing?plan=${salePlanSlug}` : "/welcome");
       },
       onError: (err: Error & { body?: { code?: string } }) => {
         const code = err?.body?.code;
@@ -152,6 +166,8 @@ export default function Register() {
         ...(phone.trim() ? { phone: phone.trim() } : {}),
         ...(referralCode ? { referralCode } : {}),
         ...(inviteCode ? { inviteCode } : {}),
+        ...(offerKey ? { offerKey } : {}),
+        ...(salePlanSlug ? { salePlanSlug } : {}),
         locale,
       },
     });
@@ -475,7 +491,7 @@ export default function Register() {
               <FieldStatus ok={passMatch} msg={passMatch === true ? t.match_ok : t.match_err} />
             </div>
 
-            <div className="space-y-2">
+            {!offerKey && !salePlanSlug && <div className="space-y-2">
               <Label htmlFor="inviteCode" className="font-mono text-xs uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                 <Lock className="h-3 w-3" /> {uiText("Código de Convite", "Invite Code", "Código de invitación")} <span className="text-destructive">*</span>
               </Label>
@@ -486,7 +502,7 @@ export default function Register() {
               <p className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
                 {uiText("Obrigatório durante o período de acesso exclusivo", "Required during the exclusive access period", "Obligatorio durante el período de acceso exclusivo")}
               </p>
-            </div>
+            </div>}
 
             {referralCode && (
               <div className="border border-success/30 bg-success/5 px-3 py-2 flex items-center gap-2">
@@ -497,7 +513,7 @@ export default function Register() {
               </div>
             )}
 
-            <div className="space-y-2">
+            {!offerKey && !salePlanSlug && <div className="space-y-2">
               <Label htmlFor="plan" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
                 {t.plan_label}
               </Label>
@@ -510,7 +526,7 @@ export default function Register() {
                   <SelectItem value="agency" className="font-mono uppercase text-xs tracking-wider focus:bg-primary/20 focus:text-primary">{t.plan_agency}</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </div>}
 
             <Button type="submit"
               className="w-full rounded-none font-mono uppercase tracking-widest font-bold btn-weapon-primary mt-2 h-12"

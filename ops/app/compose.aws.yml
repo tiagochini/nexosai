@@ -1,0 +1,17 @@
+# EC2 host Caddy connects directly to API to preserve HTTPS and client IP.
+services:
+  api:
+    ports:
+      - "127.0.0.1:8080:8080"
+    logging: &bounded-logs
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+  web:
+    logging: *bounded-logs
+  redis:
+    logging: *bounded-logs
+  db-tools:
+    ports: !reset []
+    logging: *bounded-logs

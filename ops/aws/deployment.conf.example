@@ -1,0 +1,9 @@
+# Bash configuration, no credentials. Copy to /etc/nexos/deployment.conf.
+APP_ENV_FILE=/etc/nexos/app.env
+REDIS_PASSWORD_FILE=/etc/nexos/redis-password
+DATABASE_CA_FILE=/etc/nexos/rds-ca.pem
+WEB_PORT=8081
+NEXOS_DATABASE_NETWORK=nexos-production-database
+# Change both tags for each release. Keep previous images for rollback.
+NEXOS_API_IMAGE=nexos-api:release-001
+NEXOS_WEB_IMAGE=nexos-web:release-001

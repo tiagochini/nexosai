@@ -17,6 +17,7 @@ import {
   type Campaign,
   type InsertCampaign,
   commercialSubscriptionsTable,
+  entitlementGrantsTable,
 } from "@workspace/db";
 import {
   simulateBudget,
@@ -221,7 +222,7 @@ export async function createCampaign(
   }
 
   const subscriptions = await db
-    .select({ id: commercialSubscriptionsTable.id, productId: commercialSubscriptionsTable.productId })
+    .select({ id: commercialSubscriptionsTable.id, productId: commercialSubscriptionsTable.productId, endsAt: commercialSubscriptionsTable.endsAt, providerMetadata: commercialSubscriptionsTable.providerMetadata })
     .from(commercialSubscriptionsTable)
     .where(and(eq(commercialSubscriptionsTable.workspaceId, workspaceId), eq(commercialSubscriptionsTable.status, "active")))
     ;
@@ -239,6 +240,17 @@ export async function createCampaign(
   }
   const subscription = matchingSubscriptions[0];
   if (requestedSubscriptionId && !subscription) throw new ValidationError("Subscription is not active in this workspace/product");
+  if (subscription?.endsAt && subscription.endsAt <= new Date()) throw new ForbiddenError("O período contratado para esta oferta terminou.");
+  if (subscription && (subscription.providerMetadata as Record<string, unknown>)?.salesOfferContractId) {
+    const [campaignGrant] = await db.select({ value: entitlementGrantsTable.value }).from(entitlementGrantsTable)
+      .where(and(eq(entitlementGrantsTable.workspaceId, workspaceId), eq(entitlementGrantsTable.subscriptionId, subscription.id), eq(entitlementGrantsTable.capability, "campaigns"))).limit(1);
+    const included = Number((campaignGrant?.value as Record<string, unknown> | undefined)?.included ?? 0);
+    const [used] = await db.select({ total: count() }).from(campaignsTable)
+      .where(and(eq(campaignsTable.workspaceId, workspaceId), eq(campaignsTable.commercialSubscriptionId, subscription.id)));
+    if (included < 1 || Number(used?.total ?? 0) >= included) {
+      throw new ForbiddenError("Esta assinatura não inclui campanhas disponíveis. Contrate uma oferta com campanhas ou selecione outro contrato ativo.");
+    }
+  }
   const [campaign] = await db
     .insert(campaignsTable)
     .values({

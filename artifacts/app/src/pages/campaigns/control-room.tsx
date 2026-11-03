@@ -10,7 +10,7 @@ import {
   ArrowLeft, Activity, ShieldCheck, Database,
   Layers, Clock, CheckCircle2, AlertTriangle,
   Terminal, RefreshCw, XCircle, ChevronRight,
-  Filter, Calendar, Type, Hash, Tag, ExternalLink
+  Filter, Calendar, Type, Hash, Tag, ExternalLink, Loader2, Rocket, Circle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -1195,6 +1195,107 @@ function ErrorState({ error, onRetry }: { error: Error, onRetry: () => void }) {
   );
 }
 
+type LaunchPreflight = {
+  campaignId: string;
+  checkedAt: string;
+  ready: boolean;
+  checks: Array<{ id: string; label: string; state: "ready" | "blocked" | "warning" | "skipped"; detail: string; href?: string }>;
+};
+
+function LaunchChecklist({ campaignId }: { campaignId: string }) {
+  const t = useUiText();
+  const [preflight, setPreflight] = useState<LaunchPreflight | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [launching, setLaunching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [launchResult, setLaunchResult] = useState<string | null>(null);
+
+  const runPreflight = async () => {
+    setChecking(true);
+    setError(null);
+    setLaunchResult(null);
+    try {
+      const result = await customFetch<LaunchPreflight>(`/api/campaigns/${campaignId}/execute/preflight`, { method: "POST" });
+      setPreflight(result);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("Não foi possível verificar a prontidão.", "Could not check launch readiness.", "No se pudo comprobar la preparación."));
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const launch = async () => {
+    setLaunching(true);
+    setError(null);
+    try {
+      const response = await customFetch<{ message?: string }>(`/api/campaigns/${campaignId}/execute/launch`, { method: "POST" });
+      setLaunchResult(response.message ?? t("Lançamento iniciado.", "Launch started.", "Lanzamiento iniciado."));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("O servidor bloqueou o lançamento. Atualize a verificação.", "The server blocked launch. Refresh the checks.", "El servidor bloqueó el lanzamiento. Actualiza las comprobaciones."));
+      setPreflight(null);
+    } finally {
+      setLaunching(false);
+    }
+  };
+
+  const stateIcon = (state: LaunchPreflight["checks"][number]["state"]) => {
+    if (state === "ready") return <CheckCircle2 className="h-5 w-5 text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.75)]" />;
+    if (state === "blocked") return <XCircle className="h-5 w-5 text-red-400" />;
+    if (state === "warning") return <AlertTriangle className="h-5 w-5 text-amber-300" />;
+    return <Circle className="h-5 w-5 text-slate-500" />;
+  };
+
+  return (
+    <section className="relative overflow-hidden border border-primary/30 bg-[#060b17]/90 p-4 sm:p-6 shadow-[0_0_40px_rgba(91,72,255,0.08)]" aria-live="polite">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.13),_transparent_60%)]" />
+      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="mb-1 flex items-center gap-2 text-primary">
+            <Rocket className="h-4 w-4" />
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em]">{t("Prontidão para lançamento", "Launch readiness", "Preparación del lanzamiento")}</span>
+          </div>
+          <h2 className="font-mono text-lg font-bold text-white">{t("Prepare. Valide. Lance.", "Prepare. Validate. Launch.", "Prepara. Valida. Lanza.")}</h2>
+          <p className="mt-1 max-w-2xl font-mono text-[10px] text-muted-foreground">{t("Cada etapa consulta os dados reais da campanha e valida as integrações antes de liberar o lançamento.", "Each stage checks live campaign data and validates integrations before enabling launch.", "Cada etapa consulta los datos reales y valida las integraciones antes de habilitar el lanzamiento.")}</p>
+        </div>
+        <Button onClick={() => void runPreflight()} disabled={checking || launching} variant="outline" className="h-9 shrink-0 border-primary/50 bg-primary/10 font-mono text-[10px] uppercase tracking-widest text-primary hover:bg-primary/20">
+          {checking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Activity className="mr-2 h-4 w-4" />}
+          {checking ? t("Verificando etapas...", "Checking stages...", "Verificando etapas...") : t("Verificar prontidão", "Check readiness", "Verificar preparación")}
+        </Button>
+      </div>
+
+      {checking && !preflight && <div className="relative mt-5 h-1 overflow-hidden bg-white/10"><div className="h-full w-1/3 animate-[pulse_1s_ease-in-out_infinite] bg-gradient-to-r from-blue-500 to-violet-500" /></div>}
+      {preflight && <div className="relative mt-5 space-y-2">
+        {preflight.checks.map((check, index) => (
+          <div key={check.id} className={`flex gap-3 border p-3 transition-colors duration-500 ${check.state === "ready" ? "border-emerald-500/30 bg-emerald-500/[0.06]" : check.state === "blocked" ? "border-red-500/30 bg-red-500/[0.05]" : check.state === "warning" ? "border-amber-400/25 bg-amber-400/[0.04]" : "border-white/10 bg-black/20"}`}>
+            <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center">
+              {checking && index === preflight.checks.findIndex((item) => item.state !== "ready" && item.state !== "skipped") ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : stateIcon(check.state)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className={`font-mono text-[11px] font-bold uppercase tracking-wider ${check.state === "ready" ? "text-emerald-300" : check.state === "blocked" ? "text-red-300" : check.state === "warning" ? "text-amber-200" : "text-slate-400"}`}>{check.label}</span>
+                <span className="font-mono text-[9px] uppercase tracking-widest opacity-70">{check.state === "ready" ? t("Confirmado", "Confirmed", "Confirmado") : check.state === "blocked" ? t("Pendente", "Pending", "Pendiente") : check.state === "warning" ? t("Atenção", "Attention", "Atención") : t("Não se aplica", "Not applicable", "No aplica")}</span>
+              </div>
+              <p className="mt-1 break-words font-mono text-[10px] leading-relaxed text-muted-foreground">{check.detail}</p>
+              {check.state === "blocked" && check.href && <Link href={check.href} className="mt-1 inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest text-primary hover:underline">{t("Corrigir etapa", "Fix this stage", "Corregir etapa")} <ChevronRight className="h-3 w-3" /></Link>}
+            </div>
+          </div>
+        ))}
+        <p className="pt-1 text-right font-mono text-[9px] text-muted-foreground">{t("Verificado em", "Checked at", "Verificado a las")} {new Date(preflight.checkedAt).toLocaleString()}</p>
+      </div>}
+
+      {error && <div className="relative mt-4 border border-red-500/30 bg-red-500/10 p-3 font-mono text-[10px] text-red-200">{error}</div>}
+      {launchResult && <div className="relative mt-4 flex items-center gap-2 border border-emerald-500/40 bg-emerald-500/10 p-3 font-mono text-[10px] text-emerald-200"><CheckCircle2 className="h-4 w-4" />{launchResult}</div>}
+      <div className="relative mt-5 flex flex-col items-center gap-2 border-t border-white/10 pt-4">
+        <Button onClick={() => void launch()} disabled={!preflight?.ready || checking || launching} className={`h-12 w-full max-w-xl font-mono text-xs font-bold uppercase tracking-[0.2em] transition-all ${preflight?.ready ? "bg-gradient-to-r from-blue-500 to-violet-600 text-white shadow-[0_0_28px_rgba(99,102,241,0.35)] hover:brightness-110" : "bg-slate-800 text-slate-500"}`}>
+          {launching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Rocket className="mr-2 h-4 w-4" />}
+          {launching ? t("Iniciando campanha...", "Starting campaign...", "Iniciando campaña...") : t("Lançar campanha", "Launch campaign", "Lanzar campaña")}
+        </Button>
+        <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("O servidor repete as validações antes de iniciar.", "The server repeats these checks before starting.", "El servidor repite estas comprobaciones antes de iniciar.")}</span>
+      </div>
+    </section>
+  );
+}
+
 export default function ControlRoom() {
   const t = useUiText();
   const [, params] = useRoute("/campaigns/:id/control-room");
@@ -1278,6 +1379,9 @@ export default function ControlRoom() {
 
       {/* DASHBOARD GRID */}
       <main className="flex-1 p-4 sm:p-6 max-w-[1600px] w-full mx-auto relative z-10">
+        <div className="mb-4 sm:mb-6">
+          <LaunchChecklist campaignId={id} />
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
 
           {/* LEFT COLUMN */}

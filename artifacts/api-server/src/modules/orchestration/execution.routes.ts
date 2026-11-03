@@ -13,14 +13,17 @@ import { AppError } from "../../lib/errors.js";
 import {
   db,
   campaignsTable,
+  masterplanVersionsTable,
   workspacesTable,
   workspaceIntegrationsTable,
   contentPiecesTable,
+  pagesTable,
   auditLogsTable,
 } from "@workspace/db";
-import { eq, and, inArray, ne, count } from "drizzle-orm";
+import { eq, and, inArray, ne, count, desc } from "drizzle-orm";
 import { env } from "../../lib/env.js";
 import { z } from "zod/v4";
+import { testIntegrationCredential } from "../integrations/integration-validator.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -40,15 +43,19 @@ async function launchCampaign(
   userId: string,
   log: Parameters<typeof triggerExecutionPhase>[2],
 ) {
-  const [ownedCampaign] = await db.select({ id: campaignsTable.id }).from(campaignsTable)
+  const [ownedCampaign] = await db.select({ id: campaignsTable.id, landingSetupData: campaignsTable.landingSetupData }).from(campaignsTable)
     .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).limit(1);
   if (!ownedCampaign) throw new AppError(404, "Campaign not found", "NOT_FOUND");
+  const [approvedMasterplan] = await db.select({ id: masterplanVersionsTable.id }).from(masterplanVersionsTable)
+    .where(and(eq(masterplanVersionsTable.campaignId, campaignId), eq(masterplanVersionsTable.workspaceId, workspaceId), eq(masterplanVersionsTable.status, "approved"))).limit(1);
+  if (!approvedMasterplan) throw new AppError(422, "Aprove o Master Plan antes de lançar a campanha.", "MASTERPLAN_NOT_APPROVED", { approvalUrl: `/campaigns/${campaignId}/control-room` });
   const integrationCheck = await checkIntegrationsForLaunch(workspaceId, campaignId);
   if (integrationCheck.status === "blocked") {
-    const categoryList = integrationCheck.missing.map((m) => m.category).join(", ");
-    throw new AppError(422, `Para lançar esta campanha, conecte as integrações necessárias: ${categoryList}. Acesse /integracoes para conectar.`, "MISSING_INTEGRATIONS", { missing: integrationCheck.missing, connectUrl: "/integracoes" });
+    const missing = integrationCheck.missing ?? [];
+    const categoryList = missing.map((m) => m.category).join(", ");
+    throw new AppError(422, `Para lançar esta campanha, conecte as integrações necessárias: ${categoryList}. Acesse /integracoes para conectar.`, "MISSING_INTEGRATIONS", { missing, connectUrl: "/integracoes" });
   }
-  const allPieces = await db.select({ status: contentPiecesTable.status }).from(contentPiecesTable)
+  const allPieces = await db.select({ status: contentPiecesTable.status, type: contentPiecesTable.type }).from(contentPiecesTable)
     .where(eq(contentPiecesTable.campaignId, campaignId));
   const unapprovedPieces = allPieces.filter((piece) => piece.status !== "approved").length;
   if (allPieces.length === 0) {
@@ -57,6 +64,15 @@ async function launchCampaign(
   if (unapprovedPieces > 0) {
     throw new AppError(422, `${unapprovedPieces} peça${unapprovedPieces > 1 ? "s" : ""} de conteúdo ainda ${unapprovedPieces > 1 ? "precisam" : "precisa"} de aprovação antes do lançamento.`, "CONTENT_NOT_APPROVED", { unapprovedPieces, totalPieces: allPieces.length, approvalUrl: `/campaigns/${campaignId}/content` });
   }
+  const landingPiece = allPieces.some((piece) => piece.status === "approved" && piece.type === "landing_page_structure");
+  if (landingPiece) {
+    const [publishedPage] = await db.select({ publishedUrl: pagesTable.publishedUrl }).from(pagesTable)
+      .where(and(eq(pagesTable.workspaceId, workspaceId), eq(pagesTable.campaignId, campaignId), eq(pagesTable.status, "published"))).limit(1);
+    const landingSetup = (ownedCampaign.landingSetupData ?? {}) as { status?: string; ctas?: unknown[] };
+    if (!publishedPage?.publishedUrl || landingSetup.status !== "published" || !Array.isArray(landingSetup.ctas) || landingSetup.ctas.length === 0) {
+      throw new AppError(422, "A landing page aprovada precisa estar publicada com pelo menos um CTA configurado antes do lançamento.", "LANDING_NOT_PUBLISHED", { landingUrl: `/campaigns/${campaignId}/content` });
+    }
+  }
   const validation = await runCrossAgentValidation(campaignId, workspaceId, log);
   if (!validation.isViable) {
     throw new AppError(422, `Validação cruzada de agentes detectou ${validation.blockers.length} conflito(s) crítico(s): ${validation.blockers[0]?.description ?? "verificar agentes"}`, "CROSS_VALIDATION_FAILED", { blockers: validation.blockers, warnings: validation.warnings, metrics: validation.metrics });
@@ -64,6 +80,56 @@ async function launchCampaign(
   const result = await triggerExecutionPhase(campaignId, workspaceId, log, userId);
   return { result };
 }
+
+// A live, campaign-scoped preflight used by the visual launch checklist.
+router.post("/:campaignId/execute/preflight", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+  const workspaceId = req.auth.workspaceId;
+  const [campaign] = await db.select({ id: campaignsTable.id, landingSetupData: campaignsTable.landingSetupData })
+    .from(campaignsTable).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).limit(1);
+  if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "NOT_FOUND" }); return; }
+
+  const [masterplan, pieces, landingPage] = await Promise.all([
+    db.select({ id: masterplanVersionsTable.id, version: masterplanVersionsTable.version, approvedAt: masterplanVersionsTable.approvedAt })
+      .from(masterplanVersionsTable).where(and(eq(masterplanVersionsTable.campaignId, campaignId), eq(masterplanVersionsTable.workspaceId, workspaceId), eq(masterplanVersionsTable.status, "approved"))).orderBy(desc(masterplanVersionsTable.version)).limit(1),
+    db.select({ id: contentPiecesTable.id, type: contentPiecesTable.type, status: contentPiecesTable.status })
+      .from(contentPiecesTable).where(and(eq(contentPiecesTable.campaignId, campaignId), eq(contentPiecesTable.workspaceId, workspaceId))),
+    db.select({ publishedUrl: pagesTable.publishedUrl, publishedAt: pagesTable.publishedAt })
+      .from(pagesTable).where(and(eq(pagesTable.campaignId, campaignId), eq(pagesTable.workspaceId, workspaceId), eq(pagesTable.status, "published"))).limit(1),
+  ]);
+  const plan = masterplan[0];
+  const approvedPieces = pieces.filter((piece) => piece.status === "approved");
+  const pendingPieces = pieces.length - approvedPieces.length;
+  const integrationCheck = await checkIntegrationsForLaunch(workspaceId, campaignId);
+  const hasLanding = approvedPieces.some((piece) => piece.type === "landing_page_structure");
+  const setup = (campaign.landingSetupData ?? {}) as { status?: string; ctas?: unknown[]; tracking?: unknown };
+  const liveLanding = landingPage[0];
+  const checks: Array<{ id: string; label: string; state: "ready" | "blocked" | "warning" | "skipped"; detail: string; href?: string }> = [
+    { id: "masterplan", label: "Master Plan aprovado", state: plan ? "ready" : "blocked", detail: plan ? `Versão ${plan.version} aprovada${plan.approvedAt ? ` em ${new Date(plan.approvedAt).toLocaleString("pt-BR")}` : ""}.` : "Aprove o Master Plan para continuar.", href: `/campaigns/${campaignId}/control-room` },
+    { id: "integrations", label: "Integrações necessárias", state: integrationCheck.status === "ok" ? (integrationCheck.checks.some((check) => check.state === "warning") ? "warning" : "ready") : "blocked", detail: integrationCheck.status === "ok" ? (integrationCheck.checks.map((check) => check.detail).join(" ") || "Nenhuma integração externa exigida pelas peças aprovadas.") : (integrationCheck.missing ?? []).map((item) => `${item.category}: ${item.reason}`).join(" "), href: "/integracoes" },
+    { id: "content", label: "Conteúdos aprovados", state: pieces.length > 0 && pendingPieces === 0 ? "ready" : "blocked", detail: pieces.length === 0 ? "Gere e aprove as peças antes de iniciar." : pendingPieces === 0 ? `${approvedPieces.length} peça(s) aprovadas.` : `${pendingPieces} de ${pieces.length} peça(s) ainda aguardam aprovação.`, href: `/campaigns/${campaignId}/content` },
+  ];
+  if (hasLanding) {
+    const landingReady = !!liveLanding?.publishedUrl;
+    const setupReady = setup.status === "published" && Array.isArray(setup.ctas) && setup.ctas.length > 0;
+    checks.push({ id: "landing", label: "Landing page, CTAs e publicação", state: landingReady && setupReady ? "ready" : "blocked", detail: landingReady && setupReady ? `Página publicada: ${liveLanding.publishedUrl}` : "A landing aprovada precisa de plano de implementação com CTAs e publicação ativa.", href: `/campaigns/${campaignId}/content` });
+  } else {
+    checks.push({ id: "landing", label: "Landing page", state: "skipped", detail: "Esta campanha não tem landing page aprovada como entregável." });
+  }
+  let crossValidation: { isViable: boolean; blockers: Array<{ description: string }> } | null = null;
+  if (plan && pieces.length > 0 && pendingPieces === 0 && integrationCheck.status === "ok" && (!hasLanding || !!liveLanding?.publishedUrl)) {
+    try { crossValidation = await runCrossAgentValidation(campaignId, workspaceId, req.log); }
+    catch (error) { req.log.warn({ campaignId, error }, "launch preflight cross-validation unavailable"); }
+  }
+  checks.push({
+    id: "validation",
+    label: "Validação estratégica final",
+    state: crossValidation ? (crossValidation.isViable ? "ready" : "blocked") : "warning",
+    detail: crossValidation ? (crossValidation.isViable ? "Validação cruzada concluída sem bloqueios." : crossValidation.blockers.map((blocker) => blocker.description).join(" ")) : "A validação será executada ao iniciar o lançamento.",
+  });
+  const blockers = checks.filter((check) => check.state === "blocked");
+  res.json({ campaignId, checkedAt: new Date().toISOString(), ready: blockers.length === 0 && checks.some((check) => check.id === "validation" && check.state === "ready"), checks });
+});
 
 // GET /campaigns/:campaignId/execution/status
 router.get("/:campaignId/execution/status", async (req, res): Promise<void> => {
@@ -544,9 +610,11 @@ router.post("/:campaignId/content/pieces/:pieceType/skip", async (req, res): Pro
 // Blocks campaign launch if NO messaging AND NO email channels are connected.
 type DbIntegrationProvider = "meta_ads" | "instagram" | "tiktok_ads" | "google_ads" | "whatsapp_business" | "telegram" | "stripe" | "hotmart" | "eduzz" | "kiwify" | "mailchimp" | "activecampaign" | "rd_station" | "hubspot" | "crypto_native" | "custom_webhook";
 
-type IntegrationCheckResult =
-  | { status: "ok" }
-  | { status: "blocked"; missing: { category: string; providers: string[]; reason: string; pieceTypes: string[] }[] };
+type IntegrationCheckResult = {
+  status: "ok" | "blocked";
+  checks: { category: string; provider: string; state: "ready" | "warning" | "blocked"; detail: string }[];
+  missing?: { category: string; providers: string[]; reason: string; pieceTypes: string[] }[];
+};
 
 // Maps each content piece type to the integration category it operationally requires.
 // If a piece of that type exists in the campaign, the corresponding integration MUST
@@ -623,16 +691,33 @@ async function checkIntegrationsForLaunch(
   }
 
   // E-mail: RESEND_API_KEY satisfies the e-mail requirement even without a DB integration
+  const checks: { category: string; provider: string; state: "ready" | "warning" | "blocked"; detail: string }[] = [];
   if (env.RESEND_API_KEY && requiredCategories.has("E-mail")) {
-    requiredCategories.delete("E-mail");
+    try {
+      const result = await testIntegrationCredential("resend", { accessToken: env.RESEND_API_KEY });
+      if (result.valid) {
+        checks.push({ category: "E-mail", provider: "Resend", state: "ready", detail: result.detail ?? "Chave Resend validada com a API." });
+        requiredCategories.delete("E-mail");
+      }
+    } catch {
+      // Other configured email integrations remain eligible as a fallback.
+    }
   }
 
-  if (requiredCategories.size === 0) return { status: "ok" };
+  if (requiredCategories.size === 0) return { status: "ok", checks };
 
   // 3. Check which required providers are actually connected
   const allRequiredProviders = [...requiredCategories.values()].flatMap((r) => r.providers);
   const connected = await db
-    .select({ provider: workspaceIntegrationsTable.provider })
+    .select({
+      provider: workspaceIntegrationsTable.provider,
+      accessToken: workspaceIntegrationsTable.accessToken,
+      accountId: workspaceIntegrationsTable.accountId,
+      accountName: workspaceIntegrationsTable.accountName,
+      metadata: workspaceIntegrationsTable.metadata,
+      webhookUrl: workspaceIntegrationsTable.webhookUrl,
+      tokenExpiresAt: workspaceIntegrationsTable.tokenExpiresAt,
+    })
     .from(workspaceIntegrationsTable)
     .where(
       and(
@@ -642,13 +727,49 @@ async function checkIntegrationsForLaunch(
       ),
     );
 
-  const connectedProviders = new Set(connected.map((r) => r.provider as string));
+  // 4. Ping each connected candidate on its provider API. Secrets stay server-side.
+  const checkedProviders = new Map<string, { state: "ready" | "warning" | "blocked"; detail: string }>();
+  for (const integration of connected) {
+    const provider = integration.provider as string;
+    if (!integration.accessToken && !integration.webhookUrl) {
+      checkedProviders.set(provider, { state: "blocked", detail: `${provider}: conexão sem credencial disponível.` });
+      continue;
+    }
+    if (integration.tokenExpiresAt && integration.tokenExpiresAt.getTime() <= Date.now()) {
+      checkedProviders.set(provider, { state: "blocked", detail: `${provider}: token expirado; reconecte a integração.` });
+      continue;
+    }
+    try {
+      const result = await testIntegrationCredential(provider, {
+        accessToken: integration.accessToken ?? undefined,
+        accountId: integration.accountId ?? undefined,
+        webhookUrl: integration.webhookUrl ?? undefined,
+        metadata: (integration.metadata ?? {}) as Record<string, unknown>,
+      });
+      checkedProviders.set(provider, result.valid
+        ? { state: result.validationSkipped ? "warning" : "ready", detail: result.detail ?? `${integration.accountName ?? provider}: ${result.validationSkipped ? "credencial salva; verificação automática indisponível" : "conexão confirmada pela API"}.` }
+        : { state: "blocked", detail: result.error ?? `${provider}: o provedor recusou a credencial.` });
+    } catch {
+      checkedProviders.set(provider, { state: "blocked", detail: `${provider}: não foi possível validar a conexão agora.` });
+    }
+  }
 
-  // 4. Find categories where NONE of the required providers are connected
+  // 5. Find categories where NONE of the required providers passed validation.
   const missing: { category: string; providers: string[]; reason: string; pieceTypes: string[] }[] = [];
-
   for (const [category, req] of requiredCategories) {
-    const hasAny = req.providers.some((p) => connectedProviders.has(p));
+    const hasAny = req.providers.some((provider) => {
+      const state = checkedProviders.get(provider)?.state;
+      return state === "ready" || state === "warning";
+    });
+    const selected = req.providers.find((provider) => checkedProviders.get(provider)?.state === "ready")
+      ?? req.providers.find((provider) => checkedProviders.get(provider)?.state === "warning");
+    if (selected) {
+      const check = checkedProviders.get(selected)!;
+      checks.push({ category, provider: selected, state: check.state, detail: check.detail });
+    } else {
+      const attempted = req.providers.find((provider) => checkedProviders.has(provider));
+      checks.push({ category, provider: attempted ?? req.providers[0] ?? category, state: "blocked", detail: attempted ? checkedProviders.get(attempted)!.detail : `${category}: conecte uma integração necessária.` });
+    }
     if (!hasAny) {
       missing.push({
         category,
@@ -659,8 +780,8 @@ async function checkIntegrationsForLaunch(
     }
   }
 
-  if (missing.length === 0) return { status: "ok" };
-  return { status: "blocked", missing };
+  if (missing.length === 0) return { status: "ok", checks };
+  return { status: "blocked", checks, missing };
 }
 
 // POST /campaigns/:campaignId/execute/launch

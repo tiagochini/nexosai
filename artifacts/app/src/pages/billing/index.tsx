@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useAuth } from "@/lib/auth";
@@ -64,6 +65,25 @@ interface Plan {
   isWhiteLabel: boolean;
 }
 
+interface SalesOffer {
+  id: string; key: string; name: string; description: string; priceCents: number;
+  planSlug?: "solo" | "agency"; licensePlanName?: string; licenseMaxCampaigns?: number;
+  licenseMaxWorkspaces?: number; licenseSocialNetworks?: string[]; licenseWhiteLabel?: boolean;
+  interval: "one_time" | "monthly" | "yearly"; nexosAccessLifetime: boolean;
+  campaignsIncluded: number; socialMediaDays: number; creditsIncluded: number;
+}
+interface OfferContract {
+  id: string; offer: SalesOffer; status: string; startedAt?: string | null;
+  currentPeriodEndsAt?: string | null; recurring: boolean; createdAt: string;
+}
+
+const LICENSE_PLAN_RANK: Record<string, number> = { solo: 1, agency: 2 };
+function isLicenseDowngrade(currentPlanSlug: string | null | undefined, targetPlanSlug: string | null | undefined): boolean {
+  const currentRank = currentPlanSlug ? LICENSE_PLAN_RANK[currentPlanSlug] : undefined;
+  const targetRank = targetPlanSlug ? LICENSE_PLAN_RANK[targetPlanSlug] : undefined;
+  return currentRank !== undefined && targetRank !== undefined && targetRank < currentRank;
+}
+
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 function localizedMethodLabel(method: string, t: ReturnType<typeof useUiText>) {
@@ -99,12 +119,7 @@ const PAYMENT_METHODS: {
   { value: "credit_card", label: ["Cartão", "Card", "Tarjeta"], sub: ["+3,5% de taxa · Aprovação rápida", "+3.5% fee · Fast approval", "+3,5 % de comisión · Aprobación rápida"], icon: CreditCard },
 ];
 
-const CREDIT_PACKS = [
-  { id: "pack_500",  credits: 500,  priceBrl: 85,  label: "Lançamento Extra", description: "~1 lançamento completo",   perCr: "0,170", highlight: false },
-  { id: "pack_1500", credits: 1500, priceBrl: 239, label: "Trimestral",       description: "~3 lançamentos completos", perCr: "0,159", highlight: true  },
-  { id: "pack_3500", credits: 3500, priceBrl: 529, label: "Semestral",        description: "~8 lançamentos completos", perCr: "0,151", highlight: false },
-  { id: "pack_7000", credits: 7000, priceBrl: 979, label: "Anual",            description: "~16 lançamentos",         perCr: "0,140", highlight: false },
-];
+type CreditPack = { id: string; credits: number; priceBrl: number; label: string; description: string; highlight: boolean };
 
 const CREDIT_PACK_COPY: Record<string, { label: [string, string, string]; description: [string, string, string] }> = {
   pack_500: {
@@ -124,6 +139,15 @@ const CREDIT_PACK_COPY: Record<string, { label: [string, string, string]; descri
     description: ["~16 lançamentos", "~16 launches", "~16 lanzamientos"],
   },
 };
+
+// Keep the top-up choices visible even when the catalog endpoint is temporarily
+// unavailable. The API uses the same defaults when no admin-priced rows exist.
+const DEFAULT_CREDIT_PACKS: CreditPack[] = [
+  { id: "pack_500", credits: 500, priceBrl: 85, label: "Lançamento Extra", description: "~1 lançamento completo", highlight: false },
+  { id: "pack_1500", credits: 1500, priceBrl: 239, label: "Trimestral", description: "~3 lançamentos completos", highlight: true },
+  { id: "pack_3500", credits: 3500, priceBrl: 529, label: "Semestral", description: "~8 lançamentos completos", highlight: false },
+  { id: "pack_7000", credits: 7000, priceBrl: 979, label: "Anual", description: "~16 lançamentos", highlight: false },
+];
 
 const FALLBACK_PLAN_FEATURE_COPY: Record<string, [string, string, string][]> = {
   solo: [
@@ -194,6 +218,7 @@ function PaymentPanel({ payment, onClose, onConfirmed }: {
   const { locale } = useUiLocale();
   const countdown = useCountdown(payment.expiresAt);
   const [copied, setCopied] = useState(false);
+  const confirmationHandled = useRef(false);
 
   const { data: polled } = useQuery<{ payment: PaymentRecord }>({
     queryKey: ["/api/billing/payment", payment.id],
@@ -212,7 +237,10 @@ function PaymentPanel({ payment, onClose, onConfirmed }: {
   const isPaid = currentStatus === "paid";
 
   useEffect(() => {
-    if (isPaid) { onConfirmed(); }
+    if (isPaid && !confirmationHandled.current) {
+      confirmationHandled.current = true;
+      onConfirmed();
+    }
   }, [isPaid, onConfirmed]);
 
   const handleCopy = (text: string, label: string) => {
@@ -411,27 +439,34 @@ interface CardData {
   expiryMonth: string;
   expiryYear: string;
   cvv: string;
-  cpfCnpj?: string;
+  cpfCnpj: string;
+  phone: string;
+  postalCode: string;
+  addressNumber: string;
 }
 
 // ── Checkout selector ─────────────────────────────────────────────────────────
 
-function CheckoutSelector({ label, amount, amountCents, onMethod, loading, onCancel }: {
+function CheckoutSelector({ label, amount, amountCents, onMethod, loading, onCancel, recurring = false }: {
   label: string;
   amount: string;
   amountCents: number;
   onMethod: (method: string, card?: CardData, cpfCnpj?: string) => void;
   loading: boolean;
   onCancel: () => void;
+  recurring?: boolean;
 }) {
   const t = useUiText();
-  const [method, setMethod] = useState("pix");
+  const [method, setMethod] = useState(recurring ? "credit_card" : "pix");
   const [cardHolder, setCardHolder] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [cardMonth, setCardMonth] = useState("");
   const [cardYear, setCardYear] = useState("");
   const [cardCvv, setCardCvv] = useState("");
   const [cardCpf, setCardCpf] = useState("");
+  const [cardPhone, setCardPhone] = useState("");
+  const [cardPostalCode, setCardPostalCode] = useState("");
+  const [cardAddressNumber, setCardAddressNumber] = useState("");
 
   const cardFee = Math.round(amountCents * 1.035);
   const displayAmount = method === "credit_card" ? `R$ ${(cardFee / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : amount;
@@ -442,6 +477,30 @@ function CheckoutSelector({ label, amount, amountCents, onMethod, loading, onCan
       return;
     }
     if (method === "credit_card") {
+      if (!/^\d{11}$|^\d{14}$/.test(cardCpf.replace(/\D/g, ""))) {
+        toast.error(t("Informe um CPF/CNPJ válido para o titular.", "Enter a valid cardholder tax ID.", "Ingresa un documento fiscal válido del titular."));
+        return;
+      }
+      if (!/^\d{10,13}$/.test(cardPhone.replace(/\D/g, ""))) {
+        toast.error(t("Informe um telefone válido do titular.", "Enter a valid cardholder phone number.", "Ingresa un teléfono válido del titular."));
+        return;
+      }
+      if (!/^\d{8}$/.test(cardPostalCode.replace(/\D/g, ""))) {
+        toast.error(t("Informe um CEP válido com 8 dígitos.", "Enter a valid 8-digit postal code.", "Ingresa un código postal válido de 8 dígitos."));
+        return;
+      }
+      if (!cardAddressNumber.trim()) {
+        toast.error(t("Informe o número do endereço de cobrança.", "Enter the billing address number.", "Ingresa el número de la dirección de facturación."));
+        return;
+      }
+      if (!/^(0[1-9]|1[0-2])$/.test(cardMonth)) {
+        toast.error(t("Informe o mês de validade entre 01 e 12.", "Enter a valid expiration month from 01 to 12.", "Ingresa un mes de vencimiento válido entre 01 y 12."));
+        return;
+      }
+      if (!/^\d{2}(?:\d{2})?$/.test(cardYear)) {
+        toast.error(t("Informe o ano de validade com 2 ou 4 dígitos, por exemplo 27 ou 2027.", "Enter the expiration year with 2 or 4 digits, such as 27 or 2027.", "Ingresa el año de vencimiento con 2 o 4 dígitos, por ejemplo 27 o 2027."));
+        return;
+      }
       if (!cardHolder || !cardNumber || !cardMonth || !cardYear || !cardCvv) {
         return;
       }
@@ -449,9 +508,12 @@ function CheckoutSelector({ label, amount, amountCents, onMethod, loading, onCan
         holderName: cardHolder,
         number: cardNumber.replace(/\s/g, ""),
         expiryMonth: cardMonth,
-        expiryYear: cardYear,
+        expiryYear: cardYear.length === 2 ? `20${cardYear}` : cardYear,
         cvv: cardCvv,
-        cpfCnpj: cardCpf || undefined,
+        cpfCnpj: cardCpf.replace(/\D/g, ""),
+        phone: cardPhone.replace(/\D/g, ""),
+        postalCode: cardPostalCode.replace(/\D/g, ""),
+        addressNumber: cardAddressNumber.trim(),
       });
     } else {
       onMethod(method, undefined, cardCpf.replace(/[.\-/\s]/g, "") || undefined);
@@ -475,7 +537,7 @@ function CheckoutSelector({ label, amount, amountCents, onMethod, loading, onCan
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        {PAYMENT_METHODS.map(m => {
+        {(recurring ? PAYMENT_METHODS.filter(m => m.value === "credit_card") : PAYMENT_METHODS).map(m => {
           const Icon = m.icon;
           return (
             <button
@@ -539,7 +601,7 @@ function CheckoutSelector({ label, amount, amountCents, onMethod, loading, onCan
             </div>
             <div className="space-y-1.5">
               <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Ano", "Year", "Año")}</label>
-              <input value={cardYear} onChange={e => setCardYear(e.target.value.replace(/\D/g,"").slice(0,4))} placeholder="YYYY" maxLength={4}
+              <input value={cardYear} onChange={e => setCardYear(e.target.value.replace(/\D/g,"").slice(0,4))} placeholder="AA ou AAAA" maxLength={4} inputMode="numeric" autoComplete="cc-exp-year"
                 className="w-full border border-border/40 bg-background/50 rounded-none px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary" />
             </div>
             <div className="space-y-1.5">
@@ -549,16 +611,21 @@ function CheckoutSelector({ label, amount, amountCents, onMethod, loading, onCan
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("CPF do titular (opcional)", "Cardholder tax ID (optional)", "CPF del titular (opcional)")}</label>
-            <input value={cardCpf} onChange={e => setCardCpf(e.target.value)} placeholder="000.000.000-00"
+            <label htmlFor="billing-card-tax-id" className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("CPF/CNPJ do titular (obrigatório)", "Cardholder tax ID (required)", "Documento fiscal del titular (obligatorio)")}</label>
+            <input id="billing-card-tax-id" required value={cardCpf} onChange={e => setCardCpf(e.target.value)} placeholder="CPF ou CNPJ"
               className="w-full border border-border/40 bg-background/50 rounded-none px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="space-y-1.5"><label htmlFor="billing-card-phone" className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Telefone do titular (obrigatório)", "Cardholder phone (required)", "Teléfono del titular (obligatorio)")}</label><input id="billing-card-phone" required inputMode="tel" autoComplete="tel" value={cardPhone} onChange={e => setCardPhone(e.target.value)} placeholder="11999999999" className="w-full border border-border/40 bg-background/50 rounded-none px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary" /></div>
+            <div className="space-y-1.5"><label htmlFor="billing-card-postal-code" className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("CEP de cobrança (obrigatório)", "Billing postal code (required)", "Código postal de facturación (obligatorio)")}</label><input id="billing-card-postal-code" required inputMode="numeric" autoComplete="postal-code" maxLength={9} value={cardPostalCode} onChange={e => setCardPostalCode(e.target.value.replace(/\D/g, "").slice(0, 8))} placeholder="00000-000" className="w-full border border-border/40 bg-background/50 rounded-none px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary" /></div>
+            <div className="space-y-1.5"><label htmlFor="billing-card-address-number" className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">{t("Número do endereço (obrigatório)", "Address number (required)", "Número de dirección (obligatorio)")}</label><input id="billing-card-address-number" required autoComplete="address-line2" value={cardAddressNumber} onChange={e => setCardAddressNumber(e.target.value)} placeholder={t("Ex.: 123 ou S/N", "e.g. 123", "Ej.: 123")} className="w-full border border-border/40 bg-background/50 rounded-none px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary" /></div>
           </div>
         </div>
       )}
 
       <Button
         onClick={handlePay}
-        disabled={loading || (method === "credit_card" && (!cardHolder || !cardNumber || !cardMonth || !cardYear || !cardCvv))}
+        disabled={loading || (method === "credit_card" && (!cardHolder || !cardNumber || !cardMonth || !cardYear || !cardCvv || !cardCpf.trim() || !cardPhone.trim() || !cardPostalCode.trim() || !cardAddressNumber.trim()))}
         className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11"
       >
         {loading ? (
@@ -566,8 +633,9 @@ function CheckoutSelector({ label, amount, amountCents, onMethod, loading, onCan
         ) : (
           <ChevronRight className="h-4 w-4" />
         )}
-        {loading ? t("Processando...", "Processing...", "Procesando...") : `${t("Pagar via", "Pay with", "Pagar con")} ${localizedMethodLabel(method, t)}`}
+        {loading ? t("Processando...", "Processing...", "Procesando...") : recurring ? t("Assinar com cobrança automática", "Subscribe with automatic billing", "Suscribirme con cobro automático") : `${t("Pagar via", "Pay with", "Pagar con")} ${localizedMethodLabel(method, t)}`}
       </Button>
+      {recurring && <p className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-widest text-center">{t("Renova automaticamente a cada ciclo. Cancele quando quiser.", "Renews automatically each cycle. Cancel anytime.", "Se renueva automáticamente en cada ciclo. Cancela cuando quieras.")}</p>}
       <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest text-center">
         {t("Confirmação automática · Acesso/créditos liberados na hora", "Automatic confirmation · Access/credits released immediately", "Confirmación automática · Acceso/créditos disponibles al instante")}
       </p>
@@ -661,18 +729,22 @@ function PromoCodeSection() {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function BillingPage() {
+  const [, navigate] = useLocation();
   const { plan: currentPlan, planSlug } = useAuth();
+  const currentLicensePlanSlug = planSlug ?? currentPlan?.slug;
   const t = useUiText();
   const { locale } = useUiLocale();
   const queryClient = useQueryClient();
 
   const [checkout, setCheckout] = useState<{
-    type: "pack" | "plan";
+    type: "pack" | "plan" | "offer";
     id: string;
     label: string;
     amountBrl: string;
   } | null>(null);
   const [activePayment, setActivePayment] = useState<PaymentRecord | null>(null);
+  const offerSelectionApplied = useRef(false);
+  const requestedPlanSlug = new URLSearchParams(window.location.search).get("plan");
 
   const { data: statusData, isLoading: loadingStatus } = useQuery({
     queryKey: ["/api/billing/status"],
@@ -690,9 +762,61 @@ export default function BillingPage() {
   const { data: plansData, isLoading: loadingPlans } = useQuery({
     queryKey: ["/api/plans"],
     queryFn: async () => {
-      const data = await customFetch<{ plans: Plan[] }>("/api/plans");
-      return data;
+      const data = await customFetch<{ plans: Array<Plan & { priceMonthly?: number | string; whiteLabel?: boolean }> }>("/api/plans");
+      return {
+        plans: data.plans.map(plan => ({
+          ...plan,
+          monthlyPriceBrl: Math.round(Number(plan.priceMonthly ?? plan.monthlyPriceBrl ?? 0) * 100),
+          isWhiteLabel: plan.whiteLabel ?? plan.isWhiteLabel ?? false,
+          features: Array.isArray(plan.features) ? plan.features : [],
+        })),
+      };
     },
+  });
+
+  const offersQuery = useQuery({ queryKey: ["/api/billing/offers"], queryFn: () => customFetch<{ offers: SalesOffer[] }>("/api/billing/offers") });
+  const creditPacksQuery = useQuery({ queryKey: ["/api/billing/packs"], queryFn: () => customFetch<{ packs: CreditPack[] }>("/api/billing/packs") });
+  useEffect(() => {
+    const offerKey = new URLSearchParams(window.location.search).get("offer");
+    if (offerSelectionApplied.current) return;
+    if (offerKey) {
+      if (!offersQuery.data) return;
+      offerSelectionApplied.current = true;
+      const offer = offersQuery.data.offers.find(item => item.key === offerKey);
+      if (!offer) {
+        toast.error(t("A oferta do link não está mais disponível.", "The offer from this link is no longer available.", "La oferta de este enlace ya no está disponible."));
+        return;
+      }
+      if (isLicenseDowngrade(currentLicensePlanSlug, offer.planSlug)) {
+        toast.error(t("Esta oferta inclui uma licença inferior à sua atual. Escolha uma oferta do mesmo nível ou superior.", "This offer includes a lower license than your current one. Choose an offer at the same or a higher level.", "Esta oferta incluye una licencia inferior a la actual. Elige una oferta del mismo nivel o superior."));
+        return;
+      }
+      const amount = `R$ ${(offer.priceCents / 100).toLocaleString(intlLocale(locale), { minimumFractionDigits: 2 })}`;
+      setCheckout({ type: "offer", id: offer.id, label: offer.name, amountBrl: amount });
+      window.setTimeout(() => document.getElementById(`sales-offer-${offer.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 150);
+      return;
+    }
+    if (requestedPlanSlug === "solo" || requestedPlanSlug === "agency") {
+      if (!plansData) return;
+      offerSelectionApplied.current = true;
+      const plan = plansData.plans.find(item => item.slug === requestedPlanSlug);
+      if (!plan) {
+        toast.error(t("Este plano não está disponível para contratação.", "This plan is not available for purchase.", "Este plan no está disponible para contratar."));
+        return;
+      }
+      if (isLicenseDowngrade(currentLicensePlanSlug, plan.slug)) {
+        toast.error(t("Sua licença atual não pode ser reduzida. Escolha o plano atual ou um superior.", "Your current license cannot be downgraded. Choose your current plan or a higher one.", "Tu licencia actual no se puede reducir. Elige el plan actual o uno superior."));
+        return;
+      }
+      const amount = `R$${(plan.monthlyPriceBrl / 100).toLocaleString(intlLocale(locale), { minimumFractionDigits: 2 })}`;
+      setCheckout({ type: "plan", id: plan.id, label: `Plano ${plan.name}`, amountBrl: amount });
+      window.setTimeout(() => document.getElementById(`base-plan-${plan.slug}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 150);
+    }
+  }, [offersQuery.data, plansData, requestedPlanSlug, locale, t, currentLicensePlanSlug]);
+  const offerContractsQuery = useQuery({
+    queryKey: ["/api/billing/offer-contracts"],
+    queryFn: () => customFetch<{ contracts: OfferContract[] }>("/api/billing/offer-contracts"),
+    refetchInterval: (query) => query.state.data?.contracts.some(c => c.status === "pending") ? 5000 : false,
   });
 
   const initiatePlanMutation = useMutation({
@@ -733,13 +857,37 @@ export default function BillingPage() {
     },
   });
 
-  const handlePaymentConfirmed = () => {
+  const purchaseOfferMutation = useMutation({
+    mutationFn: async ({ offerId, method, card, cpfCnpj }: { offerId: string; method: string; card?: CardData; cpfCnpj?: string }) =>
+      customFetch<{ payment: PaymentRecord | null; contractId: string; recurring: boolean }>(`/api/billing/offers/${offerId}/purchase`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ method, card, cpfCnpj }),
+      }),
+    onSuccess: (result) => {
+      if (result.payment) setActivePayment(result.payment);
+      else toast.success(t("Assinatura criada. A primeira cobrança será processada pelo Asaas; os benefícios serão liberados após confirmação.", "Subscription created. Asaas will process the first charge; benefits activate after confirmation.", "Suscripción creada. Asaas procesará el primer cobro; los beneficios se activarán tras la confirmación."));
+      setCheckout(null);
+      void queryClient.invalidateQueries({ queryKey: ["/api/billing/offer-contracts"] });
+      void queryClient.invalidateQueries({ queryKey: ["/api/billing/history"] });
+      void queryClient.invalidateQueries({ queryKey: ["/api/billing/access"] });
+    },
+    onError: (error: Error) => toast.error(error.message ?? t("Não foi possível iniciar a compra.", "Could not start the purchase.", "No se pudo iniciar la compra.")),
+  });
+
+  const cancelOfferMutation = useMutation({
+    mutationFn: (contractId: string) => customFetch<{ contract: { id: string; status: string } }>(`/api/billing/offer-contracts/${contractId}/cancel`, { method: "POST" }),
+    onSuccess: () => { toast.success(t("Renovação automática cancelada.", "Automatic renewal cancelled.", "Renovación automática cancelada.")); void queryClient.invalidateQueries({ queryKey: ["/api/billing/offer-contracts"] }); void queryClient.invalidateQueries({ queryKey: ["/api/billing/access"] }); },
+    onError: (error: Error) => toast.error(error.message ?? t("Não foi possível cancelar a renovação.", "Could not cancel the renewal.", "No se pudo cancelar la renovación.")),
+  });
+
+  const handlePaymentConfirmed = useCallback(() => {
     toast.success(t("Pagamento confirmado! Créditos/acesso liberados.", "Payment confirmed! Credits/access activated.", "¡Pago confirmado! Créditos/acceso activados."), { duration: 6000 });
-    queryClient.invalidateQueries({ queryKey: ["/api/billing/status"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/billing/history"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/credits/balance"] });
-    setTimeout(() => setActivePayment(null), 4000);
-  };
+    void queryClient.invalidateQueries({ queryKey: ["/api/billing/status"] });
+    void queryClient.invalidateQueries({ queryKey: ["/api/billing/history"] });
+    void queryClient.invalidateQueries({ queryKey: ["/api/credits/balance"] });
+    void queryClient.invalidateQueries({ queryKey: ["/api/billing/offer-contracts"] });
+    setActivePayment(null);
+    navigate("/dashboard");
+  }, [navigate, queryClient, t]);
 
   const status = statusData;
   const payments = historyData?.payments ?? [];
@@ -799,6 +947,52 @@ export default function BillingPage() {
           onConfirmed={handlePaymentConfirmed}
         />
       )}
+
+      {offersQuery.data?.offers.length ? <section className="space-y-4">
+        <div><div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60">{t("Ofertas disponíveis", "Available offers", "Ofertas disponibles")}</div><p className="mt-1 text-xs text-muted-foreground">{t("Produtos e combos configurados pelo NexOS.", "Products and bundles configured by NexOS.", "Productos y paquetes configurados por NexOS.")}</p></div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {offersQuery.data.offers.map(offer => {
+            const selected = checkout?.type === "offer" && checkout.id === offer.id;
+            const isDowngrade = isLicenseDowngrade(currentLicensePlanSlug, offer.planSlug);
+            const existingContract = offerContractsQuery.data?.contracts.find(contract => {
+              if (contract.offer.id !== offer.id) return false;
+              if (contract.status === "active" || contract.status === "pending" || contract.status === "paused") return true;
+              return contract.status === "cancelled" && Boolean(contract.currentPeriodEndsAt && new Date(contract.currentPeriodEndsAt) > new Date());
+            });
+            const price = `R$ ${(offer.priceCents / 100).toLocaleString(intlLocale(locale), { minimumFractionDigits: 2 })}`;
+            const intervalLabel = offer.interval === "monthly" ? t("/ mês · renovação automática", "/ month · auto-renewal", "/ mes · renovación automática") : offer.interval === "yearly" ? t("/ ano · renovação automática", "/ year · auto-renewal", "/ año · renovación automática") : t("· pagamento único", "· one-time payment", "· pago único");
+            return <div id={`sales-offer-${offer.id}`} key={offer.id} className={`border p-5 transition-colors ${selected ? "border-primary/60 bg-primary/5" : "border-border/50 bg-card/40"}`}>
+              <div className="flex items-start justify-between gap-3"><div><h2 className="font-mono text-lg font-bold uppercase">{offer.name}</h2>{offer.description && <p className="mt-1 text-xs text-muted-foreground">{offer.description}</p>}</div><Badge variant="outline" className="rounded-none">{offer.interval === "one_time" ? t("Único", "One-time", "Único") : offer.interval === "monthly" ? t("Mensal", "Monthly", "Mensual") : t("Anual", "Yearly", "Anual")}</Badge></div>
+              <div className="mt-4 font-mono text-2xl font-bold text-primary">{price}<span className="ml-2 text-xs font-normal text-muted-foreground">{intervalLabel}</span></div>
+              <div className="mt-4 border border-primary/25 bg-primary/5 p-3">
+                <div className="font-mono text-xs font-bold uppercase tracking-wider text-primary">{t("Licença NexOS", "NexOS license", "Licencia NexOS")}: {offer.licensePlanName ?? (offer.planSlug === "agency" ? "Agency" : "Solo")}</div>
+                <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                  {offer.licenseMaxCampaigns !== undefined && <li>{t("Até", "Up to", "Hasta")} {offer.licenseMaxCampaigns} {t("campanhas simultâneas", "concurrent campaigns", "campañas simultáneas")}</li>}
+                  {offer.licenseMaxWorkspaces !== undefined && <li>{offer.licenseMaxWorkspaces} {t("workspace(s)", "workspace(s)", "workspace(s)")}</li>}
+                  {offer.licenseSocialNetworks && <li>{t("Redes liberadas", "Enabled networks", "Redes habilitadas")}: {offer.licenseSocialNetworks.join(", ") || t("nenhuma", "none", "ninguna")}</li>}
+                  {offer.licenseWhiteLabel && <li>{t("White-label incluído", "White-label included", "White-label incluido")}</li>}
+                </ul>
+              </div>
+              <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+                {offer.nexosAccessLifetime && <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />{t("Acesso vitalício ao NexOS", "Lifetime NexOS access", "Acceso vitalicio a NexOS")}</li>}
+                {offer.campaignsIncluded > 0 && <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />{offer.campaignsIncluded} {t("campanha(s) por ciclo", "campaign(s) per cycle", "campaña(s) por ciclo")}</li>}
+                {offer.socialMediaDays > 0 && <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />{offer.socialMediaDays} {t("dias de Social Media por ciclo", "Social Media days per cycle", "días de Social Media por ciclo")}</li>}
+                {offer.creditsIncluded > 0 && <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />{offer.creditsIncluded.toLocaleString(intlLocale(locale))} {t("créditos", "credits", "créditos")}</li>}
+              </ul>
+              <Button disabled={Boolean(activePayment) || purchaseOfferMutation.isPending || Boolean(existingContract) || isDowngrade} onClick={() => setCheckout(selected ? null : { type: "offer", id: offer.id, label: offer.name, amountBrl: price })} className="mt-5 w-full rounded-none font-mono uppercase tracking-widest">{isDowngrade ? t("Licença inferior à atual", "Below your current license", "Licencia inferior a la actual") : existingContract ? (existingContract.status === "pending" ? t("Compra em andamento", "Purchase in progress", "Compra en curso") : t("Oferta já contratada", "Offer already purchased", "Oferta ya contratada")) : selected ? t("Fechar checkout", "Close checkout", "Cerrar checkout") : t("Contratar esta oferta", "Choose this offer", "Contratar esta oferta")}</Button>
+              {selected && !activePayment && !existingContract && !isDowngrade && <div className="mt-3"><CheckoutSelector label={offer.name} amount={price} amountCents={offer.priceCents} recurring={offer.interval !== "one_time"} loading={purchaseOfferMutation.isPending} onCancel={() => setCheckout(null)} onMethod={(method, card, cpfCnpj) => purchaseOfferMutation.mutate({ offerId: offer.id, method, card, cpfCnpj })} /></div>}
+            </div>;
+          })}
+        </div>
+      </section> : offersQuery.isError ? <div role="alert" className="border border-destructive/30 p-4 text-sm text-destructive">{t("Não foi possível carregar as ofertas adicionais.", "Could not load the additional offers.", "No se pudieron cargar las ofertas adicionales.")}</div> : null}
+
+      {offerContractsQuery.data?.contracts.length ? <section className="space-y-3">
+        <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60">{t("Contratos das ofertas", "Offer contracts", "Contratos de ofertas")}</div>
+        <div className="divide-y divide-border/30 border border-border/50">{offerContractsQuery.data.contracts.map(contract => <div key={contract.id} className="flex flex-wrap items-center justify-between gap-3 bg-card/40 px-4 py-3">
+          <div><div className="font-mono text-sm font-bold">{contract.offer.name}</div><div className="mt-1 text-xs text-muted-foreground">{t("Estado", "Status", "Estado")}: {contract.status}{contract.currentPeriodEndsAt ? ` · ${t("vigente até", "valid through", "vigente hasta")} ${new Date(contract.currentPeriodEndsAt).toLocaleDateString(intlLocale(locale))}` : ""}</div></div>
+          {contract.recurring && contract.status !== "cancelled" && <Button variant="outline" size="sm" disabled={cancelOfferMutation.isPending} onClick={() => { if (window.confirm(t("Cancelar a renovação automática desta oferta? O acesso segue até o fim do período pago.", "Cancel automatic renewal? Access remains through the paid period.", "¿Cancelar la renovación automática? El acceso continúa hasta el fin del período pagado."))) cancelOfferMutation.mutate(contract.id); }} className="rounded-none">{t("Cancelar renovação", "Cancel renewal", "Cancelar renovación")}</Button>}
+        </div>)}</div>
+      </section> : null}
 
       {/* ── Access Status ── */}
       <div className="border border-border/50 bg-card/40 p-5 relative overflow-hidden">
@@ -878,14 +1072,15 @@ export default function BillingPage() {
       <div>
         <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-1">{t("Packs de créditos", "Credit packs", "Paquetes de créditos")}</div>
         <div className="text-[11px] font-mono text-muted-foreground/40 mb-3">{t("Para quando seus créditos incluídos acabarem — sem mensalidade, sem prazo", "For when your included credits run out — no monthly fee, no expiration", "Para cuando se acaben tus créditos incluidos: sin cuota mensual ni vencimiento")}</div>
+        {creditPacksQuery.isError && <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-3 border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-200"><span>{t("Não foi possível carregar os preços atualizados. Exibindo os valores padrão; tente atualizar para conferir o catálogo atual.", "Could not load the latest prices. Showing default prices; retry to check the current catalog.", "No se pudieron cargar los precios actualizados. Se muestran los valores predeterminados; vuelve a intentarlo para consultar el catálogo actual.")}</span><Button type="button" variant="outline" size="sm" onClick={() => void creditPacksQuery.refetch()} className="rounded-none">{t("Tentar novamente", "Retry", "Reintentar")}</Button></div>}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {CREDIT_PACKS.map(pack => {
+          {(creditPacksQuery.data?.packs?.length ? creditPacksQuery.data.packs : DEFAULT_CREDIT_PACKS).map(pack => {
             const isSelected = checkout?.id === pack.id && checkout.type === "pack";
             return (
               <div
                 key={pack.id}
                 onClick={() => {
-                  if (activePayment) return;
+                  if (activePayment || creditPacksQuery.isError) return;
                   setCheckout(isSelected ? null : {
                     type: "pack",
                     id: pack.id,
@@ -893,7 +1088,7 @@ export default function BillingPage() {
                     amountBrl: `R$${pack.priceBrl}`,
                   });
                 }}
-                className={`border p-4 cursor-pointer transition-all relative overflow-hidden
+                className={`border p-4 ${creditPacksQuery.isError ? "cursor-not-allowed opacity-70" : "cursor-pointer"} transition-all relative overflow-hidden
                   ${pack.highlight
                     ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(var(--primary)/0.08)]"
                     : "border-border/40 bg-card/30 hover:border-primary/30"
@@ -915,7 +1110,7 @@ export default function BillingPage() {
                   R${pack.priceBrl.toLocaleString("pt-BR")}
                 </div>
                 <div className="font-mono text-[11px] text-muted-foreground/50">
-                      {pack.credits.toLocaleString("pt-BR")} {t("créditos", "credits", "créditos")} · R${pack.perCr}/{t("cr", "credit", "cr")}
+                      {pack.credits.toLocaleString("pt-BR")} {t("créditos", "credits", "créditos")} · R${(pack.priceBrl / pack.credits).toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}/{t("cr", "credit", "cr")}
                 </div>
                 {isSelected && (
                   <div className="mt-2 flex items-center gap-1 font-mono text-[11px] text-primary">
@@ -952,17 +1147,18 @@ export default function BillingPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {displayPlans.map(plan => {
-              const isCurrent = plan.slug === planSlug;
+              const isCurrent = plan.slug === planSlug && plan.slug !== requestedPlanSlug;
+              const isDowngrade = isLicenseDowngrade(currentLicensePlanSlug, plan.slug);
               const isSelected = checkout?.id === plan.id && checkout.type === "plan";
               const priceDisplay = plan.monthlyPriceBrl > 0
                 ? `R$${(plan.monthlyPriceBrl / 100).toLocaleString("pt-BR")}`
                 : plan.slug === "solo" ? "R$3.990" : "R$9.990";
               const launches = Math.max(1, Math.floor(plan.creditsMonthly / 420));
               return (
-                <div key={plan.id}>
+                <div id={`base-plan-${plan.slug}`} key={plan.id}>
                   <div
                     onClick={() => {
-                      if (isCurrent || activePayment) return;
+                      if (isCurrent || isDowngrade || activePayment) return;
                       setCheckout(isSelected ? null : {
                         type: "plan",
                         id: plan.id,
@@ -973,6 +1169,8 @@ export default function BillingPage() {
                     className={`border p-5 cursor-pointer transition-all relative overflow-hidden
                       ${isCurrent
                         ? "border-success/40 bg-success/5 cursor-default"
+                        : isDowngrade
+                          ? "border-border/30 bg-muted/5 cursor-not-allowed opacity-55"
                         : isSelected
                           ? "border-primary/60 bg-primary/5 shadow-[0_0_20px_hsl(var(--primary)/0.1)]"
                           : "border-border/50 bg-card/40 hover:border-primary/30"}`}
@@ -981,6 +1179,11 @@ export default function BillingPage() {
                     {isCurrent && (
                       <Badge variant="outline" className="absolute top-3 right-3 rounded-none font-mono text-[11px] text-success border-success/40 bg-success/10">
                         {t("Plano atual", "Current plan", "Plan actual")}
+                      </Badge>
+                    )}
+                    {isDowngrade && (
+                      <Badge variant="outline" className="absolute top-3 right-3 rounded-none font-mono text-[11px] text-muted-foreground border-border/40">
+                        {t("Plano inferior", "Lower plan", "Plan inferior")}
                       </Badge>
                     )}
                     <div className="mb-4">
@@ -1014,14 +1217,14 @@ export default function BillingPage() {
                         </li>
                       ))}
                     </ul>
-                    {!isCurrent && isSelected && (
+                    {!isCurrent && !isDowngrade && isSelected && (
                       <div className="mt-3 border-t border-border/30 pt-3 flex items-center gap-1 font-mono text-[11px] text-primary">
                         <CheckCircle2 className="h-3 w-3" /> {t("Selecionado — escolha a forma de pagamento abaixo", "Selected — choose your payment method below", "Seleccionado — elige tu método de pago abajo")}
                       </div>
                     )}
                   </div>
 
-                  {isSelected && !activePayment && (
+                  {isSelected && !activePayment && !isDowngrade && (
                     <div className="mt-2">
                       <CheckoutSelector
                         label={`Plano ${plan.name}`}

@@ -55,6 +55,7 @@ import {
   campaignsTable,
   socialPostsTable,
 } from "@workspace/db";
+import { resolveSocialMediaEntitlement } from "./modules/billing/commercial-entitlements.service.js";
 import { eq, and, lt } from "drizzle-orm";
 
 const rawPort = process.env["PORT"];
@@ -162,15 +163,21 @@ const bootRecoveryCutoff = new Date(Date.now() - 30 * 60 * 1000);
 async function startBackgroundServices(): Promise<void> {
   initOrchestrationWorker();
   startSocialScheduler();
-  startMetricsSyncScheduler(async () =>
-    db
+  startMetricsSyncScheduler(async () => {
+    const posts = await db
       .select({
         id: socialPostsTable.id,
         workspaceId: socialPostsTable.workspaceId,
       })
       .from(socialPostsTable)
-      .where(eq(socialPostsTable.status, "published")),
-  );
+      .where(eq(socialPostsTable.status, "published"));
+    const workspaces = [...new Set(posts.map((post) => post.workspaceId))];
+    const entitledWorkspaces = new Set<string>();
+    for (const workspaceId of workspaces) {
+      if ((await resolveSocialMediaEntitlement(workspaceId)).active) entitledWorkspaces.add(workspaceId);
+    }
+    return posts.filter((post) => entitledWorkspaces.has(post.workspaceId));
+  });
   startPaidMediaScheduler();
   await initSequenceScheduler();
   startLifecycleScheduler();

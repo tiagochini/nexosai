@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, ClipboardList, LayoutDashboard, ListChecks, Rocket, Settings2, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ClipboardList, LayoutDashboard, ListChecks, Rocket, Settings2, ShieldCheck, ShoppingBag } from "lucide-react";
 import { useUiText } from "@/lib/i18n";
 
 const links = [
   { href: "/admin", icon: LayoutDashboard, label: ["Visão geral", "Overview", "Resumen"] },
   { href: "/admin/pricing", icon: Settings2, label: ["Planos e preços", "Plans & pricing", "Planes y precios"] },
+  { href: "/admin/sales-offers", icon: ShoppingBag, label: ["Ofertas de venda", "Sales offers", "Ofertas de venta"] },
   { href: "/admin/operations", icon: ListChecks, label: ["Operações", "Operations", "Operaciones"] },
   { href: "/admin/audit-logs", icon: ClipboardList, label: ["Auditoria", "Audit log", "Auditoría"] },
   { href: "/admin/nexos-launch", icon: Rocket, label: ["Sala de lançamento", "Launch room", "Sala de lanzamiento"] },

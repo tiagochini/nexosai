@@ -24,6 +24,7 @@ import type { Logger } from "pino";
 import { enforceLaunchAutonomyGate, enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import { assertCampaignCreditBudget } from "../credits/credits.service.js";
 import { assertSocialDiagnosisApproved } from "../campaigns/social-diagnosis.policy.js";
+import { resolveSocialMediaEntitlement } from "../billing/commercial-entitlements.service.js";
 
 // ── Execution status ──────────────────────────────────────────────────────────
 
@@ -411,7 +412,8 @@ export async function triggerStrategyPhase(
   if (!campaign) throw new NotFoundError("Campaign");
 
   // Check this before charging credits or enqueueing the strategy phase.
-  assertSocialDiagnosisApproved(campaign.type, campaign.brainData);
+  const socialMediaEntitlement = await resolveSocialMediaEntitlement(workspaceId);
+  assertSocialDiagnosisApproved(socialMediaEntitlement.active, campaign.brainData);
 
   // PIPELINE_KERNEL: single source of truth
   if (!(STRATEGY_PHASE_ENTRY_STATUSES as readonly string[]).includes(campaign.status)) {

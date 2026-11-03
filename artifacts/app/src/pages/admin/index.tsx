@@ -39,6 +39,12 @@ interface CampaignCostRow {
 interface CostBreakdownResponse {
   campaigns: CampaignCostRow[];
   platformTotals: { totalCostUsd: number; totalCredits: number; totalTokens: number; totalCalls: number };
+  entries: {
+    id: string; campaignId: string | null; campaignName: string | null; workspaceName: string | null;
+    ownerEmail: string; agentType: string | null; provider: string; model: string;
+    inputTokens: number; outputTokens: number; totalTokens: number; costUsd: number;
+    creditsCharged: number; latencyMs: number | null; createdAt: string;
+  }[];
 }
 
 interface AiCreditPricingResponse {
@@ -53,6 +59,13 @@ interface DREMonthRow {
   impostosCents: number; receitaLiquidaCents: number;
   aiCostUsd: number; aiCostBrlCents: number;
   lucroBrutoCents: number; aiCalls: number;
+}
+
+function toLocalDateInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 interface DREResponse {
@@ -480,6 +493,8 @@ export default function AdminPage() {
   const [tab, setTab] = useState<"overview" | "financials" | "users" | "upsell" | "pagamentos" | "convites" | "solicitacoes" | "rastreamento" | "custo" | "crm" | "dre" | "fiscal" | "propostas" | "rh">("pagamentos");
   const [fpSearch, setFpSearch] = useState("");
   const [costWorkspaceFilter, setCostWorkspaceFilter] = useState("");
+  const [costDateFrom, setCostDateFrom] = useState(() => { const date = new Date(); date.setDate(date.getDate() - 29); return toLocalDateInput(date); });
+  const [costDateTo, setCostDateTo] = useState(() => toLocalDateInput(new Date()));
   const [aiMarginDraft, setAiMarginDraft] = useState<string | null>(null);
   const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
 
@@ -572,10 +587,15 @@ export default function AdminPage() {
   }
 
   const { data: costData, isLoading: loadingCost, refetch: refetchCost } = useQuery({
-    queryKey: ["/api/admin/cost-breakdown"],
+    queryKey: ["/api/admin/cost-breakdown", costDateFrom, costDateTo],
     enabled: isAdmin && tab === "custo",
-    queryFn: () => customFetch<CostBreakdownResponse>("/api/admin/cost-breakdown?limit=100"),
-    staleTime: 60_000,
+    queryFn: () => {
+      const dateFrom = new Date(`${costDateFrom}T00:00:00`).toISOString();
+      const dateTo = new Date(`${costDateTo}T23:59:59.999`).toISOString();
+      const query = new URLSearchParams({ limit: "100", dateFrom, dateTo });
+      return customFetch<CostBreakdownResponse>(`/api/admin/cost-breakdown?${query.toString()}`);
+    },
+    staleTime: 15_000,
   });
 
   const { data: aiPricing, isLoading: loadingAiPricing } = useQuery({
@@ -680,6 +700,7 @@ export default function AdminPage() {
   });
 
   const [grantTarget, setGrantTarget] = useState<{ workspaceId: string; userName: string; currentPlan: string } | null>(null);
+  const [campaignAccessTarget, setCampaignAccessTarget] = useState<{ workspaceId: string; userName: string; email: string } | null>(null);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [grantPlan, setGrantPlan] = useState<"solo" | "agency">("solo");
   const [grantNote, setGrantNote] = useState("");
@@ -734,6 +755,24 @@ export default function AdminPage() {
     onError: (err: Error) => {
       toast.error(err.message ?? t("Erro ao confirmar pagamento.", "Failed to confirm payment.", "Error al confirmar el pago."));
     },
+  });
+
+  const grantCampaignAccessMutation = useMutation({
+    mutationFn: async ({ workspaceId, note }: { workspaceId: string; note: string }) =>
+      customFetch<{ ok: boolean; created: boolean; permanent: boolean; productName: string }>(
+        `/api/admin/workspaces/${workspaceId}/grant-campaign-access`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note }) },
+      ),
+    onSuccess: (data) => {
+      toast.success(data.created
+        ? t("Acesso permanente ao briefing liberado.", "Permanent briefing access granted.", "Acceso permanente al briefing concedido.")
+        : t("O acesso permanente ao briefing já estava ativo.", "Permanent briefing access was already active.", "El acceso permanente al briefing ya estaba activo."));
+      setCampaignAccessTarget(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/overview"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/crm"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/workspaces"] });
+    },
+    onError: (err: Error) => toast.error(err.message || t("Não foi possível liberar o briefing.", "Could not grant briefing access.", "No se pudo conceder acceso al briefing.")),
   });
 
   if (!isAdmin) {
@@ -1392,6 +1431,13 @@ export default function AdminPage() {
                         >
                           🎟 {t("Liberar", "Grant", "Conceder")}
                         </button>
+                        <button
+                          onClick={() => setCampaignAccessTarget({ workspaceId: u.workspaceId, userName: u.userName, email: u.email })}
+                          className="font-mono text-[10px] uppercase tracking-widest border border-success/30 bg-success/5 hover:bg-success/15 text-success px-2 py-1 transition-colors shrink-0"
+                          title={t("Conceder acesso permanente ao briefing e campanhas", "Grant permanent briefing and campaign access", "Conceder acceso permanente al briefing y las campañas")}
+                        >
+                          ∞ {t("Briefing", "Briefing", "Briefing")}
+                        </button>
                       </div>
                     </div>
                   );
@@ -1465,6 +1511,38 @@ export default function AdminPage() {
             >
               {grantPlanMutation.isPending ? t("Liberando...", "Granting...", "Concediendo...") : `${t("Liberar Acesso", "Grant Access", "Conceder Acceso")} ${grantPlan.toUpperCase()} →`}
             </Button>
+          </div>
+        </div>
+      )}
+
+      {campaignAccessTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+          onClick={e => e.target === e.currentTarget && setCampaignAccessTarget(null)}>
+          <div className="card-nexos rounded-xl p-7 w-full max-w-md space-y-5 border border-success/30">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-mono text-base font-bold uppercase tracking-widest text-foreground">∞ {t("Acesso permanente ao briefing", "Permanent briefing access", "Acceso permanente al briefing")}</h3>
+                <p className="font-mono text-xs text-muted-foreground mt-1">{campaignAccessTarget.userName} · {campaignAccessTarget.email}</p>
+              </div>
+              <button onClick={() => setCampaignAccessTarget(null)} className="text-muted-foreground hover:text-foreground text-lg">✕</button>
+            </div>
+            <div className="border border-yellow-400/20 bg-yellow-400/5 px-4 py-3">
+              <p className="font-mono text-[11px] text-yellow-400/80">
+                {t("Será criada uma assinatura administrativa permanente, sem cobrança nem data de vencimento, para permitir iniciar briefings e campanhas. A concessão ficará registrada na auditoria.", "A permanent admin subscription will be created, with no charge or expiration, so this workspace can start briefings and campaigns. The grant will be recorded in the audit log.", "Se creará una suscripción administrativa permanente, sin cobro ni vencimiento, para iniciar briefings y campañas. La concesión quedará registrada en la auditoría.")}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setCampaignAccessTarget(null)} className="flex-1 rounded-none font-mono uppercase tracking-widest">
+                {t("Cancelar", "Cancel", "Cancelar")}
+              </Button>
+              <Button
+                onClick={() => grantCampaignAccessMutation.mutate({ workspaceId: campaignAccessTarget.workspaceId, note: "Concessão permanente para teste de briefing pelo celular, autorizada pelo founder." })}
+                disabled={grantCampaignAccessMutation.isPending}
+                className="flex-1 rounded-none font-mono uppercase tracking-widest bg-success text-success-foreground hover:bg-success/90"
+              >
+                {grantCampaignAccessMutation.isPending ? t("Liberando...", "Granting...", "Concediendo...") : t("Liberar acesso", "Grant access", "Conceder acceso")}
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -2856,6 +2934,20 @@ export default function AdminPage() {
 
             return (
               <>
+                <div className="flex flex-wrap items-end gap-3 border border-border/30 bg-card/20 p-3">
+                  <label className="space-y-1">
+                    <span className="block font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">{t("De", "From", "Desde")}</span>
+                    <input type="date" value={costDateFrom} max={costDateTo} onChange={e => setCostDateFrom(e.target.value)} className="border border-border/50 bg-background px-2 py-1.5 font-mono text-xs" />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="block font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">{t("Até", "To", "Hasta")}</span>
+                    <input type="date" value={costDateTo} min={costDateFrom} onChange={e => setCostDateTo(e.target.value)} className="border border-border/50 bg-background px-2 py-1.5 font-mono text-xs" />
+                  </label>
+                  <Button size="sm" variant="outline" onClick={() => void refetchCost()} className="rounded-none font-mono text-xs">
+                    <RefreshCw className="mr-2 h-3 w-3" />{t("Atualizar período", "Refresh period", "Actualizar período")}
+                  </Button>
+                  <span className="font-mono text-[10px] text-muted-foreground/50">{t("Custo calculado pela tabela de preços configurada; não é fatura do provedor.", "Cost estimated from configured rates; not a provider invoice.", "Costo estimado según tarifas configuradas; no es una factura del proveedor.")}</span>
+                </div>
                 {/* ── Summary cards ── */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <MetricCard
@@ -3053,6 +3145,38 @@ export default function AdminPage() {
                     })}
                   </div>
                 )}
+
+                <section className="space-y-2 pt-5">
+                  <div className="flex items-center justify-between border-b border-border/30 pb-2">
+                    <h3 className="font-mono text-xs font-bold uppercase tracking-widest">{t("Execuções de IA no período", "AI calls in period", "Ejecuciones de IA en el período")}</h3>
+                    <span className="font-mono text-[10px] text-muted-foreground/50">{costData.entries.length} {t("registros (máx. 500)", "records (max 500)", "registros (máx. 500)")}</span>
+                  </div>
+                  {!costData.entries.length ? (
+                    <div className="border border-border/20 bg-card/10 p-6 text-center font-mono text-xs text-muted-foreground/40">{t("Nenhuma chamada de IA neste período.", "No AI calls in this period.", "No hay llamadas de IA en este período.")}</div>
+                  ) : (
+                    <div className="max-h-[560px] overflow-auto border border-border/30">
+                      <div className="min-w-[1050px]">
+                        <div className="sticky top-0 grid grid-cols-[150px_minmax(180px,1fr)_130px_100px_100px_100px_90px_90px] gap-3 border-b border-border/30 bg-background px-3 py-2 font-mono text-[9px] uppercase tracking-wider text-muted-foreground/50">
+                          <span>{t("Data/hora", "Date/time", "Fecha/hora")}</span><span>{t("Campanha / conta", "Campaign / account", "Campaña / cuenta")}</span><span>{t("Agente · provedor", "Agent · provider", "Agente · proveedor")}</span><span>{t("Modelo", "Model", "Modelo")}</span><span className="text-right">{t("Entrada", "Input", "Entrada")}</span><span className="text-right">{t("Saída", "Output", "Salida")}</span><span className="text-right">USD</span><span className="text-right">{t("Créditos", "Credits", "Créditos")}</span>
+                        </div>
+                        {costData.entries.map(entry => (
+                          <div key={entry.id} className="grid grid-cols-[150px_minmax(180px,1fr)_130px_100px_100px_100px_90px_90px] gap-3 border-b border-border/15 px-3 py-2 font-mono text-[10px]">
+                            <span className="text-muted-foreground/60">{new Date(entry.createdAt).toLocaleString(intlLocale(locale))}</span>
+                            <span className="min-w-0 truncate" title={`${entry.campaignName ?? entry.campaignId ?? "Sem campanha"} · ${entry.ownerEmail}`}>
+                              {entry.campaignName ?? (entry.campaignId ? entry.campaignId.slice(0, 8) : t("Sem campanha", "No campaign", "Sin campaña"))}<span className="block truncate text-[9px] text-muted-foreground/45">{entry.workspaceName ?? "—"} · {entry.ownerEmail || "—"}</span>
+                            </span>
+                            <span className="truncate text-muted-foreground/70">{entry.agentType ?? "—"} · {entry.provider}</span>
+                            <span className="truncate text-muted-foreground/60" title={entry.model}>{entry.model}</span>
+                            <span className="text-right tabular-nums text-muted-foreground/70">{entry.inputTokens.toLocaleString("pt-BR")}</span>
+                            <span className="text-right tabular-nums text-muted-foreground/70">{entry.outputTokens.toLocaleString("pt-BR")}</span>
+                            <span className="text-right tabular-nums">${entry.costUsd.toFixed(6)}</span>
+                            <span className="text-right tabular-nums text-muted-foreground/70">{entry.creditsCharged}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </section>
               </>
             );
           })()}

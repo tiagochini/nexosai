@@ -24,6 +24,15 @@
 !artifacts/app/public/**
 !artifacts/app/scripts/
 !artifacts/app/scripts/**
+!artifacts/nexos-academy/
+!artifacts/nexos-academy/package.json
+!artifacts/nexos-academy/vite.config.ts
+!artifacts/nexos-academy/index.html
+!artifacts/nexos-academy/tsconfig.json
+!artifacts/nexos-academy/src/
+!artifacts/nexos-academy/src/**
+!artifacts/nexos-academy/public/
+!artifacts/nexos-academy/public/**
 !lib/
 !lib/**
 !ops/

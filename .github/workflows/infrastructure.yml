@@ -42,6 +42,11 @@ jobs:
         with:
           node-version: 24
       - run: node --test lib/db/scripts/connection-options.test.mjs
+      - name: AWS runtime safeguards and Compose configuration
+        run: |
+          node --test ops/aws/runtime.test.mjs
+          node scripts/check-aws-compose.mjs
+          bash -n ops/aws/nexos.sh
       - name: Docker application with optional local or external TLS PostgreSQL
         run: node scripts/test-docker-deployment.mjs
       - uses: actions/upload-artifact@v4

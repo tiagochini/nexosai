@@ -3,3 +3,7 @@ attached_assets/video-8141930918780581768_1790085303028.mp4 filter=lfs diff=lfs 
 attached_assets/video-1771433735153855027_1790087417335.mp4 filter=lfs diff=lfs merge=lfs -text
 ops/redis/*.sh text eol=lf
 ops/redis/*.conf text eol=lf
+ops/aws/*.sh text eol=lf
+ops/aws/*.mjs text eol=lf
+ops/aws/*.example text eol=lf
+ops/aws/Caddyfile text eol=lf

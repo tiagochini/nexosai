@@ -58,6 +58,7 @@ Esta pasta reúne relatórios de homologação, resultados de testes, snapshots 
 
 ## Infraestrutura e CI
 
+- [AWS_PREPARATION_RESULTS.json](AWS_PREPARATION_RESULTS.json)
 - [DOCKER_DEPLOYMENT_RESULTS.json](DOCKER_DEPLOYMENT_RESULTS.json)
 - [P1_CLOSEOUT.en.md](P1_CLOSEOUT.en.md)
 - [P1_CLOSEOUT.md](P1_CLOSEOUT.md)

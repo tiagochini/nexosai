@@ -5,6 +5,11 @@ import { logger } from "../../lib/logger.js";
 import type { CardInputData } from "../billing/billing.service.js";
 import { recordCheckoutStarted, recordPaidSale, recordRefundedSale } from "../lifecycle/lifecycle.service.js";
 
+// Product checkout has its own cardholder fallbacks; recurring billing requires
+// the complete address. Keep this input aligned with the public checkout schema.
+type ProductCheckoutCardInput = Pick<CardInputData, "holderName" | "number" | "expiryMonth" | "expiryYear" | "cvv">
+  & Partial<Pick<CardInputData, "cpfCnpj" | "phone" | "postalCode">>;
+
 // ─── Asaas helpers — workspace key takes priority over platform key ───────────
 
 const ASAAS_SANDBOX_BASE = "https://sandbox.asaas.com/api/v3";
@@ -231,7 +236,7 @@ export async function initiateProductCheckout(opts: {
   buyerEmail: string;
   buyerCpf?: string;
   method: "pix" | "boleto" | "credit_card";
-  card?: CardInputData;
+  card?: ProductCheckoutCardInput;
   installmentCount?: number;
   purchaserReferralCode?: string;
 }): Promise<ProductSale> {

@@ -169,12 +169,17 @@ async function ensureUserAndWorkspace(opts: {
           name: `${existingUser.name ?? opts.email}'s Workspace`,
           slug,
           creditsBalance: startingCredits,
+          creditsMonthlyBalance: fallbackPlan.creditsMonthly,
+          creditsPurchasedBalance: opts.creditPackCredits ?? 0,
         })
         .returning();
     } else {
       await db
         .update(workspacesTable)
-        .set({ creditsBalance: existingWorkspace.creditsBalance + (opts.creditPackCredits ?? 0) })
+        .set({
+          creditsBalance: existingWorkspace.creditsBalance + (opts.creditPackCredits ?? 0),
+          creditsPurchasedBalance: (existingWorkspace.creditsPurchasedBalance ?? 0) + (opts.creditPackCredits ?? 0),
+        })
         .where(eq(workspacesTable.id, existingWorkspace.id));
     }
 
@@ -204,6 +209,8 @@ async function ensureUserAndWorkspace(opts: {
         name: `${opts.name}'s Workspace`,
         slug,
         creditsBalance: startingCredits,
+        creditsMonthlyBalance: fallbackPlan.creditsMonthly,
+        creditsPurchasedBalance: opts.creditPackCredits ?? 0,
       })
       .returning();
 

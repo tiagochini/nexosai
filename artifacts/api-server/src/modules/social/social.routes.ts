@@ -31,6 +31,7 @@ import {
   verifyMetaWebhookSubscription,
 } from "./meta-webhook.security.js";
 import { getMetaReviewReadiness } from "./meta-review-readiness.service.js";
+import { resolveSocialMediaEntitlement } from "../billing/commercial-entitlements.service.js";
 
 const router = Router();
 
@@ -120,8 +121,17 @@ router.get("/callback/tiktok", async (req, res): Promise<void> => {
 // ─── Accounts management ──────────────────────────────────────────────────────
 
 router.get("/accounts/analytics", requireAuth, async (req, res): Promise<void> => {
+  const entitlement = await resolveSocialMediaEntitlement(req.auth.workspaceId);
+  if (!entitlement.active) {
+    res.status(403).json({ error: "O monitoramento de métricas exige um contrato de Social Media vigente.", code: "SOCIAL_MEDIA_ENTITLEMENT_REQUIRED", entitlement });
+    return;
+  }
   const analytics = await getAccountsWithAnalytics(req.auth.workspaceId);
   res.json({ analytics });
+});
+
+router.get("/entitlement", requireAuth, async (req, res): Promise<void> => {
+  res.json({ entitlement: await resolveSocialMediaEntitlement(req.auth.workspaceId) });
 });
 
 router.get("/accounts", requireAuth, async (req, res): Promise<void> => {

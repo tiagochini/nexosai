@@ -26,6 +26,7 @@ type Plan = {
   features: string[];
   active: boolean;
 };
+type CreditPack = { id: string; credits: number; priceBrl: string | number; label: string; description: string; highlight: boolean };
 
 function toDraft(plan: Plan) {
   return { ...plan, priceMonthly: String(plan.priceMonthly), priceOnboarding: String(plan.priceOnboarding), featuresText: (plan.features ?? []).join("\n") };
@@ -48,16 +49,25 @@ export default function AdminPricingPage() {
   const t = useUiText();
   const queryClient = useQueryClient();
   const [drafts, setDrafts] = useState<Record<string, PlanDraft>>({});
+  const [packPrices, setPackPrices] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const plansQuery = useQuery({
     queryKey: ["/api/admin/plans"],
     enabled: isAdmin,
     queryFn: () => customFetch<{ plans: Plan[] }>("/api/admin/plans"),
   });
+  const packsQuery = useQuery({
+    queryKey: ["/api/admin/credit-packs"],
+    enabled: isAdmin,
+    queryFn: () => customFetch<{ packs: CreditPack[] }>("/api/admin/credit-packs"),
+  });
 
   useEffect(() => {
     if (plansQuery.data) setDrafts(Object.fromEntries(plansQuery.data.plans.map((plan) => [plan.slug, toDraft(plan)])));
   }, [plansQuery.data]);
+  useEffect(() => {
+    if (packsQuery.data) setPackPrices(Object.fromEntries(packsQuery.data.packs.map((pack) => [pack.id, String(pack.priceBrl)])));
+  }, [packsQuery.data]);
 
   function update(slug: string, patch: Partial<PlanDraft>) {
     setDrafts((current) => ({ ...current, [slug]: { ...current[slug]!, ...patch } }));
@@ -96,6 +106,26 @@ export default function AdminPricingPage() {
     }
   }
 
+  async function savePackPrice(pack: CreditPack) {
+    const priceBrl = Number(packPrices[pack.id]);
+    if (!Number.isFinite(priceBrl) || priceBrl < 0 || priceBrl > 1_000_000 || saving) {
+      toast.error(t("Informe um preço válido para o pacote.", "Enter a valid pack price.", "Introduce un precio válido para el paquete."));
+      return;
+    }
+    setSaving(pack.id);
+    try {
+      const result = await customFetch<{ pack: CreditPack }>(`/api/admin/credit-packs/${pack.id}`, { method: "PATCH", body: JSON.stringify({ priceBrl }) });
+      setPackPrices((current) => ({ ...current, [pack.id]: String(result.pack.priceBrl) }));
+      await queryClient.invalidateQueries({ queryKey: ["/api/billing/packs"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/admin/credit-packs"] });
+      toast.success(t(`Preço do pacote ${pack.label} atualizado.`, `${pack.label} pack price updated.`, `Precio del paquete ${pack.label} actualizado.`));
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : t("Não foi possível salvar o preço do pacote.", "Could not save the pack price.", "No se pudo guardar el precio del paquete."));
+    } finally {
+      setSaving(null);
+    }
+  }
+
   if (!isAdmin) return <div className="mx-auto max-w-3xl py-20 text-center space-y-3"><ShieldAlert className="mx-auto h-10 w-10 text-destructive" /><h1 className="font-mono uppercase">{t("Acesso restrito", "Restricted access", "Acceso restringido")}</h1><p className="text-sm text-muted-foreground">{t("Esta área é exclusiva para administradores da plataforma.", "This area is for platform administrators only.", "Esta área es exclusiva para administradores de la plataforma.")}</p><Button asChild variant="outline" className="rounded-none"><Link href="/admin"><ArrowLeft className="mr-2 h-4 w-4" />{t("Voltar ao backoffice", "Back to admin", "Volver al panel")}</Link></Button></div>;
 
   return <main className="mx-auto max-w-6xl space-y-6 pb-12">
@@ -127,5 +157,10 @@ export default function AdminPricingPage() {
         </section>;
       })}</div>
     )}
+
+    <section className="space-y-4 border-t border-border/50 pt-6">
+      <div><h2 className="font-mono text-xl font-bold uppercase">{t("Pacotes de créditos", "Credit packs", "Paquetes de créditos")}</h2><p className="mt-1 text-sm text-muted-foreground">{t("Ajuste os preços dos quatro pacotes vendidos na área de cobrança. Os créditos e pagamentos já feitos não mudam.", "Set prices for the four packs offered in billing. Credit amounts and completed payments are unchanged.", "Ajusta los precios de los cuatro paquetes disponibles en facturación. Los créditos y pagos completados no cambian.")}</p></div>
+      {packsQuery.isLoading ? <div className="py-8 text-center text-sm text-muted-foreground">{t("Carregando pacotes…", "Loading packs…", "Cargando paquetes…")}</div> : packsQuery.isError ? <div role="alert" className="flex flex-wrap items-center justify-between gap-4 border border-destructive/30 p-4 text-sm text-destructive"><span>{t("Não foi possível carregar os pacotes de crédito.", "Could not load credit packs.", "No se pudieron cargar los paquetes de crédito.")}</span><Button type="button" variant="outline" size="sm" onClick={() => void packsQuery.refetch()} className="rounded-none gap-2"><RefreshCw className="h-3.5 w-3.5" />{t("Tentar novamente", "Retry", "Reintentar")}</Button></div> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{(packsQuery.data?.packs ?? []).map((pack) => <div key={pack.id} className="space-y-3 border border-border/60 bg-card/40 p-4"><div><h3 className="font-semibold">{pack.label}</h3><p className="text-xs text-muted-foreground">{pack.credits.toLocaleString("pt-BR")} {t("créditos", "credits", "créditos")} · {pack.description}</p></div><NumericField label={t("Preço (R$)", "Price (BRL)", "Precio (BRL)")} value={packPrices[pack.id] ?? ""} step={0.01} onChange={(value) => setPackPrices((current) => ({ ...current, [pack.id]: value }))} /><div className="flex justify-end"><Button onClick={() => void savePackPrice(pack)} disabled={saving !== null} className="rounded-none gap-2">{saving === pack.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{t("Salvar preço", "Save price", "Guardar precio")}</Button></div></div>)}</div>}
+    </section>
   </main>;
 }

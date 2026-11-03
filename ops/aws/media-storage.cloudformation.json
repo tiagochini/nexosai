@@ -1,0 +1,117 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "NexOS campaign media: private S3 bucket and EC2 instance profile. Does not provision EC2 or integrate the application.",
+  "Parameters": {
+    "Environment": {
+      "Type": "String",
+      "Default": "production",
+      "AllowedValues": ["production", "staging"]
+    }
+  },
+  "Resources": {
+    "CampaignMediaBucket": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [{
+            "ServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}
+          }]
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "IgnorePublicAcls": true,
+          "BlockPublicPolicy": true,
+          "RestrictPublicBuckets": true
+        },
+        "OwnershipControls": {"Rules": [{"ObjectOwnership": "BucketOwnerEnforced"}]},
+        "VersioningConfiguration": {"Status": "Enabled"},
+        "LifecycleConfiguration": {"Rules": [{
+          "Id": "AbortIncompleteMultipartUploads",
+          "Status": "Enabled",
+          "AbortIncompleteMultipartUpload": {"DaysAfterInitiation": 7}
+        }]},
+        "Tags": [
+          {"Key": "Project", "Value": "NexOS"},
+          {"Key": "Environment", "Value": {"Ref": "Environment"}}
+        ]
+      }
+    },
+    "MediaBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {"Ref": "CampaignMediaBucket"},
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Sid": "DenyInsecureTransport",
+            "Effect": "Deny",
+            "Principal": "*",
+            "Action": "s3:*",
+            "Resource": [
+              {"Fn::GetAtt": ["CampaignMediaBucket", "Arn"]},
+              {"Fn::Sub": "${CampaignMediaBucket.Arn}/*"}
+            ],
+            "Condition": {"Bool": {"aws:SecureTransport": "false"}}
+          }]
+        }
+      }
+    },
+    "MediaApplicationRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {"Service": "ec2.amazonaws.com"},
+            "Action": "sts:AssumeRole"
+          }]
+        },
+        "Policies": [{
+          "PolicyName": "CampaignMediaOnly",
+          "PolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Sid": "BucketLocation",
+                "Effect": "Allow",
+                "Action": "s3:GetBucketLocation",
+                "Resource": {"Fn::GetAtt": ["CampaignMediaBucket", "Arn"]}
+              },
+              {
+                "Sid": "ListCampaignMediaPrefix",
+                "Effect": "Allow",
+                "Action": ["s3:ListBucket", "s3:ListBucketMultipartUploads"],
+                "Resource": {"Fn::GetAtt": ["CampaignMediaBucket", "Arn"]},
+                "Condition": {"StringLike": {"s3:prefix": ["media/", "media/*"]}}
+              },
+              {
+                "Sid": "CampaignObjects",
+                "Effect": "Allow",
+                "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
+                "Resource": {"Fn::Sub": "${CampaignMediaBucket.Arn}/media/*"}
+              }
+            ]
+          }
+        }],
+        "Tags": [
+          {"Key": "Project", "Value": "NexOS"},
+          {"Key": "Environment", "Value": {"Ref": "Environment"}}
+        ]
+      }
+    },
+    "MediaInstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {"Roles": [{"Ref": "MediaApplicationRole"}]}
+    }
+  },
+  "Outputs": {
+    "BucketName": {"Value": {"Ref": "CampaignMediaBucket"}},
+    "BucketRegion": {"Value": {"Ref": "AWS::Region"}},
+    "MediaPrefix": {"Value": "media/"},
+    "Ec2InstanceProfile": {"Value": {"Ref": "MediaInstanceProfile"}},
+    "ApplicationRoleArn": {"Value": {"Fn::GetAtt": ["MediaApplicationRole", "Arn"]}}
+  }
+}

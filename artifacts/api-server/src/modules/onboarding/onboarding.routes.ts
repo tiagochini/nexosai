@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
-import { db, campaignsTable, workspacesTable } from "@workspace/db";
-import { eq, count } from "drizzle-orm";
+import { db, campaignsTable, workspacesTable, commercialProductsTable, commercialSubscriptionsTable } from "@workspace/db";
+import { and, asc, eq, count } from "drizzle-orm";
+import { AppError } from "../../lib/errors.js";
 
 import { createCampaign } from "../campaigns/campaigns.service.js";
 import { saveIntakeData } from "../intake/intake.service.js";
@@ -18,6 +19,30 @@ import {
 
 const router = Router();
 router.use(requireAuth);
+
+async function resolveOnboardingSubscription(workspaceId: string) {
+  const subscriptions = await db.select({
+    id: commercialSubscriptionsTable.id,
+    productId: commercialSubscriptionsTable.productId,
+    productKey: commercialProductsTable.key,
+    masterPlanKey: commercialProductsTable.masterPlanKey,
+  }).from(commercialSubscriptionsTable)
+    .innerJoin(commercialProductsTable, eq(commercialProductsTable.id, commercialSubscriptionsTable.productId))
+    .where(and(
+      eq(commercialSubscriptionsTable.workspaceId, workspaceId),
+      eq(commercialSubscriptionsTable.status, "active"),
+      eq(commercialProductsTable.status, "active"),
+    ))
+    .orderBy(asc(commercialSubscriptionsTable.createdAt), asc(commercialSubscriptionsTable.id));
+
+  const subscription = subscriptions.find(item => item.productKey === "nexos_campaign_access")
+    ?? subscriptions.find(item => item.masterPlanKey === "launch")
+    ?? subscriptions[0];
+  if (!subscription) {
+    throw new AppError(403, "É necessária uma assinatura ativa para iniciar um briefing.", "ACTIVE_COMMERCIAL_SUBSCRIPTION_REQUIRED");
+  }
+  return { commercialProductId: subscription.productId, commercialSubscriptionId: subscription.id };
+}
 
 // ─── Onboarding status ────────────────────────────────────────────────────────
 // Returns whether this workspace needs onboarding (no campaigns yet)
@@ -64,6 +89,7 @@ router.post("/start", async (req, res): Promise<void> => {
   }
 
   const { path, title } = parsed.data;
+  const commercialAccess = await resolveOnboardingSubscription(req.auth.workspaceId);
 
   let campaign;
 
@@ -72,6 +98,7 @@ router.post("/start", async (req, res): Promise<void> => {
       title: title ?? "Meu Primeiro Lançamento",
       type: "launch",
       track: "six_digits",
+      ...commercialAccess,
       intakeData: { _onboardingPath: "has_product" },
     }, req.log);
   } else if (path === "building_product") {
@@ -79,6 +106,7 @@ router.post("/start", async (req, res): Promise<void> => {
       title: title ?? "Produto em Desenvolvimento",
       type: "launch",
       track: "six_digits",
+      ...commercialAccess,
       intakeData: { _onboardingPath: "building_product" },
     }, req.log);
   } else if (path === "affiliate_nexos") {
@@ -86,6 +114,7 @@ router.post("/start", async (req, res): Promise<void> => {
       title: "Afiliado NexOS AI",
       type: "affiliate",
       track: "six_digits",
+      ...commercialAccess,
       intakeData: {
         _onboardingPath: "affiliate_nexos",
         "product.name": "NexOS AI",
@@ -106,6 +135,7 @@ router.post("/start", async (req, res): Promise<void> => {
       title: titleMap[subPath] ?? "Monetização de Audiência",
       type: "creator_monetization",
       track: "six_digits",
+      ...commercialAccess,
       intakeData: {
         _onboardingPath: "has_audience",
         _audienceSubPath: subPath,

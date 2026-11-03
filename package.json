@@ -24,6 +24,7 @@
     "test:p1-local": "node scripts/test-p1-local.mjs",
     "test:p2-local": "node scripts/test-p2-local.mjs",
     "test:docker-local": "node scripts/test-docker-deployment.mjs",
+    "test:aws-preparation": "node --test ops/aws/runtime.test.mjs && node scripts/check-aws-compose.mjs",
     "test:p3-local": "node scripts/test-p3-local.mjs",
     "test:ai-quality": "node --test scripts/evaluate-ai-quality.test.mjs",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",

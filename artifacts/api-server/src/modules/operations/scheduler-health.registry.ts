@@ -20,6 +20,15 @@ export type SchedulerHealth = {
 type SchedulerRecord = Omit<SchedulerHealth, "stale"> & { staleAfterMs: number };
 const schedulers = new Map<string, SchedulerRecord>();
 
+function safeErrorCode(error: unknown): string | null {
+  let current: unknown = error;
+  for (let depth = 0; depth < 4 && current && typeof current === "object"; depth += 1) {
+    if ("code" in current && typeof current.code === "string" && /^[A-Z0-9]{5}$/.test(current.code)) return current.code;
+    current = "cause" in current ? current.cause : null;
+  }
+  return null;
+}
+
 export function registerScheduler(name: string, staleAfterMs: number): void {
   if (!schedulers.has(name)) {
     schedulers.set(name, {
@@ -52,11 +61,13 @@ export async function runSchedulerTick(name: string, callback: () => Promise<voi
     record.lastSuccessAt = new Date().toISOString();
     record.lastOutcome = "completed";
     return true;
-  } catch {
-    // Do not retain error text: provider errors can contain credentials or payloads.
+  } catch (error) {
+    // Keep provider messages/payloads out of logs; SQLSTATE is safe and makes
+    // database failures actionable (e.g. missing table/column/permission).
+    const code = safeErrorCode(error);
     record.lastErrorAt = new Date().toISOString();
     record.lastOutcome = "failed";
-    throw new Error(`Scheduler "${name}" tick failed`);
+    throw new Error(`Scheduler "${name}" tick failed${code ? ` [${code}]` : ""}`);
   } finally {
     record.lastDurationMs = Date.now() - started;
     record.inFlight = false;

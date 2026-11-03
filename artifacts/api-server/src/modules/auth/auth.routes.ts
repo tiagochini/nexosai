@@ -4,8 +4,8 @@ import { z } from "zod/v4";
 import { issueTokens, registerUser, loginUser, refreshTokens } from "./auth.service.js";
 import { createOwnedWorkspace, getWorkspaceOverview } from "./workspaces.service.js";
 import { requireAuth } from "./auth.middleware.js";
-import { db, usersTable, workspacesTable, plansTable, inviteCodesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, usersTable, workspacesTable, plansTable, inviteCodesTable, commercialSalesOffersTable } from "@workspace/db";
+import { and, eq } from "drizzle-orm";
 import { AppError } from "../../lib/errors.js";
 import { clearRefreshCookie, readRefreshCookie, requireTrustedSessionOrigin, sendSessionTokens } from "./auth-session-cookie.js";
 import { revokeRefreshSession } from "./refresh-session.service.js";
@@ -20,6 +20,8 @@ const registerSchema = z.object({
   locale: z.enum(["pt-BR", "en-US", "en-AU", "es-LA"]).default("pt-BR"),
   inviteCode: z.string().optional(),
   referralCode: z.string().optional(),
+  offerKey: z.string().trim().min(1).max(120).optional(),
+  salePlanSlug: z.enum(["solo", "agency"]).optional(),
   planSlug: z.enum(["solo", "agency"]).optional(),
 });
 
@@ -49,7 +51,35 @@ router.post("/register", requireTrustedSessionOrigin, async (req, res): Promise<
   // ── Platform access gate ───────────────────────────────────────────────────
   // When PLATFORM_OPEN is not "true", only users with a valid invite code can register.
   const platformOpen = process.env["PLATFORM_OPEN"] === "true";
-  if (!platformOpen && !parsed.data.inviteCode) {
+  let validSalesOffer = false;
+  let salesOfferPlanSlug: "solo" | "agency" | undefined;
+  let validBasePlan: "solo" | "agency" | undefined;
+  if (parsed.data.offerKey) {
+    const [offer] = await db.select({ id: commercialSalesOffersTable.id, planSlug: commercialSalesOffersTable.planSlug })
+      .from(commercialSalesOffersTable)
+      .innerJoin(plansTable, eq(plansTable.slug, commercialSalesOffersTable.planSlug))
+      .where(and(
+        eq(commercialSalesOffersTable.key, parsed.data.offerKey),
+        eq(commercialSalesOffersTable.active, true),
+        eq(plansTable.active, true),
+      )).limit(1);
+    validSalesOffer = Boolean(offer);
+    if (offer?.planSlug === "solo" || offer?.planSlug === "agency") salesOfferPlanSlug = offer.planSlug;
+    if (!validSalesOffer) {
+      res.status(404).json({ code: "OFFER_NOT_AVAILABLE", error: "Esta oferta não está mais disponível." });
+      return;
+    }
+  }
+  if (parsed.data.salePlanSlug) {
+    const [plan] = await db.select({ slug: plansTable.slug }).from(plansTable)
+      .where(and(eq(plansTable.slug, parsed.data.salePlanSlug), eq(plansTable.active, true))).limit(1);
+    if (!plan) {
+      res.status(404).json({ code: "PLAN_NOT_AVAILABLE", error: "Este plano não está disponível para contratação." });
+      return;
+    }
+    validBasePlan = plan.slug;
+  }
+  if (!platformOpen && !parsed.data.inviteCode && !validSalesOffer && !validBasePlan) {
     res.status(423).json({
       code: "PLATFORM_CLOSED",
       error: "A plataforma está em modo exclusivo. Você precisa de um código de convite para se cadastrar.",
@@ -58,7 +88,14 @@ router.post("/register", requireTrustedSessionOrigin, async (req, res): Promise<
   }
 
   try {
-    const tokens = await registerUser(parsed.data, req.log);
+    const tokens = await registerUser({
+      ...parsed.data,
+      ...((salesOfferPlanSlug || validBasePlan) ? {
+        planSlug: salesOfferPlanSlug ?? validBasePlan!,
+        initialCredits: 0,
+        pendingSalesCheckout: true,
+      } : {}),
+    }, req.log);
 
     // Mark invite code as used after registration.
     // NOTE: invite codes are an ACCESS gate only — they do not change the

@@ -1,9 +1,15 @@
-import { eq, and, desc, sql, type SQL } from "drizzle-orm";
+import { eq, and, desc, sql, type SQL, inArray, or, gt } from "drizzle-orm";
 import {
   db,
   subscriptionPaymentsTable,
   workspacesTable,
   plansTable,
+  commercialSalesOffersTable,
+  commercialOfferContractsTable,
+  commercialProductsTable,
+  commercialSubscriptionsTable,
+  creditPackPricingTable,
+  entitlementGrantsTable,
   type SubscriptionPayment,
   type PaymentMethod,
 } from "@workspace/db";
@@ -21,6 +27,21 @@ const ASAAS_BASE =
   process.env["ASAAS_ENV"] === "production"
     ? "https://api.asaas.com/v3"
     : "https://sandbox.asaas.com/api/v3";
+
+const LICENSE_PLAN_RANK: Record<string, number> = { solo: 1, agency: 2 };
+
+async function assertLicenseDoesNotDowngrade(workspaceId: string, targetPlanSlug: string): Promise<void> {
+  const [current] = await db.select({ slug: plansTable.slug })
+    .from(workspacesTable)
+    .innerJoin(plansTable, eq(workspacesTable.planId, plansTable.id))
+    .where(eq(workspacesTable.id, workspaceId))
+    .limit(1);
+  const currentRank = current ? LICENSE_PLAN_RANK[current.slug] : undefined;
+  const targetRank = LICENSE_PLAN_RANK[targetPlanSlug];
+  if (currentRank !== undefined && targetRank !== undefined && targetRank < currentRank) {
+    throw new AppError(409, "Não é possível reduzir o nível da licença. Escolha o plano atual ou um superior.", "LICENSE_DOWNGRADE_NOT_ALLOWED");
+  }
+}
 
 async function asaasRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const apiKey = process.env["ASAAS_API_KEY"];
@@ -66,11 +87,51 @@ export function isAsaasReversalStatus(event: string, status: string | undefined)
 }
 
 async function ensureAsaasCustomer(name: string, email: string, cpfCnpj?: string): Promise<string> {
+  const document = cpfCnpj?.replace(/\D/g, "");
+  if (!document || ![11, 14].includes(document.length)) {
+    throw new AppError(400, "Informe um CPF/CNPJ válido para cadastrar o pagador", "PAYER_DOCUMENT_REQUIRED");
+  }
   const customer = await asaasRequest<{ id: string }>("/customers", {
     method: "POST",
-    body: JSON.stringify({ name, email, cpfCnpj: cpfCnpj ?? "00000000000" }),
+    body: JSON.stringify({ name, email, cpfCnpj: document }),
   });
   return customer.id;
+}
+
+export async function createAsaasRecurringCardSubscription(opts: {
+  name: string; email: string; cpfCnpj?: string; amountCents: number; description: string;
+  nextDueDate: string; cycle: "MONTHLY" | "YEARLY"; card: CardInputData; remoteIp: string;
+}): Promise<{ subscriptionId: string }> {
+  const customerId = await ensureAsaasCustomer(opts.name, opts.email, opts.card.cpfCnpj ?? opts.cpfCnpj);
+  const created = await asaasRequest<{ id: string }>("/subscriptions", {
+    method: "POST",
+    signal: AbortSignal.timeout(60_000),
+    body: JSON.stringify({
+      customer: customerId,
+      billingType: "CREDIT_CARD",
+      nextDueDate: opts.nextDueDate,
+      value: opts.amountCents / 100,
+      cycle: opts.cycle,
+      description: opts.description,
+      creditCard: {
+        holderName: opts.card.holderName,
+        number: opts.card.number.replace(/\D/g, ""),
+        expiryMonth: opts.card.expiryMonth,
+        expiryYear: opts.card.expiryYear,
+        ccv: opts.card.cvv,
+      },
+      creditCardHolderInfo: {
+        name: opts.name,
+        email: opts.email,
+        cpfCnpj: (opts.card.cpfCnpj ?? opts.cpfCnpj ?? "").replace(/\D/g, ""),
+        postalCode: (opts.card.postalCode ?? "").replace(/\D/g, ""),
+        addressNumber: opts.card.addressNumber,
+        phone: (opts.card.phone ?? "").replace(/\D/g, ""),
+      },
+      remoteIp: opts.remoteIp,
+    }),
+  });
+  return { subscriptionId: created.id };
 }
 
 // ─── PIX via Asaas ───────────────────────────────────────────────────────────
@@ -162,6 +223,7 @@ interface AsaasCardOpts {
   cpfCnpj?: string;
   phone?: string;
   postalCode?: string;
+  addressNumber?: string;
   amountCents: number;
   description: string;
   dueDate: string;
@@ -202,10 +264,10 @@ async function createAsaasCardPayment(opts: AsaasCardOpts): Promise<{
       creditCardHolderInfo: {
         name: opts.name,
         email: opts.email,
-        cpfCnpj: opts.cpfCnpj ?? "00000000000",
-        postalCode: opts.postalCode ?? "00000000",
-        addressNumber: "S/N",
-        phone: opts.phone ?? "00000000000",
+        cpfCnpj: (opts.cpfCnpj ?? "").replace(/\D/g, ""),
+        postalCode: (opts.postalCode ?? "").replace(/\D/g, ""),
+        addressNumber: opts.addressNumber ?? "",
+        phone: (opts.phone ?? "").replace(/\D/g, ""),
       },
     }),
   });
@@ -235,9 +297,10 @@ export interface CardInputData {
   expiryMonth: string;
   expiryYear: string;
   cvv: string;
-  cpfCnpj?: string;
-  phone?: string;
-  postalCode?: string;
+  cpfCnpj: string;
+  phone: string;
+  postalCode: string;
+  addressNumber: string;
 }
 
 type PaymentData = Pick<
@@ -334,6 +397,7 @@ async function buildAsaasPayment(
         cpfCnpj: card.cpfCnpj,
         phone: card.phone,
         postalCode: card.postalCode,
+        addressNumber: card.addressNumber,
         amountCents: charged,
         description: opts.description,
         dueDate: opts.dueDate,
@@ -374,6 +438,7 @@ export async function initiatePayment(opts: {
     .where(eq(plansTable.id, opts.planId))
     .limit(1);
   if (!plan || !plan.active) throw new NotFoundError("Plano não encontrado");
+  await assertLicenseDoesNotDowngrade(opts.workspaceId, plan.slug);
 
   const amountCents = Math.round(Number(plan.priceMonthly) * 100);
   const description = `NexOS AI — Acesso ${plan.name} (vitalício)`;
@@ -422,6 +487,210 @@ export async function initiatePayment(opts: {
   return payment;
 }
 
+type SalesOfferSnapshot = {
+  id: string; key: string; name: string; description: string; priceCents: number;
+  planSlug?: "solo" | "agency";
+  interval: "one_time" | "monthly" | "yearly"; nexosAccessLifetime: boolean;
+  campaignsIncluded: number; socialMediaDays: number; creditsIncluded: number;
+};
+
+function addUtcDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setUTCDate(result.getUTCDate() + days);
+  return result;
+}
+
+async function fulfillSalesOfferPayment(trx: Parameters<Parameters<typeof db.transaction>[0]>[0], payment: SubscriptionPayment): Promise<void> {
+  const metadata = payment.metadata as { type?: string; offerContractId?: string; offerSnapshot?: SalesOfferSnapshot };
+  if (metadata.type !== "sales_offer" || !metadata.offerContractId || !metadata.offerSnapshot) return;
+  const [contract] = await trx.select().from(commercialOfferContractsTable)
+    .where(eq(commercialOfferContractsTable.id, metadata.offerContractId)).limit(1).for("update");
+  if (!contract) throw new AppError(409, "Contrato da oferta não encontrado", "OFFER_CONTRACT_NOT_FOUND");
+  const fulfilled = Array.isArray(contract.fulfilledPaymentIds) ? contract.fulfilledPaymentIds as string[] : [];
+  if (fulfilled.includes(payment.id)) return;
+
+  const offer = metadata.offerSnapshot;
+  if (offer.planSlug) {
+    const [licensePlan] = await trx.select({ id: plansTable.id }).from(plansTable)
+      .where(eq(plansTable.slug, offer.planSlug)).limit(1);
+    if (!licensePlan) throw new AppError(409, "O plano da licença desta oferta não foi encontrado", "OFFER_LICENSE_PLAN_NOT_FOUND");
+    await trx.update(workspacesTable).set({ planId: licensePlan.id })
+      .where(eq(workspacesTable.id, payment.workspaceId));
+  }
+  const productKey = `sales-${contract.id}`;
+  let [product] = await trx.select({ id: commercialProductsTable.id }).from(commercialProductsTable)
+    .where(eq(commercialProductsTable.key, productKey)).limit(1);
+  if (!product) {
+    const capabilities = {
+      license_plan: offer.planSlug ? { slug: offer.planSlug } : null,
+      nexos_access: { enabled: offer.nexosAccessLifetime, lifetime: offer.nexosAccessLifetime },
+      campaigns: { included: offer.campaignsIncluded },
+      social_media: { enabled: offer.socialMediaDays > 0, durationDays: offer.socialMediaDays || null },
+    };
+    await trx.insert(commercialProductsTable).values({
+      key: productKey, name: offer.name, masterPlanKey: "sales_offer", status: "active",
+      capabilities, usagePolicy: {}, metadata: { salesOfferId: offer.id, salesOfferKey: offer.key, contractId: contract.id },
+    }).onConflictDoNothing({ target: commercialProductsTable.key });
+    [product] = await trx.select({ id: commercialProductsTable.id }).from(commercialProductsTable)
+      .where(eq(commercialProductsTable.key, productKey)).limit(1);
+  }
+  if (!product) throw new AppError(500, "Não foi possível provisionar o produto da oferta", "OFFER_PRODUCT_PROVISION_FAILED");
+
+  const now = payment.paidAt ?? new Date();
+  const periodDays = offer.interval === "monthly" ? 30 : offer.interval === "yearly" ? 365 : 0;
+  const periodEnd = periodDays ? addUtcDays(now, periodDays) : null;
+  const accessPeriodEnd = periodEnd ?? (offer.interval === "one_time" && !offer.nexosAccessLifetime && offer.campaignsIncluded === 0 && offer.socialMediaDays > 0
+    ? addUtcDays(now, offer.socialMediaDays) : null);
+  const [entitlement] = await trx.insert(commercialSubscriptionsTable).values({
+    workspaceId: payment.workspaceId,
+    productId: product.id,
+    status: "active",
+    providerMetadata: { salesOfferContractId: contract.id, sourcePaymentId: payment.id, interval: offer.interval, periodEndsAt: periodEnd?.toISOString() ?? null },
+    startedAt: now,
+    endsAt: periodEnd,
+  }).returning({ id: commercialSubscriptionsTable.id });
+  if (!entitlement) throw new AppError(500, "Não foi possível ativar os benefícios da oferta", "OFFER_ENTITLEMENT_FAILED");
+  if (offer.campaignsIncluded > 0) {
+    await trx.insert(entitlementGrantsTable).values({
+      workspaceId: payment.workspaceId, subscriptionId: entitlement.id, capability: "campaigns",
+      value: { included: offer.campaignsIncluded, cycleEndsAt: periodEnd?.toISOString() ?? null, paymentId: payment.id }, source: "subscription",
+    });
+  }
+  if (offer.socialMediaDays > 0) {
+    await trx.insert(entitlementGrantsTable).values({
+      workspaceId: payment.workspaceId, subscriptionId: entitlement.id, capability: "social_media",
+      value: { enabled: true, durationDays: offer.socialMediaDays }, source: "subscription",
+    });
+  }
+  if (offer.creditsIncluded > 0) {
+    const creditAction = offer.interval === "monthly" ? "monthly_reset" : "purchase";
+    const creditDescription = offer.interval === "monthly"
+      ? `Franquia mensal renovada em ${offer.name}; saldo mensal anterior expirado`
+      : `Créditos adquiridos em ${offer.name}`;
+    await grantCreditsInTransaction(trx, payment.workspaceId, offer.creditsIncluded, creditAction, creditDescription, `offer-payment:${payment.id}`);
+  }
+  await trx.update(commercialOfferContractsTable).set({
+    status: "active", startedAt: contract.startedAt ?? now, currentPeriodEndsAt: accessPeriodEnd,
+    fulfilledPaymentIds: [...fulfilled, payment.id], updatedAt: new Date(),
+  }).where(eq(commercialOfferContractsTable.id, contract.id));
+}
+
+export async function initiateSalesOfferPurchase(opts: {
+  workspaceId: string; userId: string; offerId: string; method: PaymentMethod;
+  userName: string; userEmail: string; cpfCnpj?: string; card?: CardInputData; remoteIp: string;
+}): Promise<{ payment: SubscriptionPayment | null; contractId: string; recurring: boolean }> {
+  const [offerRow] = await db.select().from(commercialSalesOffersTable)
+    .where(and(eq(commercialSalesOffersTable.id, opts.offerId), eq(commercialSalesOffersTable.active, true))).limit(1);
+  if (!offerRow) throw new NotFoundError("Oferta comercial");
+  const now = new Date();
+  const [existingContract] = await db.select({ id: commercialOfferContractsTable.id })
+    .from(commercialOfferContractsTable)
+    .where(and(
+      eq(commercialOfferContractsTable.workspaceId, opts.workspaceId),
+      eq(commercialOfferContractsTable.offerId, offerRow.id),
+      or(
+        inArray(commercialOfferContractsTable.status, ["active", "pending", "paused"]),
+        and(eq(commercialOfferContractsTable.status, "cancelled"), gt(commercialOfferContractsTable.currentPeriodEndsAt, now)),
+      ),
+    )).limit(1);
+  if (existingContract) {
+    throw new AppError(409, "Esta oferta já está ativa ou possui uma compra em andamento neste workspace.", "OFFER_ALREADY_PURCHASED");
+  }
+  if (!offerRow.planSlug) throw new AppError(409, "Esta oferta ainda não está vinculada a uma licença Solo ou Agency", "OFFER_LICENSE_PLAN_REQUIRED");
+  await assertLicenseDoesNotDowngrade(opts.workspaceId, offerRow.planSlug);
+  if (offerRow.interval !== "one_time" && offerRow.nexosAccessLifetime) {
+    throw new AppError(400, "Acesso vitalício não pode fazer parte de um plano recorrente", "LIFETIME_RECURRING_OFFER_INVALID");
+  }
+  if (offerRow.interval !== "one_time") {
+    if (opts.method !== "credit_card" || !opts.card) throw new AppError(400, "Planos recorrentes exigem cartão de crédito para cobrança automática", "RECURRING_CARD_REQUIRED");
+    if (!opts.card.cpfCnpj || !opts.card.phone || !opts.card.postalCode || !opts.card.addressNumber) throw new AppError(400, "CPF/CNPJ, telefone, CEP e número do endereço são obrigatórios para assinatura recorrente", "RECURRING_CARDHOLDER_INFO_REQUIRED");
+    if (!opts.remoteIp) throw new AppError(400, "Não foi possível identificar o IP do pagador para validar o cartão", "RECURRING_CARD_IP_REQUIRED");
+  } else {
+    if (!["pix", "boleto", "credit_card"].includes(opts.method)) throw new AppError(400, "Método de pagamento não disponível para esta oferta", "OFFER_PAYMENT_METHOD_INVALID");
+    if (opts.method === "credit_card" && !opts.card) throw new AppError(400, "Dados do cartão obrigatórios", "CARD_DATA_REQUIRED");
+    if (["pix", "boleto"].includes(opts.method) && !opts.cpfCnpj) throw new AppError(400, "Informe CPF/CNPJ para emitir PIX ou boleto", "PAYER_DOCUMENT_REQUIRED");
+  }
+  const [workspace] = await db.select({ planId: workspacesTable.planId }).from(workspacesTable)
+    .where(eq(workspacesTable.id, opts.workspaceId)).limit(1);
+  if (!workspace?.planId) throw new AppError(409, "Workspace sem plano base para registrar a cobrança", "WORKSPACE_PLAN_REQUIRED");
+  const [licensePlan] = await db.select({ id: plansTable.id }).from(plansTable)
+    .where(eq(plansTable.slug, offerRow.planSlug)).limit(1);
+  if (!licensePlan) throw new AppError(409, "O plano da licença desta oferta não foi encontrado", "OFFER_LICENSE_PLAN_NOT_FOUND");
+  const snapshot: SalesOfferSnapshot = {
+    id: offerRow.id, key: offerRow.key, name: offerRow.name, description: offerRow.description,
+    planSlug: offerRow.planSlug,
+    priceCents: offerRow.priceCents, interval: offerRow.interval, nexosAccessLifetime: offerRow.nexosAccessLifetime,
+    campaignsIncluded: offerRow.campaignsIncluded, socialMediaDays: offerRow.socialMediaDays, creditsIncluded: offerRow.creditsIncluded,
+  };
+  const [contract] = await db.insert(commercialOfferContractsTable).values({
+    workspaceId: opts.workspaceId, userId: opts.userId, offerId: offerRow.id, offerSnapshot: snapshot,
+  }).returning();
+  if (!contract) throw new AppError(500, "Não foi possível criar o contrato comercial", "OFFER_CONTRACT_CREATE_FAILED");
+
+  if (offerRow.interval !== "one_time") {
+    const nextDueDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+    const priceCents = applyCardFee(offerRow.priceCents);
+    try {
+      const created = await createAsaasRecurringCardSubscription({
+        name: opts.userName, email: opts.userEmail, cpfCnpj: opts.cpfCnpj, amountCents: priceCents,
+        description: `NexOS — ${offerRow.name}`, nextDueDate, cycle: offerRow.interval === "monthly" ? "MONTHLY" : "YEARLY",
+        card: opts.card!, remoteIp: opts.remoteIp,
+      });
+      await db.update(commercialOfferContractsTable).set({ providerSubscriptionId: created.subscriptionId, updatedAt: new Date() })
+        .where(eq(commercialOfferContractsTable.id, contract.id));
+    } catch (error) {
+      await db.update(commercialOfferContractsTable).set({ status: "cancelled", updatedAt: new Date() }).where(eq(commercialOfferContractsTable.id, contract.id));
+      throw error;
+    }
+    return { payment: null, contractId: contract.id, recurring: true };
+  }
+
+  const dueDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]!;
+  let pd: Awaited<ReturnType<typeof buildAsaasPayment>>;
+  try {
+    pd = await buildAsaasPayment(opts.method, {
+      name: opts.userName, email: opts.userEmail, cpfCnpj: opts.cpfCnpj, amountCents: offerRow.priceCents,
+      description: `NexOS — ${offerRow.name}`, dueDate,
+    }, opts.card);
+  } catch (error) {
+    await db.update(commercialOfferContractsTable).set({ status: "cancelled", updatedAt: new Date() }).where(eq(commercialOfferContractsTable.id, contract.id));
+    throw error;
+  }
+  const cardApproved = pd.cardResult && ["CONFIRMED", "RECEIVED"].includes(pd.cardResult.status);
+  const payment = await db.transaction(async (trx) => {
+    const [inserted] = await trx.insert(subscriptionPaymentsTable).values({
+      workspaceId: opts.workspaceId, userId: opts.userId, planId: licensePlan.id,
+      amountCents: pd.chargedCents, currency: "BRL", method: opts.method, status: cardApproved ? "paid" : "pending",
+      description: `NexOS — ${offerRow.name}`, externalId: pd.externalId, pixData: pd.pixData, boletoData: pd.boletoData,
+      bankTransferData: pd.bankTransferData, cryptoData: pd.cryptoData, expiresAt: pd.expiresAt, paidAt: cardApproved ? new Date() : null,
+      metadata: { type: "sales_offer", offerContractId: contract.id, offerSnapshot: snapshot, cardResult: pd.cardResult },
+    }).returning();
+    if (!inserted) throw new AppError(500, "Falha ao registrar pagamento da oferta", "OFFER_PAYMENT_CREATE_FAILED");
+    if (cardApproved) await fulfillSalesOfferPayment(trx, inserted);
+    const [result] = await trx.select().from(subscriptionPaymentsTable).where(eq(subscriptionPaymentsTable.id, inserted.id));
+    return result!;
+  });
+  return { payment, contractId: contract.id, recurring: false };
+}
+
+export async function getSalesOfferContracts(workspaceId: string) {
+  return db.select().from(commercialOfferContractsTable)
+    .where(eq(commercialOfferContractsTable.workspaceId, workspaceId))
+    .orderBy(desc(commercialOfferContractsTable.createdAt));
+}
+
+export async function cancelSalesOfferContract(workspaceId: string, contractId: string) {
+  const [contract] = await db.select().from(commercialOfferContractsTable)
+    .where(and(eq(commercialOfferContractsTable.id, contractId), eq(commercialOfferContractsTable.workspaceId, workspaceId))).limit(1);
+  if (!contract) throw new NotFoundError("Assinatura da oferta");
+  if (!contract.providerSubscriptionId) throw new AppError(409, "Esta oferta é de pagamento único e não tem renovação automática", "OFFER_NOT_RECURRING");
+  if (contract.status === "cancelled") return contract;
+  await asaasRequest(`/subscriptions/${encodeURIComponent(contract.providerSubscriptionId)}`, { method: "DELETE" });
+  const [updated] = await db.update(commercialOfferContractsTable).set({ status: "cancelled", updatedAt: new Date() })
+    .where(eq(commercialOfferContractsTable.id, contract.id)).returning();
+  return updated!;
+}
+
 // ─── Credit pack payment ──────────────────────────────────────────────────────
 
 export async function initiatePackPayment(opts: {
@@ -434,7 +703,12 @@ export async function initiatePackPayment(opts: {
   userEmail: string;
   card?: CardInputData;
 }, buildPayment: typeof buildAsaasPayment = buildAsaasPayment): Promise<SubscriptionPayment> {
-  const pack = PACK_CONFIG[opts.packId];
+  const [configuredPack] = await db.select().from(creditPackPricingTable)
+    .where(eq(creditPackPricingTable.id, opts.packId)).limit(1);
+  const fallbackPack = PACK_CONFIG[opts.packId];
+  const pack = configuredPack
+    ? { credits: configuredPack.credits, priceBrl: Number(configuredPack.priceBrl), label: configuredPack.label }
+    : fallbackPack;
   if (!pack) throw new NotFoundError("Pack de créditos não encontrado");
 
   const [ws] = await db
@@ -523,6 +797,7 @@ async function settleSubscriptionPayment(where: SQL, metadataChanges: Record<str
       const [result] = await trx.select().from(subscriptionPaymentsTable).where(eq(subscriptionPaymentsTable.id, payment.id));
       return result;
     }
+    if (updated && meta?.type === "sales_offer") await fulfillSalesOfferPayment(trx, updated);
     return updated;
   });
 }
@@ -632,10 +907,13 @@ export async function getSubscriptionStatus(workspaceId: string): Promise<{
 // ─── Asaas webhook ────────────────────────────────────────────────────────────
 
 export async function processAsaasWebhook(body: unknown): Promise<void> {
-  const payload = body as { event?: string; payment?: { id?: string } };
+  const payload = body as { event?: string; payment?: { id?: string; subscription?: string; value?: number; status?: string; billingType?: string; dueDate?: string } };
   const asaasId = payload.payment?.id;
   const event = payload.event;
   if (!asaasId) return;
+  if (payload.payment?.subscription && ["PAYMENT_CREATED", "PAYMENT_UPDATED", "PAYMENT_CONFIRMED", "PAYMENT_RECEIVED"].includes(event ?? "")) {
+    await recordRecurringOfferPayment(payload);
+  }
   if (event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED") {
     await reconcileBillingIfHeld(asaasId);
     await confirmPaymentByExternalId(asaasId, payload);
@@ -645,6 +923,37 @@ export async function processAsaasWebhook(body: unknown): Promise<void> {
   // independent preserves legacy plan/credit-pack fulfillment semantics.
   const { processRadarAsaasEvent } = await import("../market-intel/radar-entitlements.service.js");
   await processRadarAsaasEvent(asaasId, event ?? "", payload);
+}
+
+async function recordRecurringOfferPayment(payload: { payment?: { id?: string; subscription?: string; value?: number; status?: string; billingType?: string; dueDate?: string } }): Promise<void> {
+  const payment = payload.payment;
+  if (!payment?.id || !payment.subscription) return;
+  const externalId = payment.id;
+  const providerSubscriptionId = payment.subscription;
+  await db.transaction(async (trx) => {
+    await trx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${externalId}))`);
+    const existing = await trx.select({ id: subscriptionPaymentsTable.id }).from(subscriptionPaymentsTable)
+      .where(eq(subscriptionPaymentsTable.externalId, externalId)).limit(1);
+    if (existing.length) return;
+    const [contract] = await trx.select().from(commercialOfferContractsTable)
+      .where(eq(commercialOfferContractsTable.providerSubscriptionId, providerSubscriptionId)).limit(1);
+    if (!contract) return;
+    const [workspace] = await trx.select({ planId: workspacesTable.planId }).from(workspacesTable)
+      .where(eq(workspacesTable.id, contract.workspaceId)).limit(1);
+    if (!workspace?.planId) throw new AppError(409, "Workspace sem plano base para registrar a recorrência", "WORKSPACE_PLAN_REQUIRED");
+    const snapshot = contract.offerSnapshot as SalesOfferSnapshot;
+    const [licensePlan] = snapshot.planSlug
+      ? await trx.select({ id: plansTable.id }).from(plansTable).where(eq(plansTable.slug, snapshot.planSlug)).limit(1)
+      : [undefined];
+    const chargePlanId = licensePlan?.id ?? workspace.planId;
+    const [inserted] = await trx.insert(subscriptionPaymentsTable).values({
+      workspaceId: contract.workspaceId, userId: contract.userId, planId: chargePlanId,
+      amountCents: Math.round((payment.value ?? snapshot.priceCents / 100) * 100), currency: "BRL", method: "credit_card",
+      status: "pending", description: `NexOS — ${snapshot.name} (${snapshot.interval})`, externalId,
+      metadata: { type: "sales_offer", offerContractId: contract.id, offerSnapshot: snapshot, asaasStatus: payment.status, asaasSubscriptionId: providerSubscriptionId },
+    }).returning({ id: subscriptionPaymentsTable.id });
+    if (inserted) logger.info({ contractId: contract.id, paymentId: inserted.id }, "Recurring sales offer charge recorded");
+  });
 }
 
 export async function getWorkspaceByPaymentToken(token: string) {

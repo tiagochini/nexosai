@@ -478,10 +478,65 @@ export interface CampaignCostRow {
  * Returns real AI cost per campaign sorted by highest cost first.
  * Used by the product owner to understand launch cost structure and set correct credit pricing.
  */
-export async function getCampaignCostBreakdown(limitCampaigns = 50): Promise<{
+export async function getCampaignCostBreakdown(limitCampaigns = 50, dateFrom?: Date, dateTo?: Date): Promise<{
   campaigns: CampaignCostRow[];
   platformTotals: { totalCostUsd: number; totalCredits: number; totalTokens: number; totalCalls: number };
+  entries: {
+    id: string; campaignId: string | null; campaignName: string | null; workspaceName: string | null;
+    ownerEmail: string; agentType: string | null; provider: string; model: string;
+    inputTokens: number; outputTokens: number; totalTokens: number; costUsd: number;
+    creditsCharged: number; latencyMs: number | null; createdAt: string;
+  }[];
 }> {
+  const dateConditions = [
+    ...(dateFrom ? [gte(aiProviderLogsTable.createdAt, dateFrom)] : []),
+    ...(dateTo ? [lte(aiProviderLogsTable.createdAt, dateTo)] : []),
+  ];
+  const filteredWhere = dateConditions.length ? and(...dateConditions) : undefined;
+  const campaignWhere = and(isNotNull(aiProviderLogsTable.campaignId), ...dateConditions);
+
+  const [platformTotalsRow] = await db.select({
+    totalCostUsd: sql<number>`coalesce(sum(cast(${aiProviderLogsTable.costUsd} as float)), 0)`,
+    totalCredits: sql<number>`coalesce(sum(${aiProviderLogsTable.creditsCharged}), 0)`,
+    totalTokens: sql<number>`coalesce(sum(${aiProviderLogsTable.totalTokens}), 0)`,
+    totalCalls: sql<number>`count(*)`,
+  }).from(aiProviderLogsTable).where(filteredWhere);
+
+  const entriesQuery = await db.select({
+    id: aiProviderLogsTable.id,
+    campaignId: aiProviderLogsTable.campaignId,
+    campaignName: campaignsTable.title,
+    workspaceName: workspacesTable.name,
+    ownerEmail: usersTable.email,
+    agentType: aiProviderLogsTable.agentType,
+    provider: aiProviderLogsTable.provider,
+    model: aiProviderLogsTable.model,
+    inputTokens: aiProviderLogsTable.inputTokens,
+    outputTokens: aiProviderLogsTable.outputTokens,
+    totalTokens: aiProviderLogsTable.totalTokens,
+    costUsd: aiProviderLogsTable.costUsd,
+    creditsCharged: aiProviderLogsTable.creditsCharged,
+    latencyMs: aiProviderLogsTable.latencyMs,
+    createdAt: aiProviderLogsTable.createdAt,
+  }).from(aiProviderLogsTable)
+    .leftJoin(campaignsTable, eq(aiProviderLogsTable.campaignId, campaignsTable.id))
+    .leftJoin(workspacesTable, eq(aiProviderLogsTable.workspaceId, workspacesTable.id))
+    .leftJoin(usersTable, eq(workspacesTable.ownerId, usersTable.id))
+    .where(filteredWhere)
+    .orderBy(desc(aiProviderLogsTable.createdAt))
+    .limit(500);
+
+  const entries = entriesQuery.map(row => ({
+    ...row,
+    ownerEmail: row.ownerEmail ?? "",
+    costUsd: Number(row.costUsd),
+    inputTokens: Number(row.inputTokens),
+    outputTokens: Number(row.outputTokens),
+    totalTokens: Number(row.totalTokens),
+    creditsCharged: Number(row.creditsCharged),
+    createdAt: row.createdAt.toISOString(),
+  }));
+
   // Per-campaign totals
   const campaignTotals = await db
     .select({
@@ -492,14 +547,21 @@ export async function getCampaignCostBreakdown(limitCampaigns = 50): Promise<{
       totalCalls:   sql<number>`count(*)`,
     })
     .from(aiProviderLogsTable)
-    .where(isNotNull(aiProviderLogsTable.campaignId))
+    .where(campaignWhere)
     .groupBy(aiProviderLogsTable.campaignId)
     .orderBy(sql`sum(cast(${aiProviderLogsTable.costUsd} as float)) desc`)
     .limit(limitCampaigns);
 
-  if (campaignTotals.length === 0) {
-    return { campaigns: [], platformTotals: { totalCostUsd: 0, totalCredits: 0, totalTokens: 0, totalCalls: 0 } };
-  }
+  if (campaignTotals.length === 0) return {
+    campaigns: [],
+    platformTotals: {
+      totalCostUsd: Number(platformTotalsRow?.totalCostUsd ?? 0),
+      totalCredits: Number(platformTotalsRow?.totalCredits ?? 0),
+      totalTokens: Number(platformTotalsRow?.totalTokens ?? 0),
+      totalCalls: Number(platformTotalsRow?.totalCalls ?? 0),
+    },
+    entries,
+  };
 
   const campaignIds = campaignTotals.map(r => r.campaignId!);
 
@@ -529,7 +591,7 @@ export async function getCampaignCostBreakdown(limitCampaigns = 50): Promise<{
       calls:       sql<number>`count(*)`,
     })
     .from(aiProviderLogsTable)
-    .where(inArray(aiProviderLogsTable.campaignId, campaignIds))
+    .where(and(inArray(aiProviderLogsTable.campaignId, campaignIds), ...dateConditions))
     .groupBy(aiProviderLogsTable.campaignId, aiProviderLogsTable.agentType)
     .orderBy(aiProviderLogsTable.campaignId, sql`sum(cast(${aiProviderLogsTable.costUsd} as float)) desc`);
 
@@ -542,7 +604,7 @@ export async function getCampaignCostBreakdown(limitCampaigns = 50): Promise<{
     tokens: sql<number>`coalesce(sum(${aiProviderLogsTable.totalTokens}), 0)`,
     calls: sql<number>`count(*)`,
   }).from(aiProviderLogsTable)
-    .where(inArray(aiProviderLogsTable.campaignId, campaignIds))
+    .where(and(inArray(aiProviderLogsTable.campaignId, campaignIds), ...dateConditions))
     .groupBy(aiProviderLogsTable.campaignId, aiProviderLogsTable.provider, aiProviderLogsTable.model)
     .orderBy(aiProviderLogsTable.campaignId, sql`sum(cast(${aiProviderLogsTable.costUsd} as float)) desc`);
 
@@ -591,17 +653,16 @@ export async function getCampaignCostBreakdown(limitCampaigns = 50): Promise<{
   });
 
   // Platform-wide totals
-  const platformTotals = campaigns.reduce(
-    (acc, c) => ({
-      totalCostUsd:  acc.totalCostUsd  + c.totalCostUsd,
-      totalCredits:  acc.totalCredits  + c.totalCredits,
-      totalTokens:   acc.totalTokens   + c.totalTokens,
-      totalCalls:    acc.totalCalls    + c.totalCalls,
-    }),
-    { totalCostUsd: 0, totalCredits: 0, totalTokens: 0, totalCalls: 0 },
-  );
-
-  return { campaigns, platformTotals };
+  return {
+    campaigns,
+    platformTotals: {
+      totalCostUsd: Number(platformTotalsRow?.totalCostUsd ?? 0),
+      totalCredits: Number(platformTotalsRow?.totalCredits ?? 0),
+      totalTokens: Number(platformTotalsRow?.totalTokens ?? 0),
+      totalCalls: Number(platformTotalsRow?.totalCalls ?? 0),
+    },
+    entries,
+  };
 }
 
 // ─── Admin payments list ───────────────────────────────────────────────────────

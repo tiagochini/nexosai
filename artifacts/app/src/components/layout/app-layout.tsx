@@ -181,7 +181,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
   const [savingLocale, setSavingLocale] = useState(false);
   const tr = useAppI18n();
   const t = useUiText();
-  const { locale } = useUiLocale();
+  const { locale, setGuestLocale } = useUiLocale();
 
   const currentLocale: LocaleCode = (user?.locale as LocaleCode | undefined) ?? "pt-BR";
   const currentLocaleOpt = LOCALE_OPTIONS.find(o => o.value === currentLocale) ?? LOCALE_OPTIONS[0]!
@@ -195,6 +195,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locale }),
       });
+      setGuestLocale(locale);
       toast.success(t("Idioma da plataforma atualizado.", "Platform language updated.", "Idioma de la plataforma actualizado."));
       await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     } catch {

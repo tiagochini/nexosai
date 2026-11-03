@@ -31,6 +31,8 @@ export const workspacesTable = pgTable("workspaces", {
   slug: text("slug").notNull().unique(),
   status: workspaceStatusEnum("status").notNull().default("active"),
   creditsBalance: integer("credits_balance").notNull().default(0),
+  creditsPurchasedBalance: integer("credits_purchased_balance").notNull().default(0),
+  creditsMonthlyBalance: integer("credits_monthly_balance").notNull().default(0),
   creditsLastReset: timestamp("credits_last_reset", { withTimezone: true })
     .notNull()
     .defaultNow(),

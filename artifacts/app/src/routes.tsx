@@ -24,6 +24,7 @@ const AccessWall = lazy(() =>
 );
 const Login = lazy(() => import("@/pages/login"));
 const Register = lazy(() => import("@/pages/register"));
+const PublicOfferPage = lazy(() => import("@/pages/public-offer"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const InstitucionalPage = lazy(() => import("@/pages/institucional/index"));
 const Welcome = lazy(() => import("@/pages/welcome/index"));
@@ -52,6 +53,7 @@ const AgencyClientsPage = lazy(() => import("@/pages/agency/clients"));
 const AgencyProfilesPage = lazy(() => import("@/pages/agency/profiles"));
 const AdminPage = lazy(() => import("@/pages/admin/index"));
 const AdminPricingPage = lazy(() => import("@/pages/admin/pricing"));
+const AdminSalesOffersPage = lazy(() => import("@/pages/admin/sales-offers"));
 const AuditLogsPage = lazy(() => import("@/pages/admin/audit-logs"));
 const OperationsPage = lazy(() => import("@/pages/admin/operations"));
 const NexosLaunchRoom = lazy(() => import("@/pages/admin/nexos-launch"));
@@ -131,6 +133,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <AppLayout>{children}</AppLayout>;
 }
 
+// Billing must remain reachable to authenticated new buyers even before their
+// first purchase gives the workspace product access.
+function AuthenticatedBillingRoute() {
+  const { token, isAdmin } = useAuth();
+  if (!token) return <Redirect to={`/login?next=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`} />;
+  if (isAdmin) return <AppLayout><BillingPage /></AppLayout>;
+  return <AppLayout><BillingPage /></AppLayout>;
+}
+
 function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   const { token, isAdmin, isAdminLoading } = useAuth();
   if (!token) return <Redirect to="/login" />;
@@ -193,6 +204,8 @@ export default function AppRoutes() {
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
+      <Route path="/oferta">{() => <PublicOfferPage />}</Route>
+      <Route path="/oferta/:key">{params => <PublicOfferPage offerKey={params.key} />}</Route>
       <Route path="/welcome" component={WelcomeRoute} />
       <Route path="/onboarding" component={OnboardingRoute} />
       <Route path="/landing/:slug">{params => <PublicLanding slug={params.slug} />}</Route>
@@ -329,6 +342,9 @@ export default function AppRoutes() {
       <Route path="/admin/pricing">
         {() => <ProtectedAdminRoute><AdminPricingPage /></ProtectedAdminRoute>}
       </Route>
+      <Route path="/admin/sales-offers">
+        {() => <ProtectedAdminRoute><AdminSalesOffersPage /></ProtectedAdminRoute>}
+      </Route>
       <Route path="/admin">
         {() => <ProtectedAdminRoute><AdminPage /></ProtectedAdminRoute>}
       </Route>
@@ -453,7 +469,7 @@ export default function AppRoutes() {
         {() => <ProtectedRoute><CreditsPage /></ProtectedRoute>}
       </Route>
       <Route path="/billing">
-        {() => <ProtectedRoute><BillingPage /></ProtectedRoute>}
+        {() => <AuthenticatedBillingRoute />}
       </Route>
       <Route path="/memory">
         {() => <ProtectedRoute><MemoryPage /></ProtectedRoute>}

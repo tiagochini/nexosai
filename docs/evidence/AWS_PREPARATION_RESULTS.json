@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-30",
+  "domain": "agencianexos.vip",
+  "proposedRegion": "sa-east-1",
+  "scope": "Local preparation only. No AWS resources, DNS changes or production data operations.",
+  "checks": {
+    "typecheck": "PASS all workspace typechecks after correcting the product checkout card input type",
+    "runtimeSafeguards": "PASS 4 tests on Windows and in an isolated Linux container, including secret generation and overwrite refusal",
+    "awsCompose": "PASS loopback-only API/web, no Redis/db-tools published ports, external database CA mounts, persistent uploads and bounded logs",
+    "bashSyntax": "PASS in isolated Linux container",
+    "caddyConfiguration": "PASS official Caddy image validation; no certificate requested and no public listener started",
+    "s3CloudFormation": "PASS cfn-lint for sa-east-1; stack not deployed or validated against an AWS account",
+    "dockerDeployment": "PASS local and external disposable PostgreSQL, Academy assets, non-root API, persistent recordings, TLS hostname rejection and database outage/recovery; see ../DOCKER_DEPLOYMENT_RESULTS.json",
+    "databaseTlsUnitTests": "PASS 2 tests",
+    "productCheckoutOfflineGuards": "PASS with a non-operational local database URL and mocked provider response; no real Asaas request",
+    "secretScan": "PASS"
+  },
+  "remainingBeforeProduction": [
+    "Create AWS account/network/EC2/RDS/S3 resources, configure DNS, backups and alerts",
+    "Choose and publish a complete release including current local changes and migrations",
+    "Implement and test campaign-media S3 adapter; existing GCS/Replit and data URL paths are not migrated by creating the bucket",
+    "Fill private runtime credentials on the host and preserve original encryption keys for imported tokens",
+    "Migrate and verify database/media as applicable, review pending external operations, then validate real HTTPS/login/realtime/provider workflows"
+  ]
+}

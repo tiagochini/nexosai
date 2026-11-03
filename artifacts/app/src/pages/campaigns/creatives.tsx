@@ -177,8 +177,8 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
   const t = useUiText();
   const [rejectReason, setRejectReason] = useState("");
   const [showReject, setShowReject] = useState(false);
+  const [imageUnavailable, setImageUnavailable] = useState(false);
   const status = STATUS_CONFIG[creative.status] ?? STATUS_CONFIG.concept_pending;
-  const StatusIcon = status.icon;
   const fmt = FORMATS[creative.format];
   const plat = PLATFORMS.find((p) => p.value === creative.platform);
 
@@ -223,6 +223,20 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
   const imageUrl = creative.finalUrl ?? creative.previewUrl;
   const hasImage = !!imageUrl;
   const imageError = creative.metadata?.imageError;
+  useEffect(() => setImageUnavailable(false), [imageUrl]);
+  const imageFailure = Boolean(imageError) || imageUnavailable ||
+    (!hasImage && ["preview_ready", "approved"].includes(creative.status));
+  const retryQuality: "standard" | "hd" = creative.status === "approved" ||
+    (creative.status === "preview_ready" && hasImage) ? "hd" : "standard";
+  const imageFailureMessage = imageUnavailable || (!hasImage && ["preview_ready", "approved"].includes(creative.status))
+    ? t("A imagem não foi encontrada ou não está acessível no armazenamento. A geração falhou; tente gerar novamente.", "The image was not found or is unavailable in storage. Generation failed; try again.", "No se encontró la imagen o no está disponible en el almacenamiento. La generación falló; inténtalo de nuevo.")
+    : typeof imageError === "string"
+      ? t(...imageGenerationErrorMessage(imageError))
+      : t("A imagem não foi gerada. O conceito foi preservado; tente novamente.", "The image was not generated. The concept was preserved; try again.", "La imagen no se generó. Se conservó el concepto; inténtalo de nuevo.");
+  const visibleStatus = imageFailure
+    ? { label: ["Falha na imagem", "Image generation failed", "Falló la imagen"] as [string, string, string], color: "border-red-400/40 bg-red-400/10 text-red-400", icon: ImageOff }
+    : status;
+  const VisibleStatusIcon = visibleStatus.icon;
 
   return (
     <div className={`border bg-card/20 overflow-hidden transition-all ${creative.status === "approved" ? "border-green-400/30" : creative.status === "rejected" ? "border-red-400/20 opacity-60" : "border-border/30"}`}>
@@ -234,21 +248,21 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
              {plat?.label ?? creative.platform} · {fmt ? t(...fmt.label) : creative.format}
           </span>
         </div>
-        <div className={`flex items-center gap-1.5 border px-2 py-0.5 shrink-0 ${status.color}`}>
-          <StatusIcon className={`h-3 w-3 shrink-0 ${["concept_pending","preview_generating","final_generating"].includes(creative.status) ? "animate-spin" : ""}`} />
-           <span className="font-mono text-[10px] uppercase tracking-widest">{t(...status.label)}</span>
+        <div className={`flex items-center gap-1.5 border px-2 py-0.5 shrink-0 ${visibleStatus.color}`}>
+          <VisibleStatusIcon className={`h-3 w-3 shrink-0 ${!imageFailure && ["concept_pending","preview_generating","final_generating"].includes(creative.status) ? "animate-spin" : ""}`} />
+           <span className="font-mono text-[10px] uppercase tracking-widest">{t(...visibleStatus.label)}</span>
         </div>
       </div>
 
       {/* Image area */}
       <div className={`relative bg-background/40 flex items-center justify-center ${creative.format === "stories" || creative.format === "feed_portrait" ? "aspect-[9/16] max-h-64" : creative.format === "banner" ? "aspect-video" : "aspect-square"} overflow-hidden`}
         style={{ maxHeight: 320 }}>
-        {hasImage ? (
+        {hasImage && !imageUnavailable ? (
           <img
             src={imageUrl!}
             alt={t("Criativo gerado", "Generated creative", "Creativo generado")}
             className="w-full h-full object-cover"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            onError={() => setImageUnavailable(true)}
           />
         ) : (
           <div className="flex flex-col items-center gap-3 text-muted-foreground/30 p-6 text-center">
@@ -257,10 +271,10 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
                 <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
                 <span className="font-mono text-xs uppercase tracking-widest">{t("Processando...", "Processing...", "Procesando...")}</span>
               </>
-            ) : imageError ? (
+            ) : imageFailure ? (
               <>
                 <ImageOff className="h-10 w-10" />
-                <span className="text-xs leading-relaxed text-muted-foreground">{t(...imageGenerationErrorMessage(imageError))}</span>
+                <span className="text-xs leading-relaxed text-muted-foreground">{imageFailureMessage}</span>
               </>
             ) : (
               <>
@@ -278,6 +292,12 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
           </div>
         )}
       </div>
+
+      {imageFailure && hasImage && !imageUnavailable && (
+        <div role="alert" aria-live="polite" className="border-t border-red-400/20 bg-red-400/5 px-4 py-3 text-xs leading-relaxed text-red-300">
+          <div className="flex items-start gap-2"><ImageOff className="mt-0.5 h-4 w-4 shrink-0" /><span>{imageFailureMessage}</span></div>
+        </div>
+      )}
 
       {/* Concept block */}
       {creative.concept && (
@@ -333,6 +353,20 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
       {/* Actions */}
       {creative.status !== "rejected" && (
         <div className="px-4 pb-4 space-y-2">
+          {imageFailure && (
+            <Button
+              variant="outline"
+              onClick={() => regenerate.mutate(retryQuality)}
+              disabled={regenerate.isPending || ["preview_generating", "final_generating"].includes(creative.status)}
+              className="w-full rounded-none font-mono uppercase text-xs tracking-widest h-10 gap-2 border-red-400/40 text-red-300 hover:bg-red-400/10"
+            >
+              {regenerate.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              {regenerate.isPending
+                ? t("Tentando novamente...", "Retrying...", "Reintentando...")
+                : t(`Tentar gerar novamente (${retryQuality === "hd" ? "150" : "50"} créditos)`, `Try generating again (${retryQuality === "hd" ? "150" : "50"} credits)`, `Intentar generar de nuevo (${retryQuality === "hd" ? "150" : "50"} créditos)`)}
+            </Button>
+          )}
+
           {/* Approve concept → generate preview */}
           {creative.status === "concept_ready" && (
             <div className="flex gap-2">

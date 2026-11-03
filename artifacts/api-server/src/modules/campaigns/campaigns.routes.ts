@@ -29,7 +29,8 @@ import { db, campaignsTable, auditLogsTable, workspacesTable, masterplanVersions
 import { and, eq, isNotNull } from "drizzle-orm";
 import { analyzeSocialProfile } from "../agents/social-profile-analyzer.agent.js";
 import { getAccountsWithAnalytics } from "../social/social.service.js";
-import { determineSocialDiagnosisStatus, SOCIAL_DIAGNOSIS_CAMPAIGN_TYPES } from "./social-diagnosis.policy.js";
+import { determineSocialDiagnosisStatus } from "./social-diagnosis.policy.js";
+import { resolveSocialMediaEntitlement } from "../billing/commercial-entitlements.service.js";
 import {
   getIntakeQuestions,
   validateIntakeCompleteness,
@@ -48,7 +49,8 @@ router.get("/:id/social-diagnosis", async (req, res): Promise<void> => {
     .from(campaignsTable).where(and(eq(campaignsTable.id, id), eq(campaignsTable.workspaceId, req.auth.workspaceId))).limit(1);
   if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "NOT_FOUND" }); return; }
   const brain = (campaign.brainData ?? {}) as Record<string, unknown>;
-  res.json({ diagnosis: brain.socialDiagnosis ?? null });
+  const entitlement = await resolveSocialMediaEntitlement(req.auth.workspaceId);
+  res.json({ diagnosis: brain.socialDiagnosis ?? null, entitlement });
 });
 
 function cleanSocialHandle(value: string): string {
@@ -65,11 +67,12 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
   }).safeParse(req.body ?? {});
   if (!parsed.success) { res.status(400).json({ error: "Informe a rede e o perfil público.", code: "VALIDATION_ERROR" }); return; }
 
-  const [campaign] = await db.select({ type: campaignsTable.type, status: campaignsTable.status, intakeData: campaignsTable.intakeData, brainData: campaignsTable.brainData })
+  const [campaign] = await db.select({ status: campaignsTable.status, intakeData: campaignsTable.intakeData, brainData: campaignsTable.brainData })
     .from(campaignsTable).where(and(eq(campaignsTable.id, id), eq(campaignsTable.workspaceId, req.auth.workspaceId))).limit(1);
   if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "NOT_FOUND" }); return; }
-  if (!SOCIAL_DIAGNOSIS_CAMPAIGN_TYPES.has(campaign.type)) {
-    res.status(422).json({ error: "O diagnóstico obrigatório se aplica a campanhas de lançamento e vendas com data definida.", code: "SOCIAL_DIAGNOSIS_NOT_REQUIRED" }); return;
+  const entitlement = await resolveSocialMediaEntitlement(req.auth.workspaceId);
+  if (!entitlement.active) {
+    res.status(403).json({ error: "O diagnóstico social exige um contrato de Social Media vigente.", code: "SOCIAL_MEDIA_ENTITLEMENT_REQUIRED", entitlement }); return;
   }
   if (campaign.status !== "intake") { res.status(409).json({ error: "O diagnóstico só pode ser gerado enquanto o briefing estiver em edição.", code: "SOCIAL_DIAGNOSIS_PHASE_CLOSED" }); return; }
 
@@ -145,10 +148,13 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
 
 router.post("/:id/social-diagnosis/approve", async (req, res): Promise<void> => {
   const id = String(req.params["id"]);
-  const [campaign] = await db.select({ type: campaignsTable.type, status: campaignsTable.status, brainData: campaignsTable.brainData })
+  const [campaign] = await db.select({ status: campaignsTable.status, brainData: campaignsTable.brainData })
     .from(campaignsTable).where(and(eq(campaignsTable.id, id), eq(campaignsTable.workspaceId, req.auth.workspaceId))).limit(1);
   if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "NOT_FOUND" }); return; }
-  if (!SOCIAL_DIAGNOSIS_CAMPAIGN_TYPES.has(campaign.type)) { res.status(422).json({ error: "Diagnóstico não obrigatório para este tipo de campanha.", code: "SOCIAL_DIAGNOSIS_NOT_REQUIRED" }); return; }
+  const entitlement = await resolveSocialMediaEntitlement(req.auth.workspaceId);
+  if (!entitlement.active) {
+    res.status(403).json({ error: "A confirmação do diagnóstico exige um contrato de Social Media vigente.", code: "SOCIAL_MEDIA_ENTITLEMENT_REQUIRED", entitlement }); return;
+  }
   if (campaign.status !== "intake") { res.status(409).json({ error: "O diagnóstico só pode ser confirmado enquanto o briefing estiver em edição.", code: "SOCIAL_DIAGNOSIS_PHASE_CLOSED" }); return; }
   const brainData = (campaign.brainData ?? {}) as Record<string, unknown>;
   const current = brainData.socialDiagnosis as Record<string, unknown> | undefined;

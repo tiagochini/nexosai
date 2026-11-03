@@ -10,13 +10,120 @@ import {
   getSubscriptionStatus,
   markPaymentPaid,
   processAsaasWebhook,
+  initiateSalesOfferPurchase,
+  getSalesOfferContracts,
+  cancelSalesOfferContract,
 } from "./billing.service.js";
-import { db, inviteCodesTable, workspacesTable, plansTable, subscriptionPaymentsTable } from "@workspace/db";
-import { and, eq } from "drizzle-orm";
+import { db, inviteCodesTable, workspacesTable, plansTable, subscriptionPaymentsTable, commercialSalesOffersTable, commercialOfferContractsTable, creditPackPricingTable } from "@workspace/db";
+import { and, eq, gt, isNotNull, isNull, or, sql, inArray } from "drizzle-orm";
 import { matchesAsaasWebhookToken } from "../../lib/asaas-webhook-auth.js";
 import { checkBillingManualConfirmation } from "./billing.security.js";
 
 const router = Router();
+
+router.get("/packs", requireAuth, async (_req, res): Promise<void> => {
+  const packs = await db.select({
+    id: creditPackPricingTable.id, credits: creditPackPricingTable.credits,
+    priceBrl: creditPackPricingTable.priceBrl, label: creditPackPricingTable.label,
+    description: creditPackPricingTable.description, highlight: creditPackPricingTable.highlight,
+  }).from(creditPackPricingTable).orderBy(creditPackPricingTable.credits);
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ packs: packs.map((pack) => ({ ...pack, priceBrl: Number(pack.priceBrl) })) });
+});
+
+const cardDataSchema = z.object({
+  holderName: z.string().min(1),
+  number: z.string().min(13),
+  expiryMonth: z.string().regex(/^(0[1-9]|1[0-2])$/, "Informe o mês de validade entre 01 e 12"),
+  expiryYear: z.string().trim().regex(/^\d{2}(?:\d{2})?$/, "Informe o ano de validade com 2 ou 4 dígitos")
+    .transform(value => value.length === 2 ? `20${value}` : value),
+  cvv: z.string().min(3).max(4),
+  cpfCnpj: z.string().trim().refine(value => [11, 14].includes(value.replace(/\D/g, "").length), "Informe um CPF/CNPJ válido"),
+  phone: z.string().trim().transform(value => value.replace(/\D/g, "")).pipe(z.string().regex(/^\d{10,13}$/, "Informe um telefone válido para o titular")),
+  postalCode: z.string().trim().transform(value => value.replace(/\D/g, "")).pipe(z.string().regex(/^\d{8}$/, "Informe um CEP válido")),
+  addressNumber: z.string().trim().min(1, "Informe o número do endereço de cobrança").max(20),
+});
+
+const payerDocumentSchema = z.string().trim().max(20)
+  .transform(value => value.replace(/[.\-/\s]/g, ""))
+  .pipe(z.string().regex(/^(\d{11}|\d{14})$/, "Informe um CPF/CNPJ válido"));
+
+// Public product details used by the shareable sales page. Only active offers
+// tied to an active license plan are visible; checkout still requires auth.
+router.get("/public-offers/:key", async (req, res): Promise<void> => {
+  const key = z.string().trim().min(1).max(120).safeParse(req.params["key"]);
+  if (!key.success) { res.status(404).json({ error: "Oferta não encontrada", code: "NOT_FOUND" }); return; }
+  const [offer] = await db.select({
+    id: commercialSalesOffersTable.id, key: commercialSalesOffersTable.key, name: commercialSalesOffersTable.name,
+    description: commercialSalesOffersTable.description, priceCents: commercialSalesOffersTable.priceCents,
+    planSlug: commercialSalesOffersTable.planSlug, licensePlanName: plansTable.name,
+    licenseMaxCampaigns: plansTable.maxCampaigns, licenseMaxWorkspaces: plansTable.maxWorkspaces,
+    licenseSocialNetworks: plansTable.allowedSocialNetworks, licenseWhiteLabel: plansTable.whiteLabel,
+    licenseFeatures: plansTable.features, interval: commercialSalesOffersTable.interval,
+    nexosAccessLifetime: commercialSalesOffersTable.nexosAccessLifetime,
+    campaignsIncluded: commercialSalesOffersTable.campaignsIncluded, socialMediaDays: commercialSalesOffersTable.socialMediaDays,
+    creditsIncluded: commercialSalesOffersTable.creditsIncluded,
+  }).from(commercialSalesOffersTable)
+    .innerJoin(plansTable, eq(plansTable.slug, commercialSalesOffersTable.planSlug))
+    .where(and(eq(commercialSalesOffersTable.key, key.data), eq(commercialSalesOffersTable.active, true), eq(plansTable.active, true), isNotNull(commercialSalesOffersTable.planSlug)))
+    .limit(1);
+  if (!offer) { res.status(404).json({ error: "Esta oferta não está disponível", code: "OFFER_NOT_AVAILABLE" }); return; }
+  res.setHeader("Cache-Control", "public, max-age=60, s-maxage=60");
+  res.json({ offer });
+});
+
+router.get("/offers", requireAuth, async (_req, res): Promise<void> => {
+  const offers = await db.select({
+    id: commercialSalesOffersTable.id, key: commercialSalesOffersTable.key, name: commercialSalesOffersTable.name,
+    description: commercialSalesOffersTable.description, priceCents: commercialSalesOffersTable.priceCents,
+    planSlug: commercialSalesOffersTable.planSlug, licensePlanName: plansTable.name,
+    licenseMaxCampaigns: plansTable.maxCampaigns, licenseMaxWorkspaces: plansTable.maxWorkspaces,
+    licenseSocialNetworks: plansTable.allowedSocialNetworks, licenseWhiteLabel: plansTable.whiteLabel,
+    licenseFeatures: plansTable.features,
+    interval: commercialSalesOffersTable.interval, nexosAccessLifetime: commercialSalesOffersTable.nexosAccessLifetime,
+    campaignsIncluded: commercialSalesOffersTable.campaignsIncluded, socialMediaDays: commercialSalesOffersTable.socialMediaDays,
+    creditsIncluded: commercialSalesOffersTable.creditsIncluded,
+  }).from(commercialSalesOffersTable)
+    .innerJoin(plansTable, eq(plansTable.slug, commercialSalesOffersTable.planSlug))
+    .where(and(eq(commercialSalesOffersTable.active, true), eq(plansTable.active, true), isNotNull(commercialSalesOffersTable.planSlug)));
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ offers });
+});
+
+router.get("/offer-contracts", requireAuth, async (req, res): Promise<void> => {
+  const contracts = await getSalesOfferContracts(req.auth.workspaceId);
+  res.json({ contracts: contracts.map(contract => ({
+    id: contract.id, offer: contract.offerSnapshot, status: contract.status, startedAt: contract.startedAt,
+    currentPeriodEndsAt: contract.currentPeriodEndsAt, recurring: Boolean(contract.providerSubscriptionId), createdAt: contract.createdAt,
+  })) });
+});
+
+router.post("/offers/:offerId/purchase", requireAuth, async (req, res): Promise<void> => {
+  const offerId = z.uuid().safeParse(req.params["offerId"]);
+  if (!offerId.success) { res.status(400).json({ error: "ID da oferta inválido", code: "VALIDATION_ERROR" }); return; }
+  const parsed = z.object({
+    method: z.enum(["pix", "boleto", "credit_card"]),
+    card: cardDataSchema.optional(),
+    cpfCnpj: payerDocumentSchema.optional(),
+  }).safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Dados de compra inválidos", code: "VALIDATION_ERROR" });
+    return;
+  }
+  const result = await initiateSalesOfferPurchase({
+    workspaceId: req.auth.workspaceId, userId: req.auth.userId, offerId: offerId.data,
+    method: parsed.data.method, userName: req.auth.email, userEmail: req.auth.email,
+    card: parsed.data.card, cpfCnpj: parsed.data.cpfCnpj, remoteIp: req.ip ?? "",
+  });
+  res.status(201).json(result);
+});
+
+router.post("/offer-contracts/:contractId/cancel", requireAuth, async (req, res): Promise<void> => {
+  const id = z.uuid().safeParse(req.params["contractId"]);
+  if (!id.success) { res.status(400).json({ error: "ID inválido", code: "VALIDATION_ERROR" }); return; }
+  const contract = await cancelSalesOfferContract(req.auth.workspaceId, id.data);
+  res.json({ contract: { id: contract.id, status: contract.status, currentPeriodEndsAt: contract.currentPeriodEndsAt } });
+});
 
 // ─── Subscription status ──────────────────────────────────────────────────────
 
@@ -44,21 +151,6 @@ router.get("/payment/:paymentId", requireAuth, async (req, res): Promise<void> =
 });
 
 // ─── Initiate plan payment ────────────────────────────────────────────────────
-
-const cardDataSchema = z.object({
-  holderName: z.string().min(1),
-  number: z.string().min(13),
-  expiryMonth: z.string().length(2),
-  expiryYear: z.string().min(4),
-  cvv: z.string().min(3).max(4),
-  cpfCnpj: z.string().optional(),
-  phone: z.string().optional(),
-  postalCode: z.string().optional(),
-});
-
-const payerDocumentSchema = z.string().trim().max(20)
-  .transform(value => value.replace(/[.\-/\s]/g, ""))
-  .pipe(z.string().regex(/^(\d{11}|\d{14})$/, "Informe um CPF/CNPJ válido"));
 
 const initiateSchema = z.object({
   planId: z.string().uuid(),
@@ -168,13 +260,28 @@ router.get("/access", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  // Paid access
+  // Legacy purchases retain their existing access semantics. Commercial offers
+  // are checked against their explicit contract term below.
   const [paidPayment] = await db
     .select({ id: subscriptionPaymentsTable.id })
     .from(subscriptionPaymentsTable)
-    .where(and(eq(subscriptionPaymentsTable.workspaceId, req.auth.workspaceId), eq(subscriptionPaymentsTable.status, "paid")))
+    .where(and(eq(subscriptionPaymentsTable.workspaceId, req.auth.workspaceId), eq(subscriptionPaymentsTable.status, "paid"), sql`${subscriptionPaymentsTable.metadata}->>'type' IS DISTINCT FROM 'sales_offer'`))
     .limit(1);
   if (paidPayment) { res.json({ hasAccess: true, reason: "paid" }); return; }
+
+  const commercialContracts = await db.select({ offerSnapshot: commercialOfferContractsTable.offerSnapshot, status: commercialOfferContractsTable.status, currentPeriodEndsAt: commercialOfferContractsTable.currentPeriodEndsAt })
+    .from(commercialOfferContractsTable)
+    .where(and(
+      eq(commercialOfferContractsTable.workspaceId, req.auth.workspaceId),
+      inArray(commercialOfferContractsTable.status, ["active", "cancelled"]),
+      or(isNull(commercialOfferContractsTable.currentPeriodEndsAt), gt(commercialOfferContractsTable.currentPeriodEndsAt, new Date())),
+    ));
+  const commercialAccess = commercialContracts.some(contract => {
+    const offer = contract.offerSnapshot as { nexosAccessLifetime?: boolean; campaignsIncluded?: number; socialMediaDays?: number };
+    const includesPlatformFeature = offer.nexosAccessLifetime === true || Number(offer.campaignsIncluded ?? 0) > 0 || Number(offer.socialMediaDays ?? 0) > 0;
+    return includesPlatformFeature && (!contract.currentPeriodEndsAt || contract.currentPeriodEndsAt > new Date());
+  });
+  if (commercialAccess) { res.json({ hasAccess: true, reason: "commercial_offer" }); return; }
 
   // Invite code used at registration
   const [invite] = await db
@@ -191,6 +298,14 @@ router.get("/access", requireAuth, async (req, res): Promise<void> => {
     .from(workspacesTable)
     .where(eq(workspacesTable.id, req.auth.workspaceId))
     .limit(1);
+  const [workspaceSettings] = await db.select({ settings: workspacesTable.settings })
+    .from(workspacesTable)
+    .where(eq(workspacesTable.id, req.auth.workspaceId))
+    .limit(1);
+  if ((workspaceSettings?.settings as { pendingSalesCheckout?: boolean } | null)?.pendingSalesCheckout) {
+    res.json({ hasAccess: false, reason: "sales_checkout_pending" });
+    return;
+  }
   if (ws?.planId) { res.json({ hasAccess: true, reason: "plan_assigned" }); return; }
 
   res.json({ hasAccess: false, reason: "none" });
@@ -232,7 +347,8 @@ router.post("/redeem-code", requireAuth, async (req, res): Promise<void> => {
   await db.update(workspacesTable)
     .set({
       planId: plan.id,
-      creditsBalance: Math.max(workspace.creditsBalance ?? 0, plan.creditsMonthly),
+      creditsMonthlyBalance: Math.max(workspace.creditsMonthlyBalance ?? 0, plan.creditsMonthly),
+      creditsBalance: (workspace.creditsPurchasedBalance ?? 0) + Math.max(workspace.creditsMonthlyBalance ?? 0, plan.creditsMonthly),
     })
     .where(eq(workspacesTable.id, req.auth.workspaceId));
 

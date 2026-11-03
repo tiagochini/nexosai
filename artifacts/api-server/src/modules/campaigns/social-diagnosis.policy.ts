@@ -1,9 +1,5 @@
 import { ValidationError } from "../../lib/errors.js";
 
-export const SOCIAL_DIAGNOSIS_CAMPAIGN_TYPES = new Set([
-  "launch", "perpetual_launch", "semente_launch", "flash_sale", "live_sale",
-]);
-
 export function determineSocialDiagnosisStatus(input: {
   accountMetricsAvailable: boolean;
   citedPublicResearchAvailable: boolean;
@@ -13,8 +9,8 @@ export function determineSocialDiagnosisStatus(input: {
     : "insufficient_data";
 }
 
-export function assertSocialDiagnosisApproved(campaignType: string, brainData: unknown): void {
-  if (!SOCIAL_DIAGNOSIS_CAMPAIGN_TYPES.has(campaignType)) return;
+export function assertSocialDiagnosisApproved(socialMediaEntitled: boolean, brainData: unknown): void {
+  if (!socialMediaEntitled) return;
   const brain = brainData && typeof brainData === "object" ? brainData as Record<string, unknown> : {};
   const diagnosis = brain.socialDiagnosis && typeof brain.socialDiagnosis === "object"
     ? brain.socialDiagnosis as Record<string, unknown>

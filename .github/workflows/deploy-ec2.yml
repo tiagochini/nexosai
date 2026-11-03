@@ -1,0 +1,137 @@
+name: Deploy NexOS to EC2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'artifacts/**'
+      - 'lib/**'
+      - 'ops/app/**'
+      - 'ops/aws/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/deploy-ec2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: nexos-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      AWS_REGION: us-east-2
+      NEXOS_EC2_INSTANCE_ID: ${{ vars.NEXOS_EC2_INSTANCE_ID }}
+      NEXOS_RELEASE_BUCKET: ${{ vars.NEXOS_RELEASE_BUCKET }}
+      NEXOS_DEPLOY_ROLE_ARN: ${{ vars.NEXOS_DEPLOY_ROLE_ARN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate deployment settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$NEXOS_EC2_INSTANCE_ID" =~ ^i-[0-9a-f]+$ ]] || { echo 'Set environment variable NEXOS_EC2_INSTANCE_ID.' >&2; exit 1; }
+          [[ "$NEXOS_RELEASE_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]] || { echo 'Set environment variable NEXOS_RELEASE_BUCKET.' >&2; exit 1; }
+          [[ "$NEXOS_DEPLOY_ROLE_ARN" =~ ^arn:aws:iam::[0-9]{12}:role/.+$ ]] || { echo 'Set environment variable NEXOS_DEPLOY_ROLE_ARN.' >&2; exit 1; }
+
+      - name: Assume the GitHub Actions deployment role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.NEXOS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-2
+          role-session-name: nexos-github-${{ github.run_id }}
+
+      - name: Resolve release image references
+        shell: bash
+        run: |
+          set -euo pipefail
+          account_id="$(aws sts get-caller-identity --query Account --output text)"
+          registry="${account_id}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          echo "NEXOS_API_IMAGE=${registry}/nexos-api:${GITHUB_SHA}" >> "$GITHUB_ENV"
+          echo "NEXOS_WEB_IMAGE=${registry}/nexos-web:${GITHUB_SHA}" >> "$GITHUB_ENV"
+          echo "NEXOS_ECR_REGISTRY=${registry}" >> "$GITHUB_ENV"
+
+      - name: Sign in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and publish API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ops/app/Dockerfile
+          push: true
+          tags: ${{ env.NEXOS_API_IMAGE }}
+          cache-from: type=gha,scope=nexos-api
+          cache-to: type=gha,mode=max,scope=nexos-api
+
+      - name: Build and publish web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ops/app/Dockerfile.web
+          push: true
+          tags: ${{ env.NEXOS_WEB_IMAGE }}
+          cache-from: type=gha,scope=nexos-web
+          cache-to: type=gha,mode=max,scope=nexos-web
+
+      - name: Package host-side deployment files
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar -czf /tmp/nexos-ops.tar.gz \
+            ops/app/compose.yml \
+            ops/app/compose.ca.yml \
+            ops/app/compose.aws.yml \
+            ops/aws
+          (cd /tmp && sha256sum nexos-ops.tar.gz > nexos-ops.tar.gz.sha256)
+          aws s3 cp /tmp/nexos-ops.tar.gz "s3://${NEXOS_RELEASE_BUCKET}/releases/${GITHUB_SHA}/ops.tar.gz" --sse AES256 --only-show-errors
+          aws s3 cp /tmp/nexos-ops.tar.gz.sha256 "s3://${NEXOS_RELEASE_BUCKET}/releases/${GITHUB_SHA}/ops.tar.gz.sha256" --sse AES256 --only-show-errors
+
+      - name: Deploy through Systems Manager
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf -v remote_env 'export AWS_DEFAULT_REGION=%q NEXOS_RELEASE_BUCKET=%q NEXOS_RELEASE_ID=%q NEXOS_API_IMAGE=%q NEXOS_WEB_IMAGE=%q\n' \
+            "$AWS_REGION" "$NEXOS_RELEASE_BUCKET" "$GITHUB_SHA" "$NEXOS_API_IMAGE" "$NEXOS_WEB_IMAGE"
+          remote_script="$(printf '%s\n%s%s\n%s\n' \
+            "bash -s <<'NEXOS_DEPLOY_EOF'" \
+            "$remote_env" \
+            "$(cat ops/aws/deploy-ssm.sh)" \
+            'NEXOS_DEPLOY_EOF')"
+          parameters="$(jq -cn --arg script "$remote_script" '{commands:[$script]}')"
+          command_id="$(aws ssm send-command \
+            --instance-ids "$NEXOS_EC2_INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --comment "Deploy NexOS ${GITHUB_SHA}" \
+            --parameters "$parameters" \
+            --query Command.CommandId --output text)"
+          for attempt in $(seq 1 80); do
+            status="$(aws ssm get-command-invocation \
+              --command-id "$command_id" \
+              --instance-id "$NEXOS_EC2_INSTANCE_ID" \
+              --query Status --output text 2>/dev/null || true)"
+            case "$status" in
+              Success) echo "SSM deployment succeeded (${command_id})."; exit 0 ;;
+              Failed|Cancelled|TimedOut|Cancelling)
+                aws ssm get-command-invocation --command-id "$command_id" --instance-id "$NEXOS_EC2_INSTANCE_ID" --query StandardErrorContent --output text || true
+                echo "SSM deployment ended with status ${status}." >&2
+                exit 1
+                ;;
+              *) sleep 15 ;;
+            esac
+          done
+          echo "Timed out while waiting for SSM command ${command_id}." >&2
+          exit 1

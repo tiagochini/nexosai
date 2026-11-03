@@ -35,6 +35,8 @@ node_modules
 /.env.local
 /.env.homologation.local
 /.env.exemple
+/keys/
+/production/
 /backup.sql
 /*.local.sql
 /attached_assets/secrets.local.txt

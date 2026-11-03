@@ -1,12 +1,16 @@
 import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
-import { approveProductIntake, getProductIntake, listProductIntakeVersions, previewProductIntakeImpact, startProductIntake, updateProductIntake } from "./product-intake.service.js";
+import { approveProductIntake, getProductIntake, getSocialMediaBriefingAccess, listProductIntakeVersions, previewProductIntakeImpact, startProductIntake, updateProductIntake } from "./product-intake.service.js";
 import { AppError } from "../../lib/errors.js";
 
 const router = Router();
 router.use(requireAuth);
 const entryPoint = z.enum(["launch", "market_intel", "social_media", "paid_media"]);
+router.get("/available", async (req, res) => {
+  try { res.json(await getSocialMediaBriefingAccess(req.auth.workspaceId)); }
+  catch (e) { const err = e instanceof AppError ? e : new AppError(500, "Unable to load Social Media contract", "SOCIAL_MEDIA_ACCESS_ERROR"); res.status(err.statusCode).json({ error: err.message, code: err.code }); }
+});
 router.post("/start", async (req, res) => {
   const p = z.object({ commercialProductId: z.string().uuid(), entryPoint, sourceCampaignId: z.string().uuid().optional() }).safeParse(req.body);
   if (!p.success) { res.status(400).json({ error: p.error.message, code: "VALIDATION_ERROR" }); return; }

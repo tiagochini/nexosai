@@ -61,6 +61,10 @@ export interface RegisterInput {
   locale?: "pt-BR" | "en-US" | "en-AU" | "es-LA";
   referralCode?: string;
   planSlug?: "solo" | "agency";
+  /** Internal override for invite/offer flows; never accepted directly from the request body. */
+  initialCredits?: number;
+  /** Internal marker for public sales signups; access stays behind billing until confirmation. */
+  pendingSalesCheckout?: boolean;
 }
 
 export interface LoginInput {
@@ -171,10 +175,12 @@ export async function registerUser(
           planId: selectedPlan[0].id,
           name: `${input.name}'s Workspace`,
           slug,
-          creditsBalance: selectedPlan[0].creditsMonthly,
+          creditsBalance: input.initialCredits ?? selectedPlan[0].creditsMonthly,
+          creditsMonthlyBalance: input.initialCredits ?? selectedPlan[0].creditsMonthly,
           settings: {
             referralCode: myReferralCode,
             referralCount: 0,
+            ...(input.pendingSalesCheckout ? { pendingSalesCheckout: true } : {}),
             ...(input.referralCode ? { referredBy: input.referralCode } : {}),
           },
         })

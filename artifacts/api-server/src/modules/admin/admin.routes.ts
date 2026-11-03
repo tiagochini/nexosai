@@ -16,10 +16,11 @@ import { getDeadLetter, listDeadLetters, replayDeadLetter } from "../orchestrati
 import {
   db, inviteCodesTable, usersTable, workspacesTable, plansTable,
   subscriptionPaymentsTable, campaignsTable, creditTransactionsTable,
-  waitlistTable,
-  aiCreditSettingsTable,
+  waitlistTable, commercialProductsTable, commercialSubscriptionsTable, auditLogsTable,
+  aiCreditSettingsTable, commercialSalesOffersTable,
+  creditPackPricingTable,
 } from "@workspace/db";
-import { eq, desc, count, sql } from "drizzle-orm";
+import { and, eq, desc, count, sql } from "drizzle-orm";
 
 const router = Router();
 router.use(requireAuth, requirePlatformAdmin);
@@ -94,6 +95,88 @@ router.patch("/plans/:slug", async (req, res): Promise<void> => {
   res.json({ plan });
 });
 
+const creditPackPriceSchema = z.object({ priceBrl: z.number().finite().min(0).max(1_000_000) }).strict();
+
+router.get("/credit-packs", async (_req, res): Promise<void> => {
+  const packs = await db.select().from(creditPackPricingTable).orderBy(creditPackPricingTable.credits);
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ packs });
+});
+
+router.patch("/credit-packs/:id", async (req, res): Promise<void> => {
+  const id = z.enum(["pack_500", "pack_1500", "pack_3500", "pack_7000"]).safeParse(req.params["id"]);
+  if (!id.success) throw new NotFoundError("Pack de créditos não encontrado");
+  const parsed = creditPackPriceSchema.safeParse(req.body);
+  if (!parsed.success) throw new ValidationError("Informe um preço válido entre R$ 0 e R$ 1.000.000");
+  const [pack] = await db.update(creditPackPricingTable).set({
+    priceBrl: parsed.data.priceBrl.toFixed(2), updatedBy: req.auth.userId, updatedAt: new Date(),
+  }).where(eq(creditPackPricingTable.id, id.data)).returning();
+  if (!pack) throw new NotFoundError("Pack de créditos não encontrado");
+  req.log.info({ packId: pack.id, actorUserId: req.auth.userId, priceBrl: Number(pack.priceBrl) }, "admin credit pack price updated");
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ pack });
+});
+
+const salesOfferSchema = z.object({
+  key: z.string().trim().min(3).max(60).regex(/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/),
+  name: z.string().trim().min(2).max(100),
+  description: z.string().trim().max(500).default(""),
+  priceCents: z.number().int().min(100).max(100_000_000),
+  interval: z.enum(["one_time", "monthly", "yearly"]),
+  planSlug: z.enum(["solo", "agency"]),
+  nexosAccessLifetime: z.boolean().default(false),
+  campaignsIncluded: z.number().int().min(0).max(100),
+  socialMediaDays: z.number().int().min(0).max(3650),
+  creditsIncluded: z.number().int().min(0).max(10_000_000).default(0),
+  active: z.boolean().default(true),
+}).strict().superRefine((offer, ctx) => {
+  if (!offer.nexosAccessLifetime && offer.campaignsIncluded === 0 && offer.socialMediaDays === 0 && offer.creditsIncluded === 0) {
+    ctx.addIssue({ code: "custom", path: ["campaignsIncluded"], message: "A oferta precisa incluir ao menos um benefício" });
+  }
+  if (offer.interval !== "one_time" && offer.socialMediaDays > 0) {
+    const recurringDays = offer.interval === "monthly" ? 30 : 365;
+    if (offer.socialMediaDays !== recurringDays) {
+      ctx.addIssue({ code: "custom", path: ["socialMediaDays"], message: `Para cobrança ${offer.interval}, o prazo de Social Media deve ser ${recurringDays} dias por ciclo` });
+    }
+  }
+  if (offer.interval !== "one_time" && offer.nexosAccessLifetime) {
+    ctx.addIssue({ code: "custom", path: ["nexosAccessLifetime"], message: "Acesso vitalício não pode ser cobrado em plano recorrente" });
+  }
+});
+
+router.get("/sales-offers", async (_req, res): Promise<void> => {
+  const offers = await db.select().from(commercialSalesOffersTable).orderBy(commercialSalesOffersTable.createdAt);
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ offers });
+});
+
+router.post("/sales-offers", async (req, res): Promise<void> => {
+  const parsed = salesOfferSchema.safeParse(req.body);
+  if (!parsed.success) throw new ValidationError(parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; "));
+  const [existing] = await db.select({ id: commercialSalesOffersTable.id }).from(commercialSalesOffersTable)
+    .where(eq(commercialSalesOffersTable.key, parsed.data.key)).limit(1);
+  if (existing) throw new ValidationError("Já existe uma oferta com esse identificador");
+  const [offer] = await db.insert(commercialSalesOffersTable).values(parsed.data).returning();
+  req.log.info({ offerId: offer!.id, key: offer!.key, actorUserId: req.auth.userId }, "admin commercial sales offer created");
+  res.status(201).json({ offer });
+});
+
+router.patch("/sales-offers/:id", async (req, res): Promise<void> => {
+  const id = z.uuid().safeParse(req.params["id"]);
+  if (!id.success) throw new ValidationError("ID de oferta inválido");
+  const parsed = salesOfferSchema.safeParse(req.body);
+  if (!parsed.success) throw new ValidationError(parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; "));
+  const [duplicate] = await db.select({ id: commercialSalesOffersTable.id }).from(commercialSalesOffersTable)
+    .where(eq(commercialSalesOffersTable.key, parsed.data.key)).limit(1);
+  if (duplicate && duplicate.id !== id.data) throw new ValidationError("Já existe uma oferta com esse identificador");
+  const [offer] = await db.update(commercialSalesOffersTable).set({ ...parsed.data, updatedAt: new Date() })
+    .where(eq(commercialSalesOffersTable.id, id.data)).returning();
+  if (!offer) throw new NotFoundError("Oferta comercial");
+  req.log.info({ offerId: offer.id, key: offer.key, actorUserId: req.auth.userId }, "admin commercial sales offer updated");
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ offer });
+});
+
 router.get("/financials", async (req, res): Promise<void> => {
   const data = await getAdminFinancials();
   res.json(data);
@@ -101,7 +184,20 @@ router.get("/financials", async (req, res): Promise<void> => {
 
 router.get("/cost-breakdown", async (req, res): Promise<void> => {
   const limit = Math.min(parseInt(req.query["limit"] as string ?? "50", 10), 200);
-  const data = await getCampaignCostBreakdown(limit);
+  const dateFromRaw = req.query["dateFrom"] as string | undefined;
+  const dateToRaw = req.query["dateTo"] as string | undefined;
+  const parseDate = (raw: string | undefined): Date | undefined => {
+    if (!raw) return undefined;
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(raw)) throw new ValidationError("dateFrom/dateTo devem ser datas ISO com fuso horário");
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) throw new ValidationError("Período inválido");
+    return parsed;
+  };
+  const dateFrom = parseDate(dateFromRaw);
+  const dateTo = parseDate(dateToRaw);
+  if (dateFrom && dateTo && dateFrom > dateTo) throw new ValidationError("dateFrom não pode ser posterior a dateTo");
+  const data = await getCampaignCostBreakdown(limit, dateFrom, dateTo);
+  res.setHeader("Cache-Control", "no-store");
   res.json(data);
 });
 
@@ -255,12 +351,98 @@ router.post("/workspaces/:workspaceId/grant-plan", async (req, res): Promise<voi
   await db.update(workspacesTable)
     .set({
       planId: plan.id,
-      creditsBalance: Math.max(workspace.creditsBalance ?? 0, plan.creditsMonthly),
+      creditsMonthlyBalance: Math.max(workspace.creditsMonthlyBalance ?? 0, plan.creditsMonthly),
+      creditsBalance: (workspace.creditsPurchasedBalance ?? 0) + Math.max(workspace.creditsMonthlyBalance ?? 0, plan.creditsMonthly),
     })
     .where(eq(workspacesTable.id, workspaceId));
 
   req.log.info({ workspaceId, planSlug, grantedByUserId: req.auth.userId }, "admin grant-plan");
   res.json({ ok: true, planName: plan.name, creditsGranted: plan.creditsMonthly });
+});
+
+// ─── Grant permanent campaign/briefing access without recording a payment ────
+// This is separate from the workspace plan grant: campaign creation requires
+// an active commercial subscription, which is a different entitlement.
+const NEXOS_CAMPAIGN_ACCESS_PRODUCT = {
+  key: "nexos_campaign_access",
+  name: "NexOS Campaign Access",
+  masterPlanKey: "launch",
+} as const;
+
+router.post("/workspaces/:workspaceId/grant-campaign-access", async (req, res): Promise<void> => {
+  const workspaceId = req.params["workspaceId"] as string;
+  const parsed = z.object({ note: z.string().trim().max(500).optional() }).safeParse(req.body ?? {});
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  const result = await db.transaction(async (tx) => {
+    const [workspace] = await tx.select({ id: workspacesTable.id })
+      .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
+    if (!workspace) throw new NotFoundError("Workspace não encontrado");
+
+    let [product] = await tx.select({ id: commercialProductsTable.id, status: commercialProductsTable.status })
+      .from(commercialProductsTable).where(eq(commercialProductsTable.key, NEXOS_CAMPAIGN_ACCESS_PRODUCT.key)).limit(1);
+    if (!product) {
+      await tx.insert(commercialProductsTable).values({
+        ...NEXOS_CAMPAIGN_ACCESS_PRODUCT,
+        metadata: { purpose: "admin_granted_campaign_access" },
+      }).onConflictDoNothing({ target: commercialProductsTable.key });
+      [product] = await tx.select({ id: commercialProductsTable.id, status: commercialProductsTable.status })
+        .from(commercialProductsTable).where(eq(commercialProductsTable.key, NEXOS_CAMPAIGN_ACCESS_PRODUCT.key)).limit(1);
+    }
+    if (!product || product.status !== "active") {
+      throw new ValidationError("O produto de acesso a campanhas do NexOS não está ativo");
+    }
+
+    const [existing] = await tx.select({ id: commercialSubscriptionsTable.id })
+      .from(commercialSubscriptionsTable)
+      .where(and(
+        eq(commercialSubscriptionsTable.workspaceId, workspaceId),
+        eq(commercialSubscriptionsTable.productId, product.id),
+        eq(commercialSubscriptionsTable.status, "active"),
+      )).limit(1);
+    if (existing) return { subscriptionId: existing.id, created: false };
+
+    const note = parsed.data.note || "Concessão permanente de acesso ao briefing/campanhas autorizada pelo founder.";
+    const [subscription] = await tx.insert(commercialSubscriptionsTable).values({
+      workspaceId,
+      productId: product.id,
+      status: "active",
+      startedAt: new Date(),
+      endsAt: null,
+      providerMetadata: {
+        source: "admin_grant",
+        permanent: true,
+        note,
+        grantedByUserId: req.auth.userId,
+      },
+    }).returning({ id: commercialSubscriptionsTable.id });
+
+    await tx.insert(auditLogsTable).values({
+      workspaceId,
+      action: "commercial_subscription.admin_granted",
+      actor: "platform_admin",
+      data: {
+        subscriptionId: subscription!.id,
+        productKey: NEXOS_CAMPAIGN_ACCESS_PRODUCT.key,
+        permanent: true,
+        note,
+        grantedByUserId: req.auth.userId,
+      },
+    });
+    return { subscriptionId: subscription!.id, created: true };
+  });
+
+  req.log.info({ workspaceId, subscriptionId: result.subscriptionId, created: result.created }, "admin grant permanent campaign access");
+  res.status(result.created ? 201 : 200).json({
+    ok: true,
+    permanent: true,
+    created: result.created,
+    subscriptionId: result.subscriptionId,
+    productName: NEXOS_CAMPAIGN_ACCESS_PRODUCT.name,
+  });
 });
 
 // ─── User detail / profile ────────────────────────────────────────────────────

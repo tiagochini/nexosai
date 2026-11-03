@@ -89,6 +89,7 @@ function ProfileTab() {
   const [savingLocale, setSavingLocale] = useState(false);
   const [copied, setCopied] = useState(false);
   const currentLocale = user?.locale ?? "pt-BR";
+  const { setGuestLocale } = useUiLocale();
   const t = useUiText();
 
   useEffect(() => { setName(user?.name ?? ""); }, [user?.name]);
@@ -130,6 +131,7 @@ function ProfileTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locale }),
       });
+      setGuestLocale(locale);
       toast.success(t("Idioma da plataforma atualizado com sucesso.", "Platform language updated successfully.", "Idioma de la plataforma actualizado correctamente."));
       await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     } catch {

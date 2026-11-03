@@ -39,7 +39,7 @@ export function startPaidMediaScheduler() {
     timer = setInterval(() => {
       void runSchedulerTick("paid-media-crm-sync", crmSyncTick).catch(() => logger.error("CRM audience sync tick failed"));
       void runSchedulerTick("paid-media-experiment-recovery", async () => { await expireExperimentExecutions(); await expireCapiTests(); }).catch(() => logger.error("Diagnostic recovery tick failed"));
-      void runSchedulerTick("paid-media-optimization-rules", optimizationRulesTick).catch(() => logger.error("Optimization rules tick failed"));
+      void runSchedulerTick("paid-media-optimization-rules", optimizationRulesTick).catch((err) => logger.error({ err }, "Optimization rules tick failed"));
       void runSchedulerTick("paid-media-audience-retention", expireAudienceOperations).catch(() => logger.error("Audience retention scheduler tick failed"));
       void runSchedulerTick("paid-media-capi", () => capiRetryTick()).catch(() => logger.error("CAPI retry scheduler tick failed"));
       void runSchedulerTick("paid-media", tick).catch(() => logger.error("Paid-media scheduler tick failed"));

@@ -331,23 +331,25 @@ function MasterPlanView({
   const t = useUiText();
   const { locale } = useUiLocale();
   const numberLocale = intlLocale(locale);
-  const needsSocialDiagnosis = ["launch", "perpetual_launch", "semente_launch", "flash_sale", "live_sale"].includes(campaignType ?? "launch");
   const [socialPlatform, setSocialPlatform] = useState("instagram");
   const [socialHandle, setSocialHandle] = useState(formData["social.handle"] ?? formData["social.instagram"] ?? "");
   const [socialDiagnosis, setSocialDiagnosis] = useState<Record<string, unknown> | null>(null);
+  const [socialMediaEntitled, setSocialMediaEntitled] = useState<boolean | null>(null);
   const [socialDiagnosisLoading, setSocialDiagnosisLoading] = useState(false);
   const [socialDiagnosisApproved, setSocialDiagnosisApproved] = useState(false);
   useEffect(() => {
-    if (!needsSocialDiagnosis || !campaignId) return;
-    customFetch<{ diagnosis: Record<string, unknown> | null }>(`/api/campaigns/${campaignId}/social-diagnosis`)
-      .then(({ diagnosis }) => {
+    if (!campaignId) return;
+    setSocialMediaEntitled(null);
+    customFetch<{ diagnosis: Record<string, unknown> | null; entitlement: { active: boolean } }>(`/api/campaigns/${campaignId}/social-diagnosis`)
+      .then(({ diagnosis, entitlement }) => {
+        setSocialMediaEntitled(entitlement.active);
         if (!diagnosis) return;
         setSocialDiagnosis(diagnosis);
         setSocialDiagnosisApproved(diagnosis.status === "approved");
         if (typeof diagnosis.handle === "string") setSocialHandle(diagnosis.handle);
         if (typeof diagnosis.platform === "string") setSocialPlatform(diagnosis.platform);
-      }).catch(() => undefined);
-  }, [campaignId, needsSocialDiagnosis]);
+      }).catch(() => setSocialMediaEntitled(null));
+  }, [campaignId]);
   const runSocialDiagnosis = async () => {
     if (!socialHandle.trim()) { toast.error(t("Informe o perfil público da marca.", "Enter the brand's public profile.", "Ingresa el perfil público de la marca.")); return; }
     setSocialDiagnosisLoading(true);
@@ -595,7 +597,7 @@ function MasterPlanView({
       </div>
 
       }
-      {needsSocialDiagnosis && <section className="border border-cyan-400/40 bg-cyan-400/5 p-5 mb-6 space-y-4" aria-labelledby="social-diagnosis-heading">
+      {socialMediaEntitled === true && <section className="border border-cyan-400/40 bg-cyan-400/5 p-5 mb-6 space-y-4" aria-labelledby="social-diagnosis-heading">
         <div>
           <h2 id="social-diagnosis-heading" className="font-mono text-sm font-bold uppercase tracking-wider">{t("Diagnóstico de Presença Social", "Social Presence Diagnosis", "Diagnóstico de presencia social")}</h2>
           <p className="text-xs text-muted-foreground mt-1">{t("Etapa anterior à estratégia: contexto da campanha, presença pública, dados disponíveis e lacunas. Nenhuma métrica será presumida quando a plataforma não a fornecer.", "Required before strategy: campaign context, public presence, available data, and gaps. Metrics will not be assumed when the platform does not provide them.", "Antes de la estrategia: contexto de campaña, presencia pública, datos disponibles y brechas. No se supondrán métricas que la plataforma no proporcione.")}</p>
@@ -634,9 +636,10 @@ function MasterPlanView({
             {t("Ao aprovar, os agentes iniciam imediatamente — estratégia, conteúdo e calendário editorial", "Once approved, the agents start immediately — strategy, content, and editorial calendar", "Al aprobar, los agentes comienzan de inmediato — estrategia, contenido y calendario editorial")}
           </p>
         </div>
+        {socialMediaEntitled === null && <p role="status" className="text-xs text-amber-300">{t("Verificando o contrato de Social Media… Se não carregar, atualize a tela antes de iniciar.", "Checking the Social Media contract… If it does not load, refresh before starting.", "Verificando el contrato de Social Media… Si no carga, actualiza la pantalla antes de iniciar.")}</p>}
         <Button
           onClick={() => void onApprove()}
-          disabled={finalizing || (needsSocialDiagnosis && !socialDiagnosisApproved)}
+          disabled={finalizing || socialMediaEntitled === null || (socialMediaEntitled && !socialDiagnosisApproved)}
           className="font-mono uppercase tracking-widest rounded-none gap-2 h-14 px-8 text-sm btn-weapon-primary whitespace-nowrap shrink-0"
         >
           {finalizing
@@ -720,8 +723,20 @@ export default function CampaignIntake() {
   const inputRef    = useRef<HTMLTextAreaElement>(null);
   const fileInputRef    = useRef<HTMLInputElement>(null);
   const audioInputRef   = useRef<HTMLInputElement>(null);
+
+  useEffect(() => () => {
+    keepRecognitionActiveRef.current = false;
+    if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
+    if (recognitionRestartTimeoutRef.current) clearTimeout(recognitionRestartTimeoutRef.current);
+    if (autoSendTimerRef.current) clearInterval(autoSendTimerRef.current);
+    recognitionRef.current?.stop();
+  }, []);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
+  const keepRecognitionActiveRef = useRef(false);
+  const recordingFinishedRef = useRef(false);
+  const silenceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recognitionRestartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: campaignData, isLoading: loadingCampaign } = useQuery({
     queryKey: getGetCampaignQueryKey(campaignId),
@@ -953,7 +968,11 @@ export default function CampaignIntake() {
     voiceModeRef.current = v;
     if (!v) {
       stopAutoSendCountdown();
+      keepRecognitionActiveRef.current = false;
+      if (silenceTimeoutRef.current) { clearTimeout(silenceTimeoutRef.current); silenceTimeoutRef.current = null; }
+      if (recognitionRestartTimeoutRef.current) { clearTimeout(recognitionRestartTimeoutRef.current); recognitionRestartTimeoutRef.current = null; }
       recognitionRef.current?.stop();
+      setIsListening(false);
       window.speechSynthesis?.cancel();
     }
   };
@@ -967,9 +986,17 @@ export default function CampaignIntake() {
     const clean = text.replace(/[_*`#>]/g, "").substring(0, 900);
     const utt = new SpeechSynthesisUtterance(clean);
     utt.lang = "pt-BR";
-    utt.rate = 1.05;
+    // Slower pacing and a higher-quality Portuguese voice make the browser's
+    // native synthesis less rushed and less robotic where such voices exist.
+    utt.rate = 0.92;
+    utt.pitch = 1;
     const voices = window.speechSynthesis.getVoices();
-    const ptVoice = voices.find(v => v.lang.startsWith("pt-BR")) ?? voices.find(v => v.lang.startsWith("pt")) ?? null;
+    const brazilianVoices = voices.filter(v => v.lang.toLowerCase().startsWith("pt-br"));
+    const ptVoice = brazilianVoices.find(v => /(natural|online|neural)/i.test(v.name))
+      ?? brazilianVoices.find(v => /google/i.test(v.name))
+      ?? brazilianVoices[0]
+      ?? voices.find(v => v.lang.toLowerCase().startsWith("pt"))
+      ?? null;
     if (ptVoice) utt.voice = ptVoice;
     window.speechSynthesis.speak(utt);
   };
@@ -979,11 +1006,36 @@ export default function CampaignIntake() {
     const SpeechRec = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
     if (!SpeechRec) { toast.error(t("Voz não suportada. Use Chrome ou Edge.", "Voice input isn't supported. Use Chrome or Edge.", "La entrada de voz no es compatible. Usa Chrome o Edge.")); return; }
 
-    // If already listening → stop + cancel countdown
+    const clearRecordingTimers = () => {
+      if (silenceTimeoutRef.current) { clearTimeout(silenceTimeoutRef.current); silenceTimeoutRef.current = null; }
+      if (recognitionRestartTimeoutRef.current) { clearTimeout(recognitionRestartTimeoutRef.current); recognitionRestartTimeoutRef.current = null; }
+    };
+
+    const beginAutoSendCountdown = () => {
+      if (!voiceModeRef.current) return;
+      const currentVal = inputRef.current?.value?.trim() ?? "";
+      if (!currentVal) return;
+      let secs = 5;
+      setAutoSendSecsLeft(secs);
+      autoSendTimerRef.current = setInterval(() => {
+        secs -= 1;
+        setAutoSendSecsLeft(secs);
+        if (secs <= 0) {
+          if (autoSendTimerRef.current) { clearInterval(autoSendTimerRef.current); autoSendTimerRef.current = null; }
+          setTriggerAutoSend(true);
+        }
+      }, 1000);
+    };
+
+    // If already listening → explicit stop.
     if (isListening) {
+      keepRecognitionActiveRef.current = false;
+      recordingFinishedRef.current = true;
+      clearRecordingTimers();
       recognitionRef.current?.stop();
       setIsListening(false);
       stopAutoSendCountdown();
+      beginAutoSendCountdown();
       return;
     }
 
@@ -993,37 +1045,59 @@ export default function CampaignIntake() {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any
     const rec = new SpeechRec() as any;
     rec.lang = "pt-BR";
-    rec.continuous = false;
-    rec.interimResults = false;
+    // Keep listening across phrase boundaries; some mobile browsers still end
+    // the recognizer on pauses, so onend below restarts it until 10s of silence.
+    rec.continuous = true;
+    rec.interimResults = true;
+    keepRecognitionActiveRef.current = true;
+    recordingFinishedRef.current = false;
+
+    const finishAfterSilence = () => {
+      clearRecordingTimers();
+      keepRecognitionActiveRef.current = false;
+      recordingFinishedRef.current = true;
+      setIsListening(false);
+      try { rec.stop(); } catch { /* recognizer may already have ended */ }
+      beginAutoSendCountdown();
+    };
+
+    const resetSilenceTimer = () => {
+      if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = setTimeout(finishAfterSilence, 10_000);
+    };
+
+    // Silence is measured from start and reset whenever speech is detected.
+    resetSilenceTimer();
+    rec.onspeechstart = () => resetSilenceTimer();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rec.onresult = (e: any) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      const t = (e.results[0]?.[0]?.transcript as string | undefined) ?? "";
-      if (t) setInputValue(prev => prev ? `${prev} ${t}` : t);
+      resetSilenceTimer();
+      let finalText = "";
+      for (let i = e.resultIndex ?? 0; i < e.results.length; i += 1) {
+        const result = e.results[i];
+        if (result?.isFinal) finalText += `${result[0]?.transcript ?? ""} `;
+      }
+      const transcript = finalText.trim();
+      if (transcript) setInputValue(prev => prev ? `${prev} ${transcript}` : transcript);
     };
 
     rec.onend = () => {
-      setIsListening(false);
-      // If voice mode is on AND there's content → start 5-second countdown
-      if (voiceModeRef.current) {
-        const currentVal = inputRef.current?.value?.trim() ?? "";
-        if (currentVal) {
-          let secs = 5;
-          setAutoSendSecsLeft(secs);
-          autoSendTimerRef.current = setInterval(() => {
-            secs -= 1;
-            setAutoSendSecsLeft(secs);
-            if (secs <= 0) {
-              if (autoSendTimerRef.current) { clearInterval(autoSendTimerRef.current); autoSendTimerRef.current = null; }
-              setTriggerAutoSend(true);
-            }
-          }, 1000);
-        }
-      }
+      if (!keepRecognitionActiveRef.current || recordingFinishedRef.current) return;
+      if (recognitionRestartTimeoutRef.current) clearTimeout(recognitionRestartTimeoutRef.current);
+      recognitionRestartTimeoutRef.current = setTimeout(() => {
+        recognitionRestartTimeoutRef.current = null;
+        if (!keepRecognitionActiveRef.current || recordingFinishedRef.current) return;
+        try { rec.start(); } catch { /* wait for the recognizer to finish closing */ }
+      }, 250);
     };
 
-    rec.onerror = () => {
+    rec.onerror = (e: any) => {
+      if (e?.error === "no-speech" && keepRecognitionActiveRef.current) return;
+      if (e?.error === "aborted" && !keepRecognitionActiveRef.current) return;
+      keepRecognitionActiveRef.current = false;
+      recordingFinishedRef.current = true;
+      clearRecordingTimers();
       setIsListening(false);
       stopAutoSendCountdown();
       toast.error(t("Erro ao capturar áudio. Verifique as permissões do microfone.", "Couldn't capture audio. Check microphone permissions.", "No se pudo capturar el audio. Revisa los permisos del micrófono."));
@@ -1721,7 +1795,7 @@ export default function CampaignIntake() {
               {isListening && !isTranscribing && (
                 <div className="flex items-center gap-2 px-3 py-2 border border-red-500/50 bg-red-500/10 rounded-sm">
                   <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shrink-0" />
-                  <span className="font-mono text-[12px] text-red-400 font-semibold">{t("Ouvindo… fale agora", "Listening… speak now", "Escuchando… habla ahora")}</span>
+                  <span className="font-mono text-[12px] text-red-400 font-semibold">{t("Ouvindo… encerra após 10s de silêncio", "Listening… stops after 10s of silence", "Escuchando… se detiene tras 10s de silencio")}</span>
                   {voiceMode && <span className="font-mono text-[10px] text-red-400/60 ml-1">{t("— envio automático ao parar", "— sends automatically when you stop", "— se envía automáticamente al detenerte")}</span>}
                   <button onClick={toggleVoice} aria-label={t("Parar gravação", "Stop recording", "Detener grabación")} className="ml-auto text-red-400 hover:text-red-300 transition-colors">
                     <X className="h-4 w-4" />

@@ -408,6 +408,7 @@ export type AppTranslations = typeof APP_TRANSLATIONS["pt-BR"];
 
 const I18nContext = createContext<AppTranslations>(APP_TRANSLATIONS["pt-BR"]);
 const LOCALE_STORAGE_KEY = "nexos.ui-locale";
+const LOCALE_OVERRIDE_STORAGE_KEY = "nexos.ui-locale-override";
 
 function isLang(value: string | undefined): value is Lang {
   return value === "pt-BR" || value === "en-US" || value === "en-AU" || value === "es-LA";
@@ -420,6 +421,16 @@ function storedLocale(): Lang {
     return isLang(value) ? value : "pt-BR";
   } catch {
     return "pt-BR";
+  }
+}
+
+function storedLocaleOverride(): Lang | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const value = window.localStorage.getItem(LOCALE_OVERRIDE_STORAGE_KEY) ?? undefined;
+    return isLang(value) ? value : null;
+  } catch {
+    return null;
   }
 }
 
@@ -456,20 +467,25 @@ export { I18nContext };
 
 export function AppI18nProvider({ locale, children }: { locale?: string; children: ReactNode }) {
   const [guestLocale, setGuestLocaleState] = useState<Lang>(storedLocale);
-  const resolved = isLang(locale) ? locale : guestLocale;
+  const [localeOverride, setLocaleOverride] = useState<Lang | null>(storedLocaleOverride);
+  const resolved = localeOverride ?? (isLang(locale) ? locale : guestLocale);
 
   const setGuestLocale = useCallback((next: Lang) => {
     setGuestLocaleState(next);
-    try { window.localStorage.setItem(LOCALE_STORAGE_KEY, next); } catch { /* blocked storage */ }
+    setLocaleOverride(next);
+    try {
+      window.localStorage.setItem(LOCALE_STORAGE_KEY, next);
+      window.localStorage.setItem(LOCALE_OVERRIDE_STORAGE_KEY, next);
+    } catch { /* blocked storage */ }
   }, []);
 
   useEffect(() => {
     document.documentElement.lang = intlLocale(resolved);
-    if (isLang(locale)) {
+    if (!localeOverride && isLang(locale)) {
       setGuestLocaleState(locale);
       try { window.localStorage.setItem(LOCALE_STORAGE_KEY, locale); } catch { /* blocked storage */ }
     }
-  }, [resolved, locale]);
+  }, [resolved, locale, localeOverride]);
 
   const translations = (APP_TRANSLATIONS[resolved] ?? APP_TRANSLATIONS["pt-BR"]) as AppTranslations;
   return (
