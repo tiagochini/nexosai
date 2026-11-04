@@ -66,7 +66,7 @@ echo 'Deployment failed; restoring the previous release.' >&2
 if [[ -n "$old_release" && -d "$old_release" ]]; then
   ln -sfnT "$old_release" /opt/nexos/current.next
   mv -Tf /opt/nexos/current.next "$current"
-  if ! bash "$current/ops/aws/nexos.sh" start --activate; then
+  if ! env -u NEXOS_API_IMAGE -u NEXOS_WEB_IMAGE bash "$current/ops/aws/nexos.sh" start --activate; then
     echo 'Automatic restart of the previous release also failed; inspect SSM and container logs.' >&2
   fi
 else

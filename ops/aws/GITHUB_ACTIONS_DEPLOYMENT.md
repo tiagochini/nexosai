@@ -4,8 +4,10 @@ O workflow `.github/workflows/deploy-ec2.yml` prepara imagens Docker no runner
 do GitHub, publica versões identificadas pelo SHA do commit no Amazon ECR,
 envia os arquivos Compose para um prefixo privado do S3 e aciona a EC2 com
 Systems Manager. Não usa a chave SSH. A implantação valida a saúde da API e do
-site e tenta reativar a release anterior se a nova falhar. Ela não executa
-migrations do banco.
+site, executa as migrations registradas com a API parada e tenta reativar a
+release anterior se a nova falhar. O rollback restaura containers/configuração,
+mas não reverte migrations já aplicadas; por isso, migrations devem ser
+compatíveis com a release anterior.
 
 ## Situação atual
 
@@ -34,9 +36,15 @@ A região configurada é `us-east-2`.
   `s3://<bucket>/releases/*`, além das permissões SSM existentes e o acesso
   `media/*` já usado pelo sistema.
 - A instância precisa estar Online no Systems Manager, com Docker/Compose,
-  `/etc/nexos/deployment.conf`, `/etc/nexos/app.env`, o segredo Redis e o
-  certificado CA do RDS instalados. O banco vazio `nexos` deve ter recebido o
-  bootstrap do schema e sido validado antes do primeiro deploy.
+  `/etc/nexos/deployment.conf`, `/etc/nexos/app.env`, o segredo Redis, o
+  certificado CA do RDS e acesso pelo instance profile ao Secrets Manager
+  instalados. Configure `NEXOS_EXTERNAL_APIS_SECRET_ARN` em
+  `/etc/nexos/deployment.conf` para usar o JSON agrupado de credenciais de APIs
+  externas. Conceda `secretsmanager:GetSecretValue` no ARN exato e, se aplicável,
+  `kms:Decrypt` na chave KMS específica. O catálogo das chaves aceitas está em
+  `external-apis.secret.example.json` e a explicação em `README.md`. O banco
+  vazio `nexos` deve ter recebido o bootstrap do schema e sido validado antes
+  do primeiro deploy.
 
 O workflow reutiliza o bucket existente por meio do prefixo `releases/`; não
 torna o bucket público. O prefixo de imagens de campanhas permanece `media/`.
@@ -63,11 +71,15 @@ deploy automático.
 O comando de deploy exige que `/etc/nexos/deployment.conf` e os arquivos de
 runtime já existam e passem em `ops/aws/nexos.sh check`. Ele publica a nova
 release em `/opt/nexos/releases/<sha>` e troca `/opt/nexos/current` para a
-release ativa. Para a primeira implantação, preparar o runtime, criar o banco
-vazio `nexos`, executar `sudo bash ops/aws/nexos.sh bootstrap --execute` e
-validar banco, integrações, DNS e HTTPS separadamente antes de habilitar o
-workflow.
+release ativa. Antes de iniciar a release, ele materializa as credenciais do
+Secrets Manager, para API e web, aplica as migrations e verifica o banco; então
+recria os containers e valida readiness. Para a primeira implantação, preparar
+o runtime, criar o banco vazio `nexos`, executar
+`sudo bash ops/aws/nexos.sh bootstrap --execute` e validar banco, integrações,
+DNS e HTTPS separadamente antes de habilitar o workflow.
 
 Nunca adicionar `keys/nexos.pem`, arquivos `.env`, dumps ou credenciais ao
 workflow ou ao bucket. O `deploy-ssm.sh` é executado como root pelo SSM e valida
 o SHA, região, prefixo ECR e checksum do pacote antes de ativar os containers.
+Produção usa releases de imagens imutáveis pelo CD; não execute `git pull` no
+checkout da EC2 para atualizar o serviço.

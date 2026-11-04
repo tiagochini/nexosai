@@ -43,7 +43,7 @@ if [[ "$action" == deploy ]]; then
   NEXOS_API_IMAGE="$deploy_api_image"
   NEXOS_WEB_IMAGE="$deploy_web_image"
 fi
-: "${APP_ENV_FILE:?}" "${REDIS_PASSWORD_FILE:?}" "${DATABASE_CA_FILE:?}"
+: "${APP_ENV_SOURCE_FILE:?}" "${APP_ENV_FILE:?}" "${REDIS_PASSWORD_FILE:?}" "${DATABASE_CA_FILE:?}"
 : "${NEXOS_API_IMAGE:?}" "${NEXOS_WEB_IMAGE:?}"
 for image in "$NEXOS_API_IMAGE" "$NEXOS_WEB_IMAGE"; do
   if [[ "$image" != *@sha256:* && ( "$image" != *:* || "$image" == *:latest || "$image" == *:local ) ]]; then
@@ -55,6 +55,7 @@ dc() {
     -f "$root/ops/app/compose.ca.yml" -f "$root/ops/app/compose.aws.yml" "$@"
 }
 check() {
+  node "$root/ops/aws/resolve-app-secrets.mjs" "$APP_ENV_SOURCE_FILE" "$APP_ENV_FILE" "${NEXOS_EXTERNAL_APIS_SECRET_ARN:-}"
   docker info >/dev/null
   dc config --quiet
   for file in "$APP_ENV_FILE" "$REDIS_PASSWORD_FILE" "$DATABASE_CA_FILE"; do
@@ -106,9 +107,22 @@ case "$action" in
     check
     docker pull "$NEXOS_API_IMAGE"
     docker pull "$NEXOS_WEB_IMAGE"
-    dc run --rm --no-deps db-tools
+    dc stop web api
+    if ! dc run --rm --no-deps db-tools /workspace/lib/db/scripts/apply-migrations.mjs; then
+      echo 'Tracked migrations failed; starting the currently installed API and web containers again.' >&2
+      dc start api web || true
+      exit 1
+    fi
+    if ! dc run --rm --no-deps db-tools; then
+      echo 'Database verification failed after migration; restarting the currently installed containers.' >&2
+      dc start api web || true
+      exit 1
+    fi
     dc up -d --wait --wait-timeout 180 redis
-    dc up -d --force-recreate --wait --wait-timeout 180 api web
+    if ! dc up -d --force-recreate --wait --wait-timeout 180 api web; then
+      echo 'New containers failed to become healthy. The deployment wrapper will restore the previous release.' >&2
+      exit 1
+    fi
     curl --fail --silent --show-error --max-time 20 http://127.0.0.1:8080/api/livez
     curl --fail --silent --show-error --max-time 20 http://127.0.0.1:8080/api/readyz
     curl --fail --silent --show-error --max-time 20 --output /dev/null "http://127.0.0.1:${WEB_PORT:-8081}/"

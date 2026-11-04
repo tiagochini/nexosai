@@ -56,6 +56,8 @@ os arquivos deste pacote consideram acesso direto ao Caddy da EC2.
 - `app.env.example`: configuração da aplicação, sem credenciais reais.
 - `deployment.conf.example`: imagens e caminhos de operação, sem senhas.
 - `runtime.mjs`: geração de segredos para ambiente novo e validação estática.
+- `resolve-app-secrets.mjs`: materializa as chaves de APIs externas do Secrets Manager em arquivo privado para o container.
+- `external-apis.secret.example.json`: catálogo das chaves suportadas; preencha somente as integrações habilitadas.
 - `nexos.sh`: preparação, build, schema, início, parada e diagnóstico na EC2.
 - `media-storage.cloudformation.json`: bucket S3 privado e instance profile para a EC2.
 - [Integração e migração S3](S3_MEDIA.md): recursos preparados e adaptação necessária no backend.
@@ -83,9 +85,61 @@ sudo bash ops/aws/nexos.sh build
 
 `init` gera SESSION_SECRET, JWT_SECRET, JWT_REFRESH_SECRET, a chave de
 criptografia e a senha Redis em arquivos privados fora do Git. Não imprime
-valores e recusa substituir arquivos existentes. Preencher manualmente o
-endpoint/usuário/senha do RDS e as credenciais exigidas pela aplicação.
-Preservar a chave de criptografia original se importar tokens já criptografados.
+valores e recusa substituir arquivos existentes. Preencha manualmente no
+`/etc/nexos/app.env` o endpoint/usuário/senha do RDS e as configurações não
+secretas. Preserve a chave de criptografia original se importar tokens já
+criptografados.
+
+### Segredos de APIs externas
+
+O runtime aceita os segredos de provedores de duas formas: valor direto em
+`app.env`, ou referência individual `NOME_DA_CHAVE_ARN`. Para centralizar as
+integrações, crie no Secrets Manager um único segredo do tipo **Other type of
+secret**, com `SecretString` em JSON. Use `external-apis.secret.example.json`
+como catálogo e preencha somente as chaves para as quais você possui credenciais.
+Valores vazios são ignorados; chaves desconhecidas e valores que não sejam texto
+são rejeitados.
+
+Configure o ARN completo desse segredo em
+`/etc/nexos/deployment.conf`:
+
+```bash
+NEXOS_EXTERNAL_APIS_SECRET_ARN=arn:aws:secretsmanager:us-east-2:<AWS_ACCOUNT_ID>:secret:nexos/production/external-apis-<SUFFIX>
+```
+
+O ARN ilustrativo acima não é um ARN real. Copie o ARN mostrado no Secrets
+Manager e mantenha o segredo em `us-east-2`. No deploy, a EC2 busca o JSON por
+meio da AWS CLI usando o instance profile, gera
+`/etc/nexos/app.env.resolved` com modo `0600` e entrega esse arquivo ao
+container. Os valores não são impressos nos logs. Valores diretos preenchidos
+em `app.env` prevalecem sobre o segredo agrupado; uma referência individual
+`NOME_ARN` prevalece sobre o segredo agrupado e não pode coexistir com valor
+direto para a mesma chave.
+
+As chaves reconhecidas para o JSON são:
+
+| Integração | Chaves do JSON (inclua somente as que usa) |
+| --- | --- |
+| IA | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `NEXOS_OPENAI`, `GEMINI_API_KEY`, `AI_INTEGRATIONS_ANTHROPIC_API_KEY`, `AI_INTEGRATIONS_OPENAI_API_KEY`, `AI_INTEGRATIONS_GEMINI_API_KEY` |
+| E-mail | `RESEND_API_KEY`, `SMTP_PASSWORD`, `GMAIL_APP_PASSWORD` |
+| Meta, Instagram e WhatsApp | `META_APP_SECRET`, `INSTAGRAM_APP_SECRET`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN` |
+| TikTok | `TIKTOK_CLIENT_SECRET`, `TIKTOK_ADS_APP_SECRET` |
+| Google | `GOOGLE_CLIENT_SECRET`, `GOOGLE_ADS_DEVELOPER_TOKEN` |
+| CRM e LinkedIn | `HUBSPOT_CLIENT_SECRET`, `RD_STATION_CLIENT_SECRET`, `LINKEDIN_CLIENT_SECRET` |
+| Pagamentos Asaas | `ASAAS_API_KEY`, `ASAAS_SANDBOX_API_KEY`, `ASAAS_WEBHOOK_TOKEN` |
+| Geração de mídia | `RUNWAY_API_KEY`, `FAL_API_KEY`, `HEYGEN_API_KEY`, `ELEVENLABS_API_KEY` |
+| Domínios, Cloudflare e integrações | `REGISTRAR_API_KEY`, `CLOUDFLARE_API_TOKEN`, `HOSTINGER_API_KEY`, `SUPPLIER_WEBHOOK_SECRET`, `LANDING_DEPLOYMENT_TOKEN` |
+
+O instance profile da EC2 precisa de `secretsmanager:GetSecretValue` somente
+para o ARN do segredo configurado. Se ele usar uma chave KMS gerenciada pelo
+cliente, conceda também `kms:Decrypt` nessa chave específica. Não grave
+`AWS_ACCESS_KEY_ID` ou `AWS_SECRET_ACCESS_KEY` em `app.env`; o instance profile
+fornece credenciais AWS temporárias.
+
+IDs de aplicativos, URLs OAuth/callback, endpoints, nomes de usuário de e-mail
+e flags continuam em `app.env`; não são incluídos no JSON de credenciais.
+Tokens Meta, Google, TikTok e demais tokens que cada cliente autoriza via OAuth
+são dados de integração por workspace no banco, não segredos globais do NexOS.
 
 Para criar outro ambiente vazio, configure o `DATABASE_URL` para o catálogo
 `nexos` no RDS e execute o bootstrap abaixo. Na instância atual, o catálogo e o
@@ -137,11 +191,13 @@ sudo bash ops/aws/nexos.sh stop
 ```
 
 `stop` interrompe web/API e mantém os dados e o Redis. Alterar segredos requer
-recriar a API; `start --activate` faz essa recriação. Para nova release, mudar
-as duas tags em `deployment.conf`, construir as imagens, fazer backup e revisar
-migrations antes de iniciar. Não usar tags `latest`/`local`; manter a versão
-anterior. Reverter imagens só se forem compatíveis com o schema atual.
-Nunca remover volumes de produção para resolver uma falha.
+recriar a API; `start --activate` faz essa recriação. Para nova release, o
+workflow de CD publica as imagens e executa as migrations registradas antes de
+recriar API e frontend. As migrations de produção devem ser compatíveis com a
+versão anterior, pois o rollback de containers não desfaz alterações no banco.
+Confirme que o backup/PITR do RDS está ativo e revisado antes de uma migration
+potencialmente incompatível. Não use tags `latest`/`local`; mantenha a versão
+anterior. Nunca remova volumes de produção para resolver uma falha.
 
 Os comandos não instalam o host, não criam a conta/rede/EC2/RDS, não alteram
 DNS e não configuram backups/CloudWatch automaticamente. São as próximas
@@ -163,5 +219,7 @@ As verificações executadas e as pendências de produção estão registradas e
 [AWS_PREPARATION_RESULTS.json](../../docs/evidence/AWS_PREPARATION_RESULTS.json).
 
 O workflow de CD requer os recursos, permissões e variáveis documentados em
-[GITHUB_ACTIONS_DEPLOYMENT.md](GITHUB_ACTIONS_DEPLOYMENT.md). Ele não migra o
-banco automaticamente e não guarda a chave PEM nem credenciais AWS no GitHub.
+[GITHUB_ACTIONS_DEPLOYMENT.md](GITHUB_ACTIONS_DEPLOYMENT.md). Ele aplica as
+migrations registradas durante o deploy e não guarda a chave PEM nem credenciais
+AWS no GitHub. O fluxo de produção é baseado em imagens imutáveis e SSM; não
+faça `git pull` dentro da EC2 de produção.
