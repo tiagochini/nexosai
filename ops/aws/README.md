@@ -86,19 +86,26 @@ sudo bash ops/aws/nexos.sh build
 `init` gera SESSION_SECRET, JWT_SECRET, JWT_REFRESH_SECRET, a chave de
 criptografia e a senha Redis em arquivos privados fora do Git. Não imprime
 valores e recusa substituir arquivos existentes. Preencha manualmente no
-`/etc/nexos/app.env` o endpoint/usuário/senha do RDS e as configurações não
-secretas. Preserve a chave de criptografia original se importar tokens já
+`/etc/nexos/app.env` o endpoint/usuário/senha do RDS e a configuração central
+do NexOS. Preserve a chave de criptografia original se importar tokens já
 criptografados.
 
 ### Segredos de APIs externas
 
-O runtime aceita os segredos de provedores de duas formas: valor direto em
-`app.env`, ou referência individual `NOME_DA_CHAVE_ARN`. Para centralizar as
-integrações, crie no Secrets Manager um único segredo do tipo **Other type of
-secret**, com `SecretString` em JSON. Use `external-apis.secret.example.json`
-como catálogo e preencha somente as chaves para as quais você possui credenciais.
-Valores vazios são ignorados; chaves desconhecidas e valores que não sejam texto
-são rejeitados.
+Para administrar as integrações em um único lugar, crie no Secrets Manager um
+único segredo do tipo **Other type of secret**, com `SecretString` em JSON. Use
+`external-apis.secret.example.json` como catálogo. Ele reúne credenciais, IDs,
+URLs e opções das integrações de IA, e-mail, redes sociais, pagamentos, mídia,
+CRM e serviços de domínio. Edite esse único JSON quando trocar ou acrescentar
+uma configuração de provedor; não replique esses campos no `app.env`.
+
+O `app.env` permanece para configuração central do NexOS, conexão ao banco e
+opções de execução. Quando o segredo agrupado está configurado, ele é a fonte
+de verdade para as integrações: valores legados de integrações e referências
+individuais `NOME_ARN` no `app.env` são ignorados. Isso permite migrar sem deixar
+valores antigos sobrescreverem a configuração central. Valores vazios ou
+ausentes no JSON ficam sem definição para que os padrões internos do aplicativo
+se apliquem; chaves desconhecidas e valores que não sejam texto são rejeitados.
 
 Configure o ARN completo desse segredo em
 `/etc/nexos/deployment.conf`:
@@ -108,27 +115,26 @@ NEXOS_EXTERNAL_APIS_SECRET_ARN=arn:aws:secretsmanager:us-east-2:<AWS_ACCOUNT_ID>
 ```
 
 O ARN ilustrativo acima não é um ARN real. Copie o ARN mostrado no Secrets
-Manager e mantenha o segredo em `us-east-2`. No deploy, a EC2 busca o JSON por
-meio da AWS CLI usando o instance profile, gera
+Manager e mantenha o segredo em `us-east-2`. No deploy ou reinício, a EC2 busca
+o JSON por meio da AWS CLI usando o instance profile, gera
 `/etc/nexos/app.env.resolved` com modo `0600` e entrega esse arquivo ao
-container. Os valores não são impressos nos logs. Valores diretos preenchidos
-em `app.env` prevalecem sobre o segredo agrupado; uma referência individual
-`NOME_ARN` prevalece sobre o segredo agrupado e não pode coexistir com valor
-direto para a mesma chave.
+container. Os valores não são impressos nos logs. Depois de alterar o JSON no
+Secrets Manager, faça um novo deploy/reinício para o NexOS carregar a versão
+atualizada; não é necessário editar também o `app.env`.
 
 As chaves reconhecidas para o JSON são:
 
-| Integração | Chaves do JSON (inclua somente as que usa) |
+| Integração | Exemplos de campos no JSON |
 | --- | --- |
-| IA | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `NEXOS_OPENAI`, `GEMINI_API_KEY`, `AI_INTEGRATIONS_ANTHROPIC_API_KEY`, `AI_INTEGRATIONS_OPENAI_API_KEY`, `AI_INTEGRATIONS_GEMINI_API_KEY` |
-| E-mail | `RESEND_API_KEY`, `SMTP_PASSWORD`, `GMAIL_APP_PASSWORD` |
-| Meta, Instagram e WhatsApp | `META_APP_SECRET`, `INSTAGRAM_APP_SECRET`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN` |
-| TikTok | `TIKTOK_CLIENT_SECRET`, `TIKTOK_ADS_APP_SECRET` |
-| Google | `GOOGLE_CLIENT_SECRET`, `GOOGLE_ADS_DEVELOPER_TOKEN` |
-| CRM e LinkedIn | `HUBSPOT_CLIENT_SECRET`, `RD_STATION_CLIENT_SECRET`, `LINKEDIN_CLIENT_SECRET` |
-| Pagamentos Asaas | `ASAAS_API_KEY`, `ASAAS_SANDBOX_API_KEY`, `ASAAS_WEBHOOK_TOKEN` |
-| Geração de mídia | `RUNWAY_API_KEY`, `FAL_API_KEY`, `HEYGEN_API_KEY`, `ELEVENLABS_API_KEY` |
-| Domínios, Cloudflare e integrações | `REGISTRAR_API_KEY`, `CLOUDFLARE_API_TOKEN`, `HOSTINGER_API_KEY`, `SUPPLIER_WEBHOOK_SECRET`, `LANDING_DEPLOYMENT_TOKEN` |
+| IA | Chaves e parâmetros da Anthropic, OpenAI, Gemini e AI Integrations, incluindo `ANTHROPIC_WORKSPACE_ID` e URLs base |
+| E-mail | Resend, SMTP e Gmail: credenciais, remetentes, host, porta e TLS |
+| Meta, Instagram e WhatsApp | IDs e segredos de apps, verificação de webhook, URL pública e opção de inscrição automática |
+| TikTok | Client key/secret, app de anúncios e URL de autorização |
+| Google | OAuth e token de desenvolvedor do Google Ads |
+| CRM e LinkedIn | IDs e segredos OAuth do HubSpot, RD Station e LinkedIn |
+| Pagamentos Asaas | Chaves de produção/sandbox, modo de ambiente e tokens/segredos de webhook |
+| Geração de mídia | Runway, fal.ai, HeyGen e ElevenLabs, incluindo versão da API Runway |
+| Domínios, Cloudflare e integrações | URLs e credenciais de Cloudflare, Hostinger, registrador, webhooks e publicação de landing pages |
 
 O instance profile da EC2 precisa de `secretsmanager:GetSecretValue` somente
 para o ARN do segredo configurado. Se ele usar uma chave KMS gerenciada pelo
@@ -136,10 +142,9 @@ cliente, conceda também `kms:Decrypt` nessa chave específica. Não grave
 `AWS_ACCESS_KEY_ID` ou `AWS_SECRET_ACCESS_KEY` em `app.env`; o instance profile
 fornece credenciais AWS temporárias.
 
-IDs de aplicativos, URLs OAuth/callback, endpoints, nomes de usuário de e-mail
-e flags continuam em `app.env`; não são incluídos no JSON de credenciais.
-Tokens Meta, Google, TikTok e demais tokens que cada cliente autoriza via OAuth
-são dados de integração por workspace no banco, não segredos globais do NexOS.
+Não coloque no segredo os tokens OAuth que cada cliente autoriza ao conectar
+suas próprias contas. Esses tokens são dados de integração por workspace no
+banco; o segredo único cobre as credenciais e opções globais usadas pelo NexOS.
 
 Para criar outro ambiente vazio, configure o `DATABASE_URL` para o catálogo
 `nexos` no RDS e execute o bootstrap abaixo. Na instância atual, o catálogo e o

@@ -39,8 +39,10 @@ A região configurada é `us-east-2`.
   `/etc/nexos/deployment.conf`, `/etc/nexos/app.env`, o segredo Redis, o
   certificado CA do RDS e acesso pelo instance profile ao Secrets Manager
   instalados. Configure `NEXOS_EXTERNAL_APIS_SECRET_ARN` em
-  `/etc/nexos/deployment.conf` para usar o JSON agrupado de credenciais de APIs
-  externas. Conceda `secretsmanager:GetSecretValue` no ARN exato e, se aplicável,
+  `/etc/nexos/deployment.conf` para usar o único JSON agrupado com credenciais,
+  IDs, URLs e opções de todas as integrações externas. Esse segredo passa a ser
+  a fonte de verdade desses parâmetros; eles não devem ser duplicados em
+  `/etc/nexos/app.env`. Conceda `secretsmanager:GetSecretValue` no ARN exato e, se aplicável,
   `kms:Decrypt` na chave KMS específica. O catálogo das chaves aceitas está em
   `external-apis.secret.example.json` e a explicação em `README.md`. O banco
   vazio `nexos` deve ter recebido o bootstrap do schema e sido validado antes

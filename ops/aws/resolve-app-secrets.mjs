@@ -6,17 +6,45 @@ import { pathToFileURL } from 'node:url';
 
 const region = 'us-east-2';
 const supportedKeys = new Set([
-  'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'NEXOS_OPENAI', 'GEMINI_API_KEY',
-  'AI_INTEGRATIONS_ANTHROPIC_API_KEY', 'AI_INTEGRATIONS_OPENAI_API_KEY', 'AI_INTEGRATIONS_GEMINI_API_KEY',
-  'RESEND_API_KEY', 'SMTP_PASSWORD', 'GMAIL_APP_PASSWORD',
-  'INSTAGRAM_APP_SECRET', 'META_APP_SECRET', 'WHATSAPP_WEBHOOK_VERIFY_TOKEN',
-  'TIKTOK_CLIENT_SECRET', 'TIKTOK_ADS_APP_SECRET', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_ADS_DEVELOPER_TOKEN',
-  'HUBSPOT_CLIENT_SECRET', 'RD_STATION_CLIENT_SECRET', 'LINKEDIN_CLIENT_SECRET',
-  'ASAAS_API_KEY', 'ASAAS_SANDBOX_API_KEY', 'ASAAS_WEBHOOK_TOKEN',
-  'RUNWAY_API_KEY', 'FAL_API_KEY', 'HEYGEN_API_KEY', 'ELEVENLABS_API_KEY',
-  'REGISTRAR_API_KEY', 'CLOUDFLARE_API_TOKEN', 'HOSTINGER_API_KEY',
-  'SUPPLIER_WEBHOOK_SECRET', 'LANDING_DEPLOYMENT_TOKEN',
+  'ANTHROPIC_API_KEY', 'ANTHROPIC_WORKSPACE_ID', 'OPENAI_API_KEY', 'NEXOS_OPENAI', 'GEMINI_API_KEY',
+  'AI_INTEGRATIONS_ANTHROPIC_BASE_URL', 'AI_INTEGRATIONS_ANTHROPIC_API_KEY',
+  'AI_INTEGRATIONS_OPENAI_BASE_URL', 'AI_INTEGRATIONS_OPENAI_API_KEY',
+  'AI_INTEGRATIONS_GEMINI_BASE_URL', 'AI_INTEGRATIONS_GEMINI_API_KEY',
+  'RESEND_API_KEY', 'RESEND_FROM_EMAIL', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER',
+  'SMTP_PASSWORD', 'SMTP_FROM_EMAIL', 'GMAIL_USER', 'GMAIL_APP_PASSWORD',
+  'INSTAGRAM_APP_ID', 'INSTAGRAM_APP_SECRET', 'META_APP_ID', 'META_APP_SECRET',
+  'META_WEBHOOK_AUTO_SUBSCRIBE', 'META_WEBHOOK_PUBLIC_BASE_URL', 'META_WEBHOOK_VERIFY_TOKEN',
+  'WHATSAPP_WEBHOOK_VERIFY_TOKEN',
+  'TIKTOK_CLIENT_KEY', 'TIKTOK_CLIENT_SECRET', 'TIKTOK_ADS_APP_ID', 'TIKTOK_ADS_APP_SECRET', 'TIKTOK_ADS_AUTH_URL',
+  'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_ADS_DEVELOPER_TOKEN',
+  'HUBSPOT_CLIENT_ID', 'HUBSPOT_CLIENT_SECRET', 'RD_STATION_CLIENT_ID', 'RD_STATION_CLIENT_SECRET',
+  'LINKEDIN_CLIENT_ID', 'LINKEDIN_CLIENT_SECRET',
+  'ASAAS_API_KEY', 'ASAAS_ENV', 'ASAAS_SANDBOX', 'ASAAS_SANDBOX_API_KEY',
+  'ASAAS_WEBHOOK_TOKEN', 'ASAAS_WEBHOOK_SECRET', 'ASAAS_ACADEMY_WEBHOOK_TOKEN',
+  'RUNWAY_API_KEY', 'RUNWAY_API_VERSION', 'FAL_API_KEY', 'HEYGEN_API_KEY', 'ELEVENLABS_API_KEY',
+  'REGISTRAR_API_URL', 'REGISTRAR_API_KEY', 'REGISTRAR_PROVIDER',
+  'CLOUDFLARE_API_URL', 'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID',
+  'HOSTINGER_API_URL', 'HOSTINGER_API_KEY', 'SUPPLIER_WEBHOOK_SECRET',
+  'LANDING_DEPLOYMENT_URL', 'LANDING_DEPLOYMENT_TOKEN',
 ]);
+
+export function mergeGroupedIntegrationConfig(source, entries) {
+  if (!entries || typeof entries !== 'object' || Array.isArray(entries)) {
+    throw new Error('NEXOS_EXTERNAL_APIS_SECRET_ARN: SecretString must be a JSON object');
+  }
+
+  const resolved = { ...source };
+  // The grouped integration secret is the single source of truth. Remove any
+  // legacy integration values from app.env first; blank/missing JSON fields
+  // stay unset so the application can use its own documented defaults.
+  for (const key of supportedKeys) delete resolved[key];
+  for (const [key, value] of Object.entries(entries)) {
+    if (!supportedKeys.has(key)) throw new Error(`External API secret contains unsupported key: ${key}`);
+    if (typeof value !== 'string') throw new Error(`${key}: integration settings must be strings`);
+    if (value.trim()) resolved[key] = value;
+  }
+  return resolved;
+}
 
 function validateArn(value, name) {
   const match = /^arn:aws:secretsmanager:([a-z0-9-]+):(\d{12}):secret:[A-Za-z0-9/_+=.@-]+$/.exec(value);
@@ -56,34 +84,34 @@ export async function materializeAppEnv(sourceFile, resolvedFile, externalSecret
   for (const arnKey of arnKeys) {
     const target = arnKey.slice(0, -individualArnSuffix.length);
     if (!supportedKeys.has(target)) throw new Error(`${arnKey}: unsupported secret reference`);
-    if (source[target]?.trim()) throw new Error(`${target}: configure either a direct value or ${arnKey}, not both`);
+    if (!externalSecretArn && source[target]?.trim()) {
+      throw new Error(`${target}: configure either a direct value or ${arnKey}, not both`);
+    }
+  }
+
+  if (externalSecretArn) {
+    // Once the grouped secret is configured, it is authoritative. Ignore and
+    // remove any legacy direct values or per-key ARN references from app.env.
+    for (const arnKey of arnKeys) delete resolved[arnKey];
+  } else {
+    for (const arnKey of arnKeys) {
+      const target = arnKey.slice(0, -individualArnSuffix.length);
+      const payload = secretStringFromArn(source[arnKey].trim(), arnKey);
+      const entries = parseProviderSecret(payload, target);
+      const value = entries[target] ?? entries.value;
+      if (typeof value !== 'string' || !value.trim()) {
+        throw new Error(`${arnKey}: SecretString must be plain text, {"value":"..."}, or {"${target}":"..."}`);
+      }
+      resolved[target] = value;
+      delete resolved[arnKey];
+    }
   }
 
   if (externalSecretArn) {
     const payload = secretStringFromArn(externalSecretArn, 'NEXOS_EXTERNAL_APIS_SECRET_ARN');
     let entries;
     try { entries = JSON.parse(payload); } catch { throw new Error('NEXOS_EXTERNAL_APIS_SECRET_ARN: SecretString must be a JSON object'); }
-    if (!entries || typeof entries !== 'object' || Array.isArray(entries)) {
-      throw new Error('NEXOS_EXTERNAL_APIS_SECRET_ARN: SecretString must be a JSON object');
-    }
-    for (const [key, value] of Object.entries(entries)) {
-      if (!supportedKeys.has(key)) throw new Error(`External API secret contains unsupported key: ${key}`);
-      if (typeof value !== 'string') throw new Error(`${key}: secret values must be strings`);
-      if (!value.trim()) continue;
-      if (!source[key]?.trim()) resolved[key] = value;
-    }
-  }
-
-  for (const arnKey of arnKeys) {
-    const target = arnKey.slice(0, -individualArnSuffix.length);
-    const payload = secretStringFromArn(source[arnKey].trim(), arnKey);
-    const entries = parseProviderSecret(payload, target);
-    const value = entries[target] ?? entries.value;
-    if (typeof value !== 'string' || !value.trim()) {
-      throw new Error(`${arnKey}: SecretString must be plain text, {"value":"..."}, or {"${target}":"..."}`);
-    }
-    resolved[target] = value;
-    delete resolved[arnKey];
+    Object.assign(resolved, mergeGroupedIntegrationConfig(source, entries));
   }
 
   const content = Object.entries(resolved)

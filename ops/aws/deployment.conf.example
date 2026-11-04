@@ -1,12 +1,12 @@
-# Bash configuration, no credentials. Copy to /etc/nexos/deployment.conf.
-# app.env is the editable source; the deploy command generates app.env.resolved
-# from direct values and Secrets Manager ARN references before starting Docker.
+# Deployment/runtime configuration. Copy to /etc/nexos/deployment.conf.
+# Keep database/app settings in app.env. Store all external provider settings
+# together in the JSON secret referenced below; see external-apis.secret.example.json.
 APP_ENV_SOURCE_FILE=/etc/nexos/app.env
 APP_ENV_FILE=/etc/nexos/app.env.resolved
 REDIS_PASSWORD_FILE=/etc/nexos/redis-password
 DATABASE_CA_FILE=/etc/nexos/rds-ca.pem
 AWS_DEFAULT_REGION=us-east-2
-# Optional grouped JSON secret; individual KEY_ARN variables in app.env override it.
+# Single source of truth for third-party API credentials, IDs, URLs and options.
 NEXOS_EXTERNAL_APIS_SECRET_ARN=
 WEB_PORT=8081
 NEXOS_DATABASE_NETWORK=nexos-production-database
