@@ -1,11 +1,12 @@
 import { hasActivePlatformAdminSession } from "../admin/admin.middleware.js";
 import { Router } from "express";
 import { z } from "zod/v4";
+import bcrypt from "bcryptjs";
 import { issueTokens, registerUser, loginUser, refreshTokens } from "./auth.service.js";
 import { createOwnedWorkspace, getWorkspaceOverview } from "./workspaces.service.js";
 import { requireAuth } from "./auth.middleware.js";
-import { db, usersTable, workspacesTable, plansTable, inviteCodesTable, commercialSalesOffersTable } from "@workspace/db";
-import { and, eq } from "drizzle-orm";
+import { db, usersTable, workspacesTable, plansTable, inviteCodesTable, commercialSalesOffersTable, authRefreshSessionsTable } from "@workspace/db";
+import { and, eq, gt, isNull, ne } from "drizzle-orm";
 import { AppError } from "../../lib/errors.js";
 import { clearRefreshCookie, readRefreshCookie, requireTrustedSessionOrigin, sendSessionTokens } from "./auth-session-cookie.js";
 import { revokeRefreshSession } from "./refresh-session.service.js";
@@ -28,6 +29,11 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.email(),
   password: z.string(),
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(256),
+  newPassword: z.string().min(8).max(256),
 });
 
 const createWorkspaceSchema = z.object({
@@ -171,6 +177,60 @@ router.post("/login", requireTrustedSessionOrigin, async (req, res): Promise<voi
     }
     throw err;
   }
+});
+
+router.post("/change-password", requireTrustedSessionOrigin, requireAuth, async (req, res): Promise<void> => {
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  const sessionId = req.auth.sessionId;
+  if (!sessionId || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(sessionId)) {
+    res.status(401).json({ error: "A valid authenticated session is required", code: "UNAUTHORIZED" });
+    return;
+  }
+
+  const [user] = await db.select({ passwordHash: usersTable.passwordHash })
+    .from(usersTable).where(eq(usersTable.id, req.auth.userId)).limit(1);
+  if (!user || !(await bcrypt.compare(parsed.data.currentPassword, user.passwordHash))) {
+    res.status(401).json({ error: "Current password is incorrect", code: "INVALID_CREDENTIALS" });
+    return;
+  }
+  if (await bcrypt.compare(parsed.data.newPassword, user.passwordHash)) {
+    res.status(400).json({ error: "Choose a different password", code: "PASSWORD_UNCHANGED" });
+    return;
+  }
+
+  const [session] = await db.select({ id: authRefreshSessionsTable.id })
+    .from(authRefreshSessionsTable)
+    .where(and(
+      eq(authRefreshSessionsTable.id, sessionId),
+      eq(authRefreshSessionsTable.userId, req.auth.userId),
+      eq(authRefreshSessionsTable.workspaceId, req.auth.workspaceId),
+      isNull(authRefreshSessionsTable.revokedAt),
+      gt(authRefreshSessionsTable.expiresAt, new Date()),
+    )).limit(1);
+  if (!session) {
+    res.status(401).json({ error: "An active authenticated session is required", code: "UNAUTHORIZED" });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(parsed.data.newPassword, 12);
+  await db.transaction(async (tx) => {
+    await tx.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, req.auth.userId));
+    await tx.update(authRefreshSessionsTable)
+      .set({ revokedAt: new Date(), updatedAt: new Date() })
+      .where(and(
+        eq(authRefreshSessionsTable.userId, req.auth.userId),
+        ne(authRefreshSessionsTable.id, sessionId),
+        isNull(authRefreshSessionsTable.revokedAt),
+      ));
+  });
+
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ ok: true });
 });
 
 router.post("/refresh", requireTrustedSessionOrigin, async (req, res): Promise<void> => {

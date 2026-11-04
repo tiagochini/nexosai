@@ -18,6 +18,9 @@ $workDirectory = Join-Path $env:TEMP "nexos-release-$releaseId"
 $archivePath = Join-Path $workDirectory 'nexos-ops.tar.gz'
 $checksumPath = "$archivePath.sha256"
 $sendCommandPath = Join-Path $workDirectory 'ssm-command.json'
+$dockerConfigDirectory = Join-Path $workDirectory 'docker-config'
+$script:dockerConfigDirectory = $dockerConfigDirectory
+$script:useTemporaryDockerConfig = $false
 
 function Invoke-AwsJson {
   param([Parameter(Mandatory)][string[]]$Arguments)
@@ -34,7 +37,11 @@ function Invoke-Aws {
 
 function Invoke-Docker {
   param([Parameter(Mandatory)][string[]]$Arguments)
-  & docker.exe @Arguments
+  if ($script:useTemporaryDockerConfig) {
+    & docker.exe --config $script:dockerConfigDirectory @Arguments
+  } else {
+    & docker.exe @Arguments
+  }
   if ($LASTEXITCODE -ne 0) { throw 'Docker command failed.' }
 }
 
@@ -55,9 +62,26 @@ Invoke-Docker @('info','--format','{{.ServerVersion}}')
 New-Item -ItemType Directory -Path $workDirectory -Force | Out-Null
 $authenticated = $false
 try {
+  New-Item -ItemType Directory -Path $dockerConfigDirectory -Force | Out-Null
+  $dockerConfigAcl = New-Object System.Security.AccessControl.DirectorySecurity
+  $dockerConfigAcl.SetAccessRuleProtection($true, $false)
+  $currentUserSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+  $dockerConfigAcl.SetOwner($currentUserSid)
+  $dockerConfigRule = [System.Security.AccessControl.FileSystemAccessRule]::new(
+    $currentUserSid,
+    [System.Security.AccessControl.FileSystemRights]::FullControl,
+    [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit,
+    [System.Security.AccessControl.PropagationFlags]::None,
+    [System.Security.AccessControl.AccessControlType]::Allow
+  )
+  $dockerConfigAcl.AddAccessRule($dockerConfigRule)
+  Set-Acl -LiteralPath $dockerConfigDirectory -AclObject $dockerConfigAcl
+  [System.IO.File]::WriteAllText((Join-Path $dockerConfigDirectory 'config.json'), '{}', [System.Text.UTF8Encoding]::new($false))
+  $script:useTemporaryDockerConfig = $true
+
   $password = & aws.exe ecr get-login-password --profile $Profile --region $region
   if ($LASTEXITCODE -ne 0) { throw 'Could not obtain a temporary ECR login token.' }
-  $password | & docker.exe login $registry --username AWS --password-stdin | Out-Null
+  $password | & docker.exe --config $dockerConfigDirectory login $registry --username AWS --password-stdin | Out-Null
   $password = $null
   if ($LASTEXITCODE -ne 0) { throw 'Docker could not authenticate to ECR.' }
   $authenticated = $true
@@ -120,7 +144,8 @@ try {
   }
   throw "Timed out waiting for SSM command $commandId."
 } finally {
-  if ($authenticated) { & docker.exe logout $registry | Out-Null }
+  if ($authenticated) { & docker.exe --config $dockerConfigDirectory logout $registry | Out-Null }
   $password = $null
+  $script:useTemporaryDockerConfig = $false
   Remove-Item -LiteralPath $workDirectory -Recurse -Force -ErrorAction SilentlyContinue
 }

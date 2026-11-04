@@ -1,5 +1,11 @@
 # Install as /etc/caddy/Caddyfile after DNS points to this EC2.
 agencianexos.vip {
+	tls {
+		issuer acme {
+			disable_tlsalpn_challenge
+		}
+	}
+
 	@backend path /api /api/* /socket.io /socket.io/*
 	handle @backend {
 		reverse_proxy 127.0.0.1:8080
