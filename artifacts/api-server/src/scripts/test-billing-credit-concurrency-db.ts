@@ -34,7 +34,13 @@ async function ledger(id: string) {
   return db.select().from(creditTransactionsTable).where(eq(creditTransactionsTable.idempotencyKey, `billing-payment:${id}`));
 }
 async function setBalance(value: number) {
-  await db.update(workspacesTable).set({ creditsBalance: value }).where(eq(workspacesTable.id, workspaceId));
+  // Keep aggregate and source buckets consistent. Credit grants reconcile the
+  // aggregate from these buckets, so changing only creditsBalance is invalid.
+  await db.update(workspacesTable).set({
+    creditsBalance: value,
+    creditsMonthlyBalance: 0,
+    creditsPurchasedBalance: value,
+  }).where(eq(workspacesTable.id, workspaceId));
 }
 
 try {
@@ -43,7 +49,8 @@ try {
   planId = plan.id;
   await db.insert(usersTable).values({ id: userId, email: `billing-${marker}@example.invalid`, passwordHash: "not-a-login-hash", name: "Billing fixture" });
   await db.insert(workspacesTable).values([workspaceId, otherWorkspaceId].map((id) => ({
-    id, ownerId: userId, planId, name: "Billing fixture", slug: `billing-${id}`, creditsBalance: 1000,
+    id, ownerId: userId, planId, name: "Billing fixture", slug: `billing-${id}`,
+    creditsBalance: 1000, creditsMonthlyBalance: 0, creditsPurchasedBalance: 1000,
   })));
 
   const first = await payment();
