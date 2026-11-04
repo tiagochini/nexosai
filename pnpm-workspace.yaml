@@ -49,6 +49,8 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  qs: 6.16.1
+  minimatch: 11.0.1
   # Keep audited runtime/build dependencies on fixed release floors.
   dompurify: ^3.4.17
   'body-parser': ^2.4.0

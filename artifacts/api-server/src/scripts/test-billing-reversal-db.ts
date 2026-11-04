@@ -102,7 +102,9 @@ try {
   assert.equal(restored!.status, "pending"); assert.equal(await balance(), beforeHold);
   console.log("PASS: legacy grants are flagged for review without guessed debits; chargeback release never grants an unconfirmed pack");
 
-  await db.update(workspacesTable).set({ creditsBalance: -2 * plan.creditsMonthly + 7 }).where(eq(workspacesTable.id, workspaceId));
+  // Model the debt in the purchased bucket: monthly renewal replaces its
+  // allowance, while a negative purchased balance is paid down by that grant.
+  await db.update(workspacesTable).set({ creditsBalance: -2 * plan.creditsMonthly + 7, creditsMonthlyBalance: 0, creditsPurchasedBalance: -2 * plan.creditsMonthly + 7 }).where(eq(workspacesTable.id, workspaceId));
   await Promise.all(Array.from({ length: 8 }, () => resetMonthlyCredits(workspaceId, logger)));
   assert.equal(await balance(), -plan.creditsMonthly + 7);
   console.log("PASS: monthly renewal repays rather than erases debt and cannot allocate twice concurrently");

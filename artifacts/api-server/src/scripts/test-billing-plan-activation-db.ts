@@ -24,7 +24,7 @@ try {
   const solo = plans.find(p => p.slug === "solo")!, agency = plans.find(p => p.slug === "agency")!;
   assert.ok(solo && agency);
   await db.insert(usersTable).values({ id: userId, email: `billing-plan-${userId}@example.invalid`, name: "Plan fixture", passwordHash: "not-a-login-hash" });
-  await db.insert(workspacesTable).values([workspaceId, otherId].map(id => ({ id, ownerId: userId, planId: solo.id, slug: `plan-${id}`, name: "Plan fixture", creditsBalance: 1000, settings: { retained: true } })));
+  await db.insert(workspacesTable).values([workspaceId, otherId].map(id => ({ id, ownerId: userId, planId: solo.id, slug: `plan-${id}`, name: "Plan fixture", creditsBalance: 1000, creditsMonthlyBalance: 1000, creditsPurchasedBalance: 0, settings: { retained: true } })));
   const opts = { workspaceId, userId, planId: agency.id, method: "credit_card" as const, userName: "Fixture", userEmail: "fixture@example.invalid" };
   const direct = await initiatePayment(opts, approved);
   assert.equal((await ws()).planId, agency.id);
@@ -61,9 +61,12 @@ try {
   assert.equal((await ws()).planId, solo.id); assert.equal((await ws()).creditsBalance, 1000);
   await reconcileBillingReversal(pending!.externalId!, async () => proof(pending!));
   assert.equal((await ws()).planId, agency.id); assert.equal((await ws()).creditsBalance, 1000 + agency.creditsMonthly);
-  const newer = await initiatePayment({ ...opts, planId: solo.id }, approved);
+  // A current Agency license cannot be downgraded to Solo. Use a second
+  // Agency purchase to verify that refunding an older payment preserves the
+  // newer paid entitlement without bypassing the downgrade guard.
+  const newer = await initiatePayment(opts, approved);
   await reconcileBillingReversal(pending!.externalId!, async () => proof(pending!, "REFUNDED"));
-  assert.equal((await ws()).planId, solo.id, "Older plan refund must preserve newer paid plan");
+  assert.equal((await ws()).planId, agency.id, "Older plan refund must preserve newer paid plan");
   assert.equal((await getSubscriptionStatus(workspaceId)).lastPayment?.id, newer.id);
   await reconcileBillingReversal(newer.externalId!, async () => proof(newer, "REFUNDED"));
   assert.equal((await ws()).planId, solo.id, "Never restore the refunded predecessor");
@@ -94,7 +97,7 @@ try {
   }
   console.log("PASS PIX/boleto carry payer document, remain pending until RECEIVED, and grant benefits once under concurrent notifications");
 
-  await db.update(workspacesTable).set({ creditsBalance: 2147483640 }).where(eq(workspacesTable.id, workspaceId));
+  await db.update(workspacesTable).set({ creditsBalance: 2147483640, creditsMonthlyBalance: 1000, creditsPurchasedBalance: 2147482640 }).where(eq(workspacesTable.id, workspaceId));
   await assert.rejects(initiatePayment(opts, approved), /supported range/);
   assert.equal((await ws()).planId, solo.id); assert.equal((await ws()).creditsBalance, 2147483640);
   const all = await db.select().from(payments).where(eq(payments.workspaceId, workspaceId));

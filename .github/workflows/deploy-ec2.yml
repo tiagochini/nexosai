@@ -24,7 +24,10 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/main'
+    # CD stays dormant until the production environment has its AWS targets
+    # and OIDC role configured. This keeps CI usable during setup without ever
+    # attempting a partially configured production deployment.
+    if: github.ref == 'refs/heads/main' && vars.NEXOS_EC2_INSTANCE_ID != '' && vars.NEXOS_RELEASE_BUCKET != '' && vars.NEXOS_DEPLOY_ROLE_ARN != ''
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
