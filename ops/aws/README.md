@@ -59,6 +59,7 @@ os arquivos deste pacote consideram acesso direto ao Caddy da EC2.
 - `resolve-app-secrets.mjs`: materializa as chaves de APIs externas do Secrets Manager em arquivo privado para o container.
 - `external-apis.secret.example.json`: catálogo das chaves suportadas; preencha somente as integrações habilitadas.
 - `nexos.sh`: preparação, build, schema, início, parada e diagnóstico na EC2.
+- `deploy-from-git.sh`: atualização manual na EC2, com pull fast-forward, build, migrations e health checks.
 - `media-storage.cloudformation.json`: bucket S3 privado e instance profile para a EC2.
 - [Integração e migração S3](S3_MEDIA.md): recursos preparados e adaptação necessária no backend.
 - [CD via GitHub Actions](GITHUB_ACTIONS_DEPLOYMENT.md): workflow para publicar imagens no ECR e implantar pela SSM; OIDC ainda requer liberação na política do projeto AWS.
@@ -204,6 +205,20 @@ Confirme que o backup/PITR do RDS está ativo e revisado antes de uma migration
 potencialmente incompatível. Não use tags `latest`/`local`; mantenha a versão
 anterior. Nunca remova volumes de produção para resolver uma falha.
 
+Para uma atualização manual diretamente pela EC2, execute na raiz do clone:
+
+```bash
+sudo bash ops/aws/deploy-from-git.sh
+```
+
+O script exige a branch `main`, árvore sem alterações rastreadas, confirmação
+de backup/PITR do RDS, pelo menos 2 GiB entre RAM+swap e 3 GiB livres em disco.
+Ele mantém `current/`, `releases/` e outros arquivos não rastreados fora do Git,
+cria imagens locais versionadas pelo commit, aplica migrations e só então
+atualiza `/etc/nexos/deployment.conf`. A compilação ocorre antes das migrations
+para que a aplicação e as ferramentas de banco venham do mesmo commit. O
+rollback de código/imagens não desfaz migrations aplicadas.
+
 Os comandos não instalam o host, não criam a conta/rede/EC2/RDS, não alteram
 DNS e não configuram backups/CloudWatch automaticamente. São as próximas
 etapas externas depois da preparação local.
@@ -226,5 +241,6 @@ As verificações executadas e as pendências de produção estão registradas e
 O workflow de CD requer os recursos, permissões e variáveis documentados em
 [GITHUB_ACTIONS_DEPLOYMENT.md](GITHUB_ACTIONS_DEPLOYMENT.md). Ele aplica as
 migrations registradas durante o deploy e não guarda a chave PEM nem credenciais
-AWS no GitHub. O fluxo de produção é baseado em imagens imutáveis e SSM; não
-faça `git pull` dentro da EC2 de produção.
+AWS no GitHub. Esse fluxo usa imagens imutáveis e SSM. O caminho manual
+`deploy-from-git.sh` é separado e compila na EC2; ele exige memória/swap e espaço
+livre suficientes, além de backup/PITR confirmado.
