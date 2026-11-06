@@ -1,6 +1,7 @@
 import { Component, type ReactNode } from "react";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
 import { useUiText } from "@/lib/i18n";
+import { isChunkLoadError } from "@/lib/chunk-recovery";
 
 interface Props {
   children: ReactNode;
@@ -69,6 +70,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   handleReset = () => {
+    // React.lazy caches rejected imports; resetting state cannot retry them.
+    if (isChunkLoadError(this.state.error)) {
+      window.location.reload();
+      return;
+    }
     this.setState({ hasError: false, error: undefined, errorInfo: undefined });
     this.props.onReset?.();
   };
