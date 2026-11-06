@@ -1564,7 +1564,7 @@ export default function AdminPage() {
           </div>
 
           <div className="border border-primary/10 bg-primary/5 px-4 py-3 font-mono text-[11px] text-primary/70 uppercase tracking-widest">
-            💡 {t("Para liberar acesso: gere um código para o plano desejado e envie pelo WhatsApp. O usuário usa o código na tela de cadastro.", "To grant access: generate a code for the desired plan and send it via WhatsApp. The user enters the code on the registration page.", "Para conceder acceso: genera un código para el plan deseado y envíalo por WhatsApp. El usuario lo introduce en la página de registro.")}
+            💡 {t("Aprove como Trial para liberar 1 briefing e 1 análise social; Solo ou Agency concedem a licença correspondente. O código é gerado para envio ao solicitante.", "Approve as Trial to grant one briefing and one social analysis; Solo or Agency grant the matching license. A code is generated to send to the requester.", "Aprueba como Trial para permitir 1 briefing y 1 análisis social; Solo o Agency conceden la licencia correspondiente. Se genera un código para enviar al solicitante.")}
           </div>
 
           {loadingWaitlist ? (
@@ -1633,6 +1633,12 @@ export default function AdminPage() {
                             onClick={() => void approveWaitlistEntry(entry.id, "agency")}
                             disabled={approveLoading === entry.id}>
                             {approveLoading === entry.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : "Agency →"}
+                          </Button>
+                          <Button size="sm" variant="outline"
+                            className="rounded-none font-mono text-[11px] uppercase tracking-widest h-8 px-3 border-cyan-400/30 text-cyan-300 hover:bg-cyan-400/10"
+                            onClick={() => void approveWaitlistEntry(entry.id, "trial")}
+                            disabled={approveLoading === entry.id}>
+                            {approveLoading === entry.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : "Trial →"}
                           </Button>
                         </>
                       )}

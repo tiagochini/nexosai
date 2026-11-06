@@ -598,7 +598,12 @@ router.get("/waitlist", async (req, res): Promise<void> => {
 // POST /api/admin/waitlist/:id/approve — generate invite code + mark as notified
 router.post("/waitlist/:id/approve", async (req, res): Promise<void> => {
   const id = req.params["id"] as string;
-  const { planSlug = "solo" } = req.body as { planSlug?: string };
+  const parsed = z.object({ planSlug: z.enum(["solo", "agency", "trial"]).default("solo") }).safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Plano de convite inválido.", code: "VALIDATION_ERROR" });
+    return;
+  }
+  const { planSlug } = parsed.data;
 
   const [entry] = await db
     .select()

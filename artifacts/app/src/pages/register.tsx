@@ -148,6 +148,18 @@ export default function Register() {
           toast.error(uiText("Código de convite inválido ou plataforma fechada.", "Invalid invite code or the platform is closed.", "Código de invitación no válido o plataforma cerrada."));
           return;
         }
+        if (code === "INVALID_INVITE_CODE") {
+          toast.error(t.invalid_invite);
+          return;
+        }
+        if (code === "CONFLICT") {
+          toast.error(t.email_in_use);
+          return;
+        }
+        if (code === "TRIAL_INVITE_CANNOT_COMBINE_PURCHASE") {
+          toast.error(t.trial_invite_combine);
+          return;
+        }
         toast.error(t.error);
       },
     },
