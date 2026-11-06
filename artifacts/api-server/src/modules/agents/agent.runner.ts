@@ -677,6 +677,7 @@ async function runAgentInternal(opts: RunAgentOptions): Promise<RunAgentResult> 
       masteryBlock +
       complianceBlock +
       systemPrompt +
+      '\n\nCONSULTORIA PROFISSIONAL: Identifique lacunas e contradições relevantes à sua especialidade usando os fatos da campanha. Nas seções de análise ou recomendação já previstas pelo contrato, explique evidência, impacto, próximo passo prioritário e critério de validação. Diferencie fatos, hipóteses e informações ausentes. Evite elogios vazios e promessas de resultado. Recomende consulta ao especialista responsável quando necessário, sem afirmar execução ou delegação que não ocorreu. Respeite o formato de saída, decisões aprovadas e limites de autorização; não crie campos JSON fora do contrato.\n' +
       DOMINO_SELF_CRITIC;
   }
 

@@ -1,3 +1,4 @@
+import { assessBriefing, formatBriefingAssessment } from "./briefing-assessment.js";
 import { eq, and } from "drizzle-orm";
 import {
   db,
@@ -547,6 +548,21 @@ Chet apresenta como diagnóstico médico — explica o raciocínio, não só o r
 FASE 5 — EXECUÇÃO (Walker) — Camada 6
 Campos: launch.cartOpenDuration, launch.scarcityMechanism, campaign.salesChannel, campaign.hasAffiliate, risk.tolerance, risk.previousCampaigns
 
+## CONSULTORIA PROFISSIONAL E PROATIVA (em todos os turnos)
+Use o diagnóstico de prontidão fornecido no contexto para priorizar lacunas da fase atual.
+A cada resposta substantiva, faça uma observação específica baseada no que foi informado,
+explique o impacto provável e proponha uma ação prática com critério de validação.
+Depois faça UMA pergunta para resolver a lacuna mais relevante; aproveite respostas já dadas.
+Se o usuário não souber, ofereça uma hipótese claramente identificada e como testá-la.
+Use linguagem profissional, respeitosa e direta. Evite elogios automáticos, emojis,
+concordância com metas inviáveis e afirmações de mercado sem fonte no contexto.
+Identifique o responsável pela recomendação conforme a especialidade. Não afirme que
+outro agente foi acionado ou realizou pesquisa sem evidência da execução no contexto.
+Não invente notas: o servidor acrescenta notas de preenchimento e detalhamento ao texto.
+Não repita o quadro de notas na aiMessage. Distingua coleta concluída de campanha validada.
+Ao encerrar, destaque um ponto forte fundamentado e as hipóteses a validar antes de investir.
+Mantenha o JSON contratado e os campos extraídos. Recomendações não são decisões aprovadas.
+
 ## PRIMEIRA MENSAGEM (message = "iniciar_intake")
 Érico abre com energia: apresenta o time em 1 frase, explica o que vai acontecer, e pergunta qual é o produto e a transformação que ele entrega.
 
@@ -744,7 +760,8 @@ export async function processConversationalTurn(
     const productName = String(
       currentIntake["product.name"] ?? currentIntake["product.nome"] ?? "seu produto"
     );
-    const wrapUpMessage = `Perfeito! Temos tudo que precisamos para montar o Master Plan de Lançamento de **${productName}** 🎯\n\nO briefing está 100% completo. Clique no botão abaixo para ver e aprovar o Master Plan do Lançamento — com estratégia, calendário editorial, criativos e projeções de resultado.`;
+    const assessment = assessBriefing(currentIntake);
+    const wrapUpMessage = `As respostas obrigatórias de **${productName}** foram registradas. Podemos preparar o Master Plan para revisão.\n\nA coleta obrigatória está completa; o diagnóstico abaixo mostra as informações que ainda podem ser aprimoradas. Clique no botão abaixo para ver e aprovar o Master Plan do Lançamento — com estratégia, calendário editorial, criativos e projeções de resultado.\n\n${formatBriefingAssessment(assessment, true)}`;
 
     // Persist the wrap-up as the last assistant message in history.
     // Also persist _intakeChatComplete: true so the server can restore
@@ -762,6 +779,7 @@ export async function processConversationalTurn(
       ...currentIntake,
       _conversationHistory: updatedHistory,
       _intakeChatComplete: true,
+      _briefingAssessment: assessment,
     }, log);
 
     const requiredQs1 = questions.filter(q => q.required);
@@ -798,7 +816,8 @@ export async function processConversationalTurn(
 
   if (existingHistory.length >= 60 && !criticalFieldsMissing) {
     // Both conditions met: long conversation AND has at least price OR revenue target
-    const forcedMessage = `Temos tudo que precisamos para montar o Master Plan! Briefing registrado com os dados coletados. Clique no botão abaixo para ver e aprovar o Master Plan do Lançamento.`;
+    const assessment = assessBriefing(currentIntake);
+    const forcedMessage = `Briefing registrado com os dados coletados. O diagnóstico abaixo aponta pendências para revisão no Master Plan. Clique no botão abaixo para ver e aprovar o Master Plan do Lançamento.\n\n${formatBriefingAssessment(assessment, true)}`;
     const updatedHistory = [
       ...existingHistory as Array<{ role: string; content: string }>,
       { role: "user", content: userMessage },
@@ -808,6 +827,7 @@ export async function processConversationalTurn(
       ...currentIntake,
       _conversationHistory: updatedHistory,
       _intakeChatComplete: true,
+      _briefingAssessment: assessment,
     }, log);
 
     // Deterministic force-completion: this branch tells the user "we're done,
@@ -862,7 +882,7 @@ export async function processConversationalTurn(
     ? `\n\nALERTA JEFF: product.price E campaign.revenueTarget ainda não estão definidos. Aplique o PROTOCOLO DE PRECIFICAÇÃO INCERTA: ofereça trabalhar de trás pra frente pela meta, ou ofereça acionar análise de mercado.`
     : "";
 
-  const contextNote = (`ESTADO DO INTAKE:
+  const contextNote = (`DIAGNÓSTICO ATUAL (recalcular após novas respostas; notas não significam probabilidade de sucesso):\n${JSON.stringify(assessBriefing(currentIntake))}\n\nESTADO DO INTAKE:
 Tipo: ${type} | Track: ${track}
 Preenchidos (${answeredFields.length}): ${answeredFields.join(", ") || "nenhum"}
 Faltando obrigatórios: ${missingRequired.slice(0, 8).join(", ") || "COMPLETO"}
@@ -966,6 +986,12 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO 
         : "Tive um problema técnico momentâneo, mas sua mensagem foi salva. Pode tentar novamente.");
   }
 
+  const assessment = assessBriefing({ ...currentIntake, ...extracted });
+  if (safeResult.success) {
+    const ready = isComplete || validateIntakeCompleteness(type, track, { ...currentIntake, ...extracted }).valid || messageSignalsCompletion(aiMessage);
+    aiMessage += "\n\n" + formatBriefingAssessment(assessment, ready);
+  }
+
   // ── Persist the assistant turn on top of the already-checkpointed history ────
   const updatedHistory = [
     ...checkpointedHistory,
@@ -979,6 +1005,7 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO 
     ...currentIntake,
     ...(Object.keys(extracted).length > 0 ? extracted : {}),
     [HIST_KEY]: updatedHistory,
+    _briefingAssessment: assessment,
   };
   try {
     await saveIntakeData(campaignId, workspaceId, mergedData, log);

@@ -1,3 +1,4 @@
+import { assessBriefing, formatBriefingAssessment } from "../intake/briefing-assessment.js";
 import { NotFoundError } from "../../lib/errors.js";
 /**
  * Tenant-scoped, canonical campaign facts for runAgent().
@@ -221,6 +222,7 @@ export async function buildCampaignActionContext(
   const sections: string[] = [];
   let truncated = false;
   let body = campaignContextPreamble(Boolean(approvedMasterplan));
+  body += "\n### LACUNAS PARA RECOMENDAÇÃO\nDiagnóstico informativo do briefing atual. Não altera o Master Plan aprovado nem autoriza execução. Recomendações conflitantes exigem revisão humana.\n" + formatBriefingAssessment(assessBriefing(intake), true) + "\n\n";
   for (const name of requested) {
     const value = source[name];
     if (value === undefined || (typeof value === "object" && Object.keys(asObject(value)).length === 0)) continue;
