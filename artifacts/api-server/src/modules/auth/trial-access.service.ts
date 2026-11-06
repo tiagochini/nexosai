@@ -13,6 +13,35 @@ type WorkspaceSettings = Record<string, unknown> & {
   nexosTrial?: Partial<NexosTrialAccess>;
 };
 
+/** Activates the limited trial without changing the workspace plan or balances. */
+export function activateTrialSettings(value: unknown): WorkspaceSettings {
+  const settings = value && typeof value === "object" && !Array.isArray(value)
+    ? value as WorkspaceSettings
+    : {};
+  return {
+    ...settings,
+    nexosTrial: {
+      active: true,
+      briefingCampaignId: null,
+      socialAnalysisStatus: "available",
+    },
+  };
+}
+
+export function canRepairConsumedTrialAccess(input: {
+  inviteUsed: boolean;
+  invitePlanSlug: string;
+  usedByWorkspaceId: string | null;
+  workspaceId: string;
+  settings: unknown;
+}): boolean {
+  if (!input.inviteUsed || input.invitePlanSlug !== "trial" || input.usedByWorkspaceId !== input.workspaceId) return false;
+  const settings = input.settings && typeof input.settings === "object" && !Array.isArray(input.settings)
+    ? input.settings as Record<string, unknown>
+    : {};
+  return !Object.hasOwn(settings, "nexosTrial");
+}
+
 export function trialFromSettings(value: unknown): NexosTrialAccess | null {
   if (!value || typeof value !== "object") return null;
   const settings = value as WorkspaceSettings;

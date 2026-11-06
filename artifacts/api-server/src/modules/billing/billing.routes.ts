@@ -18,6 +18,7 @@ import { db, inviteCodesTable, workspacesTable, plansTable, subscriptionPayments
 import { and, eq, gt, isNotNull, isNull, or, sql, inArray } from "drizzle-orm";
 import { matchesAsaasWebhookToken } from "../../lib/asaas-webhook-auth.js";
 import { checkBillingManualConfirmation } from "./billing.security.js";
+import { activateTrialSettings, canRepairConsumedTrialAccess, trialFromSettings } from "../auth/trial-access.service.js";
 
 const router = Router();
 
@@ -333,36 +334,85 @@ router.post("/redeem-code", requireAuth, async (req, res): Promise<void> => {
   if (!code) { res.status(400).json({ error: "Informe o código." }); return; }
 
   const normalized = code.toUpperCase().trim();
-  const [invite] = await db.select().from(inviteCodesTable).where(eq(inviteCodesTable.code, normalized)).limit(1);
+  const result = await db.transaction(async (tx) => {
+    const [invite] = await tx.select().from(inviteCodesTable)
+      .where(eq(inviteCodesTable.code, normalized)).for("update").limit(1);
+    if (!invite) return { error: "Código não encontrado. Verifique e tente novamente.", status: 404 } as const;
 
-  if (!invite) { res.status(404).json({ error: "Código não encontrado. Verifique e tente novamente." }); return; }
-  if (invite.used) { res.status(409).json({ error: "Este código já foi utilizado." }); return; }
+    const [workspace] = await tx.select().from(workspacesTable)
+      .where(eq(workspacesTable.id, req.auth.workspaceId)).for("update").limit(1);
+    if (!workspace) return { error: "Workspace não encontrado.", status: 404 } as const;
 
-  const [plan] = await db.select().from(plansTable).where(eq(plansTable.slug, invite.planSlug as "solo" | "agency")).limit(1);
-  if (!plan) { res.status(500).json({ error: "Plano associado ao código não encontrado." }); return; }
+    if (invite.used) {
+      // A Trial code may already have been consumed during signup by an older
+      // server that did not persist nexosTrial. Repair only its own workspace,
+      // and only when no trial marker exists; never re-enable an expired trial.
+      if (invite.planSlug === "trial" && invite.usedByWorkspaceId === workspace.id) {
+        const settings = workspace.settings && typeof workspace.settings === "object" && !Array.isArray(workspace.settings)
+          ? workspace.settings as Record<string, unknown>
+          : {};
+        if (trialFromSettings(settings)) return { trial: true as const };
+        if (canRepairConsumedTrialAccess({
+          inviteUsed: invite.used,
+          invitePlanSlug: invite.planSlug,
+          usedByWorkspaceId: invite.usedByWorkspaceId,
+          workspaceId: workspace.id,
+          settings,
+        })) {
+          await tx.update(workspacesTable)
+            .set({ settings: activateTrialSettings(settings) })
+            .where(eq(workspacesTable.id, workspace.id));
+          return { trial: true as const };
+        }
+      }
+      return { error: "Este código já foi utilizado.", status: 409 } as const;
+    }
 
-  const [workspace] = await db.select().from(workspacesTable).where(eq(workspacesTable.id, req.auth.workspaceId)).limit(1);
-  if (!workspace) { res.status(404).json({ error: "Workspace não encontrado." }); return; }
+    if (invite.planSlug === "trial") {
+      if (trialFromSettings(workspace.settings)) {
+        return { error: "Este workspace já possui um acesso Trial ativo.", status: 409 } as const;
+      }
+      await tx.update(workspacesTable)
+        .set({ settings: activateTrialSettings(workspace.settings) })
+        .where(eq(workspacesTable.id, workspace.id));
+      await tx.update(inviteCodesTable).set({
+        used: true,
+        usedByEmail: req.auth.email,
+        usedByUserId: req.auth.userId,
+        usedByWorkspaceId: workspace.id,
+        usedAt: new Date(),
+      }).where(and(eq(inviteCodesTable.id, invite.id), eq(inviteCodesTable.used, false)));
+      return { trial: true as const };
+    }
 
-  await db.update(workspacesTable)
-    .set({
+    const [plan] = await tx.select().from(plansTable)
+      .where(eq(plansTable.slug, invite.planSlug as "solo" | "agency")).limit(1);
+    if (!plan) return { error: "Plano associado ao código não encontrado.", status: 500 } as const;
+
+    await tx.update(workspacesTable).set({
       planId: plan.id,
       creditsMonthlyBalance: Math.max(workspace.creditsMonthlyBalance ?? 0, plan.creditsMonthly),
       creditsBalance: (workspace.creditsPurchasedBalance ?? 0) + Math.max(workspace.creditsMonthlyBalance ?? 0, plan.creditsMonthly),
-    })
-    .where(eq(workspacesTable.id, req.auth.workspaceId));
-
-  await db.update(inviteCodesTable)
-    .set({
+    }).where(eq(workspacesTable.id, workspace.id));
+    await tx.update(inviteCodesTable).set({
       used: true,
       usedByEmail: req.auth.email,
       usedByUserId: req.auth.userId,
-      usedByWorkspaceId: req.auth.workspaceId,
+      usedByWorkspaceId: workspace.id,
       usedAt: new Date(),
-    })
-    .where(eq(inviteCodesTable.code, normalized));
+    }).where(and(eq(inviteCodesTable.id, invite.id), eq(inviteCodesTable.used, false)));
+    return { trial: false as const, planName: plan.name, planSlug: plan.slug, creditsGranted: plan.creditsMonthly };
+  });
 
-  res.json({ ok: true, planName: plan.name, planSlug: plan.slug, creditsGranted: plan.creditsMonthly });
+  if ("error" in result) {
+    res.status(result.status ?? 500).json({ error: result.error });
+    return;
+  }
+  if (result.trial) {
+    res.json({ ok: true, planName: "Trial", planSlug: "trial", creditsGranted: 0, trialAccess: true });
+    return;
+  }
+  res.json({ ok: true, ...result });
 });
 
 export default router;

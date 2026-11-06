@@ -650,20 +650,21 @@ function PromoCodeSection() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");
-  const [success, setSuccess] = useState<{ planName: string; creditsGranted: number } | null>(null);
+  const [success, setSuccess] = useState<{ planName: string; creditsGranted: number; trialAccess?: boolean } | null>(null);
 
   const redeemMutation = useMutation({
     mutationFn: async (c: string) =>
-      customFetch<{ ok: boolean; planName: string; planSlug: string; creditsGranted: number }>("/api/billing/redeem-code", {
+      customFetch<{ ok: boolean; planName: string; planSlug: string; creditsGranted: number; trialAccess?: boolean }>("/api/billing/redeem-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: c }),
       }),
     onSuccess: (data) => {
-      setSuccess({ planName: data.planName, creditsGranted: data.creditsGranted });
+      setSuccess({ planName: data.planName, creditsGranted: data.creditsGranted, trialAccess: data.trialAccess });
       setCode("");
       queryClient.invalidateQueries({ queryKey: ["/api/billing/status"] });
       queryClient.invalidateQueries({ queryKey: ["/api/credits/balance"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding/status"] });
     },
     onError: (err: Error) => toast.error(err.message ?? t("Código inválido ou já utilizado.", "Invalid or already redeemed code.", "Código no válido o ya utilizado.")),
   });
@@ -687,7 +688,9 @@ function PromoCodeSection() {
               <CheckCheck className="h-7 w-7 text-success mx-auto" />
               <div className="font-mono text-sm font-bold text-success uppercase tracking-widest">{t("Código aplicado!", "Code applied!", "¡Código aplicado!")}</div>
               <p className="font-mono text-xs text-muted-foreground">
-                {t("Plano", "Plan", "Plan")} <strong className="text-foreground">{success.planName}</strong> {t("ativado", "activated", "activado")} · {success.creditsGranted.toLocaleString("pt-BR")} {t("créditos adicionados", "credits added", "créditos añadidos")}
+                {success.trialAccess
+                  ? t("Acesso Trial ativado · 1 briefing + 1 análise social", "Trial access activated · 1 briefing + 1 social analysis", "Acceso Trial activado · 1 briefing + 1 análisis social")
+                  : <>{t("Plano", "Plan", "Plan")} <strong className="text-foreground">{success.planName}</strong> {t("ativado", "activated", "activado")} · {success.creditsGranted.toLocaleString("pt-BR")} {t("créditos adicionados", "credits added", "créditos añadidos")}</>}
               </p>
               <button
                 onClick={() => { setSuccess(null); setOpen(false); }}

@@ -87,6 +87,7 @@
     "test:integration-cleanup": "cross-env NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-integration-cleanup.ts",
     "test:boot-recovery-safety": "tsx src/scripts/test-boot-recovery-safety.ts",
     "test:auth-registration-db": "cross-env NODE_ENV=test tsx src/scripts/test-auth-registration-db.ts",
+    "test:trial-code-redemption-policy": "tsx src/scripts/test-trial-code-redemption-policy.ts",
     "test:operational-health": "tsx src/scripts/test-operational-health.ts",
     "test:operational-status": "tsx src/scripts/test-operational-status.ts",
     "test:content-checkpoint-resume": "cross-env NODE_ENV=test tsx src/scripts/test-content-checkpoint-resume.ts",
