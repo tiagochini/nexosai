@@ -4,6 +4,7 @@ import {
   canRepairConsumedTrialAccess,
   trialFromSettings,
 } from "../modules/auth/trial-access.service.js";
+import { isTrialRouteAllowed } from "../modules/auth/trial-scope.middleware.js";
 
 const original = {
   referralCode: "REF-123",
@@ -47,5 +48,7 @@ assert.equal(canRepairConsumedTrialAccess({
   workspaceId: "workspace-a",
   settings: { nexosTrial: { active: false } },
 }), false, "an explicitly ended trial is never reactivated");
+assert.equal(isTrialRouteAllowed("POST", "/billing/redeem-code"), true, "trial users must be able to redeem their access code");
+assert.equal(isTrialRouteAllowed("POST", "/billing/credit-packs/purchase"), false, "trial users cannot access unrelated billing operations");
 
 console.log("✓ Trial code redemption policy: activates the limited trial while preserving other workspace settings and entitlements");

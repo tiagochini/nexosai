@@ -4,14 +4,14 @@ import { getWorkspaceTrial } from "./trial-access.service.js";
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
 
-function isTrialRouteAllowed(method: string, path: string): boolean {
+export function isTrialRouteAllowed(method: string, path: string): boolean {
   if (method === "GET" && ["/auth/me", "/auth/workspaces", "/auth/platform-status", "/onboarding/status", "/campaigns"].includes(path)) return true;
   // Keep the paid-upgrade path available to trial users without exposing the
   // rest of billing (credit packs, payment history, admin controls, etc.).
   if (method === "GET" && path === "/billing/offers") return true;
   if (method === "POST" && /^\/billing\/offers\/[0-9a-f-]+\/purchase$/i.test(path)) return true;
   if (method === "POST" && [
-    "/auth/refresh", "/auth/logout", "/auth/onboarding/seen", "/onboarding/start",
+    "/auth/refresh", "/auth/logout", "/auth/onboarding/seen", "/onboarding/start", "/billing/redeem-code",
   ].includes(path)) return true;
 
   const campaignPath = new RegExp(`^/campaigns/${UUID}(?:/social-diagnosis)?$`, "i");
