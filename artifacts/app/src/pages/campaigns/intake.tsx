@@ -58,6 +58,46 @@ interface ConversationResult {
   proposedReason: string | null;
 }
 
+type SocialDiagnosisAccount = { id: string; platform: string; name: string; handle: string };
+
+function safeExternalUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+async function connectSocialDiagnosisAccount(campaignId: string, view: "master" | "trial", platform: string) {
+  const provider = platform === "instagram" ? "instagram_analysis" : platform === "facebook" ? "facebook_analysis" : "tiktok_analysis";
+  const returnTo = `/campaigns/${campaignId}/intake?social_analysis_view=${view}`;
+  const result = await customFetch<{ url: string }>(`/api/integrations/oauth/start/${provider}?redirect_mode=1&return_to=${encodeURIComponent(returnTo)}`);
+  window.location.assign(result.url);
+}
+
+function SocialDiagnosisAccountPicker({
+  platform, accounts, integrationId, handle, disabled, onSelect, onHandleChange, onConnect,
+}: {
+  platform: string; accounts: SocialDiagnosisAccount[]; integrationId: string; handle: string; disabled: boolean;
+  onSelect: (account: SocialDiagnosisAccount | null) => void; onHandleChange: (value: string) => void; onConnect: () => void;
+}) {
+  const t = useUiText();
+  const available = accounts.filter((account) => account.platform === platform);
+  const selected = available.find((account) => account.id === integrationId);
+  return <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2">
+    <select value={integrationId || "public"} onChange={(event) => onSelect(available.find((account) => account.id === event.target.value) ?? null)} disabled={disabled} className="h-10 border border-border/50 bg-background px-3 text-sm" aria-label={t("Origem do perfil", "Profile source", "Origen del perfil")}>
+      <option value="public">{t("Análise pública (sem conectar)", "Public analysis (no connection)", "Análisis público (sin conexión)")}</option>
+      {available.map((account) => <option key={`${account.platform}:${account.id}`} value={account.id}>{account.name} · {t("conta conectada", "connected account", "cuenta conectada")}</option>)}
+    </select>
+    <input value={selected?.handle ?? handle} onChange={(event) => onHandleChange(event.target.value)} disabled={disabled || Boolean(selected)} placeholder={t("@perfil ou URL pública", "@profile or public URL", "@perfil o URL pública")} aria-label={t("Perfil social da marca", "Brand social profile", "Perfil social de la marca")} className="h-10 border border-border/50 bg-background px-3 text-sm" />
+    <Button variant="outline" onClick={onConnect} disabled={disabled} className="rounded-none font-mono text-xs uppercase">{t("Conectar conta · leitura", "Connect account · read-only", "Conectar cuenta · lectura")}</Button>
+    {selected && <p className="md:col-span-3 text-[11px] text-emerald-300">{t("Conta autorizada selecionada. A análise será vinculada a esta conta.", "Authorized account selected. The analysis will be linked to this account.", "Cuenta autorizada seleccionada. El análisis quedará vinculado a esta cuenta.")}</p>}
+    {!selected && <p className="md:col-span-3 text-[11px] text-muted-foreground">{t("Você também pode informar um perfil público. A conexão é opcional e solicita somente permissões de leitura para o diagnóstico.", "You can also enter a public profile. Connecting is optional and requests read-only permissions for diagnosis.", "También puedes indicar un perfil público. La conexión es opcional y solicita permisos de lectura para el diagnóstico.")}</p>}
+  </div>;
+}
+
 // ── Intake agents roster (mirrors backend INTAKE_AGENTS) ───────────────────────
 const INTAKE_AGENTS: Record<string, { name: string; role: string; specialty: string; color: string; initial: string }> = {
   erico:  { name: "Érico",  role: "Estrategista de Produto",      specialty: "PLF · Fórmula de Lançamento",         color: "text-blue-400",    initial: "E" },
@@ -333,21 +373,29 @@ function MasterPlanView({
   const numberLocale = intlLocale(locale);
   const [socialPlatform, setSocialPlatform] = useState("instagram");
   const [socialHandle, setSocialHandle] = useState(formData["social.handle"] ?? formData["social.instagram"] ?? "");
+  const [socialIntegrationId, setSocialIntegrationId] = useState("");
+  const [socialAccounts, setSocialAccounts] = useState<SocialDiagnosisAccount[]>([]);
   const [socialDiagnosis, setSocialDiagnosis] = useState<Record<string, unknown> | null>(null);
   const [socialMediaEntitled, setSocialMediaEntitled] = useState<boolean | null>(null);
+  const [trialAccess, setTrialAccess] = useState(false);
+  const [socialAnalysisAvailable, setSocialAnalysisAvailable] = useState(true);
   const [socialDiagnosisLoading, setSocialDiagnosisLoading] = useState(false);
   const [socialDiagnosisApproved, setSocialDiagnosisApproved] = useState(false);
   useEffect(() => {
     if (!campaignId) return;
     setSocialMediaEntitled(null);
-    customFetch<{ diagnosis: Record<string, unknown> | null; entitlement: { active: boolean } }>(`/api/campaigns/${campaignId}/social-diagnosis`)
-      .then(({ diagnosis, entitlement }) => {
+    customFetch<{ diagnosis: Record<string, unknown> | null; entitlement: { active: boolean }; trialAccess?: boolean; socialAnalysisAvailable?: boolean; connectedAccounts?: SocialDiagnosisAccount[] }>(`/api/campaigns/${campaignId}/social-diagnosis`)
+      .then(({ diagnosis, entitlement, trialAccess: isTrial = false, socialAnalysisAvailable: analysisAvailable = true, connectedAccounts = [] }) => {
         setSocialMediaEntitled(entitlement.active);
+        setTrialAccess(isTrial);
+        setSocialAnalysisAvailable(analysisAvailable);
+        setSocialAccounts(connectedAccounts);
         if (!diagnosis) return;
         setSocialDiagnosis(diagnosis);
         setSocialDiagnosisApproved(diagnosis.status === "approved");
         if (typeof diagnosis.handle === "string") setSocialHandle(diagnosis.handle);
         if (typeof diagnosis.platform === "string") setSocialPlatform(diagnosis.platform);
+        if (typeof diagnosis.connectedIntegrationId === "string") setSocialIntegrationId(diagnosis.connectedIntegrationId);
       }).catch(() => setSocialMediaEntitled(null));
   }, [campaignId]);
   const runSocialDiagnosis = async () => {
@@ -357,9 +405,10 @@ function MasterPlanView({
     try {
       const result = await customFetch<{ diagnosis: Record<string, unknown> }>(`/api/campaigns/${campaignId}/social-diagnosis`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ platform: socialPlatform, handle: socialHandle.trim() }),
+        body: JSON.stringify({ platform: socialPlatform, handle: socialHandle.trim(), ...(socialIntegrationId ? { integrationId: socialIntegrationId } : {}) }),
       });
       setSocialDiagnosis(result.diagnosis);
+      if (trialAccess) setSocialAnalysisAvailable(false);
       if (result.diagnosis.status === "generated") toast.success(t("Diagnóstico social gerado. Revise as fontes e limitações.", "Social diagnosis generated. Review its sources and limitations.", "Diagnóstico social generado. Revisa las fuentes y limitaciones."));
       else toast.warning(t("Não há evidência verificável suficiente para concluir. Veja os próximos passos no diagnóstico.", "There is not enough verifiable evidence to complete this diagnosis. See next steps in the report.", "No hay suficiente evidencia verificable para completar el diagnóstico. Consulta los próximos pasos."));
     } catch (error) {
@@ -597,19 +646,21 @@ function MasterPlanView({
       </div>
 
       }
-      {socialMediaEntitled === true && <section className="border border-cyan-400/40 bg-cyan-400/5 p-5 mb-6 space-y-4" aria-labelledby="social-diagnosis-heading">
+      {(socialMediaEntitled === true || trialAccess) && <section className="border border-cyan-400/40 bg-cyan-400/5 p-5 mb-6 space-y-4" aria-labelledby="social-diagnosis-heading">
         <div>
           <h2 id="social-diagnosis-heading" className="font-mono text-sm font-bold uppercase tracking-wider">{t("Diagnóstico de Presença Social", "Social Presence Diagnosis", "Diagnóstico de presencia social")}</h2>
-          <p className="text-xs text-muted-foreground mt-1">{t("Etapa anterior à estratégia: contexto da campanha, presença pública, dados disponíveis e lacunas. Nenhuma métrica será presumida quando a plataforma não a fornecer.", "Required before strategy: campaign context, public presence, available data, and gaps. Metrics will not be assumed when the platform does not provide them.", "Antes de la estrategia: contexto de campaña, presencia pública, datos disponibles y brechas. No se supondrán métricas que la plataforma no proporcione.")}</p>
+          <p className="text-xs text-muted-foreground mt-1">{trialAccess
+            ? t("Seu acesso de avaliação inclui um único briefing e uma análise de rede social. Outros recursos e a execução por agentes exigem uma licença.", "Your trial includes one briefing and one social network analysis. Other features and agent execution require a license.", "Tu prueba incluye un briefing y un análisis de red social. Otras funciones y la ejecución por agentes requieren una licencia.")
+            : t("Etapa anterior à estratégia: contexto da campanha, presença pública, dados disponíveis e lacunas. Nenhuma métrica será presumida quando a plataforma não a fornecer.", "Required before strategy: campaign context, public presence, available data, and gaps. Metrics will not be assumed when the platform does not provide them.", "Antes de la estrategia: contexto de campaña, presencia pública, datos disponibles y brechas. No se supondrán métricas que la plataforma no proporcione.")}</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-[150px_1fr_auto] gap-2">
-          <select value={socialPlatform} onChange={(event) => { setSocialPlatform(event.target.value); setSocialDiagnosis(null); setSocialDiagnosisApproved(false); }} disabled={socialDiagnosisLoading} className="h-10 border border-border/50 bg-background px-3 text-sm">
+        <div className="grid grid-cols-1 md:grid-cols-[150px_1fr] gap-2">
+          <select value={socialPlatform} onChange={(event) => { setSocialPlatform(event.target.value); setSocialIntegrationId(""); setSocialHandle(""); setSocialDiagnosis(null); setSocialDiagnosisApproved(false); }} disabled={socialDiagnosisLoading || (trialAccess && !socialAnalysisAvailable)} className="h-10 border border-border/50 bg-background px-3 text-sm">
             <option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="tiktok">TikTok</option>
           </select>
-          <input value={socialHandle} onChange={(event) => { setSocialHandle(event.target.value); setSocialDiagnosis(null); setSocialDiagnosisApproved(false); }} disabled={socialDiagnosisLoading} placeholder="@perfil ou URL pública" aria-label={t("Perfil social da marca", "Brand social profile", "Perfil social de la marca")} className="h-10 border border-border/50 bg-background px-3 text-sm" />
-          <Button variant="outline" onClick={() => void runSocialDiagnosis()} disabled={socialDiagnosisLoading || finalizing} className="rounded-none font-mono text-xs uppercase">
+          <SocialDiagnosisAccountPicker platform={socialPlatform} accounts={socialAccounts} integrationId={socialIntegrationId} handle={socialHandle} disabled={socialDiagnosisLoading || (trialAccess && !socialAnalysisAvailable)} onSelect={(account) => { setSocialIntegrationId(account?.id ?? ""); setSocialHandle(account?.handle ?? ""); setSocialDiagnosis(null); setSocialDiagnosisApproved(false); }} onHandleChange={(value) => { setSocialHandle(value); setSocialDiagnosis(null); setSocialDiagnosisApproved(false); }} onConnect={() => void connectSocialDiagnosisAccount(campaignId, "master", socialPlatform).catch((error) => toast.error(error instanceof Error ? error.message : t("Não foi possível iniciar a conexão.", "Could not start the connection.", "No se pudo iniciar la conexión.")))} />
+          <div className="md:col-span-2 flex justify-end"><Button variant="outline" onClick={() => void runSocialDiagnosis()} disabled={socialDiagnosisLoading || finalizing || (trialAccess && !socialAnalysisAvailable)} className="rounded-none font-mono text-xs uppercase">
             {socialDiagnosisLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t("Analisando", "Analyzing", "Analizando")}</> : t("Gerar diagnóstico", "Generate diagnosis", "Generar diagnóstico")}
-          </Button>
+          </Button></div>
         </div>
         {socialDiagnosis && <div className="border border-border/40 bg-background/50 p-4 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2"><p className="font-mono text-xs font-bold">@{String(socialDiagnosis.handle ?? socialHandle)} · {String(socialDiagnosis.platform ?? socialPlatform)}</p><Badge variant="outline" className="rounded-none">{String(publicAnalysis.method ?? "análise pública")}</Badge></div>
@@ -620,10 +671,23 @@ function MasterPlanView({
             <div><p className="font-bold mb-1">{t("Forças", "Strengths", "Fortalezas")}</p><ul className="list-disc pl-5">{(publicAnalysis.strategicAnalysis?.strengths ?? []).slice(0, 4).map((item: string, index: number) => <li key={index}>{item}</li>)}</ul></div>
             <div><p className="font-bold mb-1">{t("Lacunas e oportunidades", "Gaps and opportunities", "Brechas y oportunidades")}</p><ul className="list-disc pl-5">{[...(publicAnalysis.strategicAnalysis?.weaknesses ?? []), ...(publicAnalysis.strategicAnalysis?.opportunities ?? [])].slice(0, 5).map((item: string, index: number) => <li key={index}>{item}</li>)}</ul></div>
           </div>
+          {(publicAnalysis.competitorAnalysis?.competitors?.length || publicAnalysis.competitorAnalysis?.marketPatterns?.length || publicAnalysis.competitorAnalysis?.differentiationOpportunities?.length) ? <div className="border-t border-border/30 pt-3 space-y-2 text-xs">
+            <p className="font-mono font-bold uppercase tracking-wide">{t("Concorrentes e referências de mercado", "Competitors and market references", "Competidores y referencias de mercado")}</p>
+            {(publicAnalysis.competitorAnalysis?.competitors ?? []).slice(0, 5).map((competitor: { name: string; profile?: string; observedPositioning?: string; contentSignals?: string[]; sourceUrl?: string }, index: number) => <div key={`${competitor.name}:${index}`} className="border border-border/30 p-2">
+              <p className="font-semibold">{competitor.name}{competitor.profile ? ` · ${competitor.profile}` : ""}</p>
+              {competitor.observedPositioning && <p className="text-muted-foreground mt-1">{competitor.observedPositioning}</p>}
+              {!!competitor.contentSignals?.length && <p className="mt-1">{competitor.contentSignals.slice(0, 3).join(" · ")}</p>}
+              {safeExternalUrl(competitor.sourceUrl) && <a href={safeExternalUrl(competitor.sourceUrl)!} target="_blank" rel="noreferrer" className="text-cyan-300 underline">{t("Ver fonte pública", "View public source", "Ver fuente pública")}</a>}
+            </div>)}
+            {!!publicAnalysis.competitorAnalysis?.marketPatterns?.length && <p><strong>{t("Padrões observados:", "Observed patterns:", "Patrones observados:")}</strong> {publicAnalysis.competitorAnalysis.marketPatterns.slice(0, 4).join(" · ")}</p>}
+            {!!publicAnalysis.competitorAnalysis?.differentiationOpportunities?.length && <p><strong>{t("Oportunidades de diferenciação:", "Differentiation opportunities:", "Oportunidades de diferenciación:")}</strong> {publicAnalysis.competitorAnalysis.differentiationOpportunities.slice(0, 4).join(" · ")}</p>}
+          </div> : null}
           {(publicAnalysis.actionPlan?.immediate?.length || publicAnalysis.actionPlan?.shortTerm?.length) ? <div className="text-xs"><p className="font-bold mb-1">{t("Ações recomendadas", "Recommended actions", "Acciones recomendadas")}</p><ul className="list-disc pl-5">{[...(publicAnalysis.actionPlan?.immediate ?? []), ...(publicAnalysis.actionPlan?.shortTerm ?? [])].slice(0, 6).map((item: string, index: number) => <li key={index}>{item}</li>)}</ul></div> : null}
-          {Array.isArray(publicAnalysis.sources) && publicAnalysis.sources.length > 0 && <div className="text-xs"><p className="font-bold mb-1">{t("Fontes públicas consultadas", "Public sources checked", "Fuentes públicas consultadas")}</p><ul className="list-disc pl-5">{publicAnalysis.sources.slice(0, 6).map((source: { title?: string; url: string }, index: number) => <li key={index}><a href={source.url} target="_blank" rel="noreferrer" className="text-cyan-300 underline">{source.title || source.url}</a></li>)}</ul></div>}
+          {Array.isArray(publicAnalysis.sources) && publicAnalysis.sources.length > 0 && <div className="text-xs"><p className="font-bold mb-1">{t("Fontes públicas consultadas", "Public sources checked", "Fuentes públicas consultadas")}</p><ul className="list-disc pl-5">{publicAnalysis.sources.slice(0, 6).map((source: { title?: string; url: string }, index: number) => { const href = safeExternalUrl(source.url); return href ? <li key={index}><a href={href} target="_blank" rel="noreferrer" className="text-cyan-300 underline">{source.title || source.url}</a></li> : null; })}</ul></div>}
           <p className="text-[11px] text-muted-foreground">{((socialDiagnosis.evidenceLimitations ?? []) as string[]).join(" · ")}</p>
-          {socialDiagnosisApproved ? <div className="text-emerald-400 font-mono text-xs">✓ {t("Diagnóstico revisado e confirmado", "Diagnosis reviewed and confirmed", "Diagnóstico revisado y confirmado")}</div> : socialDiagnosis.status !== "generated" ? <p className="text-amber-300 font-mono text-xs">{t("Dados verificáveis insuficientes. Conecte a conta correspondente ou gere novamente quando houver fontes públicas citadas; a estratégia permanece bloqueada até existir evidência.", "Insufficient verifiable data. Connect the matching account or retry when cited public sources are available; strategy remains blocked until evidence exists.", "Datos verificables insuficientes. Conecta la cuenta correspondiente o vuelve a intentarlo cuando haya fuentes públicas citadas; la estrategia sigue bloqueada hasta tener evidencia.")}</p> : <Button variant="outline" onClick={() => void approveSocialDiagnosis()} disabled={socialDiagnosisLoading || finalizing} className="rounded-none font-mono text-xs uppercase">{t("Confirmar diagnóstico e seguir", "Confirm diagnosis and continue", "Confirmar diagnóstico y continuar")}</Button>}
+          {trialAccess
+            ? <p className="text-cyan-200 font-mono text-xs">{t("Análise incluída no trial concluída. O briefing está disponível para consulta; iniciar estratégia e agentes requer uma licença.", "Trial analysis complete. The briefing is available for review; starting strategy and agents requires a license.", "Análisis de prueba completado. El briefing está disponible para consulta; iniciar estrategia y agentes requiere una licencia.")}</p>
+            : socialDiagnosisApproved ? <div className="text-emerald-400 font-mono text-xs">✓ {t("Diagnóstico revisado e confirmado", "Diagnosis reviewed and confirmed", "Diagnóstico revisado y confirmado")}</div> : socialDiagnosis.status !== "generated" ? <p className="text-amber-300 font-mono text-xs">{t("Dados verificáveis insuficientes. Conecte a conta correspondente ou gere novamente quando houver fontes públicas citadas; a estratégia permanece bloqueada até existir evidência.", "Insufficient verifiable data. Connect the matching account or retry when cited public sources are available; strategy remains blocked until evidence exists.", "Datos verificables insuficientes. Conecta la cuenta correspondiente o vuelve a intentarlo cuando haya fuentes públicas citadas; la estrategia sigue bloqueada hasta tener evidencia.")}</p> : <Button variant="outline" onClick={() => void approveSocialDiagnosis()} disabled={socialDiagnosisLoading || finalizing} className="rounded-none font-mono text-xs uppercase">{t("Confirmar diagnóstico e seguir", "Confirm diagnosis and continue", "Confirmar diagnóstico y continuar")}</Button>}
         </div>}
       </section>}
       {/* ── CTA de aprovação ── */}
@@ -636,10 +700,11 @@ function MasterPlanView({
             {t("Ao aprovar, os agentes iniciam imediatamente — estratégia, conteúdo e calendário editorial", "Once approved, the agents start immediately — strategy, content, and editorial calendar", "Al aprobar, los agentes comienzan de inmediato — estrategia, contenido y calendario editorial")}
           </p>
         </div>
+        {trialAccess && <p className="text-xs text-amber-300">{t("O trial permite preencher um briefing e gerar uma análise social. A aprovação para execução dos agentes exige uma licença.", "The trial allows one briefing and one social analysis. Approving agent execution requires a license.", "La prueba permite completar un briefing y generar un análisis social. Aprobar la ejecución de agentes requiere una licencia.")}</p>}
         {socialMediaEntitled === null && <p role="status" className="text-xs text-amber-300">{t("Verificando o contrato de Social Media… Se não carregar, atualize a tela antes de iniciar.", "Checking the Social Media contract… If it does not load, refresh before starting.", "Verificando el contrato de Social Media… Si no carga, actualiza la pantalla antes de iniciar.")}</p>}
         <Button
           onClick={() => void onApprove()}
-          disabled={finalizing || socialMediaEntitled === null || (socialMediaEntitled && !socialDiagnosisApproved)}
+          disabled={finalizing || socialMediaEntitled === null || trialAccess || (socialMediaEntitled && !socialDiagnosisApproved)}
           className="font-mono uppercase tracking-widest rounded-none gap-2 h-14 px-8 text-sm btn-weapon-primary whitespace-nowrap shrink-0"
         >
           {finalizing
@@ -650,6 +715,128 @@ function MasterPlanView({
       </div>
 
       <div className="h-8" />
+    </div>
+  );
+}
+
+function TrialSocialAnalysisView({
+  campaignId,
+  formData,
+  onBack,
+}: {
+  campaignId: string;
+  formData: Record<string, string>;
+  onBack: () => void;
+}) {
+  const t = useUiText();
+  const { locale } = useUiLocale();
+  const numberLocale = intlLocale(locale);
+  const [platform, setPlatform] = useState("instagram");
+  const [handle, setHandle] = useState(formData["social.handle"] ?? formData["social.instagram"] ?? "");
+  const [integrationId, setIntegrationId] = useState("");
+  const [connectedAccounts, setConnectedAccounts] = useState<SocialDiagnosisAccount[]>([]);
+  const [diagnosis, setDiagnosis] = useState<Record<string, any> | null>(null);
+  const [available, setAvailable] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    customFetch<{ diagnosis: Record<string, any> | null; socialAnalysisAvailable?: boolean; connectedAccounts?: SocialDiagnosisAccount[] }>(`/api/campaigns/${campaignId}/social-diagnosis`)
+      .then((result) => {
+        setDiagnosis(result.diagnosis);
+        setAvailable(result.socialAnalysisAvailable === true);
+        setConnectedAccounts(result.connectedAccounts ?? []);
+        if (typeof result.diagnosis?.platform === "string") setPlatform(result.diagnosis.platform);
+        if (typeof result.diagnosis?.handle === "string") setHandle(result.diagnosis.handle);
+        if (typeof result.diagnosis?.connectedIntegrationId === "string") setIntegrationId(result.diagnosis.connectedIntegrationId);
+      })
+      .catch((error) => toast.error(error instanceof Error ? error.message : t("Não foi possível carregar o diagnóstico.", "Could not load the diagnosis.", "No se pudo cargar el diagnóstico.")))
+      .finally(() => setLoading(false));
+  }, [campaignId]);
+
+  const runAnalysis = async () => {
+    if (!handle.trim()) {
+      toast.error(t("Informe o perfil público da marca.", "Enter the brand's public profile.", "Ingresa el perfil público de la marca."));
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const result = await customFetch<{ diagnosis: Record<string, any> }>(`/api/campaigns/${campaignId}/social-diagnosis`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ platform, handle: handle.trim(), ...(integrationId ? { integrationId } : {}) }),
+      });
+      setDiagnosis(result.diagnosis);
+      setAvailable(false);
+      toast.success(t("Análise de redes sociais concluída.", "Social network analysis complete.", "Análisis de redes sociales completado."));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("Não foi possível gerar a análise.", "Could not generate the analysis.", "No se pudo generar el análisis."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const publicAnalysis = diagnosis?.publicProfileAnalysis ?? {};
+  const evidence = diagnosis?.accountEvidence;
+  const strengths = publicAnalysis.strategicAnalysis?.strengths ?? [];
+  const opportunities = [
+    ...(publicAnalysis.strategicAnalysis?.weaknesses ?? []),
+    ...(publicAnalysis.strategicAnalysis?.opportunities ?? []),
+  ];
+  const actions = [
+    ...(publicAnalysis.actionPlan?.immediate ?? []),
+    ...(publicAnalysis.actionPlan?.shortTerm ?? []),
+  ];
+
+  return (
+    <div className="max-w-4xl mx-auto w-full space-y-5">
+      <Button variant="ghost" size="sm" onClick={onBack} className="font-mono uppercase text-xs tracking-widest">
+        <ArrowLeft className="h-3 w-3 mr-2" />{t("Voltar ao briefing", "Back to briefing", "Volver al briefing")}
+      </Button>
+      <section className="border border-cyan-400/40 bg-cyan-400/5 p-5 space-y-4">
+        <div>
+          <h1 className="font-mono text-lg font-bold uppercase tracking-wider">{t("Análise das redes sociais", "Social network analysis", "Análisis de redes sociales")}</h1>
+          <p className="text-sm text-muted-foreground mt-2">{t("Esta etapa analisa um perfil da marca usando sinais públicos e, quando disponíveis, métricas da conta conectada. Não inicia o Master Plan nem os agentes.", "This step analyzes one brand profile using public signals and, when available, connected account metrics. It does not start the Master Plan or agents.", "Esta etapa analiza un perfil de marca con señales públicas y, si están disponibles, métricas de la cuenta conectada. No inicia el plan maestro ni los agentes.")}</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-[150px_1fr] gap-2">
+          <select value={platform} onChange={(event) => { setPlatform(event.target.value); setIntegrationId(""); setHandle(""); }} disabled={loading || submitting || !available} className="h-10 border border-border/50 bg-background px-3 text-sm">
+            <option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="tiktok">TikTok</option>
+          </select>
+          <SocialDiagnosisAccountPicker platform={platform} accounts={connectedAccounts} integrationId={integrationId} handle={handle} disabled={loading || submitting || !available} onSelect={(account) => { setIntegrationId(account?.id ?? ""); setHandle(account?.handle ?? ""); }} onHandleChange={setHandle} onConnect={() => void connectSocialDiagnosisAccount(campaignId, "trial", platform).catch((error) => toast.error(error instanceof Error ? error.message : t("Não foi possível iniciar a conexão.", "Could not start the connection.", "No se pudo iniciar la conexión.")))} />
+          <div className="md:col-span-2 flex justify-end"><Button variant="outline" onClick={() => void runAnalysis()} disabled={loading || submitting || !available} className="rounded-none font-mono text-xs uppercase">
+            {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t("Analisando", "Analyzing", "Analizando")}</> : t("Gerar análise", "Generate analysis", "Generar análisis")}
+          </Button></div>
+        </div>
+        {!available && <p className="font-mono text-xs text-emerald-300">{t("A análise incluída já foi utilizada. O resultado permanece salvo neste briefing.", "The included analysis has been used. Its result remains saved in this briefing.", "El análisis incluido ya se utilizó. El resultado permanece guardado en este briefing.")}</p>}
+      </section>
+      {diagnosis && <section className="border border-border/40 bg-card/30 p-5 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-mono text-sm font-bold">@{diagnosis.handle} · {diagnosis.platform}</h2>
+          <Badge variant="outline" className="rounded-none">{publicAnalysis.method ?? t("Análise pública", "Public analysis", "Análisis público")}</Badge>
+        </div>
+        {publicAnalysis.overview && <p className="text-sm">{publicAnalysis.overview}</p>}
+        {evidence && <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+          {[[t("Seguidores", "Followers", "Seguidores"), evidence.followers], [t("Seguindo", "Following", "Siguiendo"), evidence.following], [t("Publicações", "Posts", "Publicaciones"), evidence.mediaCount], [t("Alcance 30 dias", "30-day reach", "Alcance 30 días"), evidence.reachLast30Days]].map(([label, value]) => <div key={String(label)} className="border border-border/30 p-2"><span className="block text-muted-foreground">{label}</span><strong>{value == null ? t("Indisponível", "Unavailable", "No disponible") : new Intl.NumberFormat(numberLocale).format(Number(value))}</strong></div>)}
+        </div>}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          {strengths.length > 0 && <div><h3 className="font-mono text-xs font-bold uppercase mb-2">{t("Forças", "Strengths", "Fortalezas")}</h3><ul className="list-disc pl-5 space-y-1">{strengths.slice(0, 5).map((item: string, index: number) => <li key={index}>{item}</li>)}</ul></div>}
+          {opportunities.length > 0 && <div><h3 className="font-mono text-xs font-bold uppercase mb-2">{t("Lacunas e oportunidades", "Gaps and opportunities", "Brechas y oportunidades")}</h3><ul className="list-disc pl-5 space-y-1">{opportunities.slice(0, 6).map((item: string, index: number) => <li key={index}>{item}</li>)}</ul></div>}
+        </div>
+        {(publicAnalysis.competitorAnalysis?.competitors?.length || publicAnalysis.competitorAnalysis?.marketPatterns?.length || publicAnalysis.competitorAnalysis?.differentiationOpportunities?.length) ? <div className="border-t border-border/30 pt-3 space-y-2 text-xs">
+          <p className="font-mono font-bold uppercase tracking-wide">{t("Concorrentes e referências de mercado", "Competitors and market references", "Competidores y referencias de mercado")}</p>
+          {(publicAnalysis.competitorAnalysis?.competitors ?? []).slice(0, 5).map((competitor: { name: string; profile?: string; observedPositioning?: string; contentSignals?: string[]; sourceUrl?: string }, index: number) => <div key={`${competitor.name}:${index}`} className="border border-border/30 p-2">
+            <p className="font-semibold">{competitor.name}{competitor.profile ? ` · ${competitor.profile}` : ""}</p>
+            {competitor.observedPositioning && <p className="text-muted-foreground mt-1">{competitor.observedPositioning}</p>}
+            {!!competitor.contentSignals?.length && <p className="mt-1">{competitor.contentSignals.slice(0, 3).join(" · ")}</p>}
+            {safeExternalUrl(competitor.sourceUrl) && <a href={safeExternalUrl(competitor.sourceUrl)!} target="_blank" rel="noreferrer" className="text-cyan-300 underline">{t("Ver fonte pública", "View public source", "Ver fuente pública")}</a>}
+          </div>)}
+          {!!publicAnalysis.competitorAnalysis?.marketPatterns?.length && <p><strong>{t("Padrões observados:", "Observed patterns:", "Patrones observados:")}</strong> {publicAnalysis.competitorAnalysis.marketPatterns.slice(0, 4).join(" · ")}</p>}
+          {!!publicAnalysis.competitorAnalysis?.differentiationOpportunities?.length && <p><strong>{t("Oportunidades de diferenciação:", "Differentiation opportunities:", "Oportunidades de diferenciación:")}</strong> {publicAnalysis.competitorAnalysis.differentiationOpportunities.slice(0, 4).join(" · ")}</p>}
+        </div> : null}
+        {actions.length > 0 && <div><h3 className="font-mono text-xs font-bold uppercase mb-2">{t("Ações recomendadas", "Recommended actions", "Acciones recomendadas")}</h3><ul className="list-disc pl-5 space-y-1 text-sm">{actions.slice(0, 6).map((item: string, index: number) => <li key={index}>{item}</li>)}</ul></div>}
+        {Array.isArray(publicAnalysis.sources) && publicAnalysis.sources.length > 0 && <div><h3 className="font-mono text-xs font-bold uppercase mb-2">{t("Fontes públicas consultadas", "Public sources checked", "Fuentes públicas consultadas")}</h3><ul className="list-disc pl-5 space-y-1 text-sm">{publicAnalysis.sources.slice(0, 6).map((source: { title?: string; url: string }, index: number) => { const href = safeExternalUrl(source.url); return href ? <li key={index}><a href={href} target="_blank" rel="noreferrer" className="text-cyan-300 underline">{source.title || source.url}</a></li> : null; })}</ul></div>}
+        {Array.isArray(diagnosis.evidenceLimitations) && <p className="text-[11px] text-muted-foreground">{diagnosis.evidenceLimitations.join(" · ")}</p>}
+      </section>}
     </div>
   );
 }
@@ -696,7 +883,21 @@ export default function CampaignIntake() {
   const [showSimulator, setShowSimulator] = useState(false);
 
   // Master Plan view — shown after chat completes, before calling finalize
-  const [showMasterPlan, setShowMasterPlan] = useState(false);
+  const [showMasterPlan, setShowMasterPlan] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("social_analysis_view") === "master");
+  const [showTrialSocialAnalysis, setShowTrialSocialAnalysis] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("social_analysis_view") === "trial");
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const connected = url.searchParams.get("oauth_connected");
+    const error = url.searchParams.get("oauth_error");
+    if (connected?.endsWith("_analysis")) toast.success(t("Conta conectada para análise social.", "Account connected for social analysis.", "Cuenta conectada para análisis social."));
+    if (error) toast.error(error);
+    if (url.searchParams.has("oauth_connected") || url.searchParams.has("oauth_error")) {
+      url.searchParams.delete("oauth_connected");
+      url.searchParams.delete("oauth_error");
+      window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+  }, [t]);
 
   // Persist draft to localStorage as user types — survives any page reload
   useEffect(() => {
@@ -743,6 +944,13 @@ export default function CampaignIntake() {
     queryFn: () => customFetch<{ campaign: any }>(`/api/campaigns/${campaignId}`),
     enabled: !!campaignId
   });
+
+  const { data: accessStatus, isLoading: loadingAccessStatus } = useQuery<{ trialAccess?: boolean }>({
+    queryKey: ["/api/onboarding/status", "trial-access"],
+    queryFn: () => customFetch<{ trialAccess?: boolean }>("/api/onboarding/status"),
+    enabled: !!campaignId,
+  });
+  const trialAccess = accessStatus?.trialAccess === true;
 
   const { data: masterplanState, isLoading: masterplanStateLoading } = useQuery<{ versions: { status?: string; approvedAt?: string | null }[] }>({
     queryKey: [`/api/campaigns/${campaignId}/masterplan/versions`],
@@ -1282,6 +1490,14 @@ export default function CampaignIntake() {
 
   // ── Finalize intake ────────────────────────────────────────────────────────────
   const handleFinalize = async () => {
+    if (loadingAccessStatus || !accessStatus) {
+      toast.error(t("Não foi possível verificar seu acesso. Atualize a página e tente novamente.", "Could not verify your access. Refresh the page and try again.", "No se pudo verificar tu acceso. Actualiza la página e inténtalo de nuevo."));
+      return;
+    }
+    if (trialAccess) {
+      toast.error(t("O trial permite concluir o briefing e gerar uma análise social. Contrate uma licença para criar o Master Plan e iniciar os agentes.", "The trial lets you complete the briefing and generate one social analysis. Get a license to create the Master Plan and start agents.", "La prueba permite completar el briefing y generar un análisis social. Contrata una licencia para crear el plan maestro e iniciar los agentes."));
+      return;
+    }
     if (briefingLocked) {
       toast.error(t("O Master Plan já foi aprovado e o briefing está bloqueado.", "The Master Plan is already approved and the briefing is locked.", "El plan maestro ya está aprobado y el briefing está bloqueado."));
       return;
@@ -1351,6 +1567,10 @@ export default function CampaignIntake() {
   }
 
   const isComplete = typeof data?.completeness === "object" && (data?.completeness as { valid?: boolean })?.valid;
+
+  if (showTrialSocialAnalysis) {
+    return <TrialSocialAnalysisView campaignId={campaignId} formData={formData} onBack={() => setShowTrialSocialAnalysis(false)} />;
+  }
 
   // ── Master Plan view: shown when user clicks the big button ──
   if (showMasterPlan) {
@@ -1687,14 +1907,25 @@ export default function CampaignIntake() {
                 >
                   <MessageSquare className="h-4 w-4" />{t("Ajustar briefing", "Adjust briefing", "Ajustar briefing")}
                 </Button>
-                <Button
-                  onClick={() => setShowMasterPlan(true)}
-                  disabled={briefingLocked}
-                  className="w-full font-mono uppercase tracking-widest rounded-none gap-2 h-14 text-sm btn-weapon-primary"
-                  style={{ fontSize: "0.8rem", letterSpacing: "0.12em" }}
-                >
-                  <Rocket className="h-5 w-5" />{approvedMasterplanExists ? t("Master Plan aprovado", "Master Plan approved", "Plan maestro aprobado") : t("Ver e Aprovar Master Plan do Lançamento", "Review and Approve Launch Master Plan", "Ver y aprobar el plan maestro de lanzamiento")}<ChevronRight className="h-5 w-5" />
-                </Button>
+                {trialAccess ? (
+                  <div className="space-y-3">
+                    <p className="border border-amber-400/30 bg-amber-400/5 p-4 text-center font-mono text-xs text-amber-200">
+                      {t("Briefing concluído. Faça agora a análise de uma rede social. O Master Plan e a execução são liberados com uma licença.", "Briefing complete. Now analyze one social network. The Master Plan and execution require a license.", "Briefing completado. Ahora analiza una red social. El plan maestro y la ejecución requieren una licencia.")}
+                    </p>
+                    <Button onClick={() => setShowTrialSocialAnalysis(true)} disabled={loadingAccessStatus || !accessStatus} className="w-full font-mono uppercase tracking-widest rounded-none gap-2 h-14 text-sm btn-weapon-primary">
+                      <Target className="h-5 w-5" />{t("Analisar redes sociais", "Analyze social networks", "Analizar redes sociales")}<ChevronRight className="h-5 w-5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={() => setShowMasterPlan(true)}
+                    disabled={briefingLocked || loadingAccessStatus || !accessStatus}
+                    className="w-full font-mono uppercase tracking-widest rounded-none gap-2 h-14 text-sm btn-weapon-primary"
+                    style={{ fontSize: "0.8rem", letterSpacing: "0.12em" }}
+                  >
+                    <Rocket className="h-5 w-5" />{approvedMasterplanExists ? t("Master Plan aprovado", "Master Plan approved", "Plan maestro aprobado") : t("Ver e Aprovar Master Plan do Lançamento", "Review and Approve Launch Master Plan", "Ver y aprobar el plan maestro de lanzamiento")}<ChevronRight className="h-5 w-5" />
+                  </Button>
+                )}
 
                 <p className="font-mono text-[10px] text-center text-muted-foreground/40 uppercase tracking-widest -mt-1">
                   {t("Estratégia · Calendário Editorial · Criativos · Projeções", "Strategy · Editorial Calendar · Creatives · Projections", "Estrategia · Calendario editorial · Creatividades · Proyecciones")}
@@ -2074,7 +2305,7 @@ export default function CampaignIntake() {
                   className="font-mono uppercase tracking-widest rounded-none border-border/50 h-10 text-xs">
                   {saveMutation.isPending ? t("Salvando...", "Saving...", "Guardando...") : t("Salvar Alterações", "Save Changes", "Guardar cambios")}
                 </Button>
-                {isComplete && (
+                {isComplete && !trialAccess && (
                   <Button onClick={() => setShowMasterPlan(true)}
                     className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10">
                     <Rocket className="h-4 w-4" />{t("Ver e Aprovar Master Plan", "Review and Approve Master Plan", "Ver y aprobar el plan maestro")}

@@ -573,6 +573,19 @@ async function fulfillSalesOfferPayment(trx: Parameters<Parameters<typeof db.tra
     status: "active", startedAt: contract.startedAt ?? now, currentPeriodEndsAt: accessPeriodEnd,
     fulfilledPaymentIds: [...fulfilled, payment.id], updatedAt: new Date(),
   }).where(eq(commercialOfferContractsTable.id, contract.id));
+
+  // A confirmed paid license supersedes trial scope atomically with fulfillment.
+  const [workspace] = await trx.select({ settings: workspacesTable.settings }).from(workspacesTable)
+    .where(eq(workspacesTable.id, payment.workspaceId)).limit(1).for("update");
+  const settings = workspace?.settings && typeof workspace.settings === "object" && !Array.isArray(workspace.settings)
+    ? workspace.settings as Record<string, unknown>
+    : {};
+  const trial = settings.nexosTrial;
+  if (trial && typeof trial === "object" && !Array.isArray(trial) && (trial as Record<string, unknown>).active === true) {
+    await trx.update(workspacesTable).set({
+      settings: { ...settings, nexosTrial: { ...(trial as Record<string, unknown>), active: false } },
+    }).where(eq(workspacesTable.id, payment.workspaceId));
+  }
 }
 
 export async function initiateSalesOfferPurchase(opts: {

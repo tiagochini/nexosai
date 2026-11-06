@@ -298,13 +298,18 @@ router.get("/invite-codes", async (req, res): Promise<void> => {
 
 // POST /api/admin/invite-codes/generate — generate N new invite codes
 router.post("/invite-codes/generate", async (req, res): Promise<void> => {
-  const { count = 10, planSlug = "agency", label } = req.body as {
-    count?: number;
-    planSlug?: string;
-    label?: string;
-  };
+  const parsed = z.object({
+    count: z.number().int().min(1).max(50).default(10),
+    planSlug: z.enum(["solo", "agency", "trial"]).default("agency"),
+    label: z.string().trim().max(120).optional(),
+  }).safeParse(req.body ?? {});
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+  const { count, planSlug, label } = parsed.data;
 
-  const toInsert = Array.from({ length: Math.min(count, 50) }, () => ({
+  const toInsert = Array.from({ length: count }, () => ({
     code: generateInviteCode(),
     planSlug,
     label: label ?? null,

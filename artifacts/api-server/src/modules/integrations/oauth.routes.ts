@@ -84,9 +84,13 @@ interface ProviderConfig {
   scope: string;
   label: string;
   dbProvider: DbProvider;
+  analysisOnly?: boolean;
 }
 
 const PROVIDER_MAP: Record<string, ProviderConfig> = {
+  instagram_analysis: { platform: "instagram_login", scope: "instagram_business_basic,instagram_business_manage_insights", label: "Instagram (análise) read-only", dbProvider: "instagram", analysisOnly: true },
+  facebook_analysis: { platform: "meta", scope: "public_profile,pages_show_list,pages_read_engagement,read_insights", label: "Facebook Pages (análise) read-only", dbProvider: "facebook", analysisOnly: true },
+  tiktok_analysis: { platform: "tiktok", scope: "user.info.basic,user.info.profile,user.info.stats,video.list", label: "TikTok (análise) read-only", dbProvider: "tiktok_ads", analysisOnly: true },
   instagram_login: {platform:"instagram_login",scope:INSTAGRAM_LOGIN_SCOPES.join(","),label:"Instagram Business",dbProvider:"instagram"},
   instagram: {
     platform: "meta",
@@ -195,8 +199,11 @@ router.get("/providers", requireAuth, (_req, res): void => {
   res.json({
     providers: {
       instagram_login: !!(env.INSTAGRAM_APP_ID && env.INSTAGRAM_APP_SECRET),
+      instagram_analysis: !!(env.INSTAGRAM_APP_ID && env.INSTAGRAM_APP_SECRET),
       meta:      !!(env.META_APP_ID && env.META_APP_SECRET),
+      facebook_analysis: !!(env.META_APP_ID && env.META_APP_SECRET),
       tiktok:    !!(env.TIKTOK_CLIENT_KEY && env.TIKTOK_CLIENT_SECRET),
+      tiktok_analysis: !!(env.TIKTOK_CLIENT_KEY && env.TIKTOK_CLIENT_SECRET),
       tiktok_ads: !!(env.TIKTOK_ADS_APP_ID && env.TIKTOK_ADS_APP_SECRET && env.TIKTOK_ADS_AUTH_URL),
       google:    !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
       hubspot:   !!(env.HUBSPOT_CLIENT_ID && env.HUBSPOT_CLIENT_SECRET),
@@ -278,9 +285,13 @@ router.get("/start/:provider", requireAuth, (req, res): void => {
   // instead of the popup-based postMessage flow (which doesn't work when the Meta
   // OAuth is handled by the Facebook/Instagram native app on Android).
   const redirectMode = req.query["redirect_mode"] === "1";
+  const requestedReturnTo = typeof req.query["return_to"] === "string" ? req.query["return_to"] : undefined;
+  const returnTo = requestedReturnTo && /^\/campaigns\/[0-9a-f-]{36}\/intake\?social_analysis_view=(master|trial)$/i.test(requestedReturnTo)
+    ? requestedReturnTo
+    : undefined;
 
   const state = jwt.sign(
-    { workspaceId: req.auth.workspaceId, provider, redirectMode },
+    { workspaceId: req.auth.workspaceId, provider, redirectMode, returnTo },
     env.JWT_SECRET,
     { expiresIn: "10m" },
   );
@@ -332,20 +343,27 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
       try {
         const rawPayload = state.split(".")[1];
         if (rawPayload) {
-          const decoded = JSON.parse(Buffer.from(rawPayload, "base64url").toString()) as { redirectMode?: boolean };
+          const decoded = JSON.parse(Buffer.from(rawPayload, "base64url").toString()) as { redirectMode?: boolean; returnTo?: string };
           earlyRedirectMode = !!decoded.redirectMode;
+          const safeReturnTo = decoded.returnTo && /^\/campaigns\/[0-9a-f-]{36}\/intake\?social_analysis_view=(master|trial)$/i.test(decoded.returnTo)
+            ? decoded.returnTo
+            : "/integracoes";
+          if (earlyRedirectMode) {
+            const destination = new URL(safeReturnTo, env.APP_URL);
+            destination.searchParams.set("oauth_error", errMsg);
+            res.redirect(302, destination.toString());
+            return;
+          }
         }
       } catch { /* ignore — fall back to popupPage */ }
     }
-    if (earlyRedirectMode) {
-      res.redirect(302, `${env.APP_URL}/integracoes?oauth_error=${encodeURIComponent(errMsg)}`);
-    } else {
+    if (!earlyRedirectMode) {
       res.send(popupPage(false, errMsg));
     }
     return;
   }
 
-  let stateData: { workspaceId: string; provider: string; redirectMode?: boolean };
+  let stateData: { workspaceId: string; provider: string; redirectMode?: boolean; returnTo?: string };
   try {
     stateData = jwt.verify(state as string, env.JWT_SECRET) as typeof stateData;
   } catch {
@@ -368,10 +386,11 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
   // On mobile (redirect mode): does a 302 redirect to the integrations page with a query param.
   const finishOAuth = (success: boolean, errorMessage?: string) => {
     if (stateData.redirectMode) {
-      const dest = success
-        ? `${env.APP_URL}/integracoes?oauth_connected=${encodeURIComponent(provider)}`
-        : `${env.APP_URL}/integracoes?oauth_error=${encodeURIComponent(errorMessage ?? "Falha na autenticação.")}`;
-      res.redirect(302, dest);
+      const safeReturn = stateData.returnTo && /^\/campaigns\/[0-9a-f-]{36}\/intake\?social_analysis_view=(master|trial)$/i.test(stateData.returnTo)
+        ? new URL(stateData.returnTo, env.APP_URL)
+        : new URL("/integracoes", env.APP_URL);
+      safeReturn.searchParams.set(success ? "oauth_connected" : "oauth_error", success ? provider : (errorMessage ?? "Falha na autenticação."));
+      res.redirect(302, safeReturn.toString());
     } else {
       const msg = success ? "Conectado com sucesso!" : (errorMessage ?? "Falha na autenticação.");
       res.send(popupPage(success, msg, provider));
@@ -388,6 +407,7 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
     let accountId = "";
     let accountName = config.label;
     let metadataExtra: Record<string, unknown> = {};
+    let additionalFacebookAnalysisPages: Array<{ id: string; name: string; access_token: string }> = [];
 
     if (config.platform === "instagram_login") {
       const grant = await exchangeInstagramLoginCode(String(code),platform.clientId(),platform.clientSecret(),redirectUri);
@@ -454,8 +474,9 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
       accountName = me.name ?? config.label;
 
       // Buscar Páginas que o usuário administra + Instagram Business Account vinculado
+      const pageFields = provider === "facebook_analysis" ? "id,name,access_token" : "id,name,access_token,instagram_business_account";
       const pagesRes = await fetch(
-        `https://graph.facebook.com/v26.0/me/accounts?fields=id,name,access_token,instagram_business_account&access_token=${accessToken}`,
+        `https://graph.facebook.com/v26.0/me/accounts?fields=${pageFields}&access_token=${encodeURIComponent(accessToken)}`,
       );
       const pagesData = (await pagesRes.json()) as {
         data?: Array<{
@@ -467,7 +488,18 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
       };
       const pages = pagesData.data ?? [];
 
-      if (pages.length > 0) {
+      if (provider === "facebook_analysis") {
+        if (!pagesRes.ok || pages.length === 0) {
+          finishOAuth(false, "Nenhuma Página do Facebook foi autorizada para leitura.");
+          return;
+        }
+        const page = pages[0]!;
+        additionalFacebookAnalysisPages = pages.slice(1).filter((item) => item.id && item.access_token);
+        accountId = page.id;
+        accountName = page.name;
+        accessToken = page.access_token || accessToken;
+        metadataExtra = { pageId: page.id, accountName: page.name, socialAnalysisOnly: true, oauthScopes: config.scope.split(",") };
+      } else if (pages.length > 0) {
         // Preferir a página que já tem Instagram Business vinculado
         const pageWithIg = pages.find((p) => p.instagram_business_account) ?? pages[0];
         const igAccountId = pageWithIg.instagram_business_account?.id ?? me.id ?? "";
@@ -556,9 +588,31 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
       if (tokenData.data.expires_in) {
         tokenExpiresAt = new Date(Date.now() + tokenData.data.expires_in * 1000);
       }
+      if (provider === "tiktok_analysis") {
+        const profileRes = await fetch(
+          "https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,avatar_url,profile_web_url",
+          { headers: { Authorization: `Bearer ${accessToken}` }, signal: AbortSignal.timeout(10_000) },
+        );
+        const profileData = await profileRes.json().catch(() => ({})) as {
+          data?: { user?: { display_name?: string; avatar_url?: string; profile_web_url?: string } };
+          error?: { message?: string };
+        };
+        const profile = profileData.data?.user;
+        if (!profileRes.ok || !profile?.display_name) {
+          finishOAuth(false, profileData.error?.message ?? "Não foi possível identificar o perfil TikTok autorizado para análise.");
+          return;
+        }
+        accountName = profile.display_name.startsWith("@") ? profile.display_name : `@${profile.display_name}`;
+        metadataExtra = {
+          displayName: profile.display_name,
+          profileUrl: profile.profile_web_url,
+          avatarUrl: profile.avatar_url,
+          socialAnalysisOnly: true,
+        };
+      }
       // TikTok Ads has advertiser identities distinct from the Login Kit
       // open_id. Do not claim one was selected until discovery is complete.
-      if (config.dbProvider === "tiktok_ads") {
+      if (config.dbProvider === "tiktok_ads" && !config.analysisOnly) {
         accountId = "";
         metadataExtra = {
           paidMedia: true,
@@ -707,12 +761,13 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
 
     // Provider values are shared by legacy organic and paid integrations.  Match
     // only the same purpose/account; never replace every row for a provider.
-    const purpose: IntegrationPurpose =
-      provider === "meta_ads" || provider === "tiktok_ads" || provider === "google_ads" ? "paid_media" : "organic_social";
+    const purpose: IntegrationPurpose = config.analysisOnly
+      ? "organic_social"
+      : provider === "meta_ads" || provider === "tiktok_ads" || provider === "google_ads" ? "paid_media" : "organic_social";
     // OAuth callbacks are another account-creation path. Paid-media accounts
     // remain outside organic social entitlements; the existing account check in
     // the guard keeps OAuth reconnects idempotent.
-    if (purpose === "organic_social" &&
+    if (!config.analysisOnly && purpose === "organic_social" &&
       (config.dbProvider === "instagram" || provider === "facebook" || provider === "tiktok" || provider === "linkedin")) {
       await assertSocialAccountEntitlement(stateData.workspaceId, config.dbProvider as "instagram" | "facebook" | "tiktok" | "linkedin", accountId);
     }
@@ -720,6 +775,8 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
       oauthConnected: true,
       connectedAt: new Date().toISOString(),
       authType: config.platform === "instagram_login" ? "instagram_login" : config.dbProvider === "instagram" ? "facebook_login" : undefined,
+      socialAnalysisOnly: config.analysisOnly === true,
+      oauthScopes: config.scope.split(/[ ,]+/).filter(Boolean),
       canonicalNetwork: purpose === "organic_social" && ["instagram", "facebook", "tiktok", "linkedin"].includes(config.dbProvider)
         ? config.dbProvider
         : undefined,
@@ -736,9 +793,10 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
       const rowMetadata = row.metadata as Record<string, unknown> | null;
       const samePurpose = integrationPurpose(rowMetadata) === purpose;
       const sameAccount = purpose === "paid_media" || row.accountId === accountId;
+      const sameAnalysisCapability = (rowMetadata?.["socialAnalysisOnly"] === true) === (config.analysisOnly === true);
       const sameInstagramAuth = config.dbProvider !== "instagram"
         || (rowMetadata?.authType === "instagram_login") === (config.platform === "instagram_login");
-      return samePurpose && sameAccount && sameInstagramAuth;
+      return samePurpose && sameAccount && sameAnalysisCapability && sameInstagramAuth;
     });
     const values = {
       workspaceId: stateData.workspaceId,
@@ -757,10 +815,51 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
       : await db.insert(workspaceIntegrationsTable).values(values)
         .returning({ id: workspaceIntegrationsTable.id });
 
+    // Facebook users may authorize several Pages at once. Keep one read-only
+    // integration per Page so the briefing can let the user choose the right one.
+    for (const page of additionalFacebookAnalysisPages) {
+      const pageMetadata = metadataForPurpose("organic_social", {
+        oauthConnected: true,
+        connectedAt: new Date().toISOString(),
+        socialAnalysisOnly: true,
+        canonicalNetwork: "facebook",
+        pageId: page.id,
+        oauthScopes: config.scope.split(/[ ,]+/).filter(Boolean),
+      });
+      const samePageRows = await db.select({ id: workspaceIntegrationsTable.id, metadata: workspaceIntegrationsTable.metadata })
+        .from(workspaceIntegrationsTable)
+        .where(and(
+          eq(workspaceIntegrationsTable.workspaceId, stateData.workspaceId),
+          eq(workspaceIntegrationsTable.provider, "facebook"),
+          eq(workspaceIntegrationsTable.accountId, page.id),
+        ));
+      const samePage = samePageRows.find((row) => (row.metadata as Record<string, unknown> | null)?.["socialAnalysisOnly"] === true);
+      const pageValues = {
+        workspaceId: stateData.workspaceId,
+        provider: "facebook" as const,
+        status: "connected" as const,
+        accessToken: page.access_token,
+        refreshToken: undefined,
+        tokenExpiresAt: undefined,
+        accountId: page.id,
+        accountName: page.name,
+        canonicalNetwork: "facebook",
+        isPaymentGateway: false,
+        blocksExecution: false,
+        metadata: pageMetadata,
+      };
+      if (samePage) {
+        await db.update(workspaceIntegrationsTable).set(pageValues)
+          .where(eq(workspaceIntegrationsTable.id, samePage.id));
+      } else {
+        await db.insert(workspaceIntegrationsTable).values(pageValues);
+      }
+    }
+
     // Registration at Meta is deliberately opt-in. OAuth still succeeds if the
     // provider rejects the subscription; the operator can correct permissions
     // without losing the connected account.
-    if (config.dbProvider === "instagram" && env.META_WEBHOOK_AUTO_SUBSCRIBE && accountId && accessToken) {
+    if (config.dbProvider === "instagram" && !config.analysisOnly && env.META_WEBHOOK_AUTO_SUBSCRIBE && accountId && accessToken) {
       try {
         await ensureInstagramWebhookSubscription(metadata.authType === "instagram_login" ? accountId : resolveInstagramWebhookPageId(metadata), accessToken, metadata.authType === "instagram_login");
         logger.info({ workspaceId: stateData.workspaceId, accountId }, "Instagram webhook subscription verified after OAuth");

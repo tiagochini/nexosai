@@ -25,7 +25,8 @@ import {
   type ProductCategory,
   type BudgetSimulation,
 } from "../intake/intake.simulation.js";
-import { NotFoundError, ForbiddenError, ValidationError } from "../../lib/errors.js";
+import { AppError, NotFoundError, ForbiddenError, ValidationError } from "../../lib/errors.js";
+import { trialFromSettings } from "../auth/trial-access.service.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import type { Logger } from "pino";
 import {
@@ -198,12 +199,46 @@ export async function createCampaign(
   ownerUserId?: string,
 ): Promise<Campaign> {
   const [ws] = await db
-    .select({ planId: workspacesTable.planId, activeCampaigns: workspacesTable.activeCampaigns })
+    .select({ planId: workspacesTable.planId, activeCampaigns: workspacesTable.activeCampaigns, settings: workspacesTable.settings })
     .from(workspacesTable)
     .where(eq(workspacesTable.id, workspaceId))
     .limit(1);
 
   if (!ws) throw new NotFoundError("Workspace");
+
+  if (trialFromSettings(ws.settings)) {
+    const campaign = await db.transaction(async (tx) => {
+      const [lockedWorkspace] = await tx.select().from(workspacesTable)
+        .where(eq(workspacesTable.id, workspaceId)).for("update").limit(1);
+      const trial = trialFromSettings(lockedWorkspace?.settings);
+      if (!lockedWorkspace || !trial) throw new AppError(403, "O acesso trial não está ativo.", "TRIAL_ACCESS_REQUIRED");
+      if (trial.briefingCampaignId) {
+        throw new AppError(403, "O trial já usou seu briefing. Acesse o briefing existente ou contrate uma licença para iniciar outra campanha.", "TRIAL_BRIEFING_ALREADY_USED");
+      }
+
+      const [created] = await tx.insert(campaignsTable).values({
+        workspaceId,
+        title: data.title,
+        type: data.type ?? "launch",
+        track: data.track ?? "six_digits",
+        status: "intake",
+        intakeData: data.intakeData ?? {},
+        locale: data.locale ?? "pt-BR",
+      }).returning();
+      const settings = (lockedWorkspace.settings ?? {}) as Record<string, unknown>;
+      await tx.update(workspacesTable).set({
+        activeCampaigns: (lockedWorkspace.activeCampaigns ?? 0) + 1,
+        settings: { ...settings, nexosTrial: { ...trial, briefingCampaignId: created.id } },
+      }).where(eq(workspacesTable.id, workspaceId));
+      await tx.insert(auditLogsTable).values({
+        workspaceId, campaignId: created.id, action: "trial.briefing.created", actor: ownerUserId ?? "user",
+        data: { campaignId: created.id, socialAnalysisAllowance: 1 },
+      });
+      return created;
+    });
+    log.info({ campaignId: campaign.id, workspaceId }, "Trial briefing created");
+    return campaign;
+  }
 
   const isFounder = ownerUserId ? isPlatformAdmin(ownerUserId) : false;
 

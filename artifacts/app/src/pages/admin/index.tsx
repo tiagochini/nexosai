@@ -1680,6 +1680,15 @@ export default function AdminPage() {
               >
                 + 10 Agency
               </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-none font-mono uppercase text-xs tracking-widest border-cyan-400/30 text-cyan-300 hover:bg-cyan-400/10 gap-2"
+                onClick={() => generateInvitesMutation.mutate({ count: 10, planSlug: "trial" })}
+                disabled={generateInvitesMutation.isPending}
+              >
+                + 10 Trial
+              </Button>
               <Button size="sm" variant="outline" className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline" onClick={() => refetchInvites()}>
                 <RefreshCw className="h-3 w-3" />
               </Button>
@@ -1687,7 +1696,7 @@ export default function AdminPage() {
           </div>
 
           <p className="font-mono text-[11px] text-muted-foreground/50 border border-border/30 bg-card/30 px-4 py-3">
-            💡 {t("Para usar: na tela de cadastro do NexOS, o convidado digita o código de convite e ganha acesso ao plano correspondente sem pagar.", "How to use: on the NexOS registration page, the invitee enters the code to access the corresponding plan at no cost.", "Uso: en la página de registro de NexOS, el invitado introduce el código y obtiene acceso al plan correspondiente sin pagar.")}
+            💡 {t("Códigos Solo e Agency liberam a licença correspondente. O código Trial libera 1 briefing e 1 análise de redes sociais, sem acesso aos demais recursos.", "Solo and Agency codes grant the matching license. A Trial code grants one briefing and one social network analysis, with other features restricted.", "Los códigos Solo y Agency conceden la licencia correspondiente. Un código Trial permite 1 briefing y 1 análisis de redes sociales; los demás recursos quedan restringidos.")}
           </p>
 
           {loadingInvites ? (
@@ -1712,8 +1721,8 @@ export default function AdminPage() {
                       <div key={c.id} className="border border-border/40 bg-card/30 px-4 py-3 flex items-center justify-between gap-3">
                         <div>
                           <span className="font-mono text-base font-bold text-primary tracking-widest">{c.code}</span>
-                          <span className={`ml-3 text-[11px] font-mono uppercase tracking-widest px-1.5 py-0.5 border ${c.planSlug === "agency" ? "text-success border-success/30 bg-success/10" : "text-primary border-primary/30 bg-primary/10"}`}>
-                            {c.planSlug}
+                          <span className={`ml-3 text-[11px] font-mono uppercase tracking-widest px-1.5 py-0.5 border ${c.planSlug === "trial" ? "text-cyan-300 border-cyan-400/30 bg-cyan-400/10" : c.planSlug === "agency" ? "text-success border-success/30 bg-success/10" : "text-primary border-primary/30 bg-primary/10"}`}>
+                            {c.planSlug === "trial" ? "Trial · 1 briefing + 1 análise social" : c.planSlug}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">

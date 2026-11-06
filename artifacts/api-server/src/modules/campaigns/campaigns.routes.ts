@@ -28,9 +28,11 @@ import { AppError, ValidationError } from "../../lib/errors.js";
 import { db, campaignsTable, auditLogsTable, workspacesTable, masterplanVersionsTable, CAMPAIGN_CREDIT_BUFFER } from "@workspace/db";
 import { and, eq, isNotNull } from "drizzle-orm";
 import { analyzeSocialProfile } from "../agents/social-profile-analyzer.agent.js";
-import { getAccountsWithAnalytics } from "../social/social.service.js";
+import { getAccountsWithAnalytics, getConnectedAccounts, getFacebookPageAnalyticsForIntegration } from "../social/social.service.js";
+import { isOrganicSocialIntegration } from "../integrations/integration-purpose.js";
 import { determineSocialDiagnosisStatus } from "./social-diagnosis.policy.js";
 import { resolveSocialMediaEntitlement } from "../billing/commercial-entitlements.service.js";
+import { finishTrialSocialAnalysis, getWorkspaceTrial, reserveTrialSocialAnalysis } from "../auth/trial-access.service.js";
 import {
   getIntakeQuestions,
   validateIntakeCompleteness,
@@ -50,7 +52,26 @@ router.get("/:id/social-diagnosis", async (req, res): Promise<void> => {
   if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "NOT_FOUND" }); return; }
   const brain = (campaign.brainData ?? {}) as Record<string, unknown>;
   const entitlement = await resolveSocialMediaEntitlement(req.auth.workspaceId);
-  res.json({ diagnosis: brain.socialDiagnosis ?? null, entitlement });
+  const trial = await getWorkspaceTrial(req.auth.workspaceId);
+  const integrations = (await getConnectedAccounts(req.auth.workspaceId)).filter((account) =>
+    account.status === "connected" && isOrganicSocialIntegration(account.metadata as Record<string, unknown> | null),
+  );
+  const connectedAccounts = integrations.flatMap((account) => {
+    const metadata = (account.metadata ?? {}) as Record<string, unknown>;
+    if (account.provider === "instagram") {
+      const instagramName = String(metadata["igUsername"] ?? account.accountName ?? "");
+      const items: Array<{ id: string; platform: string; name: string; handle: string }> = [{ id: account.id, platform: "instagram", name: instagramName, handle: instagramName.startsWith("@") ? instagramName : `@${instagramName}` }];
+      if (metadata["pageId"] && metadata["facebookPageDisconnected"] !== true) {
+        const pageName = String(metadata["accountName"] ?? "Página do Facebook");
+        items.push({ id: account.id, platform: "facebook", name: pageName, handle: pageName });
+      }
+      return items;
+    }
+    if (account.provider === "facebook") return [{ id: account.id, platform: "facebook", name: account.accountName ?? "Página do Facebook", handle: account.accountName ?? "Página do Facebook" }];
+    if (account.provider === "tiktok_ads") return [{ id: account.id, platform: "tiktok", name: account.accountName ?? "TikTok", handle: account.accountName ?? "TikTok" }];
+    return [];
+  });
+  res.json({ diagnosis: brain.socialDiagnosis ?? null, entitlement, trialAccess: trial != null, socialAnalysisAvailable: entitlement.active || trial?.socialAnalysisStatus === "available", connectedAccounts });
 });
 
 function cleanSocialHandle(value: string): string {
@@ -64,6 +85,7 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
   const parsed = z.object({
     platform: z.enum(["instagram", "facebook", "tiktok"]),
     handle: z.string().min(1).max(200),
+    integrationId: z.string().uuid().optional(),
   }).safeParse(req.body ?? {});
   if (!parsed.success) { res.status(400).json({ error: "Informe a rede e o perfil público.", code: "VALIDATION_ERROR" }); return; }
 
@@ -71,12 +93,54 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
     .from(campaignsTable).where(and(eq(campaignsTable.id, id), eq(campaignsTable.workspaceId, req.auth.workspaceId))).limit(1);
   if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "NOT_FOUND" }); return; }
   const entitlement = await resolveSocialMediaEntitlement(req.auth.workspaceId);
-  if (!entitlement.active) {
+  const trial = await getWorkspaceTrial(req.auth.workspaceId);
+  const existingDiagnosis = ((campaign.brainData ?? {}) as Record<string, unknown>).socialDiagnosis as Record<string, unknown> | undefined;
+  let handle = cleanSocialHandle(parsed.data.handle);
+  if (trial && trial.socialAnalysisStatus !== "available") {
+    if (existingDiagnosis && existingDiagnosis.platform === parsed.data.platform && String(existingDiagnosis.handle ?? "").toLowerCase() === handle.toLowerCase()) {
+      res.json({ diagnosis: existingDiagnosis, cached: true });
+      return;
+    }
+    const isReserved = trial.socialAnalysisStatus === "reserved";
+    res.status(isReserved ? 409 : 403).json({
+      error: isReserved ? "A análise social do trial já está em andamento." : "A análise de redes sociais incluída no trial já foi utilizada.",
+      code: isReserved ? "TRIAL_SOCIAL_ANALYSIS_IN_PROGRESS" : "TRIAL_SOCIAL_ANALYSIS_USED",
+    });
+    return;
+  }
+  if (!entitlement.active && !trial) {
     res.status(403).json({ error: "O diagnóstico social exige um contrato de Social Media vigente.", code: "SOCIAL_MEDIA_ENTITLEMENT_REQUIRED", entitlement }); return;
+  }
+  const selectedIntegration = parsed.data.integrationId
+    ? (await getConnectedAccounts(req.auth.workspaceId)).find((account) => {
+      if (account.id !== parsed.data.integrationId || account.status !== "connected" || !isOrganicSocialIntegration(account.metadata as Record<string, unknown> | null)) return false;
+      const metadata = (account.metadata ?? {}) as Record<string, unknown>;
+      if (parsed.data.platform === "instagram") return account.provider === "instagram";
+      if (parsed.data.platform === "facebook") return account.provider === "facebook" || (account.provider === "instagram" && !!metadata["pageId"] && metadata["facebookPageDisconnected"] !== true);
+      return account.provider === "tiktok_ads";
+    })
+    : undefined;
+  if (parsed.data.integrationId && !selectedIntegration) {
+    res.status(400).json({ error: "A conta selecionada não está conectada a esta rede neste workspace.", code: "SOCIAL_DIAGNOSIS_ACCOUNT_MISMATCH" }); return;
+  }
+  if (selectedIntegration) {
+    const metadata = (selectedIntegration.metadata ?? {}) as Record<string, unknown>;
+    const canonicalHandle = parsed.data.platform === "instagram"
+      ? String(metadata["igUsername"] ?? selectedIntegration.accountName ?? "")
+      : parsed.data.platform === "facebook"
+        ? String(metadata["accountName"] ?? selectedIntegration.accountName ?? "")
+        : String(metadata["displayName"] ?? selectedIntegration.accountName ?? "");
+    if (canonicalHandle) handle = cleanSocialHandle(canonicalHandle);
   }
   if (campaign.status !== "intake") { res.status(409).json({ error: "O diagnóstico só pode ser gerado enquanto o briefing estiver em edição.", code: "SOCIAL_DIAGNOSIS_PHASE_CLOSED" }); return; }
 
-  const handle = cleanSocialHandle(parsed.data.handle);
+  const trialReserved = trial ? await reserveTrialSocialAnalysis(req.auth.workspaceId) : false;
+  if (trial && !trialReserved) {
+    res.status(409).json({ error: "A análise social do trial foi iniciada em outra solicitação. Atualize a página e confira o resultado.", code: "TRIAL_SOCIAL_ANALYSIS_IN_PROGRESS" });
+    return;
+  }
+
+  try {
   const intake = (campaign.intakeData ?? {}) as Record<string, unknown>;
   const businessContext = Object.entries(intake)
     .filter(([key]) => !key.startsWith("_"))
@@ -85,7 +149,15 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
   const analysis = await analyzeSocialProfile(parsed.data.platform, handle, businessContext, req.log);
   const accounts = await getAccountsWithAnalytics(req.auth.workspaceId);
   const normalizedHandle = handle.toLowerCase().replace(/^@/, "");
-  const connected = accounts.find((account) => account.provider === parsed.data.platform && account.accountName.toLowerCase().replace(/^@/, "") === normalizedHandle);
+  let connected = parsed.data.integrationId
+    ? accounts.find((account) => account.integrationId === parsed.data.integrationId &&
+      ((parsed.data.platform === "instagram" && account.provider === "instagram") ||
+       (parsed.data.platform === "facebook" && account.provider === "facebook") ||
+       (parsed.data.platform === "tiktok" && account.provider === "tiktok")))
+    : accounts.find((account) => account.provider === parsed.data.platform && account.accountName.toLowerCase().replace(/^@/, "") === normalizedHandle);
+  if (!connected && selectedIntegration && parsed.data.platform === "facebook" && selectedIntegration.provider === "instagram") {
+    connected = (await getFacebookPageAnalyticsForIntegration(req.auth.workspaceId, selectedIntegration.id)) ?? undefined;
+  }
   const accountEvidence = connected ? {
     source: "connected_account_insights",
     account: connected.accountName,
@@ -110,6 +182,7 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
     status: evidenceStatus,
     platform: parsed.data.platform,
     handle,
+    connectedIntegrationId: selectedIntegration?.id ?? null,
     generatedAt: new Date().toISOString(),
     campaignContext: {
       product: intake["product.name"] ?? intake["product.nome"] ?? null,
@@ -125,6 +198,7 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
       contentAnalysis: analysis.contentAnalysis,
       strategicAnalysis: analysis.strategicAnalysis,
       gapAnalysis: analysis.gapAnalysis,
+      competitorAnalysis: analysis.competitorAnalysis,
       actionPlan: analysis.actionPlan,
       searchSourced: analysis.searchSourced,
       sources: analysis.sources,
@@ -143,7 +217,12 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
   await db.update(campaignsTable).set({ brainData: { ...brainData, socialDiagnosis: diagnosis } as any, updatedAt: new Date() })
     .where(and(eq(campaignsTable.id, id), eq(campaignsTable.workspaceId, req.auth.workspaceId)));
   await db.insert(auditLogsTable).values({ workspaceId: req.auth.workspaceId, campaignId: id, action: "campaign.social_diagnosis.generated", actor: req.auth.userId, data: { platform: diagnosis.platform, handle: diagnosis.handle, status: diagnosis.status, accountMetricsIncluded: Boolean(accountEvidence), publicSearchCited: hasCitedPublicResearch } });
+  if (trialReserved) await finishTrialSocialAnalysis(req.auth.workspaceId, "used");
   res.json({ diagnosis });
+  } catch (error) {
+    if (trialReserved) await finishTrialSocialAnalysis(req.auth.workspaceId, "available");
+    throw error;
+  }
 });
 
 router.post("/:id/social-diagnosis/approve", async (req, res): Promise<void> => {

@@ -42,6 +42,12 @@ export interface SocialProfileAnalysis {
     threats: string[];             // concorrentes, saturação de nicho etc.
   };
 
+  competitorAnalysis: {
+    competitors: Array<{ name: string; profile: string; observedPositioning: string; contentSignals: string[]; sourceUrl: string }>;
+    marketPatterns: string[];
+    differentiationOpportunities: string[];
+  };
+
   // Gap vs objetivos comerciais
   gapAnalysis: {
     alignmentScore: number;        // 0-10: quão alinhado está o perfil com os objetivos
@@ -200,13 +206,16 @@ ${businessContext || "Não informado — faça uma análise geral de posicioname
 2. Analise o conteúdo público disponível: bio, posts recentes, temas, tom, frequência, engajamento aparente.
 3. Compare o estado atual com os objetivos comerciais.
 4. Identifique gaps críticos e oportunidades de crescimento rápido.
-5. Produza um plano de ação concreto e específico (não genérico).
+5. Pesquise de 2 a 5 concorrentes ou referências públicas do mesmo nicho/região. Priorize concorrentes diretos; se não encontrar concorrentes verificáveis, explique isso e use referências do nicho sem apresentá-las como concorrentes diretos.
+6. Compare posicionamento e sinais de conteúdo observáveis, cite URLs públicas como fonte e derive oportunidades de diferenciação. Não invente nomes, dados ou URLs.
+7. Produza um plano de ação concreto e específico (não genérico).
 
 ## REGRAS
 - Seja específico e cirúrgico: nomes de posts, temas reais encontrados, comparações concretas.
 - Não invente dados. Se não encontrou algo, diga "não encontrado publicamente" — não estime falsamente.
 - O plano de ação deve ser adaptado ao negócio específico, não um template genérico.
 - Se o perfil for privado ou não encontrado, explique e faça uma análise de nicho/concorrentes.
+- Separe concorrentes diretos de referências; se uma evidência não foi encontrada, retorne lista vazia em vez de preencher por suposição.
 
 ## FORMATO DE SAÍDA
 Retorne APENAS JSON válido (sem markdown, sem blocos de código, sem texto extra):
@@ -232,6 +241,11 @@ Retorne APENAS JSON válido (sem markdown, sem blocos de código, sem texto extr
     "weaknesses": ["string"],
     "opportunities": ["string"],
     "threats": ["string"]
+  },
+  "competitorAnalysis": {
+    "competitors": [{"name": "string", "profile": "string", "observedPositioning": "string", "contentSignals": ["string"], "sourceUrl": "URL pública verificável"}],
+    "marketPatterns": ["string — padrões observados nas fontes"],
+    "differentiationOpportunities": ["string — como diferenciar a campanha"]
   },
   "gapAnalysis": {
     "alignmentScore": 7,
@@ -271,6 +285,7 @@ function parseAnalysisJSON(rawText: string, platform: string, handle: string): S
       captionStyle: "Não encontrado",
     },
     strategicAnalysis: { strengths: [], weaknesses: [], opportunities: [], threats: [] },
+    competitorAnalysis: { competitors: [], marketPatterns: [], differentiationOpportunities: [] },
     gapAnalysis: { alignmentScore: 0, criticalGaps: [], quickWins: [] },
     actionPlan: { immediate: [], shortTerm: [], longTerm: [], contentCalendarHint: "" },
     searchSourced: false,
@@ -298,6 +313,7 @@ function parseAnalysisJSON(rawText: string, platform: string, handle: string): S
       overview: { ...base.overview, ...(parsed.overview ?? {}) },
       contentAnalysis: { ...base.contentAnalysis, ...(parsed.contentAnalysis ?? {}) },
       strategicAnalysis: { ...base.strategicAnalysis, ...(parsed.strategicAnalysis ?? {}) },
+      competitorAnalysis: { ...base.competitorAnalysis, ...(parsed.competitorAnalysis ?? {}) },
       gapAnalysis: { ...base.gapAnalysis, ...(parsed.gapAnalysis ?? {}) },
       actionPlan: { ...base.actionPlan, ...(parsed.actionPlan ?? {}) },
     };

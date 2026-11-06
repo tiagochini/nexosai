@@ -78,10 +78,12 @@ import realizationRouter from "../modules/realization/realization.routes.js";
 import councilRouter from "../modules/operational-council/council.routes.js";
 import m11SocialIntelligenceRouter from "../modules/m11-social-intelligence/m11-social-intelligence.routes.js";
 import { env } from "../lib/env.js";
+import { enforceTrialScope } from "../modules/auth/trial-scope.middleware.js";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(enforceTrialScope);
 router.use("/auth", authRouter);
 router.use("/credits", creditsRouter);
 router.use("/plans", plansRouter);

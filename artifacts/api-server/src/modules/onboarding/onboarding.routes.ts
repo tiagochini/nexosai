@@ -4,6 +4,7 @@ import { requireAuth } from "../auth/auth.middleware.js";
 import { db, campaignsTable, workspacesTable, commercialProductsTable, commercialSubscriptionsTable } from "@workspace/db";
 import { and, asc, eq, count } from "drizzle-orm";
 import { AppError } from "../../lib/errors.js";
+import { getWorkspaceTrial } from "../auth/trial-access.service.js";
 
 import { createCampaign } from "../campaigns/campaigns.service.js";
 import { saveIntakeData } from "../intake/intake.service.js";
@@ -21,6 +22,7 @@ const router = Router();
 router.use(requireAuth);
 
 async function resolveOnboardingSubscription(workspaceId: string) {
+  if (await getWorkspaceTrial(workspaceId)) return { trialAccess: true as const };
   const subscriptions = await db.select({
     id: commercialSubscriptionsTable.id,
     productId: commercialSubscriptionsTable.productId,
@@ -41,7 +43,7 @@ async function resolveOnboardingSubscription(workspaceId: string) {
   if (!subscription) {
     throw new AppError(403, "É necessária uma assinatura ativa para iniciar um briefing.", "ACTIVE_COMMERCIAL_SUBSCRIPTION_REQUIRED");
   }
-  return { commercialProductId: subscription.productId, commercialSubscriptionId: subscription.id };
+  return { trialAccess: false as const, commercialProductId: subscription.productId, commercialSubscriptionId: subscription.id };
 }
 
 // ─── Onboarding status ────────────────────────────────────────────────────────
@@ -60,6 +62,7 @@ router.get("/status", async (req, res): Promise<void> => {
     .limit(1);
 
   const total = campaignCount?.count ?? 0;
+  const trial = await getWorkspaceTrial(req.auth.workspaceId);
   const daysSinceCreation = workspace?.createdAt
     ? Math.floor((Date.now() - new Date(workspace.createdAt).getTime()) / 86_400_000)
     : 0;
@@ -69,6 +72,9 @@ router.get("/status", async (req, res): Promise<void> => {
     campaignCount: total,
     daysSinceCreation,
     workspaceName: workspace?.name ?? "",
+    trialAccess: trial != null,
+    trialBriefingCampaignId: trial?.briefingCampaignId ?? null,
+    trialSocialAnalysisAvailable: trial?.socialAnalysisStatus === "available",
   });
 });
 
@@ -90,6 +96,9 @@ router.post("/start", async (req, res): Promise<void> => {
 
   const { path, title } = parsed.data;
   const commercialAccess = await resolveOnboardingSubscription(req.auth.workspaceId);
+  if (commercialAccess.trialAccess && path !== "has_product") {
+    throw new AppError(403, "O trial permite iniciar um briefing estratégico. Os outros cenários exigem uma licença.", "TRIAL_SCOPE_RESTRICTED");
+  }
 
   let campaign;
 
@@ -98,7 +107,7 @@ router.post("/start", async (req, res): Promise<void> => {
       title: title ?? "Meu Primeiro Lançamento",
       type: "launch",
       track: "six_digits",
-      ...commercialAccess,
+      ...("commercialProductId" in commercialAccess ? { commercialProductId: commercialAccess.commercialProductId, commercialSubscriptionId: commercialAccess.commercialSubscriptionId } : {}),
       intakeData: { _onboardingPath: "has_product" },
     }, req.log);
   } else if (path === "building_product") {
@@ -106,7 +115,7 @@ router.post("/start", async (req, res): Promise<void> => {
       title: title ?? "Produto em Desenvolvimento",
       type: "launch",
       track: "six_digits",
-      ...commercialAccess,
+      ...("commercialProductId" in commercialAccess ? { commercialProductId: commercialAccess.commercialProductId, commercialSubscriptionId: commercialAccess.commercialSubscriptionId } : {}),
       intakeData: { _onboardingPath: "building_product" },
     }, req.log);
   } else if (path === "affiliate_nexos") {
@@ -114,7 +123,7 @@ router.post("/start", async (req, res): Promise<void> => {
       title: "Afiliado NexOS AI",
       type: "affiliate",
       track: "six_digits",
-      ...commercialAccess,
+      ...("commercialProductId" in commercialAccess ? { commercialProductId: commercialAccess.commercialProductId, commercialSubscriptionId: commercialAccess.commercialSubscriptionId } : {}),
       intakeData: {
         _onboardingPath: "affiliate_nexos",
         "product.name": "NexOS AI",
@@ -135,7 +144,7 @@ router.post("/start", async (req, res): Promise<void> => {
       title: titleMap[subPath] ?? "Monetização de Audiência",
       type: "creator_monetization",
       track: "six_digits",
-      ...commercialAccess,
+      ...("commercialProductId" in commercialAccess ? { commercialProductId: commercialAccess.commercialProductId, commercialSubscriptionId: commercialAccess.commercialSubscriptionId } : {}),
       intakeData: {
         _onboardingPath: "has_audience",
         _audienceSubPath: subPath,

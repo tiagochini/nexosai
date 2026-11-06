@@ -85,6 +85,21 @@ router.post("/register", requireTrustedSessionOrigin, async (req, res): Promise<
     }
     validBasePlan = plan.slug;
   }
+  let trialInvite = false;
+  if (parsed.data.inviteCode) {
+    const code = parsed.data.inviteCode.toUpperCase().trim();
+    const [invite] = await db.select({ planSlug: inviteCodesTable.planSlug, used: inviteCodesTable.used })
+      .from(inviteCodesTable).where(eq(inviteCodesTable.code, code)).limit(1);
+    if (!invite || invite.used) {
+      res.status(400).json({ error: "Código de convite inválido ou já utilizado.", code: "INVALID_INVITE_CODE" });
+      return;
+    }
+    trialInvite = invite.planSlug === "trial";
+  }
+  if (trialInvite && (validSalesOffer || validBasePlan)) {
+    res.status(400).json({ error: "Use o código trial sozinho; a licença comercial pode ser contratada depois.", code: "TRIAL_INVITE_CANNOT_COMBINE_PURCHASE" });
+    return;
+  }
   if (!platformOpen && !parsed.data.inviteCode && !validSalesOffer && !validBasePlan) {
     res.status(423).json({
       code: "PLATFORM_CLOSED",
@@ -101,6 +116,7 @@ router.post("/register", requireTrustedSessionOrigin, async (req, res): Promise<
         initialCredits: 0,
         pendingSalesCheckout: true,
       } : {}),
+      ...(trialInvite ? { initialCredits: 0, trialAccess: true } : {}),
     }, req.log);
 
     // Mark invite code as used after registration.
@@ -141,7 +157,7 @@ router.post("/register", requireTrustedSessionOrigin, async (req, res): Promise<
               usedByWorkspaceId: workspace.id,
               usedAt: new Date(),
             })
-            .where(eq(inviteCodesTable.code, code));
+            .where(and(eq(inviteCodesTable.code, code), eq(inviteCodesTable.used, false)));
 
           req.log.info({ workspaceId: workspace.id }, "Invite code marked used (access gate only, plan unaffected)");
         }

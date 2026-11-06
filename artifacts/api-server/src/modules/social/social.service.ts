@@ -852,6 +852,28 @@ export async function getAccountsWithAnalytics(workspaceId: string): Promise<Acc
   });
 }
 
+/** Fetch Page analytics from a legacy Instagram/Facebook OAuth connection by its exact integration ID. */
+export async function getFacebookPageAnalyticsForIntegration(workspaceId: string, integrationId: string): Promise<AccountAnalytics | null> {
+  const [integration] = await db.select({
+    id: workspaceIntegrationsTable.id,
+    provider: workspaceIntegrationsTable.provider,
+    status: workspaceIntegrationsTable.status,
+    accountId: workspaceIntegrationsTable.accountId,
+    accountName: workspaceIntegrationsTable.accountName,
+    accessToken: workspaceIntegrationsTable.accessToken,
+    metadata: workspaceIntegrationsTable.metadata,
+  }).from(workspaceIntegrationsTable).where(and(
+    eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+    eq(workspaceIntegrationsTable.id, integrationId),
+    inArray(workspaceIntegrationsTable.provider, ["instagram", "facebook"]),
+    eq(workspaceIntegrationsTable.status, "connected"),
+  )).limit(1);
+  const metadata = (integration?.metadata ?? {}) as Record<string, unknown>;
+  const pageId = typeof metadata?.["pageId"] === "string" ? metadata["pageId"] : null;
+  if (!integration || !pageId || metadata?.["facebookPageDisconnected"] === true || !isOrganicSocialIntegration(metadata)) return null;
+  return fetchFacebookAnalytics(integration.id, pageId, String(metadata["accountName"] ?? integration.accountName ?? "Facebook Page"), integration.accessToken ?? "", integration.status);
+}
+
 // ─── Posts ────────────────────────────────────────────────────────────────────
 
 export async function createPost(

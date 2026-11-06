@@ -65,6 +65,8 @@ export interface RegisterInput {
   initialCredits?: number;
   /** Internal marker for public sales signups; access stays behind billing until confirmation. */
   pendingSalesCheckout?: boolean;
+  /** Internal marker set only by a valid, unused trial invite code. */
+  trialAccess?: boolean;
 }
 
 export interface LoginInput {
@@ -180,6 +182,7 @@ export async function registerUser(
           settings: {
             referralCode: myReferralCode,
             referralCount: 0,
+            ...(input.trialAccess ? { nexosTrial: { active: true, briefingCampaignId: null, socialAnalysisStatus: "available" } } : {}),
             ...(input.pendingSalesCheckout ? { pendingSalesCheckout: true } : {}),
             ...(input.referralCode ? { referredBy: input.referralCode } : {}),
           },

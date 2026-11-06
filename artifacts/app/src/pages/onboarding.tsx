@@ -417,6 +417,8 @@ export default function Onboarding() {
   const [path, setPath] = useState<OnboardingPath | null>(null);
   const [campaignId, setCampaignId] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [trialAccess, setTrialAccess] = useState(false);
+  const [trialBriefingCampaignId, setTrialBriefingCampaignId] = useState<string | null>(null);
   const [simulatorBanner, setSimulatorBanner] = useState<SimulatorData | null>(null);
   const [resumeCheck, setResumeCheck] = useState<"checking" | "resolved" | "error">("checking");
 
@@ -451,15 +453,31 @@ export default function Onboarding() {
   // retry screen; only the user's own confirmed choice moves past it.
   const checkForResumableCampaign = async () => {
     setResumeCheck("checking");
-    const saved = loadOnboardingState();
-    if (saved && saved.messages.length > 0 && saved.campaignId) {
-      setPath(saved.path);
-      setCampaignId(saved.campaignId);
-      setStep(saved.step);
-      setMessages(saved.messages);
-      setConversationComplete(saved.conversationComplete);
-      if (saved.audienceSubPath) setAudienceSubPath(saved.audienceSubPath);
-      setResumeCheck("resolved");
+    try {
+      const status = await customFetch<{
+        trialAccess?: boolean;
+        trialBriefingCampaignId?: string | null;
+      }>("/api/onboarding/status");
+      const isTrial = status.trialAccess === true;
+      setTrialAccess(isTrial);
+      setTrialBriefingCampaignId(status.trialBriefingCampaignId ?? null);
+
+      const saved = loadOnboardingState();
+      if (saved && saved.messages.length > 0 && saved.campaignId) {
+        if (!isTrial || saved.path === "has_product") {
+          setPath(saved.path);
+          setCampaignId(saved.campaignId);
+          setStep(saved.step);
+          setMessages(saved.messages);
+          setConversationComplete(saved.conversationComplete);
+          if (saved.audienceSubPath) setAudienceSubPath(saved.audienceSubPath);
+          setResumeCheck("resolved");
+          return;
+        }
+        clearOnboardingState();
+      }
+    } catch {
+      setResumeCheck("error");
       return;
     }
 
@@ -529,6 +547,14 @@ export default function Onboarding() {
 
   // ── Select path and create campaign ──────────────────────────────────────────
   const handlePathSelect = async (selectedPath: OnboardingPath) => {
+    if (trialAccess && trialBriefingCampaignId) {
+      setLocation(`/campaigns/${trialBriefingCampaignId}/intake`);
+      return;
+    }
+    if (trialAccess && selectedPath !== "has_product") {
+      toast.error(t("O trial inclui somente o briefing estratégico e uma análise de redes sociais.", "The trial includes only the strategic briefing and one social media analysis.", "La prueba incluye solo el briefing estratégico y un análisis de redes sociales."));
+      return;
+    }
     if (selectedPath === "has_audience") {
       setPath(selectedPath);
       setStep("audience_subpath");
@@ -557,7 +583,10 @@ export default function Onboarding() {
       saveOnboardingState({ path: selectedPath, campaignId: cid, step: "conversation", messages: initMsgs, conversationComplete: false });
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
-        toast.error(t("Limite de campanhas atingido. Acesse sua campanha existente ou faça upgrade do plano.", "Campaign limit reached. Open an existing campaign or upgrade your plan.", "Has alcanzado el límite de campañas. Accede a una campaña existente o mejora tu plan."), { duration: 6000 });
+        const isCampaignLimit = /campaign limit reached|limite de campanhas atingido/i.test(err.message);
+        toast.error(isCampaignLimit
+          ? t("Limite de campanhas atingido. Acesse sua campanha existente ou faça upgrade do plano.", "Campaign limit reached. Open an existing campaign or upgrade your plan.", "Has alcanzado el límite de campañas. Accede a una campaña existente o mejora tu plan.")
+          : err.message, { duration: 6000 });
       } else {
         toast.error(t("Erro ao iniciar. Tente novamente.", "Couldn't get started. Please try again.", "No se pudo iniciar. Inténtalo de nuevo."));
       }
@@ -592,7 +621,10 @@ export default function Onboarding() {
       saveOnboardingState({ path: "has_audience", campaignId: cid, step: "conversation", messages: initMsgs, conversationComplete: false, audienceSubPath: subPath });
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
-        toast.error(t("Limite de campanhas atingido. Acesse sua campanha existente ou faça upgrade do plano.", "Campaign limit reached. Open an existing campaign or upgrade your plan.", "Has alcanzado el límite de campañas. Accede a una campaña existente o mejora tu plan."), { duration: 6000 });
+        const isCampaignLimit = /campaign limit reached|limite de campanhas atingido/i.test(err.message);
+        toast.error(isCampaignLimit
+          ? t("Limite de campanhas atingido. Acesse sua campanha existente ou faça upgrade do plano.", "Campaign limit reached. Open an existing campaign or upgrade your plan.", "Has alcanzado el límite de campañas. Accede a una campaña existente o mejora tu plan.")
+          : err.message, { duration: 6000 });
       } else {
         toast.error(t("Erro ao iniciar. Tente novamente.", "Couldn't get started. Please try again.", "No se pudo iniciar. Inténtalo de nuevo."));
       }
@@ -1033,7 +1065,9 @@ export default function Onboarding() {
                 {t("Responda às perguntas do time de agentes — eles descobrirão o melhor caminho para você", "Answer the agent team's questions — they'll find the best path for you", "Responde las preguntas del equipo de agentes: descubrirán el mejor camino para ti")}
               </p>
               <button
-                onClick={() => handlePathSelect("has_product")}
+                onClick={() => trialBriefingCampaignId
+                  ? setLocation(`/campaigns/${trialBriefingCampaignId}/intake`)
+                  : handlePathSelect("has_product")}
                 disabled={starting}
                 className="w-full md:w-auto inline-flex items-center justify-center gap-3 rounded-none font-mono uppercase tracking-widest font-black btn-weapon-primary h-14 px-12 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -1041,13 +1075,23 @@ export default function Onboarding() {
                   ? <Loader2 className="h-5 w-5 animate-spin" />
                   : <Rocket className="h-5 w-5" />
                 }
-                {t("Começar briefing", "Start briefing", "Comenzar briefing")}
+                {trialBriefingCampaignId
+                  ? t("Continuar briefing", "Continue briefing", "Continuar briefing")
+                  : t("Começar briefing", "Start briefing", "Comenzar briefing")}
               </button>
             </div>
           </div>
 
-          {/* ── SECONDARY — specific paths ──────────────────────────────── */}
-          <div className="mb-4">
+          {/* Trial access is limited to one strategic briefing; paid product discovery paths stay hidden. */}
+          {trialAccess ? (
+            <div className="border border-emerald-400/30 bg-emerald-400/5 p-4 text-center">
+              <p className="font-mono text-xs text-emerald-300">
+                {trialBriefingCampaignId
+                  ? t("Seu briefing de avaliação já foi iniciado. Continue de onde parou.", "Your trial briefing has already started. Continue where you left off.", "Tu briefing de prueba ya comenzó. Continúa donde lo dejaste.")
+                  : t("A avaliação inclui 1 briefing estratégico e 1 análise de redes sociais. Os demais recursos são liberados com uma licença.", "The trial includes 1 strategic briefing and 1 social media analysis. Other features require a license.", "La prueba incluye 1 briefing estratégico y 1 análisis de redes sociales. Las demás funciones requieren una licencia.")}
+              </p>
+            </div>
+          ) : <div className="mb-4">
             <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 text-center mb-4">
               {t("Ou escolha um cenário específico", "Or choose a specific scenario", "O elige un escenario específico")}
             </p>
@@ -1088,7 +1132,7 @@ export default function Onboarding() {
                 );
               })}
             </div>
-          </div>
+          </div>}
         </div>
       </div>
     );
