@@ -598,6 +598,14 @@ export default function AdminPage() {
     staleTime: 15_000,
   });
 
+  const { data: providerBalances, isLoading: loadingProviderBalances, isFetching: refreshingProviderBalances, isError: providerBalanceError, refetch: refetchProviderBalances } = useQuery({
+    queryKey: ["/api/admin/provider-balances"],
+    enabled: isAdmin && tab === "custo",
+    queryFn: () => customFetch<{ providers: { provider: string; name: string; status: "available" | "console_only" | "not_configured" | "error"; balanceUsd: number | null; checkedAt: string | null; message: string; billingUrl: string }[] }>("/api/admin/provider-balances"),
+    staleTime: 60_000,
+    retry: false,
+  });
+
   const { data: aiPricing, isLoading: loadingAiPricing } = useQuery({
     queryKey: ["/api/admin/ai-credit-pricing"],
     enabled: isAdmin && tab === "custo",
@@ -2876,6 +2884,31 @@ export default function AdminPage() {
               <RefreshCw className="h-3 w-3" /> {t("Atualizar", "Refresh", "Actualizar")}
             </Button>
           </div>
+
+          <section className="border border-border/40 bg-card/20 p-4 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-mono text-sm font-bold">{t("Saldo das contas de API", "API account balances", "Saldos de las cuentas API")}</h3>
+                <p className="text-xs text-muted-foreground mt-1">{t("Créditos disponíveis nos provedores. Valores indisponíveis aparecem sem saldo confirmado.", "Provider credits. Unavailable balances are shown as unconfirmed.", "Créditos de los proveedores. Los saldos no disponibles aparecen sin confirmar.")}</p>
+              </div>
+              <Button variant="outline" size="sm" disabled={refreshingProviderBalances} onClick={() => void refetchProviderBalances()}>
+                <RefreshCw className={refreshingProviderBalances ? "h-3 w-3 mr-2 animate-spin" : "h-3 w-3 mr-2"} />{t("Atualizar saldos", "Refresh balances", "Actualizar saldos")}
+              </Button>
+            </div>
+            {loadingProviderBalances ? <p role="status">{t("Consultando saldos…", "Checking balances…", "Consultando saldos…")}</p> : providerBalanceError ? <p role="alert" className="text-sm text-destructive">{t("Não foi possível carregar os saldos. Tente atualizar.", "Could not load balances. Try refreshing.", "No se pudieron cargar los saldos. Intenta actualizar.")}</p> : (
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {providerBalances?.providers.map(provider => (
+                  <div key={provider.provider} className="border border-border/30 p-3 space-y-2">
+                    <h4 className="font-mono font-bold text-sm">{provider.name}</h4>
+                    <div className="text-xl font-mono">{provider.status === "available" && provider.balanceUsd !== null ? new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency: "USD" }).format(provider.balanceUsd) : "—"}</div>
+                    <p className="text-xs text-muted-foreground">{provider.message}</p>
+                    {provider.checkedAt && <p className="text-[10px] text-muted-foreground">{t("Consultado em", "Checked at", "Consultado el")} {new Date(provider.checkedAt).toLocaleString(intlLocale(locale))}</p>}
+                    <a className="inline-block text-xs text-primary underline" href={provider.billingUrl} target="_blank" rel="noopener noreferrer">{t("Abrir faturamento", "Open billing", "Abrir facturación")} ↗</a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.75fr)]">
             <div className="border border-primary/30 bg-primary/5 p-4 space-y-3">

@@ -859,6 +859,7 @@ export default function CampaignIntake() {
     try { return localStorage.getItem(`nexos_intake_draft_${campaignId}`) ?? ""; }
     catch { return ""; }
   });
+  const inputValueRef = useRef(inputValue);
   const [sending, setSending] = useState(false);
   const [chatComplete, setChatComplete] = useState(() => {
     try { return localStorage.getItem(`nexos:chatComplete:${campaignId}`) === "1"; }
@@ -901,11 +902,31 @@ export default function CampaignIntake() {
 
   // Persist draft to localStorage as user types — survives any page reload
   useEffect(() => {
+    inputValueRef.current = inputValue;
     try {
       if (inputValue) localStorage.setItem(draftKey, inputValue);
       else localStorage.removeItem(draftKey);
-    } catch { /* ignore */ }
+    } catch { /* storage can be unavailable in private browsing */ }
   }, [inputValue, draftKey]);
+
+  // Flush the latest draft if the browser hides or unloads the page before
+  // React's post-render persistence effect gets a chance to run.
+  useEffect(() => {
+    const flushDraft = () => {
+      try {
+        if (inputValueRef.current) localStorage.setItem(draftKey, inputValueRef.current);
+        else localStorage.removeItem(draftKey);
+      } catch { /* storage can be unavailable in private browsing */ }
+    };
+    const onVisibilityChange = () => { if (document.visibilityState === "hidden") flushDraft(); };
+    window.addEventListener("pagehide", flushDraft);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      flushDraft();
+      window.removeEventListener("pagehide", flushDraft);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [draftKey]);
 
   const [isListening, setIsListening]           = useState(false);
   const [isTranscribing, setIsTranscribing]     = useState(false);
@@ -2060,7 +2081,17 @@ export default function CampaignIntake() {
                 ref={inputRef}
                 aria-label={t("Mensagem para ajustar o briefing", "Message to adjust the briefing", "Mensaje para ajustar el briefing")}
                 value={inputValue}
-                onChange={(e) => { setInputValue(e.target.value); if (autoSendSecsLeft > 0) stopAutoSendCountdown(); }}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Write synchronously on every keystroke; the effect below is a backup.
+                  inputValueRef.current = value;
+                  try {
+                    if (value) localStorage.setItem(draftKey, value);
+                    else localStorage.removeItem(draftKey);
+                  } catch { /* storage can be unavailable in private browsing */ }
+                  setInputValue(value);
+                  if (autoSendSecsLeft > 0) stopAutoSendCountdown();
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();

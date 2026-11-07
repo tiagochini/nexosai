@@ -1,3 +1,4 @@
+import { getProviderBalances } from "./provider-balances.service.js";
 import { Router } from "express";
 import { z } from "zod";
 import { requestBillingRefund, refreshBillingRefund } from "../billing/billing-refund-request.service.js";
@@ -24,6 +25,11 @@ import { and, eq, desc, count, sql } from "drizzle-orm";
 
 const router = Router();
 router.use(requireAuth, requirePlatformAdmin);
+
+router.get("/provider-balances", async (_req, res, next): Promise<void> => {
+  res.setHeader("Cache-Control", "no-store");
+  try { res.json(await getProviderBalances()); } catch (error) { next(error); }
+});
 
 
 function assertOptionalUuid(value: string | undefined, field: string): void {
