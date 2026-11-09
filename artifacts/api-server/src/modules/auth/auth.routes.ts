@@ -85,7 +85,6 @@ router.post("/register", requireTrustedSessionOrigin, async (req, res): Promise<
     }
     validBasePlan = plan.slug;
   }
-  let trialInvite = false;
   if (parsed.data.inviteCode) {
     const code = parsed.data.inviteCode.toUpperCase().trim();
     const [invite] = await db.select({ planSlug: inviteCodesTable.planSlug, used: inviteCodesTable.used })
@@ -94,11 +93,6 @@ router.post("/register", requireTrustedSessionOrigin, async (req, res): Promise<
       res.status(400).json({ error: "Código de convite inválido ou já utilizado.", code: "INVALID_INVITE_CODE" });
       return;
     }
-    trialInvite = invite.planSlug === "trial";
-  }
-  if (trialInvite && (validSalesOffer || validBasePlan)) {
-    res.status(400).json({ error: "Use o código trial sozinho; a licença comercial pode ser contratada depois.", code: "TRIAL_INVITE_CANNOT_COMBINE_PURCHASE" });
-    return;
   }
   if (!platformOpen && !parsed.data.inviteCode && !validSalesOffer && !validBasePlan) {
     res.status(423).json({
@@ -111,12 +105,13 @@ router.post("/register", requireTrustedSessionOrigin, async (req, res): Promise<
   try {
     const tokens = await registerUser({
       ...parsed.data,
-      ...((salesOfferPlanSlug || validBasePlan) ? {
-        planSlug: salesOfferPlanSlug ?? validBasePlan!,
-        initialCredits: 0,
-        pendingSalesCheckout: true,
-      } : {}),
-      ...(trialInvite ? { initialCredits: 0, trialAccess: true } : {}),
+      // Registration alone never activates a commercial license. Even when a
+      // purchase was selected, keep the workspace in trial until its payment
+      // is confirmed by the provider.
+      planSlug: "solo",
+      initialCredits: 0,
+      trialAccess: true,
+      ...((validSalesOffer || validBasePlan) ? { pendingSalesCheckout: true } : {}),
     }, req.log);
 
     // Mark invite code as used after registration.

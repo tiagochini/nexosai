@@ -1,5 +1,6 @@
-import { eq } from "drizzle-orm";
-import { db, workspacesTable } from "@workspace/db";
+import { and, eq, gt, isNull, or } from "drizzle-orm";
+import { db, commercialProductsTable, commercialSubscriptionsTable, workspacesTable } from "@workspace/db";
+import { ADMIN_CAMPAIGN_ACCESS_PRODUCT_KEY, WORKSPACE_PLAN_ACCESS_PRODUCT_KEY } from "../billing/commercial-access.constants.js";
 
 export type TrialSocialStatus = "available" | "reserved" | "used";
 
@@ -10,7 +11,12 @@ export interface NexosTrialAccess {
 }
 
 type WorkspaceSettings = Record<string, unknown> & {
-  nexosTrial?: Partial<NexosTrialAccess>;
+  nexosTrial?: {
+    active?: boolean;
+    briefingCampaignId?: string | null;
+    socialAnalysisStatus?: TrialSocialStatus;
+    [key: string]: unknown;
+  };
 };
 
 /** Activates the limited trial without changing the workspace plan or balances. */
@@ -24,6 +30,25 @@ export function activateTrialSettings(value: unknown): WorkspaceSettings {
       active: true,
       briefingCampaignId: null,
       socialAnalysisStatus: "available",
+    },
+  };
+}
+
+/** Preserve trial provenance while marking its access as converted to a plan. */
+export function deactivateTrialSettings(value: unknown, reason: string): WorkspaceSettings {
+  const settings = value && typeof value === "object" && !Array.isArray(value)
+    ? value as WorkspaceSettings
+    : {};
+  const trial = settings.nexosTrial;
+  if (!trial || typeof trial !== "object") return { ...settings, pendingSalesCheckout: false };
+  return {
+    ...settings,
+    pendingSalesCheckout: false,
+    nexosTrial: {
+      ...trial,
+      active: false,
+      convertedAt: new Date().toISOString(),
+      conversionReason: reason,
     },
   };
 }
@@ -58,7 +83,30 @@ export function trialFromSettings(value: unknown): NexosTrialAccess | null {
 export async function getWorkspaceTrial(workspaceId: string): Promise<NexosTrialAccess | null> {
   const [workspace] = await db.select({ settings: workspacesTable.settings })
     .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
-  return trialFromSettings(workspace?.settings);
+  const trial = trialFromSettings(workspace?.settings);
+  if (!trial) return null;
+
+  // A plan or permanent campaign subscription always supersedes a stale trial
+  // marker. This also repairs access for workspaces converted before the marker
+  // was explicitly deactivated.
+  const subscriptions = await db.select({
+    productKey: commercialProductsTable.key,
+    capabilities: commercialProductsTable.capabilities,
+  }).from(commercialSubscriptionsTable)
+    .innerJoin(commercialProductsTable, eq(commercialProductsTable.id, commercialSubscriptionsTable.productId))
+    .where(and(
+      eq(commercialSubscriptionsTable.workspaceId, workspaceId),
+      eq(commercialSubscriptionsTable.status, "active"),
+      eq(commercialProductsTable.status, "active"),
+      or(isNull(commercialSubscriptionsTable.endsAt), gt(commercialSubscriptionsTable.endsAt, new Date())),
+    ));
+  const hasPlanAccess = subscriptions.some(subscription => {
+    if (subscription.productKey === WORKSPACE_PLAN_ACCESS_PRODUCT_KEY || subscription.productKey === ADMIN_CAMPAIGN_ACCESS_PRODUCT_KEY) return true;
+    const capabilities = subscription.capabilities as Record<string, unknown> | null;
+    const licensePlan = capabilities?.license_plan;
+    return Boolean(licensePlan && typeof licensePlan === "object" && typeof (licensePlan as Record<string, unknown>).slug === "string");
+  });
+  return hasPlanAccess ? null : trial;
 }
 
 /** Reserve the single social analysis under a workspace row lock to prevent concurrent duplicate use. */

@@ -19,7 +19,7 @@ import { grantCreditsInTransaction } from "../credits/credits.service.js";
 import { fetchAsaasSettlement, parseAsaasSettlement, matchesBillingSettlement, type AsaasSettlement } from "./billing-settlement.js";
 import { reconcileBillingReversal, reconcileBillingIfHeld } from "./billing-reversal.service.js";
 import { REVERSAL_EVENTS } from "../../lib/asaas-refunds.js";
-import { activatePaidPlan } from "./billing-plan-activation.js";
+import { activatePaidPlan, activateWorkspacePlanAccess } from "./billing-plan-activation.js";
 
 // ─── Asaas API ────────────────────────────────────────────────────────────────
 
@@ -510,8 +510,9 @@ async function fulfillSalesOfferPayment(trx: Parameters<Parameters<typeof db.tra
   if (fulfilled.includes(payment.id)) return;
 
   const offer = metadata.offerSnapshot;
+  let licensePlan: { id: string; maxCampaigns: number; creditsMonthly: number } | undefined;
   if (offer.planSlug) {
-    const [licensePlan] = await trx.select({ id: plansTable.id }).from(plansTable)
+    [licensePlan] = await trx.select({ id: plansTable.id, maxCampaigns: plansTable.maxCampaigns, creditsMonthly: plansTable.creditsMonthly }).from(plansTable)
       .where(eq(plansTable.slug, offer.planSlug)).limit(1);
     if (!licensePlan) throw new AppError(409, "O plano da licença desta oferta não foi encontrado", "OFFER_LICENSE_PLAN_NOT_FOUND");
     await trx.update(workspacesTable).set({ planId: licensePlan.id })
@@ -541,6 +542,9 @@ async function fulfillSalesOfferPayment(trx: Parameters<Parameters<typeof db.tra
   const periodEnd = periodDays ? addUtcDays(now, periodDays) : null;
   const accessPeriodEnd = periodEnd ?? (offer.interval === "one_time" && !offer.nexosAccessLifetime && offer.campaignsIncluded === 0 && offer.socialMediaDays > 0
     ? addUtcDays(now, offer.socialMediaDays) : null);
+  if (offer.planSlug) {
+    await activateWorkspacePlanAccess(trx, payment.workspaceId, offer.planSlug, "plan_purchase", payment.id, undefined, periodEnd);
+  }
   const [entitlement] = await trx.insert(commercialSubscriptionsTable).values({
     workspaceId: payment.workspaceId,
     productId: product.id,
@@ -550,10 +554,13 @@ async function fulfillSalesOfferPayment(trx: Parameters<Parameters<typeof db.tra
     endsAt: periodEnd,
   }).returning({ id: commercialSubscriptionsTable.id });
   if (!entitlement) throw new AppError(500, "Não foi possível ativar os benefícios da oferta", "OFFER_ENTITLEMENT_FAILED");
-  if (offer.campaignsIncluded > 0) {
+  const campaignsIncluded = offer.planSlug && licensePlan
+    ? Math.max(offer.campaignsIncluded, licensePlan.maxCampaigns)
+    : offer.campaignsIncluded;
+  if (campaignsIncluded > 0) {
     await trx.insert(entitlementGrantsTable).values({
       workspaceId: payment.workspaceId, subscriptionId: entitlement.id, capability: "campaigns",
-      value: { included: offer.campaignsIncluded, cycleEndsAt: periodEnd?.toISOString() ?? null, paymentId: payment.id }, source: "subscription",
+      value: { included: campaignsIncluded, cycleEndsAt: periodEnd?.toISOString() ?? null, paymentId: payment.id }, source: "subscription",
     });
   }
   if (offer.socialMediaDays > 0) {
@@ -562,30 +569,23 @@ async function fulfillSalesOfferPayment(trx: Parameters<Parameters<typeof db.tra
       value: { enabled: true, durationDays: offer.socialMediaDays }, source: "subscription",
     });
   }
-  if (offer.creditsIncluded > 0) {
+  const creditsIncluded = offer.planSlug && licensePlan
+    ? Math.max(offer.creditsIncluded, licensePlan.creditsMonthly)
+    : offer.creditsIncluded;
+  if (creditsIncluded > 0) {
     const creditAction = offer.interval === "monthly" ? "monthly_reset" : "purchase";
     const creditDescription = offer.interval === "monthly"
       ? `Franquia mensal renovada em ${offer.name}; saldo mensal anterior expirado`
       : `Créditos adquiridos em ${offer.name}`;
-    await grantCreditsInTransaction(trx, payment.workspaceId, offer.creditsIncluded, creditAction, creditDescription, `offer-payment:${payment.id}`);
+    await grantCreditsInTransaction(trx, payment.workspaceId, creditsIncluded, creditAction, creditDescription, `offer-payment:${payment.id}`);
   }
+  await trx.update(subscriptionPaymentsTable).set({
+    metadata: { ...(payment.metadata as Record<string, unknown>), offerCreditsGranted: creditsIncluded },
+  }).where(eq(subscriptionPaymentsTable.id, payment.id));
   await trx.update(commercialOfferContractsTable).set({
     status: "active", startedAt: contract.startedAt ?? now, currentPeriodEndsAt: accessPeriodEnd,
     fulfilledPaymentIds: [...fulfilled, payment.id], updatedAt: new Date(),
   }).where(eq(commercialOfferContractsTable.id, contract.id));
-
-  // A confirmed paid license supersedes trial scope atomically with fulfillment.
-  const [workspace] = await trx.select({ settings: workspacesTable.settings }).from(workspacesTable)
-    .where(eq(workspacesTable.id, payment.workspaceId)).limit(1).for("update");
-  const settings = workspace?.settings && typeof workspace.settings === "object" && !Array.isArray(workspace.settings)
-    ? workspace.settings as Record<string, unknown>
-    : {};
-  const trial = settings.nexosTrial;
-  if (trial && typeof trial === "object" && !Array.isArray(trial) && (trial as Record<string, unknown>).active === true) {
-    await trx.update(workspacesTable).set({
-      settings: { ...settings, nexosTrial: { ...(trial as Record<string, unknown>), active: false } },
-    }).where(eq(workspacesTable.id, payment.workspaceId));
-  }
 }
 
 export async function initiateSalesOfferPurchase(opts: {

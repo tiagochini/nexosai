@@ -27,6 +27,7 @@ const Register = lazy(() => import("@/pages/register"));
 const PublicOfferPage = lazy(() => import("@/pages/public-offer"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const InstitucionalPage = lazy(() => import("@/pages/institucional/index"));
+const ExecutionLanding = lazy(() => import("@/pages/landing"));
 const Welcome = lazy(() => import("@/pages/welcome/index"));
 const WarRoom = lazy(() => import("@/pages/war-room/index"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
@@ -156,7 +157,7 @@ function VideoEditorProtected() {
   return <VideoEditorPage />;
 }
 
-function HomeRoute() {
+function HomeRoute({ publicOnly = false }: { publicOnly?: boolean } = {}) {
   const { token } = useAuth();
   const host = window.location.hostname;
   const { data: landing, isLoading } = useQuery<{ page: { html: string } }>({
@@ -168,9 +169,9 @@ function HomeRoute() {
     },
     retry: false,
     staleTime: 60_000,
-    enabled: !token,
+    enabled: publicOnly || !token,
   });
-  if (token) return <AppLayout><Dashboard /></AppLayout>;
+  if (token && !publicOnly) return <AppLayout><Dashboard /></AppLayout>;
   if (landing?.page.html) return <PublicLanding />;
   if (isLoading) return <RouteFallback />;
   return <InstitucionalPage />;
@@ -208,11 +209,14 @@ export default function AppRoutes() {
       <Route path="/oferta/:key">{params => <PublicOfferPage offerKey={params.key} />}</Route>
       <Route path="/welcome" component={WelcomeRoute} />
       <Route path="/onboarding" component={OnboardingRoute} />
+      <Route path="/execucao-autonoma" component={ExecutionLanding} />
+      {/* Legacy/default CMS landing route, with the institutional homepage as fallback. */}
+      <Route path="/landing" component={() => <HomeRoute publicOnly />} />
       <Route path="/landing/:slug">{params => <PublicLanding slug={params.slug} />}</Route>
       <Route path="/war-room/:id">
         {() => <ProtectedRoute><WarRoom /></ProtectedRoute>}
       </Route>
-      <Route path="/" component={HomeRoute} />
+      <Route path="/" component={() => <HomeRoute />} />
       <Route path="/dashboard" component={DashboardRoute} />
       <Route path="/campaigns">
         {() => (

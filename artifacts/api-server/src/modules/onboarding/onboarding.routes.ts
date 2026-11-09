@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { db, campaignsTable, workspacesTable, commercialProductsTable, commercialSubscriptionsTable } from "@workspace/db";
-import { and, asc, eq, count } from "drizzle-orm";
+import { and, asc, eq, count, gt, isNull, or } from "drizzle-orm";
 import { AppError } from "../../lib/errors.js";
 import { getWorkspaceTrial } from "../auth/trial-access.service.js";
 
@@ -22,7 +22,6 @@ const router = Router();
 router.use(requireAuth);
 
 async function resolveOnboardingSubscription(workspaceId: string) {
-  if (await getWorkspaceTrial(workspaceId)) return { trialAccess: true as const };
   const subscriptions = await db.select({
     id: commercialSubscriptionsTable.id,
     productId: commercialSubscriptionsTable.productId,
@@ -34,16 +33,16 @@ async function resolveOnboardingSubscription(workspaceId: string) {
       eq(commercialSubscriptionsTable.workspaceId, workspaceId),
       eq(commercialSubscriptionsTable.status, "active"),
       eq(commercialProductsTable.status, "active"),
+      or(isNull(commercialSubscriptionsTable.endsAt), gt(commercialSubscriptionsTable.endsAt, new Date())),
     ))
     .orderBy(asc(commercialSubscriptionsTable.createdAt), asc(commercialSubscriptionsTable.id));
 
   const subscription = subscriptions.find(item => item.productKey === "nexos_campaign_access")
     ?? subscriptions.find(item => item.masterPlanKey === "launch")
     ?? subscriptions[0];
-  if (!subscription) {
-    throw new AppError(403, "É necessária uma assinatura ativa para iniciar um briefing.", "ACTIVE_COMMERCIAL_SUBSCRIPTION_REQUIRED");
-  }
-  return { trialAccess: false as const, commercialProductId: subscription.productId, commercialSubscriptionId: subscription.id };
+  if (subscription) return { trialAccess: false as const, commercialProductId: subscription.productId, commercialSubscriptionId: subscription.id };
+  if (await getWorkspaceTrial(workspaceId)) return { trialAccess: true as const };
+  throw new AppError(403, "É necessária uma assinatura ativa para iniciar um briefing.", "ACTIVE_COMMERCIAL_SUBSCRIPTION_REQUIRED");
 }
 
 // ─── Onboarding status ────────────────────────────────────────────────────────

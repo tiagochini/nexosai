@@ -3,6 +3,7 @@ import { eq, desc, and, sql, gte, count } from "drizzle-orm";
 import {
   db,
   campaignsTable,
+  commercialProductsTable,
   workspacesTable,
   plansTable,
   approvalCheckpointsTable,
@@ -26,7 +27,7 @@ import {
   type BudgetSimulation,
 } from "../intake/intake.simulation.js";
 import { AppError, NotFoundError, ForbiddenError, ValidationError } from "../../lib/errors.js";
-import { trialFromSettings } from "../auth/trial-access.service.js";
+import { getWorkspaceTrial, trialFromSettings } from "../auth/trial-access.service.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import type { Logger } from "pino";
 import {
@@ -199,14 +200,14 @@ export async function createCampaign(
   ownerUserId?: string,
 ): Promise<Campaign> {
   const [ws] = await db
-    .select({ planId: workspacesTable.planId, activeCampaigns: workspacesTable.activeCampaigns, settings: workspacesTable.settings })
+    .select({ planId: workspacesTable.planId, activeCampaigns: workspacesTable.activeCampaigns })
     .from(workspacesTable)
     .where(eq(workspacesTable.id, workspaceId))
     .limit(1);
 
   if (!ws) throw new NotFoundError("Workspace");
 
-  if (trialFromSettings(ws.settings)) {
+  if (await getWorkspaceTrial(workspaceId)) {
     const campaign = await db.transaction(async (tx) => {
       const [lockedWorkspace] = await tx.select().from(workspacesTable)
         .where(eq(workspacesTable.id, workspaceId)).for("update").limit(1);
@@ -257,8 +258,9 @@ export async function createCampaign(
   }
 
   const subscriptions = await db
-    .select({ id: commercialSubscriptionsTable.id, productId: commercialSubscriptionsTable.productId, endsAt: commercialSubscriptionsTable.endsAt, providerMetadata: commercialSubscriptionsTable.providerMetadata })
+    .select({ id: commercialSubscriptionsTable.id, productId: commercialSubscriptionsTable.productId, endsAt: commercialSubscriptionsTable.endsAt, providerMetadata: commercialSubscriptionsTable.providerMetadata, capabilities: commercialProductsTable.capabilities })
     .from(commercialSubscriptionsTable)
+    .innerJoin(commercialProductsTable, eq(commercialProductsTable.id, commercialSubscriptionsTable.productId))
     .where(and(eq(commercialSubscriptionsTable.workspaceId, workspaceId), eq(commercialSubscriptionsTable.status, "active")))
     ;
   const requestedSubscriptionId = data.commercialSubscriptionId;
@@ -276,7 +278,9 @@ export async function createCampaign(
   const subscription = matchingSubscriptions[0];
   if (requestedSubscriptionId && !subscription) throw new ValidationError("Subscription is not active in this workspace/product");
   if (subscription?.endsAt && subscription.endsAt <= new Date()) throw new ForbiddenError("O período contratado para esta oferta terminou.");
-  if (subscription && (subscription.providerMetadata as Record<string, unknown>)?.salesOfferContractId) {
+  const licensePlan = (subscription?.capabilities as Record<string, unknown> | undefined)?.license_plan;
+  const includesWorkspacePlan = Boolean(licensePlan && typeof licensePlan === "object" && typeof (licensePlan as Record<string, unknown>).slug === "string");
+  if (subscription && (subscription.providerMetadata as Record<string, unknown>)?.salesOfferContractId && !includesWorkspacePlan) {
     const [campaignGrant] = await db.select({ value: entitlementGrantsTable.value }).from(entitlementGrantsTable)
       .where(and(eq(entitlementGrantsTable.workspaceId, workspaceId), eq(entitlementGrantsTable.subscriptionId, subscription.id), eq(entitlementGrantsTable.capability, "campaigns"))).limit(1);
     const included = Number((campaignGrant?.value as Record<string, unknown> | undefined)?.included ?? 0);

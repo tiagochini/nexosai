@@ -14,11 +14,12 @@ import {
   getSalesOfferContracts,
   cancelSalesOfferContract,
 } from "./billing.service.js";
-import { db, inviteCodesTable, workspacesTable, plansTable, subscriptionPaymentsTable, commercialSalesOffersTable, commercialOfferContractsTable, creditPackPricingTable } from "@workspace/db";
+import { db, inviteCodesTable, workspacesTable, plansTable, subscriptionPaymentsTable, commercialProductsTable, commercialSubscriptionsTable, commercialSalesOffersTable, commercialOfferContractsTable, creditPackPricingTable } from "@workspace/db";
 import { and, eq, gt, isNotNull, isNull, or, sql, inArray } from "drizzle-orm";
 import { matchesAsaasWebhookToken } from "../../lib/asaas-webhook-auth.js";
 import { checkBillingManualConfirmation } from "./billing.security.js";
 import { activateTrialSettings, canRepairConsumedTrialAccess, trialFromSettings } from "../auth/trial-access.service.js";
+import { activateWorkspacePlanAccess } from "./billing-plan-activation.js";
 
 const router = Router();
 
@@ -369,6 +370,35 @@ router.post("/redeem-code", requireAuth, async (req, res): Promise<void> => {
     }
 
     if (invite.planSlug === "trial") {
+      const settings = workspace.settings && typeof workspace.settings === "object" && !Array.isArray(workspace.settings)
+        ? workspace.settings as Record<string, unknown>
+        : {};
+      const trialMarker = settings.nexosTrial && typeof settings.nexosTrial === "object"
+        ? settings.nexosTrial as Record<string, unknown>
+        : {};
+      if (typeof trialMarker.convertedAt === "string") {
+        return { error: "O trial já foi convertido em uma licença e não pode ser reativado.", status: 409 } as const;
+      }
+      const activeSubscriptions = await tx.select({
+        productKey: commercialProductsTable.key,
+        capabilities: commercialProductsTable.capabilities,
+      }).from(commercialSubscriptionsTable)
+        .innerJoin(commercialProductsTable, eq(commercialProductsTable.id, commercialSubscriptionsTable.productId))
+        .where(and(
+          eq(commercialSubscriptionsTable.workspaceId, workspace.id),
+          eq(commercialSubscriptionsTable.status, "active"),
+          eq(commercialProductsTable.status, "active"),
+          or(isNull(commercialSubscriptionsTable.endsAt), gt(commercialSubscriptionsTable.endsAt, new Date())),
+        ));
+      const hasPlanAccess = activeSubscriptions.some(subscription => {
+        if (["nexos_workspace_plan_access", "nexos_campaign_access"].includes(subscription.productKey)) return true;
+        const capabilities = subscription.capabilities as Record<string, unknown> | null;
+        const licensePlan = capabilities?.license_plan;
+        return Boolean(licensePlan && typeof licensePlan === "object" && typeof (licensePlan as Record<string, unknown>).slug === "string");
+      });
+      if (hasPlanAccess) {
+        return { error: "Este workspace já possui uma licença ativa; o trial não pode ser reativado.", status: 409 } as const;
+      }
       if (trialFromSettings(workspace.settings)) {
         return { error: "Este workspace já possui um acesso Trial ativo.", status: 409 } as const;
       }
@@ -394,6 +424,7 @@ router.post("/redeem-code", requireAuth, async (req, res): Promise<void> => {
       creditsMonthlyBalance: Math.max(workspace.creditsMonthlyBalance ?? 0, plan.creditsMonthly),
       creditsBalance: (workspace.creditsPurchasedBalance ?? 0) + Math.max(workspace.creditsMonthlyBalance ?? 0, plan.creditsMonthly),
     }).where(eq(workspacesTable.id, workspace.id));
+    await activateWorkspacePlanAccess(tx, workspace.id, plan.slug, "invite_code");
     await tx.update(inviteCodesTable).set({
       used: true,
       usedByEmail: req.auth.email,

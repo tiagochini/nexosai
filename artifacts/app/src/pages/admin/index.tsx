@@ -325,6 +325,22 @@ function UserProfileDrawer({ userId, onClose, onGrant }: { userId: string; onClo
                 ))}
               </div>
 
+              {/* Current workspace plan */}
+              <div className="border border-border/40 bg-card/20 p-4">
+                <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-3">{t("Plano atual", "Current plan", "Plan actual")}</div>
+                <div className="flex items-center gap-3">
+                  <Layers className="h-3.5 w-3.5 text-primary/60 shrink-0" />
+                  <span className="font-mono text-[11px] text-muted-foreground/50 w-20 shrink-0">{t("Plano", "Plan", "Plan")}</span>
+                  <span className="font-mono text-sm text-foreground font-bold">{p.user.planName ?? p.user.planSlug ?? "—"}</span>
+                  {p.user.planSlug && <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">({p.user.planSlug})</span>}
+                </div>
+                <div className="flex items-center gap-3">
+                  <Tag className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                  <span className="font-mono text-[11px] text-muted-foreground/50 w-20 shrink-0">{t("Trial", "Trial", "Trial")}</span>
+                  <span className={`font-mono text-sm font-bold ${p.user.trialAccess ? "text-yellow-400" : "text-success"}`}>{p.user.trialAccess ? t("Ativo", "Active", "Activo") : t("Inativo", "Inactive", "Inactivo")}</span>
+                </div>
+              </div>
+
               {/* Lead source */}
               <div className="border border-border/40 bg-card/20 p-4">
                 <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-3">{t("🔗 Origem do lead", "🔗 Lead source", "🔗 Origen del lead")}</div>
@@ -337,7 +353,7 @@ function UserProfileDrawer({ userId, onClose, onGrant }: { userId: string; onClo
                     </div>
                     <div className="flex items-center gap-3">
                       <Layers className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-                      <span className="font-mono text-[11px] text-muted-foreground/50 w-20 shrink-0">{t("Plano", "Plan", "Plan")}</span>
+                      <span className="font-mono text-[11px] text-muted-foreground/50 w-28 shrink-0">{t("Plano do código", "Code plan", "Plan del código")}</span>
                       <span className="font-mono text-sm text-foreground uppercase">{p.leadSource.planSlug}</span>
                     </div>
                     {p.leadSource.usedAt && (
@@ -605,9 +621,20 @@ export default function AdminPage() {
   const { data: providerBalances, isLoading: loadingProviderBalances, isFetching: refreshingProviderBalances, isError: providerBalanceError, refetch: refetchProviderBalances } = useQuery({
     queryKey: ["/api/admin/provider-balances"],
     enabled: isAdmin && tab === "custo",
-    queryFn: () => customFetch<{ providers: { provider: string; name: string; status: "available" | "console_only" | "not_configured" | "error"; balanceUsd: number | null; checkedAt: string | null; message: string; billingUrl: string }[] }>("/api/admin/provider-balances"),
+    queryFn: () => customFetch<{ providers: { provider: string; name: string; status: "available" | "manual" | "console_only" | "not_configured" | "error"; balanceUsd: number | null; checkedAt: string | null; message: string; billingUrl: string }[] }>("/api/admin/provider-balances"),
     staleTime: 60_000,
     retry: false,
+  });
+
+  const saveProviderBalance = useMutation({
+    mutationFn: async ({ provider, balanceUsd }: { provider: string; balanceUsd: number }) => customFetch(`/api/admin/provider-balances/${provider}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ balanceUsd }),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/provider-balances"] });
+      toast.success(t("Saldo manual atualizado.", "Manual balance updated.", "Saldo manual actualizado."));
+    },
+    onError: () => toast.error(t("Não foi possível salvar o saldo.", "Could not save the balance.", "No se pudo guardar el saldo.")),
   });
 
   const { data: aiPricing, isLoading: loadingAiPricing } = useQuery({
@@ -2917,9 +2944,21 @@ export default function AdminPage() {
                 {providerBalances?.providers.map(provider => (
                   <div key={provider.provider} className="border border-border/30 p-3 space-y-2">
                     <h4 className="font-mono font-bold text-sm">{provider.name}</h4>
-                    <div className="text-xl font-mono">{provider.status === "available" && provider.balanceUsd !== null ? new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency: "USD" }).format(provider.balanceUsd) : "—"}</div>
+                    <div className="text-xl font-mono">{(provider.status === "available" || provider.status === "manual") && provider.balanceUsd !== null ? new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency: "USD" }).format(provider.balanceUsd) : "—"}</div>
                     <p className="text-xs text-muted-foreground">{provider.message}</p>
                     {provider.checkedAt && <p className="text-[10px] text-muted-foreground">{t("Consultado em", "Checked at", "Consultado el")} {new Date(provider.checkedAt).toLocaleString(intlLocale(locale))}</p>}
+                    {(provider.status === "console_only" || provider.status === "manual") && <form className="space-y-2" onSubmit={event => {
+                      event.preventDefault();
+                      const form = event.currentTarget;
+                      const amount = Number(new FormData(form).get("balanceUsd"));
+                      if (Number.isFinite(amount) && amount >= 0) saveProviderBalance.mutate({ provider: provider.provider, balanceUsd: amount });
+                    }}>
+                      <label className="block text-[10px] text-muted-foreground" htmlFor={`manual-balance-${provider.provider}`}>{t("Saldo conferido (USD)", "Verified balance (USD)", "Saldo verificado (USD)")}</label>
+                      <div className="flex gap-2">
+                        <input id={`manual-balance-${provider.provider}`} name="balanceUsd" type="number" min="0" step="0.01" required defaultValue={provider.balanceUsd ?? ""} className="min-w-0 w-full border border-border/50 bg-background px-2 py-1 text-xs" />
+                        <Button type="submit" size="sm" variant="outline" disabled={saveProviderBalance.isPending}>{t("Salvar", "Save", "Guardar")}</Button>
+                      </div>
+                    </form>}
                     <a className="inline-block text-xs text-primary underline" href={provider.billingUrl} target="_blank" rel="noopener noreferrer">{t("Abrir faturamento", "Open billing", "Abrir facturación")} ↗</a>
                   </div>
                 ))}

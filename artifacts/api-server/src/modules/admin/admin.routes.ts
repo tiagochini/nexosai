@@ -31,7 +31,31 @@ router.use(requireAuth, requirePlatformAdmin);
 
 router.get("/provider-balances", async (_req, res, next): Promise<void> => {
   res.setHeader("Cache-Control", "no-store");
-  try { res.json(await getProviderBalances()); } catch (error) { next(error); }
+  try {
+    const [settings] = await db.select({ snapshots: aiCreditSettingsTable.providerBalanceSnapshots }).from(aiCreditSettingsTable).limit(1);
+    res.json(await getProviderBalances(process.env, fetch, settings?.snapshots ?? {}));
+  } catch (error) { next(error); }
+});
+
+router.patch("/provider-balances/:provider", async (req, res): Promise<void> => {
+  const provider = req.params["provider"];
+  if (!provider || !["openai", "anthropic", "gemini"].includes(provider)) {
+    throw new ValidationError("Provedor inválido para atualização manual");
+  }
+  const parsed = z.object({ balanceUsd: z.number().finite().min(0).max(1_000_000_000) }).strict().safeParse(req.body);
+  if (!parsed.success) throw new ValidationError("Informe um saldo em USD entre 0 e 1.000.000.000");
+  const checkedAt = new Date().toISOString();
+  const snapshot = { [provider]: { balanceUsd: parsed.data.balanceUsd, checkedAt, updatedBy: req.auth.userId } };
+  const [settings] = await db.insert(aiCreditSettingsTable).values({ id: 1, updatedBy: req.auth.userId, providerBalanceSnapshots: snapshot })
+    .onConflictDoUpdate({ target: aiCreditSettingsTable.id, set: {
+      providerBalanceSnapshots: sql`coalesce(${aiCreditSettingsTable.providerBalanceSnapshots}, '{}'::jsonb) || ${JSON.stringify(snapshot)}::jsonb`,
+      updatedBy: req.auth.userId,
+      updatedAt: new Date(),
+    } }).returning({ snapshots: aiCreditSettingsTable.providerBalanceSnapshots });
+  await db.insert(auditLogsTable).values({ workspaceId: req.auth.workspaceId, action: "admin.provider_balance.updated", actor: req.auth.userId, data: { provider, balanceUsd: parsed.data.balanceUsd, checkedAt } });
+  req.log.info({ actorUserId: req.auth.userId, provider, checkedAt }, "admin provider balance snapshot updated");
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ ok: true, checkedAt, provider, balanceUsd: parsed.data.balanceUsd, snapshots: settings?.snapshots ?? {} });
 });
 
 

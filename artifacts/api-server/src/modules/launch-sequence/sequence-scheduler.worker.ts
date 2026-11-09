@@ -924,6 +924,9 @@ export async function initSequenceScheduler(options: SequenceSchedulerOptions = 
   if (env.REDIS_URL && !options.disableRedis) {
     try {
       schedulerQueue = new Queue(SEQUENCE_SCHEDULER_QUEUE_NAME, { connection: redisConnectionOptions('producer') });
+      schedulerQueue.on("error", (err) => {
+        log.warn({ err }, "Sequence scheduler queue error — database polling remains available");
+      });
       await schedulerQueue.upsertJobScheduler(
         "sequence-tick",
         { every: schedulerEveryMs },
@@ -976,7 +979,7 @@ export async function initSequenceScheduler(options: SequenceSchedulerOptions = 
   }, schedulerEveryMs);
   fallbackInterval.unref();
 
-  log.info({ everyMs: schedulerEveryMs }, "Sequence scheduler started via setInterval — Redis not available");
+  log.info({ everyMs: schedulerEveryMs }, "Sequence scheduler started via setInterval — Redis disabled or unavailable");
 }
 
 export async function closeSequenceScheduler(): Promise<void> {

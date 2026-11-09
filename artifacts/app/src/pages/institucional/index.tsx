@@ -84,7 +84,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
               {t("Entrar", "Sign in", "Entrar")}
             </Button>
           </a>
-          <a href="/landing/" className="hidden sm:block">
+          <a href="/execucao-autonoma" className="hidden sm:block">
             <Button size="sm" className="bg-purple-600 hover:bg-purple-500 text-white font-mono uppercase text-[10px] tracking-widest font-bold rounded-none h-9 px-4">
               {t("Começar", "Get started", "Comenzar")}
             </Button>
@@ -106,7 +106,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
           <a href="#academy" onClick={() => setMobileOpen(false)} className="hover:text-white">Academy</a>
           <a href="#contato" onClick={() => setMobileOpen(false)} className="hover:text-white">{t("Contato", "Contact", "Contacto")}</a>
           <a href="/login" className="hover:text-white">{t("Entrar", "Sign in", "Entrar")}</a>
-          <a href="/landing/" className="hover:text-white">{t("Começar", "Get started", "Comenzar")}</a>
+          <a href="/execucao-autonoma" className="hover:text-white">{t("Começar", "Get started", "Comenzar")}</a>
         </div>
       )}
     </nav>
@@ -144,7 +144,7 @@ function HeroSection() {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <a href="/landing/">
+          <a href="/execucao-autonoma">
             <Button className="bg-purple-600 hover:bg-purple-500 text-white font-mono uppercase tracking-widest text-sm font-bold rounded-none h-12 px-8 gap-2">
               {t("Ver NexOS AI", "Explore NexOS AI", "Ver NexOS AI")} <ArrowRight className="h-4 w-4" />
             </Button>
@@ -194,7 +194,7 @@ const PRODUTOS = [
       "Tracks: 6 dígitos → 10 dígitos",
     ],
     cta: "Quero execução autônoma",
-    href: "/landing/",
+    href: "/execucao-autonoma",
     highlight: true,
     comingSoon: false,
   },
@@ -571,7 +571,7 @@ function ContatoSection() {
           <div className="border border-white/10 bg-white/[0.03] p-8">
             <h3 className="font-mono font-bold text-white uppercase tracking-wide mb-6 text-sm">{t("Acesso rápido aos produtos", "Quick access to products", "Acceso rápido a los productos")}</h3>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <a href="/landing/">
+              <a href="/execucao-autonoma">
                 <Button className="bg-purple-600 hover:bg-purple-500 text-white font-mono uppercase text-xs tracking-widest rounded-none h-10 px-6 gap-2">
                   <Rocket className="h-3.5 w-3.5" /> NexOS AI
                 </Button>
@@ -604,7 +604,7 @@ function Footer() {
           <div className="font-mono text-xs text-white/25 uppercase tracking-[0.2em]">NexOS AI © 2026</div>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-mono text-[10px] text-white/25 uppercase tracking-widest">
-          <a href="/landing/" className="hover:text-white/50 transition-colors">NexOS AI</a>
+          <a href="/execucao-autonoma" className="hover:text-white/50 transition-colors">NexOS AI</a>
           <a href="/nexos-academy/" className="hover:text-white/50 transition-colors">Academy</a>
           <a href="/login" className="hover:text-white/50 transition-colors">{t("Entrar", "Sign in", "Entrar")}</a>
           <a href="/landing/privacy" className="hover:text-white/50 transition-colors">{t("Privacidade", "Privacy", "Privacidad")}</a>

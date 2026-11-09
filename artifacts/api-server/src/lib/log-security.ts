@@ -41,10 +41,16 @@ export function sanitizeLogText(value: string): string {
 
 function safeError(value: object): Record<string, unknown> {
   const descriptors = Object.getOwnPropertyDescriptors(value);
+  const rawName = dataProperty(value, "name");
+  const safeName = typeof rawName === "string" && /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(rawName)
+    ? rawName
+    : "Error";
   const code = descriptors["code"]?.value;
   const status = descriptors["status"]?.value ?? descriptors["statusCode"]?.value;
   return {
-    type: "Error", message: LOG_REDACTED,
+    // Error class names help diagnose startup failures while message and stack
+    // remain redacted because they may contain credentials or user data.
+    type: safeName, message: LOG_REDACTED,
     ...(typeof code === "string" && /^(?:ERR_[A-Z_]{1,60}|E(?:CONNREFUSED|CONNRESET|TIMEDOUT|PIPE|NOENT|ACCES)|[0-9]{5})$/.test(code) ? { code } : {}),
     ...(typeof status === "number" && Number.isInteger(status) && status >= 100 && status <= 599 ? { statusCode: status } : {}),
   };

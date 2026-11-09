@@ -38,7 +38,7 @@ export async function reconcileBillingReversal(externalId: string, lookup: (id: 
     const offerSnapshot = meta.type === "sales_offer" ? meta.offerSnapshot as { creditsIncluded?: number; interval?: string } | undefined : undefined;
     const refundableCredits = meta.type === "pack" ? Number(meta.packCredits)
       : meta.type === "plan" && activation ? Number(activation.creditsGranted)
-        : meta.type === "sales_offer" ? Number(offerSnapshot?.creditsIncluded ?? 0) : 0;
+        : meta.type === "sales_offer" ? Number(meta.offerCreditsGranted ?? offerSnapshot?.creditsIncluded ?? 0) : 0;
     if (!Number.isSafeInteger(refundableCredits) || refundableCredits < 0) throw new AppError(409, "Créditos da oferta inválidos", "INVALID_OFFER_CREDIT_REVERSAL");
     // Cumulative integer proportion; repeated partial events cannot compound rounding.
     const desired = hold || full ? refundableCredits : Number(BigInt(refundableCredits) * BigInt(refunded) / BigInt(payment.amountCents));

@@ -1,7 +1,7 @@
 export interface ProviderBalance {
   provider: string;
   name: string;
-  status: 'available' | 'console_only' | 'not_configured' | 'error';
+  status: 'available' | 'manual' | 'console_only' | 'not_configured' | 'error';
   balanceUsd: number | null;
   checkedAt: string | null;
   message: string;
@@ -21,6 +21,7 @@ export function parseXaiBalance(payload: unknown): number {
 export async function getProviderBalances(
   config: NodeJS.ProcessEnv = process.env,
   request: typeof fetch = fetch,
+  snapshots: Record<string, { balanceUsd: number; checkedAt: string; updatedBy: string }> = {},
 ): Promise<{ providers: ProviderBalance[] }> {
   const providers: ProviderBalance[] = [
     { provider: 'openai', name: 'OpenAI', status: 'console_only', balanceUsd: null, checkedAt: null,
@@ -36,6 +37,14 @@ export async function getProviderBalances(
   const grok: ProviderBalance = { provider: 'xai', name: 'xAI / Grok', status: 'not_configured', balanceUsd: null, checkedAt: null,
     message: 'Consulta pendente de configuração da chave de gerenciamento e da equipe xAI no servidor.', billingUrl: 'https://console.x.ai/' };
   providers.push(grok);
+  for (const provider of providers) {
+    const snapshot = snapshots[provider.provider];
+    if (!snapshot || !Number.isFinite(snapshot.balanceUsd) || snapshot.balanceUsd < 0 || !snapshot.checkedAt) continue;
+    provider.balanceUsd = snapshot.balanceUsd;
+    provider.checkedAt = snapshot.checkedAt;
+    provider.status = 'manual';
+    provider.message = `Saldo informado manualmente em ${new Date(snapshot.checkedAt).toLocaleString('pt-BR')}. Confira no painel do provedor.`;
+  }
   const key = config['XAI_MANAGEMENT_API_KEY']?.trim();
   const teamId = config['XAI_TEAM_ID']?.trim();
   if (!key || !teamId) return { providers };

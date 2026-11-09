@@ -6,9 +6,11 @@ const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 
 export function isTrialRouteAllowed(method: string, path: string): boolean {
   if (method === "GET" && ["/auth/me", "/auth/workspaces", "/auth/platform-status", "/onboarding/status", "/campaigns"].includes(path)) return true;
-  // Keep the paid-upgrade path available to trial users without exposing the
-  // rest of billing (credit packs, payment history, admin controls, etc.).
-  if (method === "GET" && path === "/billing/offers") return true;
+  // Keep plan checkout and its status polling available to trial users. Credit
+  // pack purchases and unrelated billing controls remain outside trial scope.
+  if (method === "GET" && ["/billing/status", "/billing/history", "/billing/access", "/billing/offers"].includes(path)) return true;
+  if (method === "GET" && new RegExp(`^/billing/payment/${UUID}$`, "i").test(path)) return true;
+  if (method === "POST" && path === "/billing/initiate") return true;
   if (method === "POST" && /^\/billing\/offers\/[0-9a-f-]+\/purchase$/i.test(path)) return true;
   if (method === "POST" && [
     "/auth/refresh", "/auth/logout", "/auth/onboarding/seen", "/onboarding/start", "/billing/redeem-code",

@@ -81,9 +81,10 @@ logger.info(
 
 const httpServer = http.createServer(app);
 let shuttingDown = false;
+let startupPhase = "module initialization";
 
 process.on("unhandledRejection", (reason) => {
-  logger.fatal({ reason }, "Unhandled promise rejection — shutting down");
+  logger.fatal({ reason, startupPhase }, "Unhandled promise rejection — shutting down");
   void shutdown("unhandledRejection");
 });
 
@@ -161,8 +162,11 @@ if (!localSafeMode) {
 const bootRecoveryCutoff = new Date(Date.now() - 30 * 60 * 1000);
 
 async function startBackgroundServices(): Promise<void> {
+  startupPhase = "orchestration worker initialization";
   initOrchestrationWorker();
+  startupPhase = "social scheduler initialization";
   startSocialScheduler();
+  startupPhase = "social metrics scheduler initialization";
   startMetricsSyncScheduler(async () => {
     const posts = await db
       .select({
@@ -178,12 +182,22 @@ async function startBackgroundServices(): Promise<void> {
     }
     return posts.filter((post) => entitledWorkspaces.has(post.workspaceId));
   });
+  startupPhase = "paid media scheduler initialization";
   startPaidMediaScheduler();
-  await initSequenceScheduler();
+  startupPhase = "sequence scheduler initialization";
+  // Local and homologation environments use the scheduler's durable DB polling
+  // fallback. This avoids opening a second BullMQ worker while the API's main
+  // orchestration worker is still connecting to the homologation Redis service.
+  await initSequenceScheduler({ disableRedis: process.env["NODE_ENV"] !== "production" });
+  startupPhase = "lifecycle scheduler initialization";
   startLifecycleScheduler();
+  startupPhase = "academy funnel scheduler initialization";
   startFunnelScheduler();
+  startupPhase = "academy access outbox scheduler initialization";
   startAcademyAccessOutboxScheduler();
+  startupPhase = "approval SLA scheduler initialization";
   startApprovalSlaScheduler();
+  startupPhase = "background services initialized";
 }
 
 function scheduleRecordingOrganizationSweep(): void {
@@ -206,6 +220,7 @@ if (localSafeMode) {
     logger.info({ port }, "NexOS AI API Server listening in local safe mode");
   });
 } else {
+  startupPhase = "boot recovery database cleanup";
   Promise.all([
     db
       .update(campaignAgentsTable)
@@ -277,18 +292,22 @@ if (localSafeMode) {
     .then(async () => {
       // Stale recovery is deliberately complete before explicit resume. Queue state
       // remains untouched, and resume itself excludes campaigns with a fresh agent.
+      startupPhase = "resuming generating campaigns";
       await resumeGeneratingCampaigns(bootRecoveryCutoff);
+      startupPhase = "recovering studio renders";
       await recoverStudioRenders(logger);
 
       // Do not begin consuming jobs until stale recovery has finished. Starting
       // workers above would let a second instance race its own boot checks.
       await startBackgroundServices();
 
+      startupPhase = "starting HTTP listener";
       httpServer.listen(port, (err?: Error) => {
         if (err) {
           logger.error({ err }, "Error listening on port");
           process.exit(1);
         }
+        startupPhase = "runtime";
         logger.info({ port }, "NexOS AI API Server listening");
         scheduleRecordingOrganizationSweep();
         startRegionalAcquisitionScheduler();
@@ -305,7 +324,9 @@ if (localSafeMode) {
           "Background service startup failed after cleanup error",
         ),
       );
+      startupPhase = "starting HTTP listener after recovery failure";
       httpServer.listen(port, () => {
+        startupPhase = "runtime";
         logger.info({ port }, "NexOS AI API Server listening (cleanup failed)");
         scheduleRecordingOrganizationSweep();
         startRegionalAcquisitionScheduler();
