@@ -68,6 +68,8 @@ export const agentExecutionLogsTable = pgTable("agent_execution_logs", {
   modelUsed: text("model_used"),
   tokensUsed: integer("tokens_used"),
   estimatedCostUsd: real("estimated_cost_usd"),
+  // Actual customer balance reduction. Null means older rows predate this field.
+  creditsDebited: integer("credits_debited"),
 
   // Dry-run flag
   isDryRun: boolean("is_dry_run").notNull().default(false),

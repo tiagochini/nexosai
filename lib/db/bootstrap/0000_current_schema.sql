@@ -1226,6 +1226,7 @@ CREATE TABLE "agent_execution_logs" (
 	"model_used" text,
 	"tokens_used" integer,
 	"estimated_cost_usd" real,
+	"credits_debited" integer,
 	"is_dry_run" boolean DEFAULT false NOT NULL,
 	"started_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"completed_at" timestamp with time zone

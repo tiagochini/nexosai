@@ -35,6 +35,7 @@ interface AuditLogRow {
   modelUsed: string | null;
   tokensUsed: number | null;
   estimatedCostUsd: number | null;
+  creditsDebited: number | null;
   isDryRun: boolean;
   startedAt: string;
   completedAt: string | null;
@@ -136,6 +137,14 @@ function LogDetailModal({ log, onClose }: { log: AuditLogRow; onClose: () => voi
             <div>
               <p className="text-zinc-500 text-xs mb-1">{t("Tokens / custo", "Tokens / cost", "Tokens / costo")}</p>
               <p className="text-zinc-200">{log.tokensUsed?.toLocaleString("pt-BR") ?? "—"} / ${log.estimatedCostUsd?.toFixed(4) ?? "—"}</p>
+            </div>
+            <div>
+              <p className="text-zinc-500 text-xs mb-1">{t("Créditos debitados do cliente", "Customer credits debited", "Créditos descontados al cliente")}</p>
+              <p className="text-amber-300 font-mono font-semibold">
+                {log.creditsDebited !== null
+                  ? `${log.creditsDebited} ${t("créditos", "credits", "créditos")}`
+                  : t("Não registrado nesta execução", "Not recorded for this run", "No registrado para esta ejecución")}
+              </p>
             </div>
             <div>
               <p className="text-zinc-500 text-xs mb-1">{t("Pontuação de confiança", "Confidence score", "Puntuación de confianza")}</p>
@@ -397,6 +406,7 @@ export default function AuditLogsPage() {
                   <th className="text-left px-4 py-3">{t("Provedor", "Provider", "Proveedor")}</th>
                   <th className="text-left px-4 py-3">Tokens</th>
                   <th className="text-left px-4 py-3">{t("Custo", "Cost", "Costo")}</th>
+                  <th className="text-left px-4 py-3">{t("Créditos debitados", "Credits debited", "Créditos descontados")}</th>
                   <th className="text-left px-4 py-3">{t("Duração", "Duration", "Duración")}</th>
                   <th className="text-left px-4 py-3">{t("Iniciado", "Started", "Iniciado")}</th>
                   <th className="px-4 py-3"></th>
@@ -405,14 +415,14 @@ export default function AuditLogsPage() {
               <tbody>
                 {isLoading && Array.from({ length: 10 }).map((_, i) => (
                   <tr key={i} className="border-b border-zinc-800/50">
-                    <td className="px-4 py-3" colSpan={11}>
+                    <td className="px-4 py-3" colSpan={12}>
                       <Skeleton className="h-4 w-full bg-zinc-800" />
                     </td>
                   </tr>
                 ))}
                 {!isLoading && (!logs || logs.length === 0) && (
                   <tr>
-                    <td colSpan={11} className="px-4 py-12 text-center text-zinc-500">
+                    <td colSpan={12} className="px-4 py-12 text-center text-zinc-500">
                       {t("Nenhum registro encontrado com os filtros aplicados", "No logs found for the selected filters", "No se encontraron registros con los filtros seleccionados")}
                     </td>
                   </tr>
@@ -453,6 +463,11 @@ export default function AuditLogsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-xs text-zinc-400">{row.estimatedCostUsd != null ? `$${row.estimatedCostUsd.toFixed(4)}` : "—"}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`font-mono text-xs ${row.creditsDebited === null ? "text-zinc-600" : "text-amber-300"}`}>
+                        {row.creditsDebited !== null ? row.creditsDebited.toLocaleString(intlLocale(locale)) : "—"}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-xs text-zinc-400">{durationMs(row)}</span>

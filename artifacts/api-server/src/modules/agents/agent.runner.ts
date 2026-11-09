@@ -912,11 +912,17 @@ async function runAgentInternal(opts: RunAgentOptions): Promise<RunAgentResult> 
 
     const newStatus = requiresApproval ? "waiting_approval" : "completed";
     let debitReplayed = false;
+    const persistCreditsDebited = execLogId ? await hasCreditsDebitedColumn() : false;
     const charge = await deductCredits(workspaceId, "campaign_execution", log,
       isValidCampaignId ? campaignId! : undefined, result.provider,
       result.inputTokens + result.outputTokens, result.costUsd, creditOperationKey, creditsCharged,
       async (trx, settled, replayed) => {
         debitReplayed = replayed;
+        if (execLogId && persistCreditsDebited) {
+          await trx.update(agentExecutionLogsTable)
+            .set({ creditsDebited: replayed || settled.description?.startsWith("[∞]") ? 0 : settled.amount })
+            .where(eq(agentExecutionLogsTable.id, execLogId));
+        }
         if (!agentRecord) return;
         const [saved] = await trx.update(campaignAgentsTable).set({
           status: newStatus,
@@ -1148,6 +1154,76 @@ export interface AuditLogFilter {
   offset?: number;
 }
 
+function isMissingCreditsDebitedColumn(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 4 && current; depth += 1) {
+    if (typeof current !== "object") return false;
+    const candidate = current as { code?: unknown; message?: unknown; cause?: unknown };
+    if (candidate.code === "42703" && typeof candidate.message === "string" && candidate.message.includes("credits_debited")) {
+      return true;
+    }
+    current = candidate.cause;
+  }
+  return false;
+}
+
+let creditsDebitedColumnAvailable: boolean | undefined;
+let creditsDebitedColumnCheckedAt = 0;
+
+async function hasCreditsDebitedColumn(): Promise<boolean> {
+  if (creditsDebitedColumnAvailable !== undefined && Date.now() - creditsDebitedColumnCheckedAt < 10_000) {
+    return creditsDebitedColumnAvailable;
+  }
+  try {
+    const result = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'agent_execution_logs'
+          AND column_name = 'credits_debited'
+      ) AS present
+    `);
+    const rows = Array.isArray(result) ? result : (result as { rows?: { present?: boolean }[] }).rows ?? [];
+    creditsDebitedColumnAvailable = rows[0]?.present === true;
+  } catch {
+    creditsDebitedColumnAvailable = false;
+  }
+  creditsDebitedColumnCheckedAt = Date.now();
+  return creditsDebitedColumnAvailable;
+}
+
+async function queryLegacyAgentExecutionLogs(where: SQL | undefined, limit: number, offset: number) {
+  const rows = await db.select({
+    id: agentExecutionLogsTable.id,
+    campaignId: agentExecutionLogsTable.campaignId,
+    workspaceId: agentExecutionLogsTable.workspaceId,
+    userId: agentExecutionLogsTable.userId,
+    agentName: agentExecutionLogsTable.agentName,
+    actionType: agentExecutionLogsTable.actionType,
+    inputSummary: agentExecutionLogsTable.inputSummary,
+    outputSummary: agentExecutionLogsTable.outputSummary,
+    confidenceScore: agentExecutionLogsTable.confidenceScore,
+    riskScore: agentExecutionLogsTable.riskScore,
+    approvalRequired: agentExecutionLogsTable.approvalRequired,
+    approvalStatus: agentExecutionLogsTable.approvalStatus,
+    executionStatus: agentExecutionLogsTable.executionStatus,
+    errorMessage: agentExecutionLogsTable.errorMessage,
+    providerUsed: agentExecutionLogsTable.providerUsed,
+    modelUsed: agentExecutionLogsTable.modelUsed,
+    tokensUsed: agentExecutionLogsTable.tokensUsed,
+    estimatedCostUsd: agentExecutionLogsTable.estimatedCostUsd,
+    isDryRun: agentExecutionLogsTable.isDryRun,
+    startedAt: agentExecutionLogsTable.startedAt,
+    completedAt: agentExecutionLogsTable.completedAt,
+  }).from(agentExecutionLogsTable)
+    .where(where)
+    .orderBy(desc(agentExecutionLogsTable.startedAt))
+    .limit(limit)
+    .offset(offset);
+
+  return rows.map(row => ({ ...row, creditsDebited: null }));
+}
+
 export async function queryAgentExecutionLogs(filter: AuditLogFilter) {
   const conditions: SQL[] = [];
 
@@ -1178,24 +1254,35 @@ export async function queryAgentExecutionLogs(filter: AuditLogFilter) {
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const rows = await db
-    .select()
-    .from(agentExecutionLogsTable)
-    .where(where)
-    .orderBy(desc(agentExecutionLogsTable.startedAt))
-    .limit(filter.limit ?? 50)
-    .offset(filter.offset ?? 0);
-
-  return rows;
+  const limit = filter.limit ?? 50;
+  const offset = filter.offset ?? 0;
+  try {
+    return await db
+      .select()
+      .from(agentExecutionLogsTable)
+      .where(where)
+      .orderBy(desc(agentExecutionLogsTable.startedAt))
+      .limit(limit)
+      .offset(offset);
+  } catch (error) {
+    if (!isMissingCreditsDebitedColumn(error)) throw error;
+    return queryLegacyAgentExecutionLogs(where, limit, offset);
+  }
 }
 
 export async function getAgentExecutionLogById(id: string) {
-  const [row] = await db
-    .select()
-    .from(agentExecutionLogsTable)
-    .where(eq(agentExecutionLogsTable.id, id))
-    .limit(1);
-  return row ?? null;
+  try {
+    const [row] = await db
+      .select()
+      .from(agentExecutionLogsTable)
+      .where(eq(agentExecutionLogsTable.id, id))
+      .limit(1);
+    return row ?? null;
+  } catch (error) {
+    if (!isMissingCreditsDebitedColumn(error)) throw error;
+    const [row] = await queryLegacyAgentExecutionLogs(eq(agentExecutionLogsTable.id, id), 1, 0);
+    return row ?? null;
+  }
 }
 
 export async function getAgentExecutionLogsSummary() {
