@@ -147,7 +147,7 @@ type SaasStatus = "novo" | "ativo_lancando" | "ativo" | "pausado" | "hibernado";
 interface AdminUser {
   workspaceId: string; workspaceName: string; userId: string; userName: string;
   email: string; planName: string; planSlug: string; saasStatus: string;
-  totalCampaigns: number; creditsBalance: number; createdAt: string;
+  totalCampaigns: number; creditsBalance: number; trialAccess: boolean; createdAt: string;
 }
 interface AdminOverview {
   total: number;
@@ -182,11 +182,11 @@ interface UserProfile {
     userId: string; name: string; email: string; phone: string | null;
     createdAt: string; workspaceId: string; workspaceName: string;
     workspaceStatus: string; planName: string | null; planSlug: string | null;
-    creditsBalance: number; activeCampaigns: number;
+    creditsBalance: number; activeCampaigns: number; trialAccess: boolean;
   };
   leadSource: { code: string; planSlug: string; usedAt: string | null } | null;
   payments: { id: string; amountCents: number; currency: string; method: string; status: string; description: string | null; createdAt: string; paidAt: string | null }[];
-  campaigns: { id: string; name: string; type: string; status: string; track: string | null; createdAt: string }[];
+  campaigns: { id: string; name: string; type: string; status: string; track: string | null; creditsCost?: number | null; costUsd?: number | null; createdAt: string }[];
   creditStats: { totalDebited: number; totalCredited: number; txCount: number };
   recentCredits: { id: string; type: string; amount: number; action: string; createdAt: string }[];
 }
@@ -385,6 +385,10 @@ function UserProfileDrawer({ userId, onClose, onGrant }: { userId: string; onClo
                           {c.track && <><span className="text-muted-foreground/30">·</span><span>{c.track}</span></>}
                           <span className="text-muted-foreground/30">·</span>
                           <span>{fmtDate(c.createdAt, intlLocale(locale))}</span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">
+                          <span>{t("Créditos debitados", "Credits debited", "Créditos descontados")}: <strong className="text-amber-300">{c.creditsCost != null ? c.creditsCost.toLocaleString(intlLocale(locale)) : "—"}</strong></span>
+                          <span>{t("Custo estimado IA", "Estimated AI cost", "Costo estimado IA")}: <strong className="text-foreground/80">{c.costUsd != null ? new Intl.NumberFormat(intlLocale(locale), { style: "currency", currency: "USD", minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(c.costUsd) : "—"}</strong></span>
                         </div>
                       </div>
                       <span className={`font-mono text-[11px] uppercase shrink-0 ${CAMPAIGN_STATUS_COLOR[c.status] ?? "text-muted-foreground"}`}>
@@ -1384,13 +1388,14 @@ export default function AdminPage() {
       {tab === "users" && (
         <div className="space-y-4">
           <div className="border border-border/50 bg-card/40 overflow-hidden">
-            <div className="hidden md:grid grid-cols-[1fr_90px_70px_80px_80px_120px] text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 border-b border-border/50 bg-muted/10 px-5 py-2.5 gap-4">
+            <div className="hidden lg:grid lg:grid-cols-[minmax(240px,1fr)_76px_58px_88px_58px_120px_190px] text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 border-b border-border/50 bg-muted/10 px-5 py-2.5 gap-3">
               <span>{t("Usuário / Workspace", "User / Workspace", "Usuario / Espacio de trabajo")}</span>
               <span className="text-right">{t("Plano", "Plan", "Plan")}</span>
               <span className="text-right">{t("Camp.", "Campaigns", "Camp.")}</span>
               <span className="text-right">{t("Créditos", "Credits", "Créditos")}</span>
               <span className="text-right">{t("Dias", "Days", "Días")}</span>
               <span className="text-right">{t("Status", "Status", "Estado")}</span>
+              <span className="text-right">{t("Ações", "Actions", "Acciones")}</span>
             </div>
 
             {loadingOverview ? (
@@ -1407,41 +1412,53 @@ export default function AdminPage() {
                   const Icon = meta?.icon ?? Activity;
                   const days = Math.floor((Date.now() - new Date(u.createdAt).getTime()) / 86400000);
                   return (
-                    <div key={u.workspaceId} className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_90px_70px_80px_80px_120px] items-center px-5 py-3.5 gap-4 hover:bg-muted/5 transition-colors group">
+                    <div key={u.workspaceId} className="grid grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(240px,1fr)_76px_58px_88px_58px_120px_190px] items-center px-5 py-3.5 gap-3 hover:bg-muted/5 transition-colors group">
                       <div className="min-w-0">
-                        <button onClick={() => setProfileUserId(u.userId)} className="font-mono text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate text-left hover:underline underline-offset-2">{u.userName}</button>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <button onClick={() => setProfileUserId(u.userId)} className="font-mono text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate text-left hover:underline underline-offset-2">{u.userName}</button>
+                          {u.trialAccess && <Badge variant="outline" className="rounded-none border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-widest text-amber-300 shrink-0">TRIAL</Badge>}
+                        </div>
                         <div className="text-xs text-muted-foreground font-mono truncate flex items-center gap-2">
                           <span>{u.email}</span>
                           {u.workspaceName && (<><span className="text-muted-foreground/30">·</span><span className="text-muted-foreground/50">{u.workspaceName}</span></>)}
                         </div>
                         <div className="text-[11px] text-muted-foreground/40 font-mono mt-0.5">{fmtDate(u.createdAt, intlLocale(locale))}</div>
+                        <div className="lg:hidden text-[10px] text-muted-foreground/60 font-mono mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                          <span>{t("Plano", "Plan", "Plan")}: {u.planSlug}</span>
+                          <span>{t("Camp.", "Campaigns", "Camp.")}: {u.totalCampaigns}</span>
+                          <span>{t("Créditos", "Credits", "Créditos")}: {(u.creditsBalance ?? 0).toLocaleString(intlLocale(locale))}</span>
+                          <span>{t("Dias", "Days", "Días")}: {days}d</span>
+                          {u.trialAccess && <span className="text-amber-300">TRIAL</span>}
+                        </div>
                       </div>
-                      <div className="hidden md:flex justify-end">
+                      <div className="hidden lg:flex justify-end">
                         <span className={`text-[11px] font-mono uppercase tracking-widest px-2 py-1 border ${u.planSlug === "agency" ? "text-success border-success/30 bg-success/10" : "text-primary border-primary/30 bg-primary/10"}`}>{u.planSlug}</span>
                       </div>
-                      <div className="hidden md:block text-right font-mono text-sm text-foreground/80">{u.totalCampaigns}</div>
-                      <div className="hidden md:block text-right">
+                      <div className="hidden lg:block text-right font-mono text-sm text-foreground/80">{u.totalCampaigns}</div>
+                      <div className="hidden lg:block text-right">
                         <span className={`font-mono text-sm font-bold ${u.creditsBalance < 150 ? "text-yellow-400" : "text-foreground/80"}`}>
                           {(u.creditsBalance ?? 0).toLocaleString("pt-BR")}
                         </span>
                       </div>
-                      <div className="hidden md:block text-right font-mono text-sm text-muted-foreground/50">{days}d</div>
-                      <div className="flex justify-end items-center gap-2">
+                      <div className="hidden lg:block text-right font-mono text-sm text-muted-foreground/50">{days}d</div>
+                      <div className="flex justify-end items-center min-w-0">
                         {meta && (
-                          <Badge variant="outline" className={`rounded-none font-mono text-[11px] uppercase tracking-widest px-2 py-0.5 ${meta.color}`}>
+                          <Badge variant="outline" className={`rounded-none font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 whitespace-nowrap ${meta.color}`}>
                             <Icon className="h-2.5 w-2.5 mr-1 shrink-0" />{meta.label}
                           </Badge>
                         )}
+                      </div>
+                      <div className="col-span-2 lg:col-span-1 flex justify-end items-center gap-2">
                         <button
                           onClick={() => { setGrantTarget({ workspaceId: u.workspaceId, userName: u.userName, currentPlan: u.planSlug }); setGrantPlan("solo"); }}
-                          className="font-mono text-[10px] uppercase tracking-widest border border-primary/30 bg-primary/5 hover:bg-primary/15 text-primary px-2 py-1 transition-colors shrink-0"
+                          className="font-mono text-[10px] uppercase tracking-widest border border-primary/30 bg-primary/5 hover:bg-primary/15 text-primary px-2 py-1 transition-colors shrink-0 whitespace-nowrap"
                           title={t("Liberar acesso ao plano sem pagamento", "Grant plan access without payment", "Conceder acceso al plan sin pago")}
                         >
                           🎟 {t("Liberar", "Grant", "Conceder")}
                         </button>
                         <button
                           onClick={() => setCampaignAccessTarget({ workspaceId: u.workspaceId, userName: u.userName, email: u.email })}
-                          className="font-mono text-[10px] uppercase tracking-widest border border-success/30 bg-success/5 hover:bg-success/15 text-success px-2 py-1 transition-colors shrink-0"
+                          className="font-mono text-[10px] uppercase tracking-widest border border-success/30 bg-success/5 hover:bg-success/15 text-success px-2 py-1 transition-colors shrink-0 whitespace-nowrap"
                           title={t("Conceder acesso permanente ao briefing e campanhas", "Grant permanent briefing and campaign access", "Conceder acceso permanente al briefing y las campañas")}
                         >
                           ∞ {t("Briefing", "Briefing", "Briefing")}

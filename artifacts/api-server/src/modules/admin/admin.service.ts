@@ -1,4 +1,4 @@
-import { eq, count, inArray, sql, sum, gte, lte, and, desc, isNotNull } from "drizzle-orm";
+import { eq, count, inArray, sql, sum, gte, lte, and, desc, isNotNull, gt, isNull, or } from "drizzle-orm";
 import {
   db,
   workspacesTable,
@@ -8,7 +8,10 @@ import {
   subscriptionPaymentsTable,
   creditTransactionsTable,
   aiProviderLogsTable,
+  commercialSubscriptionsTable,
+  commercialProductsTable,
 } from "@workspace/db";
+import { ADMIN_CAMPAIGN_ACCESS_PRODUCT_KEY, WORKSPACE_PLAN_ACCESS_PRODUCT_KEY } from "../billing/commercial-access.constants.js";
 
 // ─── SaaS User types ──────────────────────────────────────────────────────────
 
@@ -32,6 +35,7 @@ export interface SaasUserRow {
   totalCampaigns: number;
   hasActiveLaunch: boolean;
   creditsBalance: number;
+  trialAccess: boolean;
   createdAt: string;
   daysSinceCreation: number;
 }
@@ -97,6 +101,7 @@ export async function getAdminOverview(): Promise<AdminOverview> {
       workspaceName: workspacesTable.name,
       workspaceStatus: workspacesTable.status,
       creditsBalance: workspacesTable.creditsBalance,
+      settings: workspacesTable.settings,
       createdAt: workspacesTable.createdAt,
       userId: usersTable.id,
       userName: usersTable.name,
@@ -114,6 +119,26 @@ export async function getAdminOverview(): Promise<AdminOverview> {
   }
 
   const workspaceIds = workspaces.map((w) => w.workspaceId);
+
+  const activeCommercialAccess = await db
+    .select({
+      workspaceId: commercialSubscriptionsTable.workspaceId,
+      productKey: commercialProductsTable.key,
+      capabilities: commercialProductsTable.capabilities,
+    })
+    .from(commercialSubscriptionsTable)
+    .innerJoin(commercialProductsTable, eq(commercialProductsTable.id, commercialSubscriptionsTable.productId))
+    .where(and(
+      inArray(commercialSubscriptionsTable.workspaceId, workspaceIds),
+      eq(commercialSubscriptionsTable.status, "active"),
+      eq(commercialProductsTable.status, "active"),
+      or(isNull(commercialSubscriptionsTable.endsAt), gt(commercialSubscriptionsTable.endsAt, new Date())),
+    ));
+  const workspacesWithPlanAccess = new Set(activeCommercialAccess.filter(access => {
+    if (access.productKey === WORKSPACE_PLAN_ACCESS_PRODUCT_KEY || access.productKey === ADMIN_CAMPAIGN_ACCESS_PRODUCT_KEY) return true;
+    const licensePlan = (access.capabilities as Record<string, unknown> | null)?.license_plan;
+    return Boolean(licensePlan && typeof licensePlan === "object" && typeof (licensePlan as Record<string, unknown>).slug === "string");
+  }).map(access => access.workspaceId));
 
   const campaignCounts = await db
     .select({ workspaceId: campaignsTable.workspaceId, total: count() })
@@ -157,6 +182,8 @@ export async function getAdminOverview(): Promise<AdminOverview> {
       totalCampaigns,
       hasActiveLaunch,
       creditsBalance: w.creditsBalance,
+      trialAccess: !workspacesWithPlanAccess.has(w.workspaceId)
+        && Boolean((w.settings as { nexosTrial?: { active?: boolean } } | null)?.nexosTrial?.active),
       createdAt: w.createdAt.toISOString(),
       daysSinceCreation,
     };

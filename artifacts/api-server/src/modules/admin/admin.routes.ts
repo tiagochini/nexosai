@@ -6,6 +6,8 @@ import { requireAuth } from "../auth/auth.middleware.js";
 import { getAdminOverview, getAdminFinancials, getAdminPayments, getCampaignCostBreakdown, getAdminDRE, getAdminCRM } from "./admin.service.js";
 import { queryAgentExecutionLogs, getAgentExecutionLogById, getAgentExecutionLogsSummary } from "./audit-logs.service.js";
 import { markPaymentPaid } from "../billing/billing.service.js";
+import { activateWorkspacePlanAccess } from "../billing/billing-plan-activation.js";
+import { getWorkspaceTrial } from "../auth/trial-access.service.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { collectOperationalHealth } from "../../routes/health.js";
 import { getOperationalStatus } from "../operations/operational-status.service.js";
@@ -17,11 +19,12 @@ import { getDeadLetter, listDeadLetters, replayDeadLetter } from "../orchestrati
 import {
   db, inviteCodesTable, usersTable, workspacesTable, plansTable,
   subscriptionPaymentsTable, campaignsTable, creditTransactionsTable,
+  aiProviderLogsTable,
   waitlistTable, commercialProductsTable, commercialSubscriptionsTable, auditLogsTable,
   aiCreditSettingsTable, commercialSalesOffersTable,
   creditPackPricingTable,
 } from "@workspace/db";
-import { and, eq, desc, count, sql } from "drizzle-orm";
+import { and, eq, desc, count, sql, inArray } from "drizzle-orm";
 
 const router = Router();
 router.use(requireAuth, requirePlatformAdmin);
@@ -353,19 +356,23 @@ router.post("/workspaces/:workspaceId/grant-plan", async (req, res): Promise<voi
     return;
   }
 
-  const [workspace] = await db.select().from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
-  if (!workspace) throw new NotFoundError("Workspace não encontrado");
+  const plan = await db.transaction(async (tx) => {
+    const [workspace] = await tx.select().from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).for("update").limit(1);
+    if (!workspace) throw new NotFoundError("Workspace não encontrado");
 
-  const [plan] = await db.select().from(plansTable).where(eq(plansTable.slug, planSlug as "solo" | "agency")).limit(1);
-  if (!plan) throw new NotFoundError("Plano não encontrado");
+    const [selectedPlan] = await tx.select().from(plansTable).where(eq(plansTable.slug, planSlug as "solo" | "agency")).limit(1);
+    if (!selectedPlan) throw new NotFoundError("Plano não encontrado");
 
-  await db.update(workspacesTable)
-    .set({
-      planId: plan.id,
-      creditsMonthlyBalance: Math.max(workspace.creditsMonthlyBalance ?? 0, plan.creditsMonthly),
-      creditsBalance: (workspace.creditsPurchasedBalance ?? 0) + Math.max(workspace.creditsMonthlyBalance ?? 0, plan.creditsMonthly),
-    })
-    .where(eq(workspacesTable.id, workspaceId));
+    await tx.update(workspacesTable)
+      .set({
+        planId: selectedPlan.id,
+        creditsMonthlyBalance: Math.max(workspace.creditsMonthlyBalance ?? 0, selectedPlan.creditsMonthly),
+        creditsBalance: (workspace.creditsPurchasedBalance ?? 0) + Math.max(workspace.creditsMonthlyBalance ?? 0, selectedPlan.creditsMonthly),
+      })
+      .where(eq(workspacesTable.id, workspaceId));
+    await activateWorkspacePlanAccess(tx, workspaceId, selectedPlan.slug, "admin_grant", undefined, req.auth.userId);
+    return selectedPlan;
+  });
 
   req.log.info({ workspaceId, planSlug, grantedByUserId: req.auth.userId }, "admin grant-plan");
   res.json({ ok: true, planName: plan.name, creditsGranted: plan.creditsMonthly });
@@ -483,6 +490,7 @@ router.get("/users/:userId", async (req, res): Promise<void> => {
     .limit(1);
 
   if (!user) throw new NotFoundError("Usuário não encontrado");
+  const trialAccess = (await getWorkspaceTrial(user.workspaceId)) !== null;
 
   // Invite code used at registration (lead source)
   const [invite] = await db
@@ -516,12 +524,31 @@ router.get("/users/:userId", async (req, res): Promise<void> => {
       type: campaignsTable.type,
       status: campaignsTable.status,
       track: campaignsTable.track,
+      creditsCost: campaignsTable.creditsCost,
       createdAt: campaignsTable.createdAt,
     })
     .from(campaignsTable)
     .where(eq(campaignsTable.workspaceId, user.workspaceId))
     .orderBy(desc(campaignsTable.createdAt))
     .limit(20);
+
+  const campaignAiCosts = campaigns.length > 0
+    ? await db.select({
+        campaignId: aiProviderLogsTable.campaignId,
+        costUsd: sql<number>`COALESCE(SUM(CAST(${aiProviderLogsTable.costUsd} AS float)), 0)`.mapWith(Number),
+      })
+      .from(aiProviderLogsTable)
+      .where(and(
+        eq(aiProviderLogsTable.workspaceId, user.workspaceId),
+        inArray(aiProviderLogsTable.campaignId, campaigns.map(campaign => campaign.id)),
+      ))
+      .groupBy(aiProviderLogsTable.campaignId)
+    : [];
+  const campaignAiCostMap = new Map(campaignAiCosts.map(row => [row.campaignId, row.costUsd]));
+  const campaignsWithCosts = campaigns.map(campaign => ({
+    ...campaign,
+    costUsd: campaignAiCostMap.get(campaign.id) ?? null,
+  }));
 
   // Credit usage stats
   const [creditStats] = await db
@@ -548,10 +575,10 @@ router.get("/users/:userId", async (req, res): Promise<void> => {
     .limit(10);
 
   res.json({
-    user,
+    user: { ...user, trialAccess },
     leadSource: invite ?? null,
     payments,
-    campaigns,
+    campaigns: campaignsWithCosts,
     creditStats: creditStats ?? { totalDebited: 0, totalCredited: 0, txCount: 0 },
     recentCredits,
   });
