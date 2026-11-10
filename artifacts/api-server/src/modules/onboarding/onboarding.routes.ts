@@ -84,6 +84,17 @@ const startSchema = z.object({
   path: z.enum(["has_product", "building_product", "affiliate_nexos", "has_audience"]),
   title: z.string().optional(),
   audienceSubPath: z.enum(["micro_launch", "members_area", "product_from_audience"]).optional(),
+  campaignType: z.enum([
+    "launch",
+    "perpetual_launch",
+    "flash_sale",
+    "live_sale",
+    "continuous_sales",
+    "subscription_growth",
+    "authority",
+    "audience_growth",
+    "affiliate",
+  ]).optional(),
 });
 
 router.post("/start", async (req, res): Promise<void> => {
@@ -93,7 +104,7 @@ router.post("/start", async (req, res): Promise<void> => {
     return;
   }
 
-  const { path, title } = parsed.data;
+  const { path, title, campaignType } = parsed.data;
   const commercialAccess = await resolveOnboardingSubscription(req.auth.workspaceId);
   if (commercialAccess.trialAccess && path !== "has_product") {
     throw new AppError(403, "O trial permite iniciar um briefing estratégico. Os outros cenários exigem uma licença.", "TRIAL_SCOPE_RESTRICTED");
@@ -104,10 +115,10 @@ router.post("/start", async (req, res): Promise<void> => {
   if (path === "has_product") {
     campaign = await createCampaign(req.auth.workspaceId, {
       title: title ?? "Meu Primeiro Lançamento",
-      type: "launch",
+      type: campaignType ?? "launch",
       track: "six_digits",
       ...("commercialProductId" in commercialAccess ? { commercialProductId: commercialAccess.commercialProductId, commercialSubscriptionId: commercialAccess.commercialSubscriptionId } : {}),
-      intakeData: { _onboardingPath: "has_product" },
+      intakeData: { _onboardingPath: "has_product", ...(campaignType ? { _selectedCampaignType: campaignType } : {}) },
     }, req.log);
   } else if (path === "building_product") {
     campaign = await createCampaign(req.auth.workspaceId, {

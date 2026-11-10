@@ -12,6 +12,7 @@ import {
   Mail, MessageSquare, Target, TrendingUp, Shield,
   Users, Video, BarChart2, Link2, Wifi, WifiOff,
   Phone, CreditCard, Megaphone, ExternalLink, RefreshCw, CornerDownLeft,
+  Zap, Radio,
 } from "lucide-react";
 import { toast } from "sonner";
 import nexosLogo from "/nexos-logo.png";
@@ -22,7 +23,26 @@ import { useUiText } from "@/lib/i18n";
 // ── Types ─────────────────────────────────────────────────────────────────────
 type OnboardingPath = "has_product" | "building_product" | "affiliate_nexos" | "has_audience";
 type AudienceSubPath = "micro_launch" | "members_area" | "product_from_audience";
+type BriefingCampaignType = "launch" | "perpetual_launch" | "flash_sale" | "live_sale" | "continuous_sales" | "subscription_growth" | "authority" | "audience_growth" | "affiliate";
 type UIStep = "welcome" | "path_select" | "audience_subpath" | "conversation" | "plan_preview" | "clone_wow" | "diagnosis_approval" | "integration_setup";
+
+const BRIEFING_CAMPAIGN_TYPES: Array<{
+  id: BriefingCampaignType;
+  icon: typeof Rocket;
+  title: [string, string, string];
+  description: [string, string, string];
+  tag: [string, string, string];
+}> = [
+  { id: "launch", icon: Rocket, title: ["Lançamento", "Launch", "Lanzamiento"], description: ["Aquecimento, evento e abertura de carrinho em uma janela planejada.", "Warm-up, event, and cart opening on a planned timeline.", "Calentamiento, evento y apertura de carrito en una ventana planificada."], tag: ["PLF / Fórmula", "PLF / Formula", "PLF / Fórmula"] },
+  { id: "perpetual_launch", icon: RefreshCw, title: ["Lançamento perpétuo", "Evergreen launch", "Lanzamiento perpetuo"], description: ["Funil contínuo com apresentações e ofertas recorrentes.", "An always-on funnel with recurring presentations and offers.", "Embudo continuo con presentaciones y ofertas recurrentes."], tag: ["Evergreen", "Evergreen", "Evergreen"] },
+  { id: "flash_sale", icon: Zap, title: ["Flash sale", "Flash sale", "Venta relámpago"], description: ["Oferta curta, com prazo de 24 a 72 horas.", "A short offer window, typically 24 to 72 hours.", "Oferta breve, normalmente de 24 a 72 horas."], tag: ["24–72 horas", "24–72 hours", "24–72 horas"] },
+  { id: "live_sale", icon: Radio, title: ["Venda ao vivo", "Live sale", "Venta en vivo"], description: ["Conversão concentrada em uma live, aula ou evento online.", "Sales concentrated around a live stream, class, or online event.", "Ventas concentradas en una transmisión, clase o evento en línea."], tag: ["Evento ao vivo", "Live event", "Evento en vivo"] },
+  { id: "continuous_sales", icon: TrendingUp, title: ["Vendas contínuas", "Continuous sales", "Ventas continuas"], description: ["Aquisição e conversão recorrentes, sem depender de um carrinho de lançamento.", "Ongoing acquisition and conversion without a launch cart window.", "Adquisición y conversión constantes sin depender de un carrito de lanzamiento."], tag: ["Vendas diárias", "Daily sales", "Ventas diarias"] },
+  { id: "subscription_growth", icon: Mail, title: ["Crescimento de assinaturas", "Subscription growth", "Crecimiento de suscripciones"], description: ["Captação, ativação e retenção para clube, membros ou serviço recorrente.", "Acquisition, activation, and retention for memberships or recurring services.", "Captación, activación y retención para membresías o servicios recurrentes."], tag: ["Clube / membros", "Membership", "Membresía"] },
+  { id: "authority", icon: BarChart2, title: ["Autoridade", "Authority", "Autoridad"], description: ["Posicionamento e conteúdo para fortalecer confiança e referência no mercado.", "Positioning and content to build trust and market authority.", "Posicionamiento y contenido para fortalecer confianza y autoridad."], tag: ["Branding", "Branding", "Marca"] },
+  { id: "audience_growth", icon: Users, title: ["Crescimento de audiência", "Audience growth", "Crecimiento de audiencia"], description: ["Atração e relacionamento para ampliar uma audiência própria.", "Attract and engage people to grow an owned audience.", "Atrae y relaciona personas para ampliar una audiencia propia."], tag: ["Orgânico", "Organic", "Orgánico"] },
+  { id: "affiliate", icon: Link2, title: ["Campanha de afiliados", "Affiliate campaign", "Campaña de afiliados"], description: ["Divulgação e conversão de um produto de terceiros por afiliados.", "Promote and sell a third-party product through affiliate partners.", "Promoción y venta de un producto de terceros mediante afiliados."], tag: ["Produto de terceiros", "Third-party product", "Producto de terceros"] },
+];
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -419,6 +439,7 @@ export default function Onboarding() {
   const [starting, setStarting] = useState(false);
   const [trialAccess, setTrialAccess] = useState(false);
   const [trialBriefingCampaignId, setTrialBriefingCampaignId] = useState<string | null>(null);
+  const [trialCampaignType, setTrialCampaignType] = useState<BriefingCampaignType>("launch");
   const [simulatorBanner, setSimulatorBanner] = useState<SimulatorData | null>(null);
   const [resumeCheck, setResumeCheck] = useState<"checking" | "resolved" | "error">("checking");
 
@@ -546,7 +567,7 @@ export default function Onboarding() {
   }, [messages]);
 
   // ── Select path and create campaign ──────────────────────────────────────────
-  const handlePathSelect = async (selectedPath: OnboardingPath) => {
+  const handlePathSelect = async (selectedPath: OnboardingPath, selectedCampaignType?: BriefingCampaignType) => {
     if (trialAccess && trialBriefingCampaignId) {
       setLocation(`/campaigns/${trialBriefingCampaignId}/intake`);
       return;
@@ -566,7 +587,7 @@ export default function Onboarding() {
       const data = await customFetch<{ campaign: { id: string }; path: string }>("/api/onboarding/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: selectedPath }),
+        body: JSON.stringify({ path: selectedPath, ...(trialAccess && selectedCampaignType ? { campaignType: selectedCampaignType } : {}) }),
       });
       const cid = data.campaign.id;
       setCampaignId(cid);
@@ -1052,22 +1073,60 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* ── PRIMARY CTA — direct start ───────────────────────────────── */}
+          {trialAccess && !trialBriefingCampaignId && (
+            <div className="mb-8 border border-primary/30 bg-card/20 p-5 md:p-7">
+              <div className="text-center mb-5">
+                <p className="font-mono text-[11px] uppercase tracking-widest text-primary/70 mb-2">{t("Escolha o tipo da sua campanha", "Choose your campaign type", "Elige el tipo de campaña")}</p>
+                <h2 className="font-mono font-black text-xl md:text-2xl uppercase tracking-tight text-foreground mb-2">{t("Qual estratégia você quer planejar?", "What strategy do you want to plan?", "¿Qué estrategia quieres planificar?")}</h2>
+                <p className="font-mono text-xs text-muted-foreground leading-relaxed">{t("O briefing continua gratuito no trial. Os agentes podem recomendar ajustes depois de entender seu produto.", "The briefing remains included in your trial. Agents may recommend adjustments after learning about your product.", "El briefing sigue incluido en tu prueba. Los agentes pueden recomendar ajustes después de conocer tu producto.")}</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {BRIEFING_CAMPAIGN_TYPES.map((campaignType) => {
+                  const Icon = campaignType.icon;
+                  const selected = trialCampaignType === campaignType.id;
+                  return (
+                    <button
+                      key={campaignType.id}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setTrialCampaignType(campaignType.id)}
+                      className={`flex items-start gap-3 p-4 text-left border transition-colors ${selected ? "border-primary bg-primary/10" : "border-border/40 bg-background/40 hover:border-primary/50"}`}
+                    >
+                      <Icon className={`w-5 h-5 mt-0.5 shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                      <span className="min-w-0">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-xs font-bold uppercase tracking-wide text-foreground">{t(...campaignType.title)}</span>
+                          <Badge variant="outline" className="rounded-none font-mono text-[9px] uppercase tracking-wider px-1.5 py-0 border-primary/25 text-primary/80">{t(...campaignType.tag)}</Badge>
+                        </span>
+                        <span className="block mt-1.5 font-mono text-[11px] leading-relaxed text-muted-foreground">{t(...campaignType.description)}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ── PRIMARY CTA ──────────────────────────────────────────────── */}
           <div className="mb-8 relative">
             <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary" />
             <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary" />
             <div className="border border-primary/40 bg-primary/5 p-6 md:p-8 text-center">
               <p className="font-mono text-xs uppercase tracking-widest text-primary/70 mb-2">{t("Recomendado", "Recommended", "Recomendado")}</p>
               <h2 className="font-mono font-black text-xl md:text-2xl uppercase tracking-tighter text-foreground mb-2">
-                {t("Iniciar briefing agora", "Start briefing now", "Iniciar briefing ahora")}
+                {trialAccess && !trialBriefingCampaignId
+                  ? t("Briefing de campanha", "Campaign briefing", "Briefing de campaña")
+                  : t("Iniciar briefing agora", "Start briefing now", "Iniciar briefing ahora")}
               </h2>
               <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-6 leading-relaxed">
-                {t("Responda às perguntas do time de agentes — eles descobrirão o melhor caminho para você", "Answer the agent team's questions — they'll find the best path for you", "Responde las preguntas del equipo de agentes: descubrirán el mejor camino para ti")}
+                {trialAccess && !trialBriefingCampaignId
+                  ? <>{t("Tipo selecionado:", "Selected type:", "Tipo seleccionado:")} <strong className="text-primary">{t(...BRIEFING_CAMPAIGN_TYPES.find((item) => item.id === trialCampaignType)!.title)}</strong>. {t("Responda às perguntas para montar a estratégia.", "Answer the questions to build your strategy.", "Responde las preguntas para crear la estrategia.")}</>
+                  : t("Responda às perguntas do time de agentes — eles descobrirão o melhor caminho para você", "Answer the agent team's questions — they'll find the best path for you", "Responde las preguntas del equipo de agentes: descubrirán el mejor camino para ti")}
               </p>
               <button
                 onClick={() => trialBriefingCampaignId
                   ? setLocation(`/campaigns/${trialBriefingCampaignId}/intake`)
-                  : handlePathSelect("has_product")}
+                  : handlePathSelect("has_product", trialAccess ? trialCampaignType : undefined)}
                 disabled={starting}
                 className="w-full md:w-auto inline-flex items-center justify-center gap-3 rounded-none font-mono uppercase tracking-widest font-black btn-weapon-primary h-14 px-12 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
