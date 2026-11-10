@@ -19,12 +19,14 @@ import nexosLogo from "/nexos-logo.png";
 import { CloneStudioPanel } from "@/components/CloneStudioPanel";
 import { CloneWowMoment } from "@/components/CloneWowMoment";
 import { useUiText } from "@/lib/i18n";
+import jsPDF, { GState } from "jspdf";
+import { pdfText } from "@/lib/pdf-text";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type OnboardingPath = "has_product" | "building_product" | "affiliate_nexos" | "has_audience";
 type AudienceSubPath = "micro_launch" | "members_area" | "product_from_audience";
 type BriefingCampaignType = "launch" | "perpetual_launch" | "flash_sale" | "live_sale" | "continuous_sales" | "subscription_growth" | "authority" | "audience_growth" | "affiliate";
-type UIStep = "welcome" | "path_select" | "audience_subpath" | "conversation" | "plan_preview" | "clone_wow" | "diagnosis_approval" | "integration_setup";
+type UIStep = "welcome" | "path_select" | "audience_subpath" | "conversation" | "trial_social_analysis" | "plan_preview" | "clone_wow" | "diagnosis_approval" | "integration_setup";
 
 const BRIEFING_CAMPAIGN_TYPES: Array<{
   id: BriefingCampaignType;
@@ -429,7 +431,7 @@ function loadSimulatorData(): SimulatorData | null {
 // ── Main component ────────────────────────────────────────────────────────────
 export default function Onboarding() {
   const t = useUiText();
-  const { user } = useAuth();
+  const { user, workspace } = useAuth();
   const { setMode } = useMode();
   const [, setLocation] = useLocation();
 
@@ -440,6 +442,12 @@ export default function Onboarding() {
   const [trialAccess, setTrialAccess] = useState(false);
   const [trialBriefingCampaignId, setTrialBriefingCampaignId] = useState<string | null>(null);
   const [trialCampaignType, setTrialCampaignType] = useState<BriefingCampaignType>("launch");
+  const [trialSocialProfile, setTrialSocialProfile] = useState("");
+  const [trialSocialDiagnosis, setTrialSocialDiagnosis] = useState<Record<string, any> | null>(null);
+  const [trialSocialAnalysisAvailable, setTrialSocialAnalysisAvailable] = useState(true);
+  const [trialSocialLoading, setTrialSocialLoading] = useState(false);
+  const [trialSocialSubmitting, setTrialSocialSubmitting] = useState(false);
+  const [trialIntakeData, setTrialIntakeData] = useState<Record<string, unknown>>({});
   const [simulatorBanner, setSimulatorBanner] = useState<SimulatorData | null>(null);
   const [resumeCheck, setResumeCheck] = useState<"checking" | "resolved" | "error">("checking");
 
@@ -488,7 +496,10 @@ export default function Onboarding() {
         if (!isTrial || saved.path === "has_product") {
           setPath(saved.path);
           setCampaignId(saved.campaignId);
-          setStep(saved.step);
+          // A cached trial step may predate the social-analysis gate or point
+          // at a paid-only step. Resume the brief, then let handleFinish route
+          // through the persisted diagnosis check before showing the preview.
+          setStep(isTrial ? "conversation" : saved.step);
           setMessages(saved.messages);
           setConversationComplete(saved.conversationComplete);
           if (saved.audienceSubPath) setAudienceSubPath(saved.audienceSubPath);
@@ -793,6 +804,31 @@ export default function Onboarding() {
 
   // ── Show plan preview then navigate ──────────────────────────────────────────
   const handleFinish = async () => {
+    if (trialAccess) {
+      if (!campaignId) {
+        toast.error(t("Não foi possível localizar o briefing desta avaliação.", "Could not find this trial briefing.", "No se pudo encontrar este briefing de prueba."));
+        return;
+      }
+      setTrialSocialLoading(true);
+      try {
+        const [campaignResult, diagnosisResult] = await Promise.all([
+          customFetch<{ campaign: Record<string, unknown> }>(`/api/campaigns/${campaignId}`),
+          customFetch<{ diagnosis: Record<string, any> | null; socialAnalysisAvailable?: boolean }>(`/api/campaigns/${campaignId}/social-diagnosis`),
+        ]);
+        const intake = (campaignResult.campaign?.intakeData as Record<string, unknown>) ?? {};
+        setTrialIntakeData(intake);
+        setTrialSocialProfile(String(intake["social.facebook"] ?? intake["social.facebookPage"] ?? intake["social.facebookUrl"] ?? ""));
+        setTrialSocialDiagnosis(diagnosisResult.diagnosis);
+        setTrialSocialAnalysisAvailable(diagnosisResult.socialAnalysisAvailable !== false);
+        if (diagnosisResult.diagnosis) setStep("plan_preview");
+        else setStep("trial_social_analysis");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : t("Não foi possível preparar a análise social.", "Could not prepare the social analysis.", "No se pudo preparar el análisis social."));
+      } finally {
+        setTrialSocialLoading(false);
+      }
+      return;
+    }
     setStep("plan_preview");
     // Fetch campaign intake data to compute real financial scenarios
     if (campaignId) {
@@ -808,6 +844,254 @@ export default function Onboarding() {
     }
   };
 
+  const handleTrialSocialAnalysis = async () => {
+    if (!campaignId || !trialSocialProfile.trim()) {
+      toast.error(t("Informe o endereço ou @ da Página do Facebook que deseja analisar.", "Enter the Facebook Page URL or handle to analyze.", "Ingresa la URL o el usuario de la página de Facebook que quieres analizar."));
+      return;
+    }
+    setTrialSocialSubmitting(true);
+    try {
+      const result = await customFetch<{ diagnosis: Record<string, any> }>(`/api/campaigns/${campaignId}/social-diagnosis`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ platform: "facebook", handle: trialSocialProfile.trim() }),
+      });
+      setTrialSocialDiagnosis(result.diagnosis);
+      setTrialSocialAnalysisAvailable(false);
+      setStep("plan_preview");
+      toast.success(t("Análise da Página do Facebook concluída.", "Facebook Page analysis complete.", "Análisis de página de Facebook completado."));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("Não foi possível analisar a Página do Facebook.", "Could not analyze the Facebook Page.", "No se pudo analizar la página de Facebook."));
+    } finally {
+      setTrialSocialSubmitting(false);
+    }
+  };
+
+  const downloadTrialPlanPdf = () => {
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 18;
+    let y = 22;
+    const generatedAt = new Date();
+    const identityName = user?.name?.trim() || "Usuário NexOS";
+    const identityEmail = user?.email?.trim() || "sem-email";
+    const identityUserId = user?.id || "unknown-user";
+    const identityWorkspaceId = workspace?.id || "unknown-workspace";
+    const fingerprintInput = `${identityUserId}::${campaignId ?? "trial"}::${generatedAt.toISOString()}::${window.crypto.randomUUID?.() ?? Array.from(window.crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("")}`;
+    let fingerprintHash = 0x811c9dc5;
+    for (let index = 0; index < fingerprintInput.length; index += 1) {
+      fingerprintHash ^= fingerprintInput.charCodeAt(index);
+      fingerprintHash = Math.imul(fingerprintHash, 0x01000193) >>> 0;
+    }
+    const fingerprintHex = fingerprintHash.toString(16).toUpperCase().padStart(8, "0");
+    const fingerprint = `NXS-${fingerprintHex.slice(0, 4)}-${fingerprintHex.slice(4, 8)}`;
+    const fingerprintBits = fingerprintHex.split("").flatMap((char) => {
+      const nibble = Number.parseInt(char, 16);
+      return [3, 2, 1, 0].map((bit) => (nibble >> bit) & 1);
+    });
+    let fingerprintBitIndex = 0;
+    const lineHeight = (size: number) => Math.max(4.6, size * 0.48);
+    const ensureRoom = (height: number) => {
+      if (y + height <= pageHeight - 17) return;
+      doc.addPage();
+      y = 22;
+      doc.setTextColor(70, 80, 220);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.text("NEXOS - GUIA PRATICO DE EXECUCAO", margin, 13);
+      doc.setDrawColor(220, 220, 230);
+      doc.line(margin, 16, pageWidth - margin, 16);
+      doc.setTextColor(35, 35, 45);
+    };
+    const write = (rawText: string, size = 10, gap = 4, bold = false, indent = 0) => {
+      const text = pdfText(rawText);
+      doc.setFont("helvetica", bold ? "bold" : "normal");
+      doc.setFontSize(size);
+      const lines = doc.splitTextToSize(text, pageWidth - margin * 2 - indent) as string[];
+      const height = lines.length * lineHeight(size);
+      ensureRoom(height + gap);
+      const delta = 0.14;
+      const baseSpace = doc.getTextWidth(" ");
+      lines.forEach((line, lineIndex) => {
+        const words = line.split(/\s+/).filter(Boolean);
+        let x = margin + indent;
+        const lineY = y + lineIndex * lineHeight(size);
+        words.forEach((word, wordIndex) => {
+          const wordWidth = doc.getTextWidth(word);
+          doc.text(word, x, lineY);
+          if (wordIndex < words.length - 1) {
+            const bit = fingerprintBits[fingerprintBitIndex % fingerprintBits.length];
+            fingerprintBitIndex += 1;
+            x += wordWidth + baseSpace + (bit ? delta : -delta);
+          }
+        });
+      });
+      y += height + gap;
+    };
+    const section = (title: string) => {
+      y += 2;
+      ensureRoom(12);
+      doc.setTextColor(70, 80, 220);
+      write(title.toUpperCase(), 12, 5, true);
+      doc.setTextColor(35, 35, 45);
+    };
+    const field = (...keys: string[]) => {
+      for (const key of keys) {
+        const value = trialIntakeData[key];
+        if (typeof value === "string" && value.trim()) return value.trim().slice(0, 700);
+        if (typeof value === "number" && Number.isFinite(value)) return String(value);
+        if (Array.isArray(value)) {
+          const items = value.map((item) => typeof item === "string" ? item.trim() : "").filter(Boolean);
+          if (items.length) return items.join(", ").slice(0, 700);
+        }
+      }
+      return "";
+    };
+    const list = (value: unknown, max = 4): string[] => Array.isArray(value)
+      ? value.map((item) => typeof item === "string" ? item.trim() : "").filter(Boolean).slice(0, max)
+      : typeof value === "string" && value.trim() ? [value.trim()] : [];
+    const label = (name: string, value: string) => write(`${name}: ${value}`, 9, 4);
+
+    const product = field("product.name", "product.nome", "productName") || t("produto/serviço", "product/service", "producto/servicio");
+    const description = field("product.description", "product.descricao", "product.summary");
+    const audience = field("audience.description", "audience.profile", "audience.public", "audience.target");
+    const pains = field("audience.painPoints", "audience.pains");
+    const desires = field("audience.desires", "audience.goals");
+    const differentiator = field("creator.uniqueAngle", "product.uniqueAngle", "campaign.mainPromise", "campaign.promise");
+    const price = field("product.price", "product.offerPrice", "offer.price");
+    const campaignType = BRIEFING_CAMPAIGN_TYPES.find((item) => item.id === trialCampaignType);
+
+    doc.setTextColor(70, 80, 220);
+    write(t("NexOS: GUIA PRÁTICO DA PRÉVIA", "NexOS: PRACTICAL PREVIEW GUIDE", "NexOS: GUÍA PRÁCTICA DE LA VISTA PREVIA"), 16, 5, true);
+    doc.setTextColor(35, 35, 45);
+    write(`${t("Cliente", "Customer", "Cliente")}: ${user?.name || t("Usuário NexOS", "NexOS user", "Usuario NexOS")}`, 10, 2);
+    write(`${t("Produto", "Product", "Producto")}: ${product}`, 10, 2);
+    write(`${t("Estratégia escolhida", "Selected strategy", "Estrategia elegida")}: ${campaignType ? t(...campaignType.title) : t("Não informada", "Not provided", "No indicada")}`, 10, 2);
+    write(trialSocialDiagnosis?.handle
+      ? `${t("Perfil público analisado", "Public profile analyzed", "Perfil público analizado")}: ${trialSocialDiagnosis.handle} (Facebook)`
+      : t("Análise social não realizada; as sugestões usam somente o briefing.", "Social analysis was not performed; suggestions use only the brief.", "No se realizó análisis social; las sugerencias usan solo el briefing."), 9, 5);
+
+    section(t("1. Antes de publicar", "1. Before publishing", "1. Antes de publicar"));
+    label(t("O que é a oferta", "What is the offer", "Qué es la oferta"), description || t("Escreva uma frase simples explicando o produto/serviço.", "Write one simple sentence describing the product/service.", "Escribe una frase sencilla que describa el producto/servicio."));
+    label(t("Para quem", "Who it is for", "Para quién"), audience || t("Ainda não está específico no briefing. Escolha um grupo de pessoas com uma necessidade em comum.", "Not specific in the brief yet. Choose one group with a shared need.", "Aún no está especificado. Elige un grupo con una necesidad en común."));
+    if (pains) label(t("Problema citado", "Problem stated", "Problema indicado"), pains);
+    if (desires) label(t("Resultado desejado", "Desired outcome", "Resultado deseado"), desires);
+    if (differentiator) label(t("Diferencial informado", "Stated differentiator", "Diferenciador indicado"), differentiator);
+    if (price) label(t("Preço informado", "Stated price", "Precio indicado"), price);
+    write(t("Checklist: confirme preço, o que está incluído, para quem serve, condições, prazo verdadeiro e link de contato. Complete qualquer campo entre [colchetes] nos exemplos. Não use promessas, depoimentos, números ou escassez que não possa comprovar.", "Checklist: confirm the price, what's included, who it's for, terms, any real deadline, and contact link. Fill every [bracketed] field in the examples. Do not use claims, testimonials, numbers, or scarcity you cannot verify.", "Lista: confirma precio, qué incluye, para quién es, condiciones, plazo real y enlace de contacto. Completa cada campo entre [corchetes]. No uses promesas, testimonios, cifras ni escasez que no puedas comprobar."), 9, 5);
+
+    section(t("2. Plano mínimo de execução - 7 dias", "2. Minimum execution plan - 7 days", "2. Plan mínimo de ejecución - 7 días"));
+    write(t("Separe 30 a 45 minutos por dia. Use uma rede onde já tenha público; se ainda não tiver, escolha um canal. Publique uma peça principal por dia e responda às pessoas manualmente. Os exemplos são modelos: adapte-os ao produto e revise antes de publicar.", "Set aside 30 to 45 minutes daily. Use a network where you already have an audience; if you don't, choose one channel. Publish one main piece daily and reply manually. These are templates: adapt and review before posting.", "Reserva de 30 a 45 minutos al día. Usa una red donde ya tengas público; si no, elige un canal. Publica una pieza principal al día y responde manualmente. Son modelos: adáptalos y revísalos antes de publicar."), 9, 5);
+
+    const days = [
+      { title: t("Dia 1 - Definir a mensagem", "Day 1 - Define the message", "Día 1 - Define el mensaje"), goal: t("Deixe claro para quem é e qual problema resolve.", "Clarify who it's for and what problem it solves.", "Aclara para quién es y qué problema resuelve."), copy: t("Você também enfrenta [problema]? Nesta semana vou mostrar como [produto/serviço] ajuda [público] com [necessidade]. Quer que eu te avise? Responda 'quero'.", "Do you also face [problem]? This week I'll show how [product/service] helps [audience] with [need]. Want me to let you know? Reply 'yes'.", "¿También tienes [problema]? Esta semana mostraré cómo [producto/servicio] ayuda a [público] con [necesidad]. ¿Quieres que te avise? Responde 'sí'."), action: t("Troque os colchetes por palavras do briefing. Publique em story ou post. Responda quem interagir.", "Replace brackets using the brief. Publish as a story or post. Reply to people who engage.", "Sustituye los corchetes usando el briefing. Publica una historia o post. Responde a quienes interactúen."), metric: t("Anote visualizações, respostas e perguntas.", "Record views, replies, and questions.", "Anota vistas, respuestas y preguntas.") },
+      { title: t("Dia 2 - Dar uma dica prática", "Day 2 - Share a practical tip", "Día 2 - Comparte un consejo práctico"), goal: t("Entregue uma pequena ajuda relacionada ao problema do público.", "Give a small piece of help related to the audience's problem.", "Ofrece una pequeña ayuda relacionada con el problema del público."), copy: t("Uma forma de começar com [tema] é: 1) [passo 1]; 2) [passo 2]; 3) [passo 3]. Qual desses passos é mais difícil para você?", "A way to start with [topic] is: 1) [step 1]; 2) [step 2]; 3) [step 3]. Which step is hardest for you?", "Una forma de empezar con [tema] es: 1) [paso 1]; 2) [paso 2]; 3) [paso 3]. ¿Cuál te cuesta más?"), action: t("Use só uma dica que você conhece e consegue explicar. Responda comentários no mesmo dia.", "Use a tip you know and can explain. Reply to comments the same day.", "Usa un consejo que conozcas y puedas explicar. Responde comentarios el mismo día."), metric: t("Anote salvamentos, comentários e perguntas.", "Record saves, comments, and questions.", "Anota guardados, comentarios y preguntas.") },
+      { title: t("Dia 3 - Apresentar a oferta", "Day 3 - Present the offer", "Día 3 - Presenta la oferta"), goal: t("Explique o que é, o que inclui, o preço e como comprar ou pedir detalhes.", "Explain what it is, what's included, the price, and how to buy or ask for details.", "Explica qué es, qué incluye, el precio y cómo comprar o pedir detalles."), copy: t("Conheça [produto/serviço], feito para [público] que busca [necessidade]. Inclui [itens principais] e custa [preço/condição]. Veja os detalhes em [link] ou me envie 'detalhes'.", "Meet [product/service], for [audience] looking for [need]. It includes [main items] and costs [price/terms]. Details: [link], or message me 'details'.", "Conoce [producto/servicio], para [público] que busca [necesidad]. Incluye [elementos] y cuesta [precio/condición]. Detalles en [enlace] o escríbeme 'detalles'."), action: t("Teste o link em outro celular/navegador. Não diga 'últimas vagas' sem limite real.", "Test the link on another phone/browser. Don't say 'last spots' without a real limit.", "Prueba el enlace en otro móvil/navegador. No digas 'últimas plazas' sin límite real."), metric: t("Anote cliques, mensagens de interesse e pedidos de compra.", "Record clicks, interested messages, and purchase enquiries.", "Anota clics, mensajes de interés y consultas de compra.") },
+      { title: t("Dia 4 - Responder interessados", "Day 4 - Reply to interested people", "Día 4 - Responde a interesados"), goal: t("Entenda a dúvida da pessoa antes de recomendar a oferta.", "Understand the person's question before recommending the offer.", "Entiende la duda antes de recomendar la oferta."), copy: t("Uma pergunta que recebi foi: [dúvida real]. A resposta é: [resposta clara, baseada nas condições]. Se ainda tiver dúvidas, escreva aqui ou me chame.", "A question I received was: [real question]. The answer is: [clear answer based on the terms]. Ask here if you still have questions.", "Una pregunta que recibí fue: [pregunta real]. La respuesta es: [respuesta clara según las condiciones]. Pregunta aquí si aún tienes dudas."), action: t("Responda primeiro a quem pediu informação. Peça permissão antes de enviar mensagens privadas não solicitadas.", "Reply first to people who asked. Get permission before unsolicited private messages.", "Responde primero a quienes preguntaron. Pide permiso antes de enviar mensajes privados no solicitados."), metric: t("Anote as dúvidas frequentes e quantas conversas abriram o link.", "Record frequent questions and conversations that opened the link.", "Anota preguntas frecuentes y conversaciones que abrieron el enlace.") },
+      { title: t("Dia 5 - Esclarecer uma objeção", "Day 5 - Address an objection", "Día 5 - Aclara una objeción"), goal: t("Use uma dúvida real e explique para quem a oferta serve ou não serve.", "Use a real concern and explain who the offer is and isn't for.", "Usa una duda real y explica para quién es o no es la oferta."), copy: t("'Isso é para mim?' Pode fazer sentido se [critério verdadeiro]. Não é indicado para [limite real, se houver]. Confira tudo que está incluído em [link].", "'Is this for me?' It may fit if [true criterion]. It may not fit [real limitation, if any]. See what's included at [link].", "'¿Es para mí?' Puede encajar si [criterio verdadero]. No encaja con [límite real, si existe]. Mira qué incluye en [enlace]."), action: t("Não invente depoimentos, resultados ou quantidade de clientes. Use somente informações confirmadas.", "Don't invent testimonials, results, or customer counts. Use confirmed information only.", "No inventes testimonios, resultados ni cantidad de clientes. Usa solo información confirmada."), metric: t("Anote respostas, cliques e dúvidas que ficaram abertas.", "Record replies, clicks, and unanswered questions.", "Anota respuestas, clics y dudas pendientes.") },
+      { title: t("Dia 6 - Fazer um lembrete honesto", "Day 6 - Send an honest reminder", "Día 6 - Envía un recordatorio honesto"), goal: t("Reforce condições reais; mencione prazo só se ele existir.", "Restate real terms; mention a deadline only if one exists.", "Repite condiciones reales; menciona plazo solo si existe."), copy: t("Para quem pediu os detalhes: [produto] inclui [benefício verificável] por [preço/condição]. Confira em [link]. [Se houver prazo real: inscrições até data/hora].", "For those who asked: [product] includes [verifiable benefit] for [price/terms]. See [link]. [If real: enrollment closes at date/time].", "Para quienes preguntaron: [producto] incluye [beneficio verificable] por [precio/condiciones]. Mira [enlace]. [Si existe: cierra en fecha/hora]."), action: t("Se não há prazo ou estoque limitado, remova o trecho entre colchetes. Não crie urgência falsa.", "If there is no deadline or stock limit, remove the bracketed part. Don't create false urgency.", "Si no hay plazo ni límite de stock, elimina el texto entre corchetes. No inventes urgencia."), metric: t("Anote cliques, perguntas e pedidos de compra.", "Record clicks, questions, and purchase enquiries.", "Anota clics, preguntas y consultas de compra.") },
+      { title: t("Dia 7 - Fechar ou planejar a próxima semana", "Day 7 - Close or plan next week", "Día 7 - Cierra o planifica la próxima semana"), goal: t("Conclua apenas se houver prazo real; caso contrário, revise o que aprendeu.", "Close only if there is a real deadline; otherwise review what you learned.", "Cierra solo si hay un plazo real; si no, revisa lo aprendido."), copy: t("Obrigado por acompanhar. [A oferta encerra hoje às hora, conforme informado] / [A oferta segue disponível em link]. O que devo explicar melhor na próxima semana?", "Thanks for following along. [Offer closes today at stated time] / [Offer remains available at link]. What should I explain better next week?", "Gracias por acompañar. [La oferta cierra hoy a la hora indicada] / [Sigue disponible en enlace]. ¿Qué debo explicar mejor la próxima semana?"), action: t("Use apenas a alternativa verdadeira. Compare os números e repita o conteúdo que trouxe conversas mais relevantes.", "Use only the true option. Compare your numbers and repeat the content that led to the most relevant conversations.", "Usa solo la opción verdadera. Compara tus cifras y repite el contenido que generó conversaciones relevantes."), metric: t("Feche o registro de alcance, respostas, cliques, interessados e vendas pagas.", "Complete reach, replies, clicks, interested people, and paid sales.", "Completa alcance, respuestas, clics, interesados y ventas pagadas.") },
+    ];
+    days.forEach((day) => {
+      ensureRoom(30);
+      doc.setTextColor(70, 80, 220);
+      write(day.title, 11, 3, true);
+      doc.setTextColor(35, 35, 45);
+      label(t("Objetivo", "Goal", "Objetivo"), day.goal);
+      label(t("Exemplo para adaptar", "Example to adapt", "Ejemplo para adaptar"), day.copy);
+      label(t("Faça", "Do", "Hazlo"), day.action);
+      label(t("Registre", "Record", "Registra"), day.metric);
+      y += 2;
+    });
+
+    section(t("3. Como saber se avançou", "3. How to tell if you made progress", "3. Cómo saber si avanzaste"));
+    write(t("Ao fim de cada dia, anote em uma folha ou planilha: data e canal; alcance/visualizações; respostas e conversas; cliques no link; interessados; vendas realmente pagas. Mantenha os números de cada rede separados. O resultado mínimo é ter publicado, respondido e registrado dados suficientes para decidir o próximo passo - não há garantia de venda ou alcance.", "At the end of each day, record date/channel, reach/views, replies/conversations, link clicks, interested people, and actually paid sales. Keep network metrics separate. The minimum outcome is to publish, reply, and collect enough data to choose the next step - sales and reach are not guaranteed.", "Al final de cada día, anota fecha/canal, alcance/vistas, respuestas/conversaciones, clics, interesados y ventas pagadas. Separa las redes. El resultado mínimo es publicar, responder y reunir datos para decidir el siguiente paso; no se garantizan ventas ni alcance."), 9, 5);
+
+    const analysis = trialSocialDiagnosis?.publicProfileAnalysis ?? {};
+    if (analysis.overview) {
+      section(t("4. Sugestões da análise social", "4. Social analysis suggestions", "4. Sugerencias del análisis social"));
+      write(String(analysis.overview), 9, 4);
+      const strengths = list(analysis.strategicAnalysis?.strengths);
+      const opportunities = list(analysis.strategicAnalysis?.opportunities);
+      const actions = list(analysis.actionPlan, 5);
+      if (strengths.length) label(t("Pontos fortes observados", "Observed strengths", "Puntos fuertes observados"), strengths.join("; "));
+      if (opportunities.length) label(t("Oportunidades sugeridas", "Suggested opportunities", "Oportunidades sugeridas"), opportunities.join("; "));
+      actions.forEach((action, index) => write(`${index + 1}. ${action}`, 9, 3, false, 2));
+      write(t("A análise de perfil público é indicativa. Confira manualmente as observações antes de mudar a estratégia ou investir em anúncios.", "Public profile analysis is indicative. Verify observations before changing strategy or spending on ads.", "El análisis del perfil público es orientativo. Verifica las observaciones antes de cambiar la estrategia o invertir en anuncios."), 9, 4);
+    }
+    section(t("Quer levar esta estratégia mais longe?", "Ready to take this strategy further?", "¿Quieres llevar esta estrategia más lejos?"));
+    write(t("Este documento é uma análise básica e gratuita, construída a partir das informações que você compartilhou no briefing e, quando realizada, de sinais públicos da rede social. Com uma licença NexOS, os agentes podem aprofundar o diagnóstico e transformar esta primeira direção em um plano de campanha mais completo e personalizado, com estratégia, calendário, conteúdos e recomendações práticas de execução. Quando você conecta e autoriza suas contas, o plano também pode considerar os dados disponíveis dessas redes para orientar melhor as decisões. Você recebe mais contexto para agir com clareza e aproveitar melhor cada etapa da campanha. A profundidade depende das informações e integrações disponíveis; nenhum plano garante resultados de alcance ou vendas. Esta prévia não conecta contas, publica conteúdo, envia mensagens nem cria anúncios.", "This document is a free, basic analysis built from the information you shared in the brief and, when performed, public social signals. With a NexOS license, the agents can deepen the diagnosis and turn this initial direction into a more complete, personalized campaign plan with strategy, a calendar, content, and practical execution recommendations. When you connect and authorize your accounts, the plan can also use the data available from those networks to better inform decisions. You get more context to act with clarity and make the most of each campaign stage. The depth depends on available information and integrations; no plan guarantees reach or sales. This preview does not connect accounts, publish content, send messages, or create ads.", "Este documento es un análisis básico y gratuito, creado a partir de la información compartida en el briefing y, cuando se realiza, de señales públicas de redes sociales. Con una licencia NexOS, los agentes pueden profundizar el diagnóstico y convertir esta primera orientación en un plan de campaña más completo y personalizado, con estrategia, calendario, contenidos y recomendaciones prácticas de ejecución. Cuando conectas y autorizas tus cuentas, el plan también puede considerar los datos disponibles de esas redes para orientar mejor las decisiones. Obtienes más contexto para actuar con claridad y aprovechar cada etapa de la campaña. El nivel de detalle depende de la información y las integraciones disponibles; ningún plan garantiza alcance ni ventas. Esta vista previa no conecta cuentas, publica contenido, envía mensajes ni crea anuncios."), 9, 4);
+
+    // Add the same visible, per-recipient identification used by the licensed Master Plan.
+    const totalPages = doc.getNumberOfPages();
+    for (let page = 1; page <= totalPages; page += 1) {
+      doc.setPage(page);
+      const pageCommands = (doc.internal as typeof doc.internal & { pages: string[][] }).pages[page];
+      const watermarkStart = pageCommands.length;
+      doc.saveGraphicsState();
+      doc.setGState(new GState({ opacity: 0.12 }));
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(180, 160, 210);
+      const watermark = `CÓPIA IDENTIFICADA PARA ${identityName.toUpperCase()} · ${identityEmail} · ${fingerprint}`;
+      doc.text(watermark, pageWidth / 2, pageHeight / 2, { angle: 45, align: "center" });
+      doc.setFontSize(7.5);
+      doc.text(watermark, pageWidth / 2, pageHeight / 3, { angle: 45, align: "center" });
+      doc.text(watermark, pageWidth / 2, (2 * pageHeight) / 3, { angle: 45, align: "center" });
+      doc.restoreGraphicsState();
+      const watermarkCommands = pageCommands.splice(watermarkStart);
+      const firstTextCommand = pageCommands.findIndex((command) => /^BT\b/.test(command));
+      pageCommands.splice(firstTextCommand < 0 ? pageCommands.length : firstTextCommand, 0, ...watermarkCommands);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(110, 110, 125);
+      doc.text(`${t("Prévia NexOS", "NexOS preview", "Vista previa NexOS")} - ${page}/${totalPages + 1} · ${fingerprint}`, pageWidth - margin, pageHeight - 8, { align: "right" });
+    }
+
+    // Include a clear usage notice without claiming encryption or preventing copying.
+    doc.addPage();
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(70, 80, 220);
+    doc.text(pdfText("IDENTIFICAÇÃO E USO DO DOCUMENTO"), margin, 28);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(45, 45, 55);
+    const protectionNotice = pdfText(
+      `Esta prévia foi gerada para uso de ${identityName} (${identityEmail}), no workspace ${workspace?.name || "NexOS"}. A cópia contém identificação visível em todas as páginas e metadados vinculados à conta. O fingerprint ${fingerprint} identifica esta versão. Use o material para avaliação e execução pessoal no seu negócio; não redistribua ou publique o documento integral sem autorização. A marca d'água auxilia a identificar a origem da cópia, mas não impede tecnicamente a cópia do arquivo.`
+    );
+    doc.text(doc.splitTextToSize(protectionNotice, pageWidth - margin * 2), margin, 42);
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 115);
+    doc.text(`${t("Prévia NexOS", "NexOS preview", "Vista previa NexOS")} - ${totalPages + 1}/${totalPages + 1} · ${fingerprint}`, pageWidth - margin, pageHeight - 8, { align: "right" });
+    const noticePage = doc.getNumberOfPages();
+    const noticeCommands = (doc.internal as typeof doc.internal & { pages: string[][] }).pages[noticePage];
+    const noticeWatermarkStart = noticeCommands.length;
+    doc.saveGraphicsState();
+    doc.setGState(new GState({ opacity: 0.12 }));
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(180, 160, 210);
+    const noticeWatermark = `CÓPIA IDENTIFICADA PARA ${identityName.toUpperCase()} · ${identityEmail} · ${fingerprint}`;
+    doc.text(noticeWatermark, pageWidth / 2, pageHeight / 2, { angle: 45, align: "center" });
+    doc.setFontSize(7.5);
+    doc.text(noticeWatermark, pageWidth / 2, pageHeight / 3, { angle: 45, align: "center" });
+    doc.text(noticeWatermark, pageWidth / 2, (2 * pageHeight) / 3, { angle: 45, align: "center" });
+    doc.restoreGraphicsState();
+    const noticeWatermarkCommands = noticeCommands.splice(noticeWatermarkStart);
+    const noticeFirstText = noticeCommands.findIndex((command) => /^BT\b/.test(command));
+    noticeCommands.splice(noticeFirstText < 0 ? noticeCommands.length : noticeFirstText, 0, ...noticeWatermarkCommands);
+    doc.setProperties({
+      title: `NexOS AI — Prévia de lançamento ${campaignId ?? "trial"}`,
+      author: identityName,
+      creator: "NexOS AI",
+      subject: `Prévia personalizada para ${identityEmail}`,
+      keywords: `nexos-ai,trial-preview,${fingerprint},${identityUserId},${identityWorkspaceId},${identityEmail}`,
+    });
+    doc.save(`nexos-previa-lancamento-${(campaignId ?? "trial").slice(0, 8)}-${fingerprint}.pdf`);
+  };
   const handleGoToDiagnosis = () => {
     setStep("diagnosis_approval");
   };
@@ -1639,6 +1923,38 @@ export default function Onboarding() {
     );
   }
 
+  if (step === "trial_social_analysis") {
+    return (
+      <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in duration-500 py-8">
+        <div className="text-center space-y-3">
+          <div className="inline-flex items-center gap-2 border border-cyan-400/40 bg-cyan-400/10 px-3 py-1.5">
+            <Users className="h-4 w-4 text-cyan-300" />
+            <span className="font-mono text-xs uppercase tracking-widest text-cyan-300">{t("Etapa trial · análise social", "Trial step · social analysis", "Etapa de prueba · análisis social")}</span>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-mono font-bold uppercase">{t("Qual é sua Página do Facebook?", "What is your Facebook Page?", "¿Cuál es tu página de Facebook?")}</h2>
+          <p className="text-sm text-muted-foreground max-w-2xl mx-auto">{t("Vamos avaliar a presença pública da marca antes de montar a prévia do plano. Informe a Página oficial do Facebook. Não precisa conectar a conta nem compartilhar senha para analisar conteúdo público.", "We’ll review the brand’s public presence before preparing the plan preview. Enter its official Facebook Page. You do not need to connect an account or share a password to analyze public content.", "Revisaremos la presencia pública de la marca antes de preparar la vista previa. Indica su página oficial de Facebook. No necesitas conectar una cuenta ni compartir la contraseña para analizar contenido público.")}</p>
+        </div>
+        <section className="border border-cyan-400/30 bg-card/40 p-5 space-y-4">
+          <label className="block space-y-2">
+            <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Página ou perfil público", "Public Page or profile", "Página o perfil público")}</span>
+            <input value={trialSocialProfile} onChange={(event) => setTrialSocialProfile(event.target.value)} placeholder="https://facebook.com/sua-marca ou @sua-marca" disabled={trialSocialSubmitting || trialSocialLoading} className="w-full h-12 border border-border/50 bg-background px-4 text-sm" />
+          </label>
+          <p className="text-xs text-muted-foreground">{t("Use o link ou @ da Página pública da empresa ou marca. Não informe senha. O diagnóstico será indicativo e usará apenas informações públicas.", "Use the link or @handle of the company's or brand's public Page. Do not enter a password. The diagnosis is indicative and uses public information only.", "Usa el enlace o @ de la página pública de la empresa o marca. No indiques contraseñas. El diagnóstico es orientativo y solo usa información pública.")}</p>
+          {!trialSocialAnalysisAvailable && !trialSocialDiagnosis && <p role="alert" className="border border-amber-400/40 bg-amber-400/10 p-3 text-sm text-amber-200">{t("A análise social incluída neste trial já foi utilizada, mas o resultado não foi localizado neste briefing. Não vamos iniciar outra análise para evitar consumir novamente o benefício. Atualize a página; se continuar, contate o suporte.", "The social analysis included with this trial has already been used, but its result was not found in this brief. We will not start another analysis and consume the benefit again. Refresh the page; if this continues, contact support.", "El análisis social incluido en esta prueba ya se utilizó, pero no se encontró el resultado en este briefing. No iniciaremos otro análisis para evitar consumir el beneficio nuevamente. Actualiza la página; si continúa, contacta con soporte.")}</p>}
+          <div className="flex flex-col sm:flex-row gap-3 sm:justify-between">
+            <Button variant="outline" onClick={() => setStep("conversation")} disabled={trialSocialSubmitting} className="rounded-none font-mono uppercase text-xs">{t("Voltar ao briefing", "Back to briefing", "Volver al briefing")}</Button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button variant="outline" onClick={() => setStep("plan_preview")} disabled={trialSocialSubmitting || trialSocialLoading} className="rounded-none font-mono uppercase text-xs">{t("Pular por agora e ver prévia", "Skip for now and view preview", "Omitir por ahora y ver vista previa")}</Button>
+              <Button onClick={() => void handleTrialSocialAnalysis()} disabled={!trialSocialAnalysisAvailable || trialSocialSubmitting || trialSocialLoading || !trialSocialProfile.trim()} className="rounded-none font-mono uppercase tracking-wider btn-weapon-primary">
+                {trialSocialSubmitting || trialSocialLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t("Analisando página…", "Analyzing Page…", "Analizando página…")}</> : <><BarChart2 className="h-4 w-4 mr-2" />{t("Analisar e montar prévia", "Analyze and prepare preview", "Analizar y preparar vista previa")}</>}
+              </Button>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   // ── PLAN PREVIEW ─────────────────────────────────────────────────────────────
   if (step === "plan_preview") {
     const DAY_PLAN = [
@@ -1682,13 +1998,13 @@ export default function Onboarding() {
         <div className="text-center">
           <div className="inline-flex items-center gap-2 border border-success/40 bg-success/10 px-3 py-1.5 mb-4">
             <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-            <span className="font-mono text-xs uppercase tracking-widest text-success">{t("Plano gerado pelo agente", "Plan generated by the agent", "Plan generado por el agente")}</span>
+            <span className="font-mono text-xs uppercase tracking-widest text-success">{trialAccess ? t("Prévia gratuita do plano", "Free plan preview", "Vista previa gratuita del plan") : t("Plano gerado pelo agente", "Plan generated by the agent", "Plan generado por el agente")}</span>
           </div>
           <h2 className="text-2xl md:text-3xl font-mono font-bold uppercase tracking-tighter text-foreground mb-2">
             {t("Seu lançamento em 7 dias", "Your launch in 7 days", "Tu lanzamiento en 7 días")}
           </h2>
           <p className="text-xs font-mono text-muted-foreground">
-            {t("NexOS executa cada fase automaticamente — você só aprova", "NexOS runs each phase automatically — you just approve", "NexOS ejecuta cada fase automáticamente; tú solo tienes que aprobar")}
+            {trialAccess ? t("Prévia de planejamento: a execução requer uma licença NexOS", "Planning preview: execution requires a NexOS license", "Vista previa de planificación: la ejecución requiere una licencia NexOS") : t("NexOS executa cada fase automaticamente — você só aprova", "NexOS runs each phase automatically — you just approve", "NexOS ejecuta cada fase automáticamente; tú solo tienes que aprobar")}
           </p>
         </div>
 
@@ -1721,6 +2037,7 @@ export default function Onboarding() {
           })}
         </div>
 
+        {!trialAccess && <>
         {/* Specialists grid */}
         <div className="border border-border/50 bg-card/40 p-4 space-y-4">
           <div className="flex items-center justify-between">
@@ -1862,8 +2179,23 @@ export default function Onboarding() {
             </div>
           </div>
         )}
+        </>}
 
         {/* CTA */}
+        {trialAccess ? (
+          <div className="border border-success/30 bg-success/5 p-5 space-y-4">
+            <div className="flex items-center gap-2 text-success">
+              <CheckCircle2 className="h-5 w-5" />
+              <h3 className="font-mono font-bold uppercase tracking-wider">{t("Prévia do trial pronta", "Trial preview is ready", "Vista previa de prueba lista")}</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">{String(trialSocialDiagnosis?.publicProfileAnalysis?.overview ?? t("Nenhuma Página foi analisada. Você pode usar esta prévia do briefing sem a análise social.", "No Page was analyzed. You can use this brief preview without the social analysis.", "No se analizó ninguna página. Puedes ver esta vista previa sin el análisis social."))}</p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button onClick={downloadTrialPlanPdf} className="rounded-none font-mono uppercase tracking-wider btn-weapon-primary gap-2"><ArrowRight className="h-4 w-4" />{t("Baixar plano em PDF", "Download plan PDF", "Descargar plan en PDF")}</Button>
+              <Button variant="outline" onClick={() => setLocation("/billing")} className="rounded-none font-mono uppercase tracking-wider">{t("Conhecer as licenças", "View licenses", "Ver licencias")}</Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">{t("Este documento é uma prévia. O trial não inicia execução, publicações, anúncios ou automações de campanha.", "This document is a preview. Trial does not start campaign execution, publishing, ads, or automations.", "Este documento es una vista previa. La prueba no inicia ejecución, publicaciones, anuncios ni automatizaciones.")}</p>
+          </div>
+        ) : (
         <div className="border border-primary/30 bg-primary/5 p-5 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary" />
           <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-primary" />
@@ -1897,6 +2229,7 @@ export default function Onboarding() {
             </button>
           </div>
         </div>
+        )}
       </div>
     );
   }
