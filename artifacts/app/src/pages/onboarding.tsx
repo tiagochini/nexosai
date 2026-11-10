@@ -491,6 +491,33 @@ export default function Onboarding() {
       setTrialAccess(isTrial);
       setTrialBriefingCampaignId(status.trialBriefingCampaignId ?? null);
 
+      // Campaign Intake's trial Facebook-analysis flow returns here with the
+      // campaign ID so the user sees the same plan preview as the guided flow.
+      // Load the persisted briefing and diagnosis instead of starting a new one.
+      const trialPreviewCampaignId = new URLSearchParams(window.location.search).get("trialPreviewCampaignId");
+      if (trialPreviewCampaignId && /^[0-9a-f-]{36}$/i.test(trialPreviewCampaignId)) {
+        if (!isTrial) {
+          setLocation(`/campaigns/${trialPreviewCampaignId}/intake`);
+          setResumeCheck("resolved");
+          return;
+        }
+        const [campaignResult, diagnosisResult] = await Promise.all([
+          customFetch<{ campaign: Record<string, unknown> }>(`/api/campaigns/${trialPreviewCampaignId}`),
+          customFetch<{ diagnosis: Record<string, any> | null; socialAnalysisAvailable?: boolean }>(`/api/campaigns/${trialPreviewCampaignId}/social-diagnosis`),
+        ]);
+        const intakeData = (campaignResult.campaign?.intakeData as Record<string, unknown>) ?? {};
+        setPath("has_product");
+        setCampaignId(trialPreviewCampaignId);
+        setTrialIntakeData(intakeData);
+        setTrialSocialProfile(String(intakeData["social.facebook"] ?? intakeData["social.facebookPage"] ?? intakeData["social.facebookUrl"] ?? ""));
+        setTrialSocialDiagnosis(diagnosisResult.diagnosis);
+        setTrialSocialAnalysisAvailable(diagnosisResult.socialAnalysisAvailable !== false);
+        setConversationComplete(true);
+        setStep("plan_preview");
+        setResumeCheck("resolved");
+        return;
+      }
+
       const saved = loadOnboardingState();
       if (saved && saved.messages.length > 0 && saved.campaignId) {
         if (!isTrial || saved.path === "has_product") {
@@ -2188,7 +2215,9 @@ export default function Onboarding() {
               <CheckCircle2 className="h-5 w-5" />
               <h3 className="font-mono font-bold uppercase tracking-wider">{t("Prévia do trial pronta", "Trial preview is ready", "Vista previa de prueba lista")}</h3>
             </div>
-            <p className="text-sm text-muted-foreground">{String(trialSocialDiagnosis?.publicProfileAnalysis?.overview ?? t("Nenhuma Página foi analisada. Você pode usar esta prévia do briefing sem a análise social.", "No Page was analyzed. You can use this brief preview without the social analysis.", "No se analizó ninguna página. Puedes ver esta vista previa sin el análisis social."))}</p>
+            <p className="text-sm text-muted-foreground">{String(trialSocialDiagnosis?.publicProfileAnalysis?.overview ?? (!trialSocialAnalysisAvailable
+              ? t("A análise incluída já foi usada, mas o relatório não foi localizado nesta campanha. Esta prévia usa as respostas do briefing.", "The included analysis has already been used, but its report was not found on this campaign. This preview uses your briefing answers.", "El análisis incluido ya se utilizó, pero no se encontró el informe en esta campaña. Esta vista previa usa tus respuestas del briefing.")
+              : t("Nenhuma Página foi analisada. Você pode usar esta prévia do briefing sem a análise social.", "No Page was analyzed. You can use this brief preview without the social analysis.", "No se analizó ninguna página. Puedes ver esta vista previa sin el análisis social.")))}</p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button onClick={downloadTrialPlanPdf} className="rounded-none font-mono uppercase tracking-wider btn-weapon-primary gap-2"><ArrowRight className="h-4 w-4" />{t("Baixar plano em PDF", "Download plan PDF", "Descargar plan en PDF")}</Button>
               <Button variant="outline" onClick={() => setLocation("/billing")} className="rounded-none font-mono uppercase tracking-wider">{t("Conhecer as licenças", "View licenses", "Ver licencias")}</Button>

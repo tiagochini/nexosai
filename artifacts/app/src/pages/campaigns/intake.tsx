@@ -19,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import {
-  ArrowLeft, CheckCircle2, Loader2, Send, Database,
+  ArrowLeft, ArrowRight, CheckCircle2, Loader2, Send, Database,
   MessageSquare, LayoutList, ChevronRight, Zap,
   Rocket, RefreshCw, Radio, TrendingUp, BarChart3,
   Users, Mail, Check, X, BarChart2, ChevronDown, ChevronUp, CornerDownLeft,
@@ -727,10 +727,12 @@ function TrialSocialAnalysisView({
   campaignId,
   formData,
   onBack,
+  onContinueToPlan,
 }: {
   campaignId: string;
   formData: Record<string, string>;
   onBack: () => void;
+  onContinueToPlan: () => void;
 }) {
   const t = useUiText();
   const { locale } = useUiLocale();
@@ -743,6 +745,8 @@ function TrialSocialAnalysisView({
   const [available, setAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const onContinueToPlanRef = useRef(onContinueToPlan);
+  onContinueToPlanRef.current = onContinueToPlan;
 
   useEffect(() => {
     customFetch<{ diagnosis: Record<string, any> | null; trialAccess?: boolean; socialAnalysisAvailable?: boolean; connectedAccounts?: SocialDiagnosisAccount[] }>(`/api/campaigns/${campaignId}/social-diagnosis`)
@@ -753,6 +757,7 @@ function TrialSocialAnalysisView({
         if (!result.trialAccess && typeof result.diagnosis?.platform === "string") setPlatform(result.diagnosis.platform);
         if (typeof result.diagnosis?.handle === "string" && (!result.trialAccess || result.diagnosis.platform === "facebook")) setHandle(result.diagnosis.handle);
         if (typeof result.diagnosis?.connectedIntegrationId === "string" && (!result.trialAccess || result.diagnosis.platform === "facebook")) setIntegrationId(result.diagnosis.connectedIntegrationId);
+        if (result.trialAccess && result.socialAnalysisAvailable === false) onContinueToPlanRef.current();
       })
       .catch((error) => toast.error(error instanceof Error ? error.message : t("Não foi possível carregar o diagnóstico.", "Could not load the diagnosis.", "No se pudo cargar el diagnóstico.")))
       .finally(() => setLoading(false));
@@ -773,6 +778,7 @@ function TrialSocialAnalysisView({
       setDiagnosis(result.diagnosis);
       setAvailable(false);
       toast.success(t("Análise da Página do Facebook concluída.", "Facebook Page analysis complete.", "Análisis de página de Facebook completado."));
+      onContinueToPlan();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("Não foi possível gerar a análise.", "Could not generate the analysis.", "No se pudo generar el análisis."));
     } finally {
@@ -811,7 +817,14 @@ function TrialSocialAnalysisView({
             {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t("Analisando", "Analyzing", "Analizando")}</> : t("Gerar análise", "Generate analysis", "Generar análisis")}
           </Button></div>
         </div>
-        {!available && <p className="font-mono text-xs text-emerald-300">{t("A análise incluída já foi utilizada. O resultado permanece salvo neste briefing.", "The included analysis has been used. Its result remains saved in this briefing.", "El análisis incluido ya se utilizó. El resultado permanece guardado en este briefing.")}</p>}
+        {!available && <div className="space-y-3">
+          <p className="font-mono text-xs text-emerald-300">{diagnosis
+            ? t("A análise incluída já foi utilizada. O resultado está salvo neste briefing.", "The included analysis has been used. Its result is saved in this brief.", "El análisis incluido ya se utilizó. El resultado está guardado en este briefing.")
+            : t("A análise incluída já foi utilizada, mas não há relatório associado a este briefing. Você ainda pode consultar a prévia baseada nas respostas do briefing.", "The included analysis has been used, but no report is attached to this brief. You can still view the preview based on your briefing answers.", "El análisis incluido ya se utilizó, pero no hay un informe asociado a este briefing. Aún puedes consultar la vista previa basada en tus respuestas.")}</p>
+          <Button onClick={onContinueToPlan} className="rounded-none font-mono uppercase tracking-wider btn-weapon-primary">
+            <ArrowRight className="h-4 w-4 mr-2" />{t("Ver prévia do plano", "View plan preview", "Ver vista previa del plan")}
+          </Button>
+        </div>}
       </section>
       {diagnosis && <section className="border border-border/40 bg-card/30 p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1594,7 +1607,12 @@ export default function CampaignIntake() {
   const isComplete = typeof data?.completeness === "object" && (data?.completeness as { valid?: boolean })?.valid;
 
   if (showTrialSocialAnalysis) {
-    return <TrialSocialAnalysisView campaignId={campaignId} formData={formData} onBack={() => setShowTrialSocialAnalysis(false)} />;
+    return <TrialSocialAnalysisView
+      campaignId={campaignId}
+      formData={formData}
+      onBack={() => setShowTrialSocialAnalysis(false)}
+      onContinueToPlan={() => setLocation(`/onboarding?trialPreviewCampaignId=${encodeURIComponent(campaignId)}`)}
+    />;
   }
 
   // ── Master Plan view: shown when user clicks the big button ──
@@ -1905,7 +1923,12 @@ export default function CampaignIntake() {
                   const pPrice = fd["product.price"] ?? fd["product.preco"];
                   const pAudience = fd["audience.avatar"] ?? fd["audience.target"];
                   const pBudget = fd["campaign.budget.total"] ?? fd["campaign.budget"];
-                  const formatMoney = (value: unknown) => new Intl.NumberFormat(numberLocale, { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(value));
+                  const formatMoney = (value: unknown) => {
+                    const amount = typeof value === "number" ? value : Number(String(value).trim());
+                    return Number.isFinite(amount)
+                      ? new Intl.NumberFormat(numberLocale, { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(amount)
+                      : String(value);
+                  };
                   if (pName) pills.push({ label: t("Produto", "Product", "Producto"), value: String(pName) });
                   if (pPrice) pills.push({ label: t("Preço", "Price", "Precio"), value: formatMoney(pPrice) });
                   if (pAudience) pills.push({ label: t("Público", "Audience", "Público"), value: String(pAudience).slice(0, 35) + (String(pAudience).length > 35 ? "…" : "") });
