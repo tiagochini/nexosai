@@ -734,7 +734,6 @@ function PromoCodeSection() {
 export default function BillingPage() {
   const [, navigate] = useLocation();
   const { plan: currentPlan, planSlug } = useAuth();
-  const currentLicensePlanSlug = planSlug ?? currentPlan?.slug;
   const t = useUiText();
   const { locale } = useUiLocale();
   const queryClient = useQueryClient();
@@ -753,6 +752,15 @@ export default function BillingPage() {
     queryKey: ["/api/billing/status"],
     queryFn: () => customFetch<AccessStatus>("/api/billing/status"),
   });
+
+  // Trial workspaces carry a default Solo plan ID for legacy/schema compatibility.
+  // It is not a purchased license and must not be shown or enforced as one.
+  const { data: onboardingStatus, isLoading: loadingOnboardingStatus } = useQuery({
+    queryKey: ["/api/onboarding/status"],
+    queryFn: () => customFetch<{ trialAccess?: boolean }>("/api/onboarding/status"),
+  });
+  const isTrialAccess = onboardingStatus?.trialAccess === true;
+  const currentLicensePlanSlug = loadingOnboardingStatus || isTrialAccess ? null : (planSlug ?? currentPlan?.slug);
 
   const { data: historyData, isLoading: loadingHistory } = useQuery({
     queryKey: ["/api/billing/history"],
@@ -885,6 +893,7 @@ export default function BillingPage() {
   const handlePaymentConfirmed = useCallback(() => {
     toast.success(t("Pagamento confirmado! Créditos/acesso liberados.", "Payment confirmed! Credits/access activated.", "¡Pago confirmado! Créditos/acceso activados."), { duration: 6000 });
     void queryClient.invalidateQueries({ queryKey: ["/api/billing/status"] });
+    void queryClient.invalidateQueries({ queryKey: ["/api/onboarding/status"] });
     void queryClient.invalidateQueries({ queryKey: ["/api/billing/history"] });
     void queryClient.invalidateQueries({ queryKey: ["/api/credits/balance"] });
     void queryClient.invalidateQueries({ queryKey: ["/api/billing/offer-contracts"] });
@@ -938,7 +947,9 @@ export default function BillingPage() {
           </h1>
         </div>
         <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-          {t("Acesso vitalício · Lançamentos ilimitados · Packs de créditos sob demanda", "Lifetime access · Unlimited launches · On-demand credit packs", "Acceso de por vida · Lanzamientos ilimitados · Paquetes de créditos bajo demanda")}
+          {isTrialAccess
+            ? t("Acesso trial · 1 briefing + análise social · sem licença ativa", "Trial access · 1 briefing + social analysis · no active license", "Acceso de prueba · 1 briefing + análisis social · sin licencia activa")
+            : t("Gerencie sua licença e seus créditos NexOS", "Manage your NexOS license and credits", "Administra tu licencia y créditos NexOS")}
         </p>
       </div>
 
@@ -1003,16 +1014,18 @@ export default function BillingPage() {
         <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-primary/40" />
         <div className="absolute left-0 inset-y-0 w-[2px] bg-gradient-to-b from-primary/60 to-transparent" />
         <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-3">{t("Seu acesso", "Your access", "Tu acceso")}</div>
-        {loadingStatus ? (
+        {loadingStatus || loadingOnboardingStatus ? (
           <div className="space-y-2"><Skeleton className="h-8 w-48 bg-muted/20" /><Skeleton className="h-4 w-64 bg-muted/20" /></div>
         ) : (
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <h2 className="font-mono font-bold text-xl uppercase tracking-tight text-foreground">
-                  NexOS — {status?.planName ?? currentPlan?.name ?? "Solo"}
+                  NexOS — {isTrialAccess ? t("Trial", "Trial", "Prueba") : (status?.planName ?? currentPlan?.name ?? t("Sem licença", "No license", "Sin licencia"))}
                 </h2>
-                {status?.status && (
+                {isTrialAccess ? (
+                  <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 text-cyan-300 border-cyan-400/40 bg-cyan-400/10">TRIAL</Badge>
+                ) : status?.status && (
                   <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 ${STATUS_BADGE[status.status]?.className ?? "text-primary border-primary/40"}`}>
                     {STATUS_BADGE[status.status] ? t(STATUS_BADGE[status.status].label, status.status === "active" ? "Active" : status.status === "pending" ? "Pending" : status.status === "cancelled" ? "Cancelled" : status.status === "paid" ? "Paid" : status.status === "expired" ? "Expired" : "Trial", status.status === "active" ? "Activo" : status.status === "pending" ? "Pendiente" : status.status === "cancelled" ? "Cancelado" : status.status === "paid" ? "Pagado" : status.status === "expired" ? "Vencido" : "Prueba") : status.status}
                   </Badge>
@@ -1020,11 +1033,13 @@ export default function BillingPage() {
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[
-                  { label: t("Plano", "Plan", "Plan"), value: (planSlug ?? "solo").toUpperCase() },
-                  { label: t("Tipo de acesso", "Access type", "Tipo de acceso"), value: t("Vitalício", "Lifetime", "De por vida") },
+                  { label: t("Plano", "Plan", "Plan"), value: isTrialAccess ? t("Sem licença", "No license", "Sin licencia") : (currentLicensePlanSlug ?? t("Sem licença", "No license", "Sin licencia")).toUpperCase() },
+                  { label: t("Tipo de acesso", "Access type", "Tipo de acceso"), value: isTrialAccess ? "Trial" : t("Vitalício", "Lifetime", "De por vida") },
                   {
                     label: t("Acesso pago em", "Access paid on", "Acceso pagado el"),
-                    value: status?.accessPaidAt
+                    value: isTrialAccess
+                      ? t("Não contratado", "Not purchased", "No contratado")
+                      : status?.accessPaidAt
                       ? new Date(status.accessPaidAt).toLocaleDateString(intlLocale(locale))
                       : isAccessPaid ? t("Confirmado", "Confirmed", "Confirmado") : t("Pendente", "Pending", "Pendiente"),
                   },
@@ -1036,13 +1051,23 @@ export default function BillingPage() {
                 ))}
               </div>
             </div>
-            <div className="flex items-center gap-2 border border-success/30 bg-success/5 px-4 py-2.5 shrink-0">
-              <Infinity className="h-4 w-4 text-success" />
-              <div>
-                <div className="font-mono text-[11px] text-success/70 uppercase tracking-widest">{t("Lançamentos", "Launches", "Lanzamientos")}</div>
-                <div className="font-mono text-sm font-bold text-success">{t("Ilimitados", "Unlimited", "Ilimitados")}</div>
+            {isTrialAccess ? (
+              <div className="flex items-center gap-2 border border-cyan-400/30 bg-cyan-400/5 px-4 py-2.5 shrink-0">
+                <Lock className="h-4 w-4 text-cyan-300" />
+                <div>
+                  <div className="font-mono text-[11px] text-cyan-200/70 uppercase tracking-widest">{t("Acesso trial", "Trial access", "Acceso de prueba")}</div>
+                  <div className="font-mono text-sm font-bold text-cyan-200">{t("1 briefing", "1 briefing", "1 briefing")}</div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center gap-2 border border-success/30 bg-success/5 px-4 py-2.5 shrink-0">
+                <Infinity className="h-4 w-4 text-success" />
+                <div>
+                  <div className="font-mono text-[11px] text-success/70 uppercase tracking-widest">{t("Lançamentos", "Launches", "Lanzamientos")}</div>
+                  <div className="font-mono text-sm font-bold text-success">{t("Ilimitados", "Unlimited", "Ilimitados")}</div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1050,6 +1075,7 @@ export default function BillingPage() {
       {/* ── Promo Code Redemption ── */}
       <PromoCodeSection />
 
+      {!loadingOnboardingStatus && !isTrialAccess && <>
       {/* ── How it works ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
@@ -1139,6 +1165,7 @@ export default function BillingPage() {
           </div>
         )}
       </div>
+      </>}
 
       {/* ── Plan Options ── */}
       <div>
@@ -1150,7 +1177,7 @@ export default function BillingPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {displayPlans.map(plan => {
-              const isCurrent = plan.slug === planSlug && plan.slug !== requestedPlanSlug;
+              const isCurrent = !loadingOnboardingStatus && !isTrialAccess && plan.slug === currentLicensePlanSlug && plan.slug !== requestedPlanSlug;
               const isDowngrade = isLicenseDowngrade(currentLicensePlanSlug, plan.slug);
               const isSelected = checkout?.id === plan.id && checkout.type === "plan";
               const priceDisplay = plan.monthlyPriceBrl > 0

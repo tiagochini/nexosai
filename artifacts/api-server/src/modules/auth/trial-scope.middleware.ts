@@ -6,9 +6,9 @@ const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 
 export function isTrialRouteAllowed(method: string, path: string): boolean {
   if (method === "GET" && ["/auth/me", "/auth/workspaces", "/auth/platform-status", "/onboarding/status", "/campaigns"].includes(path)) return true;
-  // Keep plan checkout and its status polling available to trial users. Credit
-  // pack purchases and unrelated billing controls remain outside trial scope.
-  if (method === "GET" && ["/billing/status", "/billing/history", "/billing/access", "/billing/offers"].includes(path)) return true;
+  // Catalogs are public-to-authenticated-user read paths: trials need current
+  // prices to evaluate an upgrade, while purchase actions remain separately gated.
+  if (method === "GET" && ["/plans", "/billing/status", "/billing/history", "/billing/access", "/billing/offers", "/billing/packs"].includes(path)) return true;
   if (method === "GET" && new RegExp(`^/billing/payment/${UUID}$`, "i").test(path)) return true;
   // Trial users may connect a Facebook Page in read-only analysis mode only.
   if (method === "GET" && path === "/integrations/oauth/start/facebook_analysis") return true;
