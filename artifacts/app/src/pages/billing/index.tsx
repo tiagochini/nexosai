@@ -689,7 +689,7 @@ function PromoCodeSection() {
               <div className="font-mono text-sm font-bold text-success uppercase tracking-widest">{t("Código aplicado!", "Code applied!", "¡Código aplicado!")}</div>
               <p className="font-mono text-xs text-muted-foreground">
                 {success.trialAccess
-                  ? t("Acesso Trial ativado · 1 briefing + 1 análise social", "Trial access activated · 1 briefing + 1 social analysis", "Acceso Trial activado · 1 briefing + 1 análisis social")
+                  ? t("Acesso Trial ativado · 1 briefing + 1 análise do Facebook", "Trial access activated · 1 briefing + 1 Facebook analysis", "Acceso Trial activado · 1 briefing + 1 análisis de Facebook")
                   : <>{t("Plano", "Plan", "Plan")} <strong className="text-foreground">{success.planName}</strong> {t("ativado", "activated", "activado")} · {success.creditsGranted.toLocaleString("pt-BR")} {t("créditos adicionados", "credits added", "créditos añadidos")}</>}
               </p>
               <button

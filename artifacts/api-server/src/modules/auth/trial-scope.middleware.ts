@@ -10,6 +10,8 @@ export function isTrialRouteAllowed(method: string, path: string): boolean {
   // pack purchases and unrelated billing controls remain outside trial scope.
   if (method === "GET" && ["/billing/status", "/billing/history", "/billing/access", "/billing/offers"].includes(path)) return true;
   if (method === "GET" && new RegExp(`^/billing/payment/${UUID}$`, "i").test(path)) return true;
+  // Trial users may connect a Facebook Page in read-only analysis mode only.
+  if (method === "GET" && path === "/integrations/oauth/start/facebook_analysis") return true;
   if (method === "POST" && path === "/billing/initiate") return true;
   if (method === "POST" && /^\/billing\/offers\/[0-9a-f-]+\/purchase$/i.test(path)) return true;
   if (method === "POST" && [
@@ -44,7 +46,7 @@ export async function enforceTrialScope(req: Request, res: Response, next: NextF
     if (!(await getWorkspaceTrial(payload.workspaceId))) { next(); return; }
     if (isTrialRouteAllowed(req.method.toUpperCase(), req.path)) { next(); return; }
     res.status(403).json({
-      error: "O acesso trial inclui um briefing e uma análise de redes sociais. Contrate uma licença para liberar os demais recursos.",
+      error: "O acesso trial inclui um briefing e uma análise de Página do Facebook. Contrate uma licença para liberar os demais recursos.",
       code: "TRIAL_SCOPE_RESTRICTED",
     });
   } catch (error) {

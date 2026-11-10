@@ -1616,7 +1616,7 @@ export default function AdminPage() {
           </div>
 
           <div className="border border-primary/10 bg-primary/5 px-4 py-3 font-mono text-[11px] text-primary/70 uppercase tracking-widest">
-            💡 {t("Aprove como Trial para liberar 1 briefing e 1 análise social; Solo ou Agency concedem a licença correspondente. O código é gerado para envio ao solicitante.", "Approve as Trial to grant one briefing and one social analysis; Solo or Agency grant the matching license. A code is generated to send to the requester.", "Aprueba como Trial para permitir 1 briefing y 1 análisis social; Solo o Agency conceden la licencia correspondiente. Se genera un código para enviar al solicitante.")}
+            💡 {t("Aprove como Trial para liberar 1 briefing e 1 análise de Página do Facebook; Solo ou Agency concedem a licença correspondente. O código é gerado para envio ao solicitante.", "Approve as Trial to grant one briefing and one Facebook Page analysis; Solo or Agency grant the matching license. A code is generated to send to the requester.", "Aprueba como Trial para permitir 1 briefing y 1 análisis de página de Facebook; Solo o Agency conceden la licencia correspondiente. Se genera un código para enviar al solicitante.")}
           </div>
 
           {loadingWaitlist ? (
@@ -1754,7 +1754,7 @@ export default function AdminPage() {
           </div>
 
           <p className="font-mono text-[11px] text-muted-foreground/50 border border-border/30 bg-card/30 px-4 py-3">
-            💡 {t("Códigos Solo e Agency liberam a licença correspondente. O código Trial libera 1 briefing e 1 análise de redes sociais, sem acesso aos demais recursos.", "Solo and Agency codes grant the matching license. A Trial code grants one briefing and one social network analysis, with other features restricted.", "Los códigos Solo y Agency conceden la licencia correspondiente. Un código Trial permite 1 briefing y 1 análisis de redes sociales; los demás recursos quedan restringidos.")}
+            💡 {t("Códigos Solo e Agency liberam a licença correspondente. O código Trial libera 1 briefing e 1 análise de Página do Facebook, sem acesso aos demais recursos.", "Solo and Agency codes grant the matching license. A Trial code grants one briefing and one Facebook Page analysis, with other features restricted.", "Los códigos Solo y Agency conceden la licencia correspondiente. Un código Trial permite 1 briefing y 1 análisis de página de Facebook; los demás recursos quedan restringidos.")}
           </p>
 
           {loadingInvites ? (
@@ -1780,7 +1780,7 @@ export default function AdminPage() {
                         <div>
                           <span className="font-mono text-base font-bold text-primary tracking-widest">{c.code}</span>
                           <span className={`ml-3 text-[11px] font-mono uppercase tracking-widest px-1.5 py-0.5 border ${c.planSlug === "trial" ? "text-cyan-300 border-cyan-400/30 bg-cyan-400/10" : c.planSlug === "agency" ? "text-success border-success/30 bg-success/10" : "text-primary border-primary/30 bg-primary/10"}`}>
-                            {c.planSlug === "trial" ? "Trial · 1 briefing + 1 análise social" : c.planSlug}
+                            {c.planSlug === "trial" ? "Trial · 1 briefing + 1 análise de Facebook" : c.planSlug}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">

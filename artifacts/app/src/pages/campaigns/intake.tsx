@@ -390,12 +390,16 @@ function MasterPlanView({
         setTrialAccess(isTrial);
         setSocialAnalysisAvailable(analysisAvailable);
         setSocialAccounts(connectedAccounts);
+        if (isTrial) {
+          setSocialPlatform("facebook");
+          setSocialHandle("");
+        }
         if (!diagnosis) return;
         setSocialDiagnosis(diagnosis);
         setSocialDiagnosisApproved(diagnosis.status === "approved");
-        if (typeof diagnosis.handle === "string") setSocialHandle(diagnosis.handle);
-        if (typeof diagnosis.platform === "string") setSocialPlatform(diagnosis.platform);
-        if (typeof diagnosis.connectedIntegrationId === "string") setSocialIntegrationId(diagnosis.connectedIntegrationId);
+        if (typeof diagnosis.handle === "string" && (!isTrial || diagnosis.platform === "facebook")) setSocialHandle(diagnosis.handle);
+        if (!isTrial && typeof diagnosis.platform === "string") setSocialPlatform(diagnosis.platform);
+        if (typeof diagnosis.connectedIntegrationId === "string" && (!isTrial || diagnosis.platform === "facebook")) setSocialIntegrationId(diagnosis.connectedIntegrationId);
       }).catch(() => setSocialMediaEntitled(null));
   }, [campaignId]);
   const runSocialDiagnosis = async () => {
@@ -650,12 +654,12 @@ function MasterPlanView({
         <div>
           <h2 id="social-diagnosis-heading" className="font-mono text-sm font-bold uppercase tracking-wider">{t("Diagnóstico de Presença Social", "Social Presence Diagnosis", "Diagnóstico de presencia social")}</h2>
           <p className="text-xs text-muted-foreground mt-1">{trialAccess
-            ? t("Seu acesso de avaliação inclui um único briefing e uma análise de rede social. Outros recursos e a execução por agentes exigem uma licença.", "Your trial includes one briefing and one social network analysis. Other features and agent execution require a license.", "Tu prueba incluye un briefing y un análisis de red social. Otras funciones y la ejecución por agentes requieren una licencia.")
+            ? t("Seu acesso de avaliação inclui um briefing e a análise de uma Página do Facebook. Outros recursos e a execução por agentes exigem uma licença.", "Your trial includes one briefing and one Facebook Page analysis. Other features and agent execution require a license.", "Tu prueba incluye un briefing y el análisis de una página de Facebook. Otras funciones y la ejecución por agentes requieren una licencia.")
             : t("Etapa anterior à estratégia: contexto da campanha, presença pública, dados disponíveis e lacunas. Nenhuma métrica será presumida quando a plataforma não a fornecer.", "Required before strategy: campaign context, public presence, available data, and gaps. Metrics will not be assumed when the platform does not provide them.", "Antes de la estrategia: contexto de campaña, presencia pública, datos disponibles y brechas. No se supondrán métricas que la plataforma no proporcione.")}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-[150px_1fr] gap-2">
           <select value={socialPlatform} onChange={(event) => { setSocialPlatform(event.target.value); setSocialIntegrationId(""); setSocialHandle(""); setSocialDiagnosis(null); setSocialDiagnosisApproved(false); }} disabled={socialDiagnosisLoading || (trialAccess && !socialAnalysisAvailable)} className="h-10 border border-border/50 bg-background px-3 text-sm">
-            <option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="tiktok">TikTok</option>
+            {trialAccess ? <option value="facebook">Facebook</option> : <><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="tiktok">TikTok</option></>}
           </select>
           <SocialDiagnosisAccountPicker platform={socialPlatform} accounts={socialAccounts} integrationId={socialIntegrationId} handle={socialHandle} disabled={socialDiagnosisLoading || (trialAccess && !socialAnalysisAvailable)} onSelect={(account) => { setSocialIntegrationId(account?.id ?? ""); setSocialHandle(account?.handle ?? ""); setSocialDiagnosis(null); setSocialDiagnosisApproved(false); }} onHandleChange={(value) => { setSocialHandle(value); setSocialDiagnosis(null); setSocialDiagnosisApproved(false); }} onConnect={() => void connectSocialDiagnosisAccount(campaignId, "master", socialPlatform).catch((error) => toast.error(error instanceof Error ? error.message : t("Não foi possível iniciar a conexão.", "Could not start the connection.", "No se pudo iniciar la conexión.")))} />
           <div className="md:col-span-2 flex justify-end"><Button variant="outline" onClick={() => void runSocialDiagnosis()} disabled={socialDiagnosisLoading || finalizing || (trialAccess && !socialAnalysisAvailable)} className="rounded-none font-mono text-xs uppercase">
@@ -700,7 +704,7 @@ function MasterPlanView({
             {t("Ao aprovar, os agentes iniciam imediatamente — estratégia, conteúdo e calendário editorial", "Once approved, the agents start immediately — strategy, content, and editorial calendar", "Al aprobar, los agentes comienzan de inmediato — estrategia, contenido y calendario editorial")}
           </p>
         </div>
-        {trialAccess && <p className="text-xs text-amber-300">{t("O trial permite preencher um briefing e gerar uma análise social. A aprovação para execução dos agentes exige uma licença.", "The trial allows one briefing and one social analysis. Approving agent execution requires a license.", "La prueba permite completar un briefing y generar un análisis social. Aprobar la ejecución de agentes requiere una licencia.")}</p>}
+        {trialAccess && <p className="text-xs text-amber-300">{t("O trial permite preencher um briefing e analisar uma Página do Facebook. A aprovação para execução dos agentes exige uma licença.", "The trial allows one briefing and one Facebook Page analysis. Approving agent execution requires a license.", "La prueba permite completar un briefing y analizar una página de Facebook. Aprobar la ejecución de agentes requiere una licencia.")}</p>}
         {socialMediaEntitled === null && <p role="status" className="text-xs text-amber-300">{t("Verificando o contrato de Social Media… Se não carregar, atualize a tela antes de iniciar.", "Checking the Social Media contract… If it does not load, refresh before starting.", "Verificando el contrato de Social Media… Si no carga, actualiza la pantalla antes de iniciar.")}</p>}
         <Button
           onClick={() => void onApprove()}
@@ -731,8 +735,8 @@ function TrialSocialAnalysisView({
   const t = useUiText();
   const { locale } = useUiLocale();
   const numberLocale = intlLocale(locale);
-  const [platform, setPlatform] = useState("instagram");
-  const [handle, setHandle] = useState(formData["social.handle"] ?? formData["social.instagram"] ?? "");
+  const [platform, setPlatform] = useState("facebook");
+  const [handle, setHandle] = useState(formData["social.facebook"] ?? "");
   const [integrationId, setIntegrationId] = useState("");
   const [connectedAccounts, setConnectedAccounts] = useState<SocialDiagnosisAccount[]>([]);
   const [diagnosis, setDiagnosis] = useState<Record<string, any> | null>(null);
@@ -741,14 +745,14 @@ function TrialSocialAnalysisView({
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    customFetch<{ diagnosis: Record<string, any> | null; socialAnalysisAvailable?: boolean; connectedAccounts?: SocialDiagnosisAccount[] }>(`/api/campaigns/${campaignId}/social-diagnosis`)
+    customFetch<{ diagnosis: Record<string, any> | null; trialAccess?: boolean; socialAnalysisAvailable?: boolean; connectedAccounts?: SocialDiagnosisAccount[] }>(`/api/campaigns/${campaignId}/social-diagnosis`)
       .then((result) => {
         setDiagnosis(result.diagnosis);
         setAvailable(result.socialAnalysisAvailable === true);
         setConnectedAccounts(result.connectedAccounts ?? []);
-        if (typeof result.diagnosis?.platform === "string") setPlatform(result.diagnosis.platform);
-        if (typeof result.diagnosis?.handle === "string") setHandle(result.diagnosis.handle);
-        if (typeof result.diagnosis?.connectedIntegrationId === "string") setIntegrationId(result.diagnosis.connectedIntegrationId);
+        if (!result.trialAccess && typeof result.diagnosis?.platform === "string") setPlatform(result.diagnosis.platform);
+        if (typeof result.diagnosis?.handle === "string" && (!result.trialAccess || result.diagnosis.platform === "facebook")) setHandle(result.diagnosis.handle);
+        if (typeof result.diagnosis?.connectedIntegrationId === "string" && (!result.trialAccess || result.diagnosis.platform === "facebook")) setIntegrationId(result.diagnosis.connectedIntegrationId);
       })
       .catch((error) => toast.error(error instanceof Error ? error.message : t("Não foi possível carregar o diagnóstico.", "Could not load the diagnosis.", "No se pudo cargar el diagnóstico.")))
       .finally(() => setLoading(false));
@@ -768,7 +772,7 @@ function TrialSocialAnalysisView({
       });
       setDiagnosis(result.diagnosis);
       setAvailable(false);
-      toast.success(t("Análise de redes sociais concluída.", "Social network analysis complete.", "Análisis de redes sociales completado."));
+      toast.success(t("Análise da Página do Facebook concluída.", "Facebook Page analysis complete.", "Análisis de página de Facebook completado."));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("Não foi possível gerar a análise.", "Could not generate the analysis.", "No se pudo generar el análisis."));
     } finally {
@@ -795,12 +799,12 @@ function TrialSocialAnalysisView({
       </Button>
       <section className="border border-cyan-400/40 bg-cyan-400/5 p-5 space-y-4">
         <div>
-          <h1 className="font-mono text-lg font-bold uppercase tracking-wider">{t("Análise das redes sociais", "Social network analysis", "Análisis de redes sociales")}</h1>
+          <h1 className="font-mono text-lg font-bold uppercase tracking-wider">{t("Análise da Página do Facebook", "Facebook Page analysis", "Análisis de página de Facebook")}</h1>
           <p className="text-sm text-muted-foreground mt-2">{t("Esta etapa analisa um perfil da marca usando sinais públicos e, quando disponíveis, métricas da conta conectada. Não inicia o Master Plan nem os agentes.", "This step analyzes one brand profile using public signals and, when available, connected account metrics. It does not start the Master Plan or agents.", "Esta etapa analiza un perfil de marca con señales públicas y, si están disponibles, métricas de la cuenta conectada. No inicia el plan maestro ni los agentes.")}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-[150px_1fr] gap-2">
           <select value={platform} onChange={(event) => { setPlatform(event.target.value); setIntegrationId(""); setHandle(""); }} disabled={loading || submitting || !available} className="h-10 border border-border/50 bg-background px-3 text-sm">
-            <option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="tiktok">TikTok</option>
+          <option value="facebook">Facebook</option>
           </select>
           <SocialDiagnosisAccountPicker platform={platform} accounts={connectedAccounts} integrationId={integrationId} handle={handle} disabled={loading || submitting || !available} onSelect={(account) => { setIntegrationId(account?.id ?? ""); setHandle(account?.handle ?? ""); }} onHandleChange={setHandle} onConnect={() => void connectSocialDiagnosisAccount(campaignId, "trial", platform).catch((error) => toast.error(error instanceof Error ? error.message : t("Não foi possível iniciar a conexão.", "Could not start the connection.", "No se pudo iniciar la conexión.")))} />
           <div className="md:col-span-2 flex justify-end"><Button variant="outline" onClick={() => void runAnalysis()} disabled={loading || submitting || !available} className="rounded-none font-mono text-xs uppercase">
@@ -1516,7 +1520,7 @@ export default function CampaignIntake() {
       return;
     }
     if (trialAccess) {
-      toast.error(t("O trial permite concluir o briefing e gerar uma análise social. Contrate uma licença para criar o Master Plan e iniciar os agentes.", "The trial lets you complete the briefing and generate one social analysis. Get a license to create the Master Plan and start agents.", "La prueba permite completar el briefing y generar un análisis social. Contrata una licencia para crear el plan maestro e iniciar los agentes."));
+      toast.error(t("O trial permite concluir o briefing e analisar uma Página do Facebook. Contrate uma licença para criar o Master Plan e iniciar os agentes.", "The trial lets you complete the briefing and analyze one Facebook Page. Get a license to create the Master Plan and start agents.", "La prueba permite completar el briefing y analizar una página de Facebook. Contrata una licencia para crear el plan maestro e iniciar los agentes."));
       return;
     }
     if (briefingLocked) {
@@ -1931,10 +1935,10 @@ export default function CampaignIntake() {
                 {trialAccess ? (
                   <div className="space-y-3">
                     <p className="border border-amber-400/30 bg-amber-400/5 p-4 text-center font-mono text-xs text-amber-200">
-                      {t("Briefing concluído. Faça agora a análise de uma rede social. O Master Plan e a execução são liberados com uma licença.", "Briefing complete. Now analyze one social network. The Master Plan and execution require a license.", "Briefing completado. Ahora analiza una red social. El plan maestro y la ejecución requieren una licencia.")}
+                      {t("Briefing concluído. Analise uma Página do Facebook. O Master Plan e a execução são liberados com uma licença.", "Briefing complete. Analyze one Facebook Page. The Master Plan and execution require a license.", "Briefing completado. Analiza una página de Facebook. El plan maestro y la ejecución requieren una licencia.")}
                     </p>
                     <Button onClick={() => setShowTrialSocialAnalysis(true)} disabled={loadingAccessStatus || !accessStatus} className="w-full font-mono uppercase tracking-widest rounded-none gap-2 h-14 text-sm btn-weapon-primary">
-                      <Target className="h-5 w-5" />{t("Analisar redes sociais", "Analyze social networks", "Analizar redes sociales")}<ChevronRight className="h-5 w-5" />
+                      <Target className="h-5 w-5" />{t("Analisar Página do Facebook", "Analyze Facebook Page", "Analizar página de Facebook")}<ChevronRight className="h-5 w-5" />
                     </Button>
                   </div>
                 ) : (

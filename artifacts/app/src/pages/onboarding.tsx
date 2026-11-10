@@ -573,7 +573,7 @@ export default function Onboarding() {
       return;
     }
     if (trialAccess && selectedPath !== "has_product") {
-      toast.error(t("O trial inclui somente o briefing estratégico e uma análise de redes sociais.", "The trial includes only the strategic briefing and one social media analysis.", "La prueba incluye solo el briefing estratégico y un análisis de redes sociales."));
+      toast.error(t("O trial inclui somente o briefing estratégico e uma análise de Página do Facebook.", "The trial includes only the strategic briefing and one Facebook Page analysis.", "La prueba incluye solo el briefing estratégico y un análisis de página de Facebook."));
       return;
     }
     if (selectedPath === "has_audience") {
@@ -1147,7 +1147,7 @@ export default function Onboarding() {
               <p className="font-mono text-xs text-emerald-300">
                 {trialBriefingCampaignId
                   ? t("Seu briefing de avaliação já foi iniciado. Continue de onde parou.", "Your trial briefing has already started. Continue where you left off.", "Tu briefing de prueba ya comenzó. Continúa donde lo dejaste.")
-                  : t("A avaliação inclui 1 briefing estratégico e 1 análise de redes sociais. Os demais recursos são liberados com uma licença.", "The trial includes 1 strategic briefing and 1 social media analysis. Other features require a license.", "La prueba incluye 1 briefing estratégico y 1 análisis de redes sociales. Las demás funciones requieren una licencia.")}
+                  : t("A avaliação inclui 1 briefing estratégico e 1 análise de Página do Facebook. Os demais recursos são liberados com uma licença.", "The trial includes 1 strategic briefing and 1 Facebook Page analysis. Other features require a license.", "La prueba incluye 1 briefing estratégico y 1 análisis de página de Facebook. Las demás funciones requieren una licencia.")}
               </p>
             </div>
           ) : <div className="mb-4">

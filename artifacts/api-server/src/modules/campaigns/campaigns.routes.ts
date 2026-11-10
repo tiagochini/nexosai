@@ -71,7 +71,8 @@ router.get("/:id/social-diagnosis", async (req, res): Promise<void> => {
     if (account.provider === "tiktok_ads") return [{ id: account.id, platform: "tiktok", name: account.accountName ?? "TikTok", handle: account.accountName ?? "TikTok" }];
     return [];
   });
-  res.json({ diagnosis: brain.socialDiagnosis ?? null, entitlement, trialAccess: trial != null, socialAnalysisAvailable: entitlement.active || trial?.socialAnalysisStatus === "available", connectedAccounts });
+  const visibleAccounts = trial ? connectedAccounts.filter((account) => account.platform === "facebook") : connectedAccounts;
+  res.json({ diagnosis: brain.socialDiagnosis ?? null, entitlement, trialAccess: trial != null, socialAnalysisAvailable: entitlement.active || trial?.socialAnalysisStatus === "available", connectedAccounts: visibleAccounts });
 });
 
 function cleanSocialHandle(value: string): string {
@@ -94,6 +95,10 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
   if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "NOT_FOUND" }); return; }
   const entitlement = await resolveSocialMediaEntitlement(req.auth.workspaceId);
   const trial = await getWorkspaceTrial(req.auth.workspaceId);
+  if (trial && parsed.data.platform !== "facebook") {
+    res.status(403).json({ error: "A análise incluída no trial é exclusiva para Páginas do Facebook.", code: "TRIAL_FACEBOOK_ANALYSIS_ONLY" });
+    return;
+  }
   const existingDiagnosis = ((campaign.brainData ?? {}) as Record<string, unknown>).socialDiagnosis as Record<string, unknown> | undefined;
   let handle = cleanSocialHandle(parsed.data.handle);
   if (trial && trial.socialAnalysisStatus !== "available") {
@@ -103,7 +108,7 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
     }
     const isReserved = trial.socialAnalysisStatus === "reserved";
     res.status(isReserved ? 409 : 403).json({
-      error: isReserved ? "A análise social do trial já está em andamento." : "A análise de redes sociais incluída no trial já foi utilizada.",
+      error: isReserved ? "A análise da Página do Facebook do trial já está em andamento." : "A análise da Página do Facebook incluída no trial já foi utilizada.",
       code: isReserved ? "TRIAL_SOCIAL_ANALYSIS_IN_PROGRESS" : "TRIAL_SOCIAL_ANALYSIS_USED",
     });
     return;
@@ -136,7 +141,7 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
 
   const trialReserved = trial ? await reserveTrialSocialAnalysis(req.auth.workspaceId) : false;
   if (trial && !trialReserved) {
-    res.status(409).json({ error: "A análise social do trial foi iniciada em outra solicitação. Atualize a página e confira o resultado.", code: "TRIAL_SOCIAL_ANALYSIS_IN_PROGRESS" });
+    res.status(409).json({ error: "A análise da Página do Facebook do trial foi iniciada em outra solicitação. Atualize a página e confira o resultado.", code: "TRIAL_SOCIAL_ANALYSIS_IN_PROGRESS" });
     return;
   }
 
