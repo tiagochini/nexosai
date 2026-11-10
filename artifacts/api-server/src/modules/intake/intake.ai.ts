@@ -50,6 +50,79 @@ function messageSignalsCompletion(message: string): boolean {
   return COMPLETION_SIGNAL_PATTERNS.some((re) => re.test(message));
 }
 
+function parseBrazilianMoneyToken(raw: string): number | null {
+  const compact = raw.trim().replace(/\s/g, "");
+  const suffix = compact.match(/[kKmM]$/)?.[0]?.toLowerCase();
+  let amountText = compact.replace(/[kKmM]$/i, "");
+  if (!amountText || !/^[\d.,]+$/.test(amountText)) return null;
+  if (amountText.includes(",")) {
+    amountText = amountText.replace(/\./g, "").replace(",", ".");
+  } else if ((amountText.match(/\./g) ?? []).length > 0) {
+    const decimals = amountText.split(".").at(-1)?.length ?? 0;
+    amountText = decimals === 3 ? amountText.replace(/\./g, "") : amountText;
+  }
+  const parsed = Number(amountText);
+  if (!Number.isFinite(parsed)) return null;
+  const multiplier = suffix === "k" ? 1_000 : suffix === "m" ? 1_000_000 : 1;
+  return parsed * multiplier;
+}
+
+function moneyTokens(value: string): number[] {
+  const tokens = [...value.matchAll(/(\d[\d.,]*)(\s*[kKmM])?/g)]
+    .map((match) => parseBrazilianMoneyToken(`${match[1] ?? ""}${match[2] ?? ""}`))
+    .filter((amount): amount is number => amount != null);
+  if (/\bmil\b/i.test(value) && !/[kKmM]/.test(value)) {
+    return tokens.map((amount) => amount > 0 && amount < 1_000 ? amount * 1_000 : amount);
+  }
+  return tokens;
+}
+
+function amountNearLabel(value: string, label: "solo" | "agency"): number | null {
+  const token = String.raw`(\d[\d.,]*(?:\s*[kKmM])?)`;
+  const after = new RegExp(`${label}[^\\d]{0,24}${token}`, "i").exec(value)?.[1];
+  const before = new RegExp(`${token}[^\\d]{0,24}${label}`, "i").exec(value)?.[1];
+  const raw = after ?? before;
+  return raw ? parseBrazilianMoneyToken(raw) : null;
+}
+
+/** Normalize clearly supplied price tiers and budget ranges before scoring or persistence. */
+function normalizeIntakeMoneyFields(data: Record<string, unknown>): Record<string, unknown> {
+  const normalized = { ...data };
+  const rawPrice = normalized["product.price"];
+  if (typeof rawPrice === "string") {
+    const soloPrice = amountNearLabel(rawPrice, "solo");
+    const agencyPrice = amountNearLabel(rawPrice, "agency");
+    if (soloPrice != null && agencyPrice != null) {
+      normalized["product.price"] = soloPrice;
+      normalized["product.priceTiers"] = rawPrice.trim();
+    } else {
+      const amounts = moneyTokens(rawPrice);
+      if (amounts.length) {
+        normalized["product.price"] = amounts[0];
+        if (amounts.length > 1) normalized["product.priceTiers"] = rawPrice.trim();
+      }
+    }
+  }
+
+  const rawBudget = normalized["campaign.budget.total"];
+  if (typeof rawBudget === "string") {
+    const amounts = moneyTokens(rawBudget);
+    if (amounts.length) {
+      normalized["campaign.budget.total"] = Math.max(...amounts);
+      if (amounts.length > 1) normalized["campaign.budget.range"] = rawBudget.trim();
+    }
+  }
+  return normalized;
+}
+
+/** The server owns readiness scoring; discard any score the model echoed from chat history. */
+function stripModelBriefingAssessments(message: string): string {
+  return message.replace(
+    /\n{2,}\*\*Diagnóstico do briefing\s*[—–-]\s*\d+\s*\/\s*100\*\*[\s\S]*?(?=\n{2,}---|\n{2,}Briefing (?:encerrado|concluído)|$)/gi,
+    "",
+  ).trim();
+}
+
 // ─── Natural language extraction ──────────────────────────────────────────────
 
 const NL_SYSTEM_PROMPT = `Você é especialista em marketing digital brasileiro, focado em lançamentos e infoprodutos.
@@ -166,7 +239,8 @@ export async function extractIntakeFromText(
     }
   }
 
-  const merged = { ...existingData, ...highConfidenceExtracted };
+  const merged = normalizeIntakeMoneyFields({ ...existingData, ...highConfidenceExtracted });
+  extracted = normalizeIntakeMoneyFields(extracted);
 
   if (Object.keys(highConfidenceExtracted).length > 0) {
     await saveIntakeData(campaignId, workspaceId, merged, log);
@@ -736,7 +810,7 @@ export async function processConversationalTurn(
 
   const type = (campaign.type ?? "launch") as CampaignType;
   const track = (campaign.track ?? "six_digits") as CampaignTrack;
-  const currentIntake = (campaign.intakeData ?? {}) as Record<string, unknown>;
+  const currentIntake = normalizeIntakeMoneyFields((campaign.intakeData ?? {}) as Record<string, unknown>);
   const questions = getIntakeQuestions(type, track);
   const completeness = validateIntakeCompleteness(type, track, currentIntake);
 
@@ -966,7 +1040,7 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO 
         proposedReason?: string;
       };
       agentId = parsed.agentId ?? currentAgent.id;
-      extracted = parsed.extracted ?? {};
+      extracted = normalizeIntakeMoneyFields(parsed.extracted ?? {});
       aiMessage = parsed.aiMessage ?? aiMessage;
       nextQuestionId = parsed.nextQuestionId ?? null;
       isComplete = parsed.isComplete ?? false;
@@ -988,6 +1062,7 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO 
 
   const assessment = assessBriefing({ ...currentIntake, ...extracted });
   if (safeResult.success) {
+    aiMessage = stripModelBriefingAssessments(aiMessage);
     const ready = isComplete || validateIntakeCompleteness(type, track, { ...currentIntake, ...extracted }).valid || messageSignalsCompletion(aiMessage);
     aiMessage += "\n\n" + formatBriefingAssessment(assessment, ready);
   }

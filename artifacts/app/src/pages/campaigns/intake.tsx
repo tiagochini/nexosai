@@ -1920,9 +1920,9 @@ export default function CampaignIntake() {
                   const fd = formData;
                   const pills: { label: string; value: string }[] = [];
                   const pName = fd["product.name"] ?? fd["product.nome"];
-                  const pPrice = fd["product.price"] ?? fd["product.preco"];
+                  const pPrice = fd["product.priceTiers"] ?? fd["product.price"] ?? fd["product.preco"];
                   const pAudience = fd["audience.avatar"] ?? fd["audience.target"];
-                  const pBudget = fd["campaign.budget.total"] ?? fd["campaign.budget"];
+                  const pBudget = fd["campaign.budget.range"] ?? fd["campaign.budget.total"] ?? fd["campaign.budget"];
                   const formatMoney = (value: unknown) => {
                     const amount = typeof value === "number" ? value : Number(String(value).trim());
                     return Number.isFinite(amount)
