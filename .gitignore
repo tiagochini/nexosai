@@ -59,6 +59,7 @@ iniciar-servidor.bat
 .DS_Store
 Thumbs.db
 attached_assets/
+/uploads/recordings
 
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
