@@ -21,19 +21,88 @@ export type StrategyObj = Record<string, unknown>;
 type Obj = Record<string, unknown>;
 type ModuleStatus = "pending" | "approved" | "flagged" | "rejected";
 
-export function parseStrategyInsights(strategyD: StrategyObj): StrategyObj {
-  const raw = strategyD["executiveSummary"];
-  if (typeof raw !== "string") return {};
-  const stripped = raw
-    .replace(/^```json\s*/m, "").replace(/^```\s*/m, "").replace(/```\s*$/m, "").trim();
-  try {
-    const parsed = JSON.parse(stripped);
-    return typeof parsed === "object" && parsed !== null ? parsed as StrategyObj : {};
-  } catch {
-    const match = stripped.match(/\{[\s\S]*\}/);
-    if (!match) return {};
-    try { return JSON.parse(match[0]) as StrategyObj; } catch { return {}; }
+const STRATEGY_WRAPPER_KEYS = ["data", "result", "insights", "masterplan", "strategy"] as const;
+const STRATEGY_SUMMARY_KEYS = ["executiveSummary", "summary", "executive_summary", "analysis", "overview"] as const;
+
+function stripJsonFence(value: string): string {
+  return value
+    .replace(/^\s*```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/i, "")
+    .trim();
+}
+
+function firstJsonObject(value: string): string | null {
+  const start = value.indexOf("{");
+  if (start < 0) return null;
+
+  let depth = 0;
+  let quoted = false;
+  let escaped = false;
+  for (let i = start; i < value.length; i++) {
+    const char = value[i]!;
+    if (quoted) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') quoted = false;
+      continue;
+    }
+    if (char === '"') quoted = true;
+    else if (char === "{") depth++;
+    else if (char === "}" && --depth === 0) return value.slice(start, i + 1);
   }
+  return null;
+}
+
+function parseStrategyValue(raw: unknown): Obj | null {
+  let value: unknown = raw;
+  for (let depth = 0; depth < 5; depth++) {
+    if (typeof value === "string") {
+      const candidate = stripJsonFence(value);
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(candidate);
+      } catch {
+        const objectText = firstJsonObject(candidate);
+        if (!objectText) return null;
+        try { parsed = JSON.parse(objectText); } catch { return null; }
+      }
+      value = parsed;
+      continue;
+    }
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+
+    const object = value as Obj;
+    const wrapper = STRATEGY_WRAPPER_KEYS.find(key => {
+      const nested = object[key];
+      return (typeof nested === "string" && nested.trim()) || (!!nested && typeof nested === "object");
+    });
+    if (wrapper && !STRATEGY_SUMMARY_KEYS.some(key => key in object)) {
+      value = object[wrapper];
+      continue;
+    }
+    return object;
+  }
+  return null;
+}
+
+function summaryText(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const text = value.trim();
+  if (!text) return "";
+
+  const parsed = parseStrategyValue(text);
+  if (parsed) {
+    for (const key of STRATEGY_SUMMARY_KEYS) {
+      const summary = parsed[key];
+      if (typeof summary === "string" && summary.trim()) return summary.trim();
+    }
+  }
+  const looksLikeJson = /^(?:\{|\[)/.test(stripJsonFence(text));
+  return looksLikeJson ? "" : text;
+}
+
+export function parseStrategyInsights(strategyD: StrategyObj): StrategyObj {
+  return parseStrategyValue(strategyD["executiveSummary"]) ?? {};
 }
 
 function str(v: unknown): string {
@@ -41,8 +110,12 @@ function str(v: unknown): string {
   return "";
 }
 function arr(v: unknown): string[] {
-  if (!Array.isArray(v)) return [];
-  return v.filter((x): x is string => typeof x === "string" && x.trim() !== "");
+  let value = v;
+  if (typeof value === "string") {
+    try { value = JSON.parse(stripJsonFence(value)); } catch { return []; }
+  }
+  if (!Array.isArray(value)) return [];
+  return value.filter((x): x is string => typeof x === "string" && x.trim() !== "");
 }
 function num(v: unknown): number | null {
   const n = Number(v);
@@ -50,6 +123,7 @@ function num(v: unknown): number | null {
 }
 function obj(v: unknown): Obj {
   if (v && typeof v === "object" && !Array.isArray(v)) return v as Obj;
+  if (typeof v === "string") return parseStrategyValue(v) ?? {};
   return {};
 }
 
@@ -500,7 +574,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
   const getStatus = (id: string): ModuleStatus => statuses[id] ?? "pending";
 
   // ── Data extraction ──
-  const executiveSummary = savedEdits["executiveSummary"] ?? (str(src["executiveSummary"]) || str(strategyD["executiveSummary"]));
+  const executiveSummary = savedEdits["executiveSummary"] ?? (summaryText(src["executiveSummary"]) || summaryText(strategyD["executiveSummary"]));
   const bigDomino        = savedEdits["bigDomino"]        ?? (str(src["bigDomino"])        || str(strategyD["bigDomino"]));
   const strategistNotes  = savedEdits["strategistNotes"]  ?? (str(src["strategistNotes"])  || str(strategyD["strategistNotes"]));
 

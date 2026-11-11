@@ -1,7 +1,9 @@
+import { confirmsMarketReportChanges } from "./market-intel-revision.js";
 import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
 import {
+  applyMarketReportCorrections,
   listReports,
   getReport,
   deleteReport,
@@ -110,6 +112,19 @@ router.post("/:id/link-campaign", async (req, res): Promise<void> => {
   res.json({ report });
 });
 
+router.post("/:id/apply-corrections", async (req, res): Promise<void> => {
+  try {
+    const report = await applyMarketReportCorrections(String(req.params.id), req.auth.workspaceId, req.log);
+    res.json({ report });
+  } catch (err) {
+    req.log.warn({ err }, "market-intel: report revision failed");
+    const message = err instanceof Error ? err.message : "";
+    res.status(message.includes("não encontrado") ? 404 : 409).json({ error:
+      message.includes("não encontrado") || message.includes("Converse") || message.includes("mudou durante")
+        ? message : "Não foi possível aplicar as correções. O relatório anterior foi preservado. Tente novamente." });
+  }
+});
+
 router.get("/:id/chat", async (req, res): Promise<void> => {
   const { id } = req.params as { id: string };
   const history = await getChatHistory(id, req.auth.workspaceId);
@@ -133,7 +148,17 @@ router.post("/:id/chat", async (req, res): Promise<void> => {
       parsed.history ?? [],
       req.log,
     );
-    res.json({ answer });
+    if (confirmsMarketReportChanges(parsed.question)) {
+      try {
+        const report = await applyMarketReportCorrections(id, req.auth.workspaceId, req.log);
+        res.json({ answer: answer + "\n\nRelatório atualizado com sucesso.", report });
+      } catch (err) {
+        req.log.warn({ err, reportId: id }, "market-intel: confirmed revision failed");
+        res.json({ answer, applyError: "A conversa foi salva, mas não foi possível aplicar as correções. Use o botão para tentar novamente." });
+      }
+    } else {
+      res.json({ answer });
+    }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Erro ao responder.";
     req.log.warn({ err, reportId: id }, "market-intel chat: error");

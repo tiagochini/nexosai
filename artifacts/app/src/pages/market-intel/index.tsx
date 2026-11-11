@@ -36,6 +36,8 @@ interface PositioningGap {
   estimatedTAM?: string;
 }
 interface MarketIntelOutput {
+  _deepdiveAppliedMessages?: number;
+  _deepdiveAppliedAt?: string;
   market?: string;
   marketSize?: string;
   marketMaturity?: string;
@@ -132,6 +134,9 @@ export default function MarketIntelPage() {
   const [chatMsgs, setChatMsgs] = useState<ChatMsg[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatSending, setChatSending] = useState(false);
+  const [applyingCorrections, setApplyingCorrections] = useState(false);
+  const [chatPersisted, setChatPersisted] = useState(false);
+  const [revisionError, setRevisionError] = useState<string | null>(null);
   const [chatLoadingHistory, setChatLoadingHistory] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
@@ -266,7 +271,9 @@ export default function MarketIntelPage() {
 
   async function openReport(r: Report) {
     setShowChat(false);
+    setRevisionError(null);
     setChatMsgs([]);
+    setChatPersisted(false);
     setShowLink(false);
     setLinkError(null);
     try {
@@ -281,6 +288,7 @@ export default function MarketIntelPage() {
       const histData = await customFetch<{ history: ChatMsg[] }>(`${API}/${r.id}/chat`);
       if (histData.history.length > 0) {
         setChatMsgs(histData.history);
+        setChatPersisted(true);
         setShowChat(true); // auto-open chat if there's saved history
       }
     } catch { /* noop — treat as empty history */ } finally {
@@ -288,14 +296,33 @@ export default function MarketIntelPage() {
     }
   }
 
+  function acceptRevisedReport(report: Report) {
+    setSelected(report);
+    setReports(items => items.map(item => item.id === report.id ? report : item));
+  }
+
+  async function applyCorrections() {
+    if (!selected || applyingCorrections || chatSending) return;
+    setApplyingCorrections(true);
+    setRevisionError(null);
+    try {
+      const data = await customFetch<{ report: Report }>(`${API}/${selected.id}/apply-corrections`, { method: "POST" });
+      acceptRevisedReport(data.report);
+    } catch {
+      setRevisionError(t("Não foi possível aplicar as correções. Tente novamente; seu relatório foi preservado.", "Could not apply corrections. Try again; your report was preserved.", "No se pudieron aplicar las correcciones. Inténtalo de nuevo; tu informe se conservó."));
+    } finally { setApplyingCorrections(false); }
+  }
+
   async function sendChat() {
-    if (!chatInput.trim() || !selected || chatSending) return;
+    if (!chatInput.trim() || !selected || chatSending || applyingCorrections) return;
     const question = chatInput.trim();
     setChatInput("");
     setChatMsgs((m) => [...m, { role: "user", content: question }]);
     setChatSending(true);
+    setChatPersisted(false);
+    setRevisionError(null);
     try {
-      const data = await customFetch<{ answer: string }>(`${API}/${selected.id}/chat`, {
+      const data = await customFetch<{ answer: string; report?: Report; applyError?: string }>(`${API}/${selected.id}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -308,6 +335,9 @@ export default function MarketIntelPage() {
         }),
       });
       setChatMsgs((m) => [...m, { role: "assistant", content: data.answer }]);
+      setChatPersisted(true);
+      if (data.report) acceptRevisedReport(data.report);
+      if (data.applyError) setRevisionError(data.applyError);
     } catch (err: unknown) {
       const serverMsg = (err as { data?: { error?: string } } | null)?.data?.error;
       const fallback = t("Não consegui responder agora. Tente novamente em instantes.", "I couldn't respond just now. Please try again shortly.", "No pude responder ahora. Inténtalo de nuevo en un momento.");
@@ -592,10 +622,10 @@ export default function MarketIntelPage() {
                     <Sparkles className="h-3.5 w-3.5 text-primary" /> Deepdive com o Analista
                   </span>
                   <div className="flex items-center gap-2">
-                    {chatMsgs.length > 0 && (
+                    {chatPersisted && chatMsgs.length > 0 && (
                       <span className="text-[10px] text-green-400/70 flex items-center gap-1">
                         <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400/70" />
-                         {t("salvo", "saved", "guardado")}
+                         {selected.output?._deepdiveAppliedMessages === chatMsgs.length ? t("Relatório atualizado", "Report updated", "Informe actualizado") : t("Conversa salva", "Conversation saved", "Conversación guardada")}
                       </span>
                     )}
                     {chatLoadingHistory && (
@@ -610,7 +640,7 @@ export default function MarketIntelPage() {
                   {chatMsgs.length === 0 && !chatLoadingHistory && (
                     <p className="text-xs text-muted-foreground p-2">
                       {t('Pergunte qualquer coisa sobre este mercado: "Como ataco a vulnerabilidade do concorrente X?", "Qual gap priorizo com orçamento baixo?"…', 'Ask anything about this market: "How do I target competitor X’s vulnerability?", "Which gap should I prioritize on a small budget?"…', 'Pregunta lo que quieras sobre este mercado: "¿Cómo aprovecho la vulnerabilidad del competidor X?", "¿Qué brecha priorizo con poco presupuesto?"…')}<br/>
-                      <span className="mt-1 block text-[10px] text-muted-foreground/60">{t("Conversa salva automaticamente e compartilhada com os agentes de Social Media e Lançamentos.", "Conversation saved automatically and shared with the Social Media and Launch agents.", "La conversación se guarda automáticamente y se comparte con los agentes de redes sociales y lanzamientos.")}</span>
+                      <span className="mt-1 block text-[10px] text-muted-foreground/60">{t("Converse para ajustar a análise. Ao concluir, diga “pode aplicar” ou use o botão para atualizar o relatório.", "Discuss changes to the analysis. When ready, say “aplique” or use the button to update the report.", "Conversa para ajustar el análisis. Al terminar, usa el botón para actualizar el informe.")}</span>
                     </p>
                   )}
                   {chatMsgs.map((m, i) => (
@@ -629,6 +659,14 @@ export default function MarketIntelPage() {
                   )}
                   <div ref={chatBottomRef} />
                 </div>
+                <div className="p-3 border-t border-border/50 space-y-2">
+                  <Button variant="outline" size="sm" className="w-full" onClick={applyCorrections}
+                    disabled={chatSending || applyingCorrections || chatLoadingHistory || !chatMsgs.some(m => m.role === "user")}>
+                    {applyingCorrections ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-2" />}
+                    {applyingCorrections ? t("Aplicando correções…", "Applying corrections…", "Aplicando correcciones…") : t("Aplicar correções ao relatório", "Apply corrections to report", "Aplicar correcciones al informe")}
+                  </Button>
+                  {revisionError && <p role="alert" className="text-xs text-destructive">{revisionError}</p>}
+                </div>
                 <div className="p-3 border-t border-border/50 flex gap-2">
                   <input
                     value={chatInput}
@@ -637,7 +675,7 @@ export default function MarketIntelPage() {
                     placeholder={t("Pergunte ao analista…", "Ask the analyst…", "Pregunta al analista…")}
                     className="flex-1 bg-background border border-border/50 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-primary/50"
                   />
-                  <Button size="sm" onClick={sendChat} disabled={chatSending || !chatInput.trim()} aria-label={t("Enviar", "Send", "Enviar")}>
+                  <Button size="sm" onClick={sendChat} disabled={chatSending || applyingCorrections || !chatInput.trim()} aria-label={t("Enviar", "Send", "Enviar")}>
                     <Send className="h-4 w-4" />
                   </Button>
                 </div>

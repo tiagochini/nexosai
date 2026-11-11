@@ -32,6 +32,39 @@ export interface MasterplanPdfData {
 function str(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
 }
+
+function printableExecutiveSummary(value: string, nesting = 0): string {
+  if (nesting >= 5) return "";
+  let candidate = value.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "");
+  for (let depth = 0; depth < 5; depth++) {
+    try {
+      const parsed: unknown = JSON.parse(candidate);
+      if (typeof parsed === "string") {
+        candidate = parsed.trim();
+        continue;
+      }
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return "";
+      const object = parsed as Record<string, unknown>;
+      for (const key of ["executiveSummary", "summary", "executive_summary", "analysis", "overview"]) {
+        const nested = object[key];
+        if (typeof nested === "string" && nested.trim()) return printableExecutiveSummary(nested, nesting + 1);
+      }
+      for (const key of ["data", "result", "insights", "masterplan", "strategy"]) {
+        const nested = object[key];
+        if (typeof nested === "string" && nested.trim()) return printableExecutiveSummary(nested, nesting + 1);
+        if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+          return printableExecutiveSummary(JSON.stringify(nested), nesting + 1);
+        }
+      }
+      return "";
+    } catch {
+      // Plain prose remains printable; JSON-like content must never leak as a raw dump.
+      return candidate.startsWith("{") || candidate.startsWith("[") ? "" : candidate;
+    }
+  }
+  return "";
+}
+
 function arr(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
   return v.filter((x): x is string => typeof x === "string" && x.trim() !== "");
@@ -293,6 +326,7 @@ export function generateMasterplanPDF(
   user: PdfUserIdentity,
   options: { save?: boolean } = {},
 ): { fingerprint: string; document: jsPDF } {
+  const executiveSummary = printableExecutiveSummary(data.executiveSummary);
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   // Normalize before both measurement and drawing so wrapping stays consistent.
   const originalText = doc.text.bind(doc);
@@ -531,14 +565,14 @@ export function generateMasterplanPDF(
   y = MT + 5;
 
   // ── M01 — DIAGNÓSTICO EXECUTIVO
-  if (data.executiveSummary) {
+  if (executiveSummary) {
     y = renderSection(doc, "01", "DIAGNÓSTICO EXECUTIVO", y);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7.5);
     setColor(doc, 100, 70, 160);
     doc.text("1.1 — Análise de Viabilidade e PMF", ML, y); y += 4;
     // Steganographic encoding: fingerprint bits embedded in inter-word spacing
-    y = stegaText(doc, data.executiveSummary, ML, y, CW, bits, stegaCursor);
+    y = stegaText(doc, executiveSummary, ML, y, CW, bits, stegaCursor);
     y += 6;
   }
 
