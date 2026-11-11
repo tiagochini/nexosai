@@ -119,9 +119,19 @@ router.post("/:id/apply-corrections", async (req, res): Promise<void> => {
   } catch (err) {
     req.log.warn({ err }, "market-intel: report revision failed");
     const message = err instanceof Error ? err.message : "";
-    res.status(message.includes("não encontrado") ? 404 : 409).json({ error:
-      message.includes("não encontrado") || message.includes("Converse") || message.includes("mudou durante")
-        ? message : "Não foi possível aplicar as correções. O relatório anterior foi preservado. Tente novamente." });
+    const conflict = message.includes("mudou durante");
+    const missing = message.includes("não encontrado");
+    const invalid = message.includes("Converse") || message.includes("não está pronto");
+    const invalidOutput = err instanceof z.ZodError;
+    const invalidJson = err instanceof SyntaxError;
+    if (invalidOutput) req.log.warn({ reportId: req.params.id, fields: err.issues.map(issue => issue.path.join(".")) }, "market-intel: invalid revision fields");
+    res.status(missing ? 404 : conflict ? 409 : invalid ? 400 : 502).json({
+      code: conflict ? "REVISION_CONFLICT" : invalidOutput ? "REVISION_INVALID_OUTPUT" : invalidJson ? "REVISION_INVALID_JSON" : "REVISION_FAILED",
+      error: missing || conflict || invalid ? message : invalidOutput
+        ? "A IA devolveu uma revisão incompleta ou com campos inválidos. O relatório anterior foi preservado. Tente novamente."
+        : invalidJson ? "A resposta da IA não veio no formato necessário. O relatório anterior foi preservado. Tente novamente."
+        : "Falha ao gerar ou salvar a revisão. O relatório anterior foi preservado. Tente novamente.",
+    });
   }
 });
 

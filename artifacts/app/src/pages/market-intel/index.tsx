@@ -308,8 +308,9 @@ export default function MarketIntelPage() {
     try {
       const data = await customFetch<{ report: Report }>(`${API}/${selected.id}/apply-corrections`, { method: "POST" });
       acceptRevisedReport(data.report);
-    } catch {
-      setRevisionError(t("Não foi possível aplicar as correções. Tente novamente; seu relatório foi preservado.", "Could not apply corrections. Try again; your report was preserved.", "No se pudieron aplicar las correcciones. Inténtalo de nuevo; tu informe se conservó."));
+    } catch (err: unknown) {
+      const serverError = (err as { data?: { error?: string } } | null)?.data?.error;
+      setRevisionError(serverError ?? t("Não foi possível aplicar as correções. Tente novamente; seu relatório foi preservado.", "Could not apply corrections. Try again; your report was preserved.", "No se pudieron aplicar las correcciones. Inténtalo de nuevo; tu informe se conservó."));
     } finally { setApplyingCorrections(false); }
   }
 
