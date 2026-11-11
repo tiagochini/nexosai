@@ -18,6 +18,7 @@ export async function queueMarketRevision(id: string, workspaceId: string) {
   if (report.status !== "ready" || !report.output) throw new Error("Relatório não está pronto.");
   if (!Array.isArray(report.chatHistory) || report.chatHistory.length === 0) throw new Error("Converse com o analista antes de aplicar correções.");
   if (["queued", "running"].includes(revision(report.output).state ?? "")) return report;
+  if (revision(report.output).state === "completed" && asObject(report.output)._deepdiveAppliedMessages === report.chatHistory.length) return report;
   const [updated] = await db.update(marketIntelReportsTable).set({
     output: { ...asObject(report.output), _deepdiveRevision: { state: "queued", startedAt: new Date().toISOString() } }, updatedAt: new Date(),
   }).where(and(eq(marketIntelReportsTable.id, id), eq(marketIntelReportsTable.workspaceId, workspaceId), eq(marketIntelReportsTable.updatedAt, report.updatedAt))).returning();

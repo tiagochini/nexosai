@@ -137,6 +137,7 @@ export default function MarketIntelPage() {
   const [chatSending, setChatSending] = useState(false);
   const [submittingRevision, setApplyingCorrections] = useState(false);
   const revisionState = selected?.output?._deepdiveRevision;
+  const correctionsApplied = revisionState?.state === "completed" && selected?.output?._deepdiveAppliedMessages === chatMsgs.length;
   const applyingCorrections = submittingRevision || revisionState?.state === "queued" || revisionState?.state === "running";
   const [chatPersisted, setChatPersisted] = useState(false);
   const [revisionError, setRevisionError] = useState<string | null>(null);
@@ -322,7 +323,7 @@ export default function MarketIntelPage() {
   }
 
   async function applyCorrections() {
-    if (!selected || applyingCorrections || chatSending) return;
+    if (!selected || correctionsApplied || applyingCorrections || chatSending) return;
     setApplyingCorrections(true);
     setRevisionError(null);
     try {
@@ -682,9 +683,9 @@ export default function MarketIntelPage() {
                 </div>
                 <div className="p-3 border-t border-border/50 space-y-2">
                   <Button variant="outline" size="sm" className="w-full" onClick={applyCorrections}
-                    disabled={chatSending || applyingCorrections || chatLoadingHistory || !chatMsgs.some(m => m.role === "user")}>
+                    disabled={correctionsApplied || chatSending || applyingCorrections || chatLoadingHistory || !chatMsgs.some(m => m.role === "user")}>
                     {applyingCorrections ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-2" />}
-                    {applyingCorrections ? t("Aplicando correções…", "Applying corrections…", "Aplicando correcciones…") : t("Aplicar correções ao relatório", "Apply corrections to report", "Aplicar correcciones al informe")}
+                    {applyingCorrections ? t("Aplicando correções…", "Applying corrections…", "Aplicando correcciones…") : correctionsApplied ? t("Relatório atualizado", "Report updated", "Informe actualizado") : t("Aplicar correções ao relatório", "Apply corrections to report", "Aplicar correcciones al informe")}
                   </Button>
                   {(revisionError || revisionState?.error) && <p role="alert" className="text-xs text-destructive">{revisionError || revisionState?.error}</p>}
                 </div>
