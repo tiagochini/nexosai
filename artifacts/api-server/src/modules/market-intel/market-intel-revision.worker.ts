@@ -1,3 +1,4 @@
+import { z } from "zod/v4";
 import { and, eq, sql } from "drizzle-orm";
 import { db, marketIntelReportsTable } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
@@ -45,7 +46,7 @@ async function tick() {
       const invalid = error instanceof Error && (error.name === "ZodError" || error instanceof SyntaxError);
       const message = invalid ? "A IA retornou uma estrutura inválida. O relatório foi preservado; tente novamente."
         : "Não foi possível concluir a revisão. O relatório foi preservado; tente novamente.";
-      logger.warn({ reportId: claimed.id, failureCategory: invalid ? "invalid_structure" : "revision_failed" }, "Market revision failed");
+      logger.warn({ reportId: claimed.id, ...(error instanceof z.ZodError ? { validationFields: error.issues.map(issue => ({ fieldPath: issue.path.join("."), validationCode: issue.code })) } : {}), failureCategory: invalid ? "invalid_structure" : "revision_failed" }, "Market revision failed");
       // Retain any newer conversation or report changes; only replace job state.
       await db.update(marketIntelReportsTable).set({
         output: sql`jsonb_set(${marketIntelReportsTable.output}, '{_deepdiveRevision}', ${JSON.stringify({ state: "failed", error: message })}::jsonb)`, updatedAt: new Date(),

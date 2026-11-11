@@ -26,3 +26,5 @@ for (const envelope of [valid, { report: valid }, { data: { result: { output: va
 assert.deepEqual(parseMarketRevision("```json\n" + JSON.stringify({ report: valid }) + "\n```"), valid);
 assert.throws(() => parseMarketRevision(JSON.stringify({ report: { market: "Partial" } })));
 assert.throws(() => parseMarketRevision(JSON.stringify({ data: { message: "done" } })));
+
+assert.deepEqual(parseMarketRevision(JSON.stringify({ revised_report: valid })), valid);

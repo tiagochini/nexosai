@@ -23,6 +23,8 @@ export const revisedMarketReportSchema = z.object({
   clarifyingQuestions: z.array(z.string()).optional(),
 }).passthrough();
 
+export const marketRevisionFormat = JSON.stringify(z.toJSONSchema(revisedMarketReportSchema));
+
 /** Unwrap provider envelopes without accepting incomplete report payloads. */
 export function parseMarketRevision(content: string): Record<string, unknown> {
   let value: unknown = content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
@@ -31,7 +33,7 @@ export function parseMarketRevision(content: string): Record<string, unknown> {
     if (!value || typeof value !== "object" || Array.isArray(value)) break;
     const object = value as Record<string, unknown>;
     if ("market" in object || "competitors" in object) return revisedMarketReportSchema.parse(object);
-    const key = ["report", "output", "data", "result", "revisedReport", "updatedReport", "analysis"].find(k => object[k] !== undefined);
+    const key = ["report", "output", "data", "result", "revisedReport", "updatedReport", "revised_report", "updated_report", "relatorio", "relatorioAtualizado", "analysis"].find(k => object[k] !== undefined);
     if (!key) break;
     value = object[key];
   }
