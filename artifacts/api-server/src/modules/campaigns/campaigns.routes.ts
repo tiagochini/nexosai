@@ -45,6 +45,29 @@ const REORIENT_STRATEGY_COST = 45;
 const router = Router();
 router.use(requireAuth);
 
+async function restoreTrialSocialAnalysisIfNoReport(workspaceId: string): Promise<void> {
+  const trial = await getWorkspaceTrial(workspaceId);
+  if (!trial) return;
+
+  // The allowance is consumed by a persisted diagnosis, not by an attempted
+  // request. Check the whole trial workspace so stale status or campaign
+  // pointers cannot strand the user after a failed or interrupted generation.
+  const workspaceCampaigns = await db.select({ brainData: campaignsTable.brainData })
+    .from(campaignsTable)
+    .where(eq(campaignsTable.workspaceId, workspaceId));
+  const hasPersistedDiagnosis = workspaceCampaigns.some(({ brainData }) => {
+    const diagnosis = ((brainData ?? {}) as Record<string, unknown>).socialDiagnosis;
+    return diagnosis !== null && typeof diagnosis === "object" &&
+      (diagnosis as Record<string, unknown>).status !== "insufficient_data";
+  });
+
+  if (hasPersistedDiagnosis && trial.socialAnalysisStatus !== "used") {
+    await finishTrialSocialAnalysis(workspaceId, "used");
+  } else if (!hasPersistedDiagnosis && trial.socialAnalysisStatus === "used") {
+    await finishTrialSocialAnalysis(workspaceId, "available");
+  }
+}
+
 router.get("/:id/social-diagnosis", async (req, res): Promise<void> => {
   const id = String(req.params["id"]);
   const [campaign] = await db.select({ brainData: campaignsTable.brainData })
@@ -52,6 +75,7 @@ router.get("/:id/social-diagnosis", async (req, res): Promise<void> => {
   if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "NOT_FOUND" }); return; }
   const brain = (campaign.brainData ?? {}) as Record<string, unknown>;
   const entitlement = await resolveSocialMediaEntitlement(req.auth.workspaceId);
+  await restoreTrialSocialAnalysisIfNoReport(req.auth.workspaceId);
   const trial = await getWorkspaceTrial(req.auth.workspaceId);
   const integrations = (await getConnectedAccounts(req.auth.workspaceId)).filter((account) =>
     account.status === "connected" && isOrganicSocialIntegration(account.metadata as Record<string, unknown> | null),
@@ -76,7 +100,23 @@ router.get("/:id/social-diagnosis", async (req, res): Promise<void> => {
 });
 
 function cleanSocialHandle(value: string): string {
-  return value.trim().replace(/^@/, "").replace(/^https?:\/\/(www\.)?[^/]+\//i, "").replace(/\/$/, "");
+  const cleaned = value.trim().replace(/^@/, "");
+  const withProtocol = /^https?:\/\//i.test(cleaned) ? cleaned : `https://${cleaned}`;
+  try {
+    const url = new URL(withProtocol);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    if (["facebook.com", "m.facebook.com", "fb.com"].includes(host)) {
+      const path = url.pathname.split("/").filter(Boolean);
+      if (path.length) return path[path.length - 1] === "profile.php" ? (url.searchParams.get("id") ?? "profile.php") : decodeURIComponent(path[0]!);
+    }
+    if (["instagram.com", "tiktok.com", "linkedin.com", "youtube.com"].some((domain) => host === domain || host.endsWith(`.${domain}`))) {
+      const path = url.pathname.split("/").filter(Boolean);
+      if (path.length) return decodeURIComponent(path[path.length - 1]!.replace(/^@/, ""));
+    }
+  } catch {
+    // Retain plain handles such as @brand after removing the leading @ above.
+  }
+  return cleaned.replace(/\/$/, "");
 }
 
 // A campaign-specific pre-strategy diagnosis. Public analysis is clearly labeled
@@ -94,6 +134,7 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
     .from(campaignsTable).where(and(eq(campaignsTable.id, id), eq(campaignsTable.workspaceId, req.auth.workspaceId))).limit(1);
   if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "NOT_FOUND" }); return; }
   const entitlement = await resolveSocialMediaEntitlement(req.auth.workspaceId);
+  await restoreTrialSocialAnalysisIfNoReport(req.auth.workspaceId);
   const trial = await getWorkspaceTrial(req.auth.workspaceId);
   if (trial && parsed.data.platform !== "facebook") {
     res.status(403).json({ error: "A análise incluída no trial é exclusiva para Páginas do Facebook.", code: "TRIAL_FACEBOOK_ANALYSIS_ONLY" });
@@ -180,7 +221,7 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
     apiError: connected.error ?? null,
   } : null;
   const hasAccountMetrics = accountEvidence != null && [accountEvidence.followers, accountEvidence.mediaCount, accountEvidence.reachLast30Days].some((value) => value != null);
-  const hasCitedPublicResearch = analysis.searchSourced && analysis.sources.length > 0;
+  const hasCitedPublicResearch = analysis.profileEvidenceFound && analysis.profileSources.length > 0;
   const evidenceStatus = determineSocialDiagnosisStatus({ accountMetricsAvailable: hasAccountMetrics, citedPublicResearchAvailable: hasCitedPublicResearch });
   const diagnosis = {
     version: 1,
@@ -198,7 +239,10 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
     },
     accountEvidence,
     publicProfileAnalysis: {
-      method: analysis.searchSourced ? "AI-assisted web search" : "AI-assisted analysis; web search unavailable",
+      method: analysis.profileEvidenceFound ? "AI-assisted web search" : "AI-assisted analysis; profile sources not verified",
+      accountType: analysis.accountType,
+      accountTypeEvidence: analysis.accountTypeEvidence,
+      profileEvidenceFound: analysis.profileEvidenceFound,
       overview: analysis.overview,
       contentAnalysis: analysis.contentAnalysis,
       strategicAnalysis: analysis.strategicAnalysis,
@@ -206,7 +250,7 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
       competitorAnalysis: analysis.competitorAnalysis,
       actionPlan: analysis.actionPlan,
       searchSourced: analysis.searchSourced,
-      sources: analysis.sources,
+      sources: analysis.profileEvidenceFound ? analysis.profileSources : [],
     },
     evidenceLimitations: [
       "Análise pública assistida por IA é indicativa; valide fatos e referências antes de investir.",
@@ -221,8 +265,10 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
   const brainData = (campaign.brainData ?? {}) as Record<string, unknown>;
   await db.update(campaignsTable).set({ brainData: { ...brainData, socialDiagnosis: diagnosis } as any, updatedAt: new Date() })
     .where(and(eq(campaignsTable.id, id), eq(campaignsTable.workspaceId, req.auth.workspaceId)));
-  await db.insert(auditLogsTable).values({ workspaceId: req.auth.workspaceId, campaignId: id, action: "campaign.social_diagnosis.generated", actor: req.auth.userId, data: { platform: diagnosis.platform, handle: diagnosis.handle, status: diagnosis.status, accountMetricsIncluded: Boolean(accountEvidence), publicSearchCited: hasCitedPublicResearch } });
-  if (trialReserved) await finishTrialSocialAnalysis(req.auth.workspaceId, "used");
+  await db.insert(auditLogsTable).values({ workspaceId: req.auth.workspaceId, campaignId: id, action: "campaign.social_diagnosis.generated", actor: req.auth.userId, data: { platform: diagnosis.platform, handle: diagnosis.handle, status: diagnosis.status, accountMetricsIncluded: Boolean(accountEvidence), publicSearchCited: hasCitedPublicResearch, profileEvidenceFound: analysis.profileEvidenceFound } });
+  if (trialReserved) {
+    await finishTrialSocialAnalysis(req.auth.workspaceId, evidenceStatus === "insufficient_data" ? "available" : "used");
+  }
   res.json({ diagnosis });
   } catch (error) {
     if (trialReserved) await finishTrialSocialAnalysis(req.auth.workspaceId, "available");

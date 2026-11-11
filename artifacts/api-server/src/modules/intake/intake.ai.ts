@@ -41,6 +41,8 @@ const COMPLETION_SIGNAL_PATTERNS = [
   /já temos (as |todas as )?informações suficientes/i,
   /temos tudo (o )?que precisamos/i,
   /briefing (está |)?(100%\s*)?completo/i,
+  /briefing (foi )?(encerrado|concluído|finalizado)/i,
+  /agentes de execução estão preparando os rascunhos/i,
   /clique no botão abaixo/i,
   /ver e aprovar o? master plan/i,
   /pronto para (o|montar o) master plan/i,
@@ -110,6 +112,15 @@ function normalizeIntakeMoneyFields(data: Record<string, unknown>): Record<strin
     if (amounts.length) {
       normalized["campaign.budget.total"] = Math.max(...amounts);
       if (amounts.length > 1) normalized["campaign.budget.range"] = rawBudget.trim();
+    }
+  }
+
+  const rawTrafficBudget = normalized["campaign.budget.traffic"];
+  if (typeof rawTrafficBudget === "string") {
+    const amounts = moneyTokens(rawTrafficBudget);
+    if (amounts.length) {
+      normalized["campaign.budget.traffic"] = Math.max(...amounts);
+      if (amounts.length > 1) normalized["campaign.budget.traffic.range"] = rawTrafficBudget.trim();
     }
   }
   return normalized;
@@ -1080,6 +1091,12 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO 
     ...currentIntake,
     ...(Object.keys(extracted).length > 0 ? extracted : {}),
     [HIST_KEY]: updatedHistory,
+    // The UI can mark a conversation complete from the model's explicit flag
+    // or a completion message even when the structured required fields are
+    // still incomplete. Persist that terminal state so a reload does not
+    // recalculate a lower percentage and present the completed briefing as
+    // an in-progress phase.
+    ...(isComplete || messageSignalsCompletion(aiMessage) ? { _intakeChatComplete: true } : {}),
     _briefingAssessment: assessment,
   };
   try {

@@ -505,6 +505,13 @@ export default function Onboarding() {
           customFetch<{ campaign: Record<string, unknown> }>(`/api/campaigns/${trialPreviewCampaignId}`),
           customFetch<{ diagnosis: Record<string, any> | null; socialAnalysisAvailable?: boolean }>(`/api/campaigns/${trialPreviewCampaignId}/social-diagnosis`),
         ]);
+        // Do not produce a briefing-only PDF while the trial's social analysis
+        // is still available. Return to the campaign step so the user can run it.
+        if (!diagnosisResult.diagnosis && diagnosisResult.socialAnalysisAvailable === true) {
+          setLocation(`/campaigns/${trialPreviewCampaignId}/intake`);
+          setResumeCheck("resolved");
+          return;
+        }
         const intakeData = (campaignResult.campaign?.intakeData as Record<string, unknown>) ?? {};
         setPath("has_product");
         setCampaignId(trialPreviewCampaignId);
@@ -975,9 +982,20 @@ export default function Onboarding() {
       }
       return "";
     };
-    const list = (value: unknown, max = 4): string[] => Array.isArray(value)
-      ? value.map((item) => typeof item === "string" ? item.trim() : "").filter(Boolean).slice(0, max)
-      : typeof value === "string" && value.trim() ? [value.trim()] : [];
+    const list = (value: unknown, max = 4): string[] => {
+      const items = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
+      return items.map((item) => {
+        if (typeof item === "string") return item.trim();
+        if (typeof item === "number" && Number.isFinite(item)) return String(item);
+        if (!item || typeof item !== "object" || Array.isArray(item)) return "";
+        const record = item as Record<string, unknown>;
+        for (const key of ["action", "recommendation", "nextStep", "suggestion", "title", "description", "text", "step", "content", "summary"]) {
+          const candidate = record[key];
+          if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+        }
+        return "";
+      }).filter(Boolean).slice(0, max);
+    };
     const label = (name: string, value: string) => write(`${name}: ${value}`, 9, 4);
 
     const product = field("product.name", "product.nome", "productName") || t("produto/serviço", "product/service", "producto/servicio");
@@ -1038,13 +1056,79 @@ export default function Onboarding() {
     const analysis = trialSocialDiagnosis?.publicProfileAnalysis ?? {};
     if (analysis.overview) {
       section(t("4. Sugestões da análise social", "4. Social analysis suggestions", "4. Sugerencias del análisis social"));
-      write(String(analysis.overview), 9, 4);
+      if (typeof analysis.overview === "string") {
+        write(analysis.overview, 9, 4);
+      } else if (typeof analysis.overview === "object" && !Array.isArray(analysis.overview)) {
+        const overview = analysis.overview as Record<string, unknown>;
+        const overviewFields: Array<[string, unknown]> = [
+          [t("Biografia", "Bio", "Biografía"), overview.bio],
+          [t("Seguidores estimados", "Estimated followers", "Seguidores estimados"), overview.estimatedFollowers],
+          [t("Seguindo", "Following", "Siguiendo"), overview.followingCount],
+          [t("Frequência de publicação", "Posting frequency", "Frecuencia de publicación"), overview.postFrequency],
+          [t("Idade da conta", "Account age", "Antigüedad de la cuenta"), overview.accountAge],
+          [t("Verificação", "Verified", "Verificación"), overview.verified == null ? null : overview.verified ? t("Sim", "Yes", "Sí") : t("Não", "No", "No")],
+        ];
+        overviewFields.forEach(([name, value]) => {
+          if (typeof value === "string" && value.trim() && !/^(não encontrado|nao encontrado|not found|indisponível|unavailable)$/i.test(value.trim())) label(name, value.trim());
+          else if (typeof value === "number" && Number.isFinite(value)) label(name, String(value));
+        });
+      }
       const strengths = list(analysis.strategicAnalysis?.strengths);
       const opportunities = list(analysis.strategicAnalysis?.opportunities);
-      const actions = list(analysis.actionPlan, 5);
+      const gapAnalysis = (analysis.gapAnalysis && typeof analysis.gapAnalysis === "object" ? analysis.gapAnalysis : {}) as Record<string, unknown>;
+      const actionPlan = (analysis.actionPlan && typeof analysis.actionPlan === "object" ? analysis.actionPlan : {}) as Record<string, unknown>;
+      const specificActions = [
+        ...list(gapAnalysis.criticalGaps, 2),
+        ...list(gapAnalysis.quickWins, 3),
+        ...list(actionPlan.immediate, 3),
+        ...list(actionPlan.shortTerm, 3),
+        ...list(actionPlan.longTerm, 2),
+        ...list(analysis.strategicAnalysis?.opportunities, 2),
+      ].filter((action, index, all) => all.indexOf(action) === index).slice(0, 5);
+      const fallbackActions = [
+        t("Revise a descrição da Página para explicar a quem a oferta se destina e qual é o próximo passo. Confira se o link da chamada para ação funciona.", "Update the Page description to explain who the offer is for and what to do next. Check that the call-to-action link works.", "Actualiza la descripción de la página para explicar para quién es la oferta y cuál es el siguiente paso. Comprueba que funcione el enlace de llamada a la acción."),
+        t("Fixe uma publicação que apresente a oferta, o que inclui e como pedir detalhes. Use apenas preços, condições e provas autorizadas.", "Pin a post explaining the offer, what's included, and how to get details. Use only authorized prices, terms, and evidence.", "Fija una publicación que presente la oferta, qué incluye y cómo pedir detalles. Usa solo precios, condiciones y pruebas autorizadas."),
+        t("Durante uma semana, alterne conteúdo útil, respostas a dúvidas reais e apresentação da oferta. Responda às interações manualmente.", "For one week, rotate useful content, answers to real questions, and an offer post. Reply to interactions manually.", "Durante una semana, alterna contenido útil, respuestas a preguntas reales y presentación de la oferta. Responde manualmente a las interacciones."),
+        t("Registre alcance, respostas, cliques, conversas qualificadas e vendas pagas. Ao fim da semana, repita o formato que gerou conversas relevantes.", "Track reach, replies, clicks, qualified conversations, and paid sales. At the end of the week, repeat the format that brought relevant conversations.", "Registra alcance, respuestas, clics, conversaciones cualificadas y ventas pagadas. Al final de la semana, repite el formato que generó conversaciones relevantes."),
+      ];
+      const actions = specificActions.length ? specificActions : fallbackActions;
       if (strengths.length) label(t("Pontos fortes observados", "Observed strengths", "Puntos fuertes observados"), strengths.join("; "));
       if (opportunities.length) label(t("Oportunidades sugeridas", "Suggested opportunities", "Oportunidades sugeridas"), opportunities.join("; "));
+      write(specificActions.length
+        ? t("Próximas ações sugeridas pela análise:", "Next actions suggested by the analysis:", "Próximas acciones sugeridas por el análisis:")
+        : t("Ações iniciais recomendadas (a análise não retornou ações específicas verificáveis):", "Initial recommended actions (the analysis returned no specific verifiable actions):", "Acciones iniciales recomendadas (el análisis no devolvió acciones específicas verificables):"), 9, 3, true);
       actions.forEach((action, index) => write(`${index + 1}. ${action}`, 9, 3, false, 2));
+      if (typeof actionPlan.contentCalendarHint === "string" && actionPlan.contentCalendarHint.trim()) {
+        label(t("Sugestão de calendário", "Calendar suggestion", "Sugerencia de calendario"), actionPlan.contentCalendarHint.trim());
+      }
+      const accountType = analysis.accountType === "personal_profile" || analysis.accountType === "business_page"
+        ? analysis.accountType
+        : "unknown";
+      if (typeof analysis.accountTypeEvidence === "string" && analysis.accountTypeEvidence.trim()) {
+        label(
+          accountType === "personal_profile"
+            ? t("Tipo de presença identificado", "Presence type identified", "Tipo de presencia identificado")
+            : accountType === "business_page"
+              ? t("Tipo de presença identificado", "Presence type identified", "Tipo de presencia identificado")
+              : t("Identificação da presença", "Presence identification", "Identificación de la presencia"),
+          analysis.accountTypeEvidence.trim().slice(0, 300),
+        );
+      }
+      if (accountType !== "business_page") {
+        const bioSuggestion = (product + (audience ? " para " + audience : "") + (desires ? ": " + desires : "") + ". " + t("Saiba mais", "Learn more", "Más información") + ": [link]").slice(0, 210);
+        const accountTypeNote = accountType === "personal_profile"
+          ? t("A análise identificou um perfil pessoal. Para esta campanha de produto/serviço, use uma Página como canal principal da marca; mantenha o perfil pessoal para relacionamento e divulgação, se fizer sentido.", "The analysis identified a personal profile. For this product/service campaign, use a Page as the brand's primary channel; keep the personal profile for relationships and promotion if appropriate.", "El análisis identificó un perfil personal. Para esta campaña de producto/servicio, usa una página como canal principal de la marca; conserva el perfil para relaciones y difusión si tiene sentido.")
+          : t("Não foi possível confirmar se o endereço é um perfil pessoal ou uma Página. Se for perfil pessoal e a campanha representa uma marca ou empresa, crie uma Página e use-a como canal principal.", "We could not confirm whether the URL is a personal profile or a Page. If it is a personal profile and the campaign represents a brand or business, create a Page and use it as the primary channel.", "No pudimos confirmar si la dirección es un perfil personal o una página. Si es un perfil personal y la campaña representa una marca o empresa, crea una página y úsala como canal principal.");
+        write(accountTypeNote, 9, 4);
+        write(t("Ajustes rápidos para a campanha:", "Quick setup for this campaign:", "Ajustes rápidos para esta campaña:"), 9, 3, true);
+        [
+          t("Crie a Página em Facebook > Menu > Páginas > Criar nova Página; escolha um nome e categoria que correspondam ao produto.", "Create the Page from Facebook > Menu > Pages > Create new Page; choose a name and category that match the product.", "Crea la página desde Facebook > Menú > Páginas > Crear nueva página; elige un nombre y categoría que correspondan al producto."),
+          t("Bio sugerida", "Suggested bio", "Biografía sugerida") + ": " + bioSuggestion,
+          t("Use uma imagem de perfil legível (logo ou rosto do especialista) e uma capa com produto, público e chamada para ação. Evite texto pequeno e promessas sem comprovação.", "Use a clear profile image (logo or expert's face) and a cover with the product, audience, and call to action. Avoid tiny text and unsupported claims.", "Usa una imagen de perfil clara (logo o rostro del especialista) y una portada con producto, público y llamada a la acción. Evita texto pequeño y promesas sin pruebas."),
+          t("Primeiras publicações", "First posts", "Primeras publicaciones") + ": " + t("1) apresentação de", "1) introduce", "1) presenta") + " " + product + "; " + t("2) dica prática sobre", "2) practical tip about", "2) consejo práctico sobre") + " " + (pains || audience || product) + "; " + t("3) oferta, o que inclui e como avançar", "3) offer, what's included, and next step", "3) oferta, qué incluye y cómo avanzar") + ".",
+          t("Adicione um botão/link de contato e, na primeira semana, acompanhe alcance, compartilhamentos, mensagens e cliques para ajustar os próximos posts.", "Add a contact button/link and track reach, shares, messages, and clicks during the first week to adjust the next posts.", "Añade un botón/enlace de contacto y, durante la primera semana, revisa alcance, compartidos, mensajes y clics para ajustar las próximas publicaciones."),
+        ].forEach((action, index) => write((index + 1) + ". " + action, 9, 3, false, 2));
+      }
       write(t("A análise de perfil público é indicativa. Confira manualmente as observações antes de mudar a estratégia ou investir em anúncios.", "Public profile analysis is indicative. Verify observations before changing strategy or spending on ads.", "El análisis del perfil público es orientativo. Verifica las observaciones antes de cambiar la estrategia o invertir en anuncios."), 9, 4);
     }
     section(t("Quer levar esta estratégia mais longe?", "Ready to take this strategy further?", "¿Quieres llevar esta estrategia más lejos?"));

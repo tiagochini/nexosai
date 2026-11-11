@@ -13,6 +13,10 @@ export interface SocialProfileAnalysis {
   platform: string;
   handle: string;
   analyzedAt: string;
+  accountType: "personal_profile" | "business_page" | "unknown";
+  accountTypeEvidence: string;
+  profileEvidenceFound: boolean;
+  profileSources: Array<{ title?: string; url: string }>;
 
   // Visão geral do perfil
   overview: {
@@ -77,7 +81,7 @@ export async function analyzeSocialProfile(
   businessContext: string,
   log: Logger,
 ): Promise<SocialProfileAnalysis> {
-  const cleanHandle = handle.replace(/^@/, "").replace(/^https?:\/\/(www\.)?[^/]+\//, "").replace(/\/$/, "");
+  const cleanHandle = normalizeSocialHandle(handle);
   const platformUrl = buildProfileUrl(platform, cleanHandle);
 
   const systemPrompt = buildSystemPrompt(platform, cleanHandle, platformUrl, businessContext);
@@ -176,8 +180,65 @@ export async function analyzeSocialProfile(
   const parsed = parseAnalysisJSON(rawText, platform, cleanHandle);
   parsed.searchSourced = searchSourced;
   parsed.sources = sources;
+  parsed.profileSources = sources.filter((source) => sourceMatchesProfile(source, platform, cleanHandle));
+  parsed.profileEvidenceFound = searchSourced && parsed.profileSources.length > 0;
+  if (!parsed.profileEvidenceFound) {
+    const noEvidence = parseAnalysisJSON("", platform, cleanHandle);
+    parsed.accountType = "unknown";
+    parsed.accountTypeEvidence = "A busca não encontrou uma fonte pública que corresponda claramente a este perfil.";
+    parsed.overview = noEvidence.overview;
+    parsed.contentAnalysis = noEvidence.contentAnalysis;
+    parsed.strategicAnalysis = noEvidence.strategicAnalysis;
+    parsed.competitorAnalysis = noEvidence.competitorAnalysis;
+    parsed.gapAnalysis = noEvidence.gapAnalysis;
+    parsed.actionPlan = noEvidence.actionPlan;
+  }
   parsed.rawGeminiText = rawText.slice(0, 2000); // truncar para debug
   return parsed;
+}
+
+function normalizeSocialHandle(value: string): string {
+  const cleaned = value.trim().replace(/^@/, "");
+  const withProtocol = /^https?:\/\//i.test(cleaned) ? cleaned : `https://${cleaned}`;
+  try {
+    const url = new URL(withProtocol);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    if (["facebook.com", "m.facebook.com", "fb.com"].includes(host)) {
+      const path = url.pathname.split("/").filter(Boolean);
+      if (path.length) return path[path.length - 1] === "profile.php" ? (url.searchParams.get("id") ?? "profile.php") : decodeURIComponent(path[0]!);
+    }
+    if (["instagram.com", "tiktok.com", "linkedin.com", "youtube.com"].some((domain) => host === domain || host.endsWith(`.${domain}`))) {
+      const path = url.pathname.split("/").filter(Boolean);
+      if (path.length) return decodeURIComponent(path[path.length - 1]!.replace(/^@/, ""));
+    }
+  } catch {
+    // Keep non-URL handles such as @name after removing the leading @ above.
+  }
+  return cleaned.replace(/\/$/, "");
+}
+
+function sourceMatchesProfile(source: { title?: string; url: string }, platform: string, handle: string): boolean {
+  const normalizedHandle = handle.trim().toLowerCase().replace(/^@/, "");
+  if (!normalizedHandle) return false;
+  const platformHosts: Record<string, string[]> = {
+    facebook: ["facebook.com", "m.facebook.com", "fb.com"],
+    instagram: ["instagram.com"],
+    tiktok: ["tiktok.com"],
+    linkedin: ["linkedin.com"],
+    youtube: ["youtube.com", "youtu.be"],
+  };
+  try {
+    const url = new URL(source.url);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    if ((platformHosts[platform] ?? []).some((domain) => host === domain || host.endsWith(`.${domain}`))) {
+      const segments = url.pathname.split("/").filter(Boolean).map((segment) => decodeURIComponent(segment).toLowerCase());
+      if (segments.includes(normalizedHandle)) return true;
+      if (platform === "facebook" && segments.includes("profile.php") && url.searchParams.get("id")?.toLowerCase() === normalizedHandle) return true;
+    }
+  } catch {
+    return false;
+  }
+  return Boolean(source.title?.toLowerCase().includes(normalizedHandle));
 }
 
 // ─── Prompt ──────────────────────────────────────────────────────────────────
@@ -209,6 +270,7 @@ ${businessContext || "Não informado — faça uma análise geral de posicioname
 5. Pesquise de 2 a 5 concorrentes ou referências públicas do mesmo nicho/região. Priorize concorrentes diretos; se não encontrar concorrentes verificáveis, explique isso e use referências do nicho sem apresentá-las como concorrentes diretos.
 6. Compare posicionamento e sinais de conteúdo observáveis, cite URLs públicas como fonte e derive oportunidades de diferenciação. Não invente nomes, dados ou URLs.
 7. Produza um plano de ação concreto e específico (não genérico).
+8. Identifique se a fonte encontrada é um perfil pessoal ou uma Página. Só escolha um tipo quando houver evidência pública clara; não deduza pelo formato do link ou pelo nome. Se não der para confirmar, use "unknown" e explique brevemente.
 
 ## REGRAS
 - Seja específico e cirúrgico: nomes de posts, temas reais encontrados, comparações concretas.
@@ -220,6 +282,8 @@ ${businessContext || "Não informado — faça uma análise geral de posicioname
 ## FORMATO DE SAÍDA
 Retorne APENAS JSON válido (sem markdown, sem blocos de código, sem texto extra):
 {
+  "accountType": "personal_profile|business_page|unknown",
+  "accountTypeEvidence": "evidência pública breve ou motivo pelo qual não foi possível identificar",
   "overview": {
     "bio": "string — bio encontrada ou 'não encontrada publicamente'",
     "estimatedFollowers": "string — ex: '~12k' ou 'não encontrado'",
@@ -268,6 +332,10 @@ function parseAnalysisJSON(rawText: string, platform: string, handle: string): S
     platform,
     handle,
     analyzedAt: new Date().toISOString(),
+    accountType: "unknown",
+    accountTypeEvidence: "Não foi possível confirmar publicamente se a fonte é perfil pessoal ou Página.",
+    profileEvidenceFound: false,
+    profileSources: [],
     overview: {
       bio: "Não encontrado",
       estimatedFollowers: "Não encontrado",
@@ -310,6 +378,8 @@ function parseAnalysisJSON(rawText: string, platform: string, handle: string): S
 
     return {
       ...base,
+      accountType: ["personal_profile", "business_page", "unknown"].includes(parsed.accountType) ? parsed.accountType : base.accountType,
+      accountTypeEvidence: typeof parsed.accountTypeEvidence === "string" ? parsed.accountTypeEvidence : base.accountTypeEvidence,
       overview: { ...base.overview, ...(parsed.overview ?? {}) },
       contentAnalysis: { ...base.contentAnalysis, ...(parsed.contentAnalysis ?? {}) },
       strategicAnalysis: { ...base.strategicAnalysis, ...(parsed.strategicAnalysis ?? {}) },

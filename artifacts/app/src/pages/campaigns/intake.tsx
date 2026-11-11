@@ -70,6 +70,22 @@ function safeExternalUrl(value: unknown): string | null {
   }
 }
 
+function socialValueText(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "bigint") return String(value);
+  if (typeof value === "boolean") return value ? "Sim" : "Não";
+  if (Array.isArray(value)) return value.map(socialValueText).filter(Boolean).join(" · ");
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    for (const key of ["text", "description", "recommendation", "action", "name", "title", "value"]) {
+      if (record[key] != null && typeof record[key] !== "object") return socialValueText(record[key]);
+    }
+    return Object.values(record).map(socialValueText).filter(Boolean).join(" · ");
+  }
+  return "";
+}
+
 async function connectSocialDiagnosisAccount(campaignId: string, view: "master" | "trial", platform: string) {
   const provider = platform === "instagram" ? "instagram_analysis" : platform === "facebook" ? "facebook_analysis" : "tiktok_analysis";
   const returnTo = `/campaigns/${campaignId}/intake?social_analysis_view=${view}`;
@@ -412,7 +428,12 @@ function MasterPlanView({
         body: JSON.stringify({ platform: socialPlatform, handle: socialHandle.trim(), ...(socialIntegrationId ? { integrationId: socialIntegrationId } : {}) }),
       });
       setSocialDiagnosis(result.diagnosis);
-      if (trialAccess) setSocialAnalysisAvailable(false);
+      const insufficientData = result.diagnosis.status === "insufficient_data";
+      if (trialAccess) setSocialAnalysisAvailable(insufficientData);
+      if (insufficientData) {
+        toast.warning(t("Não encontrei fontes verificáveis desta Página. O trial continua disponível para tentar outro endereço.", "I could not find verifiable sources for this Page. Your trial analysis remains available for another URL.", "No encontré fuentes verificables de esta página. El análisis de prueba sigue disponible para otra dirección."));
+        return;
+      }
       if (result.diagnosis.status === "generated") toast.success(t("Diagnóstico social gerado. Revise as fontes e limitações.", "Social diagnosis generated. Review its sources and limitations.", "Diagnóstico social generado. Revisa las fuentes y limitaciones."));
       else toast.warning(t("Não há evidência verificável suficiente para concluir. Veja os próximos passos no diagnóstico.", "There is not enough verifiable evidence to complete this diagnosis. See next steps in the report.", "No hay suficiente evidencia verificable para completar el diagnóstico. Consulta los próximos pasos."));
     } catch (error) {
@@ -745,9 +766,6 @@ function TrialSocialAnalysisView({
   const [available, setAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const onContinueToPlanRef = useRef(onContinueToPlan);
-  onContinueToPlanRef.current = onContinueToPlan;
-
   useEffect(() => {
     customFetch<{ diagnosis: Record<string, any> | null; trialAccess?: boolean; socialAnalysisAvailable?: boolean; connectedAccounts?: SocialDiagnosisAccount[] }>(`/api/campaigns/${campaignId}/social-diagnosis`)
       .then((result) => {
@@ -757,7 +775,6 @@ function TrialSocialAnalysisView({
         if (!result.trialAccess && typeof result.diagnosis?.platform === "string") setPlatform(result.diagnosis.platform);
         if (typeof result.diagnosis?.handle === "string" && (!result.trialAccess || result.diagnosis.platform === "facebook")) setHandle(result.diagnosis.handle);
         if (typeof result.diagnosis?.connectedIntegrationId === "string" && (!result.trialAccess || result.diagnosis.platform === "facebook")) setIntegrationId(result.diagnosis.connectedIntegrationId);
-        if (result.trialAccess && result.socialAnalysisAvailable === false) onContinueToPlanRef.current();
       })
       .catch((error) => toast.error(error instanceof Error ? error.message : t("Não foi possível carregar o diagnóstico.", "Could not load the diagnosis.", "No se pudo cargar el diagnóstico.")))
       .finally(() => setLoading(false));
@@ -776,7 +793,12 @@ function TrialSocialAnalysisView({
         body: JSON.stringify({ platform, handle: handle.trim(), ...(integrationId ? { integrationId } : {}) }),
       });
       setDiagnosis(result.diagnosis);
-      setAvailable(false);
+      const insufficientData = result.diagnosis.status === "insufficient_data";
+      setAvailable(insufficientData);
+      if (insufficientData) {
+        toast.warning(t("Não encontrei fontes verificáveis desta Página. O trial continua disponível para tentar outro endereço.", "I could not find verifiable sources for this Page. Your trial analysis remains available for another URL.", "No encontré fuentes verificables de esta página. El análisis de prueba sigue disponible para otra dirección."));
+        return;
+      }
       toast.success(t("Análise da Página do Facebook concluída.", "Facebook Page analysis complete.", "Análisis de página de Facebook completado."));
       onContinueToPlan();
     } catch (error) {
@@ -831,13 +853,28 @@ function TrialSocialAnalysisView({
           <h2 className="font-mono text-sm font-bold">@{diagnosis.handle} · {diagnosis.platform}</h2>
           <Badge variant="outline" className="rounded-none">{publicAnalysis.method ?? t("Análise pública", "Public analysis", "Análisis público")}</Badge>
         </div>
-        {publicAnalysis.overview && <p className="text-sm">{publicAnalysis.overview}</p>}
+        {typeof publicAnalysis.overview === "string" && publicAnalysis.overview && <p className="text-sm">{publicAnalysis.overview}</p>}
+        {publicAnalysis.overview && typeof publicAnalysis.overview === "object" && !Array.isArray(publicAnalysis.overview) && <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+          {Object.entries(publicAnalysis.overview as Record<string, unknown>).map(([key, value]) => {
+            const labels: Record<string, string> = {
+              bio: t("Biografia", "Bio", "Biografía"),
+              verified: t("Verificada", "Verified", "Verificada"),
+              accountAge: t("Idade da conta", "Account age", "Antigüedad de la cuenta"),
+              postFrequency: t("Frequência de publicação", "Posting frequency", "Frecuencia de publicación"),
+              followingCount: t("Seguindo", "Following", "Siguiendo"),
+              estimatedFollowers: t("Seguidores estimados", "Estimated followers", "Seguidores estimados"),
+            };
+            const displayValue = socialValueText(value);
+            if (!displayValue) return null;
+            return <div key={key} className="border border-border/30 p-2"><dt className="text-xs text-muted-foreground">{labels[key] ?? key}</dt><dd>{displayValue}</dd></div>;
+          })}
+        </dl>}
         {evidence && <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
           {[[t("Seguidores", "Followers", "Seguidores"), evidence.followers], [t("Seguindo", "Following", "Siguiendo"), evidence.following], [t("Publicações", "Posts", "Publicaciones"), evidence.mediaCount], [t("Alcance 30 dias", "30-day reach", "Alcance 30 días"), evidence.reachLast30Days]].map(([label, value]) => <div key={String(label)} className="border border-border/30 p-2"><span className="block text-muted-foreground">{label}</span><strong>{value == null ? t("Indisponível", "Unavailable", "No disponible") : new Intl.NumberFormat(numberLocale).format(Number(value))}</strong></div>)}
         </div>}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          {strengths.length > 0 && <div><h3 className="font-mono text-xs font-bold uppercase mb-2">{t("Forças", "Strengths", "Fortalezas")}</h3><ul className="list-disc pl-5 space-y-1">{strengths.slice(0, 5).map((item: string, index: number) => <li key={index}>{item}</li>)}</ul></div>}
-          {opportunities.length > 0 && <div><h3 className="font-mono text-xs font-bold uppercase mb-2">{t("Lacunas e oportunidades", "Gaps and opportunities", "Brechas y oportunidades")}</h3><ul className="list-disc pl-5 space-y-1">{opportunities.slice(0, 6).map((item: string, index: number) => <li key={index}>{item}</li>)}</ul></div>}
+          {strengths.length > 0 && <div><h3 className="font-mono text-xs font-bold uppercase mb-2">{t("Forças", "Strengths", "Fortalezas")}</h3><ul className="list-disc pl-5 space-y-1">{strengths.slice(0, 5).map((item: unknown, index: number) => <li key={index}>{socialValueText(item)}</li>)}</ul></div>}
+          {opportunities.length > 0 && <div><h3 className="font-mono text-xs font-bold uppercase mb-2">{t("Lacunas e oportunidades", "Gaps and opportunities", "Brechas y oportunidades")}</h3><ul className="list-disc pl-5 space-y-1">{opportunities.slice(0, 6).map((item: unknown, index: number) => <li key={index}>{socialValueText(item)}</li>)}</ul></div>}
         </div>
         {(publicAnalysis.competitorAnalysis?.competitors?.length || publicAnalysis.competitorAnalysis?.marketPatterns?.length || publicAnalysis.competitorAnalysis?.differentiationOpportunities?.length) ? <div className="border-t border-border/30 pt-3 space-y-2 text-xs">
           <p className="font-mono font-bold uppercase tracking-wide">{t("Concorrentes e referências de mercado", "Competitors and market references", "Competidores y referencias de mercado")}</p>
