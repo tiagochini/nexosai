@@ -1,3 +1,4 @@
+import { startMarketRevisionWorker, stopMarketRevisionWorker } from "./modules/market-intel/market-intel-revision.worker.js";
 import http from "http";
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
@@ -370,6 +371,7 @@ async function shutdown(signal: string): Promise<void> {
   // Let accepted HTTP requests and active workers finish before closing the
   // queues and database they may still need during their final operations.
   const drainResults = await Promise.allSettled([
+    stopMarketRevisionWorker(),
     closeSequenceScheduler(),
     closeOrchestrationWorker(),
     httpClosed,
@@ -386,6 +388,8 @@ async function shutdown(signal: string): Promise<void> {
   logger.info("Graceful shutdown completed");
   process.exit(signal === "SIGTERM" || signal === "SIGINT" ? 0 : 1);
 }
+
+startMarketRevisionWorker();
 
 process.once("SIGTERM", () => void shutdown("SIGTERM"));
 process.once("SIGINT", () => void shutdown("SIGINT"));

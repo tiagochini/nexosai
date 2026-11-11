@@ -1,9 +1,9 @@
+import { queueMarketRevision } from "./market-intel-revision.worker.js";
 import { confirmsMarketReportChanges } from "./market-intel-revision.js";
 import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
 import {
-  applyMarketReportCorrections,
   listReports,
   getReport,
   deleteReport,
@@ -114,8 +114,8 @@ router.post("/:id/link-campaign", async (req, res): Promise<void> => {
 
 router.post("/:id/apply-corrections", async (req, res): Promise<void> => {
   try {
-    const report = await applyMarketReportCorrections(String(req.params.id), req.auth.workspaceId, req.log);
-    res.json({ report });
+    const report = await queueMarketRevision(String(req.params.id), req.auth.workspaceId);
+    res.status(202).json({ report });
   } catch (err) {
     req.log.warn({ err }, "market-intel: report revision failed");
     const message = err instanceof Error ? err.message : "";
@@ -160,8 +160,8 @@ router.post("/:id/chat", async (req, res): Promise<void> => {
     );
     if (confirmsMarketReportChanges(parsed.question)) {
       try {
-        const report = await applyMarketReportCorrections(id, req.auth.workspaceId, req.log);
-        res.json({ answer: answer + "\n\nRelatório atualizado com sucesso.", report });
+        const report = await queueMarketRevision(id, req.auth.workspaceId);
+        res.json({ answer: answer + "\n\nRevisão na fila. Acompanhe o andamento no relatório.", report });
       } catch (err) {
         req.log.warn({ err, reportId: id }, "market-intel: confirmed revision failed");
         res.json({ answer, applyError: "A conversa foi salva, mas não foi possível aplicar as correções. Use o botão para tentar novamente." });

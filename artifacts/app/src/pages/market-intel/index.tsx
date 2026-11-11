@@ -36,6 +36,7 @@ interface PositioningGap {
   estimatedTAM?: string;
 }
 interface MarketIntelOutput {
+  _deepdiveRevision?: { state: "queued" | "running" | "completed" | "failed"; error?: string };
   _deepdiveAppliedMessages?: number;
   _deepdiveAppliedAt?: string;
   market?: string;
@@ -134,7 +135,9 @@ export default function MarketIntelPage() {
   const [chatMsgs, setChatMsgs] = useState<ChatMsg[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatSending, setChatSending] = useState(false);
-  const [applyingCorrections, setApplyingCorrections] = useState(false);
+  const [submittingRevision, setApplyingCorrections] = useState(false);
+  const revisionState = selected?.output?._deepdiveRevision;
+  const applyingCorrections = submittingRevision || revisionState?.state === "queued" || revisionState?.state === "running";
   const [chatPersisted, setChatPersisted] = useState(false);
   const [revisionError, setRevisionError] = useState<string | null>(null);
   const [chatLoadingHistory, setChatLoadingHistory] = useState(false);
@@ -171,6 +174,23 @@ export default function MarketIntelPage() {
     }, 8000);
     return () => clearInterval(t);
   }, [reports, selected, loadReports]);
+
+  useEffect(() => {
+    if (!selected || !["queued", "running"].includes(selected.output?._deepdiveRevision?.state ?? "")) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      try {
+        const data = await customFetch<{ report: Report }>(`${API}/${selected.id}`);
+        if (cancelled) return;
+        setSelected(data.report);
+        setReports(items => items.map(item => item.id === data.report.id ? data.report : item));
+      } catch { /* Keep the persisted job running; retry status lookup. */ }
+      if (!cancelled) timer = setTimeout(poll, 4000);
+    };
+    timer = setTimeout(poll, 3000);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [selected?.id, selected?.output?._deepdiveRevision?.state]);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -626,7 +646,7 @@ export default function MarketIntelPage() {
                     {chatPersisted && chatMsgs.length > 0 && (
                       <span className="text-[10px] text-green-400/70 flex items-center gap-1">
                         <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400/70" />
-                         {selected.output?._deepdiveAppliedMessages === chatMsgs.length ? t("Relatório atualizado", "Report updated", "Informe actualizado") : t("Conversa salva", "Conversation saved", "Conversación guardada")}
+                         {revisionState?.state === "completed" && selected.output?._deepdiveAppliedMessages === chatMsgs.length ? t("Relatório atualizado", "Report updated", "Informe actualizado") : t("Conversa salva", "Conversation saved", "Conversación guardada")}
                       </span>
                     )}
                     {chatLoadingHistory && (
@@ -666,7 +686,7 @@ export default function MarketIntelPage() {
                     {applyingCorrections ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-2" />}
                     {applyingCorrections ? t("Aplicando correções…", "Applying corrections…", "Aplicando correcciones…") : t("Aplicar correções ao relatório", "Apply corrections to report", "Aplicar correcciones al informe")}
                   </Button>
-                  {revisionError && <p role="alert" className="text-xs text-destructive">{revisionError}</p>}
+                  {(revisionError || revisionState?.error) && <p role="alert" className="text-xs text-destructive">{revisionError || revisionState?.error}</p>}
                 </div>
                 <div className="p-3 border-t border-border/50 flex gap-2">
                   <input

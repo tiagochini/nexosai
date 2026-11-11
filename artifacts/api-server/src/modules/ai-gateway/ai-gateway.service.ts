@@ -1,3 +1,4 @@
+import { providerFailureDiagnostics } from "../../lib/provider-failure-diagnostics.js";
 import { projectBriefing } from "../operations/project-access.service.js";
 import { briefingDecisionContext } from "../intake/intake-context.js";
 import { executionSettings, setExecutionSetting, withProjectExecution } from "../operations/project-execution-context.js";
@@ -1026,7 +1027,7 @@ async function completeWithAgentInternal(
           : callGemini(attemptModel, effectiveSystem, messages, cappedTokens, undefined, timeoutMs, log, attempt.credentialMode);
     },
     (attempt) => log.info({ agentRole, ...attempt, reason: "credentials_unavailable" }, "AI completion provider skipped"),
-    (attempt, err) => log.warn({ agentRole, ...attempt, reason: err instanceof Error ? err.message : "provider_error" }, "AI completion provider failed; advancing canonical chain"),
+    (attempt, err) => log.warn({ agentRole, ...attempt, ...providerFailureDiagnostics(err) }, "AI completion provider failed; advancing canonical chain"),
   );
   const { value: result, attempt: selected, failures } = execution;
 

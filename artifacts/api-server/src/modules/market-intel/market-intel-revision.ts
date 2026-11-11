@@ -22,3 +22,18 @@ export const revisedMarketReportSchema = z.object({
   platformArbitrage: z.string(), entryRecommendation: z.string(), firstMoverActions: z.array(z.string()),
   clarifyingQuestions: z.array(z.string()).optional(),
 }).passthrough();
+
+/** Unwrap provider envelopes without accepting incomplete report payloads. */
+export function parseMarketRevision(content: string): Record<string, unknown> {
+  let value: unknown = content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  for (let depth = 0; depth < 8; depth++) {
+    if (typeof value === "string") { value = JSON.parse(value); continue; }
+    if (!value || typeof value !== "object" || Array.isArray(value)) break;
+    const object = value as Record<string, unknown>;
+    if ("market" in object || "competitors" in object) return revisedMarketReportSchema.parse(object);
+    const key = ["report", "output", "data", "result", "revisedReport", "updatedReport", "analysis"].find(k => object[k] !== undefined);
+    if (!key) break;
+    value = object[key];
+  }
+  return revisedMarketReportSchema.parse(value);
+}
