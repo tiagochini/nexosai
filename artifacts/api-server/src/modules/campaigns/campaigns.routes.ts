@@ -49,23 +49,45 @@ async function restoreTrialSocialAnalysisIfNoReport(workspaceId: string): Promis
   const trial = await getWorkspaceTrial(workspaceId);
   if (!trial) return;
 
-  // The allowance is consumed by a persisted diagnosis, not by an attempted
-  // request. Check the whole trial workspace so stale status or campaign
-  // pointers cannot strand the user after a failed or interrupted generation.
+  // Older builds accepted unrelated search results as evidence. Treat those
+  // legacy reports as unusable without deleting them, so they cannot consume
+  // the one-time trial or be returned as a valid diagnosis.
   const workspaceCampaigns = await db.select({ brainData: campaignsTable.brainData })
     .from(campaignsTable)
     .where(eq(campaignsTable.workspaceId, workspaceId));
-  const hasPersistedDiagnosis = workspaceCampaigns.some(({ brainData }) => {
-    const diagnosis = ((brainData ?? {}) as Record<string, unknown>).socialDiagnosis;
-    return diagnosis !== null && typeof diagnosis === "object" &&
-      (diagnosis as Record<string, unknown>).status !== "insufficient_data";
-  });
+  let hasPersistedDiagnosis = false;
+  for (const campaign of workspaceCampaigns) {
+    const brainData = (campaign.brainData ?? {}) as Record<string, unknown>;
+    const diagnosis = brainData.socialDiagnosis;
+    if (!diagnosis || typeof diagnosis !== "object") continue;
+    if (isUsableTrialSocialDiagnosis(diagnosis)) {
+      hasPersistedDiagnosis = true;
+      continue;
+    }
+  }
 
   if (hasPersistedDiagnosis && trial.socialAnalysisStatus !== "used") {
     await finishTrialSocialAnalysis(workspaceId, "used");
   } else if (!hasPersistedDiagnosis && trial.socialAnalysisStatus === "used") {
     await finishTrialSocialAnalysis(workspaceId, "available");
   }
+}
+
+function isUsableTrialSocialDiagnosis(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const diagnosis = value as Record<string, unknown>;
+  if (diagnosis.status !== "generated" && diagnosis.status !== "approved") return false;
+  const analysis = diagnosis.publicProfileAnalysis && typeof diagnosis.publicProfileAnalysis === "object"
+    ? diagnosis.publicProfileAnalysis as Record<string, unknown>
+    : {};
+  const sources = Array.isArray(analysis.sources) ? analysis.sources : [];
+  const hasVerifiedPublicEvidence = analysis.profileEvidenceFound === true && sources.length > 0;
+  const accountEvidence = diagnosis.accountEvidence && typeof diagnosis.accountEvidence === "object"
+    ? diagnosis.accountEvidence as Record<string, unknown>
+    : {};
+  const hasOfficialAccountMetrics = accountEvidence.source === "connected_account_insights" &&
+    [accountEvidence.followers, accountEvidence.mediaCount, accountEvidence.reachLast30Days].some((metric) => metric !== null && metric !== undefined);
+  return hasVerifiedPublicEvidence || hasOfficialAccountMetrics;
 }
 
 router.get("/:id/social-diagnosis", async (req, res): Promise<void> => {
@@ -77,6 +99,9 @@ router.get("/:id/social-diagnosis", async (req, res): Promise<void> => {
   const entitlement = await resolveSocialMediaEntitlement(req.auth.workspaceId);
   await restoreTrialSocialAnalysisIfNoReport(req.auth.workspaceId);
   const trial = await getWorkspaceTrial(req.auth.workspaceId);
+  const storedDiagnosis = brain.socialDiagnosis;
+  const storedStatus = storedDiagnosis && typeof storedDiagnosis === "object" ? (storedDiagnosis as Record<string, unknown>).status : null;
+  const diagnosis = trial && storedStatus !== "insufficient_data" && !isUsableTrialSocialDiagnosis(storedDiagnosis) ? null : storedDiagnosis ?? null;
   const integrations = (await getConnectedAccounts(req.auth.workspaceId)).filter((account) =>
     account.status === "connected" && isOrganicSocialIntegration(account.metadata as Record<string, unknown> | null),
   );
@@ -96,7 +121,7 @@ router.get("/:id/social-diagnosis", async (req, res): Promise<void> => {
     return [];
   });
   const visibleAccounts = trial ? connectedAccounts.filter((account) => account.platform === "facebook") : connectedAccounts;
-  res.json({ diagnosis: brain.socialDiagnosis ?? null, entitlement, trialAccess: trial != null, socialAnalysisAvailable: entitlement.active || trial?.socialAnalysisStatus === "available", connectedAccounts: visibleAccounts });
+  res.json({ diagnosis, entitlement, trialAccess: trial != null, socialAnalysisAvailable: entitlement.active || trial?.socialAnalysisStatus === "available", connectedAccounts: visibleAccounts });
 });
 
 function cleanSocialHandle(value: string): string {
