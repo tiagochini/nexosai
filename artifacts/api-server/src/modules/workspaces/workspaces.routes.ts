@@ -1,4 +1,10 @@
 import express, { Router } from "express";
+import { randomUUID } from "node:crypto";
+import { execFile } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { promisify } from "node:util";
 import { z } from "zod/v4";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../auth/auth.middleware.js";
@@ -18,6 +24,44 @@ import {
 
 const router = Router();
 router.use(requireAuth);
+const execFileAsync = promisify(execFile);
+
+const VOICE_SAMPLE_CONSENT_VERSION = "voice-sample-storage-v1";
+const MAX_VOICE_SAMPLE_BYTES = 10 * 1024 * 1024;
+const MAX_VOICE_SAMPLES = 20;
+const VOICE_SAMPLE_MIME_TYPES: Record<string, { extension: string; providerExtension: string; formatPattern: RegExp }> = {
+  "audio/webm": { extension: "webm", providerExtension: "webm", formatPattern: /webm|matroska/i },
+  "audio/ogg": { extension: "ogg", providerExtension: "ogg", formatPattern: /ogg/i },
+  "audio/mp4": { extension: "m4a", providerExtension: "m4a", formatPattern: /mp4|m4a|mov/i },
+  "audio/mpeg": { extension: "mp3", providerExtension: "mp3", formatPattern: /mp3/i },
+};
+
+type VoiceSampleMetadata = {
+  sampleId: string;
+  name: string;
+  durationSeconds: number;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+  consentVersion: string;
+  consentedAt: string;
+  cloneConsentVersion?: string;
+  cloneConsentedAt?: string;
+};
+
+function voiceSamplesFromSettings(settings: Record<string, unknown>): VoiceSampleMetadata[] {
+  const persona = (settings["persona"] ?? {}) as Record<string, unknown>;
+  const rawSamples = Array.isArray(persona["voiceSamples"]) ? persona["voiceSamples"] : [];
+  return rawSamples.filter((sample): sample is VoiceSampleMetadata => {
+    if (!sample || typeof sample !== "object") return false;
+    const item = sample as Partial<VoiceSampleMetadata>;
+    return typeof item.sampleId === "string" && /^[0-9a-f-]{36}$/i.test(item.sampleId)
+      && typeof item.name === "string" && typeof item.durationSeconds === "number"
+      && typeof item.mimeType === "string" && typeof item.sizeBytes === "number"
+      && typeof item.createdAt === "string" && typeof item.consentVersion === "string"
+      && typeof item.consentedAt === "string";
+  });
+}
 
 const updateWorkspaceSchema = z.object({
   name: z.string().min(2).optional(),
@@ -402,6 +446,247 @@ router.patch("/me/persona", async (req, res): Promise<void> => {
     .set({ settings: { ...existingSettings, persona: updatedPersona } as any })
     .where(eq(workspacesTable.id, req.auth.workspaceId));
   res.json({ persona: updatedPersona });
+});
+
+// ── Private voice sample library ────────────────────────────────────────────
+
+router.get("/me/persona/voice-samples", async (req, res): Promise<void> => {
+  const [ws] = await db.select({ settings: workspacesTable.settings })
+    .from(workspacesTable).where(eq(workspacesTable.id, req.auth.workspaceId)).limit(1);
+  const settings = (ws?.settings ?? {}) as Record<string, unknown>;
+  res.json({ samples: voiceSamplesFromSettings(settings) });
+});
+
+router.post(
+  "/me/persona/voice-samples",
+  express.raw({ type: "*/*", limit: MAX_VOICE_SAMPLE_BYTES }),
+  async (req, res): Promise<void> => {
+    const schema = z.object({
+      name: z.string().trim().min(1).max(80),
+      consent: z.literal(true),
+      consentVersion: z.literal(VOICE_SAMPLE_CONSENT_VERSION),
+    });
+    const parsed = schema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Informe um nome e confirme o consentimento para armazenar esta amostra.", code: "VOICE_SAMPLE_CONSENT_REQUIRED" });
+      return;
+    }
+    const contentType = String(req.headers["content-type"] ?? "").split(";")[0]!.trim().toLowerCase();
+    const audioFormat = VOICE_SAMPLE_MIME_TYPES[contentType];
+    const audio = Buffer.isBuffer(req.body) ? req.body : null;
+    if (!audioFormat || !audio || audio.length < 1024 || audio.length > MAX_VOICE_SAMPLE_BYTES) {
+      res.status(400).json({ error: "Envie um áudio WebM, OGG, MP4 ou MP3 válido de até 10 MB.", code: "VOICE_SAMPLE_INVALID_FILE" });
+      return;
+    }
+
+    let tempDir: string | undefined;
+    try {
+      tempDir = await mkdtemp(path.join(os.tmpdir(), "nexos-voice-sample-"));
+      const tempFile = path.join(tempDir, `sample.${audioFormat.extension}`);
+      await writeFile(tempFile, audio, { flag: "wx" });
+      let probe: { streams?: Array<Record<string, unknown>>; format?: { duration?: string; format_name?: string } };
+      try {
+        const { stdout } = await execFileAsync("ffprobe", ["-v", "error", "-show_streams", "-show_format", "-of", "json", tempFile], { maxBuffer: 1024 * 1024 });
+        probe = JSON.parse(stdout) as typeof probe;
+      } catch {
+        res.status(400).json({ error: "O arquivo enviado não contém um áudio válido no formato informado.", code: "VOICE_SAMPLE_INVALID_AUDIO" });
+        return;
+      }
+      const streams = probe.streams ?? [];
+      const durationSeconds = Number(probe.format?.duration ?? 0);
+      if (!audioFormat.formatPattern.test(probe.format?.format_name ?? "")
+        || !streams.some((stream) => stream.codec_type === "audio") || streams.some((stream) => stream.codec_type === "video")) {
+        res.status(400).json({ error: "O conteúdo do arquivo não corresponde ao formato de áudio informado.", code: "VOICE_SAMPLE_INVALID_AUDIO" });
+        return;
+      }
+      if (!Number.isFinite(durationSeconds) || durationSeconds < 5 || durationSeconds > 120) {
+        res.status(400).json({ error: "A amostra precisa durar entre 5 segundos e 2 minutos.", code: "VOICE_SAMPLE_INVALID_AUDIO" });
+        return;
+      }
+
+      const workspaceId = req.auth.workspaceId;
+      const [ws] = await db.select({ settings: workspacesTable.settings })
+        .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
+      const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+      const existingPersona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+      const currentSamples = voiceSamplesFromSettings(existingSettings);
+      if (currentSamples.length >= MAX_VOICE_SAMPLES) {
+        res.status(409).json({ error: "Limite de 20 amostras por workspace atingido. Exclua uma amostra para continuar.", code: "VOICE_SAMPLE_LIMIT" });
+        return;
+      }
+
+      const sampleId = randomUUID();
+      const objectKey = (await import("../../lib/gcs-recordings.js")).voiceSampleObjectKey(workspaceId, sampleId, audioFormat.extension);
+      const { uploadBufferToGCS } = await import("../../lib/gcs-recordings.js");
+      await uploadBufferToGCS(audio, objectKey, contentType);
+      const now = new Date().toISOString();
+      const sample: VoiceSampleMetadata = {
+        sampleId,
+        name: parsed.data.name,
+        durationSeconds: Math.round(durationSeconds * 10) / 10,
+        mimeType: contentType,
+        sizeBytes: audio.length,
+        createdAt: now,
+        consentVersion: VOICE_SAMPLE_CONSENT_VERSION,
+        consentedAt: now,
+      };
+      try {
+        await db.update(workspacesTable)
+          .set({ settings: { ...existingSettings, persona: { ...existingPersona, voiceSamples: [...currentSamples, sample] } } as any })
+          .where(eq(workspacesTable.id, workspaceId));
+      } catch {
+        const { deleteGCSObject } = await import("../../lib/gcs-recordings.js");
+        await deleteGCSObject(objectKey).catch(() => {});
+        throw error;
+      }
+      req.log.info({ workspaceId, sampleId, sizeBytes: audio.length, durationSeconds: sample.durationSeconds }, "Private voice sample saved");
+      res.status(201).json({ sample });
+    } catch {
+      req.log.error({ workspaceId: req.auth.workspaceId }, "Private voice sample upload failed");
+      res.status(500).json({ error: "Não foi possível salvar a amostra. Tente novamente.", code: "VOICE_SAMPLE_SAVE_FAILED" });
+    } finally {
+      if (tempDir) await rm(tempDir, { recursive: true, force: true }).catch(() => {});
+    }
+  },
+);
+
+router.get("/me/persona/voice-samples/:sampleId/audio", async (req, res): Promise<void> => {
+  const sampleId = String(req.params.sampleId);
+  if (!/^[0-9a-f-]{36}$/i.test(sampleId)) {
+    res.status(404).json({ error: "Amostra não encontrada.", code: "VOICE_SAMPLE_NOT_FOUND" });
+    return;
+  }
+  const { createGCSObjectStream, voiceSampleObjectKey } = await import("../../lib/gcs-recordings.js");
+  const [ws] = await db.select({ settings: workspacesTable.settings })
+    .from(workspacesTable).where(eq(workspacesTable.id, req.auth.workspaceId)).limit(1);
+  const settings = (ws?.settings ?? {}) as Record<string, unknown>;
+  const sample = voiceSamplesFromSettings(settings).find((item) => item.sampleId === sampleId);
+  if (!sample) {
+    res.status(404).json({ error: "Amostra não encontrada.", code: "VOICE_SAMPLE_NOT_FOUND" });
+    return;
+  }
+  const extension = VOICE_SAMPLE_MIME_TYPES[sample.mimeType]?.extension;
+  if (!extension) {
+    res.status(404).json({ error: "Amostra não encontrada.", code: "VOICE_SAMPLE_NOT_FOUND" });
+    return;
+  }
+  res.setHeader("Content-Type", sample.mimeType);
+  res.setHeader("Content-Length", String(sample.sizeBytes));
+  res.setHeader("Cache-Control", "private, no-store");
+  const stream = createGCSObjectStream(voiceSampleObjectKey(req.auth.workspaceId, sampleId, extension));
+  stream.on("error", () => { if (!res.headersSent) res.status(404).end(); else res.destroy(); });
+  stream.pipe(res);
+});
+
+router.delete("/me/persona/voice-samples/:sampleId", async (req, res): Promise<void> => {
+  const sampleId = String(req.params.sampleId);
+  const workspaceId = req.auth.workspaceId;
+  if (!/^[0-9a-f-]{36}$/i.test(sampleId)) {
+    res.status(404).json({ error: "Amostra não encontrada.", code: "VOICE_SAMPLE_NOT_FOUND" });
+    return;
+  }
+  const [ws] = await db.select({ settings: workspacesTable.settings })
+    .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
+  const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+  const existingPersona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+  const samples = voiceSamplesFromSettings(existingSettings);
+  const sample = samples.find((item) => item.sampleId === sampleId);
+  const extension = sample ? VOICE_SAMPLE_MIME_TYPES[sample.mimeType]?.extension : undefined;
+  if (!sample || !extension) {
+    res.status(404).json({ error: "Amostra não encontrada.", code: "VOICE_SAMPLE_NOT_FOUND" });
+    return;
+  }
+  const remaining = samples.filter((item) => item.sampleId !== sampleId);
+  await db.update(workspacesTable)
+    .set({ settings: { ...existingSettings, persona: { ...existingPersona, voiceSamples: remaining } } as any })
+    .where(eq(workspacesTable.id, workspaceId));
+  const { deleteGCSObject, voiceSampleObjectKey } = await import("../../lib/gcs-recordings.js");
+  try {
+    await deleteGCSObject(voiceSampleObjectKey(workspaceId, sampleId, extension));
+  } catch {
+    // Restore the metadata so the user can retry removal if object deletion fails.
+    await db.update(workspacesTable)
+      .set({ settings: { ...existingSettings, persona: { ...existingPersona, voiceSamples: samples } } as any })
+      .where(eq(workspacesTable.id, workspaceId)).catch(() => {});
+    res.status(500).json({ error: "Não foi possível remover a amostra. Tente novamente.", code: "VOICE_SAMPLE_DELETE_FAILED" });
+    return;
+  }
+  req.log.info({ workspaceId, sampleId }, "Private voice sample deleted");
+  res.json({ success: true });
+});
+
+router.post("/me/persona/voice-samples/:sampleId/clone", async (req, res): Promise<void> => {
+  const consentSchema = z.object({ consent: z.literal(true), consentVersion: z.literal("voice-clone-v1") });
+  if (!consentSchema.safeParse(req.body).success) {
+    res.status(400).json({ error: "Confirme que autoriza o uso desta amostra para criar um clone de voz.", code: "VOICE_CLONE_CONSENT_REQUIRED" });
+    return;
+  }
+  const sampleId = String(req.params.sampleId);
+  if (!/^[0-9a-f-]{36}$/i.test(sampleId)) {
+    res.status(404).json({ error: "Amostra não encontrada.", code: "VOICE_SAMPLE_NOT_FOUND" });
+    return;
+  }
+  const { env } = await import("../../lib/env.js");
+  if (!env.ELEVENLABS_API_KEY) {
+    res.status(422).json({ error: "O serviço de clonagem está indisponível no momento. A amostra continua salva.", code: "PROVIDER_NOT_CONFIGURED" });
+    return;
+  }
+  const workspaceId = req.auth.workspaceId;
+  const [ws] = await db.select({ settings: workspacesTable.settings })
+    .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
+  const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+  const existingPersona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+  const sample = voiceSamplesFromSettings(existingSettings).find((item) => item.sampleId === sampleId);
+  const format = sample ? VOICE_SAMPLE_MIME_TYPES[sample.mimeType] : undefined;
+  if (!sample || !format) {
+    res.status(404).json({ error: "Amostra não encontrada.", code: "VOICE_SAMPLE_NOT_FOUND" });
+    return;
+  }
+  try {
+    const cloneConsentedAt = new Date().toISOString();
+    const updatedSamples = voiceSamplesFromSettings(existingSettings).map((item) => item.sampleId === sampleId
+      ? { ...item, cloneConsentVersion: "voice-clone-v1", cloneConsentedAt }
+      : item);
+    await db.update(workspacesTable)
+      .set({ settings: { ...existingSettings, persona: { ...existingPersona, voiceSamples: updatedSamples } } as any })
+      .where(eq(workspacesTable.id, workspaceId));
+    const { createGCSObjectStream, voiceSampleObjectKey } = await import("../../lib/gcs-recordings.js");
+    const chunks: Buffer[] = [];
+    for await (const chunk of createGCSObjectStream(voiceSampleObjectKey(workspaceId, sampleId, format.extension))) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const audio = Buffer.concat(chunks);
+    if (!audio.length || audio.length > MAX_VOICE_SAMPLE_BYTES) throw new Error("Stored voice sample size is invalid");
+    const formData = new FormData();
+    formData.append("name", sample.name);
+    formData.append("files", new Blob([audio], { type: sample.mimeType }), `voice-sample.${format.providerExtension}`);
+    const response = await fetch("https://api.elevenlabs.io/v1/voices/add", {
+      method: "POST",
+      headers: { "xi-api-key": env.ELEVENLABS_API_KEY },
+      body: formData,
+    });
+    if (!response.ok) {
+      req.log.warn({ workspaceId, status: response.status }, "Voice sample provider request failed");
+      res.status(502).json({ error: "Não foi possível criar o clone agora. Sua amostra continua salva.", code: "VOICE_CLONE_ERROR" });
+      return;
+    }
+    const data = (await response.json()) as { voice_id?: string };
+    if (!data.voice_id || data.voice_id.length > 200) throw new Error("Voice provider returned an invalid identifier");
+    const now = new Date().toISOString();
+    await db.update(workspacesTable).set({
+      settings: {
+        ...existingSettings,
+        persona: { ...existingPersona, voiceCloneId: data.voice_id, voiceCloneUpdatedAt: now, voiceName: sample.name },
+        cloneSessionId: data.voice_id,
+        hasClone: true,
+      } as any,
+    }).where(eq(workspacesTable.id, workspaceId));
+    req.log.info({ workspaceId, sampleId }, "Voice clone created from saved sample");
+    res.json({ voiceCloneId: data.voice_id, success: true });
+  } catch {
+    req.log.error({ workspaceId, sampleId }, "Voice clone from saved sample failed");
+    res.status(500).json({ error: "Não foi possível criar o clone agora. Sua amostra continua salva.", code: "VOICE_CLONE_ERROR" });
+  }
 });
 
 // POST /workspaces/me/persona/clone-voice — receive base64 audio → ElevenLabs → save voice_id

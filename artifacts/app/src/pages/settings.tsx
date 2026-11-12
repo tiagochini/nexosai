@@ -31,6 +31,7 @@ import nexosLogo from "/nexos-logo.png";
 import { useLocation } from "wouter";
 import { AutonomyTab } from "@/components/AutonomyTab";
 import { MetaReviewReadinessPanel } from "@/components/meta-review-readiness";
+import { VoiceSampleLibrary } from "@/components/VoiceSampleLibrary";
 import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 type Tab = "perfil" | "workspace" | "seguranca" | "integracoes" | "identidade" | "compliance" | "autonomia";
@@ -2350,6 +2351,11 @@ function IdentidadeTab() {
           </FieldRow>
         </div>
       </SectionCard>
+
+      <VoiceSampleLibrary onCloneCreated={(voiceCloneId) => {
+        setPersona((current) => ({ ...current, voiceCloneId, voiceCloneUpdatedAt: new Date().toISOString() }));
+        setCloneSessionId(voiceCloneId);
+      }} />
 
       {/* ── Seção 2: Avatar Digital ── */}
       <SectionCard title={t("Avatar digital", "Digital avatar", "Avatar digital")} icon={Camera}>
