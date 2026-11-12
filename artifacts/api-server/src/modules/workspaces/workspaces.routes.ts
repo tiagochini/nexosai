@@ -63,6 +63,102 @@ function voiceSamplesFromSettings(settings: Record<string, unknown>): VoiceSampl
   });
 }
 
+const AVATAR_SAMPLE_CONSENT_VERSION = "avatar-sample-storage-v1";
+const MAX_AVATAR_SAMPLE_BYTES = 300 * 1024 * 1024;
+const MAX_AVATAR_SAMPLES = 20;
+const AVATAR_SAMPLE_MIME_TYPES: Record<string, { extension: string; formatPattern: RegExp }> = {
+  "video/webm": { extension: "webm", formatPattern: /webm|matroska/i },
+  "video/mp4": { extension: "mp4", formatPattern: /mp4|mov/i },
+};
+
+type AvatarSampleMetadata = {
+  sampleId: string;
+  name: string;
+  durationSeconds: number;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+  consentVersion: string;
+  consentedAt: string;
+};
+
+function avatarSamplesFromSettings(settings: Record<string, unknown>): AvatarSampleMetadata[] {
+  const persona = (settings["persona"] ?? {}) as Record<string, unknown>;
+  const rawSamples = Array.isArray(persona["avatarSamples"]) ? persona["avatarSamples"] : [];
+  return rawSamples.filter((sample): sample is AvatarSampleMetadata => {
+    if (!sample || typeof sample !== "object") return false;
+    const item = sample as Partial<AvatarSampleMetadata>;
+    return typeof item.sampleId === "string" && /^[0-9a-f-]{36}$/i.test(item.sampleId)
+      && typeof item.name === "string" && typeof item.durationSeconds === "number"
+      && typeof item.mimeType === "string" && typeof item.sizeBytes === "number"
+      && typeof item.createdAt === "string" && typeof item.consentVersion === "string"
+      && typeof item.consentedAt === "string";
+  });
+}
+
+class AvatarSampleUploadError extends Error {
+  constructor(message: string, readonly status: number, readonly code: string) { super(message); }
+}
+
+async function persistAvatarSample(workspaceId: string, name: string, video: Buffer, contentType: string): Promise<AvatarSampleMetadata> {
+  const format = AVATAR_SAMPLE_MIME_TYPES[contentType];
+  if (!format || video.length < 1024 || video.length > MAX_AVATAR_SAMPLE_BYTES) {
+    throw new AvatarSampleUploadError("Envie um vídeo WebM ou MP4 válido de até 300 MB.", 400, "AVATAR_SAMPLE_INVALID_FILE");
+  }
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "nexos-avatar-sample-"));
+  try {
+    const tempFile = path.join(tempDir, `sample.${format.extension}`);
+    await writeFile(tempFile, video, { flag: "wx" });
+    let probe: { streams?: Array<Record<string, unknown>>; format?: { duration?: string; format_name?: string } };
+    try {
+      const { stdout } = await execFileAsync("ffprobe", ["-v", "error", "-show_streams", "-show_format", "-of", "json", tempFile], { maxBuffer: 1024 * 1024 });
+      probe = JSON.parse(stdout) as typeof probe;
+    } catch {
+      throw new AvatarSampleUploadError("O arquivo enviado não contém vídeo válido no formato informado.", 400, "AVATAR_SAMPLE_INVALID_VIDEO");
+    }
+    const streams = probe.streams ?? [];
+    const durationSeconds = Number(probe.format?.duration ?? 0);
+    if (!format.formatPattern.test(probe.format?.format_name ?? "")
+      || !streams.some((stream) => stream.codec_type === "video")
+      || !streams.some((stream) => stream.codec_type === "audio")) {
+      throw new AvatarSampleUploadError("O arquivo precisa corresponder ao formato informado e conter áudio e vídeo.", 400, "AVATAR_SAMPLE_INVALID_VIDEO");
+    }
+    if (!Number.isFinite(durationSeconds) || durationSeconds < 5 || durationSeconds > 120) {
+      throw new AvatarSampleUploadError("A gravação do avatar precisa durar entre 5 segundos e 2 minutos.", 400, "AVATAR_SAMPLE_INVALID_VIDEO");
+    }
+
+    const [ws] = await db.select({ settings: workspacesTable.settings })
+      .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
+    const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+    const existingPersona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+    const currentSamples = avatarSamplesFromSettings(existingSettings);
+    if (currentSamples.length >= MAX_AVATAR_SAMPLES) {
+      throw new AvatarSampleUploadError("Limite de 20 gravações de avatar atingido. Exclua uma para continuar.", 409, "AVATAR_SAMPLE_LIMIT");
+    }
+    const sampleId = randomUUID();
+    const { avatarSampleObjectKey, uploadBufferToGCS, deleteGCSObject } = await import("../../lib/gcs-recordings.js");
+    const objectKey = avatarSampleObjectKey(workspaceId, sampleId, format.extension);
+    await uploadBufferToGCS(video, objectKey, contentType);
+    const now = new Date().toISOString();
+    const sample: AvatarSampleMetadata = {
+      sampleId, name, durationSeconds: Math.round(durationSeconds * 10) / 10,
+      mimeType: contentType, sizeBytes: video.length, createdAt: now,
+      consentVersion: AVATAR_SAMPLE_CONSENT_VERSION, consentedAt: now,
+    };
+    try {
+      await db.update(workspacesTable)
+        .set({ settings: { ...existingSettings, persona: { ...existingPersona, avatarSamples: [...currentSamples, sample] } } as any })
+        .where(eq(workspacesTable.id, workspaceId));
+    } catch {
+      await deleteGCSObject(objectKey).catch(() => {});
+      throw new Error("Avatar sample metadata persistence failed");
+    }
+    return sample;
+  } finally {
+    await rm(tempDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
 const updateWorkspaceSchema = z.object({
   name: z.string().min(2).optional(),
   brandName: z.string().optional(),
@@ -966,6 +1062,165 @@ router.post("/me/persona/clone-avatar", async (req, res): Promise<void> => {
   }
 });
 
+// ── Private avatar training sample library ──────────────────────────────────
+
+router.get("/me/persona/avatar-samples", async (req, res): Promise<void> => {
+  const [ws] = await db.select({ settings: workspacesTable.settings })
+    .from(workspacesTable).where(eq(workspacesTable.id, req.auth.workspaceId)).limit(1);
+  res.json({ samples: avatarSamplesFromSettings((ws?.settings ?? {}) as Record<string, unknown>) });
+});
+
+router.post(
+  "/me/persona/avatar-samples",
+  express.raw({ type: "*/*", limit: MAX_AVATAR_SAMPLE_BYTES }),
+  async (req, res): Promise<void> => {
+    const parsed = z.object({
+      name: z.string().trim().min(1).max(80),
+      consent: z.literal(true),
+      consentVersion: z.literal(AVATAR_SAMPLE_CONSENT_VERSION),
+    }).safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Informe um nome e confirme o consentimento para guardar esta gravação de avatar.", code: "AVATAR_SAMPLE_CONSENT_REQUIRED" });
+      return;
+    }
+    const contentType = String(req.headers["content-type"] ?? "").split(";")[0]!.trim().toLowerCase();
+    const format = AVATAR_SAMPLE_MIME_TYPES[contentType];
+    const video = Buffer.isBuffer(req.body) ? req.body : null;
+    if (!format || !video || video.length < 1024 || video.length > MAX_AVATAR_SAMPLE_BYTES) {
+      res.status(400).json({ error: "Envie um vídeo WebM ou MP4 válido de até 300 MB.", code: "AVATAR_SAMPLE_INVALID_FILE" });
+      return;
+    }
+
+    let tempDir: string | undefined;
+    try {
+      tempDir = await mkdtemp(path.join(os.tmpdir(), "nexos-avatar-sample-"));
+      const tempFile = path.join(tempDir, `sample.${format.extension}`);
+      await writeFile(tempFile, video, { flag: "wx" });
+      let probe: { streams?: Array<Record<string, unknown>>; format?: { duration?: string; format_name?: string } };
+      try {
+        const { stdout } = await execFileAsync("ffprobe", ["-v", "error", "-show_streams", "-show_format", "-of", "json", tempFile], { maxBuffer: 1024 * 1024 });
+        probe = JSON.parse(stdout) as typeof probe;
+      } catch {
+        res.status(400).json({ error: "O arquivo enviado não contém vídeo válido no formato informado.", code: "AVATAR_SAMPLE_INVALID_VIDEO" });
+        return;
+      }
+      const streams = probe.streams ?? [];
+      const durationSeconds = Number(probe.format?.duration ?? 0);
+      if (!format.formatPattern.test(probe.format?.format_name ?? "")
+        || !streams.some((stream) => stream.codec_type === "video")
+        || !streams.some((stream) => stream.codec_type === "audio")) {
+        res.status(400).json({ error: "O arquivo precisa corresponder ao formato informado e conter áudio e vídeo.", code: "AVATAR_SAMPLE_INVALID_VIDEO" });
+        return;
+      }
+      if (!Number.isFinite(durationSeconds) || durationSeconds < 5 || durationSeconds > 120) {
+        res.status(400).json({ error: "A gravação do avatar precisa durar entre 5 segundos e 2 minutos.", code: "AVATAR_SAMPLE_INVALID_VIDEO" });
+        return;
+      }
+
+      const workspaceId = req.auth.workspaceId;
+      const [ws] = await db.select({ settings: workspacesTable.settings })
+        .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
+      const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+      const existingPersona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+      const currentSamples = avatarSamplesFromSettings(existingSettings);
+      if (currentSamples.length >= MAX_AVATAR_SAMPLES) {
+        res.status(409).json({ error: "Limite de 20 gravações de avatar atingido. Exclua uma para continuar.", code: "AVATAR_SAMPLE_LIMIT" });
+        return;
+      }
+
+      const sampleId = randomUUID();
+      const { avatarSampleObjectKey, uploadBufferToGCS, deleteGCSObject } = await import("../../lib/gcs-recordings.js");
+      const objectKey = avatarSampleObjectKey(workspaceId, sampleId, format.extension);
+      await uploadBufferToGCS(video, objectKey, contentType);
+      const now = new Date().toISOString();
+      const sample: AvatarSampleMetadata = {
+        sampleId,
+        name: parsed.data.name,
+        durationSeconds: Math.round(durationSeconds * 10) / 10,
+        mimeType: contentType,
+        sizeBytes: video.length,
+        createdAt: now,
+        consentVersion: AVATAR_SAMPLE_CONSENT_VERSION,
+        consentedAt: now,
+      };
+      try {
+        await db.update(workspacesTable)
+          .set({ settings: { ...existingSettings, persona: { ...existingPersona, avatarSamples: [...currentSamples, sample] } } as any })
+          .where(eq(workspacesTable.id, workspaceId));
+      } catch {
+        await deleteGCSObject(objectKey).catch(() => {});
+        throw new Error("Avatar sample metadata persistence failed");
+      }
+      req.log.info({ workspaceId, sampleId, bytes: video.length, durationSeconds: sample.durationSeconds }, "Private avatar sample saved");
+      res.status(201).json({ sample });
+    } catch {
+      req.log.error({ workspaceId: req.auth.workspaceId }, "Private avatar sample upload failed");
+      res.status(500).json({ error: "Não foi possível guardar a gravação. Tente novamente.", code: "AVATAR_SAMPLE_SAVE_FAILED" });
+    } finally {
+      if (tempDir) await rm(tempDir, { recursive: true, force: true }).catch(() => {});
+    }
+  },
+);
+
+router.get("/me/persona/avatar-samples/:sampleId/video", async (req, res): Promise<void> => {
+  const sampleId = String(req.params.sampleId);
+  if (!/^[0-9a-f-]{36}$/i.test(sampleId)) {
+    res.status(404).json({ error: "Gravação não encontrada.", code: "AVATAR_SAMPLE_NOT_FOUND" });
+    return;
+  }
+  const { avatarSampleObjectKey, createGCSObjectStream } = await import("../../lib/gcs-recordings.js");
+  const [ws] = await db.select({ settings: workspacesTable.settings })
+    .from(workspacesTable).where(eq(workspacesTable.id, req.auth.workspaceId)).limit(1);
+  const sample = avatarSamplesFromSettings((ws?.settings ?? {}) as Record<string, unknown>).find((item) => item.sampleId === sampleId);
+  const format = sample ? AVATAR_SAMPLE_MIME_TYPES[sample.mimeType] : undefined;
+  if (!sample || !format) {
+    res.status(404).json({ error: "Gravação não encontrada.", code: "AVATAR_SAMPLE_NOT_FOUND" });
+    return;
+  }
+  res.setHeader("Content-Type", sample.mimeType);
+  res.setHeader("Content-Length", String(sample.sizeBytes));
+  res.setHeader("Cache-Control", "private, no-store");
+  const stream = createGCSObjectStream(avatarSampleObjectKey(req.auth.workspaceId, sampleId, format.extension));
+  stream.on("error", () => { if (!res.headersSent) res.status(404).end(); else res.destroy(); });
+  stream.pipe(res);
+});
+
+router.delete("/me/persona/avatar-samples/:sampleId", async (req, res): Promise<void> => {
+  const sampleId = String(req.params.sampleId);
+  const workspaceId = req.auth.workspaceId;
+  if (!/^[0-9a-f-]{36}$/i.test(sampleId)) {
+    res.status(404).json({ error: "Gravação não encontrada.", code: "AVATAR_SAMPLE_NOT_FOUND" });
+    return;
+  }
+  const [ws] = await db.select({ settings: workspacesTable.settings })
+    .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
+  const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+  const existingPersona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+  const samples = avatarSamplesFromSettings(existingSettings);
+  const sample = samples.find((item) => item.sampleId === sampleId);
+  const format = sample ? AVATAR_SAMPLE_MIME_TYPES[sample.mimeType] : undefined;
+  if (!sample || !format) {
+    res.status(404).json({ error: "Gravação não encontrada.", code: "AVATAR_SAMPLE_NOT_FOUND" });
+    return;
+  }
+  const remaining = samples.filter((item) => item.sampleId !== sampleId);
+  await db.update(workspacesTable)
+    .set({ settings: { ...existingSettings, persona: { ...existingPersona, avatarSamples: remaining } } as any })
+    .where(eq(workspacesTable.id, workspaceId));
+  const { avatarSampleObjectKey, deleteGCSObject } = await import("../../lib/gcs-recordings.js");
+  try {
+    await deleteGCSObject(avatarSampleObjectKey(workspaceId, sampleId, format.extension));
+  } catch {
+    await db.update(workspacesTable)
+      .set({ settings: { ...existingSettings, persona: { ...existingPersona, avatarSamples: samples } } as any })
+      .where(eq(workspacesTable.id, workspaceId)).catch(() => {});
+    res.status(500).json({ error: "Não foi possível remover a gravação. Tente novamente.", code: "AVATAR_SAMPLE_DELETE_FAILED" });
+    return;
+  }
+  req.log.info({ workspaceId, sampleId }, "Private avatar sample deleted");
+  res.json({ success: true });
+});
+
 // POST /workspaces/me/persona/upload-video/:kind — raw binary upload for large video files.
 // Bypasses the global 10 MB JSON body limit via express.raw() applied inline.
 // kind: "training" | "consent"
@@ -1001,6 +1256,79 @@ router.post(
 // ── In-memory chunk buffer for large video uploads ────────────────────────────
 // Keyed by `${workspaceId}:${kind}`. Cleared when all chunks received + assembled.
 const _uploadChunks = new Map<string, { chunks: (Buffer | null)[]; total: number; contentType: string }>();
+const _avatarSampleChunks = new Map<string, { chunks: (Buffer | null)[]; total: number; contentType: string; name: string; startedAt: number }>();
+
+router.post(
+  "/me/persona/avatar-samples/chunk",
+  express.raw({ type: "*/*", limit: "9mb" }),
+  async (req, res): Promise<void> => {
+    const parsed = z.object({
+      name: z.string().trim().min(1).max(80),
+      consent: z.literal("true"),
+      consentVersion: z.literal(AVATAR_SAMPLE_CONSENT_VERSION),
+    }).safeParse(req.query);
+    const uploadId = String(req.headers["x-upload-id"] ?? "");
+    const chunkIndex = Number(req.headers["x-chunk-index"] ?? NaN);
+    const totalChunks = Number(req.headers["x-total-chunks"] ?? NaN);
+    const contentType = String(req.headers["content-type"] ?? "").split(";")[0]!.trim().toLowerCase();
+    const videoChunk = Buffer.isBuffer(req.body) ? req.body : null;
+    if (!parsed.success || !/^[0-9a-f-]{36}$/i.test(uploadId) || !AVATAR_SAMPLE_MIME_TYPES[contentType]
+      || !videoChunk || videoChunk.length === 0 || videoChunk.length > 8 * 1024 * 1024
+      || !Number.isInteger(chunkIndex) || !Number.isInteger(totalChunks) || totalChunks < 1 || totalChunks > 38
+      || chunkIndex < 0 || chunkIndex >= totalChunks) {
+      res.status(400).json({ error: "Chunk ou consentimento inválido para a gravação de avatar.", code: "AVATAR_SAMPLE_INVALID_CHUNK" });
+      return;
+    }
+    const workspaceId = req.auth.workspaceId;
+    for (const [key, session] of _avatarSampleChunks) {
+      if (Date.now() - session.startedAt > 15 * 60 * 1000) _avatarSampleChunks.delete(key);
+    }
+    const sessionKey = `${workspaceId}:${uploadId}`;
+    if (chunkIndex === 0 || !_avatarSampleChunks.has(sessionKey)) {
+      const activeForWorkspace = [..._avatarSampleChunks.keys()].filter((key) => key.startsWith(`${workspaceId}:`)).length;
+      if (activeForWorkspace >= 2 || _avatarSampleChunks.size >= 8) {
+        res.status(429).json({ error: "Já há gravações sendo enviadas. Aguarde a conclusão e tente novamente.", code: "AVATAR_SAMPLE_UPLOAD_BUSY" });
+        return;
+      }
+      _avatarSampleChunks.set(sessionKey, { chunks: new Array(totalChunks).fill(null), total: totalChunks, contentType, name: parsed.data.name, startedAt: Date.now() });
+    }
+    const session = _avatarSampleChunks.get(sessionKey)!;
+    if (session.total !== totalChunks || session.contentType !== contentType || session.name !== parsed.data.name) {
+      _avatarSampleChunks.delete(sessionKey);
+      res.status(400).json({ error: "Os dados da gravação mudaram durante o envio. Tente novamente.", code: "AVATAR_SAMPLE_INVALID_CHUNK" });
+      return;
+    }
+    session.chunks[chunkIndex] = videoChunk;
+    const receivedBytes = session.chunks.reduce((total, chunk) => total + (chunk?.length ?? 0), 0);
+    if (receivedBytes > MAX_AVATAR_SAMPLE_BYTES) {
+      _avatarSampleChunks.delete(sessionKey);
+      res.status(413).json({ error: "A gravação excede o limite de 300 MB.", code: "AVATAR_SAMPLE_TOO_LARGE" });
+      return;
+    }
+    if (session.chunks.some((chunk) => !chunk)) {
+      res.json({ complete: false, received: session.chunks.filter(Boolean).length, totalChunks });
+      return;
+    }
+    _avatarSampleChunks.delete(sessionKey);
+    const video = Buffer.concat(session.chunks as Buffer[]);
+    if (video.length > MAX_AVATAR_SAMPLE_BYTES) {
+      res.status(413).json({ error: "A gravação excede o limite de 300 MB.", code: "AVATAR_SAMPLE_TOO_LARGE" });
+      return;
+    }
+    try {
+      const sample = await persistAvatarSample(workspaceId, session.name, video, session.contentType);
+      req.log.info({ workspaceId, sampleId: sample.sampleId, bytes: sample.sizeBytes }, "Private avatar sample saved from chunks");
+      res.status(201).json({ complete: true, sample });
+    } catch (error) {
+      if (error instanceof AvatarSampleUploadError) {
+        res.status(error.status).json({ error: error.message, code: error.code });
+        return;
+      }
+      req.log.error({ workspaceId }, "Avatar sample chunk upload failed");
+      res.status(500).json({ error: "Não foi possível guardar a gravação. Tente novamente.", code: "AVATAR_SAMPLE_SAVE_FAILED" });
+    }
+  },
+);
 
 // POST /workspaces/me/persona/upload-chunk/:kind — chunked upload endpoint for large videos.
 // The Replit deployment proxy blocks single requests > ~32 MB (413).
@@ -1068,6 +1396,7 @@ router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> =>
     // (persona-media/{workspaceId}/training.webm) so the caller can omit it when
     // the training video was already uploaded in a previous step.
     trainingKey: z.string().min(5).optional(),
+    trainingSampleId: z.string().uuid().optional(),
     consentKey:  z.string().min(5),
     frameBase64: z.string().min(10).optional(),
     avatarName:  z.string().max(80).default("Meu Avatar NexOS"),
@@ -1085,6 +1414,27 @@ router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> =>
   }
 
   const workspaceId = req.auth.workspaceId;
+
+  const { avatarSampleObjectKey, personaMediaObjectKey } = await import("../../lib/gcs-recordings.js");
+  const stableTrainingKey = personaMediaObjectKey(workspaceId, "training");
+  const stableConsentKey = personaMediaObjectKey(workspaceId, "consent");
+  if ((parsed.data.trainingSampleId && parsed.data.trainingKey)
+    || (parsed.data.trainingKey && parsed.data.trainingKey !== stableTrainingKey)
+    || parsed.data.consentKey !== stableConsentKey) {
+    res.status(400).json({ error: "Os vídeos enviados não pertencem ao fluxo autenticado deste workspace.", code: "INVALID_PERSONA_MEDIA_KEY" });
+    return;
+  }
+  let savedTrainingSample: AvatarSampleMetadata | undefined;
+  if (parsed.data.trainingSampleId) {
+    const [ws] = await db.select({ settings: workspacesTable.settings })
+      .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
+    savedTrainingSample = avatarSamplesFromSettings((ws?.settings ?? {}) as Record<string, unknown>)
+      .find((sample) => sample.sampleId === parsed.data.trainingSampleId);
+    if (!savedTrainingSample) {
+      res.status(404).json({ error: "Gravação de avatar não encontrada.", code: "AVATAR_SAMPLE_NOT_FOUND" });
+      return;
+    }
+  }
 
   async function savePersona(fields: Record<string, unknown>) {
     const [ws] = await db.select({ settings: workspacesTable.settings })
@@ -1119,7 +1469,7 @@ router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> =>
   }
 
   try {
-    const { getPersonaMediaSignedUrl, personaMediaObjectKey } = await import("../../lib/gcs-recordings.js");
+    const { getPersonaMediaSignedUrl } = await import("../../lib/gcs-recordings.js");
     const { signAccess }               = await import("../auth/auth.service.js");
 
     // Prefer GCS V4 signed URLs (HeyGen downloads directly from GCS, no proxy hop).
@@ -1127,22 +1477,24 @@ router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> =>
     // unavailable (Replit external_account sidecar without signBlob permission).
     const base = env.APP_URL;
 
-    async function buildDownloadUrl(key: string): Promise<string> {
+    async function buildDownloadUrl(key: string, sampleId?: string): Promise<string> {
       const signed = await getPersonaMediaSignedUrl(key, 7200);
       if (signed) return signed;
       // Fallback: stream through our server using a long-lived token.
       const token    = signAccess({ userId: req.auth.userId, workspaceId, email: req.auth.email });
+      if (sampleId) return `${base}/api/workspaces/persona-avatar-sample/${workspaceId}/${sampleId}?token=${token}`;
       const filename = key.split("/").pop()!;
       return `${base}/api/workspaces/persona-media/${workspaceId}/${filename}?token=${token}`;
     }
 
     // Resolve the training key — fall back to stable GCS key when not supplied
-    const resolvedTrainingKey = parsed.data.trainingKey
-      ?? personaMediaObjectKey(workspaceId, "training");
+    const resolvedTrainingKey = savedTrainingSample
+      ? avatarSampleObjectKey(workspaceId, savedTrainingSample.sampleId, AVATAR_SAMPLE_MIME_TYPES[savedTrainingSample.mimeType]!.extension)
+      : parsed.data.trainingKey ?? stableTrainingKey;
 
     const [trainingUrl, consentUrl] = await Promise.all([
-      buildDownloadUrl(resolvedTrainingKey),
-      buildDownloadUrl(parsed.data.consentKey),
+      buildDownloadUrl(resolvedTrainingKey, savedTrainingSample?.sampleId),
+      buildDownloadUrl(stableConsentKey),
     ]);
 
     req.log.info({ workspaceId }, "Calling HeyGen Digital Twin (v3)");
@@ -1199,6 +1551,7 @@ router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> =>
       // Salvar consentUrl no persona para exibição persistente na UI
       await savePersona({
         digitalTwinId: groupId,
+        ...(savedTrainingSample ? { avatarTrainingSampleId: savedTrainingSample.sampleId } : {}),
         avatarType: "digital_twin",
         avatarTrainingStatus: trainingStatus,
         ...(consentPageUrl ? { heygenConsentUrl: consentPageUrl } : {}),

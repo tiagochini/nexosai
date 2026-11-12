@@ -16,6 +16,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { CloneStudioPanel, type CloneResumeState } from "@/components/CloneStudioPanel";
+import { AvatarSampleLibrary } from "@/components/AvatarSampleLibrary";
 import { toast } from "sonner";
 import {
   Mic, Camera, RefreshCw, Square, ChevronLeft,
@@ -113,22 +114,26 @@ function SnapshotCamera({ onCapture, onCancel }: { onCapture: (b64: string) => v
 
 interface AvatarFlowProps {
   onDone: () => void;
+  onSampleSaved?: () => void;
   /** When set, start the flow at this step (skipping earlier ones). */
   initialStep?: AvatarFlowStep;
   /** Training video is already in GCS — skip recording it again. */
   hasTrainingInGCS?: boolean;
+  savedTrainingSample?: { sampleId: string; videoUrl: string };
 }
 
-function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = false }: AvatarFlowProps) {
+function AvatarCloneFlow({ onDone, onSampleSaved, initialStep = "training", hasTrainingInGCS = false, savedTrainingSample }: AvatarFlowProps) {
   const t = useUiText();
   const [step, setStep]         = useState<"training" | "consent" | "uploading" | "pending" | "done">(
-    hasTrainingInGCS ? "consent" : (initialStep === "consent" ? "consent" : "training"),
+    savedTrainingSample || hasTrainingInGCS ? "consent" : (initialStep === "consent" ? "consent" : "training"),
   );
   const [recState, setRecState] = useState<VideoRecState>("idle");
-  const [trainingUrl, setTrainingUrl] = useState<string | null>(null);
+  const [trainingUrl, setTrainingUrl] = useState<string | null>(savedTrainingSample?.videoUrl ?? null);
   const [consentUrl, setConsentUrl]   = useState<string | null>(null);
   // Rastreia se o upload do vídeo de treino foi confirmado no servidor
-  const [trainingSaved, setTrainingSaved] = useState(hasTrainingInGCS);
+  const [trainingSaved, setTrainingSaved] = useState(hasTrainingInGCS || !!savedTrainingSample);
+  const [trainingConsent, setTrainingConsent] = useState(false);
+  const [trainingSampleName, setTrainingSampleName] = useState("Treino de avatar");
   const [trainingUploadError, setTrainingUploadError] = useState<string | null>(null);
   // Consent auto-upload state (upload para GCS imediatamente após gravação)
   const [consentSaved, setConsentSaved]   = useState(false);
@@ -145,6 +150,7 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
   const [error, setError]             = useState<string | null>(null);
   const [trainingStatus, setTrainingStatus] = useState<string | null>(null);
   const [uploadingTraining, setUploadingTraining] = useState(false);
+  const [trainingSampleId, setTrainingSampleId] = useState<string | null>(savedTrainingSample?.sampleId ?? null);
 
   const recorderRef     = useRef<MediaRecorder | null>(null);
   const chunksRef       = useRef<Blob[]>([]);
@@ -224,6 +230,7 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
   function retake(kind: "training" | "consent") {
     if (kind === "training") {
       setTrainingUrl(null); trainingBlobRef.current = null; trainingKeyRef.current = null;
+      setTrainingSampleId(null); setTrainingConsent(false);
       setTrainingSaved(false); setTrainingUploadError(null);
     } else {
       setConsentUrl(null); consentBlobRef.current = null; consentKeyRef.current = null;
@@ -284,6 +291,41 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
     return ((await res.json()) as { key: string }).key;
   }
 
+  async function uploadTrainingSample(blob: Blob): Promise<string> {
+    const query = new URLSearchParams({
+      name: trainingSampleName.trim() || "Treino de avatar",
+      consent: "true",
+      consentVersion: "avatar-sample-storage-v1",
+    });
+    const mimeType = blob.type.split(";")[0] || videoMime;
+    if (blob.size <= 8 * 1024 * 1024) {
+      const result = await customFetch<{ sample: { sampleId: string } }>(`/api/workspaces/me/persona/avatar-samples?${query}`, {
+        method: "POST", headers: { "Content-Type": mimeType }, body: blob,
+      });
+      onSampleSaved?.();
+      return result.sample.sampleId;
+    }
+    const uploadId = crypto.randomUUID();
+    const totalChunks = Math.ceil(blob.size / (8 * 1024 * 1024));
+    for (let index = 0; index < totalChunks; index += 1) {
+      const result = await customFetch<{ sample?: { sampleId: string } }>(`/api/workspaces/me/persona/avatar-samples/chunk?${query}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": mimeType,
+          "X-Upload-Id": uploadId,
+          "X-Chunk-Index": String(index),
+          "X-Total-Chunks": String(totalChunks),
+        },
+        body: blob.slice(index * 8 * 1024 * 1024, Math.min(blob.size, (index + 1) * 8 * 1024 * 1024)),
+      });
+      if (result.sample) {
+        onSampleSaved?.();
+        return result.sample.sampleId;
+      }
+    }
+    throw new Error(t("O upload da gravação não foi concluído.", "The recording upload did not complete.", "No se completó la carga de la grabación."));
+  }
+
   async function extractFrame(): Promise<string | null> {
     if (!trainingUrl) return null;
     return new Promise((resolve) => {
@@ -310,6 +352,11 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
     setRecState("idle");
     setTrainingUploadError(null);
 
+    if (!hasTrainingInGCS && !savedTrainingSample && !trainingConsent) {
+      setTrainingUploadError(t("Confirme o consentimento para guardar a gravação antes de continuar.", "Confirm consent to save the recording before continuing.", "Confirma el consentimiento para guardar la grabación antes de continuar."));
+      return;
+    }
+
     if (hasTrainingInGCS) {
       // Já confirmado no GCS — avançar direto
       setTrainingSaved(true);
@@ -324,10 +371,10 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
 
     setUploadingTraining(true);
     try {
-      const key = await uploadVideoRaw(trainingBlobRef.current, "training");
-      trainingKeyRef.current = key;
+      const sampleId = await uploadTrainingSample(trainingBlobRef.current);
+      setTrainingSampleId(sampleId);
       setTrainingSaved(true);   // Upload confirmado no servidor
-      toast.success(t("Vídeo de treino salvo com segurança ✓", "Training video saved securely ✓", "Vídeo de entrenamiento guardado de forma segura ✓"));
+      toast.success(t("Vídeo salvo na biblioteca privada ✓", "Video saved to your private library ✓", "Vídeo guardado en la biblioteca privada ✓"));
       setStep("consent");
     } catch (err: any) {
       // NUNCA engolir silenciosamente — o usuário precisa saber
@@ -343,13 +390,17 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
   /** Retentar upload do treino após falha. */
   async function retryTrainingUpload() {
     if (!trainingBlobRef.current) return;
+    if (!trainingConsent) {
+      setTrainingUploadError(t("Confirme o consentimento para guardar a gravação antes de continuar.", "Confirm consent to save the recording before continuing.", "Confirma el consentimiento para guardar la grabación antes de continuar."));
+      return;
+    }
     setTrainingUploadError(null);
     setUploadingTraining(true);
     try {
-      const key = await uploadVideoRaw(trainingBlobRef.current, "training");
-      trainingKeyRef.current = key;
+      const sampleId = await uploadTrainingSample(trainingBlobRef.current);
+      setTrainingSampleId(sampleId);
       setTrainingSaved(true);
-      toast.success(t("Vídeo de treino salvo com segurança ✓", "Training video saved securely ✓", "Vídeo de entrenamiento guardado de forma segura ✓"));
+      toast.success(t("Vídeo salvo na biblioteca privada ✓", "Video saved to your private library ✓", "Vídeo guardado en la biblioteca privada ✓"));
       setStep("consent");
     } catch (err: any) {
       const msg = err?.message ?? t("Erro ao salvar vídeo", "Error saving video", "Error al guardar el vídeo");
@@ -466,7 +517,7 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
       // Consent pode já estar no GCS (auto-uploaded). Usar a chave existente.
       const consentKey = consentKeyRef.current ?? await uploadVideoRaw(cBlob, "consent");
       let trainingKey = trainingKeyRef.current;
-      if (!trainingKey || trainingKey === "already-in-gcs") {
+      if (!trainingSampleId && (!trainingKey || trainingKey === "already-in-gcs")) {
         if (trainingBlobRef.current) {
           trainingKey = await uploadVideoRaw(trainingBlobRef.current, "training");
         } else {
@@ -486,7 +537,8 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
 
       // If training is already in GCS, we only pass consentKey and let backend resolve
       const body: Record<string, string> = { consentKey };
-      if (trainingKey && trainingKey !== "__gcs_stable__") body["trainingKey"] = trainingKey;
+      if (trainingSampleId) body["trainingSampleId"] = trainingSampleId;
+      if (!trainingSampleId && trainingKey && trainingKey !== "__gcs_stable__") body["trainingKey"] = trainingKey;
       if (frameBase64) body["frameBase64"] = frameBase64;
 
       const result = await customFetch<{ avatarType?: string; success: boolean }>("/api/workspaces/me/persona/clone-avatar-video", {
@@ -543,6 +595,23 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
             <div className="space-y-3">
               <video src={trainingUrl} controls className="w-full max-w-sm rounded-lg border border-border/40" />
 
+              {!hasTrainingInGCS && !savedTrainingSample && trainingBlobRef.current && (
+                <div className="space-y-2 border border-border/30 bg-background/20 p-3">
+                  <input
+                    value={trainingSampleName}
+                    onChange={(event) => setTrainingSampleName(event.target.value.slice(0, 80))}
+                    maxLength={80}
+                    aria-label={t("Nome da gravação", "Recording name", "Nombre de la grabación")}
+                    placeholder={t("Nome desta gravação", "Name this recording", "Nombre de esta grabación")}
+                    className="h-9 w-full border border-border/40 bg-background/50 px-3 font-mono text-xs outline-none"
+                  />
+                  <label className="flex items-start gap-2 font-mono text-[10px] text-muted-foreground leading-relaxed">
+                    <input type="checkbox" checked={trainingConsent} onChange={(event) => setTrainingConsent(event.target.checked)} className="mt-0.5 accent-primary" />
+                    <span>{t("Autorizo guardar este vídeo no workspace privado para uso futuro no treinamento do meu avatar. Posso removê-lo a qualquer momento. A gravação, por si só, não autoriza o armazenamento.", "I authorize saving this video in the private workspace for future avatar training. I can delete it at any time. Recording alone does not authorize storage.", "Autorizo guardar este vídeo en el espacio privado para entrenar mi avatar más adelante. Puedo eliminarlo cuando quiera. Grabar no autoriza por sí solo el almacenamiento.")}</span>
+                  </label>
+                </div>
+              )}
+
               {/* Erro de upload — bloqueante, com botão de retry */}
               {trainingUploadError && (
                 <div className="border border-destructive/40 bg-destructive/10 rounded-lg px-3 py-2.5 space-y-2">
@@ -571,7 +640,7 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
                 <div className="flex gap-2">
                   <Button
                     onClick={advanceToConsent}
-                    disabled={uploadingTraining}
+                    disabled={uploadingTraining || (!hasTrainingInGCS && !savedTrainingSample && !trainingConsent)}
                     className="font-mono gap-2"
                   >
                     {uploadingTraining
@@ -815,6 +884,8 @@ export default function CloneDigitalPage() {
   const [activeFlow, setActiveFlow]     = useState<"voice" | "avatar" | null>(null);
   const [avatarInitialStep, setAvatarInitialStep] = useState<AvatarFlowStep>("training");
   const [hasTrainingInGCS, setHasTrainingInGCS]   = useState(false);
+  const [selectedAvatarSample, setSelectedAvatarSample] = useState<{ sampleId: string; videoUrl: string } | null>(null);
+  const [avatarLibraryRefresh, setAvatarLibraryRefresh] = useState(0);
   const [showSnapshot, setShowSnapshot] = useState(false);
   const [retrying, setRetrying]         = useState(false);
 
@@ -1138,7 +1209,7 @@ export default function CloneDigitalPage() {
                       ? t("Vídeos enviados. O HeyGen está treinando seu avatar — pode fechar e voltar depois.", "Videos sent. HeyGen is training your avatar — you can close this page and come back later.", "Vídeos enviados. HeyGen está entrenando tu avatar; puedes cerrar la página y volver más tarde.")
                       : recovery?.hasTrainingVideo && !recovery.hasConsentVideo
                         ? t("Vídeo de treino salvo. Abra o fluxo para gravar o consentimento e finalizar.", "Training video saved. Open the flow to record consent and finish.", "Vídeo de entrenamiento guardado. Abre el flujo para grabar el consentimiento y terminar.")
-                        : t("Grave 2 vídeos curtos — cada um salvo automaticamente ao avançar.", "Record 2 short videos — each is saved automatically as you continue.", "Graba 2 vídeos cortos; cada uno se guarda automáticamente al continuar.")}
+                        : t("Grave um vídeo de treino e escolha consentir para guardá-lo na biblioteca privada. Depois grave o consentimento solicitado pelo HeyGen.", "Record a training video and choose whether to save it to your private library. Then record the consent requested by HeyGen.", "Graba un vídeo de entrenamiento y decide si quieres guardarlo en la biblioteca privada. Después graba el consentimiento que solicita HeyGen.")}
               </p>
 
               {/* ── Banner de consentimento pendente ──────────────────────── */}
@@ -1265,13 +1336,25 @@ export default function CloneDigitalPage() {
             </div>
           )}
 
+          <AvatarSampleLibrary
+            refreshKey={avatarLibraryRefresh}
+            onUseSample={(sampleId, videoUrl) => {
+              setSelectedAvatarSample({ sampleId, videoUrl });
+              setHasTrainingInGCS(false);
+              setActiveFlow("avatar");
+            }}
+          />
+
           {/* Inline avatar flow */}
           {activeFlow === "avatar" && !isTrainingPending && (
             <div className="mt-5">
               <AvatarCloneFlow
+                key={selectedAvatarSample?.sampleId ?? "new-avatar-training"}
                 initialStep={avatarInitialStep}
-                hasTrainingInGCS={hasTrainingInGCS && activeFlow === "avatar"}
-                onDone={() => { setActiveFlow(null); refreshAll(); }}
+                hasTrainingInGCS={hasTrainingInGCS && !selectedAvatarSample}
+                savedTrainingSample={selectedAvatarSample ?? undefined}
+                onSampleSaved={() => setAvatarLibraryRefresh((value) => value + 1)}
+                onDone={() => { setActiveFlow(null); setSelectedAvatarSample(null); refreshAll(); }}
               />
             </div>
           )}
