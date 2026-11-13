@@ -15,9 +15,11 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   ArrowLeft, CheckCheck, Loader2, Brain, Zap,
-  BookOpen, Clock, Archive, ChevronRight, Activity, RotateCw, List
+  BookOpen, Clock, Archive, ChevronRight, Activity, RotateCw, List,
+  AlertTriangle, Sparkles, CheckCircle2
 } from "lucide-react";
 import { StrategyMasterplan, parseStrategyInsights } from "./strategy-masterplan";
 import { MarketValidationReview } from "@/components/MarketValidationReview";
@@ -193,7 +195,7 @@ interface MasterplanVersion {
   contextFingerprint: string;
   readinessScore: number;
   readinessStatus: string;
-  readinessBlockers: string[];
+  readinessBlockers: Array<string | { message?: string }>;
   allowedActions: string[];
   requiredApprovals: string[];
   createdAt: string;
@@ -278,7 +280,7 @@ function MasterplanPanel({
                 <ul className="space-y-1">
                   {currentMp.readinessBlockers.map((b, i) => (
                     <li key={i} className="flex items-start gap-2 text-[10px] font-mono text-red-400/70">
-                      <span className="shrink-0 mt-0.5">◆</span> <span>{b}</span>
+                      <span className="shrink-0 mt-0.5">◆</span> <span>{typeof b === "string" ? b : b.message ?? t("Dado obrigatório ausente", "Required data missing", "Falta un dato obligatorio")}</span>
                     </li>
                   ))}
                 </ul>
@@ -370,6 +372,10 @@ export default function CampaignStrategyPage() {
 
   const [paidMediaDirty, setPaidMediaDirty] = useState(false);
   const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
+  const [triggerHelpDialogOpen, setTriggerHelpDialogOpen] = useState(false);
+  const [triggerHelpRunning, setTriggerHelpRunning] = useState(false);
+  const [triggerHelpComplete, setTriggerHelpComplete] = useState(false);
+  const [triggerHelpError, setTriggerHelpError] = useState("");
   const eventIdRef = useRef(0);
 
   // ── Campaign data ──────────────────────────────────────────────────────────
@@ -420,11 +426,12 @@ export default function CampaignStrategyPage() {
         },
       ]);
     },
-    campaign?.status === "analyzing",
+    campaign?.status === "analyzing" || triggerHelpRunning,
   );
 
   // ── Masterplan Versions ───────────────────────────────────────────────────
   const isAnalyzingStatus = campaign?.status === "analyzing";
+
   const { data: currentMpRes, isLoading: isMpLoading } = useQuery<{ masterplan: MasterplanVersion }>({
     queryKey: ["/api/campaigns", campaignId, "masterplan", "current"],
     queryFn: () => customFetch(`/api/campaigns/${campaignId}/masterplan/current`),
@@ -456,6 +463,24 @@ export default function CampaignStrategyPage() {
     onError: (err: any) => {
       toast.error(err?.data?.error || t("Falha ao atualizar masterplan.", "Failed to update master plan.", "No se pudo actualizar el plan maestro."));
     }
+  });
+
+  const completeTriggerStrategyMutation = useMutation({
+    mutationFn: () => customFetch(`/api/campaigns/${campaignId}/masterplan/repair-trigger-map`, {
+      method: "POST",
+    }),
+    onSuccess: () => {
+      setTriggerHelpError("");
+      setTriggerHelpRunning(false);
+      setTriggerHelpComplete(true);
+      queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan"] });
+      window.setTimeout(() => window.location.reload(), 1200);
+    },
+    onError: (err: any) => {
+      setTriggerHelpRunning(false);
+      setTriggerHelpError(err?.data?.error || t("Não foi possível iniciar a análise dos agentes.", "Could not start the agents' analysis.", "No se pudo iniciar el análisis de los agentes."));
+    },
   });
 
   const approveMpMutation = useMutation({
@@ -491,6 +516,10 @@ export default function CampaignStrategyPage() {
   });
 
   const handleApprove = () => {
+    if (currentMp && currentMp.readinessStatus !== "ready") {
+      toast.error(t("O plano está incompleto. Preencha os módulos indicados em Bloqueios antes de avançar.", "The plan is incomplete. Fill the modules listed under Blockers before continuing.", "El plan está incompleto. Completa los módulos indicados en Bloqueos antes de continuar."), { duration: 7000 });
+      return;
+    }
     if (currentMp && currentMp.status !== "approved") {
       approveMpMutation.mutate({ version: currentMp.version });
     } else {
@@ -498,6 +527,18 @@ export default function CampaignStrategyPage() {
     }
   };
   const isApproving = approveMpMutation.isPending || executeMutation.isPending;
+  const strategyCanAdvance = currentMp?.readinessStatus === "ready";
+  const requestTriggerHelp = () => {
+    setTriggerHelpError("");
+    setTriggerHelpComplete(false);
+    setTriggerHelpDialogOpen(true);
+  };
+
+  const confirmTriggerHelp = () => {
+    setTriggerHelpRunning(true);
+    setLiveEvents([]);
+    completeTriggerStrategyMutation.mutate();
+  };
 
   // ── Derived data ───────────────────────────────────────────────────────────
   if (isLoading) {
@@ -650,7 +691,7 @@ export default function CampaignStrategyPage() {
               </div>
               <Button
                 onClick={handleApprove}
-                disabled={isApproving || paidMediaDirty}
+                disabled={isApproving || paidMediaDirty || !strategyCanAdvance}
                 className="shrink-0 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-10 text-xs px-6"
               >
                 {isApproving
@@ -676,6 +717,8 @@ export default function CampaignStrategyPage() {
                 campaignTitle={campaignTitle}
                 track={track}
                 userIdentity={userIdentity}
+                onRequestTriggerHelp={requestTriggerHelp}
+                triggerHelpPending={completeTriggerStrategyMutation.isPending}
               />
             ) : (
               <div className="py-20 text-center border border-border/20">
@@ -696,7 +739,7 @@ export default function CampaignStrategyPage() {
                 </div>
                 <Button
                   onClick={handleApprove}
-                  disabled={isApproving}
+                  disabled={isApproving || !strategyCanAdvance}
                   className="shrink-0 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-10 text-xs px-6"
                 >
                   {isApproving
@@ -780,6 +823,103 @@ export default function CampaignStrategyPage() {
           </div>
         )}
       </div>
+
+      <Dialog
+        open={triggerHelpDialogOpen}
+        onOpenChange={(open) => {
+          if (triggerHelpRunning) return;
+          setTriggerHelpDialogOpen(open);
+          if (!open) setTriggerHelpComplete(false);
+        }}
+      >
+        <DialogContent
+          className={`max-w-lg overflow-hidden border border-violet-400/30 bg-[#090b11] p-0 shadow-[0_24px_100px_rgba(0,0,0,0.7)] ${triggerHelpRunning ? "[&>button:last-child]:hidden" : ""}`}
+          onEscapeKeyDown={(event) => { if (triggerHelpRunning) event.preventDefault(); }}
+          onInteractOutside={(event) => { if (triggerHelpRunning) event.preventDefault(); }}
+        >
+          <div className="h-1 bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-400" />
+          <div className="p-6 sm:p-7">
+            <DialogHeader className="text-left">
+              <div className={`mb-4 flex h-11 w-11 items-center justify-center border ${triggerHelpRunning ? "border-cyan-400/30 bg-cyan-400/10 text-cyan-300" : triggerHelpComplete ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-violet-400/30 bg-violet-400/10 text-violet-300"}`}>
+                {triggerHelpRunning
+                  ? <Loader2 className="h-5 w-5 animate-spin" />
+                  : triggerHelpComplete
+                    ? <CheckCircle2 className="h-5 w-5" />
+                    : <Sparkles className="h-5 w-5" />}
+              </div>
+              <DialogTitle className="font-mono text-base font-black uppercase tracking-wider text-foreground">
+                {triggerHelpRunning
+                  ? t("Completando os gatilhos", "Completing the triggers", "Completando los disparadores")
+                  : triggerHelpComplete
+                    ? t("Estratégia atualizada", "Strategy updated", "Estrategia actualizada")
+                    : t("Completar a seção de gatilhos?", "Complete the trigger section?", "¿Completar la sección de disparadores?")}
+              </DialogTitle>
+              <DialogDescription className="pt-2 text-sm leading-relaxed text-muted-foreground">
+                {triggerHelpRunning
+                  ? t("Os agentes estão preenchendo apenas os campos ausentes da seção 07. A estratégia e os conteúdos existentes serão preservados. A página será atualizada ao concluir.", "The agents are filling only the missing fields in section 07. Your strategy and existing content will be preserved. This page will refresh when complete.", "Los agentes están completando solo los campos faltantes de la sección 07. Se conservarán la estrategia y el contenido existentes. La página se actualizará al terminar.")
+                  : triggerHelpComplete
+                    ? t("Os agentes finalizaram. Atualizando os dados da campanha…", "The agents are done. Refreshing campaign data…", "Los agentes terminaron. Actualizando los datos de la campaña…")
+                    : t("Você não precisa conhecer termos de marketing. Os agentes usam o briefing para completar somente os gatilhos que faltam, mantendo as decisões e os conteúdos já existentes.", "You do not need to know marketing terminology. The agents use your brief to fill only missing triggers while keeping existing decisions and content.", "No necesitas conocer términos de marketing. Los agentes usan tu briefing para completar solo los disparadores que faltan y conservar las decisiones y el contenido existentes.")}
+              </DialogDescription>
+            </DialogHeader>
+
+            {!triggerHelpRunning && !triggerHelpComplete && (
+              <div className="mt-5 space-y-3">
+                <div className="border border-amber-400/20 bg-amber-400/[0.05] p-3.5">
+                  <div className="flex items-start gap-2.5">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+                    <div>
+                      <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-amber-200">{t("O que vai acontecer", "What will happen", "Qué sucederá")}</p>
+                      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                        {t("A IA vai completar os campos ausentes da seção 07 e gerar uma nova versão do Masterplan para revisão. A estratégia e os conteúdos existentes serão preservados. Esta ação consome créditos.", "AI will fill the missing fields in section 07 and create a new master plan version for review. Existing strategy and content will be preserved. This uses credits.", "La IA completará los campos faltantes de la sección 07 y generará una nueva versión del plan maestro para revisión. Se conservarán la estrategia y el contenido existentes. Esta acción consume créditos.")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <p className="font-mono text-[9px] leading-relaxed text-muted-foreground/60">
+                  {t("Se os dados do briefing não forem suficientes, a seção continuará bloqueada e o sistema mostrará o que ainda falta.", "If the brief does not contain enough information, the section will remain blocked and the system will show what is still missing.", "Si el briefing no contiene información suficiente, la sección seguirá bloqueada y el sistema indicará qué falta.")}
+                </p>
+              </div>
+            )}
+
+            {triggerHelpRunning && (
+              <div className="mt-5 space-y-3">
+                <div className="h-1.5 overflow-hidden bg-white/5">
+                  <div className="h-full w-full animate-pulse bg-gradient-to-r from-blue-500 to-violet-500" />
+                </div>
+                <div className="max-h-32 space-y-1.5 overflow-y-auto border border-white/5 bg-black/20 p-3">
+                  {(liveEvents.slice(-4).length ? liveEvents.slice(-4) : [{ id: "starting", message: t("Preparando os agentes e carregando o briefing…", "Preparing the agents and loading the brief…", "Preparando los agentes y cargando el briefing…"), timestamp: "", type: "info" }]).map((event) => (
+                    <div key={event.id} className="flex items-start gap-2 font-mono text-[10px] leading-relaxed text-muted-foreground/75">
+                      <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-cyan-400" />
+                      <span>{event.message}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="font-mono text-[9px] text-muted-foreground/50">{t("A correção é pontual; esta janela mostra o andamento e será fechada após a atualização.", "This is a targeted repair; progress appears here and this dialog closes after refresh.", "La corrección es puntual; el progreso aparece aquí y este cuadro se cerrará tras actualizar.")}</p>
+              </div>
+            )}
+
+            {triggerHelpError && (
+              <div role="alert" className="mt-4 border border-red-400/25 bg-red-400/[0.06] p-3 text-xs leading-relaxed text-red-200/90">
+                {triggerHelpError}
+              </div>
+            )}
+
+            {!triggerHelpRunning && !triggerHelpComplete && (
+              <DialogFooter className="mt-6 flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button variant="outline" onClick={() => setTriggerHelpDialogOpen(false)} className="rounded-none font-mono text-[10px] uppercase tracking-wider">
+                  {t("Agora não", "Not now", "Ahora no")}
+                </Button>
+                <Button onClick={confirmTriggerHelp} disabled={completeTriggerStrategyMutation.isPending} className="rounded-none bg-gradient-to-r from-blue-600 to-violet-600 font-mono text-[10px] font-bold uppercase tracking-wider text-white hover:brightness-110">
+                  {completeTriggerStrategyMutation.isPending
+                    ? <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />{t("Iniciando…", "Starting…", "Iniciando…")}</>
+                    : <><Sparkles className="mr-2 h-3.5 w-3.5" />{t("Completar gatilhos", "Complete triggers", "Completar disparadores")}</>}
+                </Button>
+              </DialogFooter>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

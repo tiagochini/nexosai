@@ -4,6 +4,8 @@ import { buildPsychologicalProfileBlock } from "./profile-injector.js";
 import type { StrategicBrief } from "./strategic-core.agent.js";
 import type { Logger } from "pino";
 import { COGNITIVE_IDENTITY_STRATEGY } from "./cognitive-identity-system.js";
+import { randomUUID } from "node:crypto";
+import { fillMissingTriggerMapFields, missingTriggerMapFields } from "@workspace/api-zod";
 
 export interface StrategyOutput {
   executiveSummary: string;
@@ -63,6 +65,54 @@ export interface StrategyOutput {
     antiRequisiteAngles: string[];
     transformationBridge: string;
   };
+  strategyValidation?: {
+    triggerMapStatus: "complete" | "incomplete";
+    triggerMapAttempts: number;
+    missingTriggerFields: string[];
+  };
+}
+
+export async function completeMissingTriggerMap(
+  campaignId: string,
+  workspaceId: string,
+  intakeData: Record<string, unknown>,
+  currentStrategy: Record<string, unknown>,
+  log: Logger,
+  attempt = 1,
+): Promise<Record<string, unknown>> {
+  const strategyTriggerMap = (currentStrategy["triggerMap"] && typeof currentStrategy["triggerMap"] === "object")
+    ? currentStrategy["triggerMap"] as Record<string, unknown>
+    : {};
+  const missing = missingTriggerMapFields(strategyTriggerMap);
+  if (missing.length === 0) return strategyTriggerMap;
+
+  const output = await runAgent({
+    campaignId,
+    workspaceId,
+    agentRole: "strategy",
+    systemPrompt: "Você é o estrategista responsável por completar somente campos ausentes do mapa de gatilhos. Use o briefing e a estratégia existente. Não altere decisões existentes. Não invente vendas, depoimentos, métricas ou provas. Quando não houver evidência, formule recomendações como hipóteses ou indique como coletar a prova. Retorne JSON válido e nenhum texto fora do JSON.",
+    profileContext: buildPsychologicalProfileBlock(intakeData),
+    messages: [{
+      role: "user",
+      content: `Complete SOMENTE os campos abaixo no triggerMap desta campanha. Escreva recomendações objetivas, específicas ao briefing e compreensíveis para alguém sem experiência em marketing.\n\nCampos que faltam:\n${missing.map((field) => `- ${field.path}: ${field.label} (${field.kind})`).join("\n")}\n\nBriefing da campanha:\n${JSON.stringify(intakeData, null, 2)}\n\nEstratégia existente (preserve suas decisões):\n${JSON.stringify(currentStrategy, null, 2)}\n\nRetorne neste formato, contendo os campos necessários sob triggerMap:\n{"triggerMap":{"preLaunch":{"triggerLogic":"...","triggerStack":["..."]},"cartOpen":{"triggerLogic":"...","triggerStack":["..."]},"cartClose":{"triggerLogic":"...","triggerStack":["..."]},"remarketing":{"triggerLogic":"...","triggerStack":["..."]},"dominantTrigger":"...","dominantTriggerJustification":"...","triggerStackSequence":["..."],"socialProofBlueprint":"...","antiRequisiteAngles":["..."],"transformationBridge":"..."}}`,
+    }],
+    log,
+    maxTokens: 7000,
+    pipelineMode: true,
+    skipAllStaticLayers: true,
+    requiresApproval: false,
+    idempotencyKeyOverride: `${campaignId}:trigger-map-repair:${attempt}:${randomUUID()}`,
+    thinkingMessages: ["Completando os campos ausentes da engenharia de gatilhos com base no briefing..."],
+  });
+
+  const parsed = parseAgentJSON<Record<string, unknown>>(output.content, {});
+  const proposed = parsed["triggerMap"] && typeof parsed["triggerMap"] === "object"
+    ? parsed["triggerMap"] as Record<string, unknown>
+    : parsed;
+  const merged = fillMissingTriggerMapFields(strategyTriggerMap, proposed, missing);
+  const remaining = missingTriggerMapFields(merged);
+  log.info({ campaignId, attempt, fieldsRequested: missing.length, fieldsRemaining: remaining.map((field) => field.path) }, "Trigger map repair response validated");
+  return merged;
 }
 
 const STRATEGY_SYSTEM_PROMPT = `Você é o Agente de Estratégia Sênior da NexOS AI.
@@ -471,7 +521,7 @@ Retorne APENAS o JSON da estratégia, nada mais.`,
     ],
   });
 
-  return parseAgentJSON<StrategyOutput>(result.content, {
+  const strategy = parseAgentJSON<StrategyOutput>(result.content, {
     executiveSummary: result.content,
     bigDomino: "",
     marketDiagnosis: {
@@ -520,4 +570,37 @@ Retorne APENAS o JSON da estratégia, nada mais.`,
     strategistNotes: "",
     triggerMap: undefined,
   });
+
+  const initialMissing = missingTriggerMapFields(strategy.triggerMap);
+  if (initialMissing.length === 0) {
+    return {
+      ...strategy,
+      strategyValidation: { triggerMapStatus: "complete", triggerMapAttempts: 1, missingTriggerFields: [] },
+    };
+  }
+
+  log.warn({ campaignId, missingFields: initialMissing.map((field) => field.path) }, "Strategy output missing trigger map fields; starting targeted repair");
+  try {
+    const repairedTriggerMap = await completeMissingTriggerMap(campaignId, workspaceId, intakeData, strategy as unknown as Record<string, unknown>, log, 1);
+    const remaining = missingTriggerMapFields(repairedTriggerMap);
+    if (remaining.length === 0) {
+      return {
+        ...strategy,
+        triggerMap: repairedTriggerMap as StrategyOutput["triggerMap"],
+        strategyValidation: { triggerMapStatus: "complete", triggerMapAttempts: 2, missingTriggerFields: [] },
+      };
+    }
+    log.error({ campaignId, remainingFields: remaining.map((field) => field.path) }, "Trigger map remains incomplete after targeted repair");
+    return {
+      ...strategy,
+      triggerMap: repairedTriggerMap as StrategyOutput["triggerMap"],
+      strategyValidation: { triggerMapStatus: "incomplete", triggerMapAttempts: 2, missingTriggerFields: remaining.map((field) => field.path) },
+    };
+  } catch (repairError) {
+    log.error({ err: repairError, campaignId, missingFields: initialMissing.map((field) => field.path) }, "Automatic trigger map repair failed");
+    return {
+      ...strategy,
+      strategyValidation: { triggerMapStatus: "incomplete", triggerMapAttempts: 2, missingTriggerFields: initialMissing.map((field) => field.path) },
+    };
+  }
 }

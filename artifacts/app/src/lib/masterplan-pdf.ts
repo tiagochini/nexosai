@@ -1,5 +1,6 @@
 import jsPDF, { GState } from "jspdf";
 import { pdfText } from "./pdf-text";
+import { missingTriggerMapFields } from "./trigger-map-contract";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -736,7 +737,7 @@ export function generateMasterplanPDF(
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7.5);
       setColor(doc, 100, 70, 160);
-      doc.text("5.4 — Gatilhos e Objeções", ML, y); y += 4;
+      doc.text("5.4 — Gatilhos de Compra e Objeções do Avatar", ML, y); y += 4;
       if (triggers.length) {
         doc.setFont("helvetica", "bold");
         doc.setFontSize(7);
@@ -828,11 +829,48 @@ export function generateMasterplanPDF(
   const transf = str(tm["transformationBridge"]);
   const antiReq = arr(tm["antiRequisiteAngles"]);
   const socialBP = str(tm["socialProofBlueprint"]);
+  const missingTriggerFields = missingTriggerMapFields(tm);
+  const triggerPhases = [
+    ["PRÉ-LANÇAMENTO", tm["preLaunch"]],
+    ["ABERTURA DO CARRINHO", tm["cartOpen"]],
+    ["FECHAMENTO DO CARRINHO", tm["cartClose"]],
+    ["REMARKETING", tm["remarketing"]],
+  ] as const;
 
-  if (domTrigger || tSeq.length || transf) {
-    y = checkBreak(doc, y, 20);
-    y = renderSection(doc, "07", "ENGENHARIA DE GATILHOS", y);
+  y = checkBreak(doc, y, 20);
+  y = renderSection(doc, "07", "ENGENHARIA DE GATILHOS", y);
 
+  const hasPhaseData = triggerPhases.some(([, value]) => {
+    const phase = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+    return str(phase["triggerLogic"]) || arr(phase["triggerStack"]).length > 0;
+  });
+  if (!domTrigger && !tSeq.length && !transf && !antiReq.length && !socialBP && !hasPhaseData) {
+    y = bodyText(doc, "Aguardando dados específicos de engenharia de gatilhos. Os gatilhos de compra listados na seção 5.4 descrevem o avatar e não substituem esta análise.", y);
+    if (missingTriggerFields.length) {
+      y = bodyText(doc, `Campos obrigatórios pendentes: ${missingTriggerFields.map((field) => field.label).join("; ")}. Esta seção ainda não está concluída.`, y);
+    }
+  } else {
+    if (missingTriggerFields.length) {
+      y = bodyText(doc, `Seção incompleta — ainda faltam: ${missingTriggerFields.map((field) => field.label).join("; ")}. Estes itens permanecem pendentes de validação e não devem ser tratados como plano concluído.`, y);
+      y += 2;
+    }
+    if (hasPhaseData) {
+      y = checkBreak(doc, y, 20);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7.5);
+      setColor(doc, 100, 70, 160);
+      doc.text("7.0 — Sequência por Fase da Campanha", ML, y); y += 4;
+      for (const [label, value] of triggerPhases) {
+        const phase = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+        const logic = str(phase["triggerLogic"]);
+        const stack = arr(phase["triggerStack"]);
+        if (!logic && !stack.length) continue;
+        y = checkBreak(doc, y, 10);
+        y = labeledText(doc, label, logic, y);
+        if (stack.length) y = bulletList(doc, stack, y, [100, 60, 170]);
+      }
+      y += 2;
+    }
     if (domTrigger) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7.5);
@@ -878,8 +916,8 @@ export function generateMasterplanPDF(
       y = checkBreak(doc, y, 10);
       y = labeledText(doc, "Blueprint de Prova Social", socialBP, y);
     }
-    y += 4;
   }
+  y += 4;
 
   // ── M08 — MÉTRICAS
   const met = data.metrics;

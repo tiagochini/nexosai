@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db, campaignsTable, masterplanVersionsTable, agentClarificationRequestsTable, auditLogsTable, commercialSubscriptionsTable, productIntakesTable } from "@workspace/db";
+import { fillMissingTriggerMapFields, missingTriggerMapFields, REQUIRED_TRIGGER_MAP_FIELDS } from "@workspace/api-zod";
 import { NotFoundError, AppError } from "../../lib/errors.js";
 import { PRODUCT_AUTONOMY_CONTRACT } from "../autonomy/autonomy.service.js";
 import { latestRegionalIntelligenceSummary } from "../market-intel/regional-intelligence.service.js";
+import { completeMissingTriggerMap } from "../agents/strategy.agent.js";
 
 import { assertPaidMediaApprovalMatchesCampaign, paidMediaSnapshotFields } from "../paid-media/paid-media-setup.service.js";
 
@@ -23,6 +25,66 @@ export function matchesApprovedDossier(
     && approved.contextFingerprint === binding.contextFingerprint);
 }
 const object = (value: unknown): Json => value && typeof value === "object" && !Array.isArray(value) ? value as Json : {};
+const nonEmptyText = (value: unknown): boolean => typeof value === "string" && value.trim().length >= 3;
+const nonEmptyList = (value: unknown): boolean => Array.isArray(value) && value.some((item) => nonEmptyText(item));
+
+/** Unwrap legacy responses that stored the model JSON inside executiveSummary. */
+function strategyPayload(value: unknown): Json {
+  const source = object(value);
+  const summary = source["executiveSummary"];
+  if (typeof summary === "string") {
+    try {
+      const parsed: unknown = JSON.parse(summary.replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, ""));
+      const nested = object(parsed);
+      if (["bigDomino", "marketDiagnosis", "offerPositioning", "audienceSegmentation", "campaignArchitecture", "successMetrics", "risks", "triggerMap", "strategistNotes"]
+        .some((key) => key in nested)) return { ...source, ...nested };
+    } catch { /* malformed/truncated output stays incomplete */ }
+  }
+  const hasStructuredStrategy = ["bigDomino", "marketDiagnosis", "offerPositioning", "audienceSegmentation", "campaignArchitecture", "successMetrics", "risks", "triggerMap", "strategistNotes"]
+    .some((key) => key in source);
+  if (hasStructuredStrategy) return source;
+  return source;
+}
+
+const REQUIRED_STRATEGY_FIELDS: Array<{ path: string; label: string; kind?: "list" | "text" | "number" }> = [
+  { path: "executiveSummary", label: "Resumo executivo" },
+  { path: "bigDomino", label: "Big Domino" },
+  { path: "marketDiagnosis.marketMaturity", label: "Maturidade do mercado" },
+  { path: "marketDiagnosis.competitiveLandscape", label: "Cenário competitivo" },
+  { path: "marketDiagnosis.entryBarriers", label: "Barreiras de entrada", kind: "list" },
+  { path: "marketDiagnosis.opportunities", label: "Oportunidades", kind: "list" },
+  { path: "marketDiagnosis.threats", label: "Ameaças", kind: "list" },
+  { path: "offerPositioning.uniqueValueProposition", label: "Proposta de valor" },
+  { path: "offerPositioning.primaryDifferentiator", label: "Diferencial principal" },
+  { path: "offerPositioning.positioning", label: "Posicionamento" },
+  { path: "offerPositioning.priceJustification", label: "Justificativa de preço" },
+  { path: "offerPositioning.competitiveAdvantages", label: "Vantagens competitivas", kind: "list" },
+  { path: "audienceSegmentation.primaryAvatar", label: "Avatar principal" },
+  { path: "audienceSegmentation.psychographicProfile", label: "Perfil psicográfico" },
+  { path: "audienceSegmentation.buyingTriggers", label: "Gatilhos de compra", kind: "list" },
+  { path: "audienceSegmentation.objections", label: "Objeções", kind: "list" },
+  { path: "audienceSegmentation.sophisticationStrategy", label: "Estratégia de sofisticação" },
+  { path: "campaignArchitecture.coreNarrative", label: "Narrativa central" },
+  { path: "campaignArchitecture.emotionalHook", label: "Gancho emocional" },
+  { path: "campaignArchitecture.keyMessages", label: "Mensagens-chave", kind: "list" },
+  { path: "campaignArchitecture.contentPillars", label: "Pilares de conteúdo", kind: "list" },
+  { path: "campaignArchitecture.platformDistributionStrategy", label: "Distribuição por plataforma" },
+  { path: "campaignArchitecture.callToActionStrategy", label: "Estratégia de chamada para ação" },
+  { path: "successMetrics.primaryKPI", label: "KPI principal" },
+  { path: "successMetrics.conversionRateTarget", label: "Meta de conversão", kind: "number" },
+  { path: "successMetrics.launchWindow", label: "Janela da campanha" },
+  { path: "successMetrics.criticalAssumptions", label: "Premissas críticas", kind: "list" },
+  { path: "risks.level", label: "Nível de risco" },
+  { path: "risks.mainRisks", label: "Riscos principais", kind: "list" },
+  { path: "risks.mitigations", label: "Mitigações", kind: "list" },
+  { path: "strategistNotes", label: "Observações do estrategista" },
+  ...REQUIRED_TRIGGER_MAP_FIELDS.map((field) => ({ path: `triggerMap.${field.path}`, label: field.label, kind: field.kind })),
+];
+
+function getPath(source: Json, path: string): unknown {
+  return path.split(".").reduce<unknown>((current, key) => object(current)[key], source);
+}
+
 export function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalize);
   if (value && typeof value === "object") {
@@ -34,13 +96,20 @@ export function deterministicHash(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(canonicalize(value))).digest("hex");
 }
 export function calculateMasterplanReadiness(strategyData: unknown, pendingClarifications: { id: string; question: string }[]) {
-  const missingStrategy = Object.keys(object(strategyData)).length === 0;
+  const strategy = strategyPayload(strategyData);
+  const missingFields = REQUIRED_STRATEGY_FIELDS.filter(({ path, kind }) => {
+    const value = getPath(strategy, path);
+    if (kind === "list") return !nonEmptyList(value);
+    if (kind === "number") return typeof value !== "number" || !Number.isFinite(value) || value <= 0;
+    return !nonEmptyText(value);
+  });
+  const missingStrategy = missingFields.length > 0;
   const blockers = [
     ...pendingClarifications.map((item) => ({ type: "clarification", id: item.id, message: item.question })),
-    ...(missingStrategy ? [{ type: "strategy", message: "Estratégia ainda não foi materializada." }] : []),
+    ...missingFields.map(({ path, label }) => ({ type: "strategy", id: path, message: `Campo obrigatório ausente: ${label}.` })),
   ];
-  const score = Math.max(0, 100 - blockers.length * 25);
-  return { blockers, score, status: missingStrategy || score < 50 ? "blocked" : blockers.length ? "needs_attention" : "ready" };
+  const score = Math.round(((REQUIRED_STRATEGY_FIELDS.length - missingFields.length) / REQUIRED_STRATEGY_FIELDS.length) * 100);
+  return { blockers, score, status: missingStrategy || pendingClarifications.length ? "blocked" : "ready" };
 }
 
 export async function listMasterplanVersions(workspaceId: string, campaignId: string) {
@@ -132,12 +201,82 @@ export async function materializeMasterplan(workspaceId: string, campaignId: str
   return created;
 }
 
+/** Completes only missing trigger-map fields, retaining the existing strategy and generated assets. */
+export async function repairMasterplanTriggerMap(workspaceId: string, campaignId: string, actorId: string, log: any) {
+  const [campaign] = await db.select().from(campaignsTable).where(and(
+    eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId),
+  )).limit(1);
+  if (!campaign) throw new NotFoundError("Campaign");
+  if (!["strategy_ready", "awaiting_approval"].includes(campaign.status)) {
+    throw new AppError(409, "Os gatilhos só podem ser completados enquanto o Masterplan aguarda revisão.", "TRIGGER_MAP_REPAIR_NOT_AVAILABLE");
+  }
+
+  const originalStrategy = strategyPayload(campaign.strategyData);
+  const originalMap = object(originalStrategy["triggerMap"]);
+  const missingBefore = missingTriggerMapFields(originalMap);
+  if (!missingBefore.length) {
+    const masterplan = await materializeMasterplan(workspaceId, campaignId, actorId, true);
+    return { masterplan, repairedFields: [], readiness: { status: masterplan?.readinessStatus, score: masterplan?.readinessScore, blockers: masterplan?.readinessBlockers } };
+  }
+
+  const proposedStrategy = await completeMissingTriggerMap(
+    campaignId,
+    workspaceId,
+    object(campaign.intakeData),
+    { ...originalStrategy, triggerMap: originalMap },
+    log,
+    1,
+  );
+  const proposedMap = object(proposedStrategy["triggerMap"]);
+  const proposedMissing = missingTriggerMapFields(proposedMap);
+  if (proposedMissing.length) {
+    const blockers = proposedMissing.map((field) => ({ path: `triggerMap.${field.path}`, label: field.label }));
+    await db.insert(auditLogsTable).values({
+      workspaceId, campaignId, action: "masterplan.trigger_map_repair_failed", actor: actorId,
+      data: { missingFields: blockers.map((field) => field.path) },
+    });
+    throw new AppError(422, "Ainda faltam informações para completar a seção de gatilhos. O Masterplan continua bloqueado.", "TRIGGER_MAP_INCOMPLETE", { blockers });
+  }
+
+  const repairedFields: string[] = [];
+  const strategyValidation = { triggerMapStatus: "complete", triggerMapAttempts: 1, missingTriggerFields: [] };
+  await db.transaction(async (tx) => {
+    const [currentCampaign] = await tx.select({ strategyData: campaignsTable.strategyData, intakeData: campaignsTable.intakeData, status: campaignsTable.status })
+      .from(campaignsTable).where(and(
+        eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId),
+      )).for("update").limit(1);
+    if (!currentCampaign) throw new NotFoundError("Campaign");
+    if (!["strategy_ready", "awaiting_approval"].includes(currentCampaign.status)) {
+      throw new AppError(409, "A campanha mudou de etapa. Atualize a página antes de completar os gatilhos.", "TRIGGER_MAP_REPAIR_NOT_AVAILABLE");
+    }
+    const currentStrategy = strategyPayload(currentCampaign.strategyData);
+    const currentMap = object(currentStrategy["triggerMap"]);
+    const stillMissing = missingTriggerMapFields(currentMap);
+    const repairedMap = fillMissingTriggerMapFields(currentMap, proposedMap, stillMissing);
+    const remaining = missingTriggerMapFields(repairedMap);
+    if (remaining.length) {
+      throw new AppError(409, "Os dados da campanha mudaram durante a correção. Atualize e tente novamente.", "TRIGGER_MAP_CHANGED");
+    }
+    repairedFields.push(...stillMissing.map((field) => `triggerMap.${field.path}`));
+    await tx.update(campaignsTable).set({
+      strategyData: { ...currentStrategy, triggerMap: repairedMap, strategyValidation } as any,
+      updatedAt: new Date(),
+    }).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
+  });
+
+  const masterplan = await materializeMasterplan(workspaceId, campaignId, actorId, true);
+  await db.insert(auditLogsTable).values({
+    workspaceId, campaignId, action: "masterplan.trigger_map_repaired", actor: actorId,
+    data: { fields: repairedFields, masterplanId: masterplan?.id, readinessStatus: masterplan?.readinessStatus },
+  });
+  return { masterplan, repairedFields, readiness: { status: masterplan?.readinessStatus, score: masterplan?.readinessScore, blockers: masterplan?.readinessBlockers } };
+}
+
 export async function approveMasterplan(workspaceId: string, campaignId: string, version: number, actorId: string) {
   const [plan] = await db.select().from(masterplanVersionsTable).where(and(eq(masterplanVersionsTable.workspaceId, workspaceId), eq(masterplanVersionsTable.campaignId, campaignId), eq(masterplanVersionsTable.version, version))).limit(1);
   if (!plan) throw new NotFoundError("Masterplan");
   if (plan.status === "approved") return plan;
   if (plan.status === "superseded") throw new AppError(409, "Versão do Masterplan já foi substituída.", "MASTERPLAN_SUPERSEDED");
-  if (plan.readinessStatus === "blocked") throw new AppError(428, "Masterplan possui bloqueios de readiness.", "MASTERPLAN_NOT_READY", { blockers: plan.readinessBlockers });
   const now = new Date();
   await db.transaction(async (tx) => {
     // Serialize with executable briefing edits. Re-read after taking the same
@@ -145,6 +284,16 @@ export async function approveMasterplan(workspaceId: string, campaignId: string,
     const [campaign] = await tx.select({ strategyData: campaignsTable.strategyData, intakeData: campaignsTable.intakeData }).from(campaignsTable).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).for("update").limit(1);
     const [current] = await tx.select().from(masterplanVersionsTable).where(and(eq(masterplanVersionsTable.id, plan.id), eq(masterplanVersionsTable.workspaceId, workspaceId))).limit(1);
     if (!campaign || !current || current.status === "superseded") throw new AppError(409, "Versão do Master Plan substituída; atualize antes de aprovar.", "MASTERPLAN_SUPERSEDED");
+    const pending = await tx.select({ id: agentClarificationRequestsTable.id, question: agentClarificationRequestsTable.question })
+      .from(agentClarificationRequestsTable).where(and(
+        eq(agentClarificationRequestsTable.workspaceId, workspaceId),
+        eq(agentClarificationRequestsTable.campaignId, campaignId),
+        eq(agentClarificationRequestsTable.status, "pending"),
+      ));
+    const readiness = calculateMasterplanReadiness(campaign.strategyData, pending);
+    if (readiness.status !== "ready") {
+      throw new AppError(428, "Masterplan incompleto. Preencha todos os módulos obrigatórios antes de aprovar.", "MASTERPLAN_NOT_READY", { blockers: readiness.blockers, score: readiness.score });
+    }
     assertPaidMediaApprovalMatchesCampaign(campaign.strategyData, campaign.intakeData, current.snapshot);
     await tx.update(masterplanVersionsTable).set({ status: "superseded", supersededAt: now }).where(and(
       eq(masterplanVersionsTable.workspaceId, workspaceId), eq(masterplanVersionsTable.campaignId, campaignId), eq(masterplanVersionsTable.status, "approved"),

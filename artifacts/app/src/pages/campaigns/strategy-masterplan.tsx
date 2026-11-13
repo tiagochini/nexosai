@@ -3,7 +3,7 @@ import { useTextAnnotation, AnnotationToolbar, AnnotationDialog } from "@/compon
 import {
   Target, Users, Zap, BarChart3, Brain, ShieldAlert,
   TrendingUp, MessageSquare, Lightbulb, Flame, Star,
-  ChevronDown, Check, AlertTriangle, Pencil, X, Save,
+  ChevronDown, Check, AlertTriangle, Pencil, X, Save, Loader2,
   Award, Crosshair, Lock, Download, ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { generateMasterplanPDF, type PdfUserIdentity } from "@/lib/masterplan-pdf";
+import { missingTriggerMapFields } from "@/lib/trigger-map-contract";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useUiText } from "@/lib/i18n";
 
@@ -419,6 +420,11 @@ interface ModuleProps {
   onReject: (id: string) => void;
   onFlag: (id: string) => void;
   isEmpty?: boolean;
+  isIncomplete?: boolean;
+  emptyDescription?: [string, string, string];
+  emptyActionLabel?: [string, string, string];
+  onEmptyAction?: () => void;
+  emptyActionPending?: boolean;
 }
 
 const ACCENT_STYLES = {
@@ -429,7 +435,7 @@ const ACCENT_STYLES = {
   purple: { border: "border-l-violet-400/40", badge: "border-violet-400/25 text-violet-400/80 bg-violet-400/[0.04]", icon: "text-violet-400/70" },
 };
 
-function Module({ index, id, icon: Icon, title, subtitle, status, accentColor, children, onApprove, onReject, onFlag, isEmpty }: ModuleProps) {
+function Module({ index, id, icon: Icon, title, subtitle, status, accentColor, children, onApprove, onReject, onFlag, isEmpty, isIncomplete, emptyDescription, emptyActionLabel, onEmptyAction, emptyActionPending }: ModuleProps) {
   const t = useUiText();
   const titles: Record<string, [string, string, string]> = {
     "Diagnóstico Executivo": ["Diagnóstico Executivo", "Executive Diagnosis", "Diagnóstico ejecutivo"],
@@ -466,7 +472,7 @@ function Module({ index, id, icon: Icon, title, subtitle, status, accentColor, c
 
   if (isEmpty) {
     return (
-      <div className={`border border-white/7 border-l-2 border-l-white/10 bg-card/10 opacity-60`}>
+      <div className={`border border-white/7 border-l-2 border-l-white/10 bg-card/10 ${emptyActionLabel ? "" : "opacity-60"}`}>
         <div className="px-4 py-3.5 flex items-center gap-3">
           <div className={`shrink-0 w-7 h-7 border flex items-center justify-center border-white/10 text-muted-foreground/30 bg-white/[0.02]`}>
             <span className="font-mono text-[9px] font-bold">{String(index).padStart(2, "0")}</span>
@@ -480,6 +486,19 @@ function Module({ index, id, icon: Icon, title, subtitle, status, accentColor, c
             {t("Aguardando", "Waiting", "Pendiente")}
           </span>
         </div>
+        {emptyDescription && (
+          <div className="px-4 pb-3 pl-14 space-y-3">
+            <p className="font-mono text-[10px] leading-relaxed text-muted-foreground/65">
+              {t(...emptyDescription)}
+            </p>
+            {emptyActionLabel && onEmptyAction && (
+              <Button type="button" variant="outline" size="sm" onClick={onEmptyAction} disabled={emptyActionPending} className="font-mono text-[9px] uppercase tracking-wider rounded-none gap-2">
+                {emptyActionPending ? <span className="animate-spin">◌</span> : <Brain className="h-3 w-3" />}
+                {t(...emptyActionLabel)}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -501,6 +520,11 @@ function Module({ index, id, icon: Icon, title, subtitle, status, accentColor, c
           <div className="font-mono text-[9px] text-muted-foreground/40 mt-0.5 truncate">{subtitles[subtitle] ? t(...subtitles[subtitle]) : subtitle}</div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {isIncomplete && (
+            <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border border-amber-500/30 text-amber-300/80 bg-amber-500/[0.05]">
+              {t("Dados pendentes", "Missing data", "Datos pendientes")}
+            </span>
+          )}
           {status === "approved" && (
             <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border border-emerald-500/35 text-emerald-400/80 bg-emerald-500/[0.06]">✓ {t("Aprovado", "Approved", "Aprobado")}</span>
           )}
@@ -640,11 +664,13 @@ interface StrategyMasterplanProps {
   campaignId?: string;
   campaignTitle?: string;
   track?: string;
+  onRequestTriggerHelp?: () => void;
+  triggerHelpPending?: boolean;
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, campaignTitle, track }: StrategyMasterplanProps) {
+export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, campaignTitle, track, onRequestTriggerHelp, triggerHelpPending = false }: StrategyMasterplanProps) {
   const t = useUiText();
   const hasIns = Object.keys(ins).length > 0;
   const src = hasIns ? ins : strategyD;
@@ -677,6 +703,13 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
   const metrics      = obj(src["successMetrics"]       ?? strategyD["successMetrics"]);
   const risks        = obj(src["risks"]                ?? strategyD["risks"]);
   const triggerMap   = obj(src["triggerMap"]           ?? strategyD["triggerMap"]);
+  const missingTriggerFields = missingTriggerMapFields(triggerMap);
+  const triggerPhases = [
+    { key: "preLaunch", label: "Pré-lançamento" },
+    { key: "cartOpen", label: "Abertura do carrinho" },
+    { key: "cartClose", label: "Fechamento do carrinho" },
+    { key: "remarketing", label: "Remarketing" },
+  ].map((phase) => ({ ...phase, data: obj(triggerMap[phase.key]) }));
 
   const revenueTarget   = num(metrics["revenueTarget"]);
   const conversionRate  = num(metrics["conversionRateTarget"]);
@@ -950,7 +983,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
         )}
         {(arr(audience["buyingTriggers"]).length > 0 || arr(audience["objections"]).length > 0) && (
           <div>
-            <SectionLabel n="5.4">Gatilhos e Objeções</SectionLabel>
+            <SectionLabel n="5.4">Gatilhos de Compra e Objeções do Avatar</SectionLabel>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {arr(audience["buyingTriggers"]).length > 0 && (
                 <div>
@@ -1028,11 +1061,58 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
       <Module index={7} id="triggers" icon={Flame}
         title="Engenharia de Gatilhos" subtitle="Gatilho dominante, sequência de ativação, ponte de transformação"
         status={getStatus("triggers")} accentColor="red"
+        emptyDescription={[
+          "Você não precisa saber esses termos. Os gatilhos da seção 5.4 descrevem o comprador; os agentes devem transformar isso em uma sequência para a campanha. Peça uma nova análise usando o briefing como base.",
+          "You do not need to know these terms. Section 5.4 describes the buyer; the agents should turn that into a campaign sequence. Ask for a new analysis based on the brief.",
+          "No necesitas conocer estos términos. La sección 5.4 describe al comprador; los agentes deben convertirlo en una secuencia de campaña. Pide un nuevo análisis basado en el briefing.",
+        ]}
+        emptyActionLabel={[
+          "Pedir aos agentes para completar",
+          "Ask agents to complete this section",
+          "Pedir a los agentes que completen esta sección",
+        ]}
+        onEmptyAction={onRequestTriggerHelp}
+        emptyActionPending={triggerHelpPending}
         onApprove={id => setStatus(id, "approved")}
         onReject={id => setStatus(id, "rejected")}
         onFlag={id => setStatus(id, "flagged")}
         isEmpty={!dominantTrigger && triggerSequence.length === 0 && !transformBridge}
+        isIncomplete={missingTriggerFields.length > 0}
       >
+        {missingTriggerFields.length > 0 && (
+          <div className="border border-amber-400/20 bg-amber-400/[0.04] p-3">
+            <div className="font-mono text-[9px] font-bold uppercase tracking-wider text-amber-200">{t("Ainda faltam itens nesta seção", "This section still has missing items", "Aún faltan elementos en esta sección")}</div>
+            <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+              {missingTriggerFields.slice(0, 4).map(field => field.label).join(" · ")}
+              {missingTriggerFields.length > 4 ? ` · +${missingTriggerFields.length - 4}` : ""}
+            </p>
+            {onRequestTriggerHelp && (
+              <Button type="button" variant="outline" size="sm" onClick={onRequestTriggerHelp} disabled={triggerHelpPending} className="mt-2 rounded-none font-mono text-[9px] uppercase tracking-wider">
+                {triggerHelpPending ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Brain className="mr-2 h-3 w-3" />}
+                {t("Pedir conclusão aos agentes", "Ask agents to complete", "Pedir a los agentes que completen")}
+              </Button>
+            )}
+          </div>
+        )}
+        {triggerPhases.some(phase => str(phase.data["triggerLogic"]) || arr(phase.data["triggerStack"]).length > 0) && (
+          <div>
+            <SectionLabel n="7.0">Sequência por Fase da Campanha</SectionLabel>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {triggerPhases.map(phase => {
+                const logic = str(phase.data["triggerLogic"]);
+                const stack = arr(phase.data["triggerStack"]);
+                if (!logic && !stack.length) return null;
+                return (
+                  <div key={phase.key} className="border border-white/8 bg-white/[0.015] p-3">
+                    <div className="mb-1.5 font-mono text-[9px] font-bold uppercase tracking-widest text-red-300/70">{phase.label}</div>
+                    {logic && <p className="mb-2 font-mono text-xs leading-relaxed text-foreground/70">{logic}</p>}
+                    {stack.length > 0 && <NumberedList items={stack} color="amber" />}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
         {dominantTrigger && (
           <div>
             <SectionLabel n="7.1">Gatilho Dominante</SectionLabel>

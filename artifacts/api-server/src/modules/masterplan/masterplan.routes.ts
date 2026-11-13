@@ -2,7 +2,7 @@ import { Router, type Response } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { AppError } from "../../lib/errors.js";
-import { approveMasterplan, getCurrentMasterplan, listMasterplanVersions, materializeMasterplan } from "./masterplan.service.js";
+import { approveMasterplan, getCurrentMasterplan, listMasterplanVersions, materializeMasterplan, repairMasterplanTriggerMap } from "./masterplan.service.js";
 
 import { getPaidMediaSetup, savePaidMediaSetup } from "../paid-media/paid-media-setup.service.js";
 
@@ -37,6 +37,12 @@ router.post("/:campaignId/masterplan/materialize", async (req, res) => {
   try {
     const masterplan = await materializeMasterplan(req.auth.workspaceId, req.params["campaignId"] as string, req.auth.userId, parsed.data.requestApproval);
     res.status(201).json({ masterplan });
+  } catch (err) { handle(err, res); }
+});
+router.post("/:campaignId/masterplan/repair-trigger-map", async (req, res) => {
+  try {
+    const result = await repairMasterplanTriggerMap(req.auth.workspaceId, req.params["campaignId"] as string, req.auth.userId, req.log);
+    res.json(result);
   } catch (err) { handle(err, res); }
 });
 router.post("/:campaignId/masterplan/approve", async (req, res) => {
