@@ -22,6 +22,8 @@ import {
   AlertTriangle, Sparkles, CheckCircle2
 } from "lucide-react";
 import { StrategyMasterplan, parseStrategyInsights } from "./strategy-masterplan";
+import { missingTriggerMapFields } from "@/lib/trigger-map-contract";
+import { missingMasterplanQualityFields } from "@/lib/masterplan-quality-contract";
 import { MarketValidationReview } from "@/components/MarketValidationReview";
 import { useUiText } from "@/lib/i18n";
 
@@ -376,6 +378,7 @@ export default function CampaignStrategyPage() {
   const [triggerHelpRunning, setTriggerHelpRunning] = useState(false);
   const [triggerHelpComplete, setTriggerHelpComplete] = useState(false);
   const [triggerHelpError, setTriggerHelpError] = useState("");
+  const [triggerHelpStages, setTriggerHelpStages] = useState<string[]>([]);
   const eventIdRef = useRef(0);
 
   // ── Campaign data ──────────────────────────────────────────────────────────
@@ -528,12 +531,6 @@ export default function CampaignStrategyPage() {
   };
   const isApproving = approveMpMutation.isPending || executeMutation.isPending;
   const strategyCanAdvance = currentMp?.readinessStatus === "ready";
-  const requestTriggerHelp = () => {
-    setTriggerHelpError("");
-    setTriggerHelpComplete(false);
-    setTriggerHelpDialogOpen(true);
-  };
-
   const confirmTriggerHelp = () => {
     setTriggerHelpRunning(true);
     setLiveEvents([]);
@@ -585,6 +582,20 @@ export default function CampaignStrategyPage() {
     ...parseStrategyInsights(snapshotStrategyD),
   };
   const campaignTitle = String(intakeD["product.name"] ?? campaign.title ?? t("Campanha", "Campaign", "Campaña"));
+  const repairStrategy = { ...campaignStrategyD, ...parseStrategyInsights(campaignStrategyD) };
+  const missingRepairTriggers = missingTriggerMapFields(repairStrategy["triggerMap"]);
+  const missingRepairQuality = missingMasterplanQualityFields(repairStrategy);
+  const repairStages = [
+    ...(missingRepairTriggers.length ? ["M07 — Engenharia de gatilhos"] : []),
+    ...(missingRepairQuality.some(field => field.path.startsWith("successMetrics.")) ? ["M08 — Métricas de performance"] : []),
+    ...(missingRepairQuality.some(field => field.path.startsWith("risks.")) ? ["M09 — Análise de riscos"] : []),
+  ];
+  const requestTriggerHelp = () => {
+    setTriggerHelpError("");
+    setTriggerHelpComplete(false);
+    setTriggerHelpStages(repairStages);
+    setTriggerHelpDialogOpen(true);
+  };
   const track = String(intakeD["launch.track"] ?? "");
   const hasStrategy = Object.keys(strategyD).length > 0;
   const isHistory = isPostStrategy(status);
@@ -866,6 +877,10 @@ export default function CampaignStrategyPage() {
 
             {!triggerHelpRunning && !triggerHelpComplete && (
               <div className="mt-5 space-y-3">
+                <div className="border border-cyan-400/20 bg-cyan-400/[0.04] p-3.5">
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-cyan-200">{t("Etapas identificadas para correção", "Sections identified for repair", "Secciones identificadas para corregir")}</p>
+                  {triggerHelpStages.length > 0 ? <div className="mt-2 flex flex-wrap gap-1.5">{triggerHelpStages.map(stage => <span key={stage} className="border border-cyan-400/20 bg-cyan-400/[0.06] px-2 py-1 font-mono text-[9px] text-cyan-100">{stage}</span>)}</div> : <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{t("Não encontrei lacunas nesta cópia da tela. O servidor fará uma nova validação antes de corrigir.", "No gaps were found in this screen copy. The server will validate again before making changes.", "No encontré faltantes en esta copia. El servidor volverá a validar antes de corregir.")}</p>}
+                </div>
                 <div className="border border-amber-400/20 bg-amber-400/[0.05] p-3.5">
                   <div className="flex items-start gap-2.5">
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
@@ -885,6 +900,10 @@ export default function CampaignStrategyPage() {
 
             {triggerHelpRunning && (
               <div className="mt-5 space-y-3">
+                <div className="border border-cyan-400/20 bg-cyan-400/[0.04] p-3">
+                  <p className="font-mono text-[9px] font-bold uppercase tracking-wider text-cyan-200">{t("Etapas em processamento", "Sections being processed", "Secciones en proceso")}</p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">{(triggerHelpStages.length ? triggerHelpStages : ["M07 — Engenharia de gatilhos", "M08 — Métricas de performance", "M09 — Análise de riscos"]).map(stage => <span key={stage} className="border border-cyan-400/20 bg-cyan-400/[0.06] px-2 py-1 font-mono text-[9px] text-cyan-100">{stage}</span>)}</div>
+                </div>
                 <div className="h-1.5 overflow-hidden bg-white/5">
                   <div className="h-full w-full animate-pulse bg-gradient-to-r from-blue-500 to-violet-500" />
                 </div>

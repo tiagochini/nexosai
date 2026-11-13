@@ -108,6 +108,16 @@ export async function completeMissingStrategySections(
     requiresApproval: false,
     idempotencyKeyOverride: `${campaignId}:masterplan-sections-repair:${attempt}:${randomUUID()}`,
     thinkingMessages: ["Conferindo as métricas, os riscos e os gatilhos ausentes no Masterplan..."],
+  }).catch((error: unknown) => {
+    log.error({
+      campaignId,
+      workspaceId,
+      attempt,
+      repairStages: [...new Set(requested.map((field) => field.section))],
+      repairFields: requested.map((field) => field.path),
+      err: error,
+    }, "Agent failed while repairing masterplan sections");
+    throw error;
   });
   const parsed = parseAgentJSON<Record<string, unknown>>(output.content, {});
   const proposed = extractStrategyCandidate(parsed) ?? parsed;

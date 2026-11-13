@@ -84,6 +84,16 @@ function getRepairableMissingFields(strategy: Json) {
   return [...quality, ...triggers];
 }
 
+function repairStagesFor(fields: Array<{ path: string }>): string[] {
+  const stages = new Set<string>();
+  for (const field of fields) {
+    if (field.path.startsWith("triggerMap.")) stages.add("M07_triggers");
+    else if (field.path.startsWith("successMetrics.")) stages.add("M08_metrics");
+    else if (field.path.startsWith("risks.")) stages.add("M09_risks");
+  }
+  return [...stages];
+}
+
 function getPath(source: Json, path: string): unknown {
   return path.split(".").reduce<unknown>((current, key) => object(current)[key], source);
 }
@@ -281,6 +291,17 @@ export async function repairMasterplanTriggerMap(workspaceId: string, campaignId
 
   const originalStrategy = strategyPayload(campaign.strategyData);
   const missingBefore = getRepairableMissingFields(originalStrategy);
+  const initialStages = repairStagesFor(missingBefore);
+  const repairContext = {
+    operation: "masterplan_section_repair",
+    campaignId,
+    campaignTitle: campaign.title,
+    workspaceId,
+    actorUserId: actorId,
+    repairStages: initialStages,
+    repairFields: missingBefore.map((field) => field.path),
+  };
+  log.info(repairContext, "Masterplan section repair started");
   if (!missingBefore.length) {
     const masterplan = await materializeTriggerRepairVersion(workspaceId, campaignId, actorId, campaign);
     return { masterplan, repairedFields: [], readiness: { status: masterplan?.readinessStatus, score: masterplan?.readinessScore, blockers: masterplan?.readinessBlockers } };
@@ -291,12 +312,15 @@ export async function repairMasterplanTriggerMap(workspaceId: string, campaignId
   let repairAttempts = 0;
   while (proposedMissing.length > 0 && repairAttempts < 2) {
     repairAttempts += 1;
+    const attemptLog = typeof log.child === "function"
+      ? log.child({ ...repairContext, attempt: repairAttempts, repairStages: repairStagesFor(proposedMissing), repairFields: proposedMissing.map((field) => field.path) })
+      : log;
     proposedStrategy = await completeMissingStrategySections(
       campaignId,
       workspaceId,
       object(campaign.intakeData),
       proposedStrategy,
-      log,
+      attemptLog,
       repairAttempts,
     );
     proposedMissing = getRepairableMissingFields(proposedStrategy);
