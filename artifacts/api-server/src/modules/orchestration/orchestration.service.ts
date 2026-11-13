@@ -5,6 +5,7 @@ import {
   campaignAgentsTable,
   approvalCheckpointsTable,
   auditLogsTable,
+  agentClarificationRequestsTable,
 } from "@workspace/db";
 import {
   STRATEGY_PHASE_ENTRY_STATUSES,
@@ -18,13 +19,14 @@ import {
   runKnownNoRedisFallback,
 } from "./orchestration-fallback.service.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
-import { NotFoundError, ValidationError } from "../../lib/errors.js";
+import { AppError, NotFoundError, ValidationError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
 import type { Logger } from "pino";
 import { enforceLaunchAutonomyGate, enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import { assertCampaignCreditBudget } from "../credits/credits.service.js";
 import { assertSocialDiagnosisApproved } from "../campaigns/social-diagnosis.policy.js";
 import { resolveSocialMediaEntitlement } from "../billing/commercial-entitlements.service.js";
+import { calculateMasterplanReadiness } from "../masterplan/masterplan.service.js";
 
 // ── Execution status ──────────────────────────────────────────────────────────
 
@@ -479,12 +481,26 @@ export async function triggerContentPhase(
   log: Logger,
 ): Promise<{ queued: boolean; jobId?: string }> {
   const [campaign] = await db
-    .select({ status: campaignsTable.status, type: campaignsTable.type })
+    .select({ status: campaignsTable.status, type: campaignsTable.type, strategyData: campaignsTable.strategyData })
     .from(campaignsTable)
     .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
 
   if (!campaign) throw new NotFoundError("Campaign");
+
+  const pendingClarifications = await db.select({ id: agentClarificationRequestsTable.id, question: agentClarificationRequestsTable.question })
+    .from(agentClarificationRequestsTable).where(and(
+      eq(agentClarificationRequestsTable.workspaceId, workspaceId),
+      eq(agentClarificationRequestsTable.campaignId, campaignId),
+      eq(agentClarificationRequestsTable.status, "pending"),
+    ));
+  const readiness = calculateMasterplanReadiness(campaign.strategyData, pendingClarifications);
+  if (readiness.status !== "ready") {
+    throw new AppError(428, "A campanha não pode avançar: complete todos os módulos obrigatórios do Masterplan e resolva as pendências.", "MASTERPLAN_NOT_READY", {
+      blockers: readiness.blockers,
+      score: readiness.score,
+    });
+  }
 
   // PIPELINE_KERNEL: single source of truth — CONTENT_PHASE_ENTRY_STATUSES from campaigns.service
   // RC-002 FIX preserved: "generating" excluded — already in progress, no re-trigger.

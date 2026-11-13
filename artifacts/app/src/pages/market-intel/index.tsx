@@ -131,7 +131,7 @@ export default function MarketIntelPage() {
   const [phaseIdx, setPhaseIdx] = useState(0);
 
   // chat
-  const [showChat, setShowChat] = useState(false);
+  const [showChat, setShowChat] = useState(true);
   const [chatMsgs, setChatMsgs] = useState<ChatMsg[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatSending, setChatSending] = useState(false);
@@ -469,11 +469,11 @@ export default function MarketIntelPage() {
           </div>
         )}
 
-        {out && selected.status === "ready" && (
-          <div className={`grid gap-6 ${showChat ? "lg:grid-cols-[1fr_380px]" : ""}`}>
+{out && selected.status === "ready" && (
+      <div className="grid grid-cols-1 gap-6">
             <div className="space-y-6 min-w-0">
               {/* Overview */}
-              <div className="grid sm:grid-cols-3 gap-4">
+            <div className={`grid gap-4 ${showChat ? "grid-cols-1" : "sm:grid-cols-3"}`}>
                 {[
                   { label: t("Tamanho do Mercado", "Market Size", "Tamaño del mercado"), value: out.marketSize, icon: TrendingUp },
                   { label: t("Maturidade", "Maturity", "Madurez"), value: out.marketMaturity ? maturityLabel(out.marketMaturity) : undefined, icon: Target },
@@ -511,7 +511,7 @@ export default function MarketIntelPage() {
                 <h2 className="font-mono text-sm uppercase tracking-wider text-foreground flex items-center gap-2">
                   <Sword className="h-4 w-4 text-primary" /> {t("Concorrentes", "Competitors", "Competidores")} ({out.competitors?.length ?? 0})
                 </h2>
-                <div className="grid md:grid-cols-2 gap-4">
+            <div className={`grid gap-4 ${showChat ? "grid-cols-1" : "md:grid-cols-2"}`}>
                   {(out.competitors ?? []).map((c, i) => (
                     <div key={i} className="border border-border/50 rounded-sm p-4 bg-card/50 space-y-3">
                       <div className="flex items-start justify-between gap-2">
@@ -530,7 +530,7 @@ export default function MarketIntelPage() {
                         <p className="text-xs text-muted-foreground"><span className="text-foreground/70">{t("Preço:", "Pricing:", "Precio:")}</span> {c.pricingStrategy}</p>
                       )}
                       {(c.strengthsPerceived?.length || c.weaknessesExposed?.length) ? (
-                        <div className="grid grid-cols-2 gap-3">
+                  <div className={`grid gap-3 ${showChat ? "grid-cols-1" : "grid-cols-2"}`}>
                           {(c.strengthsPerceived?.length ?? 0) > 0 && (
                             <div>
                               <p className="text-[11px] font-mono uppercase tracking-wider text-green-400 mb-1">{t("Fortes", "Strengths", "Fortalezas")}</p>
@@ -599,7 +599,7 @@ export default function MarketIntelPage() {
               )}
 
               {/* Arbitrage */}
-              <div className="grid md:grid-cols-2 gap-4">
+            <div className={`grid gap-4 ${showChat ? "grid-cols-1" : "md:grid-cols-2"}`}>
                 {[
                   { label: t("Segmentos não atendidos", "Underserved Segments", "Segmentos desatendidos"), value: out.untappedSegments?.length ? out.untappedSegments.join(" • ") : undefined, icon: Target },
                   { label: t("Campo de batalha de palavras-chave", "Keyword Battlefield", "Campo de batalla de palabras clave"), value: out.keywordBattlefield, icon: Sword },
@@ -637,8 +637,8 @@ export default function MarketIntelPage() {
             </div>
 
             {/* Deepdive chat */}
-            {showChat && (
-              <div className="border border-border/50 rounded-sm bg-card/50 flex flex-col h-[calc(100vh-220px)] sticky top-6 min-w-0">
+{showChat && (
+  <div className="border border-border/50 rounded-sm bg-card/50 flex flex-col h-[calc(100vh-220px)] min-w-0">
                 <div className="p-3 border-b border-border/50 flex items-center justify-between">
                   <span className="font-mono text-xs uppercase tracking-wider flex items-center gap-2">
                     <Sparkles className="h-3.5 w-3.5 text-primary" /> Deepdive com o Analista
