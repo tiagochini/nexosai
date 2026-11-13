@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db, campaignsTable, masterplanVersionsTable, agentClarificationRequestsTable, auditLogsTable, commercialSubscriptionsTable, productIntakesTable } from "@workspace/db";
-import { fillMissingCampaignArchitectureFields, fillMissingMasterplanQualityFields, fillMissingTriggerMapFields, missingCampaignArchitectureFields, missingMasterplanQualityFields, missingTriggerMapFields, REQUIRED_CAMPAIGN_ARCHITECTURE_FIELDS, REQUIRED_MASTERPLAN_QUALITY_FIELDS, REQUIRED_TRIGGER_MAP_FIELDS } from "@workspace/api-zod";
+import { fillMissingCampaignArchitectureFields, fillMissingCampaignCoreFields, fillMissingMasterplanQualityFields, fillMissingTriggerMapFields, missingCampaignArchitectureFields, missingCampaignCoreFields, missingMasterplanQualityFields, missingTriggerMapFields, REQUIRED_CAMPAIGN_ARCHITECTURE_FIELDS, REQUIRED_CAMPAIGN_CORE_FIELDS, REQUIRED_MASTERPLAN_QUALITY_FIELDS, REQUIRED_TRIGGER_MAP_FIELDS } from "@workspace/api-zod";
 import { NotFoundError, AppError } from "../../lib/errors.js";
 import { PRODUCT_AUTONOMY_CONTRACT } from "../autonomy/autonomy.service.js";
 import { latestRegionalIntelligenceSummary } from "../market-intel/regional-intelligence.service.js";
@@ -47,46 +47,36 @@ function strategyPayload(value: unknown): Json {
 }
 
 const REQUIRED_STRATEGY_FIELDS: Array<{ path: string; label: string; kind?: "list" | "text" | "number" }> = [
-  { path: "executiveSummary", label: "Resumo executivo" },
-  { path: "bigDomino", label: "Big Domino" },
-  { path: "marketDiagnosis.marketMaturity", label: "Maturidade do mercado" },
-  { path: "marketDiagnosis.competitiveLandscape", label: "Cenário competitivo" },
-  { path: "marketDiagnosis.entryBarriers", label: "Barreiras de entrada", kind: "list" },
-  { path: "marketDiagnosis.opportunities", label: "Oportunidades", kind: "list" },
-  { path: "marketDiagnosis.threats", label: "Ameaças", kind: "list" },
-  { path: "offerPositioning.uniqueValueProposition", label: "Proposta de valor" },
-  { path: "offerPositioning.primaryDifferentiator", label: "Diferencial principal" },
-  { path: "offerPositioning.positioning", label: "Posicionamento" },
-  { path: "offerPositioning.priceJustification", label: "Justificativa de preço" },
-  { path: "offerPositioning.competitiveAdvantages", label: "Vantagens competitivas", kind: "list" },
-  { path: "audienceSegmentation.primaryAvatar", label: "Avatar principal" },
-  { path: "audienceSegmentation.psychographicProfile", label: "Perfil psicográfico" },
-  { path: "audienceSegmentation.buyingTriggers", label: "Gatilhos de compra", kind: "list" },
-  { path: "audienceSegmentation.objections", label: "Objeções", kind: "list" },
-  { path: "audienceSegmentation.sophisticationStrategy", label: "Estratégia de sofisticação" },
+  ...REQUIRED_CAMPAIGN_CORE_FIELDS,
   ...REQUIRED_CAMPAIGN_ARCHITECTURE_FIELDS,
   ...REQUIRED_MASTERPLAN_QUALITY_FIELDS,
-  { path: "strategistNotes", label: "Observações do estrategista" },
   ...REQUIRED_TRIGGER_MAP_FIELDS.map((field) => ({ path: `triggerMap.${field.path}`, label: field.label, kind: field.kind })),
 ];
 
 function getRepairableMissingFields(strategy: Json) {
+  const core = missingCampaignCoreFields(strategy);
   const architecture = missingCampaignArchitectureFields(strategy);
   const quality = missingMasterplanQualityFields(strategy);
   const triggers = missingTriggerMapFields(strategy["triggerMap"]).map((field) => ({
     path: `triggerMap.${field.path}`,
     label: field.label,
   }));
-  return [...architecture, ...quality, ...triggers];
+  return [...core, ...architecture, ...quality, ...triggers];
 }
 
 function repairStagesFor(fields: Array<{ path: string }>): string[] {
   const stages = new Set<string>();
   for (const field of fields) {
-    if (field.path.startsWith("campaignArchitecture.")) stages.add("M06_campaign_architecture");
+    if (field.path.startsWith("offerPositioning.")) stages.add("M03_offer_positioning");
+    else if (field.path.startsWith("marketDiagnosis.")) stages.add("M04_market_diagnosis");
+    else if (field.path.startsWith("audienceSegmentation.")) stages.add("M05_audience_archetype");
+    else if (field.path.startsWith("campaignArchitecture.")) stages.add("M06_campaign_architecture");
     else if (field.path.startsWith("triggerMap.")) stages.add("M07_triggers");
     else if (field.path.startsWith("successMetrics.")) stages.add("M08_metrics");
     else if (field.path.startsWith("risks.")) stages.add("M09_risks");
+    else if (field.path === "bigDomino") stages.add("M02_big_domino");
+    else if (field.path === "executiveSummary") stages.add("M01_executive_summary");
+    else if (field.path === "strategistNotes") stages.add("M10_strategist_notes");
   }
   return [...stages];
 }
@@ -107,8 +97,10 @@ export function deterministicHash(value: unknown): string {
 }
 export function calculateMasterplanReadiness(strategyData: unknown, pendingClarifications: { id: string; question: string }[]) {
   const strategy = strategyPayload(strategyData);
+  const incompleteCorePaths = new Set(missingCampaignCoreFields(strategy).map(({ path }) => path));
   const incompleteArchitecturePaths = new Set(missingCampaignArchitectureFields(strategy).map(({ path }) => path));
   const missingFields = REQUIRED_STRATEGY_FIELDS.filter(({ path, kind }) => {
+    if (incompleteCorePaths.has(path)) return true;
     if (path.startsWith("campaignArchitecture.")) return incompleteArchitecturePaths.has(path);
     const value = getPath(strategy, path);
     if (kind === "list") return !nonEmptyList(value);
@@ -339,7 +331,7 @@ export async function repairMasterplanTriggerMap(workspaceId: string, campaignId
   }
 
   const repairedFields: string[] = [];
-  const strategyValidation = { triggerMapStatus: "complete", triggerMapAttempts: repairAttempts, missingTriggerFields: [], qualitySectionsStatus: "complete", missingQualityFields: [], architectureStatus: "complete", missingArchitectureFields: [] };
+  const strategyValidation = { triggerMapStatus: "complete", triggerMapAttempts: repairAttempts, missingTriggerFields: [], qualitySectionsStatus: "complete", missingQualityFields: [], architectureStatus: "complete", missingArchitectureFields: [], coreStatus: "complete", missingCoreFields: [] };
   let repairedStrategyForReadiness = originalStrategy;
   await db.transaction(async (tx) => {
     const [currentCampaign] = await tx.select({ strategyData: campaignsTable.strategyData, intakeData: campaignsTable.intakeData, status: campaignsTable.status })
@@ -348,17 +340,19 @@ export async function repairMasterplanTriggerMap(workspaceId: string, campaignId
       )).for("update").limit(1);
     if (!currentCampaign) throw new NotFoundError("Campaign");
     if (!["strategy_ready", "awaiting_approval"].includes(currentCampaign.status)) {
-      throw new AppError(409, "A campanha mudou de etapa. Atualize a página antes de completar os gatilhos.", "TRIGGER_MAP_REPAIR_NOT_AVAILABLE");
+      throw new AppError(409, "A campanha mudou de etapa. Atualize a página antes de completar as seções do Masterplan.", "TRIGGER_MAP_REPAIR_NOT_AVAILABLE");
     }
     const currentStrategy = strategyPayload(currentCampaign.strategyData);
     const stillMissing = getRepairableMissingFields(currentStrategy);
+    const coreFields = missingCampaignCoreFields(currentStrategy);
     const architectureFields = missingCampaignArchitectureFields(currentStrategy);
     const triggerFields = missingTriggerMapFields(currentStrategy["triggerMap"]);
     const qualityFields = missingMasterplanQualityFields(currentStrategy);
+    const repairedCore = fillMissingCampaignCoreFields(currentStrategy, proposedStrategy, coreFields);
     const repairedArchitecture = fillMissingCampaignArchitectureFields(currentStrategy, proposedStrategy, architectureFields);
     const repairedMap = fillMissingTriggerMapFields(currentStrategy["triggerMap"], proposedStrategy["triggerMap"], triggerFields);
     const repairedQuality = fillMissingMasterplanQualityFields(currentStrategy, proposedStrategy, qualityFields);
-    const repairedStrategy = { ...currentStrategy, campaignArchitecture: repairedArchitecture["campaignArchitecture"], triggerMap: repairedMap, successMetrics: repairedQuality["successMetrics"], risks: repairedQuality["risks"] };
+    const repairedStrategy = { ...currentStrategy, ...repairedCore, campaignArchitecture: repairedArchitecture["campaignArchitecture"], triggerMap: repairedMap, successMetrics: repairedQuality["successMetrics"], risks: repairedQuality["risks"] };
     const remaining = getRepairableMissingFields(repairedStrategy);
     if (remaining.length) {
       throw new AppError(409, "Os dados da campanha mudaram durante a correção. Atualize e tente novamente.", "MASTERPLAN_REPAIR_CONFLICT");

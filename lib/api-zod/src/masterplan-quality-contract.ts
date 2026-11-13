@@ -4,6 +4,28 @@ export type MasterplanQualityField = {
   kind: "text" | "list" | "number";
 };
 
+/** Required strategy fields outside the campaign architecture and quality sections. */
+export const REQUIRED_CAMPAIGN_CORE_FIELDS: MasterplanQualityField[] = [
+  { path: "executiveSummary", label: "Resumo executivo", kind: "text" },
+  { path: "bigDomino", label: "Big Domino", kind: "text" },
+  { path: "marketDiagnosis.marketMaturity", label: "Maturidade do mercado", kind: "text" },
+  { path: "marketDiagnosis.competitiveLandscape", label: "Cenário competitivo", kind: "text" },
+  { path: "marketDiagnosis.entryBarriers", label: "Barreiras de entrada", kind: "list" },
+  { path: "marketDiagnosis.opportunities", label: "Oportunidades", kind: "list" },
+  { path: "marketDiagnosis.threats", label: "Ameaças", kind: "list" },
+  { path: "offerPositioning.uniqueValueProposition", label: "Proposta de valor", kind: "text" },
+  { path: "offerPositioning.primaryDifferentiator", label: "Diferencial principal", kind: "text" },
+  { path: "offerPositioning.positioning", label: "Posicionamento", kind: "text" },
+  { path: "offerPositioning.priceJustification", label: "Justificativa de preço", kind: "text" },
+  { path: "offerPositioning.competitiveAdvantages", label: "Vantagens competitivas", kind: "list" },
+  { path: "audienceSegmentation.primaryAvatar", label: "Avatar principal", kind: "text" },
+  { path: "audienceSegmentation.psychographicProfile", label: "Perfil psicográfico", kind: "text" },
+  { path: "audienceSegmentation.buyingTriggers", label: "Gatilhos de compra", kind: "list" },
+  { path: "audienceSegmentation.objections", label: "Objeções", kind: "list" },
+  { path: "audienceSegmentation.sophisticationStrategy", label: "Estratégia de sofisticação", kind: "text" },
+  { path: "strategistNotes", label: "Observações do estrategista", kind: "text" },
+];
+
 /** Required evidence for the performance and risk sections of a usable master plan. */
 export const REQUIRED_MASTERPLAN_QUALITY_FIELDS: MasterplanQualityField[] = [
   { path: "successMetrics.primaryKPI", label: "KPI principal", kind: "text" },
@@ -53,6 +75,11 @@ export function missingMasterplanQualityFields(strategyValue: unknown): Masterpl
   return REQUIRED_MASTERPLAN_QUALITY_FIELDS.filter((field) => !isComplete(getPath(strategy, field.path), field.kind));
 }
 
+export function missingCampaignCoreFields(strategyValue: unknown): MasterplanQualityField[] {
+  const strategy = object(strategyValue);
+  return REQUIRED_CAMPAIGN_CORE_FIELDS.filter((field) => !isComplete(getPath(strategy, field.path), field.kind));
+}
+
 function setPath(target: JsonObject, path: string, value: unknown): void {
   const keys = path.split(".");
   let current = target;
@@ -86,6 +113,21 @@ export function missingCampaignArchitectureFields(strategyValue: unknown): Maste
 
 /** Fill only absent or visibly truncated M06 values; retain existing approved content. */
 export function fillMissingCampaignArchitectureFields(
+  currentValue: unknown,
+  proposedValue: unknown,
+  fields: MasterplanQualityField[],
+): JsonObject {
+  const current = JSON.parse(JSON.stringify(object(currentValue))) as JsonObject;
+  const proposed = object(proposedValue);
+  for (const field of fields) {
+    const value = getPath(proposed, field.path);
+    if (isComplete(value, field.kind)) setPath(current, field.path, value);
+  }
+  return current;
+}
+
+/** Fill only missing or invalid core strategy values, preserving all other data. */
+export function fillMissingCampaignCoreFields(
   currentValue: unknown,
   proposedValue: unknown,
   fields: MasterplanQualityField[],

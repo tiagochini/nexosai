@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { StrategyMasterplan, parseStrategyInsights } from "./strategy-masterplan";
 import { missingTriggerMapFields } from "@/lib/trigger-map-contract";
-import { missingCampaignArchitectureFields, missingMasterplanQualityFields } from "@/lib/masterplan-quality-contract";
+import { missingCampaignArchitectureFields, missingCampaignCoreFields, missingMasterplanQualityFields } from "@/lib/masterplan-quality-contract";
 import { MarketValidationReview } from "@/components/MarketValidationReview";
 import { useUiText } from "@/lib/i18n";
 
@@ -583,14 +583,21 @@ export default function CampaignStrategyPage() {
   };
   const campaignTitle = String(intakeD["product.name"] ?? campaign.title ?? t("Campanha", "Campaign", "Campaña"));
   const repairStrategy = { ...campaignStrategyD, ...parseStrategyInsights(campaignStrategyD) };
+  const missingRepairCore = missingCampaignCoreFields(repairStrategy);
   const missingRepairArchitecture = missingCampaignArchitectureFields(repairStrategy);
   const missingRepairTriggers = missingTriggerMapFields(repairStrategy["triggerMap"]);
   const missingRepairQuality = missingMasterplanQualityFields(repairStrategy);
   const repairStages = [
+    ...(missingRepairCore.some(field => field.path === "executiveSummary") ? ["M01 — Resumo executivo"] : []),
+    ...(missingRepairCore.some(field => field.path === "bigDomino") ? ["M02 — Big Domino"] : []),
+    ...(missingRepairCore.some(field => field.path.startsWith("offerPositioning.")) ? ["M03 — Posicionamento da oferta"] : []),
+    ...(missingRepairCore.some(field => field.path.startsWith("marketDiagnosis.")) ? ["M04 — Diagnóstico de mercado"] : []),
+    ...(missingRepairCore.some(field => field.path.startsWith("audienceSegmentation.")) ? ["M05 — Arquétipo de audiência"] : []),
     ...(missingRepairArchitecture.length ? ["M06 — Arquitetura da campanha"] : []),
     ...(missingRepairTriggers.length ? ["M07 — Engenharia de gatilhos"] : []),
     ...(missingRepairQuality.some(field => field.path.startsWith("successMetrics.")) ? ["M08 — Métricas de performance"] : []),
     ...(missingRepairQuality.some(field => field.path.startsWith("risks.")) ? ["M09 — Análise de riscos"] : []),
+    ...(missingRepairCore.some(field => field.path === "strategistNotes") ? ["M10 — Observações estratégicas"] : []),
   ];
   const requestTriggerHelp = () => {
     setTriggerHelpError("");
@@ -873,7 +880,7 @@ export default function CampaignStrategyPage() {
                   ? t("Os agentes estão completando apenas os campos ausentes ou interrompidos das etapas listadas. As informações e os conteúdos existentes serão preservados. A página será atualizada ao concluir.", "The agents are completing only missing or cut-off fields in the listed sections. Existing information and content will be preserved. This page will refresh when complete.", "Los agentes están completando solo los campos faltantes o cortados de las secciones indicadas. Se conservarán la información y el contenido existentes. La página se actualizará al terminar.")
                   : triggerHelpComplete
                     ? t("Os agentes finalizaram. Atualizando os dados da campanha…", "The agents are done. Refreshing campaign data…", "Los agentes terminaron. Actualizando los datos de la campaña…")
-                    : t("Você não precisa conhecer termos técnicos. Os agentes usam o briefing para completar apenas os campos ausentes ou interrompidos da arquitetura, dos gatilhos, das métricas e dos riscos, mantendo as informações e os conteúdos existentes.", "You do not need technical knowledge. Agents use the brief to complete only missing or cut-off architecture, trigger, metrics, and risk fields while preserving existing information and content.", "No necesitas conocimientos técnicos. Los agentes usan el briefing para completar solo los campos faltantes o cortados de arquitectura, disparadores, métricas y riesgos, conservando la información y el contenido existentes.")}
+                    : t("Você não precisa conhecer termos técnicos. Os agentes conferem o que já está salvo e usam o briefing para completar somente os campos ausentes ou interrompidos nas etapas listadas. O conteúdo existente será preservado.", "You do not need technical knowledge. Agents check what is already saved and use the brief to complete only missing or cut-off fields in the listed sections. Existing content will be preserved.", "No necesitas conocimientos técnicos. Los agentes revisan lo que ya está guardado y usan el briefing para completar solo los campos faltantes o cortados de las secciones indicadas. Se conservará el contenido existente.")}
               </DialogDescription>
             </DialogHeader>
 
@@ -904,7 +911,7 @@ export default function CampaignStrategyPage() {
               <div className="mt-5 space-y-3">
                 <div className="border border-cyan-400/20 bg-cyan-400/[0.04] p-3">
                   <p className="font-mono text-[9px] font-bold uppercase tracking-wider text-cyan-200">{t("Etapas em processamento", "Sections being processed", "Secciones en proceso")}</p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">{(triggerHelpStages.length ? triggerHelpStages : ["M06 — Arquitetura da campanha", "M07 — Engenharia de gatilhos", "M08 — Métricas de performance", "M09 — Análise de riscos"]).map(stage => <span key={stage} className="border border-cyan-400/20 bg-cyan-400/[0.06] px-2 py-1 font-mono text-[9px] text-cyan-100">{stage}</span>)}</div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">{(triggerHelpStages.length ? triggerHelpStages : ["M01 — Resumo executivo", "M02 — Big Domino", "M03 — Posicionamento da oferta", "M04 — Diagnóstico de mercado", "M05 — Arquétipo de audiência", "M06 — Arquitetura da campanha", "M07 — Engenharia de gatilhos", "M08 — Métricas de performance", "M09 — Análise de riscos", "M10 — Observações estratégicas"]).map(stage => <span key={stage} className="border border-cyan-400/20 bg-cyan-400/[0.06] px-2 py-1 font-mono text-[9px] text-cyan-100">{stage}</span>)}</div>
                 </div>
                 <div className="h-1.5 overflow-hidden bg-white/5">
                   <div className="h-full w-full animate-pulse bg-gradient-to-r from-blue-500 to-violet-500" />
