@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { generateMasterplanPDF, type PdfUserIdentity } from "@/lib/masterplan-pdf";
 import { missingTriggerMapFields } from "@/lib/trigger-map-contract";
-import { missingMasterplanQualityFields } from "@/lib/masterplan-quality-contract";
+import { missingCampaignArchitectureFields, missingMasterplanQualityFields } from "@/lib/masterplan-quality-contract";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useUiText } from "@/lib/i18n";
 
@@ -713,6 +713,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
   const positioning  = obj(src["offerPositioning"]     ?? strategyD["offerPositioning"]);
   const audience     = obj(src["audienceSegmentation"] ?? strategyD["audienceSegmentation"]);
   const architecture = obj(src["campaignArchitecture"] ?? strategyD["campaignArchitecture"]);
+  const missingArchitectureFields = missingCampaignArchitectureFields({ campaignArchitecture: architecture });
   const metrics      = obj(src["successMetrics"]       ?? strategyD["successMetrics"]);
   const risks        = obj(src["risks"]                ?? strategyD["risks"]);
   const triggerMap   = obj(src["triggerMap"]           ?? strategyD["triggerMap"]);
@@ -1027,13 +1028,19 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
       <Module index={6} id="architecture" icon={Lightbulb}
         title="Arquitetura da Campanha" subtitle="Narrativa central, gancho emocional, mensagens-chave e pilares de conteúdo"
         status={getStatus("architecture")} accentColor="purple"
+        emptyDescription={["A narrativa está incompleta ou foi interrompida. Peça aos agentes para completar gancho, mensagens, pilares, distribuição e CTA com base no briefing.", "The campaign narrative is incomplete or cut off. Ask the agents to complete the hook, messages, pillars, distribution, and CTA from the brief.", "La narrativa está incompleta o cortada. Pide a los agentes que completen el gancho, mensajes, pilares, distribución y CTA a partir del briefing."]}
+        emptyActionLabel={["Completar com os agentes", "Complete with agents", "Completar con agentes"]}
+        onEmptyAction={onRequestTriggerHelp}
+        emptyActionPending={triggerHelpPending}
         onApprove={id => setStatus(id, "approved")}
         onReject={id => setStatus(id, "rejected")}
         onFlag={id => setStatus(id, "flagged")}
         isEmpty={!str(architecture["coreNarrative"]) && !str(architecture["emotionalHook"])
           && arr(architecture["keyMessages"]).length === 0 && arr(architecture["contentPillars"]).length === 0
           && !str(architecture["platformDistributionStrategy"]) && !str(architecture["callToActionStrategy"])}
+        isIncomplete={missingArchitectureFields.length > 0}
       >
+        {missingArchitectureFields.length > 0 && <IncompleteFields fields={missingArchitectureFields.map(field => field.label)} onRepair={onRequestTriggerHelp} pending={triggerHelpPending} />}
         {str(architecture["coreNarrative"]) && (
           <div>
             <SectionLabel n="6.1">Narrativa Central</SectionLabel>

@@ -2,6 +2,7 @@ import jsPDF, { GState } from "jspdf";
 import { pdfText } from "./pdf-text";
 import { missingTriggerMapFields } from "./trigger-map-contract";
 import { missingMasterplanQualityFields } from "./masterplan-quality-contract";
+import { missingCampaignArchitectureFields } from "./masterplan-quality-contract";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -762,9 +763,15 @@ export function generateMasterplanPDF(
 
   // ── M06 — ARQUITETURA DA CAMPANHA
   const arch = data.architecture;
-  if (Object.keys(arch).length > 0) {
+  const missingArchitecture = missingCampaignArchitectureFields({ campaignArchitecture: arch });
+  if (Object.keys(arch).length > 0 || missingArchitecture.length > 0) {
     y = checkBreak(doc, y, 20);
     y = renderSection(doc, "06", "ARQUITETURA DA CAMPANHA", y);
+
+    if (missingArchitecture.length) {
+      y = bodyText(doc, `SEÇÃO INCOMPLETA — faltam campos ou há texto interrompido: ${missingArchitecture.map(field => field.label).join("; ")}. Esta parte ainda precisa ser completada.`, y);
+      y += 2;
+    }
 
     if (str(arch["coreNarrative"])) {
       doc.setFont("helvetica", "bold");

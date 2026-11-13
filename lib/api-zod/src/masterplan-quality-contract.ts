@@ -17,6 +17,15 @@ export const REQUIRED_MASTERPLAN_QUALITY_FIELDS: MasterplanQualityField[] = [
   { path: "risks.mitigations", label: "Mitigações", kind: "list" },
 ];
 
+export const REQUIRED_CAMPAIGN_ARCHITECTURE_FIELDS: MasterplanQualityField[] = [
+  { path: "campaignArchitecture.coreNarrative", label: "Narrativa central", kind: "text" },
+  { path: "campaignArchitecture.emotionalHook", label: "Gancho emocional", kind: "text" },
+  { path: "campaignArchitecture.keyMessages", label: "Mensagens-chave", kind: "list" },
+  { path: "campaignArchitecture.contentPillars", label: "Pilares de conteúdo", kind: "list" },
+  { path: "campaignArchitecture.platformDistributionStrategy", label: "Distribuição por plataforma", kind: "text" },
+  { path: "campaignArchitecture.callToActionStrategy", label: "Estratégia de chamada para ação", kind: "text" },
+];
+
 type JsonObject = Record<string, unknown>;
 const object = (value: unknown): JsonObject => value && typeof value === "object" && !Array.isArray(value) ? value as JsonObject : {};
 
@@ -25,9 +34,18 @@ function getPath(source: JsonObject, path: string): unknown {
 }
 
 function isComplete(value: unknown, kind: MasterplanQualityField["kind"]): boolean {
-  if (kind === "list") return Array.isArray(value) && value.some((item) => typeof item === "string" && item.trim().length >= 3);
+  if (kind === "list") return Array.isArray(value) && value.some((item) => isCompleteText(item));
   if (kind === "number") return typeof value === "number" && Number.isFinite(value) && value > 0;
-  return typeof value === "string" && value.trim().length >= 3;
+  return isCompleteText(value);
+}
+
+function isCompleteText(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  const text = value.trim();
+  if (text.length < 3 || /[([{,;:/—-]\s*$/.test(text)) return false;
+  if (/\b(?:and|or|e|ou|de|do|da|dos|das|para|com|que|em|por|sobre)\s*$/i.test(text)) return false;
+  const pairs: Array<[string, string]> = [["(", ")"], ["[", "]"], ["{", "}"]];
+  return pairs.every(([open, close]) => text.split(open).length <= text.split(close).length);
 }
 
 export function missingMasterplanQualityFields(strategyValue: unknown): MasterplanQualityField[] {
@@ -48,6 +66,26 @@ function setPath(target: JsonObject, path: string, value: unknown): void {
 
 /** Merge only complete values for requested missing fields; preserve existing decisions. */
 export function fillMissingMasterplanQualityFields(
+  currentValue: unknown,
+  proposedValue: unknown,
+  fields: MasterplanQualityField[],
+): JsonObject {
+  const current = JSON.parse(JSON.stringify(object(currentValue))) as JsonObject;
+  const proposed = object(proposedValue);
+  for (const field of fields) {
+    const value = getPath(proposed, field.path);
+    if (isComplete(value, field.kind)) setPath(current, field.path, value);
+  }
+  return current;
+}
+
+export function missingCampaignArchitectureFields(strategyValue: unknown): MasterplanQualityField[] {
+  const strategy = object(strategyValue);
+  return REQUIRED_CAMPAIGN_ARCHITECTURE_FIELDS.filter((field) => !isComplete(getPath(strategy, field.path), field.kind));
+}
+
+/** Fill only absent or visibly truncated M06 values; retain existing approved content. */
+export function fillMissingCampaignArchitectureFields(
   currentValue: unknown,
   proposedValue: unknown,
   fields: MasterplanQualityField[],

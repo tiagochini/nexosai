@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { StrategyMasterplan, parseStrategyInsights } from "./strategy-masterplan";
 import { missingTriggerMapFields } from "@/lib/trigger-map-contract";
-import { missingMasterplanQualityFields } from "@/lib/masterplan-quality-contract";
+import { missingCampaignArchitectureFields, missingMasterplanQualityFields } from "@/lib/masterplan-quality-contract";
 import { MarketValidationReview } from "@/components/MarketValidationReview";
 import { useUiText } from "@/lib/i18n";
 
@@ -583,9 +583,11 @@ export default function CampaignStrategyPage() {
   };
   const campaignTitle = String(intakeD["product.name"] ?? campaign.title ?? t("Campanha", "Campaign", "Campaña"));
   const repairStrategy = { ...campaignStrategyD, ...parseStrategyInsights(campaignStrategyD) };
+  const missingRepairArchitecture = missingCampaignArchitectureFields(repairStrategy);
   const missingRepairTriggers = missingTriggerMapFields(repairStrategy["triggerMap"]);
   const missingRepairQuality = missingMasterplanQualityFields(repairStrategy);
   const repairStages = [
+    ...(missingRepairArchitecture.length ? ["M06 — Arquitetura da campanha"] : []),
     ...(missingRepairTriggers.length ? ["M07 — Engenharia de gatilhos"] : []),
     ...(missingRepairQuality.some(field => field.path.startsWith("successMetrics.")) ? ["M08 — Métricas de performance"] : []),
     ...(missingRepairQuality.some(field => field.path.startsWith("risks.")) ? ["M09 — Análise de riscos"] : []),
@@ -868,10 +870,10 @@ export default function CampaignStrategyPage() {
               </DialogTitle>
               <DialogDescription className="pt-2 text-sm leading-relaxed text-muted-foreground">
                 {triggerHelpRunning
-                  ? t("Os agentes estão preenchendo apenas os campos ausentes das seções de gatilhos, métricas e riscos. As informações e os conteúdos existentes serão preservados. A página será atualizada ao concluir.", "The agents are filling only missing fields in the triggers, metrics, and risks sections. Existing information and content will be preserved. This page will refresh when complete.", "Los agentes están completando solo los campos faltantes de disparadores, métricas y riesgos. Se conservarán la información y el contenido existentes. La página se actualizará al terminar.")
+                  ? t("Os agentes estão completando apenas os campos ausentes ou interrompidos das etapas listadas. As informações e os conteúdos existentes serão preservados. A página será atualizada ao concluir.", "The agents are completing only missing or cut-off fields in the listed sections. Existing information and content will be preserved. This page will refresh when complete.", "Los agentes están completando solo los campos faltantes o cortados de las secciones indicadas. Se conservarán la información y el contenido existentes. La página se actualizará al terminar.")
                   : triggerHelpComplete
                     ? t("Os agentes finalizaram. Atualizando os dados da campanha…", "The agents are done. Refreshing campaign data…", "Los agentes terminaron. Actualizando los datos de la campaña…")
-                    : t("Você não precisa conhecer termos técnicos. Os agentes usam o briefing para completar apenas os campos ausentes de métricas, riscos e gatilhos, mantendo as informações e os conteúdos existentes.", "You do not need technical knowledge. Agents use the brief to complete only missing metrics, risks, and trigger fields while preserving existing information and content.", "No necesitas conocimientos técnicos. Los agentes usan el briefing para completar solo los campos faltantes de métricas, riesgos y disparadores, conservando la información y el contenido existentes.")}
+                    : t("Você não precisa conhecer termos técnicos. Os agentes usam o briefing para completar apenas os campos ausentes ou interrompidos da arquitetura, dos gatilhos, das métricas e dos riscos, mantendo as informações e os conteúdos existentes.", "You do not need technical knowledge. Agents use the brief to complete only missing or cut-off architecture, trigger, metrics, and risk fields while preserving existing information and content.", "No necesitas conocimientos técnicos. Los agentes usan el briefing para completar solo los campos faltantes o cortados de arquitectura, disparadores, métricas y riesgos, conservando la información y el contenido existentes.")}
               </DialogDescription>
             </DialogHeader>
 
@@ -887,7 +889,7 @@ export default function CampaignStrategyPage() {
                     <div>
                       <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-amber-200">{t("O que vai acontecer", "What will happen", "Qué sucederá")}</p>
                       <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                        {t("A IA vai tentar completar os campos ausentes das seções de métricas, riscos e gatilhos e gerar uma nova versão do Masterplan para revisão. Os dados já preenchidos e os conteúdos existentes serão preservados. Esta ação consome créditos.", "AI will try to complete missing metrics, risks, and trigger fields and create a new master plan version for review. Existing data and content will be preserved. This uses credits.", "La IA intentará completar los campos faltantes de métricas, riesgos y disparadores y generará una nueva versión del plan maestro para revisión. Se conservarán los datos y el contenido existentes. Esta acción consume créditos.")}
+                        {t("A IA vai tentar completar os campos ausentes ou interrompidos das etapas listadas. Quando existir um Masterplan, uma nova versão será criada para revisão. Os dados e conteúdos atuais serão preservados. Esta ação consome créditos.", "AI will try to complete missing or cut-off fields in the listed sections. If a master plan exists, a new version will be created for review. Existing data and content will be preserved. This uses credits.", "La IA intentará completar los campos faltantes o cortados de las secciones indicadas. Si existe un plan maestro, se creará una nueva versión para revisión. Se conservarán los datos y contenidos actuales. Esta acción consume créditos.")}
                       </p>
                     </div>
                   </div>
@@ -902,7 +904,7 @@ export default function CampaignStrategyPage() {
               <div className="mt-5 space-y-3">
                 <div className="border border-cyan-400/20 bg-cyan-400/[0.04] p-3">
                   <p className="font-mono text-[9px] font-bold uppercase tracking-wider text-cyan-200">{t("Etapas em processamento", "Sections being processed", "Secciones en proceso")}</p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">{(triggerHelpStages.length ? triggerHelpStages : ["M07 — Engenharia de gatilhos", "M08 — Métricas de performance", "M09 — Análise de riscos"]).map(stage => <span key={stage} className="border border-cyan-400/20 bg-cyan-400/[0.06] px-2 py-1 font-mono text-[9px] text-cyan-100">{stage}</span>)}</div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">{(triggerHelpStages.length ? triggerHelpStages : ["M06 — Arquitetura da campanha", "M07 — Engenharia de gatilhos", "M08 — Métricas de performance", "M09 — Análise de riscos"]).map(stage => <span key={stage} className="border border-cyan-400/20 bg-cyan-400/[0.06] px-2 py-1 font-mono text-[9px] text-cyan-100">{stage}</span>)}</div>
                 </div>
                 <div className="h-1.5 overflow-hidden bg-white/5">
                   <div className="h-full w-full animate-pulse bg-gradient-to-r from-blue-500 to-violet-500" />

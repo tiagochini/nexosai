@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db, campaignsTable, masterplanVersionsTable, agentClarificationRequestsTable, auditLogsTable, commercialSubscriptionsTable, productIntakesTable } from "@workspace/db";
-import { fillMissingMasterplanQualityFields, fillMissingTriggerMapFields, missingMasterplanQualityFields, missingTriggerMapFields, REQUIRED_MASTERPLAN_QUALITY_FIELDS, REQUIRED_TRIGGER_MAP_FIELDS } from "@workspace/api-zod";
+import { fillMissingCampaignArchitectureFields, fillMissingMasterplanQualityFields, fillMissingTriggerMapFields, missingCampaignArchitectureFields, missingMasterplanQualityFields, missingTriggerMapFields, REQUIRED_CAMPAIGN_ARCHITECTURE_FIELDS, REQUIRED_MASTERPLAN_QUALITY_FIELDS, REQUIRED_TRIGGER_MAP_FIELDS } from "@workspace/api-zod";
 import { NotFoundError, AppError } from "../../lib/errors.js";
 import { PRODUCT_AUTONOMY_CONTRACT } from "../autonomy/autonomy.service.js";
 import { latestRegionalIntelligenceSummary } from "../market-intel/regional-intelligence.service.js";
@@ -64,30 +64,27 @@ const REQUIRED_STRATEGY_FIELDS: Array<{ path: string; label: string; kind?: "lis
   { path: "audienceSegmentation.buyingTriggers", label: "Gatilhos de compra", kind: "list" },
   { path: "audienceSegmentation.objections", label: "Objeções", kind: "list" },
   { path: "audienceSegmentation.sophisticationStrategy", label: "Estratégia de sofisticação" },
-  { path: "campaignArchitecture.coreNarrative", label: "Narrativa central" },
-  { path: "campaignArchitecture.emotionalHook", label: "Gancho emocional" },
-  { path: "campaignArchitecture.keyMessages", label: "Mensagens-chave", kind: "list" },
-  { path: "campaignArchitecture.contentPillars", label: "Pilares de conteúdo", kind: "list" },
-  { path: "campaignArchitecture.platformDistributionStrategy", label: "Distribuição por plataforma" },
-  { path: "campaignArchitecture.callToActionStrategy", label: "Estratégia de chamada para ação" },
+  ...REQUIRED_CAMPAIGN_ARCHITECTURE_FIELDS,
   ...REQUIRED_MASTERPLAN_QUALITY_FIELDS,
   { path: "strategistNotes", label: "Observações do estrategista" },
   ...REQUIRED_TRIGGER_MAP_FIELDS.map((field) => ({ path: `triggerMap.${field.path}`, label: field.label, kind: field.kind })),
 ];
 
 function getRepairableMissingFields(strategy: Json) {
+  const architecture = missingCampaignArchitectureFields(strategy);
   const quality = missingMasterplanQualityFields(strategy);
   const triggers = missingTriggerMapFields(strategy["triggerMap"]).map((field) => ({
     path: `triggerMap.${field.path}`,
     label: field.label,
   }));
-  return [...quality, ...triggers];
+  return [...architecture, ...quality, ...triggers];
 }
 
 function repairStagesFor(fields: Array<{ path: string }>): string[] {
   const stages = new Set<string>();
   for (const field of fields) {
-    if (field.path.startsWith("triggerMap.")) stages.add("M07_triggers");
+    if (field.path.startsWith("campaignArchitecture.")) stages.add("M06_campaign_architecture");
+    else if (field.path.startsWith("triggerMap.")) stages.add("M07_triggers");
     else if (field.path.startsWith("successMetrics.")) stages.add("M08_metrics");
     else if (field.path.startsWith("risks.")) stages.add("M09_risks");
   }
@@ -110,7 +107,9 @@ export function deterministicHash(value: unknown): string {
 }
 export function calculateMasterplanReadiness(strategyData: unknown, pendingClarifications: { id: string; question: string }[]) {
   const strategy = strategyPayload(strategyData);
+  const incompleteArchitecturePaths = new Set(missingCampaignArchitectureFields(strategy).map(({ path }) => path));
   const missingFields = REQUIRED_STRATEGY_FIELDS.filter(({ path, kind }) => {
+    if (path.startsWith("campaignArchitecture.")) return incompleteArchitecturePaths.has(path);
     const value = getPath(strategy, path);
     if (kind === "list") return !nonEmptyList(value);
     if (kind === "number") return typeof value !== "number" || !Number.isFinite(value) || value <= 0;
@@ -224,9 +223,10 @@ async function materializeLegacyTriggerRepair(workspaceId: string, campaignId: s
     const [latest] = await tx.select().from(masterplanVersionsTable).where(and(
       eq(masterplanVersionsTable.workspaceId, workspaceId), eq(masterplanVersionsTable.campaignId, campaignId),
     )).orderBy(desc(masterplanVersionsTable.version)).limit(1).for("update");
-    if (!latest) {
-      throw new AppError(409, "Esta campanha antiga não possui um Masterplan para revisar. Adote um produto e aprove o briefing antes de gerar um novo plano.", "PRODUCT_INTAKE_BINDING_REQUIRED");
-    }
+    // A legacy campaign can still have its saved strategy repaired even if it
+    // predates Masterplan versioning. Do not fabricate a product/intake binding
+    // or fail after the strategy fields have already been safely persisted.
+    if (!latest) return null;
 
     const pending = await tx.select({ id: agentClarificationRequestsTable.id, question: agentClarificationRequestsTable.question })
       .from(agentClarificationRequestsTable).where(and(
@@ -279,7 +279,7 @@ async function materializeTriggerRepairVersion(
   return materializeLegacyTriggerRepair(workspaceId, campaignId, actorId);
 }
 
-/** Completes only missing fields in M07-M09, retaining existing strategy and generated assets. */
+/** Completes missing or visibly truncated M06-M09 fields, preserving existing content. */
 export async function repairMasterplanTriggerMap(workspaceId: string, campaignId: string, actorId: string, log: any) {
   const [campaign] = await db.select().from(campaignsTable).where(and(
     eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId),
@@ -304,7 +304,10 @@ export async function repairMasterplanTriggerMap(workspaceId: string, campaignId
   log.info(repairContext, "Masterplan section repair started");
   if (!missingBefore.length) {
     const masterplan = await materializeTriggerRepairVersion(workspaceId, campaignId, actorId, campaign);
-    return { masterplan, repairedFields: [], readiness: { status: masterplan?.readinessStatus, score: masterplan?.readinessScore, blockers: masterplan?.readinessBlockers } };
+    const readiness = calculateMasterplanReadiness(originalStrategy, []);
+    return { masterplan, repairedFields: [], readiness: masterplan
+      ? { status: masterplan.readinessStatus, score: masterplan.readinessScore, blockers: masterplan.readinessBlockers }
+      : readiness };
   }
 
   let proposedStrategy = originalStrategy;
@@ -336,7 +339,8 @@ export async function repairMasterplanTriggerMap(workspaceId: string, campaignId
   }
 
   const repairedFields: string[] = [];
-  const strategyValidation = { triggerMapStatus: "complete", triggerMapAttempts: repairAttempts, missingTriggerFields: [], qualitySectionsStatus: "complete", missingQualityFields: [] };
+  const strategyValidation = { triggerMapStatus: "complete", triggerMapAttempts: repairAttempts, missingTriggerFields: [], qualitySectionsStatus: "complete", missingQualityFields: [], architectureStatus: "complete", missingArchitectureFields: [] };
+  let repairedStrategyForReadiness = originalStrategy;
   await db.transaction(async (tx) => {
     const [currentCampaign] = await tx.select({ strategyData: campaignsTable.strategyData, intakeData: campaignsTable.intakeData, status: campaignsTable.status })
       .from(campaignsTable).where(and(
@@ -348,16 +352,19 @@ export async function repairMasterplanTriggerMap(workspaceId: string, campaignId
     }
     const currentStrategy = strategyPayload(currentCampaign.strategyData);
     const stillMissing = getRepairableMissingFields(currentStrategy);
+    const architectureFields = missingCampaignArchitectureFields(currentStrategy);
     const triggerFields = missingTriggerMapFields(currentStrategy["triggerMap"]);
     const qualityFields = missingMasterplanQualityFields(currentStrategy);
+    const repairedArchitecture = fillMissingCampaignArchitectureFields(currentStrategy, proposedStrategy, architectureFields);
     const repairedMap = fillMissingTriggerMapFields(currentStrategy["triggerMap"], proposedStrategy["triggerMap"], triggerFields);
     const repairedQuality = fillMissingMasterplanQualityFields(currentStrategy, proposedStrategy, qualityFields);
-    const repairedStrategy = { ...currentStrategy, triggerMap: repairedMap, successMetrics: repairedQuality["successMetrics"], risks: repairedQuality["risks"] };
+    const repairedStrategy = { ...currentStrategy, campaignArchitecture: repairedArchitecture["campaignArchitecture"], triggerMap: repairedMap, successMetrics: repairedQuality["successMetrics"], risks: repairedQuality["risks"] };
     const remaining = getRepairableMissingFields(repairedStrategy);
     if (remaining.length) {
       throw new AppError(409, "Os dados da campanha mudaram durante a correção. Atualize e tente novamente.", "MASTERPLAN_REPAIR_CONFLICT");
     }
     repairedFields.push(...stillMissing.map((field) => field.path));
+    repairedStrategyForReadiness = repairedStrategy;
     await tx.update(campaignsTable).set({
       strategyData: { ...repairedStrategy, strategyValidation } as any,
       updatedAt: new Date(),
@@ -365,11 +372,14 @@ export async function repairMasterplanTriggerMap(workspaceId: string, campaignId
   });
 
   const masterplan = await materializeTriggerRepairVersion(workspaceId, campaignId, actorId, campaign);
+  const readiness = calculateMasterplanReadiness(repairedStrategyForReadiness, []);
   await db.insert(auditLogsTable).values({
     workspaceId, campaignId, action: "masterplan.sections_repaired", actor: actorId,
     data: { fields: repairedFields, masterplanId: masterplan?.id, readinessStatus: masterplan?.readinessStatus },
   });
-  return { masterplan, repairedFields, readiness: { status: masterplan?.readinessStatus, score: masterplan?.readinessScore, blockers: masterplan?.readinessBlockers } };
+  return { masterplan, repairedFields, readiness: masterplan
+    ? { status: masterplan.readinessStatus, score: masterplan.readinessScore, blockers: masterplan.readinessBlockers }
+    : readiness };
 }
 
 export async function approveMasterplan(workspaceId: string, campaignId: string, version: number, actorId: string) {
