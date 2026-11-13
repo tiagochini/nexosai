@@ -23,6 +23,10 @@ type ModuleStatus = "pending" | "approved" | "flagged" | "rejected";
 
 const STRATEGY_WRAPPER_KEYS = ["data", "result", "insights", "masterplan", "strategy"] as const;
 const STRATEGY_SUMMARY_KEYS = ["executiveSummary", "summary", "executive_summary", "analysis", "overview"] as const;
+const STRATEGY_MODULE_KEYS = [
+  "bigDomino", "offerPositioning", "marketDiagnosis", "audienceSegmentation",
+  "campaignArchitecture", "successMetrics", "risks", "triggerMap", "strategistNotes",
+] as const;
 
 function stripJsonFence(value: string): string {
   return value
@@ -72,6 +76,18 @@ function parseStrategyValue(raw: unknown): Obj | null {
     if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 
     const object = value as Obj;
+    // Some saved plans wrap the full structured payload inside executiveSummary,
+    // occasionally as a second JSON string. Unwrap it only when the outer object
+    // has no module fields, so genuine summary prose is preserved.
+    if (!STRATEGY_MODULE_KEYS.some(key => key in object)) {
+      for (const key of [...STRATEGY_WRAPPER_KEYS, ...STRATEGY_SUMMARY_KEYS]) {
+        const nested = object[key];
+        if (!nested || (typeof nested !== "string" && typeof nested !== "object")) continue;
+        const payload = parseStrategyValue(nested);
+        if (payload && STRATEGY_MODULE_KEYS.some(moduleKey => moduleKey in payload)) return payload;
+      }
+    }
+
     const wrapper = STRATEGY_WRAPPER_KEYS.find(key => {
       const nested = object[key];
       return (typeof nested === "string" && nested.trim()) || (!!nested && typeof nested === "object");

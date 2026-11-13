@@ -522,9 +522,22 @@ export default function CampaignStrategyPage() {
   const status = campaign.status ?? "";
   const campaignRaw = campaign as Record<string, unknown>;
   const intakeD = ((campaignRaw["intakeData"] ?? {}) as Record<string, unknown>);
-  const strategyD = (currentMp?.snapshot && typeof currentMp.snapshot === 'object')
-    ? (currentMp.snapshot as Record<string, unknown>)
-    : ((campaignRaw["strategyData"] ?? {}) as Record<string, unknown>);
+  const campaignStrategyD = (campaignRaw["strategyData"] && typeof campaignRaw["strategyData"] === "object")
+    ? campaignRaw["strategyData"] as Record<string, unknown>
+    : {};
+  const snapshotD = (currentMp?.snapshot && typeof currentMp.snapshot === "object")
+    ? currentMp.snapshot as Record<string, unknown>
+    : {};
+  // A masterplan version snapshot can be only a partial execution snapshot. Keep
+  // the campaign's original strategy payload as a fallback so modules are not
+  // hidden merely because a newer snapshot exists without those sections.
+  const strategyD = { ...campaignStrategyD, ...snapshotD };
+  const strategyInsights = {
+    ...campaignStrategyD,
+    ...parseStrategyInsights(campaignStrategyD),
+    ...snapshotD,
+    ...parseStrategyInsights(snapshotD),
+  };
   const campaignTitle = String(intakeD["product.name"] ?? campaign.title ?? t("Campanha", "Campaign", "Campaña"));
   const track = String(intakeD["launch.track"] ?? "");
   const hasStrategy = Object.keys(strategyD).length > 0;
@@ -653,7 +666,7 @@ export default function CampaignStrategyPage() {
             {hasStrategy ? (
               <StrategyMasterplan
                 strategyD={strategyD}
-                ins={parseStrategyInsights(strategyD)}
+                ins={strategyInsights}
                 campaignId={campaignId}
                 campaignTitle={campaignTitle}
                 track={track}
@@ -727,7 +740,7 @@ export default function CampaignStrategyPage() {
             {hasStrategy ? (
               <StrategyMasterplan
                 strategyD={strategyD}
-                ins={parseStrategyInsights(strategyD)}
+                ins={strategyInsights}
                 campaignId={campaignId}
                 campaignTitle={campaignTitle}
                 track={track}
