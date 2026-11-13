@@ -3,6 +3,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { db, campaignsTable, masterplanVersionsTable, agentClarificationRequestsTable, auditLogsTable, commercialSubscriptionsTable, productIntakesTable } from "@workspace/db";
 import { fillMissingCampaignArchitectureFields, fillMissingCampaignCoreFields, fillMissingMasterplanQualityFields, fillMissingTriggerMapFields, missingCampaignArchitectureFields, missingCampaignCoreFields, missingMasterplanQualityFields, missingTriggerMapFields, REQUIRED_CAMPAIGN_ARCHITECTURE_FIELDS, REQUIRED_CAMPAIGN_CORE_FIELDS, REQUIRED_MASTERPLAN_QUALITY_FIELDS, REQUIRED_TRIGGER_MAP_FIELDS } from "@workspace/api-zod";
 import { NotFoundError, AppError } from "../../lib/errors.js";
+import { providerFailureDiagnostics } from "../../lib/provider-failure-diagnostics.js";
 import { PRODUCT_AUTONOMY_CONTRACT } from "../autonomy/autonomy.service.js";
 import { latestRegionalIntelligenceSummary } from "../market-intel/regional-intelligence.service.js";
 import { completeMissingStrategySections } from "../agents/strategy.agent.js";
@@ -79,6 +80,35 @@ function repairStagesFor(fields: Array<{ path: string }>): string[] {
     else if (field.path === "strategistNotes") stages.add("M10_strategist_notes");
   }
   return [...stages];
+}
+
+function actionableRepairProviderError(error: unknown): AppError | null {
+  const failure = error && typeof error === "object" ? error as { code?: unknown; attempts?: unknown } : {};
+  if (failure.code === "AI_COMPLETION_EXHAUSTED") {
+    const attempts = Array.isArray(failure.attempts) ? failure.attempts : [];
+    const providers = attempts.flatMap((attempt) => {
+      if (!attempt || typeof attempt !== "object") return [];
+      const item = attempt as { provider?: unknown; credentialMode?: unknown; reason?: unknown };
+      const provider = typeof item.provider === "string" ? item.provider : "unknown";
+      const credentialMode = typeof item.credentialMode === "string" ? item.credentialMode : "unknown";
+      const diagnostics = providerFailureDiagnostics(new Error(typeof item.reason === "string" ? item.reason : "provider_error"));
+      return [{ provider, credentialMode, ...diagnostics }];
+    });
+    return new AppError(
+      503,
+      "Os provedores de IA não conseguiram gerar a correção. Verifique saldo, cotas e limites das APIs configuradas e tente novamente. Nenhuma seção foi salva.",
+      "AI_PROVIDERS_UNAVAILABLE",
+      { providers },
+    );
+  }
+  if (failure.code === "AI_COMPLETION_UNAVAILABLE") {
+    return new AppError(
+      503,
+      "Não há credenciais de IA disponíveis para completar as seções. Verifique as integrações e tente novamente. Nenhuma seção foi salva.",
+      "AI_CREDENTIALS_UNAVAILABLE",
+    );
+  }
+  return null;
 }
 
 function getPath(source: Json, path: string): unknown {
@@ -310,14 +340,20 @@ export async function repairMasterplanTriggerMap(workspaceId: string, campaignId
     const attemptLog = typeof log.child === "function"
       ? log.child({ ...repairContext, attempt: repairAttempts, repairStages: repairStagesFor(proposedMissing), repairFields: proposedMissing.map((field) => field.path) })
       : log;
-    proposedStrategy = await completeMissingStrategySections(
-      campaignId,
-      workspaceId,
-      object(campaign.intakeData),
-      proposedStrategy,
-      attemptLog,
-      repairAttempts,
-    );
+    try {
+      proposedStrategy = await completeMissingStrategySections(
+        campaignId,
+        workspaceId,
+        object(campaign.intakeData),
+        proposedStrategy,
+        attemptLog,
+        repairAttempts,
+      );
+    } catch (error) {
+      const actionableError = actionableRepairProviderError(error);
+      if (actionableError) throw actionableError;
+      throw error;
+    }
     proposedMissing = getRepairableMissingFields(proposedStrategy);
   }
   if (proposedMissing.length) {
