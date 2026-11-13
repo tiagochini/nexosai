@@ -2,6 +2,8 @@ import OpenAI from "openai";
 import type { Logger } from "pino";
 import { env } from "../../lib/env.js";
 import { AppError } from "../../lib/errors.js";
+import { generateKairogenImage, kairogenConfigured } from "./kairogen-runtime.js";
+import { KairogenError } from "./kairogen-provider.js";
 
 export interface ImageAttempt {
   provider: string;
@@ -23,7 +25,10 @@ export async function executeImageProviderChain(attempts: ImageAttempt[], log: L
   for (const attempt of attempts) {
     try {
       const image = await attempt.run();
-      if (!verifiedImage(image)) throw new Error("IMAGE_DATA_MISSING");
+      if (!verifiedImage(image)) {
+        if (attempt.provider === "kairogen") throw new KairogenError("KAIROGEN_OUTPUT_UNAVAILABLE", false);
+        throw new Error("IMAGE_DATA_MISSING");
+      }
       log.info({ provider: attempt.provider, model: attempt.model, usedFallback: failures.length > 0 }, "Creative image delivered");
       return image;
     } catch (error) {
@@ -31,6 +36,9 @@ export async function executeImageProviderChain(attempts: ImageAttempt[], log: L
       // A safety refusal must not be bypassed by changing providers.
       if (detail.code === "content_policy_violation" || detail.code === "IMAGE_SAFETY_BLOCKED") {
         throw new AppError(422, "O pedido de imagem foi bloqueado por segurança. Revise o conceito.", "IMAGE_SAFETY_BLOCKED");
+      }
+      if (error instanceof KairogenError && !error.fallbackAllowed) {
+        throw new AppError(503, "A geração na KAIROGEN precisa de acompanhamento. Nenhum outro provedor foi acionado para evitar cobrança duplicada.", error.code, { generationId: error.generationId });
       }
       const failure = { provider: attempt.provider, model: attempt.model, status: detail.status };
       failures.push(failure);
@@ -60,6 +68,8 @@ export async function generateCreativeImage(prompt: string, format: string, qual
   const size = landscape ? "1536x1024" : portrait ? "1024x1536" : "1024x1024";
   const fullPrompt = `${prompt}. IMPORTANT: No text, words, letters, or numbers anywhere in the image. Pure visual composition only.`;
   const attempts: ImageAttempt[] = [];
+  if (kairogenConfigured()) attempts.push({ provider: "kairogen", model: env.KAIROGEN_IMAGE_MODEL,
+    run: () => generateKairogenImage(fullPrompt, landscape ? "3:2" : portrait ? "2:3" : "1:1", quality) });
   const addOpenAI = (apiKey: string, baseURL?: string) => {
     attempts.push({ provider: baseURL ? "openai-integration" : "openai", model: "gpt-image-1", run: async () => {
       const client = new OpenAI({ apiKey, baseURL, timeout: 90_000, maxRetries: 0 });

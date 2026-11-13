@@ -8,6 +8,7 @@ import { requireProject } from "../operations/project-access.service.js";
 
 import { eq, and, or, desc, gte, gt, lt, lte, inArray, isNull } from "drizzle-orm";
 import OpenAI from "openai";
+import { generateKairogenImage, kairogenConfigured, kairogenCanFallback } from "../creatives/kairogen-runtime.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Redis from "ioredis";
 import {
@@ -2576,6 +2577,18 @@ async function generateStoryboardFrame(
     "High contrast, strong focal point, professional quality. Someone who sees this for 2 seconds should immediately understand what is being offered.",
     businessBlock ? "Match brand aesthetics and target audience from the business context." : "",
   ].filter(Boolean).join(" ");
+
+  if (kairogenConfigured()) {
+    try {
+      const image = await generateKairogenImage(prompt, ["reel", "story"].includes(format) ? "9:16" : "16:9", "standard");
+      const match = /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/.exec(image);
+      if (!match) throw new Error("KAIROGEN_OUTPUT_INVALID");
+      return { buf: Buffer.from(match[2]!, "base64"), mimeType: match[1]!, isAI: true };
+    } catch (error) {
+      if (!kairogenCanFallback(error)) throw error;
+      log.info({ provider: "kairogen", reason: error instanceof Error ? error.message : "unavailable" }, "presence: trying next image provider");
+    }
+  }
 
   // ── Tentativa 1: Gemini Image Generation via REST (Google AI Studio) ────────
   // Modelos confirmados disponíveis na conta (verificados via ListModels):

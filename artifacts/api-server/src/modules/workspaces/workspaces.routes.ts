@@ -630,7 +630,7 @@ router.post(
         await db.update(workspacesTable)
           .set({ settings: { ...existingSettings, persona: { ...existingPersona, voiceSamples: [...currentSamples, sample] } } as any })
           .where(eq(workspacesTable.id, workspaceId));
-      } catch {
+      } catch (error) {
         const { deleteGCSObject } = await import("../../lib/gcs-recordings.js");
         await deleteGCSObject(objectKey).catch(() => {});
         throw error;

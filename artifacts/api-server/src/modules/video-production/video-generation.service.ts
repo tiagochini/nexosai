@@ -9,6 +9,7 @@
  * bypass AI credit consumption entirely.
  *
  * Priority chain:
+ *   0. KAIROGEN — quote + credit check; fallback only before acceptance
  *   1. Runway ML (RUNWAY_API_KEY)         — text → video, up to 10s, 720p/1080p
  *   2. Kling AI via fal.ai (FAL_API_KEY)  — text → video, up to 10s
  *   3. HeyGen (HEYGEN_API_KEY)            — avatar/talking-head only
@@ -20,6 +21,7 @@
 
 import { env } from "../../lib/env.js";
 import { logger } from "../../lib/logger.js";
+import { generateKairogen, kairogenConfigured, kairogenCanFallback, pollKairogen } from "../creatives/kairogen-runtime.js";
 
 const log = logger.child({ component: "video-generation" });
 
@@ -62,6 +64,7 @@ export interface VoiceCloneRequest {
 // NexOS-operated infrastructure only — always the platform's own keys.
 
 export function getAvailableVideoProvider(): string | null {
+  if (kairogenConfigured()) return "kairogen";
   if (env.RUNWAY_API_KEY) return "runway";
   if (env.FAL_API_KEY) return "kling";
   return null;
@@ -485,15 +488,27 @@ export async function fetchRandomStockHeygenAvatar(): Promise<StockAvatarResult 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 export async function generateVideoClip(req: VideoClipRequest): Promise<VideoClipResult> {
-  const provider = getAvailableVideoProvider();
-  if (!provider) {
-    return { status: "provider_not_configured", setupInstructions: SETUP_INSTRUCTIONS.video };
+  if (kairogenConfigured()) {
+    try {
+      const result = await generateKairogen({ kind: "video", prompt: req.prompt, aspectRatio: req.aspectRatio,
+        durationSeconds: req.durationSeconds, resolution: req.resolution, imageUrl: req.imageUrl });
+      return { status: result.status, jobId: result.generationId, clipUrl: result.url, provider: "kairogen" };
+    } catch (error) {
+      if (!kairogenCanFallback(error)) return { status: "failed", error: "A geração KAIROGEN precisa de acompanhamento; nenhum segundo pedido foi enviado.", provider: "kairogen" };
+      log.info({ provider: "kairogen", reason: error instanceof Error ? error.message : "unavailable" }, "Trying next configured video provider");
+    }
   }
-  if (provider === "runway") return generateWithRunway(req);
-  return generateWithKling(req);
+  // Preserve the existing order after KAIROGEN is skipped.
+  if (env.RUNWAY_API_KEY) return generateWithRunway(req);
+  if (env.FAL_API_KEY) return generateWithKling(req);
+  return { status: "provider_not_configured", setupInstructions: SETUP_INSTRUCTIONS.video };
 }
 
 export async function pollVideoJob(jobId: string, provider: string): Promise<VideoClipResult> {
+  if (provider === "kairogen") {
+    const result = await pollKairogen(jobId, "video");
+    return { status: result.status, jobId, clipUrl: result.url, provider };
+  }
   if (provider === "runway") return pollRunwayJob(jobId);
   if (provider === "kling") return pollKlingJob(jobId);
   if (provider === "heygen") return pollHeyGenJob(jobId);

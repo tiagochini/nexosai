@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:kairogen-provider": "tsx src/scripts/test-kairogen-provider.ts",
+    "test:kairogen-routing": "tsx src/scripts/test-kairogen-routing.ts",
     "test:billing-plan-activation-db": "cross-env NODE_ENV=test tsx src/scripts/test-billing-plan-activation-db.ts",
     "test:asaas-webhook-token-isolation": "cross-env NODE_ENV=test tsx src/scripts/test-asaas-webhook-token-isolation.ts",
     "test:platform-admin-db": "cross-env NODE_ENV=test tsx src/scripts/test-platform-admin-db.ts",

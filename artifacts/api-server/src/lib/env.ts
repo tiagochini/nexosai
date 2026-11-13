@@ -109,6 +109,15 @@ export const env = {
   // Set to "false" during pre-launch (carrinho fechado) — only invite codes / waitlist work.
   CART_OPEN: process.env["CART_OPEN"] === "true",
   // ── Video generation providers ─────────────────────────────────────────────
+  // Platform-owned primary image/video supplier, provisioned through scripts/kairogen-connect.mjs.
+  KAIROGEN_ENABLED: process.env["KAIROGEN_ENABLED"] !== "false",
+  KAIROGEN_ACCESS_TOKEN: process.env["KAIROGEN_ACCESS_TOKEN"] ?? "",
+  KAIROGEN_REFRESH_TOKEN: process.env["KAIROGEN_REFRESH_TOKEN"] ?? "",
+  KAIROGEN_CLIENT_ID: process.env["KAIROGEN_CLIENT_ID"] ?? "",
+  KAIROGEN_TOKEN_EXPIRES_AT: process.env["KAIROGEN_TOKEN_EXPIRES_AT"] ?? "",
+  KAIROGEN_IMAGE_MODEL: process.env["KAIROGEN_IMAGE_MODEL"] ?? "nano-banana-2",
+  KAIROGEN_VIDEO_MODEL: process.env["KAIROGEN_VIDEO_MODEL"] ?? "wan-2-6",
+  KAIROGEN_MEDIA_HOSTS: process.env["KAIROGEN_MEDIA_HOSTS"] ?? "kairogen.ai,storage.googleapis.com,replicate.delivery,fal.media",
   // Runway ML — text/image → video (Gen-3 Alpha). https://dev.runwayml.com
   RUNWAY_API_KEY: process.env["RUNWAY_API_KEY"] ?? "",
   RUNWAY_API_VERSION: process.env["RUNWAY_API_VERSION"] ?? "2024-11-06",
