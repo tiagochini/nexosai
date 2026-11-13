@@ -528,15 +528,20 @@ export default function CampaignStrategyPage() {
   const snapshotD = (currentMp?.snapshot && typeof currentMp.snapshot === "object")
     ? currentMp.snapshot as Record<string, unknown>
     : {};
-  // A masterplan version snapshot can be only a partial execution snapshot. Keep
-  // the campaign's original strategy payload as a fallback so modules are not
-  // hidden merely because a newer snapshot exists without those sections.
-  const strategyD = { ...campaignStrategyD, ...snapshotD };
+  const snapshotStrategyD = (snapshotD["strategy"] && typeof snapshotD["strategy"] === "object" && !Array.isArray(snapshotD["strategy"]))
+    ? snapshotD["strategy"] as Record<string, unknown>
+    : typeof snapshotD["strategy"] === "string"
+      ? parseStrategyInsights({ executiveSummary: snapshotD["strategy"] })
+      : {};
+  // Masterplan snapshots store the actual campaign strategy under `strategy`.
+  // Merge that payload with the campaign copy so a partial snapshot cannot hide
+  // modules that are already present in the original campaign strategy data.
+  const strategyD = { ...campaignStrategyD, ...snapshotStrategyD };
   const strategyInsights = {
     ...campaignStrategyD,
     ...parseStrategyInsights(campaignStrategyD),
-    ...snapshotD,
-    ...parseStrategyInsights(snapshotD),
+    ...snapshotStrategyD,
+    ...parseStrategyInsights(snapshotStrategyD),
   };
   const campaignTitle = String(intakeD["product.name"] ?? campaign.title ?? t("Campanha", "Campaign", "Campaña"));
   const track = String(intakeD["launch.track"] ?? "");
