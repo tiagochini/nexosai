@@ -201,6 +201,71 @@ export async function materializeMasterplan(workspaceId: string, campaignId: str
   return created;
 }
 
+/** Revisions an existing legacy masterplan without inventing a product-intake binding. */
+async function materializeLegacyTriggerRepair(workspaceId: string, campaignId: string, actorId: string) {
+  return db.transaction(async (tx) => {
+    const [campaign] = await tx.select().from(campaignsTable).where(and(
+      eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId),
+    )).for("update").limit(1);
+    if (!campaign) throw new NotFoundError("Campaign");
+    const [latest] = await tx.select().from(masterplanVersionsTable).where(and(
+      eq(masterplanVersionsTable.workspaceId, workspaceId), eq(masterplanVersionsTable.campaignId, campaignId),
+    )).orderBy(desc(masterplanVersionsTable.version)).limit(1).for("update");
+    if (!latest) {
+      throw new AppError(409, "Esta campanha antiga não possui um Masterplan para revisar. Adote um produto e aprove o briefing antes de gerar um novo plano.", "PRODUCT_INTAKE_BINDING_REQUIRED");
+    }
+
+    const pending = await tx.select({ id: agentClarificationRequestsTable.id, question: agentClarificationRequestsTable.question })
+      .from(agentClarificationRequestsTable).where(and(
+        eq(agentClarificationRequestsTable.workspaceId, workspaceId), eq(agentClarificationRequestsTable.campaignId, campaignId),
+        eq(agentClarificationRequestsTable.status, "pending"),
+      ));
+    const previousSnapshot = object(latest.snapshot);
+    const currentStrategy = strategyPayload(campaign.strategyData);
+    const paidMedia = paidMediaSnapshotFields(currentStrategy, campaign.intakeData);
+    const snapshot = canonicalize({ ...previousSnapshot, strategy: paidMedia.strategy });
+    const readiness = calculateMasterplanReadiness(campaign.strategyData, pending);
+    const contentHash = deterministicHash(snapshot);
+    const contextFingerprint = deterministicHash({ contentHash, readinessScore: readiness.score, blockers: readiness.blockers });
+    const [created] = await tx.insert(masterplanVersionsTable).values({
+      workspaceId,
+      campaignId,
+      version: latest.version + 1,
+      status: "pending_approval",
+      snapshot,
+      contentHash,
+      contextFingerprint,
+      readinessScore: readiness.score,
+      readinessStatus: readiness.status,
+      readinessBlockers: readiness.blockers,
+      autonomyContract: latest.autonomyContract,
+      allowedActions: latest.allowedActions,
+      requiredApprovals: latest.requiredApprovals,
+      commercialSubscriptionId: latest.commercialSubscriptionId,
+      commercialProductId: latest.commercialProductId,
+      productIntakeVersionId: latest.productIntakeVersionId,
+      createdByUserId: actorId,
+    }).returning();
+    await tx.insert(auditLogsTable).values({
+      workspaceId, campaignId, action: "masterplan.legacy_trigger_repair_materialized", actor: actorId,
+      data: { masterplanId: created!.id, version: created!.version, readinessStatus: readiness.status },
+    });
+    return created!;
+  });
+}
+
+async function materializeTriggerRepairVersion(
+  workspaceId: string,
+  campaignId: string,
+  actorId: string,
+  campaign: typeof campaignsTable.$inferSelect,
+) {
+  if (campaign.commercialProductId && campaign.commercialSubscriptionId && campaign.productIntakeVersionId) {
+    return materializeMasterplan(workspaceId, campaignId, actorId, true);
+  }
+  return materializeLegacyTriggerRepair(workspaceId, campaignId, actorId);
+}
+
 /** Completes only missing trigger-map fields, retaining the existing strategy and generated assets. */
 export async function repairMasterplanTriggerMap(workspaceId: string, campaignId: string, actorId: string, log: any) {
   const [campaign] = await db.select().from(campaignsTable).where(and(
@@ -215,7 +280,7 @@ export async function repairMasterplanTriggerMap(workspaceId: string, campaignId
   const originalMap = object(originalStrategy["triggerMap"]);
   const missingBefore = missingTriggerMapFields(originalMap);
   if (!missingBefore.length) {
-    const masterplan = await materializeMasterplan(workspaceId, campaignId, actorId, true);
+    const masterplan = await materializeTriggerRepairVersion(workspaceId, campaignId, actorId, campaign);
     return { masterplan, repairedFields: [], readiness: { status: masterplan?.readinessStatus, score: masterplan?.readinessScore, blockers: masterplan?.readinessBlockers } };
   }
 
@@ -270,7 +335,7 @@ export async function repairMasterplanTriggerMap(workspaceId: string, campaignId
     }).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
   });
 
-  const masterplan = await materializeMasterplan(workspaceId, campaignId, actorId, true);
+  const masterplan = await materializeTriggerRepairVersion(workspaceId, campaignId, actorId, campaign);
   await db.insert(auditLogsTable).values({
     workspaceId, campaignId, action: "masterplan.trigger_map_repaired", actor: actorId,
     data: { fields: repairedFields, masterplanId: masterplan?.id, readinessStatus: masterplan?.readinessStatus },
