@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { generateMasterplanPDF, type PdfUserIdentity } from "@/lib/masterplan-pdf";
 import { missingTriggerMapFields } from "@/lib/trigger-map-contract";
+import { missingMasterplanQualityFields } from "@/lib/masterplan-quality-contract";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useUiText } from "@/lib/i18n";
 
@@ -407,6 +408,18 @@ function PhaseTimeline({ items }: { items: string[] }) {
 
 // ─── Module wrapper ───────────────────────────────────────────────────────────
 
+function IncompleteFields({ fields, onRepair, pending }: { fields: string[]; onRepair?: () => void; pending?: boolean }) {
+  const t = useUiText();
+  return <div className="border border-amber-400/20 bg-amber-400/[0.04] p-3">
+    <div className="font-mono text-[9px] font-bold uppercase tracking-wider text-amber-200">{t("Ainda faltam itens nesta seção", "This section still has missing items", "Aún faltan elementos en esta sección")}</div>
+    <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{fields.join(" · ")}</p>
+    {onRepair && <Button type="button" variant="outline" size="sm" onClick={onRepair} disabled={pending} className="mt-2 rounded-none font-mono text-[9px] uppercase tracking-wider">
+      {pending ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Brain className="mr-2 h-3 w-3" />}
+      {t("Pedir conclusão aos agentes", "Ask agents to complete", "Pedir a los agentes que completen")}
+    </Button>}
+  </div>;
+}
+
 interface ModuleProps {
   index: number;
   id: string;
@@ -704,6 +717,8 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
   const risks        = obj(src["risks"]                ?? strategyD["risks"]);
   const triggerMap   = obj(src["triggerMap"]           ?? strategyD["triggerMap"]);
   const missingTriggerFields = missingTriggerMapFields(triggerMap);
+  const missingMetricFields = missingMasterplanQualityFields({ successMetrics: metrics, risks: {} }).filter(field => field.path.startsWith("successMetrics."));
+  const missingRiskFields = missingMasterplanQualityFields({ successMetrics: {}, risks }).filter(field => field.path.startsWith("risks."));
   const triggerPhases = [
     { key: "preLaunch", label: "Pré-lançamento" },
     { key: "cartOpen", label: "Abertura do carrinho" },
@@ -1152,12 +1167,18 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
       <Module index={8} id="metrics" icon={BarChart3}
         title="Métricas de Performance" subtitle="KPI principal, meta de receita, taxa de conversão e premissas críticas"
         status={getStatus("metrics")} accentColor="green"
+        emptyDescription={["As metas e premissas precisam estar explícitas. Peça aos agentes para completar esta seção com o briefing; hipóteses serão identificadas como hipóteses.", "Targets and assumptions must be explicit. Ask the agents to complete this section from the brief; hypotheses will be labeled as hypotheses.", "Las metas y premisas deben quedar explícitas. Pide a los agentes que completen esta sección con el briefing; las hipótesis se marcarán como hipótesis."]}
+        emptyActionLabel={["Completar com os agentes", "Complete with agents", "Completar con agentes"]}
+        onEmptyAction={onRequestTriggerHelp}
+        emptyActionPending={triggerHelpPending}
         onApprove={id => setStatus(id, "approved")}
         onReject={id => setStatus(id, "rejected")}
         onFlag={id => setStatus(id, "flagged")}
         isEmpty={!str(metrics["primaryKPI"]) && revenueTarget === null && conversionRate === null
-          && !str(metrics["launchWindow"]) && arr(metrics["criticalAssumptions"]).length === 0}
+          && !str(metrics["conversionRateDefinition"]) && !str(metrics["launchWindow"]) && arr(metrics["criticalAssumptions"]).length === 0}
+        isIncomplete={missingMetricFields.length > 0}
       >
+        {missingMetricFields.length > 0 && <IncompleteFields fields={missingMetricFields.map(field => field.label)} onRepair={onRequestTriggerHelp} pending={triggerHelpPending} />}
         <div>
           <SectionLabel n="8.1">Unit Economics</SectionLabel>
           <div className="grid grid-cols-2 gap-1.5">
@@ -1166,6 +1187,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
             <KpiBox label="Taxa de Conversão Alvo" value={conversionRate ? `${(conversionRate * 100).toFixed(1)}%` : ""} />
             <KpiBox label="Horizonte de Lançamento" value={str(metrics["launchWindow"])} />
           </div>
+          {str(metrics["conversionRateDefinition"]) && <p className="mt-2 font-mono text-[10px] leading-relaxed text-muted-foreground">{str(metrics["conversionRateDefinition"])}</p>}
         </div>
         {arr(metrics["criticalAssumptions"]).length > 0 && (
           <div>
@@ -1179,12 +1201,18 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
       <Module index={9} id="risks" icon={ShieldAlert}
         title="Análise de Riscos" subtitle="Nível de risco, ameaças principais e estratégias de mitigação"
         status={getStatus("risks")} accentColor="red"
+        emptyDescription={["A análise precisa listar riscos concretos e como reduzi-los. Os agentes podem propor controles com base no briefing.", "The analysis must list concrete risks and how to reduce them. Agents can propose controls from the brief.", "El análisis debe enumerar riesgos concretos y cómo reducirlos. Los agentes pueden proponer controles a partir del briefing."]}
+        emptyActionLabel={["Completar com os agentes", "Complete with agents", "Completar con agentes"]}
+        onEmptyAction={onRequestTriggerHelp}
+        emptyActionPending={triggerHelpPending}
         onApprove={id => setStatus(id, "approved")}
         onReject={id => setStatus(id, "rejected")}
         onFlag={id => setStatus(id, "flagged")}
         isEmpty={!str(risks["level"]) && arr(risks["mainRisks"]).length === 0
           && arr(risks["mitigations"]).length === 0}
+        isIncomplete={missingRiskFields.length > 0}
       >
+        {missingRiskFields.length > 0 && <IncompleteFields fields={missingRiskFields.map(field => field.label)} onRepair={onRequestTriggerHelp} pending={triggerHelpPending} />}
         {str(risks["level"]) && (
           <div className="flex items-center gap-3">
             <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35">{t("Nível geral", "Overall level", "Nivel general")}</span>

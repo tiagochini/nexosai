@@ -466,7 +466,7 @@ export default function CampaignStrategyPage() {
   });
 
   const completeTriggerStrategyMutation = useMutation({
-    mutationFn: () => customFetch(`/api/campaigns/${campaignId}/masterplan/repair-trigger-map`, {
+    mutationFn: () => customFetch(`/api/campaigns/${campaignId}/masterplan/repair-sections`, {
       method: "POST",
     }),
     onSuccess: () => {
@@ -834,6 +834,7 @@ export default function CampaignStrategyPage() {
       >
         <DialogContent
           className={`max-w-lg overflow-hidden border border-violet-400/30 bg-[#090b11] p-0 shadow-[0_24px_100px_rgba(0,0,0,0.7)] ${triggerHelpRunning ? "[&>button:last-child]:hidden" : ""}`}
+          style={{ backgroundColor: "#090b11", opacity: 1 }}
           onEscapeKeyDown={(event) => { if (triggerHelpRunning) event.preventDefault(); }}
           onInteractOutside={(event) => { if (triggerHelpRunning) event.preventDefault(); }}
         >
@@ -849,17 +850,17 @@ export default function CampaignStrategyPage() {
               </div>
               <DialogTitle className="font-mono text-base font-black uppercase tracking-wider text-foreground">
                 {triggerHelpRunning
-                  ? t("Completando os gatilhos", "Completing the triggers", "Completando los disparadores")
+                  ? t("Completando o Masterplan", "Completing the master plan", "Completando el plan maestro")
                   : triggerHelpComplete
                     ? t("Estratégia atualizada", "Strategy updated", "Estrategia actualizada")
-                    : t("Completar a seção de gatilhos?", "Complete the trigger section?", "¿Completar la sección de disparadores?")}
+                    : t("Completar seções pendentes?", "Complete missing sections?", "¿Completar las secciones pendientes?")}
               </DialogTitle>
               <DialogDescription className="pt-2 text-sm leading-relaxed text-muted-foreground">
                 {triggerHelpRunning
-                  ? t("Os agentes estão preenchendo apenas os campos ausentes da seção 07. A estratégia e os conteúdos existentes serão preservados. A página será atualizada ao concluir.", "The agents are filling only the missing fields in section 07. Your strategy and existing content will be preserved. This page will refresh when complete.", "Los agentes están completando solo los campos faltantes de la sección 07. Se conservarán la estrategia y el contenido existentes. La página se actualizará al terminar.")
+                  ? t("Os agentes estão preenchendo apenas os campos ausentes das seções de gatilhos, métricas e riscos. As informações e os conteúdos existentes serão preservados. A página será atualizada ao concluir.", "The agents are filling only missing fields in the triggers, metrics, and risks sections. Existing information and content will be preserved. This page will refresh when complete.", "Los agentes están completando solo los campos faltantes de disparadores, métricas y riesgos. Se conservarán la información y el contenido existentes. La página se actualizará al terminar.")
                   : triggerHelpComplete
                     ? t("Os agentes finalizaram. Atualizando os dados da campanha…", "The agents are done. Refreshing campaign data…", "Los agentes terminaron. Actualizando los datos de la campaña…")
-                    : t("Você não precisa conhecer termos de marketing. Os agentes usam o briefing para completar somente os gatilhos que faltam, mantendo as decisões e os conteúdos já existentes.", "You do not need to know marketing terminology. The agents use your brief to fill only missing triggers while keeping existing decisions and content.", "No necesitas conocer términos de marketing. Los agentes usan tu briefing para completar solo los disparadores que faltan y conservar las decisiones y el contenido existentes.")}
+                    : t("Você não precisa conhecer termos técnicos. Os agentes usam o briefing para completar apenas os campos ausentes de métricas, riscos e gatilhos, mantendo as informações e os conteúdos existentes.", "You do not need technical knowledge. Agents use the brief to complete only missing metrics, risks, and trigger fields while preserving existing information and content.", "No necesitas conocimientos técnicos. Los agentes usan el briefing para completar solo los campos faltantes de métricas, riesgos y disparadores, conservando la información y el contenido existentes.")}
               </DialogDescription>
             </DialogHeader>
 
@@ -871,7 +872,7 @@ export default function CampaignStrategyPage() {
                     <div>
                       <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-amber-200">{t("O que vai acontecer", "What will happen", "Qué sucederá")}</p>
                       <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                        {t("A IA vai completar os campos ausentes da seção 07 e gerar uma nova versão do Masterplan para revisão. A estratégia e os conteúdos existentes serão preservados. Esta ação consome créditos.", "AI will fill the missing fields in section 07 and create a new master plan version for review. Existing strategy and content will be preserved. This uses credits.", "La IA completará los campos faltantes de la sección 07 y generará una nueva versión del plan maestro para revisión. Se conservarán la estrategia y el contenido existentes. Esta acción consume créditos.")}
+                        {t("A IA vai tentar completar os campos ausentes das seções de métricas, riscos e gatilhos e gerar uma nova versão do Masterplan para revisão. Os dados já preenchidos e os conteúdos existentes serão preservados. Esta ação consome créditos.", "AI will try to complete missing metrics, risks, and trigger fields and create a new master plan version for review. Existing data and content will be preserved. This uses credits.", "La IA intentará completar los campos faltantes de métricas, riesgos y disparadores y generará una nueva versión del plan maestro para revisión. Se conservarán los datos y el contenido existentes. Esta acción consume créditos.")}
                       </p>
                     </div>
                   </div>
@@ -913,7 +914,7 @@ export default function CampaignStrategyPage() {
                 <Button onClick={confirmTriggerHelp} disabled={completeTriggerStrategyMutation.isPending} className="rounded-none bg-gradient-to-r from-blue-600 to-violet-600 font-mono text-[10px] font-bold uppercase tracking-wider text-white hover:brightness-110">
                   {completeTriggerStrategyMutation.isPending
                     ? <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />{t("Iniciando…", "Starting…", "Iniciando…")}</>
-                    : <><Sparkles className="mr-2 h-3.5 w-3.5" />{t("Completar gatilhos", "Complete triggers", "Completar disparadores")}</>}
+                    : <><Sparkles className="mr-2 h-3.5 w-3.5" />{t("Completar seções", "Complete sections", "Completar secciones")}</>}
                 </Button>
               </DialogFooter>
             )}

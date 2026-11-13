@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db, campaignsTable, masterplanVersionsTable, agentClarificationRequestsTable, auditLogsTable, commercialSubscriptionsTable, productIntakesTable } from "@workspace/db";
-import { fillMissingTriggerMapFields, missingTriggerMapFields, REQUIRED_TRIGGER_MAP_FIELDS } from "@workspace/api-zod";
+import { fillMissingMasterplanQualityFields, fillMissingTriggerMapFields, missingMasterplanQualityFields, missingTriggerMapFields, REQUIRED_MASTERPLAN_QUALITY_FIELDS, REQUIRED_TRIGGER_MAP_FIELDS } from "@workspace/api-zod";
 import { NotFoundError, AppError } from "../../lib/errors.js";
 import { PRODUCT_AUTONOMY_CONTRACT } from "../autonomy/autonomy.service.js";
 import { latestRegionalIntelligenceSummary } from "../market-intel/regional-intelligence.service.js";
-import { completeMissingTriggerMap } from "../agents/strategy.agent.js";
+import { completeMissingStrategySections } from "../agents/strategy.agent.js";
 
 import { assertPaidMediaApprovalMatchesCampaign, paidMediaSnapshotFields } from "../paid-media/paid-media-setup.service.js";
 
@@ -70,16 +70,19 @@ const REQUIRED_STRATEGY_FIELDS: Array<{ path: string; label: string; kind?: "lis
   { path: "campaignArchitecture.contentPillars", label: "Pilares de conteúdo", kind: "list" },
   { path: "campaignArchitecture.platformDistributionStrategy", label: "Distribuição por plataforma" },
   { path: "campaignArchitecture.callToActionStrategy", label: "Estratégia de chamada para ação" },
-  { path: "successMetrics.primaryKPI", label: "KPI principal" },
-  { path: "successMetrics.conversionRateTarget", label: "Meta de conversão", kind: "number" },
-  { path: "successMetrics.launchWindow", label: "Janela da campanha" },
-  { path: "successMetrics.criticalAssumptions", label: "Premissas críticas", kind: "list" },
-  { path: "risks.level", label: "Nível de risco" },
-  { path: "risks.mainRisks", label: "Riscos principais", kind: "list" },
-  { path: "risks.mitigations", label: "Mitigações", kind: "list" },
+  ...REQUIRED_MASTERPLAN_QUALITY_FIELDS,
   { path: "strategistNotes", label: "Observações do estrategista" },
   ...REQUIRED_TRIGGER_MAP_FIELDS.map((field) => ({ path: `triggerMap.${field.path}`, label: field.label, kind: field.kind })),
 ];
+
+function getRepairableMissingFields(strategy: Json) {
+  const quality = missingMasterplanQualityFields(strategy);
+  const triggers = missingTriggerMapFields(strategy["triggerMap"]).map((field) => ({
+    path: `triggerMap.${field.path}`,
+    label: field.label,
+  }));
+  return [...quality, ...triggers];
+}
 
 function getPath(source: Json, path: string): unknown {
   return path.split(".").reduce<unknown>((current, key) => object(current)[key], source);
@@ -266,51 +269,50 @@ async function materializeTriggerRepairVersion(
   return materializeLegacyTriggerRepair(workspaceId, campaignId, actorId);
 }
 
-/** Completes only missing trigger-map fields, retaining the existing strategy and generated assets. */
+/** Completes only missing fields in M07-M09, retaining existing strategy and generated assets. */
 export async function repairMasterplanTriggerMap(workspaceId: string, campaignId: string, actorId: string, log: any) {
   const [campaign] = await db.select().from(campaignsTable).where(and(
     eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId),
   )).limit(1);
   if (!campaign) throw new NotFoundError("Campaign");
   if (!["strategy_ready", "awaiting_approval"].includes(campaign.status)) {
-    throw new AppError(409, "Os gatilhos só podem ser completados enquanto o Masterplan aguarda revisão.", "TRIGGER_MAP_REPAIR_NOT_AVAILABLE");
+    throw new AppError(409, "As seções só podem ser completadas enquanto o Masterplan aguarda revisão.", "MASTERPLAN_REPAIR_NOT_AVAILABLE");
   }
 
   const originalStrategy = strategyPayload(campaign.strategyData);
-  const originalMap = object(originalStrategy["triggerMap"]);
-  const missingBefore = missingTriggerMapFields(originalMap);
+  const missingBefore = getRepairableMissingFields(originalStrategy);
   if (!missingBefore.length) {
     const masterplan = await materializeTriggerRepairVersion(workspaceId, campaignId, actorId, campaign);
     return { masterplan, repairedFields: [], readiness: { status: masterplan?.readinessStatus, score: masterplan?.readinessScore, blockers: masterplan?.readinessBlockers } };
   }
 
-  let proposedMap = originalMap;
+  let proposedStrategy = originalStrategy;
   let proposedMissing = missingBefore;
   let repairAttempts = 0;
   while (proposedMissing.length > 0 && repairAttempts < 2) {
     repairAttempts += 1;
-    proposedMap = await completeMissingTriggerMap(
+    proposedStrategy = await completeMissingStrategySections(
       campaignId,
       workspaceId,
       object(campaign.intakeData),
-      { ...originalStrategy, triggerMap: proposedMap },
+      proposedStrategy,
       log,
       repairAttempts,
     );
-    proposedMissing = missingTriggerMapFields(proposedMap);
+    proposedMissing = getRepairableMissingFields(proposedStrategy);
   }
   if (proposedMissing.length) {
-    const blockers = proposedMissing.map((field) => ({ path: `triggerMap.${field.path}`, label: field.label }));
+    const blockers = proposedMissing;
     await db.insert(auditLogsTable).values({
-      workspaceId, campaignId, action: "masterplan.trigger_map_repair_failed", actor: actorId,
+      workspaceId, campaignId, action: "masterplan.sections_repair_failed", actor: actorId,
       data: { attempts: repairAttempts, missingFields: blockers.map((field) => field.path) },
     });
     const pendingLabels = blockers.map((field) => field.label).join(", ");
-    throw new AppError(422, `A IA não conseguiu preencher todos os itens após ${repairAttempts} tentativas. Ainda falta: ${pendingLabels}. O Masterplan continua bloqueado; você pode tentar novamente.`, "TRIGGER_MAP_INCOMPLETE", { blockers, attempts: repairAttempts });
+    throw new AppError(422, `A IA não conseguiu completar todas as seções após ${repairAttempts} tentativas. Ainda falta: ${pendingLabels}. O Masterplan continua bloqueado; você pode tentar novamente.`, "MASTERPLAN_SECTIONS_INCOMPLETE", { blockers, attempts: repairAttempts });
   }
 
   const repairedFields: string[] = [];
-  const strategyValidation = { triggerMapStatus: "complete", triggerMapAttempts: repairAttempts, missingTriggerFields: [] };
+  const strategyValidation = { triggerMapStatus: "complete", triggerMapAttempts: repairAttempts, missingTriggerFields: [], qualitySectionsStatus: "complete", missingQualityFields: [] };
   await db.transaction(async (tx) => {
     const [currentCampaign] = await tx.select({ strategyData: campaignsTable.strategyData, intakeData: campaignsTable.intakeData, status: campaignsTable.status })
       .from(campaignsTable).where(and(
@@ -321,23 +323,26 @@ export async function repairMasterplanTriggerMap(workspaceId: string, campaignId
       throw new AppError(409, "A campanha mudou de etapa. Atualize a página antes de completar os gatilhos.", "TRIGGER_MAP_REPAIR_NOT_AVAILABLE");
     }
     const currentStrategy = strategyPayload(currentCampaign.strategyData);
-    const currentMap = object(currentStrategy["triggerMap"]);
-    const stillMissing = missingTriggerMapFields(currentMap);
-    const repairedMap = fillMissingTriggerMapFields(currentMap, proposedMap, stillMissing);
-    const remaining = missingTriggerMapFields(repairedMap);
+    const stillMissing = getRepairableMissingFields(currentStrategy);
+    const triggerFields = missingTriggerMapFields(currentStrategy["triggerMap"]);
+    const qualityFields = missingMasterplanQualityFields(currentStrategy);
+    const repairedMap = fillMissingTriggerMapFields(currentStrategy["triggerMap"], proposedStrategy["triggerMap"], triggerFields);
+    const repairedQuality = fillMissingMasterplanQualityFields(currentStrategy, proposedStrategy, qualityFields);
+    const repairedStrategy = { ...currentStrategy, triggerMap: repairedMap, successMetrics: repairedQuality["successMetrics"], risks: repairedQuality["risks"] };
+    const remaining = getRepairableMissingFields(repairedStrategy);
     if (remaining.length) {
-      throw new AppError(409, "Os dados da campanha mudaram durante a correção. Atualize e tente novamente.", "TRIGGER_MAP_CHANGED");
+      throw new AppError(409, "Os dados da campanha mudaram durante a correção. Atualize e tente novamente.", "MASTERPLAN_REPAIR_CONFLICT");
     }
-    repairedFields.push(...stillMissing.map((field) => `triggerMap.${field.path}`));
+    repairedFields.push(...stillMissing.map((field) => field.path));
     await tx.update(campaignsTable).set({
-      strategyData: { ...currentStrategy, triggerMap: repairedMap, strategyValidation } as any,
+      strategyData: { ...repairedStrategy, strategyValidation } as any,
       updatedAt: new Date(),
     }).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
   });
 
   const masterplan = await materializeTriggerRepairVersion(workspaceId, campaignId, actorId, campaign);
   await db.insert(auditLogsTable).values({
-    workspaceId, campaignId, action: "masterplan.trigger_map_repaired", actor: actorId,
+    workspaceId, campaignId, action: "masterplan.sections_repaired", actor: actorId,
     data: { fields: repairedFields, masterplanId: masterplan?.id, readinessStatus: masterplan?.readinessStatus },
   });
   return { masterplan, repairedFields, readiness: { status: masterplan?.readinessStatus, score: masterplan?.readinessScore, blockers: masterplan?.readinessBlockers } };

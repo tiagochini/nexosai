@@ -39,12 +39,15 @@ router.post("/:campaignId/masterplan/materialize", async (req, res) => {
     res.status(201).json({ masterplan });
   } catch (err) { handle(err, res); }
 });
-router.post("/:campaignId/masterplan/repair-trigger-map", async (req, res) => {
+const repairMasterplan = async (req: any, res: Response) => {
   try {
     const result = await repairMasterplanTriggerMap(req.auth.workspaceId, req.params["campaignId"] as string, req.auth.userId, req.log);
     res.json(result);
   } catch (err) { handle(err, res); }
-});
+};
+router.post("/:campaignId/masterplan/repair-sections", repairMasterplan);
+// Backwards-compatible alias for clients deployed before the repair covered M08-M09.
+router.post("/:campaignId/masterplan/repair-trigger-map", repairMasterplan);
 router.post("/:campaignId/masterplan/approve", async (req, res) => {
   const parsed = approveSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" }); return; }

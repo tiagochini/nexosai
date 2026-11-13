@@ -1,6 +1,7 @@
 import jsPDF, { GState } from "jspdf";
 import { pdfText } from "./pdf-text";
 import { missingTriggerMapFields } from "./trigger-map-contract";
+import { missingMasterplanQualityFields } from "./masterplan-quality-contract";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -921,7 +922,8 @@ export function generateMasterplanPDF(
 
   // ── M08 — MÉTRICAS
   const met = data.metrics;
-  if (Object.keys(met).length > 0) {
+  const missingMetrics = missingMasterplanQualityFields({ successMetrics: met, risks: {} }).filter(field => field.path.startsWith("successMetrics."));
+  if (Object.keys(met).length > 0 || missingMetrics.length > 0) {
     y = checkBreak(doc, y, 25);
     y = renderSection(doc, "08", "MÉTRICAS DE PERFORMANCE", y);
 
@@ -929,6 +931,16 @@ export function generateMasterplanPDF(
     doc.setFontSize(7.5);
     setColor(doc, 100, 70, 160);
     doc.text("8.1 — Unit Economics", ML, y); y += 4;
+
+    if (missingMetrics.length) {
+      doc.setFont("helvetica", "bold"); doc.setFontSize(7); setColor(doc, 160, 100, 20);
+      const warningLines = doc.splitTextToSize(`SEÇÃO INCOMPLETA — faltam: ${missingMetrics.map(field => field.label).join(" · ")}`, CW - 4) as string[];
+      y = checkBreak(doc, y, warningLines.length * 3.5 + 3);
+      doc.text(warningLines, ML, y); y += warningLines.length * 3.5 + 3;
+    }
+    if (str(met["conversionRateDefinition"])) {
+      y = labeledText(doc, "Base da taxa de conversão", str(met["conversionRateDefinition"]), y);
+    }
 
     const revenueTarget = num(met["revenueTarget"]);
     const conversionRate = num(met["conversionRateTarget"]);
@@ -974,9 +986,17 @@ export function generateMasterplanPDF(
 
   // ── M09 — ANÁLISE DE RISCOS
   const rsk = data.risks;
-  if (Object.keys(rsk).length > 0) {
+  const missingRiskFields = missingMasterplanQualityFields({ successMetrics: {}, risks: rsk }).filter(field => field.path.startsWith("risks."));
+  if (Object.keys(rsk).length > 0 || missingRiskFields.length > 0) {
     y = checkBreak(doc, y, 20);
     y = renderSection(doc, "09", "ANÁLISE DE RISCOS", y);
+
+    if (missingRiskFields.length) {
+      doc.setFont("helvetica", "bold"); doc.setFontSize(7); setColor(doc, 160, 100, 20);
+      const warningLines = doc.splitTextToSize(`SEÇÃO INCOMPLETA — faltam: ${missingRiskFields.map(field => field.label).join(" · ")}`, CW - 4) as string[];
+      y = checkBreak(doc, y, warningLines.length * 3.5 + 3);
+      doc.text(warningLines, ML, y); y += warningLines.length * 3.5 + 3;
+    }
 
     if (str(rsk["level"])) {
       const level = str(rsk["level"]);

@@ -158,6 +158,7 @@ export async function generateVsl(
       successMetrics: {
         primaryKPI: "",
         conversionRateTarget: 0,
+        conversionRateDefinition: "",
         revenueTarget: 0,
         launchWindow: "",
         criticalAssumptions: [],
