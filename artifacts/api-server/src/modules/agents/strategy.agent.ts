@@ -72,6 +72,30 @@ export interface StrategyOutput {
   };
 }
 
+function extractTriggerMapCandidate(value: unknown, depth = 0): Record<string, unknown> | null {
+  if (depth > 5 || !value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  for (const key of ["triggerMap", "trigger_map"]) {
+    const candidate = record[key];
+    if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) return candidate as Record<string, unknown>;
+    if (typeof candidate === "string") {
+      const parsed = parseAgentJSON<Record<string, unknown>>(candidate, {});
+      const nested = extractTriggerMapCandidate(parsed, depth + 1);
+      if (nested) return nested;
+      if (Object.keys(parsed).length) return parsed;
+    }
+  }
+  // Providers and agent wrappers may place the JSON under one of these envelopes.
+  for (const key of ["data", "result", "output", "response", "strategy", "content"]) {
+    const nested = extractTriggerMapCandidate(record[key], depth + 1);
+    if (nested) return nested;
+  }
+  // A direct trigger map has no known root-level campaign strategy properties.
+  const directMapKeys = ["preLaunch", "cartOpen", "cartClose", "remarketing", "dominantTrigger", "triggerStackSequence"];
+  if (directMapKeys.some((key) => key in record)) return record;
+  return null;
+}
+
 export async function completeMissingTriggerMap(
   campaignId: string,
   workspaceId: string,
@@ -106,9 +130,7 @@ export async function completeMissingTriggerMap(
   });
 
   const parsed = parseAgentJSON<Record<string, unknown>>(output.content, {});
-  const proposed = parsed["triggerMap"] && typeof parsed["triggerMap"] === "object"
-    ? parsed["triggerMap"] as Record<string, unknown>
-    : parsed;
+  const proposed = extractTriggerMapCandidate(parsed) ?? parsed;
   const merged = fillMissingTriggerMapFields(strategyTriggerMap, proposed, missing);
   const remaining = missingTriggerMapFields(merged);
   log.info({ campaignId, attempt, fieldsRequested: missing.length, fieldsRemaining: remaining.map((field) => field.path) }, "Trigger map repair response validated");

@@ -219,27 +219,33 @@ export async function repairMasterplanTriggerMap(workspaceId: string, campaignId
     return { masterplan, repairedFields: [], readiness: { status: masterplan?.readinessStatus, score: masterplan?.readinessScore, blockers: masterplan?.readinessBlockers } };
   }
 
-  const proposedStrategy = await completeMissingTriggerMap(
-    campaignId,
-    workspaceId,
-    object(campaign.intakeData),
-    { ...originalStrategy, triggerMap: originalMap },
-    log,
-    1,
-  );
-  const proposedMap = object(proposedStrategy["triggerMap"]);
-  const proposedMissing = missingTriggerMapFields(proposedMap);
+  let proposedMap = originalMap;
+  let proposedMissing = missingBefore;
+  let repairAttempts = 0;
+  while (proposedMissing.length > 0 && repairAttempts < 2) {
+    repairAttempts += 1;
+    proposedMap = await completeMissingTriggerMap(
+      campaignId,
+      workspaceId,
+      object(campaign.intakeData),
+      { ...originalStrategy, triggerMap: proposedMap },
+      log,
+      repairAttempts,
+    );
+    proposedMissing = missingTriggerMapFields(proposedMap);
+  }
   if (proposedMissing.length) {
     const blockers = proposedMissing.map((field) => ({ path: `triggerMap.${field.path}`, label: field.label }));
     await db.insert(auditLogsTable).values({
       workspaceId, campaignId, action: "masterplan.trigger_map_repair_failed", actor: actorId,
-      data: { missingFields: blockers.map((field) => field.path) },
+      data: { attempts: repairAttempts, missingFields: blockers.map((field) => field.path) },
     });
-    throw new AppError(422, "Ainda faltam informações para completar a seção de gatilhos. O Masterplan continua bloqueado.", "TRIGGER_MAP_INCOMPLETE", { blockers });
+    const pendingLabels = blockers.map((field) => field.label).join(", ");
+    throw new AppError(422, `A IA não conseguiu preencher todos os itens após ${repairAttempts} tentativas. Ainda falta: ${pendingLabels}. O Masterplan continua bloqueado; você pode tentar novamente.`, "TRIGGER_MAP_INCOMPLETE", { blockers, attempts: repairAttempts });
   }
 
   const repairedFields: string[] = [];
-  const strategyValidation = { triggerMapStatus: "complete", triggerMapAttempts: 1, missingTriggerFields: [] };
+  const strategyValidation = { triggerMapStatus: "complete", triggerMapAttempts: repairAttempts, missingTriggerFields: [] };
   await db.transaction(async (tx) => {
     const [currentCampaign] = await tx.select({ strategyData: campaignsTable.strategyData, intakeData: campaignsTable.intakeData, status: campaignsTable.status })
       .from(campaignsTable).where(and(
