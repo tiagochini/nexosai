@@ -418,6 +418,14 @@ ${intakeJson}
 
 ---
 
+## CONTRATO DE SAÍDA — COMPLETE TODOS OS MÓDULOS
+
+- Retorne todas as chaves do schema, sem omitir os módulos 06 a 09.
+- Seja específico, mas conciso: resumo executivo até 90 palavras; cada campo textual até 45 palavras; listas com no máximo 4 itens, cada item até 18 palavras.
+- Em triggerMap, preencha os quatro estágios em uma frase curta cada e os campos de topo obrigatórios.
+- Em successMetrics e risks, preencha todos os campos do schema com dados do briefing; quando não houver base, declare a premissa como hipótese em vez de inventar evidência.
+- Não repita a mesma explicação em campos diferentes. Mantenha o JSON completo abaixo de aproximadamente 5.000 tokens.
+
 ## PROCESSO OBRIGATÓRIO — percorra sequencialmente antes de gerar o JSON:
 
 **PASSO 1 — BIG DOMINO:**
@@ -449,6 +457,7 @@ Defina o que acontece em cada plataforma, em que dia, com que objetivo — não 
 Retorne APENAS o JSON da estratégia, nada mais.`,
       },
     ],
+    maxTokens: 16000,
     log,
     requiresApproval: true,
     checkpointType: "strategy_approval",
