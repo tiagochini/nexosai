@@ -96,7 +96,7 @@ function actionableRepairProviderError(error: unknown): AppError | null {
     });
     return new AppError(
       503,
-      "Os provedores de IA não conseguiram gerar a correção. Verifique saldo, cotas e limites das APIs configuradas e tente novamente. Nenhuma seção foi salva.",
+      "Ocorreu uma falha na comunicação com os agentes e a correção não foi concluída. Nenhuma alteração foi salva. Tente novamente em alguns minutos. Se o problema persistir, entre em contato com o suporte.",
       "AI_PROVIDERS_UNAVAILABLE",
       { providers },
     );
@@ -104,7 +104,7 @@ function actionableRepairProviderError(error: unknown): AppError | null {
   if (failure.code === "AI_COMPLETION_UNAVAILABLE") {
     return new AppError(
       503,
-      "Não há credenciais de IA disponíveis para completar as seções. Verifique as integrações e tente novamente. Nenhuma seção foi salva.",
+      "Ocorreu uma falha na comunicação com os agentes e a correção não foi concluída. Nenhuma alteração foi salva. Tente novamente em alguns minutos. Se o problema persistir, entre em contato com o suporte.",
       "AI_CREDENTIALS_UNAVAILABLE",
     );
   }
