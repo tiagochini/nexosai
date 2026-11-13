@@ -9,7 +9,7 @@ export interface StrategyOutput {
   executiveSummary: string;
   bigDomino: string;
   marketDiagnosis: {
-    marketMaturity: "emerging" | "growing" | "mature" | "saturated";
+    marketMaturity: "" | "emerging" | "growing" | "mature" | "saturated";
     competitiveLandscape: string;
     entryBarriers: string[];
     opportunities: string[];
@@ -466,7 +466,9 @@ Retorne APENAS o JSON da estratégia, nada mais.`,
     executiveSummary: result.content,
     bigDomino: "",
     marketDiagnosis: {
-      marketMaturity: "growing",
+      // Do not present a fabricated maturity as an agent finding when the
+      // response could not be parsed. The UI treats this as missing output.
+      marketMaturity: "",
       competitiveLandscape: "",
       entryBarriers: [],
       opportunities: [],

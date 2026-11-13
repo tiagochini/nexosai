@@ -57,6 +57,78 @@ function firstJsonObject(value: string): string | null {
   return null;
 }
 
+/** Parses complete fields from a JSON response truncated by the model/provider. */
+function salvageJsonValue(source: string, start: number): { value: unknown; next: number } | null {
+  let index = start;
+  const whitespace = () => { while (/\s/.test(source[index] ?? "")) index++; };
+  const parseString = (): string | null => {
+    if (source[index] !== '"') return null;
+    const stringStart = index++;
+    let escaped = false;
+    while (index < source.length) {
+      const char = source[index++]!;
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') {
+        try { return JSON.parse(source.slice(stringStart, index)) as string; } catch { return null; }
+      }
+    }
+    return null;
+  };
+
+  whitespace();
+  const opening = source[index];
+  if (opening === "{" || opening === "[") {
+    index++;
+    const result: Record<string, unknown> | unknown[] = opening === "{" ? {} : [];
+    while (index < source.length) {
+      whitespace();
+      if (source[index] === (opening === "{" ? "}" : "]")) return { value: result, next: index + 1 };
+      if (source[index] === ",") { index++; continue; }
+
+      if (opening === "{") {
+        const key = parseString();
+        if (key === null) break;
+        whitespace();
+        if (source[index] !== ":") break;
+        index++;
+        const item = salvageJsonValue(source, index);
+        if (!item) break;
+        (result as Record<string, unknown>)[key] = item.value;
+        index = item.next;
+      } else {
+        const item = salvageJsonValue(source, index);
+        if (!item) break;
+        (result as unknown[]).push(item.value);
+        index = item.next;
+      }
+
+      whitespace();
+      if (source[index] === ",") { index++; continue; }
+      if (source[index] === (opening === "{" ? "}" : "]")) return { value: result, next: index + 1 };
+      break;
+    }
+    return (opening === "{" ? Object.keys(result as Record<string, unknown>).length > 0 : (result as unknown[]).length > 0)
+      ? { value: result, next: index }
+      : null;
+  }
+
+  if (opening === '"') {
+    const value = parseString();
+    return value === null ? null : { value, next: index };
+  }
+  const scalar = source.slice(index).match(/^(?:-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null)(?=\s*[,}\]])/);
+  if (!scalar) return null;
+  try { return { value: JSON.parse(scalar[0]), next: index + scalar[0].length }; } catch { return null; }
+}
+
+function salvageFirstJsonObject(value: string): Obj | null {
+  const start = value.indexOf("{");
+  if (start < 0) return null;
+  const parsed = salvageJsonValue(value, start)?.value;
+  return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Obj : null;
+}
+
 function parseStrategyValue(raw: unknown): Obj | null {
   let value: unknown = raw;
   for (let depth = 0; depth < 5; depth++) {
@@ -67,8 +139,12 @@ function parseStrategyValue(raw: unknown): Obj | null {
         parsed = JSON.parse(candidate);
       } catch {
         const objectText = firstJsonObject(candidate);
-        if (!objectText) return null;
-        try { parsed = JSON.parse(objectText); } catch { return null; }
+        if (objectText) {
+          try { parsed = JSON.parse(objectText); } catch { parsed = salvageFirstJsonObject(candidate); }
+        } else {
+          parsed = salvageFirstJsonObject(candidate);
+        }
+        if (!parsed) return null;
       }
       value = parsed;
       continue;
@@ -754,7 +830,9 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
         onApprove={id => setStatus(id, "approved")}
         onReject={id => setStatus(id, "rejected")}
         onFlag={id => setStatus(id, "flagged")}
-        isEmpty={Object.keys(positioning).length === 0}
+        isEmpty={!str(positioning["uniqueValueProposition"]) && !str(positioning["primaryDifferentiator"])
+          && !str(positioning["positioning"]) && !str(positioning["priceJustification"])
+          && arr(positioning["competitiveAdvantages"]).length === 0}
       >
         {str(positioning["uniqueValueProposition"]) && (
           <div>
@@ -792,7 +870,9 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
         onApprove={id => setStatus(id, "approved")}
         onReject={id => setStatus(id, "rejected")}
         onFlag={id => setStatus(id, "flagged")}
-        isEmpty={Object.keys(market).length === 0}
+        isEmpty={!str(market["marketMaturity"]) && !str(market["competitiveLandscape"])
+          && arr(market["opportunities"]).length === 0 && arr(market["threats"]).length === 0
+          && arr(market["entryBarriers"]).length === 0}
       >
         {str(market["marketMaturity"]) && (
           <div className="flex items-center gap-3">
@@ -840,7 +920,9 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
         onApprove={id => setStatus(id, "approved")}
         onReject={id => setStatus(id, "rejected")}
         onFlag={id => setStatus(id, "flagged")}
-        isEmpty={Object.keys(audience).length === 0}
+        isEmpty={!str(audience["primaryAvatar"]) && !str(audience["psychographicProfile"])
+          && !str(audience["sophisticationStrategy"]) && arr(audience["buyingTriggers"]).length === 0
+          && arr(audience["objections"]).length === 0 && arr(audience["secondaryAvatars"]).length === 0}
       >
         {str(audience["primaryAvatar"]) && (
           <div>
@@ -900,7 +982,9 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
         onApprove={id => setStatus(id, "approved")}
         onReject={id => setStatus(id, "rejected")}
         onFlag={id => setStatus(id, "flagged")}
-        isEmpty={Object.keys(architecture).length === 0}
+        isEmpty={!str(architecture["coreNarrative"]) && !str(architecture["emotionalHook"])
+          && arr(architecture["keyMessages"]).length === 0 && arr(architecture["contentPillars"]).length === 0
+          && !str(architecture["platformDistributionStrategy"]) && !str(architecture["callToActionStrategy"])}
       >
         {str(architecture["coreNarrative"]) && (
           <div>
@@ -991,7 +1075,8 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
         onApprove={id => setStatus(id, "approved")}
         onReject={id => setStatus(id, "rejected")}
         onFlag={id => setStatus(id, "flagged")}
-        isEmpty={Object.keys(metrics).length === 0}
+        isEmpty={!str(metrics["primaryKPI"]) && revenueTarget === null && conversionRate === null
+          && !str(metrics["launchWindow"]) && arr(metrics["criticalAssumptions"]).length === 0}
       >
         <div>
           <SectionLabel n="8.1">Unit Economics</SectionLabel>
@@ -1017,7 +1102,8 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
         onApprove={id => setStatus(id, "approved")}
         onReject={id => setStatus(id, "rejected")}
         onFlag={id => setStatus(id, "flagged")}
-        isEmpty={Object.keys(risks).length === 0}
+        isEmpty={!str(risks["level"]) && arr(risks["mainRisks"]).length === 0
+          && arr(risks["mitigations"]).length === 0}
       >
         {str(risks["level"]) && (
           <div className="flex items-center gap-3">
