@@ -1,4 +1,3 @@
-import { PaidMediaSetupPanel } from "./components/paid-media-setup-panel";
 import { useState, useEffect, useRef } from "react";
 import { useRoute, useLocation } from "wouter";
 import {
@@ -36,6 +35,29 @@ const POST_STRATEGY_STATUSES = [
 
 function isPostStrategy(status: string) {
   return POST_STRATEGY_STATUSES.includes(status);
+}
+
+const STRATEGY_SECTION_KEYS = [
+  "marketDiagnosis", "offerPositioning", "audienceSegmentation", "campaignArchitecture",
+  "successMetrics", "risks", "triggerMap",
+];
+
+function mergeStrategyData(...sources: Record<string, unknown>[]): Record<string, unknown> {
+  return sources.reduce<Record<string, unknown>>((merged, source) => {
+    const result = { ...merged, ...source };
+    for (const key of STRATEGY_SECTION_KEYS) {
+      const previous = merged[key];
+      const incoming = source[key];
+      if ((previous && typeof previous === "object" && !Array.isArray(previous))
+        || (incoming && typeof incoming === "object" && !Array.isArray(incoming))) {
+        result[key] = {
+          ...(previous && typeof previous === "object" && !Array.isArray(previous) ? previous as Record<string, unknown> : {}),
+          ...(incoming && typeof incoming === "object" && !Array.isArray(incoming) ? incoming as Record<string, unknown> : {}),
+        };
+      }
+    }
+    return result;
+  }, {});
 }
 
 // ─── Live event feed (during analyzing) ──────────────────────────────────────
@@ -209,13 +231,15 @@ function MasterplanPanel({
   versions,
   onMaterialize,
   isMaterializing,
-  readOnly
+  readOnly,
+  approvalDisabled
 }: {
   currentMp?: MasterplanVersion;
   versions: MasterplanVersion[];
   onMaterialize: (req: { requestApproval: boolean }) => void;
   isMaterializing: boolean;
   readOnly?: boolean;
+  approvalDisabled?: boolean;
 }) {
   const t = useUiText();
   if (!currentMp) return null;
@@ -320,7 +344,7 @@ function MasterplanPanel({
                 variant="outline"
                 size="sm"
                 onClick={() => onMaterialize({ requestApproval: true })}
-                disabled={isMaterializing}
+                disabled={isMaterializing || approvalDisabled}
                 className="font-mono text-[10px] uppercase tracking-widest gap-2 h-8 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-300"
               >
                 {isMaterializing ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCheck className="h-3 w-3" />}
@@ -371,10 +395,18 @@ export default function CampaignStrategyPage() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { data: onboardingStatus } = useQuery<{ trialAccess?: boolean }>({
+    queryKey: ["/api/onboarding/status"],
+    queryFn: () => customFetch("/api/onboarding/status"),
+    staleTime: 60000,
+  });
+  const trialAccess = onboardingStatus?.trialAccess === true;
+  const trialStrategyPreview = trialAccess && new URLSearchParams(window.location.search).get("trialStrategy") === "1";
 
-  const [paidMediaDirty, setPaidMediaDirty] = useState(false);
   const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
   const [triggerHelpDialogOpen, setTriggerHelpDialogOpen] = useState(false);
+  const [briefingAdoptionOpen, setBriefingAdoptionOpen] = useState(false);
+  const [selectedAdoptionSubscriptionId, setSelectedAdoptionSubscriptionId] = useState("");
   const [triggerHelpRunning, setTriggerHelpRunning] = useState(false);
   const [triggerHelpComplete, setTriggerHelpComplete] = useState(false);
   const [triggerHelpError, setTriggerHelpError] = useState("");
@@ -395,8 +427,8 @@ export default function CampaignStrategyPage() {
 
   useEffect(() => {
     const status = campaign?.status ?? "";
-    setLocalIsActive(status === "analyzing");
-  }, [campaign?.status]);
+    setLocalIsActive(status === "analyzing" || (trialStrategyPreview && status === "intake"));
+  }, [campaign?.status, trialStrategyPreview]);
 
   // ── Workspace data (for PDF identity) ─────────────────────────────────────
   const { data: wsData } = useQuery({
@@ -409,11 +441,12 @@ export default function CampaignStrategyPage() {
   // ── Redirect rules ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!campaign || isLoading) return;
+    if (onboardingStatus === undefined) return;
     const status = campaign.status ?? "";
-    if (status === "draft" || status === "intake") {
+    if ((status === "draft" || status === "intake") && !(trialStrategyPreview && status === "intake")) {
       setLocation(`/campaigns/${campaignId}/intake`);
     }
-  }, [campaign?.status, campaignId, setLocation, campaign, isLoading]);
+  }, [campaign?.status, campaignId, setLocation, campaign, isLoading, onboardingStatus, trialStrategyPreview]);
 
   // ── Live WebSocket events (only while analyzing) ───────────────────────────
   useCampaignSocket(
@@ -435,13 +468,33 @@ export default function CampaignStrategyPage() {
   // ── Masterplan Versions ───────────────────────────────────────────────────
   const isAnalyzingStatus = campaign?.status === "analyzing";
 
-  const { data: currentMpRes, isLoading: isMpLoading } = useQuery<{ masterplan: MasterplanVersion }>({
+  const { data: currentMpRes, isLoading: isMpLoading, isError: isMpError } = useQuery<{ masterplan: MasterplanVersion | null }>({
     queryKey: ["/api/campaigns", campaignId, "masterplan", "current"],
     queryFn: () => customFetch(`/api/campaigns/${campaignId}/masterplan/current`),
     enabled: !!campaignId && !isAnalyzingStatus && campaign?.status !== "draft" && campaign?.status !== "intake",
     retry: false,
   });
   const currentMp = currentMpRes?.masterplan;
+
+  type BriefingAdoptionOptions = {
+    briefingAnswerCount: number;
+    briefingProductName: string | null;
+    currentBinding: { commercialProductId: string | null; commercialSubscriptionId: string | null; productIntakeVersionId: string | null; intakeStatus: string | null };
+    candidates: Array<{ subscriptionId: string; productId: string; productName: string; productKey: string; suggested: boolean }>;
+  };
+  const briefingAdoptionQuery = useQuery<BriefingAdoptionOptions>({
+    queryKey: ["/api/campaigns", campaignId, "masterplan", "briefing-adoption-options"],
+    queryFn: () => customFetch(`/api/campaigns/${campaignId}/masterplan/briefing-adoption-options`),
+    enabled: briefingAdoptionOpen,
+    retry: false,
+  });
+  useEffect(() => {
+    const candidates = briefingAdoptionQuery.data?.candidates ?? [];
+    const suggested = candidates.filter((candidate) => candidate.suggested);
+    if (suggested.length === 1) setSelectedAdoptionSubscriptionId(suggested[0]!.subscriptionId);
+    else if (candidates.length === 1) setSelectedAdoptionSubscriptionId(candidates[0]!.subscriptionId);
+    else if (!candidates.some((candidate) => candidate.subscriptionId === selectedAdoptionSubscriptionId)) setSelectedAdoptionSubscriptionId("");
+  }, [briefingAdoptionQuery.data, selectedAdoptionSubscriptionId]);
 
   const { data: mpVersionsRes } = useQuery<{ versions: MasterplanVersion[] }>({
     queryKey: ["/api/campaigns", campaignId, "masterplan", "versions"],
@@ -468,11 +521,39 @@ export default function CampaignStrategyPage() {
     }
   });
 
+  const adoptBriefingMutation = useMutation({
+    mutationFn: (subscriptionId: string) => customFetch(`/api/campaigns/${campaignId}/masterplan/adopt-briefing`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subscriptionId }),
+    }),
+    onSuccess: () => {
+      setBriefingAdoptionOpen(false);
+      toast.success(t("Briefing vinculado e aprovado como cadastro do produto. Criando a versão do Masterplan…", "Briefing linked and approved as the product record. Creating the master plan version…", "Briefing vinculado y aprobado como registro del producto. Creando la versión del plan maestro…"));
+      void queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
+      materializeMutation.mutate({ requestApproval: false });
+    },
+    onError: (err: any) => toast.error(err?.data?.error || t("Não foi possível vincular o briefing existente.", "Could not link the existing briefing.", "No se pudo vincular el briefing existente."), { duration: 7000 }),
+  });
+
   const completeTriggerStrategyMutation = useMutation({
     mutationFn: () => customFetch(`/api/campaigns/${campaignId}/masterplan/repair-sections`, {
       method: "POST",
     }),
-    onSuccess: () => {
+    onSuccess: (result: unknown) => {
+      const repairResult = result && typeof result === "object"
+        ? result as { masterplan?: unknown; repairedFields?: unknown }
+        : {};
+      const repairedFields = Array.isArray(repairResult.repairedFields) ? repairResult.repairedFields : [];
+      if (repairedFields.length === 0) {
+        setTriggerHelpRunning(false);
+        setTriggerHelpError(t(
+          "Os agentes não confirmaram nenhuma alteração. Atualize a página e confira se a seção ainda está pendente.",
+          "The agents did not confirm any changes. Refresh the page and check whether the section is still pending.",
+          "Los agentes no confirmaron ningún cambio. Actualiza la página y comprueba si la sección sigue pendiente.",
+        ));
+        return;
+      }
       setTriggerHelpError("");
       setTriggerHelpRunning(false);
       setTriggerHelpComplete(true);
@@ -519,6 +600,10 @@ export default function CampaignStrategyPage() {
   });
 
   const handleApprove = () => {
+    if (trialAccess) {
+      toast.info(t("A aprovação e a geração de conteúdo ficam disponíveis com uma licença NexOS.", "Approval and content generation are available with a NexOS license.", "La aprobación y la generación de contenido están disponibles con una licencia NexOS."));
+      return;
+    }
     if (currentMp && currentMp.readinessStatus !== "ready") {
       toast.error(t("O plano está incompleto. Preencha os módulos indicados em Bloqueios antes de avançar.", "The plan is incomplete. Fill the modules listed under Blockers before continuing.", "El plan está incompleto. Completa los módulos indicados en Bloqueos antes de continuar."), { duration: 7000 });
       return;
@@ -531,6 +616,20 @@ export default function CampaignStrategyPage() {
   };
   const isApproving = approveMpMutation.isPending || executeMutation.isPending;
   const strategyCanAdvance = currentMp?.readinessStatus === "ready";
+  const advanceBlockers = (currentMp?.readinessBlockers ?? [])
+    .map((blocker) => typeof blocker === "string" ? blocker : blocker.message)
+    .filter((message): message is string => Boolean(message));
+  const advanceBlockReason = isMpLoading
+    ? t("Verificando a prontidão do Masterplan…", "Checking master plan readiness…", "Verificando la preparación del plan maestro…")
+    : isMpError
+    ? t("Não foi possível consultar a prontidão do Masterplan. Atualize a página ou tente recalcular.", "Could not load master plan readiness. Refresh the page or recalculate it.", "No se pudo consultar la preparación del plan maestro. Actualiza la página o vuelve a calcularla.")
+    : !currentMp
+    ? t("Ainda não existe uma versão materializada do Masterplan para aprovar.", "There is no materialized master plan version to approve yet.", "Todavía no existe una versión materializada del plan maestro para aprobar.")
+    : !strategyCanAdvance
+    ? advanceBlockers.length > 0
+      ? `${t("Pendências registradas pelo sistema", "System-reported blockers", "Bloqueos reportados por el sistema")}: ${advanceBlockers.join(" ")}`
+      : `${t("O sistema retornou o status", "The system returned status", "El sistema devolvió el estado")} “${currentMp.readinessStatus || t("desconhecido", "unknown", "desconocido")}” ${t("sem detalhar pendências. Recalcule a prontidão para atualizar esta versão.", "without listing blockers. Recalculate readiness to refresh this version.", "sin detallar bloqueos. Vuelve a calcular la preparación para actualizar esta versión.")}`
+    : "";
   const confirmTriggerHelp = () => {
     setTriggerHelpRunning(true);
     setLiveEvents([]);
@@ -571,18 +670,18 @@ export default function CampaignStrategyPage() {
     : typeof snapshotD["strategy"] === "string"
       ? parseStrategyInsights({ executiveSummary: snapshotD["strategy"] })
       : {};
-  // Masterplan snapshots store the actual campaign strategy under `strategy`.
-  // Merge that payload with the campaign copy so a partial snapshot cannot hide
-  // modules that are already present in the original campaign strategy data.
-  const strategyD = { ...campaignStrategyD, ...snapshotStrategyD };
-  const strategyInsights = {
-    ...campaignStrategyD,
-    ...parseStrategyInsights(campaignStrategyD),
-    ...snapshotStrategyD,
-    ...parseStrategyInsights(snapshotStrategyD),
-  };
+  // The repair endpoint treats campaign.strategyData as the source of truth.
+  // Keep the displayed strategy aligned with it so an older snapshot cannot
+  // show a truncated value after the campaign data has already been repaired.
+  const strategyD = mergeStrategyData(snapshotStrategyD, campaignStrategyD);
+  const strategyInsights = mergeStrategyData(
+    parseStrategyInsights(snapshotStrategyD),
+    snapshotStrategyD,
+    parseStrategyInsights(campaignStrategyD),
+    campaignStrategyD,
+  );
   const campaignTitle = String(intakeD["product.name"] ?? campaign.title ?? t("Campanha", "Campaign", "Campaña"));
-  const repairStrategy = { ...campaignStrategyD, ...parseStrategyInsights(campaignStrategyD) };
+  const repairStrategy = mergeStrategyData(parseStrategyInsights(campaignStrategyD), campaignStrategyD);
   const missingRepairCore = missingCampaignCoreFields(repairStrategy);
   const missingRepairArchitecture = missingCampaignArchitectureFields(repairStrategy);
   const missingRepairTriggers = missingTriggerMapFields(repairStrategy["triggerMap"]);
@@ -697,35 +796,81 @@ export default function CampaignStrategyPage() {
         {isReady && (
           <div className="space-y-0">
             {/* Approve banner (sticky-ish at top) */}
-            <div className="border border-cyan-400/40 bg-cyan-400/[0.04] p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
-              <div className="flex items-center gap-2 flex-1">
-                <Zap className="h-4 w-4 text-cyan-400 shrink-0" />
-                <div>
-                  <div className="font-mono text-xs font-black uppercase tracking-widest text-cyan-400">
-                     {t("Masterplan pronto", "Master plan ready", "Plan maestro listo")}
+            <div className="mb-6 overflow-hidden border border-cyan-400/30 bg-gradient-to-br from-cyan-400/[0.07] via-card/80 to-primary/[0.05] shadow-[0_12px_40px_rgba(0,0,0,0.18)]">
+              <div className="flex items-start gap-4 px-5 py-5 sm:px-6">
+                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center border border-cyan-300/25 bg-cyan-300/[0.08] text-cyan-300">
+                  <Zap className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="font-mono text-sm font-black uppercase tracking-[0.16em] text-cyan-200">
+                      {t("Masterplan pronto", "Master plan ready", "Plan maestro listo")}
+                    </h2>
+                    <span className={`border px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider ${strategyCanAdvance ? "border-emerald-400/25 bg-emerald-400/[0.06] text-emerald-300/80" : "border-amber-300/25 bg-amber-300/[0.06] text-amber-200/80"}`}>
+                      {trialAccess
+                        ? t("Prévia", "Preview", "Vista previa")
+                        : strategyCanAdvance
+                        ? t("Pronto para revisão", "Ready for review", "Listo para revisión")
+                        : t("Prontidão pendente", "Readiness pending", "Preparación pendiente")}
+                    </span>
                   </div>
-                  <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
-                     {t("Revise o plano abaixo. Quando aprovado, os agentes gerarão todo o conteúdo automaticamente.", "Review the plan below. Once approved, the agents will generate all content automatically.", "Revisa el plan a continuación. Cuando lo apruebes, los agentes generarán todo el contenido automáticamente.")}
-                  </div>
+                  <p className="mt-2 max-w-3xl font-mono text-[11px] leading-relaxed text-muted-foreground/75">
+                    {trialAccess
+                      ? t("Consulte os módulos e baixe o PDF. Aprovar e gerar conteúdo exige uma licença.", "Review the modules and download the PDF. Approval and content generation require a license.", "Consulta los módulos y descarga el PDF. Aprobar y generar contenido requiere una licencia.")
+                      : t("Revise a estratégia. Depois da aprovação, os agentes preparam o conteúdo da campanha.", "Review the strategy. After approval, the agents prepare the campaign content.", "Revisa la estrategia. Tras aprobarla, los agentes preparan el contenido de la campaña.")}
+                  </p>
                 </div>
               </div>
-              <Button
-                onClick={handleApprove}
-                disabled={isApproving || paidMediaDirty || !strategyCanAdvance}
-                className="shrink-0 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-10 text-xs px-6"
-              >
-                {isApproving
-                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("Gerando...", "Generating...", "Generando...")}</>
-                  : <><CheckCheck className="h-3.5 w-3.5" /> {t("Aprovar e gerar conteúdo", "Approve and generate content", "Aprobar y generar contenido")}</>}
-              </Button>
+              <div className="grid grid-cols-1 gap-4 border-t border-white/[0.07] bg-black/20 px-5 py-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                <div className="min-w-0">
+                  {!trialAccess && advanceBlockReason ? (
+                    <div role="status" className="flex items-start gap-2 text-amber-200/85">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <div className="space-y-2">
+                        <p className="font-mono text-[10px] leading-relaxed">{advanceBlockReason}</p>
+                        {!isMpLoading && !isMpError && !strategyCanAdvance && advanceBlockers.length === 0 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => currentMp ? materializeMutation.mutate({ requestApproval: false }) : setBriefingAdoptionOpen(true)}
+                            disabled={materializeMutation.isPending || adoptBriefingMutation.isPending}
+                            className="h-7 gap-1.5 rounded-none border-amber-200/20 px-2.5 font-mono text-[9px] uppercase tracking-wider text-amber-100/80 hover:bg-amber-200/[0.06]"
+                          >
+                            {materializeMutation.isPending || adoptBriefingMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : currentMp ? <RotateCw className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+                            {currentMp ? t("Recalcular prontidão", "Recalculate readiness", "Recalcular preparación") : t("Vincular briefing existente", "Link existing briefing", "Vincular briefing existente")}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="font-mono text-[10px] leading-relaxed text-muted-foreground/60">
+                      {trialAccess
+                        ? t("A geração de conteúdo fica disponível com uma licença NexOS.", "Content generation is available with a NexOS license.", "La generación de contenido está disponible con una licencia NexOS.")
+                        : t("O plano está pronto para aprovação e geração do conteúdo.", "The plan is ready for approval and content generation.", "El plan está listo para aprobar y generar el contenido.")}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  onClick={handleApprove}
+                  disabled={trialAccess || isApproving || !strategyCanAdvance}
+                  className="h-11 w-full gap-2 rounded-none px-5 font-mono text-[10px] font-black uppercase tracking-[0.12em] btn-weapon-primary sm:w-auto sm:min-w-[250px]"
+                >
+                  {trialAccess
+                    ? <><CheckCheck className="h-3.5 w-3.5" /> {t("Disponível com licença", "Available with a license", "Disponible con licencia")}</>
+                    : isApproving
+                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("Gerando...", "Generating...", "Generando...")}</>
+                    : <><CheckCheck className="h-3.5 w-3.5" /> {t("Aprovar e gerar conteúdo", "Approve and generate content", "Aprobar y generar contenido")}</>}
+                </Button>
+              </div>
             </div>
 
-            <PaidMediaSetupPanel key={campaignId} campaignId={campaignId} masterplan={currentMp} onDirtyChange={setPaidMediaDirty} />
             <MasterplanPanel
               currentMp={currentMp}
               versions={mpVersions}
               onMaterialize={(req) => materializeMutation.mutate(req)}
               isMaterializing={materializeMutation.isPending}
+              approvalDisabled={trialAccess}
             />
 
             {/* Full masterplan */}
@@ -737,7 +882,7 @@ export default function CampaignStrategyPage() {
                 campaignTitle={campaignTitle}
                 track={track}
                 userIdentity={userIdentity}
-                onRequestTriggerHelp={requestTriggerHelp}
+                onRequestTriggerHelp={trialAccess ? undefined : requestTriggerHelp}
                 triggerHelpPending={completeTriggerStrategyMutation.isPending}
               />
             ) : (
@@ -751,18 +896,41 @@ export default function CampaignStrategyPage() {
 
             {/* Approve button — repeated at bottom for convenience */}
             {hasStrategy && (
-              <div className="border border-cyan-400/40 bg-cyan-400/[0.04] p-4 flex flex-col sm:flex-row items-center gap-3 mt-6">
-                <div className="flex-1 min-w-0">
-                  <span className="font-mono text-[11px] uppercase tracking-widest text-cyan-400/80">
-                     {t("Tudo revisado? Aprove para gerar o conteúdo completo do lançamento.", "All reviewed? Approve to generate the complete launch content.", "¿Ya revisaste todo? Aprueba para generar el contenido completo del lanzamiento.")}
-                  </span>
+              <div className="mt-6 grid grid-cols-1 gap-4 border border-cyan-400/25 bg-gradient-to-r from-cyan-400/[0.05] to-primary/[0.04] p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                <div className="min-w-0 space-y-1.5">
+                  <h3 className="font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-cyan-200/90">
+                    {t("Tudo revisado?", "Finished reviewing?", "¿Terminaste de revisar?")}
+                  </h3>
+                  <p className="font-mono text-[10px] leading-relaxed text-muted-foreground/65">
+                    {t("Aprove o Masterplan para preparar o conteúdo completo do lançamento.", "Approve the master plan to prepare the complete launch content.", "Aprueba el plan maestro para preparar todo el contenido del lanzamiento.")}
+                  </p>
+                  {!trialAccess && advanceBlockReason && (
+                    <div role="status" className="space-y-2 pt-1">
+                      <p className="font-mono text-[10px] leading-relaxed text-amber-200/85">{advanceBlockReason}</p>
+                      {!isMpLoading && !isMpError && !strategyCanAdvance && advanceBlockers.length === 0 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => currentMp ? materializeMutation.mutate({ requestApproval: false }) : setBriefingAdoptionOpen(true)}
+                          disabled={materializeMutation.isPending || adoptBriefingMutation.isPending}
+                          className="h-7 gap-1.5 rounded-none border-amber-200/20 px-2.5 font-mono text-[9px] uppercase tracking-wider text-amber-100/80 hover:bg-amber-200/[0.06]"
+                        >
+                          {materializeMutation.isPending || adoptBriefingMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : currentMp ? <RotateCw className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+                          {currentMp ? t("Recalcular prontidão", "Recalculate readiness", "Recalcular preparación") : t("Vincular briefing existente", "Link existing briefing", "Vincular briefing existente")}
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <Button
                   onClick={handleApprove}
-                  disabled={isApproving || !strategyCanAdvance}
-                  className="shrink-0 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-10 text-xs px-6"
+                  disabled={trialAccess || isApproving || !strategyCanAdvance}
+                  className="h-11 w-full gap-2 rounded-none px-5 font-mono text-[10px] font-black uppercase tracking-[0.12em] btn-weapon-primary sm:w-auto sm:min-w-[250px]"
                 >
-                  {isApproving
+                  {trialAccess
+                    ? <><CheckCheck className="h-3.5 w-3.5" /> {t("Disponível com licença", "Available with a license", "Disponible con licencia")}</>
+                    : isApproving
                     ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("Gerando...", "Generating...", "Generando...")}</>
                     : <><CheckCheck className="h-3.5 w-3.5" /> {t("Aprovar e gerar conteúdo", "Approve and generate content", "Aprobar y generar contenido")}</>}
                 </Button>
@@ -795,12 +963,12 @@ export default function CampaignStrategyPage() {
               </Button>
             </div>
 
-            <PaidMediaSetupPanel key={campaignId} campaignId={campaignId} masterplan={currentMp} onDirtyChange={setPaidMediaDirty} />
             <MasterplanPanel
               currentMp={currentMp}
               versions={mpVersions}
               onMaterialize={(req) => materializeMutation.mutate(req)}
               isMaterializing={materializeMutation.isPending}
+              approvalDisabled={trialAccess}
               readOnly={true}
             />
 
@@ -843,6 +1011,97 @@ export default function CampaignStrategyPage() {
           </div>
         )}
       </div>
+
+      <Dialog open={briefingAdoptionOpen} onOpenChange={(open) => {
+        if (adoptBriefingMutation.isPending || materializeMutation.isPending) return;
+        setBriefingAdoptionOpen(open);
+        if (!open) setSelectedAdoptionSubscriptionId("");
+      }}>
+        <DialogContent className="max-w-xl border border-cyan-400/25 bg-[#090b11] p-0 shadow-[0_24px_100px_rgba(0,0,0,0.7)]">
+          <div className="h-1 bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500" />
+          <div className="p-6 sm:p-7">
+            <DialogHeader className="text-left">
+              <div className="mb-4 flex h-11 w-11 items-center justify-center border border-cyan-400/25 bg-cyan-400/[0.07] text-cyan-200">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+              <DialogTitle className="font-mono text-base font-black uppercase tracking-wider text-foreground">
+                {t("Vincular briefing existente", "Link existing briefing", "Vincular briefing existente")}
+              </DialogTitle>
+              <DialogDescription className="pt-2 text-sm leading-relaxed text-muted-foreground">
+                {t(
+                  "O briefing que gerou esta estratégia será reaproveitado como cadastro oficial do produto. Escolha o produto/assinatura corretos e confirme o vínculo; o sistema registrará essa versão como aprovada antes de criar o Masterplan.",
+                  "The briefing that generated this strategy will be reused as the product's canonical record. Choose the correct product/subscription and confirm; the system will record this version as approved before creating the master plan.",
+                  "El briefing que generó esta estrategia se reutilizará como registro oficial del producto. Elige el producto/suscripción correctos y confirma el vínculo; el sistema registrará esta versión como aprobada antes de crear el plan maestro.",
+                )}
+              </DialogDescription>
+            </DialogHeader>
+
+            {briefingAdoptionQuery.isLoading ? (
+              <div className="mt-5 flex items-center gap-2 border border-cyan-400/15 bg-cyan-400/[0.03] p-3 text-xs text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
+                {t("Localizando produtos e assinaturas ativos…", "Finding active products and subscriptions…", "Buscando productos y suscripciones activos…")}
+              </div>
+            ) : briefingAdoptionQuery.isError ? (
+              <div role="alert" className="mt-5 border border-red-400/25 bg-red-400/[0.05] p-3 text-xs leading-relaxed text-red-200/90">
+                {t("Não foi possível carregar os produtos disponíveis para esta campanha. Feche a janela e tente novamente.", "Could not load products available for this campaign. Close the dialog and try again.", "No se pudieron cargar los productos disponibles para esta campaña. Cierra la ventana e inténtalo de nuevo.")}
+              </div>
+            ) : (
+              <div className="mt-5 space-y-4">
+                <div className="border border-white/8 bg-white/[0.02] p-3 text-xs leading-relaxed text-muted-foreground">
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-cyan-200/80">{t("Briefing salvo", "Saved briefing", "Briefing guardado")}</span>
+                  <div className="mt-1 text-foreground/85">
+                    {briefingAdoptionQuery.data?.briefingProductName ?? t("Produto não identificado no briefing", "Product not identified in the briefing", "Producto no identificado en el briefing")}
+                  </div>
+                  <div className="mt-1 font-mono text-[9px] text-muted-foreground/60">
+                    {briefingAdoptionQuery.data?.briefingAnswerCount ?? 0} {t("respostas estruturadas encontradas", "structured answers found", "respuestas estructuradas encontradas")}
+                  </div>
+                </div>
+
+                {briefingAdoptionQuery.data?.candidates.length ? (
+                  <label className="block space-y-1.5 text-xs">
+                    <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground/70">{t("Produto e assinatura ativa", "Product and active subscription", "Producto y suscripción activa")}</span>
+                    <select
+                      value={selectedAdoptionSubscriptionId}
+                      onChange={(event) => setSelectedAdoptionSubscriptionId(event.target.value)}
+                      className="h-10 w-full border border-border/50 bg-background px-3 text-sm"
+                    >
+                      <option value="">{t("Selecione o produto correto", "Select the correct product", "Selecciona el producto correcto")}</option>
+                      {briefingAdoptionQuery.data.candidates.map((candidate) => (
+                        <option key={candidate.subscriptionId} value={candidate.subscriptionId}>
+                          {candidate.productName}{candidate.suggested ? ` · ${t("corresponde ao nome do briefing", "matches the briefing name", "coincide con el nombre del briefing")}` : ""} · {candidate.productKey}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  <div role="alert" className="border border-amber-300/20 bg-amber-300/[0.04] p-3 text-xs leading-relaxed text-amber-100/85">
+                    {t("Não encontrei uma assinatura ativa que possa ser vinculada. Verifique o produto/assinatura da campanha antes de continuar; o briefing permanece salvo.", "No active subscription is available to link. Check the campaign's product/subscription before continuing; the briefing remains saved.", "No encontré una suscripción activa para vincular. Revisa el producto/suscripción de la campaña antes de continuar; el briefing sigue guardado.")}
+                  </div>
+                )}
+
+                <div className="border border-amber-300/15 bg-amber-300/[0.03] p-3 text-[11px] leading-relaxed text-muted-foreground">
+                  {t("Esta ação vincula o briefing existente ao produto selecionado e aprova essa cópia canônica para a campanha. Nenhum anúncio será criado e nenhuma verba será gasta.", "This links the existing briefing to the selected product and approves that canonical copy for this campaign. No ads will be created and no budget will be spent.", "Esta acción vincula el briefing existente al producto seleccionado y aprueba esa copia canónica para la campaña. No se crearán anuncios ni se gastará presupuesto.")}
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="mt-6 flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button variant="outline" onClick={() => setBriefingAdoptionOpen(false)} disabled={adoptBriefingMutation.isPending || materializeMutation.isPending} className="rounded-none font-mono text-[10px] uppercase tracking-wider">
+                {t("Cancelar", "Cancel", "Cancelar")}
+              </Button>
+              <Button
+                onClick={() => adoptBriefingMutation.mutate(selectedAdoptionSubscriptionId)}
+                disabled={!selectedAdoptionSubscriptionId || (briefingAdoptionQuery.data?.briefingAnswerCount ?? 0) < 3 || adoptBriefingMutation.isPending || materializeMutation.isPending}
+                className="rounded-none bg-gradient-to-r from-cyan-600 to-blue-600 font-mono text-[10px] font-bold uppercase tracking-wider text-white hover:brightness-110"
+              >
+                {adoptBriefingMutation.isPending || materializeMutation.isPending
+                  ? <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />{t("Vinculando…", "Linking…", "Vinculando…")}</>
+                  : <><CheckCircle2 className="mr-2 h-3.5 w-3.5" />{t("Vincular e continuar", "Link and continue", "Vincular y continuar")}</>}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={triggerHelpDialogOpen}

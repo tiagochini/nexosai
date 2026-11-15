@@ -128,7 +128,8 @@
     ,"test:m11-social-intelligence-db": "M11_SOCIAL_DB_TESTS=true NODE_ENV=test tsx src/scripts/test-m11-social-intelligence-db.ts"
      ,"test:campaign-control-room-version-diff": "cross-env NODE_ENV=test tsx src/scripts/test-campaign-control-room-version-diff.ts",
      "test:approval-center-db": "cross-env NODE_ENV=test tsx src/scripts/test-approval-center-db.ts",
-     "test:approval-sla-db": "cross-env NODE_ENV=test tsx src/scripts/test-approval-sla-db.ts"
+     "test:approval-sla-db": "cross-env NODE_ENV=test tsx src/scripts/test-approval-sla-db.ts",
+     "test:campaign-briefing-adoption-db": "cross-env NODE_ENV=test tsx src/scripts/test-campaign-briefing-adoption-db.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

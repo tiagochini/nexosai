@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { db, auditLogsTable, campaignsTable, commercialSubscriptionsTable, productIntakesTable, marketIntelReportsTable, socialPostsTable, paidMediaLaunchPlansTable, type ProductIntake } from "@workspace/db";
+import { db, auditLogsTable, campaignsTable, commercialProductsTable, commercialSubscriptionsTable, productIntakesTable, marketIntelReportsTable, socialPostsTable, paidMediaLaunchPlansTable, type ProductIntake } from "@workspace/db";
 import { AppError, NotFoundError } from "../../lib/errors.js";
 import type { Logger } from "pino";
 import { briefingAnswerCount } from "./product-intake.contracts.js";
@@ -139,4 +139,141 @@ export async function adoptLegacyCampaignIntake(workspaceId: string, campaignId:
   await db.update(campaignsTable).set({ productIntakeVersionId: adopted.id, commercialProductId: productId, commercialSubscriptionId: subscription?.id ?? campaign.commercialSubscriptionId, updatedAt: new Date() }).where(eq(campaignsTable.id, campaignId));
   await audit(workspaceId, "product_intake.legacy_adopted", { campaignId, intakeId: adopted.id }, actorId);
   return adopted.id;
+}
+
+/** Lists active product subscriptions that can explicitly adopt a legacy campaign briefing. */
+export async function getCampaignBriefingAdoptionOptions(workspaceId: string, campaignId: string) {
+  const [campaign] = await db.select().from(campaignsTable).where(and(
+    eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId),
+  )).limit(1);
+  if (!campaign) throw new NotFoundError("Campaign");
+
+  const [boundIntake] = campaign.productIntakeVersionId
+    ? await db.select({ id: productIntakesTable.id, commercialProductId: productIntakesTable.commercialProductId, status: productIntakesTable.status })
+      .from(productIntakesTable).where(and(
+        eq(productIntakesTable.id, campaign.productIntakeVersionId),
+        eq(productIntakesTable.workspaceId, workspaceId),
+      )).limit(1)
+    : [];
+  const bindingProductId = campaign.commercialProductId ?? boundIntake?.commercialProductId ?? null;
+  const subscriptions = await db.select({
+    subscriptionId: commercialSubscriptionsTable.id,
+    productId: commercialProductsTable.id,
+    productName: commercialProductsTable.name,
+    productKey: commercialProductsTable.key,
+  }).from(commercialSubscriptionsTable).innerJoin(
+    commercialProductsTable, eq(commercialProductsTable.id, commercialSubscriptionsTable.productId),
+  ).where(and(
+    eq(commercialSubscriptionsTable.workspaceId, workspaceId),
+    eq(commercialSubscriptionsTable.status, "active"),
+    eq(commercialProductsTable.status, "active"),
+  ));
+  const candidates = subscriptions.filter((item) =>
+    (!bindingProductId || item.productId === bindingProductId)
+    && (!campaign.commercialSubscriptionId || item.subscriptionId === campaign.commercialSubscriptionId),
+  );
+  const snapshot = (campaign.intakeData ?? {}) as Record<string, unknown>;
+  const productName = typeof snapshot["product.name"] === "string" ? String(snapshot["product.name"]).trim() : "";
+  const normalizedName = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+  const suggested = productName
+    ? candidates.filter((item) => normalizedName(item.productName) === normalizedName(productName))
+    : [];
+  return {
+    campaignId,
+    briefingAnswerCount: briefingAnswerCount(snapshot),
+    briefingProductName: productName || null,
+    currentBinding: {
+      commercialProductId: campaign.commercialProductId ?? null,
+      commercialSubscriptionId: campaign.commercialSubscriptionId ?? null,
+      productIntakeVersionId: campaign.productIntakeVersionId ?? null,
+      intakeStatus: boundIntake?.status ?? null,
+    },
+    candidates: candidates.map((item) => ({ ...item, suggested: suggested.some((row) => row.subscriptionId === item.subscriptionId) })),
+  };
+}
+
+/** Explicitly adopts the campaign's existing completed briefing as its canonical product intake. */
+export async function adoptCampaignBriefingToProduct(
+  workspaceId: string,
+  campaignId: string,
+  subscriptionId: string,
+  actorId: string,
+) {
+  const [campaign] = await db.select().from(campaignsTable).where(and(
+    eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId),
+  )).limit(1);
+  if (!campaign) throw new NotFoundError("Campaign");
+
+  const [subscription] = await db.select({
+    id: commercialSubscriptionsTable.id,
+    productId: commercialProductsTable.id,
+    productName: commercialProductsTable.name,
+  }).from(commercialSubscriptionsTable).innerJoin(
+    commercialProductsTable, eq(commercialProductsTable.id, commercialSubscriptionsTable.productId),
+  ).where(and(
+    eq(commercialSubscriptionsTable.id, subscriptionId),
+    eq(commercialSubscriptionsTable.workspaceId, workspaceId),
+    eq(commercialSubscriptionsTable.status, "active"),
+    eq(commercialProductsTable.status, "active"),
+  )).limit(1);
+  if (!subscription) throw new AppError(409, "Selecione um produto com assinatura ativa para esta campanha.", "CAMPAIGN_PRODUCT_ADOPTION_INVALID");
+  if (campaign.commercialProductId && campaign.commercialProductId !== subscription.productId) {
+    throw new AppError(409, "O produto escolhido não corresponde ao produto já vinculado à campanha.", "CAMPAIGN_PRODUCT_MISMATCH");
+  }
+  if (campaign.commercialSubscriptionId && campaign.commercialSubscriptionId !== subscription.id) {
+    throw new AppError(409, "A assinatura escolhida não corresponde à assinatura já vinculada à campanha.", "CAMPAIGN_SUBSCRIPTION_MISMATCH");
+  }
+  const campaignSnapshot = (campaign.intakeData ?? {}) as Record<string, unknown>;
+  if (briefingAnswerCount(campaignSnapshot) < 3) {
+    throw new AppError(409, "O briefing salvo ainda não tem dados suficientes para ser adotado como briefing oficial do produto.", "CAMPAIGN_BRIEFING_INCOMPLETE");
+  }
+
+  let intake: ProductIntake | undefined;
+  if (campaign.productIntakeVersionId) {
+    [intake] = await db.select().from(productIntakesTable).where(and(
+      eq(productIntakesTable.id, campaign.productIntakeVersionId),
+      eq(productIntakesTable.workspaceId, workspaceId),
+      eq(productIntakesTable.commercialProductId, subscription.productId),
+    )).limit(1);
+    if (!intake) throw new AppError(409, "A versão de briefing vinculada pertence a outro produto; revise o vínculo da campanha.", "CAMPAIGN_INTAKE_PRODUCT_MISMATCH");
+  }
+
+  if (!intake || intake.status === "superseded") {
+    const current = await getProductIntake(workspaceId, subscription.productId);
+    const started = await startProductIntake(workspaceId, subscription.productId, "launch", actorId, campaignId);
+    const base = (started.intake.snapshot ?? {}) as Record<string, unknown>;
+    const approvedSnapshot = (current.canonicalCurrent?.snapshot ?? {}) as Record<string, unknown>;
+    const mergedSnapshot = { ...approvedSnapshot, ...base, ...campaignSnapshot };
+    const updated = await updateProductIntake(workspaceId, started.intake.id, mergedSnapshot, actorId);
+    intake = updated;
+  } else if (intake.status === "draft") {
+    const mergedSnapshot = { ...((intake.snapshot ?? {}) as Record<string, unknown>), ...campaignSnapshot };
+    intake = await updateProductIntake(workspaceId, intake.id, mergedSnapshot, actorId);
+  }
+
+  if (!intake || (intake.status !== "approved" && intake.status !== "locked")) {
+    if (!intake || briefingAnswerCount((intake.snapshot ?? {}) as Record<string, unknown>) < 3) {
+      throw new AppError(409, "O briefing precisa de pelo menos três respostas salvas antes da adoção.", "CAMPAIGN_BRIEFING_INCOMPLETE");
+    }
+    intake = await approveProductIntake(workspaceId, intake.id, actorId);
+  }
+
+  await db.update(campaignsTable).set({
+    commercialProductId: subscription.productId,
+    commercialSubscriptionId: subscription.id,
+    productIntakeVersionId: intake.id,
+    updatedAt: new Date(),
+  }).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
+  await audit(workspaceId, "campaign.briefing_adopted_as_product_intake", {
+    campaignId, productId: subscription.productId, subscriptionId: subscription.id, intakeId: intake.id,
+  }, actorId);
+
+  return {
+    campaignId,
+    productId: subscription.productId,
+    productName: subscription.productName,
+    subscriptionId: subscription.id,
+    intakeId: intake.id,
+    intakeStatus: intake.status,
+  };
 }
