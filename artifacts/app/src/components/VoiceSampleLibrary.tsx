@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useUiText } from "@/lib/i18n";
 import { toast } from "sonner";
 import { CheckCircle2, Headphones, Loader2, Mic, Play, Square, Trash2 } from "lucide-react";
@@ -15,21 +14,17 @@ type VoiceSample = {
   createdAt: string;
 };
 
-const STORAGE_CONSENT_VERSION = "voice-sample-storage-v1";
-const CLONE_CONSENT_VERSION = "voice-clone-v1";
+const STORAGE_CONSENT_VERSION = "voice-sample-storage-v2";
 
-export function VoiceSampleLibrary({ onCloneCreated }: { onCloneCreated?: (voiceCloneId: string) => void }) {
+export function VoiceSampleLibrary({ onSamplesChange }: { onSamplesChange?: (count: number) => void }) {
   const t = useUiText();
   const [samples, setSamples] = useState<VoiceSample[]>([]);
-  const [name, setName] = useState("");
   const [blob, setBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [storageConsent, setStorageConsent] = useState(false);
-  const [cloneConsent, setCloneConsent] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [cloningId, setCloningId] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [audioUrls, setAudioUrls] = useState<Record<string, string>>({});
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -42,7 +37,8 @@ export function VoiceSampleLibrary({ onCloneCreated }: { onCloneCreated?: (voice
   const loadSamples = useCallback(async () => {
     const result = await customFetch<{ samples: VoiceSample[] }>("/api/workspaces/me/persona/voice-samples");
     setSamples(result.samples);
-  }, []);
+    onSamplesChange?.(result.samples.length);
+  }, [onSamplesChange]);
 
   useEffect(() => {
     void loadSamples().catch(() => toast.error(t("Não foi possível carregar as amostras salvas.", "Couldn't load saved samples.", "No se pudieron cargar las muestras guardadas.")));
@@ -104,20 +100,20 @@ export function VoiceSampleLibrary({ onCloneCreated }: { onCloneCreated?: (voice
   };
 
   const saveSample = async () => {
-    if (!blob || !storageConsent || !name.trim()) return;
+    if (!blob || !storageConsent) return;
     setLoading(true);
     try {
-      const query = new URLSearchParams({ name: name.trim(), consent: "true", consentVersion: STORAGE_CONSENT_VERSION });
+      const query = new URLSearchParams({ consent: "true", consentVersion: STORAGE_CONSENT_VERSION });
       const result = await customFetch<{ sample: VoiceSample }>(`/api/workspaces/me/persona/voice-samples?${query}`, {
         method: "POST",
         headers: { "Content-Type": blob.type.split(";")[0] || "audio/webm" },
         body: blob,
       });
-      setSamples((current) => [...current, result.sample]);
-      setName("");
+      setSamples([result.sample]);
+      onSamplesChange?.(1);
       setStorageConsent(false);
       clearPreview();
-      toast.success(t("Amostra salva no workspace privado.", "Sample saved to your private workspace.", "Muestra guardada en el espacio de trabajo privado."));
+      toast.success(t("Amostra salva. A anterior foi substituída e removida.", "Sample saved. The previous one was replaced and deleted.", "Muestra guardada. La anterior fue sustituida y eliminada."));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("Não foi possível salvar a amostra.", "Couldn't save the sample.", "No se pudo guardar la muestra."));
     } finally {
@@ -150,6 +146,7 @@ export function VoiceSampleLibrary({ onCloneCreated }: { onCloneCreated?: (voice
     try {
       await customFetch(`/api/workspaces/me/persona/voice-samples/${sample.sampleId}`, { method: "DELETE" });
       setSamples((current) => current.filter((item) => item.sampleId !== sample.sampleId));
+      onSamplesChange?.(Math.max(0, samples.length - 1));
       if (audioUrlsRef.current[sample.sampleId]) URL.revokeObjectURL(audioUrlsRef.current[sample.sampleId]!);
       delete audioUrlsRef.current[sample.sampleId];
       setAudioUrls((current) => { const next = { ...current }; delete next[sample.sampleId]; return next; });
@@ -161,28 +158,11 @@ export function VoiceSampleLibrary({ onCloneCreated }: { onCloneCreated?: (voice
     }
   };
 
-  const cloneFromSample = async (sample: VoiceSample) => {
-    if (!cloneConsent) return;
-    setCloningId(sample.sampleId);
-    try {
-      const result = await customFetch<{ voiceCloneId: string }>(`/api/workspaces/me/persona/voice-samples/${sample.sampleId}/clone`, {
-        method: "POST",
-        body: JSON.stringify({ consent: true, consentVersion: CLONE_CONSENT_VERSION }),
-      });
-      onCloneCreated?.(result.voiceCloneId);
-      toast.success(t(`Clone criado com sucesso. ID: ${result.voiceCloneId.slice(0, 8)}…`, `Voice clone created. ID: ${result.voiceCloneId.slice(0, 8)}…`, `Clon creado. ID: ${result.voiceCloneId.slice(0, 8)}…`));
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("Não foi possível criar o clone. A amostra continua salva.", "Couldn't create the clone. Your sample is still saved.", "No se pudo crear el clon. La muestra sigue guardada."));
-    } finally {
-      setCloningId(null);
-    }
-  };
-
   return (
     <SectionCard title={t("Biblioteca privada de voz", "Private voice library", "Biblioteca privada de voz")} icon={Headphones}>
       <div className="space-y-4">
         <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">
-          {t("Grave amostras de 5 segundos a 2 minutos. Elas ficam privadas neste workspace, podem ser usadas para preparar um clone e podem ser removidas por você a qualquer momento. Gravar não salva nem clona o áudio.", "Record samples from 5 seconds to 2 minutes. They stay private in this workspace, can be used to prepare a clone, and can be deleted by you at any time. Recording does not save or clone the audio.", "Graba muestras de 5 segundos a 2 minutos. Permanecen privadas en este espacio, pueden usarse para preparar un clon y puedes eliminarlas cuando quieras. Grabar no guarda ni clona el audio.")}
+          {t("Grave ou envie uma amostra de 5 segundos a 2 minutos. O workspace mantém somente uma amostra: ao salvar outra, a anterior será substituída e removida permanentemente. Após seu consentimento, o áudio fica no armazenamento privado do NexOS; nenhum provedor de IA recebe o arquivo nesta etapa.", "Record or upload one sample from 5 seconds to 2 minutes. Each workspace keeps only one sample: saving another permanently replaces and deletes the previous one. With your consent, the audio is stored privately by NexOS; no AI provider receives it at this stage.", "Graba o sube una muestra de 5 segundos a 2 minutos. Cada espacio de trabajo conserva una sola muestra: al guardar otra, la anterior se sustituye y se elimina permanentemente. Con tu consentimiento, NexOS almacena el audio de forma privada; ningún proveedor de IA lo recibe en esta etapa.")}
         </p>
 
         <div className="space-y-3 border border-border/40 bg-background/20 p-4">
@@ -200,14 +180,13 @@ export function VoiceSampleLibrary({ onCloneCreated }: { onCloneCreated?: (voice
           </div>
           {blob && (
             <div className="space-y-3">
-              <Input value={name} onChange={(event) => setName(event.target.value)} maxLength={80} placeholder={t("Nome identificável, ex.: Voz natural", "Descriptive name, e.g. Natural voice", "Nombre identificable, p. ej. Voz natural")} className="h-9 rounded-none" />
               <label className="flex items-start gap-2 font-mono text-[10px] text-muted-foreground/80 leading-relaxed">
                 <input type="checkbox" checked={storageConsent} onChange={(event) => setStorageConsent(event.target.checked)} className="mt-0.5 accent-primary" />
-                <span>{t("Autorizo armazenar esta amostra de áudio no workspace privado para uso futuro na preparação de um clone. Sei que posso removê-la a qualquer momento.", "I authorize storing this audio sample in the private workspace for future voice clone preparation. I understand I can delete it at any time.", "Autorizo guardar esta muestra de audio en el espacio privado para preparar un clon más adelante. Puedo eliminarla cuando quiera.")}</span>
+                <span>{t("Autorizo guardar esta amostra no armazenamento privado do NexOS. Entendo que o workspace aceita somente uma amostra e que, ao salvar esta, a anterior será substituída e removida permanentemente. Salvar não clona minha voz nem envia o áudio a um provedor de IA.", "I authorize saving this sample to NexOS private storage. I understand the workspace accepts only one sample and that saving this one permanently replaces and deletes the previous one. Saving does not clone my voice or send audio to an AI provider.", "Autorizo guardar esta muestra en el almacenamiento privado de NexOS. Entiendo que el espacio de trabajo admite una sola muestra y que, al guardar esta, la anterior se sustituirá y eliminará permanentemente. Guardarla no clona mi voz ni envía el audio a un proveedor de IA.")}</span>
               </label>
-              <Button size="sm" onClick={() => void saveSample()} disabled={!storageConsent || !name.trim() || loading} className="rounded-none font-mono text-[10px] uppercase tracking-widest gap-2">
+              <Button size="sm" onClick={() => void saveSample()} disabled={!storageConsent || loading} className="rounded-none font-mono text-[10px] uppercase tracking-widest gap-2">
                 {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                {t("Consentir e salvar amostra", "Consent and save sample", "Consentir y guardar muestra")}
+                {t(samples.length ? "Substituir amostra salva" : "Consentir e salvar amostra", samples.length ? "Replace saved sample" : "Consent and save sample", samples.length ? "Sustituir muestra guardada" : "Consentir y guardar muestra")}
               </Button>
             </div>
           )}
@@ -215,7 +194,7 @@ export function VoiceSampleLibrary({ onCloneCreated }: { onCloneCreated?: (voice
 
         {samples.length > 0 ? (
           <div className="space-y-2">
-            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Amostras salvas", "Saved samples", "Muestras guardadas")} ({samples.length}/20)</div>
+            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Amostra salva", "Saved sample", "Muestra guardada")} ({samples.length}/1)</div>
             {samples.map((sample) => (
               <div key={sample.sampleId} className="flex flex-wrap items-center gap-3 border border-border/30 px-3 py-2">
                 <div className="min-w-0 flex-1">
@@ -225,19 +204,11 @@ export function VoiceSampleLibrary({ onCloneCreated }: { onCloneCreated?: (voice
                 <Button size="sm" variant="outline" onClick={() => void playSample(sample)} className="h-8 rounded-none gap-1.5 font-mono text-[10px]">
                   <Play className="h-3 w-3" /> {playingId === sample.sampleId ? t("Reproduzindo", "Playing", "Reproduciendo") : t("Ouvir", "Listen", "Escuchar")}
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => void deleteSample(sample)} disabled={loading || cloningId === sample.sampleId} className="h-8 rounded-none text-red-400 gap-1.5 font-mono text-[10px]">
+                <Button size="sm" variant="outline" onClick={() => void deleteSample(sample)} disabled={loading} className="h-8 rounded-none text-red-400 gap-1.5 font-mono text-[10px]">
                   <Trash2 className="h-3 w-3" /> {t("Excluir", "Delete", "Eliminar")}
-                </Button>
-                <Button size="sm" onClick={() => void cloneFromSample(sample)} disabled={!cloneConsent || loading || cloningId !== null} className="h-8 rounded-none gap-1.5 font-mono text-[10px]">
-                  {cloningId === sample.sampleId ? <Loader2 className="h-3 w-3 animate-spin" /> : <Headphones className="h-3 w-3" />}
-                  {t("Criar clone", "Create clone", "Crear clon")}
                 </Button>
               </div>
             ))}
-            <label className="flex items-start gap-2 font-mono text-[10px] text-muted-foreground/80 leading-relaxed">
-              <input type="checkbox" checked={cloneConsent} onChange={(event) => setCloneConsent(event.target.checked)} className="mt-0.5 accent-primary" />
-              <span>{t("Autorizo usar a amostra selecionada para enviar meu áudio ao provedor de clonagem e criar uma voz clonada. Esta autorização é separada do armazenamento.", "I authorize sending the selected sample to the cloning provider to create a cloned voice. This authorization is separate from storage.", "Autorizo enviar la muestra seleccionada al proveedor para crear una voz clonada. Esta autorización es independiente del almacenamiento.")}</span>
-            </label>
           </div>
         ) : (
           <div className="font-mono text-[10px] text-muted-foreground/60">{t("Nenhuma amostra salva ainda.", "No saved samples yet.", "Aún no hay muestras guardadas.")}</div>

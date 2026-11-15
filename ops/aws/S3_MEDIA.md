@@ -41,39 +41,53 @@ contêiner em rede bridge obter credenciais via IMDSv2, conferir a configuraçã
 de metadata hop limit da EC2; pode ser necessário definir o limite em 2.
 Manter IMDSv2 obrigatório. Nunca disponibilizar endpoints de metadata ao usuário.
 
-## Adaptação do código necessária antes de ativar
+## Adaptador de armazenamento da aplicação
 
-A auditoria encontrou `artifacts/api-server/src/lib/gcs-recordings.ts`, que usa
-credenciais do sidecar Replit/GCS em gravações, mídias de presença, personas e
-vídeo. Não existe hoje um adaptador S3 selecionável. A geração de algumas
-imagens também retorna data URLs. **O bucket preparado ainda não recebe essas
-mídias automaticamente.** Nenhuma variável S3 foi incluída no runtime como se
-o suporte já estivesse implementado.
+`artifacts/api-server/src/lib/gcs-recordings.ts` seleciona S3 quando
+`NODE_ENV=production`, com o bucket definido por `NEXOS_MEDIA_S3_BUCKET` e
+região `AWS_REGION` ou `AWS_DEFAULT_REGION` (padrão `us-east-2`). O SDK usa a
+cadeia padrão de credenciais AWS; na EC2, isso deve resolver para a role
+`nexos-production-ec2-role`, sem access keys estáticas.
 
-Para completar a integração das mídias publicitárias:
+As chaves lógicas já utilizadas pela aplicação são armazenadas sob `media/`
+para respeitar o escopo da role. O adaptador cobre uploads, leitura com Range,
+metadados, listagem, URLs assinadas e exclusão nos fluxos que já o utilizam
+(gravações, amostras privadas, mídia de presença e produção/edição de vídeo).
+Em desenvolvimento local e testes, os mesmos fluxos usam disco; configure
+`NEXOS_LOCAL_MEDIA_DIR` para escolher a pasta de desenvolvimento. Os testes que
+definem `NATIVE_MEDIA_TEST_STORAGE_DIR` ficam isolados nessa pasta. O staging
+Replit continua usando o caminho GCS existente.
 
-1. Adicionar o adaptador S3 no backend, usando SDK AWS e a role, com uploads
-   multipart/streaming para vídeos grandes e downloads com Range.
-2. Usar chaves geradas pelo servidor no formato
+Isso não migra automaticamente objetos antigos que ainda estejam em GCS, nem
+substitui as verificações de autorização e isolamento por workspace feitas pela
+API. Configure `AWS_DEFAULT_REGION=us-east-2` e
+`NEXOS_MEDIA_S3_BUCKET=nexos-467626281008-us-east-2-an` no ambiente da API de
+produção antes de ativar os fluxos S3. As imagens geradas como data URLs e
+qualquer fluxo de upload fora desse adaptador ainda precisam de integração
+própria.
+
+Para completar a integração de ativos de campanha ponta a ponta:
+
+1. Padronizar as chaves geradas pelo servidor no formato
    `media/{workspaceId}/{campaignId}/{assetId}/original.ext`; conferir posse da
    campanha antes de upload, leitura e exclusão. IAM da instância protege o
    bucket; o isolamento entre clientes continua sendo responsabilidade da API.
-3. Registrar no banco bucket/key, workspace/campanha, MIME, tamanho e checksum.
+2. Registrar no banco bucket/key, workspace/campanha, MIME, tamanho e checksum.
    Preservar as origens existentes durante a transição e tratar retries sem
    duplicar objetos. Não salvar URLs temporárias como endereço permanente.
-4. Autorizar o usuário na API antes de gerar URLs de leitura/upload. Se o
+3. Autorizar o usuário na API antes de gerar URLs de leitura/upload. Se o
    navegador enviar diretamente ao S3, adicionar CORS somente para
    `https://agencianexos.vip`, com métodos/headers necessários e validação
    posterior de tamanho, checksum e tipo real do arquivo.
-5. Gerar URL temporária nova na publicação para Meta e outros provedores,
+4. Gerar URL temporária nova na publicação para Meta e outros provedores,
    com tempo suficiente para o download e suas tentativas. Validar o fluxo
    real de cada provedor. Uma URL S3 assinada pode expirar antes do tempo pedido
    quando as credenciais temporárias da role expiram.
-6. Migrar arquivos existentes por lote, verificar checksum e leitura, atualizar
+5. Migrar arquivos existentes por lote, verificar checksum e leitura, atualizar
    referências e manter backup antes de remover a origem. Não aplicar esse
    bucket de campanhas a consentimentos, material pago da Academy ou outros
    dados privados sem revisar seus contratos de acesso e exclusão.
-7. Testar isolamento entre clientes, expiração, streaming, retries, falha de
+6. Testar isolamento entre clientes, expiração, streaming, retries, falha de
    upload, remoção, restauração e publicação real controlada.
 
 CloudFront é uma evolução para distribuição/cache. Pode acessar o bucket
@@ -87,5 +101,6 @@ Referências: [URLs pré-assinadas S3](https://docs.aws.amazon.com/AmazonS3/late
 [credenciais de roles em EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html).
 
 O template passou no `cfn-lint` para `sa-east-1`; essa validação não significa
-que ele foi implantado em `us-east-2`. Ainda é necessário implementar e
-homologar o adaptador S3 no backend antes de armazenar mídias das campanhas.
+que ele foi implantado em `us-east-2`. O adaptador S3 está integrado aos fluxos
+que já usam essa camada; os fluxos de ativos de campanha acima ainda precisam
+ser concluídos e homologados antes de armazenar campanhas nesse bucket.

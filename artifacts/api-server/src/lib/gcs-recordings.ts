@@ -1,15 +1,23 @@
 /**
- * Minimal GCS client for persisting recording videos.
- * Uses Replit sidecar authentication (no API key needed).
+ * Shared private media storage adapter.
+ * Production uses the EC2 role and the existing S3 bucket; local development
+ * and tests use a local directory. Replit staging keeps its existing GCS path.
  */
 import { Storage } from "@google-cloud/storage";
+import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import fsModule from "node:fs";
+import os from "node:os";
 import pathModule from "node:path";
+import { PassThrough } from "node:stream";
 
 const REPLIT_SIDECAR = "http://127.0.0.1:1106";
 
+const runningOnReplit = Boolean(process.env["REPL_ID"] || process.env["REPLIT_DEPLOYMENT"]);
+const s3 = new S3Client({ region: process.env["AWS_REGION"] ?? process.env["AWS_DEFAULT_REGION"] ?? "us-east-2" });
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const gcs = new Storage({
+const gcs = new Storage(runningOnReplit ? {
   credentials: {
     audience: "replit",
     subject_token_type: "access_token",
@@ -22,7 +30,73 @@ const gcs = new Storage({
     universe_domain: "googleapis.com",
   } as any,
   projectId: "",
-});
+} : {});
+
+function localFilesystemStorageEnabled(): boolean {
+  return testStorageEnabled() || (!runningOnReplit && process.env["NODE_ENV"] !== "production");
+}
+
+function s3StorageEnabled(): boolean {
+  return process.env["NODE_ENV"] === "production";
+}
+
+function s3Bucket(): string {
+  const bucket = process.env["NEXOS_MEDIA_S3_BUCKET"];
+  if (!bucket) throw new Error("NEXOS_MEDIA_S3_BUCKET is required in production");
+  return bucket;
+}
+
+function s3ObjectKey(objectKey: string): string {
+  const normalized = objectKey.replace(/^\/+/, "");
+  if (!normalized || normalized.split("/").some((part) => part === "..")) {
+    throw new Error("Invalid media object key");
+  }
+  return normalized.startsWith("media/") ? normalized : `media/${normalized}`;
+}
+
+function metadataForS3(metadata?: Record<string, string>): Record<string, string> | undefined {
+  if (!metadata) return undefined;
+  return Object.fromEntries(Object.entries(metadata).map(([key, value]) => [key.toLowerCase(), value]));
+}
+
+function s3ReadStream(objectKey: string, opts?: { start?: number; end?: number }): PassThrough {
+  const stream = new PassThrough();
+  const range = opts?.start !== undefined || opts?.end !== undefined
+    ? `bytes=${opts.start ?? 0}-${opts.end ?? ""}`
+    : undefined;
+  void s3.send(new GetObjectCommand({ Bucket: s3Bucket(), Key: s3ObjectKey(objectKey), Range: range }))
+    .then((result) => {
+      if (!result.Body || !("pipe" in result.Body)) throw new Error("S3 returned an unreadable media body");
+      result.Body.pipe(stream);
+    })
+    .catch((error: unknown) => stream.destroy(error instanceof Error ? error : new Error(String(error))));
+  return stream;
+}
+
+function localStorageRoot(): string {
+  if (testStorageEnabled()) return pathModule.resolve(process.env["NATIVE_MEDIA_TEST_STORAGE_DIR"]!);
+  const configured = process.env["NEXOS_LOCAL_MEDIA_DIR"];
+  if (configured) return pathModule.resolve(configured);
+  const base = process.env["LOCALAPPDATA"] ?? process.env["XDG_DATA_HOME"] ?? pathModule.join(os.homedir(), ".local", "share");
+  return pathModule.join(base, "NexOS", "media");
+}
+
+function localObjectPath(objectKey: string): string {
+  const root = localStorageRoot();
+  const target = pathModule.resolve(root, objectKey);
+  if (target !== root && !target.startsWith(`${root}${pathModule.sep}`)) {
+    throw new Error("Invalid local media object key");
+  }
+  return target;
+}
+
+async function storeLocally(buffer: Buffer, objectKey: string, contentType: string, metadata?: Record<string, string>): Promise<void> {
+  const fs = await import("node:fs/promises");
+  const target = localObjectPath(objectKey);
+  await fs.mkdir(pathModule.dirname(target), { recursive: true });
+  await fs.writeFile(target, buffer);
+  await fs.writeFile(`${target}.metadata.json`, JSON.stringify({ contentType, size: buffer.length, ...metadata }));
+}
 
 function bucketId(): string {
   const id = process.env["DEFAULT_OBJECT_STORAGE_BUCKET_ID"] ?? "";
@@ -50,6 +124,25 @@ export async function uploadRecordingToGCS(
   contentType = "video/webm",
 ): Promise<string> {
   const key = recordingObjectKey(recordingId);
+  if (localFilesystemStorageEnabled()) {
+    const fs = await import("node:fs/promises");
+    const target = localObjectPath(key);
+    await fs.mkdir(pathModule.dirname(target), { recursive: true });
+    await fs.copyFile(localPath, target);
+    const size = (await fs.stat(target)).size;
+    await fs.writeFile(`${target}.metadata.json`, JSON.stringify({ contentType, size }));
+    return key;
+  }
+  if (s3StorageEnabled()) {
+    await new Upload({
+      client: s3,
+      params: { Bucket: s3Bucket(), Key: s3ObjectKey(key), Body: fsModule.createReadStream(localPath), ContentType: contentType },
+      queueSize: 4,
+      partSize: 8 * 1024 * 1024,
+      leavePartsOnError: false,
+    }).done();
+    return key;
+  }
   await gcs.bucket(bucketId()).upload(localPath, {
     destination: key,
     contentType,
@@ -60,6 +153,15 @@ export async function uploadRecordingToGCS(
 
 /** Get the total byte size of a GCS recording. */
 export async function getGCSRecordingSize(objectKey: string): Promise<number> {
+  if (localFilesystemStorageEnabled()) {
+    const fs = await import("node:fs/promises");
+    return (await fs.stat(localObjectPath(objectKey))).size;
+  }
+  if (s3StorageEnabled()) {
+    const meta = await s3.send(new HeadObjectCommand({ Bucket: s3Bucket(), Key: s3ObjectKey(objectKey) }));
+    if (meta.ContentLength === undefined) throw new Error("S3 object size is unavailable");
+    return meta.ContentLength;
+  }
   const [meta] = await gcs.bucket(bucketId()).file(objectKey).getMetadata();
   return parseInt(meta.size as string, 10);
 }
@@ -69,6 +171,8 @@ export function createGCSReadStream(
   objectKey: string,
   opts?: { start?: number; end?: number },
 ) {
+  if (localFilesystemStorageEnabled()) return fsModule.createReadStream(localObjectPath(objectKey), opts ?? {});
+  if (s3StorageEnabled()) return s3ReadStream(objectKey, opts);
   return gcs.bucket(bucketId()).file(objectKey).createReadStream(opts ?? {});
 }
 
@@ -102,6 +206,12 @@ export async function getPersonaMediaSignedUrl(
   objectKey: string,
   ttlSeconds = 7200,
 ): Promise<string | null> {
+  if (localFilesystemStorageEnabled()) return null;
+  if (s3StorageEnabled()) {
+    try {
+      return await getSignedUrl(s3, new GetObjectCommand({ Bucket: s3Bucket(), Key: s3ObjectKey(objectKey) }), { expiresIn: ttlSeconds });
+    } catch { return null; }
+  }
   try {
     const [url] = await gcs
       .bucket(bucketId())
@@ -123,6 +233,14 @@ export async function uploadBufferToGCS(
   key: string,
   contentType = "video/webm",
 ): Promise<string> {
+  if (localFilesystemStorageEnabled()) {
+    await storeLocally(buf, key, contentType);
+    return key;
+  }
+  if (s3StorageEnabled()) {
+    await s3.send(new PutObjectCommand({ Bucket: s3Bucket(), Key: s3ObjectKey(key), Body: buf, ContentType: contentType }));
+    return key;
+  }
   await gcs.bucket(bucketId()).file(key).save(buf, { contentType, resumable: false });
   return key;
 }
@@ -141,6 +259,27 @@ export async function uploadFileToGCS(
     await fs.mkdir(path.dirname(target), { recursive: true });
     await fs.copyFile(localPath, target);
     await fs.writeFile(`${target}.metadata.json`, JSON.stringify({ contentType, size: (await fs.stat(target)).size, sha256: metadata?.sha256 }));
+    return key;
+  }
+  if (localFilesystemStorageEnabled()) {
+    const fs = await import("node:fs/promises");
+    const target = localObjectPath(key);
+    await fs.mkdir(pathModule.dirname(target), { recursive: true });
+    await fs.copyFile(localPath, target);
+    await fs.writeFile(`${target}.metadata.json`, JSON.stringify({ contentType, size: (await fs.stat(target)).size, sha256: metadata?.sha256 }));
+    return key;
+  }
+  if (s3StorageEnabled()) {
+    await new Upload({
+      client: s3,
+      params: {
+        Bucket: s3Bucket(), Key: s3ObjectKey(key), Body: fsModule.createReadStream(localPath),
+        ContentType: contentType, Metadata: metadataForS3(metadata),
+      },
+      queueSize: 4,
+      partSize: 8 * 1024 * 1024,
+      leavePartsOnError: false,
+    }).done();
     return key;
   }
   await gcs.bucket(bucketId()).upload(localPath, {
@@ -171,6 +310,8 @@ export function createGCSObjectStream(
     const local = pathModule.join(process.env["NATIVE_MEDIA_TEST_STORAGE_DIR"]!, objectKey);
     return fsModule.createReadStream(local, opts ?? {});
   }
+  if (localFilesystemStorageEnabled()) return fsModule.createReadStream(localObjectPath(objectKey), opts ?? {});
+  if (s3StorageEnabled()) return s3ReadStream(objectKey, opts);
   return gcs.bucket(bucketId()).file(objectKey).createReadStream(opts ?? {});
 }
 
@@ -179,6 +320,18 @@ export async function getGCSObjectMeta(objectKey: string): Promise<{ contentType
   if (testStorageEnabled()) {
     const fs = await import("node:fs/promises"); const path = await import("node:path");
     return JSON.parse(await fs.readFile(`${path.join(process.env["NATIVE_MEDIA_TEST_STORAGE_DIR"]!, objectKey)}.metadata.json`, "utf8"));
+  }
+  if (localFilesystemStorageEnabled()) {
+    const fs = await import("node:fs/promises");
+    return JSON.parse(await fs.readFile(`${localObjectPath(objectKey)}.metadata.json`, "utf8"));
+  }
+  if (s3StorageEnabled()) {
+    const meta = await s3.send(new HeadObjectCommand({ Bucket: s3Bucket(), Key: s3ObjectKey(objectKey) }));
+    return {
+      contentType: meta.ContentType ?? "application/octet-stream",
+      size: meta.ContentLength ?? 0,
+      sha256: meta.Metadata?.["sha256"],
+    };
   }
   const [meta] = await gcs.bucket(bucketId()).file(objectKey).getMetadata();
   return {
@@ -200,6 +353,17 @@ export async function deleteGCSObject(objectKey: string): Promise<void> {
     const local = pathModule.join(process.env["NATIVE_MEDIA_TEST_STORAGE_DIR"]!, objectKey);
     await fs.rm(local, { force: true });
     await fs.rm(`${local}.metadata.json`, { force: true });
+    return;
+  }
+  if (localFilesystemStorageEnabled()) {
+    const fs = await import("node:fs/promises");
+    const local = localObjectPath(objectKey);
+    await fs.rm(local, { force: true });
+    await fs.rm(`${local}.metadata.json`, { force: true });
+    return;
+  }
+  if (s3StorageEnabled()) {
+    await s3.send(new DeleteObjectCommand({ Bucket: s3Bucket(), Key: s3ObjectKey(objectKey) }));
     return;
   }
   try {
@@ -231,6 +395,40 @@ export async function listGCSObjects(prefix: string): Promise<string[]> {
     await walk(base);
     return keys;
   }
+  if (localFilesystemStorageEnabled()) {
+    const root = localStorageRoot();
+    const base = localObjectPath(prefix);
+    const fs = await import("node:fs/promises");
+    const keys: string[] = [];
+    const walk = async (dir: string): Promise<void> => {
+      let entries: import("node:fs").Dirent[];
+      try { entries = await fs.readdir(dir, { withFileTypes: true }); } catch (error: any) {
+        if (error?.code === "ENOENT") return;
+        throw error;
+      }
+      await Promise.all(entries.map(async (entry) => {
+        const full = pathModule.join(dir, entry.name);
+        if (entry.isDirectory()) return walk(full);
+        if (!entry.name.endsWith(".metadata.json")) keys.push(pathModule.relative(root, full).replaceAll(pathModule.sep, "/"));
+      }));
+    };
+    await walk(base);
+    return keys;
+  }
+  if (s3StorageEnabled()) {
+    const keys: string[] = [];
+    let continuationToken: string | undefined;
+    do {
+      const page = await s3.send(new ListObjectsV2Command({
+        Bucket: s3Bucket(), Prefix: s3ObjectKey(prefix), ContinuationToken: continuationToken,
+      }));
+      for (const object of page.Contents ?? []) {
+        if (object.Key) keys.push(object.Key.startsWith("media/") ? object.Key.slice("media/".length) : object.Key);
+      }
+      continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (continuationToken);
+    return keys;
+  }
   const [files] = await gcs.bucket(bucketId()).getFiles({ prefix });
   return files.map((file) => file.name);
 }
@@ -247,6 +445,12 @@ export async function getPresenceMediaSignedUrl(
   objectKey: string,
   ttlSeconds = 1800,
 ): Promise<string | null> {
+  if (localFilesystemStorageEnabled()) return null;
+  if (s3StorageEnabled()) {
+    try {
+      return await getSignedUrl(s3, new GetObjectCommand({ Bucket: s3Bucket(), Key: s3ObjectKey(objectKey) }), { expiresIn: ttlSeconds });
+    } catch { return null; }
+  }
   try {
     const [url] = await gcs
       .bucket(bucketId())

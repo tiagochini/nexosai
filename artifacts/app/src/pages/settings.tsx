@@ -31,7 +31,6 @@ import nexosLogo from "/nexos-logo.png";
 import { useLocation } from "wouter";
 import { AutonomyTab } from "@/components/AutonomyTab";
 import { MetaReviewReadinessPanel } from "@/components/meta-review-readiness";
-import { VoiceSampleLibrary } from "@/components/VoiceSampleLibrary";
 import { intlLocale, useUiLocale, useUiText } from "@/lib/i18n";
 
 type Tab = "perfil" | "workspace" | "seguranca" | "integracoes" | "identidade" | "compliance" | "autonomia";
@@ -1882,12 +1881,14 @@ function IdentidadeTab() {
   const [savingStyle, setSavingStyle] = useState(false);
 
   // ── Voice recording state ─────────────────────────────────────────────────
-  const [recState, setRecState] = useState<"idle" | "recording" | "recorded" | "cloning" | "done">("idle");
+  const [recState, setRecState] = useState<"idle" | "recording" | "recorded" | "saving" | "done">("idle");
   const [recSeconds, setRecSeconds] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [audioBase64, setAudioBase64] = useState<string | null>(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioDurationSeconds, setAudioDurationSeconds] = useState<number | null>(null);
   const [audioMime, setAudioMime] = useState("audio/webm");
-  const [cloneError, setCloneError] = useState<string | null>(null);
+  const [sampleError, setSampleError] = useState<string | null>(null);
+  const [voiceSampleCount, setVoiceSampleCount] = useState(0);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef   = useRef<BlobPart[]>([]);
   const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1939,7 +1940,6 @@ function IdentidadeTab() {
         setLsAccessories(p.lifestylePreferences?.accessories ?? "");
         setLsCountries(p.lifestylePreferences?.countries ?? "");
         setLsOther(p.lifestylePreferences?.other ?? "");
-        if (p.voiceCloneId) setRecState("done");
         // Ler clone state de workspace.settings (onde clone-voice-multi salva)
         // Mantém fallback para workspace.metadata por compatibilidade com sessões antigas
         const meta = (workspace as any).settings ?? (workspace as any).metadata ?? {};
@@ -1953,6 +1953,15 @@ function IdentidadeTab() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    void customFetch<{ samples: Array<{ sampleId: string }> }>("/api/workspaces/me/persona/voice-samples")
+      .then(({ samples }) => {
+        setVoiceSampleCount(samples.length);
+        if (samples.length > 0) setRecState("done");
+      })
+      .catch(() => {});
   }, []);
 
   // ── Save video production style to workspace metadata ─────────────────────
@@ -1980,9 +1989,10 @@ function IdentidadeTab() {
 
   // ── Recording helpers ─────────────────────────────────────────────────────
   const startRecording = useCallback(async () => {
-    setCloneError(null);
+    setSampleError(null);
     setAudioUrl(null);
-    setAudioBase64(null);
+    setAudioBlob(null);
+    setAudioDurationSeconds(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mime = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4";
@@ -1995,12 +2005,7 @@ function IdentidadeTab() {
         const blob = new Blob(chunksRef.current, { type: mime });
         const url  = URL.createObjectURL(blob);
         setAudioUrl(url);
-        const reader = new FileReader();
-        reader.onload = () => {
-          const b64 = (reader.result as string).split(",")[1] ?? "";
-          setAudioBase64(b64);
-        };
-        reader.readAsDataURL(blob);
+        setAudioBlob(blob);
         setRecState("recorded");
         setRecSeconds(0);
         if (timerRef.current) clearInterval(timerRef.current);
@@ -2011,7 +2016,7 @@ function IdentidadeTab() {
       setRecSeconds(0);
       timerRef.current = setInterval(() => setRecSeconds(s => s + 1), 1000);
     } catch {
-      setCloneError(t("Microfone não disponível — verifique as permissões do navegador.", "Microphone unavailable — check your browser permissions.", "Micrófono no disponible: comprueba los permisos del navegador."));
+      setSampleError(t("Microfone não disponível — verifique as permissões do navegador.", "Microphone unavailable — check your browser permissions.", "Micrófono no disponible: comprueba los permisos del navegador."));
     }
   }, [t]);
 
@@ -2024,9 +2029,10 @@ function IdentidadeTab() {
 
   const clearAudio = useCallback(() => {
     setAudioUrl(null);
-    setAudioBase64(null);
+    setAudioBlob(null);
+    setAudioDurationSeconds(null);
     setRecState("idle");
-    setCloneError(null);
+    setSampleError(null);
     if (recorderRef.current && recorderRef.current.state !== "inactive") {
       recorderRef.current.stop();
     }
@@ -2036,39 +2042,40 @@ function IdentidadeTab() {
   }, []);
 
   const handleFileUpload = useCallback((file: File) => {
-    setCloneError(null);
+    setSampleError(null);
     const mime = file.type || "audio/mpeg";
     setAudioMime(mime);
     const url = URL.createObjectURL(file);
     setAudioUrl(url);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const b64 = (reader.result as string).split(",")[1] ?? "";
-      setAudioBase64(b64);
-    };
-    reader.readAsDataURL(file);
+    setAudioBlob(file);
+    setAudioDurationSeconds(null);
     setRecState("recorded");
   }, []);
 
-  const cloneVoice = useCallback(async () => {
-    if (!audioBase64) return;
-    setCloneError(null);
-    setRecState("cloning");
+  const saveVoiceSample = useCallback(async () => {
+    if (!audioBlob) return;
+    setSampleError(null);
+    setRecState("saving");
     try {
-      const result = await customFetch<{ voiceCloneId: string; success: boolean }>("/api/workspaces/me/persona/clone-voice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ audioBase64, mimeType: audioMime, voiceName: voiceName || "Minha Voz NexOS" }),
+      const query = new URLSearchParams({
+        consent: "true",
+        consentVersion: "voice-sample-storage-v2",
+        durationSeconds: String(audioDurationSeconds ?? recSeconds),
       });
-      setPersona(prev => ({ ...prev, voiceCloneId: result.voiceCloneId, voiceCloneUpdatedAt: new Date().toISOString() }));
+      await customFetch<{ sample: { sampleId: string } }>(`/api/workspaces/me/persona/voice-samples?${query}`, {
+        method: "POST",
+        headers: { "Content-Type": audioMime.split(";")[0] || "audio/webm" },
+        body: audioBlob,
+      });
+      setVoiceSampleCount(1);
       setRecState("done");
-      toast.success(t("Voz clonada com sucesso! Voice ID: ", "Voice cloned successfully! Voice ID: ", "¡Voz clonada correctamente! Voice ID: ") + result.voiceCloneId.slice(0, 8) + "…");
+      toast.success(t("Amostra salva no armazenamento privado do NexOS.", "Sample saved to NexOS private storage.", "Muestra guardada en el almacenamiento privado de NexOS."));
     } catch (err: unknown) {
-       const msg = err instanceof Error ? err.message : t("Erro ao clonar voz", "Couldn't clone voice", "No se pudo clonar la voz");
-      setCloneError(msg);
+       const msg = err instanceof Error ? err.message : t("Erro ao salvar a amostra", "Couldn't save the sample", "No se pudo guardar la muestra");
+      setSampleError(msg);
       setRecState("recorded");
     }
-  }, [audioBase64, audioMime, t, voiceName]);
+  }, [audioBlob, audioDurationSeconds, audioMime, recSeconds, t]);
 
   const copyVoiceSampleScript = async () => {
     const script = t(
@@ -2204,8 +2211,8 @@ function IdentidadeTab() {
           </div>
         </div>
         <div className="flex gap-2 shrink-0">
-          <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-2 py-0.5 ${persona.voiceCloneId ? "text-green-400 border-green-400/40 bg-green-400/10" : "text-muted-foreground/50"}`}>
-             {persona.voiceCloneId ? t("✓ Voz clonada", "✓ Voice cloned", "✓ Voz clonada") : t("Voz: Pendente", "Voice: Pending", "Voz: Pendiente")}
+          <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-2 py-0.5 ${voiceSampleCount > 0 ? "text-green-400 border-green-400/40 bg-green-400/10" : "text-muted-foreground/50"}`}>
+             {voiceSampleCount > 0 ? t("✓ Amostra salva", "✓ Sample saved", "✓ Muestra guardada") : t("Amostra de voz: pendente", "Voice sample: pending", "Muestra de voz: pendiente")}
           </Badge>
           <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-2 py-0.5 ${persona.heygenAvatarId ? "text-blue-400 border-blue-400/40 bg-blue-400/10" : "text-muted-foreground/50"}`}>
              {persona.heygenAvatarId ? t("✓ Avatar ativo", "✓ Avatar active", "✓ Avatar activo") : t("Avatar: Pendente", "Avatar: Pending", "Avatar: Pendiente")}
@@ -2213,33 +2220,20 @@ function IdentidadeTab() {
         </div>
       </div>
 
-      {/* ── Seção 1: Clone de Voz ── */}
-      <SectionCard title={t("Clone de voz", "Voice clone", "Clon de voz")} icon={Headphones}>
+      {/* ── Seção 1: Amostra de Voz ── */}
+      <SectionCard title={t("Amostra de voz", "Voice sample", "Muestra de voz")} icon={Headphones}>
         <div className="space-y-4">
-          {/* Status atual */}
-          {persona.voiceCloneId && (
+          {voiceSampleCount > 0 && (
             <div className="flex items-center gap-3 px-4 py-3 border border-green-500/20 bg-green-500/5">
               <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
               <div>
-                 <div className="font-mono text-[11px] font-bold text-green-300">{t("Voz clonada com sucesso", "Voice cloned successfully", "Voz clonada correctamente")}</div>
-                <div className="font-mono text-[10px] text-muted-foreground/60">
-                  Voice ID: <span className="text-green-400/80">{persona.voiceCloneId}</span>
-                   {persona.voiceCloneUpdatedAt && ` · ${new Date(persona.voiceCloneUpdatedAt).toLocaleDateString(intlLocale(locale))}`}
-                </div>
+                <div className="font-mono text-[11px] font-bold text-green-300">{t("Amostra salva no armazenamento privado", "Sample saved in private storage", "Muestra guardada en el almacenamiento privado")}</div>
+                <div className="font-mono text-[10px] text-muted-foreground/60">{t("Uma amostra por workspace", "One sample per workspace", "Una muestra por espacio de trabajo")}</div>
               </div>
             </div>
           )}
 
-          <FieldRow label={t("Nome da voz", "Voice name", "Nombre de la voz")} sublabel={t("Identificação da voz clonada", "Voice clone identifier", "Identificación de la voz clonada")}>
-            <Input
-              value={voiceName}
-              onChange={e => setVoiceName(e.target.value)}
-              placeholder={t("Ex: João — Voz NexOS", "e.g. Alex — NexOS voice", "Ej.: Alex — Voz de NexOS")}
-              className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
-            />
-          </FieldRow>
-
-          <FieldRow label={t("Amostras de voz", "Voice samples", "Muestras de voz")} sublabel={t("30–120 segundos falando naturalmente. Quanto mais variado, melhor o clone.", "Speak naturally for 30–120 seconds. More variety improves the clone.", "Habla con naturalidad durante 30–120 segundos. Cuanta más variedad, mejor será el clon.")}>
+          <FieldRow label={t("Amostra de voz", "Voice sample", "Muestra de voz")} sublabel={t("5–120 segundos falando naturalmente. A amostra será armazenada em privado.", "Speak naturally for 5–120 seconds. The sample will be stored privately.", "Habla con naturalidad durante 5–120 segundos. La muestra se guardará de forma privada.")}>
             <div className="space-y-3">
               {/* Recorder */}
               <div className="flex items-center gap-3">
@@ -2289,7 +2283,10 @@ function IdentidadeTab() {
               {audioUrl && recState !== "recording" && (
                 <div className="flex items-center gap-2 border border-border/30 bg-background/30 px-3 py-2">
                   <Headphones className="h-3.5 w-3.5 text-primary shrink-0" />
-                  <audio controls src={audioUrl} className="flex-1 h-8 min-w-0" style={{ filter: "invert(0) hue-rotate(180deg) brightness(0.8)" }} />
+                  <audio controls src={audioUrl} onLoadedMetadata={(event) => {
+                    const duration = event.currentTarget.duration;
+                    if (Number.isFinite(duration)) setAudioDurationSeconds(duration);
+                  }} className="flex-1 h-8 min-w-0" style={{ filter: "invert(0) hue-rotate(180deg) brightness(0.8)" }} />
                   <button
                     onClick={clearAudio}
                     title={t("Excluir gravação e recomeçar", "Delete recording and start over", "Eliminar grabación y empezar de nuevo")}
@@ -2300,22 +2297,22 @@ function IdentidadeTab() {
                 </div>
               )}
 
-              {/* Clone button */}
-              {(recState === "recorded" || recState === "cloning") && (
+              {/* Save sample button */}
+              {(recState === "recorded" || recState === "saving") && (
                 <Button
-                  onClick={() => void cloneVoice()}
-                  disabled={recState === "cloning"}
+                  onClick={() => void saveVoiceSample()}
+                  disabled={recState === "saving"}
                   className="rounded-none font-mono text-[11px] uppercase tracking-widest h-9 px-5 gap-2 btn-weapon-primary w-full"
                 >
-                  {recState === "cloning"
-                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t("Clonando voz com IA…", "Cloning voice with AI…", "Clonando voz con IA…")}</>
-                    : <><Sparkles className="h-3.5 w-3.5" />{t("Clonar minha voz com IA", "Clone my voice with AI", "Clonar mi voz con IA")}</>}
+                  {recState === "saving"
+                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t("Salvando amostra…", "Saving sample…", "Guardando muestra…")}</>
+                    : <><Sparkles className="h-3.5 w-3.5" />{voiceSampleCount > 0 ? t("Substituir amostra salva", "Replace saved sample", "Sustituir muestra guardada") : t("Salvar amostra no sistema", "Save sample to system", "Guardar muestra en el sistema")}</>}
                 </Button>
               )}
 
-              {cloneError && (
+              {sampleError && (
                 <div className="border border-red-500/20 bg-red-500/5 px-4 py-3">
-                  <div className="font-mono text-[10px] text-red-400">{cloneError}</div>
+                  <div className="font-mono text-[10px] text-red-400">{sampleError}</div>
                 </div>
               )}
 
@@ -2345,17 +2342,12 @@ function IdentidadeTab() {
               </div>
 
               <div className="font-mono text-[9px] text-muted-foreground/30 leading-relaxed">
-                 {t("Fale naturalmente por 30–120s. Inclua variações de tom, pausas, entusiasmo. Evite ruído de fundo. Seu Voice ID é armazenado com segurança e usado apenas em vídeos desta conta.", "Speak naturally for 30–120 seconds. Vary your tone, pauses, and energy. Avoid background noise. Your Voice ID is stored securely and used only in videos for this account.", "Habla con naturalidad durante 30–120 segundos. Varía el tono, las pausas y la energía. Evita el ruido de fondo. Tu Voice ID se almacena de forma segura y solo se usa en videos de esta cuenta.")}
+                 {t("Fale naturalmente por até 120 segundos. Inclua variações de tom, pausas e entusiasmo. Evite ruído de fundo. A gravação fica no armazenamento privado do sistema e não é enviada a um provedor de IA.", "Speak naturally for up to 120 seconds. Vary your tone, pauses, and energy. Avoid background noise. The recording stays in private system storage and is not sent to an AI provider.", "Habla con naturalidad durante un máximo de 120 segundos. Varía el tono, las pausas y la energía. Evita el ruido de fondo. La grabación queda en el almacenamiento privado del sistema y no se envía a un proveedor de IA.")}
               </div>
             </div>
           </FieldRow>
         </div>
       </SectionCard>
-
-      <VoiceSampleLibrary onCloneCreated={(voiceCloneId) => {
-        setPersona((current) => ({ ...current, voiceCloneId, voiceCloneUpdatedAt: new Date().toISOString() }));
-        setCloneSessionId(voiceCloneId);
-      }} />
 
       {/* ── Seção 2: Avatar Digital ── */}
       <SectionCard title={t("Avatar digital", "Digital avatar", "Avatar digital")} icon={Camera}>

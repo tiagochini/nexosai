@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useUiText } from "@/lib/i18n";
 import { toast } from "sonner";
 import { Camera, Loader2, Play, Square, Trash2, Video } from "lucide-react";
@@ -15,7 +14,7 @@ type AvatarSample = {
   createdAt: string;
 };
 
-const CONSENT_VERSION = "avatar-sample-storage-v1";
+const CONSENT_VERSION = "avatar-sample-storage-v2";
 const CHUNK_BYTES = 8 * 1024 * 1024;
 
 export function AvatarSampleLibrary({ onUseSample, refreshKey }: {
@@ -24,7 +23,6 @@ export function AvatarSampleLibrary({ onUseSample, refreshKey }: {
 }) {
   const t = useUiText();
   const [samples, setSamples] = useState<AvatarSample[]>([]);
-  const [name, setName] = useState("");
   const [blob, setBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
@@ -107,10 +105,11 @@ export function AvatarSampleLibrary({ onUseSample, refreshKey }: {
   };
 
   const saveSample = async () => {
-    if (!blob || !consent || !name.trim()) return;
+    if (!blob || !consent) return;
     setSaving(true);
     try {
-      const query = new URLSearchParams({ name: name.trim(), consent: "true", consentVersion: CONSENT_VERSION });
+      let savedSample: AvatarSample | undefined;
+      const query = new URLSearchParams({ consent: "true", consentVersion: CONSENT_VERSION });
       const mimeType = blob.type.split(";")[0] || "video/webm";
       if (blob.size <= CHUNK_BYTES) {
         const result = await customFetch<{ sample: AvatarSample }>(`/api/workspaces/me/persona/avatar-samples?${query}`, {
@@ -118,7 +117,7 @@ export function AvatarSampleLibrary({ onUseSample, refreshKey }: {
           headers: { "Content-Type": mimeType },
           body: blob,
         });
-        setSamples((current) => [...current, result.sample]);
+        savedSample = result.sample;
       } else {
         const uploadId = crypto.randomUUID();
         const totalChunks = Math.ceil(blob.size / CHUNK_BYTES);
@@ -133,10 +132,13 @@ export function AvatarSampleLibrary({ onUseSample, refreshKey }: {
             },
             body: blob.slice(index * CHUNK_BYTES, Math.min(blob.size, (index + 1) * CHUNK_BYTES)),
           });
-          if (result.sample) setSamples((current) => [...current, result.sample!]);
+          if (result.sample) savedSample = result.sample;
         }
       }
-      setName("");
+      if (!savedSample) throw new Error(t("O envio terminou sem confirmar a gravação.", "The upload finished without confirming the recording.", "La carga terminó sin confirmar la grabación."));
+      Object.values(urlMapRef.current).forEach((url) => URL.revokeObjectURL(url));
+      urlMapRef.current = {};
+      setSamples([savedSample]);
       setConsent(false);
       clearPreview();
       toast.success(t("Gravação salva no workspace privado.", "Recording saved to your private workspace.", "Grabación guardada en el espacio privado."));
@@ -216,12 +218,11 @@ export function AvatarSampleLibrary({ onUseSample, refreshKey }: {
         {previewUrl && <video src={previewUrl} controls playsInline className="w-full max-w-sm rounded-lg border border-border/40" />}
         {blob && (
           <div className="space-y-3">
-            <Input value={name} onChange={(event) => setName(event.target.value)} maxLength={80} placeholder={t("Nome identificável, ex.: Treino frontal", "Descriptive name, e.g. Front training", "Nombre identificable, p. ej. Entrenamiento frontal")} className="h-9 rounded-none" />
             <label className="flex items-start gap-2 font-mono text-[10px] text-muted-foreground leading-relaxed">
               <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-0.5 accent-primary" />
-              <span>{t("Autorizo guardar este vídeo de imagem e voz no workspace privado para uso futuro no treinamento do meu avatar. Posso removê-lo a qualquer momento.", "I authorize saving this image and voice video in the private workspace for future avatar training. I can delete it at any time.", "Autorizo guardar este vídeo de imagen y voz en el espacio privado para entrenar mi avatar más adelante. Puedo eliminarlo cuando quiera.")}</span>
+              <span>{t("Autorizo guardar este vídeo de imagem e voz no workspace privado para uso futuro no treinamento do meu avatar. Posso removê-lo a qualquer momento.", "I authorize saving this image and voice video in the private workspace for future avatar training. I can delete it at any time.", "Autorizo guardar este vídeo de imagen y voz en el espacio privado para entrenar mi avatar más adelante. Puedo eliminarlo cuando quieras.")}</span>
             </label>
-            <Button size="sm" onClick={() => void saveSample()} disabled={!consent || !name.trim() || saving} className="font-mono text-xs gap-2">
+            <Button size="sm" onClick={() => void saveSample()} disabled={!consent || saving} className="font-mono text-xs gap-2">
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}{t("Consentir e salvar gravação", "Consent and save recording", "Consentir y guardar grabación")}
             </Button>
           </div>

@@ -16,7 +16,7 @@ Nenhum recurso AWS é criado pelos testes ou pelo `init`.
 | EBS | gp3, 60–100 GiB iniciais, criptografado | Sistema, imagens, uploads e Redis |
 | Elastic IP | Associado à EC2 | Endereço fixo para o DNS |
 | RDS | PostgreSQL 18.3, `db.t4g.micro`, privado | Banco `nexos` inicializado sem importar dados do Supabase |
-| S3 | Atual: bucket privado `nexos-467626281008-us-east-2-an` e role da EC2 | Imagens e vídeos das campanhas, após integrar o backend |
+| S3 | Atual: bucket privado `nexos-467626281008-us-east-2-an` e role da EC2 | Armazenamento dos fluxos de mídia integrados ao adaptador; ativos de campanha ponta a ponta ainda estão em andamento |
 | Backups | RDS automático e snapshots EBS com retenção definida | Recuperação de banco, uploads e filas |
 | Monitoramento | Orçamento AWS, alertas de disco/memória/CPU e readiness | Detectar custos e indisponibilidade |
 | Provedores | Credenciais dos módulos contratados, em arquivos privados | IA, Meta/WhatsApp, e-mail, pagamentos etc. |
@@ -61,7 +61,7 @@ os arquivos deste pacote consideram acesso direto ao Caddy da EC2.
 - `nexos.sh`: preparação, build, schema, início, parada e diagnóstico na EC2.
 - `deploy-from-git.sh`: atualização manual na EC2, com pull fast-forward, build, migrations e health checks.
 - `media-storage.cloudformation.json`: bucket S3 privado e instance profile para a EC2.
-- [Integração e migração S3](S3_MEDIA.md): recursos preparados e adaptação necessária no backend.
+- [Integração e migração S3](S3_MEDIA.md): bucket existente, seleção S3/local e fluxos ainda pendentes de campanha.
 - [CD via GitHub Actions](GITHUB_ACTIONS_DEPLOYMENT.md): workflow para publicar imagens no ECR e implantar pela SSM; OIDC ainda requer liberação na política do projeto AWS.
 - [Implantação manual](MANUAL_DEPLOYMENT.md): publicação a partir deste computador pelo perfil `nexos`, ECR, S3 e SSM.
 

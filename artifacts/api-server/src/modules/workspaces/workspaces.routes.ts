@@ -26,15 +26,31 @@ const router = Router();
 router.use(requireAuth);
 const execFileAsync = promisify(execFile);
 
-const VOICE_SAMPLE_CONSENT_VERSION = "voice-sample-storage-v1";
+const VOICE_SAMPLE_CONSENT_VERSION = "voice-sample-storage-v2";
 const MAX_VOICE_SAMPLE_BYTES = 10 * 1024 * 1024;
-const MAX_VOICE_SAMPLES = 20;
+const VOICE_SAMPLE_DEFAULT_NAME = "Amostra de voz";
 const VOICE_SAMPLE_MIME_TYPES: Record<string, { extension: string; providerExtension: string; formatPattern: RegExp }> = {
   "audio/webm": { extension: "webm", providerExtension: "webm", formatPattern: /webm|matroska/i },
   "audio/ogg": { extension: "ogg", providerExtension: "ogg", formatPattern: /ogg/i },
   "audio/mp4": { extension: "m4a", providerExtension: "m4a", formatPattern: /mp4|m4a|mov/i },
   "audio/mpeg": { extension: "mp3", providerExtension: "mp3", formatPattern: /mp3/i },
 };
+
+function matchesAudioContainerSignature(audio: Buffer, mimeType: string): boolean {
+  switch (mimeType) {
+    case "audio/webm":
+      return audio.length >= 4 && audio[0] === 0x1a && audio[1] === 0x45 && audio[2] === 0xdf && audio[3] === 0xa3;
+    case "audio/ogg":
+      return audio.subarray(0, 4).toString("ascii") === "OggS";
+    case "audio/mp4":
+      return audio.subarray(4, 8).toString("ascii") === "ftyp";
+    case "audio/mpeg":
+      return audio.subarray(0, 3).toString("ascii") === "ID3"
+        || (audio.length >= 2 && audio[0] === 0xff && (audio[1]! & 0xe0) === 0xe0);
+    default:
+      return false;
+  }
+}
 
 type VoiceSampleMetadata = {
   sampleId: string;
@@ -63,9 +79,9 @@ function voiceSamplesFromSettings(settings: Record<string, unknown>): VoiceSampl
   });
 }
 
-const AVATAR_SAMPLE_CONSENT_VERSION = "avatar-sample-storage-v1";
+const AVATAR_SAMPLE_CONSENT_VERSION = "avatar-sample-storage-v2";
 const MAX_AVATAR_SAMPLE_BYTES = 300 * 1024 * 1024;
-const MAX_AVATAR_SAMPLES = 20;
+const AVATAR_SAMPLE_DEFAULT_NAME = "Amostra de avatar";
 const AVATAR_SAMPLE_MIME_TYPES: Record<string, { extension: string; formatPattern: RegExp }> = {
   "video/webm": { extension: "webm", formatPattern: /webm|matroska/i },
   "video/mp4": { extension: "mp4", formatPattern: /mp4|mov/i },
@@ -100,7 +116,13 @@ class AvatarSampleUploadError extends Error {
   constructor(message: string, readonly status: number, readonly code: string) { super(message); }
 }
 
-async function persistAvatarSample(workspaceId: string, name: string, video: Buffer, contentType: string): Promise<AvatarSampleMetadata> {
+async function persistAvatarSample(
+  workspaceId: string,
+  name: string,
+  video: Buffer,
+  contentType: string,
+  onCleanupFailure: (failedCleanupCount: number) => void,
+): Promise<AvatarSampleMetadata> {
   const format = AVATAR_SAMPLE_MIME_TYPES[contentType];
   if (!format || video.length < 1024 || video.length > MAX_AVATAR_SAMPLE_BYTES) {
     throw new AvatarSampleUploadError("Envie um vídeo WebM ou MP4 válido de até 300 MB.", 400, "AVATAR_SAMPLE_INVALID_FILE");
@@ -127,14 +149,6 @@ async function persistAvatarSample(workspaceId: string, name: string, video: Buf
       throw new AvatarSampleUploadError("A gravação do avatar precisa durar entre 5 segundos e 2 minutos.", 400, "AVATAR_SAMPLE_INVALID_VIDEO");
     }
 
-    const [ws] = await db.select({ settings: workspacesTable.settings })
-      .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
-    const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
-    const existingPersona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
-    const currentSamples = avatarSamplesFromSettings(existingSettings);
-    if (currentSamples.length >= MAX_AVATAR_SAMPLES) {
-      throw new AvatarSampleUploadError("Limite de 20 gravações de avatar atingido. Exclua uma para continuar.", 409, "AVATAR_SAMPLE_LIMIT");
-    }
     const sampleId = randomUUID();
     const { avatarSampleObjectKey, uploadBufferToGCS, deleteGCSObject } = await import("../../lib/gcs-recordings.js");
     const objectKey = avatarSampleObjectKey(workspaceId, sampleId, format.extension);
@@ -145,14 +159,33 @@ async function persistAvatarSample(workspaceId: string, name: string, video: Buf
       mimeType: contentType, sizeBytes: video.length, createdAt: now,
       consentVersion: AVATAR_SAMPLE_CONSENT_VERSION, consentedAt: now,
     };
+    let previousSamples: AvatarSampleMetadata[] = [];
     try {
-      await db.update(workspacesTable)
-        .set({ settings: { ...existingSettings, persona: { ...existingPersona, avatarSamples: [...currentSamples, sample] } } as any })
-        .where(eq(workspacesTable.id, workspaceId));
-    } catch {
+      previousSamples = await db.transaction(async (tx) => {
+        const [ws] = await tx.select({ settings: workspacesTable.settings })
+          .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).for("update").limit(1);
+        const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+        const existingPersona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+        const currentSamples = avatarSamplesFromSettings(existingSettings);
+        await tx.update(workspacesTable)
+          .set({ settings: { ...existingSettings, persona: { ...existingPersona, avatarSamples: [sample] } } as any })
+          .where(eq(workspacesTable.id, workspaceId));
+        return currentSamples;
+      });
+    } catch (error) {
       await deleteGCSObject(objectKey).catch(() => {});
-      throw new Error("Avatar sample metadata persistence failed");
+      throw error;
     }
+    const staleObjectKeys = previousSamples
+      .filter((previous) => previous.sampleId !== sampleId)
+      .map((previous) => {
+        const previousFormat = AVATAR_SAMPLE_MIME_TYPES[previous.mimeType];
+        return previousFormat ? avatarSampleObjectKey(workspaceId, previous.sampleId, previousFormat.extension) : null;
+      })
+      .filter((key): key is string => key !== null);
+    const cleanupResults = await Promise.allSettled(staleObjectKeys.map((key) => deleteGCSObject(key)));
+    const failedCleanupCount = cleanupResults.filter((result) => result.status === "rejected").length;
+    if (failedCleanupCount > 0) onCleanupFailure(failedCleanupCount);
     return sample;
   } finally {
     await rm(tempDir, { recursive: true, force: true }).catch(() => {});
@@ -558,13 +591,14 @@ router.post(
   express.raw({ type: "*/*", limit: MAX_VOICE_SAMPLE_BYTES }),
   async (req, res): Promise<void> => {
     const schema = z.object({
-      name: z.string().trim().min(1).max(80),
-      consent: z.literal(true),
+      name: z.string().trim().min(1).max(80).optional(),
+      consent: z.literal("true"),
       consentVersion: z.literal(VOICE_SAMPLE_CONSENT_VERSION),
+      durationSeconds: z.coerce.number().finite().optional(),
     });
     const parsed = schema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: "Informe um nome e confirme o consentimento para armazenar esta amostra.", code: "VOICE_SAMPLE_CONSENT_REQUIRED" });
+      res.status(400).json({ error: "Confirme o consentimento para armazenar esta amostra.", code: "VOICE_SAMPLE_CONSENT_REQUIRED" });
       return;
     }
     const contentType = String(req.headers["content-type"] ?? "").split(";")[0]!.trim().toLowerCase();
@@ -576,6 +610,7 @@ router.post(
     }
 
     let tempDir: string | undefined;
+    let saveStage = "validating audio";
     try {
       tempDir = await mkdtemp(path.join(os.tmpdir(), "nexos-voice-sample-"));
       const tempFile = path.join(tempDir, `sample.${audioFormat.extension}`);
@@ -584,9 +619,25 @@ router.post(
       try {
         const { stdout } = await execFileAsync("ffprobe", ["-v", "error", "-show_streams", "-show_format", "-of", "json", tempFile], { maxBuffer: 1024 * 1024 });
         probe = JSON.parse(stdout) as typeof probe;
-      } catch {
-        res.status(400).json({ error: "O arquivo enviado não contém um áudio válido no formato informado.", code: "VOICE_SAMPLE_INVALID_AUDIO" });
-        return;
+      } catch (error) {
+        const ffprobeUnavailable = (error as NodeJS.ErrnoException).code === "ENOENT";
+        const browserDuration = parsed.data.durationSeconds;
+        if (!ffprobeUnavailable || !matchesAudioContainerSignature(audio, contentType)
+          || !Number.isFinite(browserDuration) || browserDuration! < 5 || browserDuration! > 120) {
+          req.log.error({ err: error, ffprobeUnavailable, contentType }, "Voice sample media inspection failed");
+          res.status(400).json({ error: "Não foi possível validar o áudio. Confira o arquivo ou tente gravá-lo novamente.", code: "VOICE_SAMPLE_INVALID_AUDIO" });
+          return;
+        }
+        const fallbackFormatName: Record<string, string> = {
+          "audio/webm": "webm",
+          "audio/ogg": "ogg",
+          "audio/mp4": "mp4",
+          "audio/mpeg": "mp3",
+        };
+        probe = {
+          streams: [{ codec_type: "audio" }],
+          format: { duration: String(browserDuration), format_name: fallbackFormatName[contentType] },
+        };
       }
       const streams = probe.streams ?? [];
       const durationSeconds = Number(probe.format?.duration ?? 0);
@@ -601,24 +652,15 @@ router.post(
       }
 
       const workspaceId = req.auth.workspaceId;
-      const [ws] = await db.select({ settings: workspacesTable.settings })
-        .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
-      const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
-      const existingPersona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
-      const currentSamples = voiceSamplesFromSettings(existingSettings);
-      if (currentSamples.length >= MAX_VOICE_SAMPLES) {
-        res.status(409).json({ error: "Limite de 20 amostras por workspace atingido. Exclua uma amostra para continuar.", code: "VOICE_SAMPLE_LIMIT" });
-        return;
-      }
-
       const sampleId = randomUUID();
-      const objectKey = (await import("../../lib/gcs-recordings.js")).voiceSampleObjectKey(workspaceId, sampleId, audioFormat.extension);
-      const { uploadBufferToGCS } = await import("../../lib/gcs-recordings.js");
+      const { deleteGCSObject, uploadBufferToGCS, voiceSampleObjectKey } = await import("../../lib/gcs-recordings.js");
+      const objectKey = voiceSampleObjectKey(workspaceId, sampleId, audioFormat.extension);
+      saveStage = "uploading sample to storage";
       await uploadBufferToGCS(audio, objectKey, contentType);
       const now = new Date().toISOString();
       const sample: VoiceSampleMetadata = {
         sampleId,
-        name: parsed.data.name,
+        name: parsed.data.name ?? VOICE_SAMPLE_DEFAULT_NAME,
         durationSeconds: Math.round(durationSeconds * 10) / 10,
         mimeType: contentType,
         sizeBytes: audio.length,
@@ -626,19 +668,40 @@ router.post(
         consentVersion: VOICE_SAMPLE_CONSENT_VERSION,
         consentedAt: now,
       };
+      let previousSamples: VoiceSampleMetadata[] = [];
+      saveStage = "saving sample metadata";
       try {
-        await db.update(workspacesTable)
-          .set({ settings: { ...existingSettings, persona: { ...existingPersona, voiceSamples: [...currentSamples, sample] } } as any })
-          .where(eq(workspacesTable.id, workspaceId));
+        previousSamples = await db.transaction(async (tx) => {
+          const [ws] = await tx.select({ settings: workspacesTable.settings })
+            .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).for("update").limit(1);
+          const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+          const existingPersona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+          const currentSamples = voiceSamplesFromSettings(existingSettings);
+          await tx.update(workspacesTable)
+            .set({ settings: { ...existingSettings, persona: { ...existingPersona, voiceSamples: [sample] } } as any })
+            .where(eq(workspacesTable.id, workspaceId));
+          return currentSamples;
+        });
       } catch (error) {
-        const { deleteGCSObject } = await import("../../lib/gcs-recordings.js");
         await deleteGCSObject(objectKey).catch(() => {});
         throw error;
       }
+      const staleObjectKeys = previousSamples
+        .filter((previous) => previous.sampleId !== sampleId)
+        .map((previous) => {
+          const extension = VOICE_SAMPLE_MIME_TYPES[previous.mimeType]?.extension;
+          return extension ? voiceSampleObjectKey(workspaceId, previous.sampleId, extension) : null;
+        })
+        .filter((key): key is string => key !== null);
+      const cleanupResults = await Promise.allSettled(staleObjectKeys.map((key) => deleteGCSObject(key)));
+      const failedCleanupCount = cleanupResults.filter((result) => result.status === "rejected").length;
+      if (failedCleanupCount > 0) {
+        req.log.error({ workspaceId, failedCleanupCount }, "Replaced voice sample metadata, but failed to delete previous audio objects");
+      }
       req.log.info({ workspaceId, sampleId, sizeBytes: audio.length, durationSeconds: sample.durationSeconds }, "Private voice sample saved");
       res.status(201).json({ sample });
-    } catch {
-      req.log.error({ workspaceId: req.auth.workspaceId }, "Private voice sample upload failed");
+    } catch (error) {
+      req.log.error({ err: error, workspaceId: req.auth.workspaceId, stage: saveStage }, "Private voice sample upload failed");
       res.status(500).json({ error: "Não foi possível salvar a amostra. Tente novamente.", code: "VOICE_SAMPLE_SAVE_FAILED" });
     } finally {
       if (tempDir) await rm(tempDir, { recursive: true, force: true }).catch(() => {});
@@ -1075,12 +1138,12 @@ router.post(
   express.raw({ type: "*/*", limit: MAX_AVATAR_SAMPLE_BYTES }),
   async (req, res): Promise<void> => {
     const parsed = z.object({
-      name: z.string().trim().min(1).max(80),
-      consent: z.literal(true),
+      name: z.string().trim().min(1).max(80).optional(),
+      consent: z.literal("true"),
       consentVersion: z.literal(AVATAR_SAMPLE_CONSENT_VERSION),
     }).safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ error: "Informe um nome e confirme o consentimento para guardar esta gravação de avatar.", code: "AVATAR_SAMPLE_CONSENT_REQUIRED" });
+      res.status(400).json({ error: "Confirme o consentimento para guardar esta gravação de avatar.", code: "AVATAR_SAMPLE_CONSENT_REQUIRED" });
       return;
     }
     const contentType = String(req.headers["content-type"] ?? "").split(";")[0]!.trim().toLowerCase();
@@ -1091,73 +1154,20 @@ router.post(
       return;
     }
 
-    let tempDir: string | undefined;
     try {
-      tempDir = await mkdtemp(path.join(os.tmpdir(), "nexos-avatar-sample-"));
-      const tempFile = path.join(tempDir, `sample.${format.extension}`);
-      await writeFile(tempFile, video, { flag: "wx" });
-      let probe: { streams?: Array<Record<string, unknown>>; format?: { duration?: string; format_name?: string } };
-      try {
-        const { stdout } = await execFileAsync("ffprobe", ["-v", "error", "-show_streams", "-show_format", "-of", "json", tempFile], { maxBuffer: 1024 * 1024 });
-        probe = JSON.parse(stdout) as typeof probe;
-      } catch {
-        res.status(400).json({ error: "O arquivo enviado não contém vídeo válido no formato informado.", code: "AVATAR_SAMPLE_INVALID_VIDEO" });
-        return;
-      }
-      const streams = probe.streams ?? [];
-      const durationSeconds = Number(probe.format?.duration ?? 0);
-      if (!format.formatPattern.test(probe.format?.format_name ?? "")
-        || !streams.some((stream) => stream.codec_type === "video")
-        || !streams.some((stream) => stream.codec_type === "audio")) {
-        res.status(400).json({ error: "O arquivo precisa corresponder ao formato informado e conter áudio e vídeo.", code: "AVATAR_SAMPLE_INVALID_VIDEO" });
-        return;
-      }
-      if (!Number.isFinite(durationSeconds) || durationSeconds < 5 || durationSeconds > 120) {
-        res.status(400).json({ error: "A gravação do avatar precisa durar entre 5 segundos e 2 minutos.", code: "AVATAR_SAMPLE_INVALID_VIDEO" });
-        return;
-      }
-
       const workspaceId = req.auth.workspaceId;
-      const [ws] = await db.select({ settings: workspacesTable.settings })
-        .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
-      const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
-      const existingPersona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
-      const currentSamples = avatarSamplesFromSettings(existingSettings);
-      if (currentSamples.length >= MAX_AVATAR_SAMPLES) {
-        res.status(409).json({ error: "Limite de 20 gravações de avatar atingido. Exclua uma para continuar.", code: "AVATAR_SAMPLE_LIMIT" });
+      const sample = await persistAvatarSample(workspaceId, parsed.data.name ?? AVATAR_SAMPLE_DEFAULT_NAME, video, contentType, (failedCleanupCount) => {
+        req.log.error({ workspaceId, failedCleanupCount }, "Replaced avatar sample metadata, but failed to delete previous video objects");
+      });
+      req.log.info({ workspaceId, sampleId: sample.sampleId, bytes: video.length, durationSeconds: sample.durationSeconds }, "Private avatar sample saved");
+      res.status(201).json({ sample });
+    } catch (error) {
+      if (error instanceof AvatarSampleUploadError) {
+        res.status(error.status).json({ error: error.message, code: error.code });
         return;
       }
-
-      const sampleId = randomUUID();
-      const { avatarSampleObjectKey, uploadBufferToGCS, deleteGCSObject } = await import("../../lib/gcs-recordings.js");
-      const objectKey = avatarSampleObjectKey(workspaceId, sampleId, format.extension);
-      await uploadBufferToGCS(video, objectKey, contentType);
-      const now = new Date().toISOString();
-      const sample: AvatarSampleMetadata = {
-        sampleId,
-        name: parsed.data.name,
-        durationSeconds: Math.round(durationSeconds * 10) / 10,
-        mimeType: contentType,
-        sizeBytes: video.length,
-        createdAt: now,
-        consentVersion: AVATAR_SAMPLE_CONSENT_VERSION,
-        consentedAt: now,
-      };
-      try {
-        await db.update(workspacesTable)
-          .set({ settings: { ...existingSettings, persona: { ...existingPersona, avatarSamples: [...currentSamples, sample] } } as any })
-          .where(eq(workspacesTable.id, workspaceId));
-      } catch {
-        await deleteGCSObject(objectKey).catch(() => {});
-        throw new Error("Avatar sample metadata persistence failed");
-      }
-      req.log.info({ workspaceId, sampleId, bytes: video.length, durationSeconds: sample.durationSeconds }, "Private avatar sample saved");
-      res.status(201).json({ sample });
-    } catch {
       req.log.error({ workspaceId: req.auth.workspaceId }, "Private avatar sample upload failed");
       res.status(500).json({ error: "Não foi possível guardar a gravação. Tente novamente.", code: "AVATAR_SAMPLE_SAVE_FAILED" });
-    } finally {
-      if (tempDir) await rm(tempDir, { recursive: true, force: true }).catch(() => {});
     }
   },
 );
@@ -1263,7 +1273,7 @@ router.post(
   express.raw({ type: "*/*", limit: "9mb" }),
   async (req, res): Promise<void> => {
     const parsed = z.object({
-      name: z.string().trim().min(1).max(80),
+      name: z.string().trim().min(1).max(80).optional(),
       consent: z.literal("true"),
       consentVersion: z.literal(AVATAR_SAMPLE_CONSENT_VERSION),
     }).safeParse(req.query);
@@ -1279,6 +1289,7 @@ router.post(
       res.status(400).json({ error: "Chunk ou consentimento inválido para a gravação de avatar.", code: "AVATAR_SAMPLE_INVALID_CHUNK" });
       return;
     }
+    const uploadName = parsed.data.name ?? AVATAR_SAMPLE_DEFAULT_NAME;
     const workspaceId = req.auth.workspaceId;
     for (const [key, session] of _avatarSampleChunks) {
       if (Date.now() - session.startedAt > 15 * 60 * 1000) _avatarSampleChunks.delete(key);
@@ -1290,10 +1301,10 @@ router.post(
         res.status(429).json({ error: "Já há gravações sendo enviadas. Aguarde a conclusão e tente novamente.", code: "AVATAR_SAMPLE_UPLOAD_BUSY" });
         return;
       }
-      _avatarSampleChunks.set(sessionKey, { chunks: new Array(totalChunks).fill(null), total: totalChunks, contentType, name: parsed.data.name, startedAt: Date.now() });
+      _avatarSampleChunks.set(sessionKey, { chunks: new Array(totalChunks).fill(null), total: totalChunks, contentType, name: uploadName, startedAt: Date.now() });
     }
     const session = _avatarSampleChunks.get(sessionKey)!;
-    if (session.total !== totalChunks || session.contentType !== contentType || session.name !== parsed.data.name) {
+    if (session.total !== totalChunks || session.contentType !== contentType || session.name !== uploadName) {
       _avatarSampleChunks.delete(sessionKey);
       res.status(400).json({ error: "Os dados da gravação mudaram durante o envio. Tente novamente.", code: "AVATAR_SAMPLE_INVALID_CHUNK" });
       return;
@@ -1316,7 +1327,9 @@ router.post(
       return;
     }
     try {
-      const sample = await persistAvatarSample(workspaceId, session.name, video, session.contentType);
+      const sample = await persistAvatarSample(workspaceId, session.name, video, session.contentType, (failedCleanupCount) => {
+        req.log.error({ workspaceId, failedCleanupCount }, "Replaced avatar sample metadata, but failed to delete previous video objects");
+      });
       req.log.info({ workspaceId, sampleId: sample.sampleId, bytes: sample.sizeBytes }, "Private avatar sample saved from chunks");
       res.status(201).json({ complete: true, sample });
     } catch (error) {
