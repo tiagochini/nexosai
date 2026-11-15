@@ -38,7 +38,7 @@ function strategyPayload(value: unknown): Json {
       const parsed: unknown = JSON.parse(summary.replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, ""));
       const nested = object(parsed);
       if (["bigDomino", "marketDiagnosis", "offerPositioning", "audienceSegmentation", "campaignArchitecture", "successMetrics", "risks", "triggerMap", "strategistNotes"]
-        .some((key) => key in nested)) return { ...source, ...nested };
+        .some((key) => key in nested)) return { ...nested, ...source };
     } catch { /* malformed/truncated output stays incomplete */ }
   }
   const hasStructuredStrategy = ["bigDomino", "marketDiagnosis", "offerPositioning", "audienceSegmentation", "campaignArchitecture", "successMetrics", "risks", "triggerMap", "strategistNotes"]
@@ -220,7 +220,15 @@ export async function materializeMasterplan(workspaceId: string, campaignId: str
   // Materialization is idempotent while the campaign's canonical data is unchanged.
   if (latest?.contentHash === contentHash) {
     const current = await getCurrentMasterplan(workspaceId, campaignId);
-    if (current?.status !== "superseded") return current;
+    const readinessIsCurrent = current?.readinessScore === score
+      && current?.readinessStatus === readinessStatus
+      && JSON.stringify(current?.readinessBlockers ?? []) === JSON.stringify(blockers);
+    const approvalStateIsCurrent = !requestApproval
+      || current?.status === "pending_approval"
+      || current?.status === "approved";
+    if (current && current.status !== "superseded" && readinessIsCurrent && approvalStateIsCurrent) {
+      return current;
+    }
   }
   const [created] = await db.insert(masterplanVersionsTable).values({
     workspaceId, campaignId, version: (latest?.version ?? 0) + 1, status: requestApproval ? "pending_approval" : "draft",
@@ -325,11 +333,12 @@ export async function repairMasterplanTriggerMap(workspaceId: string, campaignId
   };
   log.info(repairContext, "Masterplan section repair started");
   if (!missingBefore.length) {
-    const masterplan = await materializeTriggerRepairVersion(workspaceId, campaignId, actorId, campaign);
-    const readiness = calculateMasterplanReadiness(originalStrategy, []);
-    return { masterplan, repairedFields: [], readiness: masterplan
-      ? { status: masterplan.readinessStatus, score: masterplan.readinessScore, blockers: masterplan.readinessBlockers }
-      : readiness };
+    log.warn(repairContext, "Masterplan section repair made no changes because no repairable fields were found");
+    throw new AppError(
+      409,
+      "Os agentes não encontraram campos pendentes para corrigir. Nenhuma alteração foi feita; atualize a página para conferir os dados e tente novamente se a seção ainda aparecer pendente.",
+      "MASTERPLAN_REPAIR_NO_CHANGES",
+    );
   }
 
   let proposedStrategy = originalStrategy;

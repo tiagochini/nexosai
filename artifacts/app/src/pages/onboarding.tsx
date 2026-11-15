@@ -447,6 +447,7 @@ export default function Onboarding() {
   const [trialSocialAnalysisAvailable, setTrialSocialAnalysisAvailable] = useState(true);
   const [trialSocialLoading, setTrialSocialLoading] = useState(false);
   const [trialSocialSubmitting, setTrialSocialSubmitting] = useState(false);
+  const [trialStrategyStarting, setTrialStrategyStarting] = useState(false);
   const [trialIntakeData, setTrialIntakeData] = useState<Record<string, unknown>>({});
   const [simulatorBanner, setSimulatorBanner] = useState<SimulatorData | null>(null);
   const [resumeCheck, setResumeCheck] = useState<"checking" | "resolved" | "error">("checking");
@@ -898,6 +899,19 @@ export default function Onboarding() {
       toast.error(error instanceof Error ? error.message : t("Não foi possível analisar a Página do Facebook.", "Could not analyze the Facebook Page.", "No se pudo analizar la página de Facebook."));
     } finally {
       setTrialSocialSubmitting(false);
+    }
+  };
+
+  const approveTrialPreview = async () => {
+    if (!campaignId || trialStrategyStarting) return;
+    setTrialStrategyStarting(true);
+    try {
+      await customFetch(`/api/campaigns/${campaignId}/execute/strategy`, { method: "POST" });
+      setLocation(`/campaigns/${campaignId}/strategy?trialStrategy=1`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("Não foi possível iniciar a estratégia.", "Could not start the strategy.", "No se pudo iniciar la estrategia."));
+    } finally {
+      setTrialStrategyStarting(false);
     }
   };
 
@@ -2068,6 +2082,150 @@ export default function Onboarding() {
 
   // ── PLAN PREVIEW ─────────────────────────────────────────────────────────────
   if (step === "plan_preview") {
+    const trialBriefingEntries = Object.entries(trialIntakeData).filter(([key, value]) =>
+      !key.startsWith("_") && !key.startsWith("social.") && value != null && value !== "" &&
+      !(Array.isArray(value) && value.length === 0),
+    );
+    const previewFieldLabels: Record<string, [string, string, string]> = {
+      "product.name": ["Nome do produto", "Product name", "Nombre del producto"],
+      "product.description": ["O que seu produto oferece", "What your product offers", "Qué ofrece tu producto"],
+      "product.price": ["Preço do produto", "Product price", "Precio del producto"],
+      "product.category": ["Categoria do produto", "Product category", "Categoría del producto"],
+      "product.deliverymethod": ["Como o produto é entregue", "How the product is delivered", "Cómo se entrega el producto"],
+      "product.pricingmodel": ["Forma de cobrança", "How customers are charged", "Forma de cobro"],
+      "product.socialproof": ["Resultados e depoimentos disponíveis", "Available results and testimonials", "Resultados y testimonios disponibles"],
+      "campaign.type": ["Tipo de campanha", "Campaign type", "Tipo de campaña"],
+      "campaign.track": ["Acompanhamento da campanha", "Campaign track", "Seguimiento de la campaña"],
+      "launch.track": ["Acompanhamento da campanha", "Campaign track", "Seguimiento de la campaña"],
+      "campaign.saleschannel": ["Como os clientes vão comprar", "How customers will buy", "Cómo comprarán los clientes"],
+      "campaign.timeline": ["Prazo da campanha", "Campaign timeline", "Duración de la campaña"],
+      "campaign.duration": ["Duração da campanha", "Campaign duration", "Duración de la campaña"],
+      "campaign.durationdays": ["Duração da campanha", "Campaign duration", "Duración de la campaña"],
+      "campaign.budgetrange": ["Faixa de investimento", "Budget range", "Rango de inversión"],
+      "campaign.budget.total": ["Orçamento total", "Total budget", "Presupuesto total"],
+      "campaign.budget.traffic": ["Investimento em anúncios", "Advertising budget", "Inversión en anuncios"],
+      "campaign.revenuetarget": ["Meta de faturamento", "Revenue goal", "Meta de ingresos"],
+      "campaign.hasaffiliate": ["Vai trabalhar com afiliados?", "Will you work with affiliates?", "¿Trabajarás con afiliados?"],
+      "campaign.affiliatecommission": ["Comissão para afiliados", "Affiliate commission", "Comisión de afiliados"],
+      "audience.description": ["Público que você quer alcançar", "Audience you want to reach", "Público al que quieres llegar"],
+      "audience.location": ["Onde está seu público", "Where your audience is", "Dónde está tu público"],
+      "audience.desires": ["O que seu público deseja", "What your audience wants", "Qué desea tu público"],
+      "audience.painpoints": ["Desafios do seu público", "Your audience’s challenges", "Retos de tu público"],
+      "audience.decisionmaker": ["Quem decide a compra", "Who makes the purchase decision", "Quién decide la compra"],
+      "audience.buyervsuser": ["Quem compra e quem usa", "Who buys and who uses it", "Quién compra y quién lo usa"],
+      "audience.sophisticationlevel": ["Quanto seu público já conhece o problema", "How familiar your audience is with the problem", "Cuánto conoce tu público el problema"],
+      "business.hasphysicallocation": ["Sua empresa atende em endereço físico?", "Does your business serve customers in person?", "¿Tu negocio atiende en un local físico?"],
+      "business.physicalcities": ["Cidades onde sua empresa atende", "Cities where your business operates", "Ciudades donde opera tu negocio"],
+      "creator.name": ["Nome do responsável pela marca", "Brand owner’s name", "Nombre de la persona responsable de la marca"],
+      "creator.positioning": ["Como sua marca se apresenta", "How your brand is positioned", "Cómo se presenta tu marca"],
+      "creator.uniqueangle": ["O que torna sua marca diferente", "What makes your brand different", "Qué diferencia a tu marca"],
+      "content.style": ["Estilo de conteúdo", "Content style", "Estilo de contenido"],
+      "content.tone": ["Tom de comunicação", "Communication tone", "Tono de comunicación"],
+      "content.forbiddentopics": ["Temas que devem ser evitados", "Topics to avoid", "Temas que se deben evitar"],
+      "risk.tolerance": ["Nível de risco desejado", "Preferred risk level", "Nivel de riesgo deseado"],
+      "risk.tolerancelevel": ["Nível de risco desejado", "Preferred risk level", "Nivel de riesgo deseado"],
+      "risk.previouscampaigns": ["Experiência com campanhas anteriores", "Experience with past campaigns", "Experiencia con campañas anteriores"],
+      "product.pricetiers": ["Opções e preços", "Product options and prices", "Opciones y precios"],
+      "briefing.reviewnotes": ["Resumo do que você informou", "Summary of your answers", "Resumen de tus respuestas"],
+      "launch.cartopendate": ["Data de abertura das vendas", "Sales opening date", "Fecha de apertura de ventas"],
+      "launch.cartopenduration": ["Por quanto tempo as vendas ficam abertas", "How long sales stay open", "Cuánto tiempo estarán abiertas las ventas"],
+      "launch.scarcitymechanism": ["Prazo ou limite real da oferta", "Real offer deadline or limit", "Plazo o límite real de la oferta"],
+      "scale.partnerstrategy": ["Plano para trabalhar com parceiros", "Partner strategy", "Plan para trabajar con socios"],
+      "scale.affiliatestructure": ["Como será o programa de afiliados", "Affiliate program structure", "Cómo será el programa de afiliados"],
+      "scale.channeldiversification": ["Canais de divulgação", "Marketing channels", "Canales de difusión"],
+      "perpetual.triggerformat": ["Formato para atrair interessados", "Lead generation format", "Formato para atraer interesados"],
+      "perpetual.cartopenduration": ["Duração da oferta", "Offer duration", "Duración de la oferta"],
+      "perpetual.nurturingdays": ["Dias de acompanhamento dos interessados", "Lead follow-up period", "Días de seguimiento de interesados"],
+      "perpetual.automationplatform": ["Ferramenta de automação", "Automation tool", "Herramienta de automatización"],
+      "evergreen.funneltype": ["Caminho até a compra", "Path to purchase", "Camino hacia la compra"],
+      "evergreen.nurturingchannel": ["Canal de relacionamento", "Follow-up channel", "Canal de seguimiento"],
+      "evergreen.cactarget": ["Custo desejado por cliente", "Target cost per customer", "Costo objetivo por cliente"],
+      "evergreen.ltvtarget": ["Valor esperado por cliente", "Expected customer value", "Valor esperado por cliente"],
+      "evergreen.monthlyleadtarget": ["Meta mensal de interessados", "Monthly lead goal", "Meta mensual de interesados"],
+      "flash.duration": ["Duração da oferta relâmpago", "Flash sale duration", "Duración de la oferta relámpago"],
+      "flash.discountmechanism": ["Condição especial da oferta", "Special offer", "Condición especial de la oferta"],
+      "flash.trigger": ["Motivo da oferta", "Reason for the offer", "Motivo de la oferta"],
+      "flash.audiencesize": ["Tamanho do público atual", "Current audience size", "Tamaño de la audiencia actual"],
+      "live.platform": ["Onde será a transmissão ao vivo", "Where the live event will take place", "Dónde será la transmisión en vivo"],
+      "live.duration": ["Duração da transmissão", "Live event duration", "Duración de la transmisión"],
+      "live.exclusiveoffer": ["Oferta exclusiva do evento", "Event-only offer", "Oferta exclusiva del evento"],
+      "live.entertainmentelement": ["Atividade ou dinâmica do evento", "Event activity or format", "Actividad o dinámica del evento"],
+      "remarketing.audiencetype": ["Público que receberá novo contato", "Audience for follow-up", "Público para volver a contactar"],
+      "remarketing.audiencesize": ["Tamanho do público para novo contato", "Follow-up audience size", "Tamaño del público para volver a contactar"],
+      "remarketing.timesincelastcontact": ["Tempo desde o último contato", "Time since last contact", "Tiempo desde el último contacto"],
+      "remarketing.offerangle": ["Abordagem da oferta", "Offer approach", "Enfoque de la oferta"],
+      "upsell.triggerproduct": ["Produto que será oferecido", "Product to offer", "Producto que se ofrecerá"],
+      "upsell.offertype": ["Formato da oferta adicional", "Additional offer format", "Formato de la oferta adicional"],
+      "upsell.complementarity": ["Como a oferta complementa a compra", "How the offer complements the purchase", "Cómo complementa la oferta la compra"],
+      "upsell.buyeraudiencesize": ["Quantidade de clientes que podem receber a oferta", "Number of customers eligible for the offer", "Cantidad de clientes que pueden recibir la oferta"],
+      "social.facebook": ["Página do Facebook", "Facebook Page", "Página de Facebook"],
+      "social.facebookpage": ["Página do Facebook", "Facebook Page", "Página de Facebook"],
+      "social.facebookurl": ["Página do Facebook", "Facebook Page", "Página de Facebook"],
+    };
+    const previewEnumValues: Record<string, [string, string, string]> = {
+      continuous_sales: ["Vendas contínuas", "Ongoing sales", "Ventas continuas"],
+      subscription_growth: ["Crescimento de assinaturas", "Subscription growth", "Crecimiento de suscripciones"],
+      audience_growth: ["Crescimento de público", "Audience growth", "Crecimiento de audiencia"],
+      flash_sale: ["Oferta relâmpago", "Flash sale", "Oferta relámpago"],
+      live_sale: ["Venda ao vivo", "Live sale", "Venta en vivo"],
+      perpetual_launch: ["Lançamento contínuo", "Evergreen launch", "Lanzamiento continuo"],
+      six_digits: ["6 dígitos", "6 figures", "6 cifras"],
+      eight_digits: ["8 dígitos", "8 figures", "8 cifras"],
+      ten_digits: ["10 dígitos", "10 figures", "10 cifras"],
+      not_applicable: ["Sem meta de faturamento", "No revenue target", "Sin meta de ingresos"],
+      moderate: ["Moderado", "Moderate", "Moderado"],
+      conservative: ["Conservador", "Conservative", "Conservador"],
+      aggressive: ["Arrojado", "Aggressive", "Agresivo"],
+      license_with_credits: ["Licença com créditos adicionais", "License with additional credits", "Licencia con créditos adicionales"],
+      application_call: ["Aplicação e conversa com a equipe", "Application and team call", "Solicitud y conversación con el equipo"],
+      no_reliable_data: ["Ainda não há dados confiáveis", "No reliable data yet", "Aún no hay datos confiables"],
+      a_definir_por_etapa: ["A definir em cada etapa", "To be set at each stage", "Por definir en cada etapa"],
+      brazil_nationwide: ["Brasil inteiro", "Nationwide Brazil", "Todo Brasil"],
+      brazil_southeast: ["Região Sudeste do Brasil", "Southeast Brazil", "Región sureste de Brasil"],
+      brazil_northeast: ["Região Nordeste do Brasil", "Northeast Brazil", "Región noreste de Brasil"],
+      infoproduct: ["Curso, e-book ou mentoria online", "Online course, ebook, or coaching", "Curso, ebook o mentoría en línea"],
+      mentorship: ["Mentoria ou consultoria", "Coaching or consulting", "Mentoría o consultoría"],
+      software: ["Software ou serviço online", "Software or online service", "Software o servicio en línea"],
+      ecommerce: ["Loja online ou produto físico", "Online store or physical product", "Tienda en línea o producto físico"],
+      one_time: ["Pagamento único", "One-time payment", "Pago único"],
+      installments: ["Pagamento parcelado", "Installment payments", "Pago en cuotas"],
+      recurring_monthly: ["Assinatura mensal", "Monthly subscription", "Suscripción mensual"],
+      recurring_annual: ["Assinatura anual", "Annual subscription", "Suscripción anual"],
+      hybrid: ["Formato híbrido", "Hybrid format", "Formato híbrido"],
+      in_person: ["Presencial", "In person", "Presencial"],
+      physical_shipment: ["Envio de produto físico", "Physical product shipping", "Envío de producto físico"],
+      yes: ["Sim", "Yes", "Sí"],
+      no: ["Não", "No", "No"],
+      not_decided: ["Ainda não decidi", "Not decided yet", "Aún no lo he decidido"],
+      "90_days": ["90 dias", "90 days", "90 días"],
+      "30_days": ["30 dias", "30 days", "30 días"],
+      "7_days": ["7 dias", "7 days", "7 días"],
+      true: ["Sim", "Yes", "Sí"],
+      false: ["Não", "No", "No"],
+    };
+    const formatPreviewLabel = (key: string) => {
+      const normalized = key.replace(/[._]/g, "").toLowerCase();
+      const dotted = key.toLowerCase();
+      const label = previewFieldLabels[dotted] ?? Object.entries(previewFieldLabels)
+        .find(([candidate]) => candidate.replace(/[._]/g, "").toLowerCase() === normalized)?.[1];
+      if (label) return t(...label);
+      return key.replace(/[._]/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (char) => char.toUpperCase());
+    };
+    const formatPreviewValue = (value: unknown, fieldKey = ""): string => {
+      if (value == null) return "";
+      if (typeof value === "string") {
+        const enumValue = previewEnumValues[value.trim().toLowerCase()];
+        return enumValue ? t(...enumValue) : value;
+      }
+      if (typeof value === "number") return String(value);
+      if (typeof value === "boolean") return t(...previewEnumValues[String(value)]);
+      if (Array.isArray(value)) return value.map((item) => formatPreviewValue(item, fieldKey)).filter(Boolean).join(" · ");
+      if (typeof value === "object") return Object.entries(value as Record<string, unknown>)
+        .filter(([key, item]) => !key.startsWith("_") && item != null && item !== "")
+        .map(([key, item]) => `${formatPreviewLabel(key)}: ${formatPreviewValue(item, key)}`).join("\n");
+      return String(value);
+    };
+    const socialOverview = trialSocialDiagnosis?.publicProfileAnalysis?.overview;
     const DAY_PLAN = [
       { day: 1, phase: t("Pré-lançamento", "Pre-launch", "Prelanzamiento"), activity: t("Aquecimento de audiência + conteúdo de antecipação publicado", "Audience warm-up + teaser content published", "Calentamiento de audiencia + contenido de anticipación publicado"), icon: Target, color: "border-primary/40 bg-primary/10 text-primary" },
       { day: 2, phase: t("Pré-lançamento", "Pre-launch", "Prelanzamiento"), activity: t("Lista de espera ativada + sequência de email iniciada", "Waitlist activated + email sequence started", "Lista de espera activada + secuencia de correo iniciada"), icon: Mail, color: "border-primary/40 bg-primary/10 text-primary" },
@@ -2118,6 +2276,25 @@ export default function Onboarding() {
             {trialAccess ? t("Prévia de planejamento: a execução requer uma licença NexOS", "Planning preview: execution requires a NexOS license", "Vista previa de planificación: la ejecución requiere una licencia NexOS") : t("NexOS executa cada fase automaticamente — você só aprova", "NexOS runs each phase automatically — you just approve", "NexOS ejecuta cada fase automáticamente; tú solo tienes que aprobar")}
           </p>
         </div>
+
+        {trialAccess && <section className="border border-border/40 bg-card/30 p-5 space-y-4">
+          <div>
+            <h3 className="font-mono text-sm font-bold uppercase tracking-wider">{t("Dados do briefing", "Briefing details", "Datos del briefing")}</h3>
+            <p className="text-xs text-muted-foreground mt-1">{t("Revise as informações consideradas nesta prévia.", "Review the information used in this preview.", "Revisa la información considerada en esta vista previa.")}</p>
+          </div>
+          {trialBriefingEntries.length ? <dl className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {trialBriefingEntries.map(([key, value]) => <div key={key} className="border border-border/30 p-3 min-w-0">
+              <dt className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{formatPreviewLabel(key)}</dt>
+              <dd className="mt-1 text-sm whitespace-pre-wrap break-words">{formatPreviewValue(value, key)}</dd>
+            </div>)}
+          </dl> : <p className="text-sm text-muted-foreground">{t("Nenhuma resposta de briefing foi registrada.", "No briefing answers were recorded.", "No se registraron respuestas del briefing.")}</p>}
+          {trialSocialProfile && <div className="border border-cyan-400/30 bg-cyan-400/5 p-3">
+            <div className="font-mono text-[10px] uppercase tracking-wider text-cyan-300">{t("Página do Facebook", "Facebook Page", "Página de Facebook")}</div>
+            <div className="text-sm mt-1">{trialSocialProfile}</div>
+            {trialSocialDiagnosis?.publicProfileAnalysis && <pre className="mt-3 whitespace-pre-wrap break-words font-sans text-sm text-muted-foreground">{formatPreviewValue(trialSocialDiagnosis.publicProfileAnalysis)}</pre>}
+            {trialSocialDiagnosis?.accountEvidence && <pre className="mt-3 whitespace-pre-wrap break-words font-sans text-sm text-muted-foreground">{formatPreviewValue(trialSocialDiagnosis.accountEvidence)}</pre>}
+          </div>}
+        </section>}
 
         {/* 7-day timeline strip */}
         <div className="grid grid-cols-7 gap-1">
@@ -2299,14 +2476,17 @@ export default function Onboarding() {
               <CheckCircle2 className="h-5 w-5" />
               <h3 className="font-mono font-bold uppercase tracking-wider">{t("Prévia do trial pronta", "Trial preview is ready", "Vista previa de prueba lista")}</h3>
             </div>
-            <p className="text-sm text-muted-foreground">{String(trialSocialDiagnosis?.publicProfileAnalysis?.overview ?? (!trialSocialAnalysisAvailable
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{typeof socialOverview === "string" ? socialOverview : socialOverview != null ? formatPreviewValue(socialOverview) : (!trialSocialAnalysisAvailable
               ? t("A análise incluída já foi usada, mas o relatório não foi localizado nesta campanha. Esta prévia usa as respostas do briefing.", "The included analysis has already been used, but its report was not found on this campaign. This preview uses your briefing answers.", "El análisis incluido ya se utilizó, pero no se encontró el informe en esta campaña. Esta vista previa usa tus respuestas del briefing.")
-              : t("Nenhuma Página foi analisada. Você pode usar esta prévia do briefing sem a análise social.", "No Page was analyzed. You can use this brief preview without the social analysis.", "No se analizó ninguna página. Puedes ver esta vista previa sin el análisis social.")))}</p>
+              : t("Nenhuma Página foi analisada. Você pode usar esta prévia do briefing sem a análise social.", "No Page was analyzed. You can use this brief preview without the social analysis.", "No se analizó ninguna página. Puedes ver esta vista previa sin el análisis social."))}</p>
             <div className="flex flex-col sm:flex-row gap-3">
+              <Button onClick={() => void approveTrialPreview()} disabled={trialStrategyStarting} className="rounded-none font-mono uppercase tracking-wider btn-weapon-primary gap-2">
+                {trialStrategyStarting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                {trialStrategyStarting ? t("Preparando Master Plan", "Preparing master plan", "Preparando el plan maestro") : t("Aprovar prévia e abrir Master Plan", "Approve preview and open master plan", "Aprobar vista previa y abrir el plan maestro")}
+              </Button>
               <Button onClick={downloadTrialPlanPdf} className="rounded-none font-mono uppercase tracking-wider btn-weapon-primary gap-2"><ArrowRight className="h-4 w-4" />{t("Baixar plano em PDF", "Download plan PDF", "Descargar plan en PDF")}</Button>
-              <Button variant="outline" onClick={() => setLocation("/billing")} className="rounded-none font-mono uppercase tracking-wider">{t("Conhecer as licenças", "View licenses", "Ver licencias")}</Button>
             </div>
-            <p className="text-[11px] text-muted-foreground">{t("Este documento é uma prévia. O trial não inicia execução, publicações, anúncios ou automações de campanha.", "This document is a preview. Trial does not start campaign execution, publishing, ads, or automations.", "Este documento es una vista previa. La prueba no inicia ejecución, publicaciones, anuncios ni automatizaciones.")}</p>
+            <p className="text-[11px] text-muted-foreground">{t("Ao aprovar, a IA prepara a estratégia completa para você revisar. No trial, aprovar o Master Plan e gerar conteúdo exige uma licença.", "Approving asks AI to prepare the full strategy for your review. In the trial, approving the master plan and generating content requires a license.", "Al aprobar, la IA prepara la estrategia completa para que la revises. En la prueba, aprobar el plan maestro y generar contenido requiere una licencia.")}</p>
           </div>
         ) : (
         <div className="border border-primary/30 bg-primary/5 p-5 relative overflow-hidden">

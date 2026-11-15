@@ -16,6 +16,7 @@ import {
 } from "@workspace/db";
 import { AppError, InsufficientCreditsError, NotFoundError } from "../../lib/errors.js";
 import type { Logger } from "pino";
+import { getWorkspaceTrial } from "../auth/trial-access.service.js";
 
 function isAdminWorkspace(workspaceOwnerId: string): boolean {
   return isPlatformAdmin(workspaceOwnerId);
@@ -24,6 +25,20 @@ function isAdminWorkspace(workspaceOwnerId: string): boolean {
 export type CreditAction = string & keyof typeof CREDIT_COSTS;
 
 export type CampaignCreditPhase = CampaignCreditBudgetPhase;
+
+export async function isTrialBriefingCampaign(workspaceId: string, campaignId?: string | null): Promise<boolean> {
+  if (!campaignId) return false;
+  const trial = await getWorkspaceTrial(workspaceId);
+  return trial?.briefingCampaignId === campaignId;
+}
+
+/** A trial's one-time strategy preview is the only AI phase exempt from credits. */
+export async function isTrialStrategyCampaign(workspaceId: string, campaignId?: string | null): Promise<boolean> {
+  if (!campaignId || !await isTrialBriefingCampaign(workspaceId, campaignId)) return false;
+  const [campaign] = await db.select({ status: campaignsTable.status }).from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).limit(1);
+  return campaign?.status === "analyzing";
+}
 
 /**
  * Blocks a campaign start/phase unless the workspace can cover the expected
@@ -42,6 +57,10 @@ export async function assertCampaignCreditBudget(
     ownerId: workspacesTable.ownerId,
   }).from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
   if (!workspace) throw new NotFoundError("Workspace");
+
+  if (phase === "strategy" && await isTrialBriefingCampaign(workspaceId, campaignId)) {
+    return { balance: workspace.balance ?? 0, required: 0, averageCampaignCredits: 0, alreadySpent: 0, estimateSource: "trial_strategy_preview" as const, phase, campaignType, unlimited: false };
+  }
 
   const unlimited = (workspace.settings as Record<string, unknown>)?.unlimitedCredits === true
     || isAdminWorkspace(workspace.ownerId);
@@ -117,8 +136,9 @@ export async function getBalance(workspaceId: string): Promise<number> {
 
 type CreditDbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-export async function assertGenerationCredits(workspaceId: string): Promise<void> {
+export async function assertGenerationCredits(workspaceId: string, campaignId?: string | null): Promise<void> {
   await assertCreditsNotRefundHeld(workspaceId);
+  if (await isTrialStrategyCampaign(workspaceId, campaignId)) return;
   const [ws] = await db.select().from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
   if (!ws) throw new NotFoundError("Workspace");
   const unlimited = (ws.settings as Record<string, unknown>)?.unlimitedCredits === true || isAdminWorkspace(ws.ownerId);
@@ -138,7 +158,8 @@ export async function deductCredits(
   persistDelivery?: (trx: CreditDbTransaction, charge: CreditTransaction, replayed: boolean) => Promise<void>,
   allowNegativeBalanceForCompletedUsage = false,
 ): Promise<CreditTransaction> {
-  const cost = costOverride ?? CREDIT_COSTS[action];
+  const trialStrategy = await isTrialStrategyCampaign(workspaceId, campaignId);
+  const cost = trialStrategy ? 0 : costOverride ?? CREDIT_COSTS[action];
   if (cost === undefined) throw new Error(`Unknown credit action: ${action}`);
   if (!Number.isSafeInteger(cost) || cost < 0) throw new Error("Invalid credit cost");
 

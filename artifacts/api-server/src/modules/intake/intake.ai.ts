@@ -179,6 +179,7 @@ Campos possíveis:
 - campaign.salesChannel: "sales_page"|"whatsapp_group"|"webinar"|"lives"|"vsl"|"telegram"|"hybrid"
 - campaign.hasAffiliate: boolean
 - campaign.affiliateCommission: number (percentual)
+- launch.cartOpenDate: data, período desejado ou status de definição da abertura do carrinho, incluindo restrições e flexibilidade declaradas pelo usuário
 - launch.cartOpenDuration: number (dias)
 - launch.scarcityMechanism: "deadline"|"limited_spots"|"bonus_expiry"|"price_increase"|"combined"
 - risk.tolerance: "conservative"|"moderate"|"aggressive"
@@ -399,8 +400,18 @@ mais recente e elimine duplicações. O histórico já preserva as declarações
 anteriores. Separe a etapa atual da etapa futura e diferencie teto de orçamento
 de autorização de gasto. Preserve ressalvas que continuam válidas.
 Não converta hipóteses em fatos. Registre o prazo de teste em campaign.timeline
-(ex.: "30_days"). Em vendas contínuas, não invente janela de carrinho, escassez,
-ROAS ou prova social. A conclusão da coleta não autoriza venda ou ação externa.
+(ex.: "30_days"). Para campanhas com lançamento, Walker deve perguntar para quando
+o usuário pretende abrir o carrinho. Se ainda não houver data, investigue o período
+desejado, a flexibilidade e as restrições relevantes (datas do mercado, produção,
+disponibilidade do especialista, audiência, orçamento e operação). Diferencie a
+abertura do carrinho do início do pré-lançamento. Avalie se o prazo declarado permite
+preparar as etapas necessárias; se estiver apertado ou houver informação insuficiente,
+explique o motivo, declare as premissas e recomende uma janela alternativa com o
+tempo de preparação correspondente. Não invente benchmarks nem trate a recomendação
+como decisão aprovada. Registre a resposta em launch.cartOpenDate e o horizonte de
+execução/teste em campaign.timeline. Em vendas contínuas, não invente janela de
+carrinho, escassez, ROAS ou prova social. A conclusão da coleta não autoriza venda
+ou ação externa.
 1. UMA pergunta por turno — a mais estratégica que falta naquela fase
 2. Quando o agente MUDA de fase, apresenta-se brevemente e passa a palavra
 3. Quando CONTINUA na mesma fase, vai direto ao ponto reconhecendo a resposta anterior
@@ -631,7 +642,11 @@ Tracks: six_digits (R$100k–999k/7d), eight_digits (R$10M–99M/7d), ten_digits
 Chet apresenta como diagnóstico médico — explica o raciocínio, não só o resultado.
 
 FASE 5 — EXECUÇÃO (Walker) — Camada 6
-Campos: launch.cartOpenDuration, launch.scarcityMechanism, campaign.salesChannel, campaign.hasAffiliate, risk.tolerance, risk.previousCampaigns
+Campos: launch.cartOpenDate, launch.cartOpenDuration, launch.scarcityMechanism, campaign.salesChannel, campaign.hasAffiliate, risk.tolerance, risk.previousCampaigns, campaign.timeline
+Walker também avalia a viabilidade do calendário: pergunta a data ou janela desejada
+para o lançamento, coleta restrições e flexibilidade e recomenda uma data mais
+adequada quando o tempo disponível não comportar a preparação. Distingue pré-lançamento
+da abertura do carrinho e apresenta premissas sem inventar prazos padrão.
 
 ## CONSULTORIA PROFISSIONAL E PROATIVA (em todos os turnos)
 Use o diagnóstico de prontidão fornecido no contexto para priorizar lacunas da fase atual.

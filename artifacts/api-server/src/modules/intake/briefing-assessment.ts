@@ -40,7 +40,8 @@ const AREAS: Array<{ area: string; specialist: string; checks: Check[] }> = [
     ['creator.positioning', 'Posicionamento da comunicação pendente.', 'Definir o papel da marca ou especialista na comunicação.'],
   ] },
   { area: 'Execução', specialist: 'Walker', checks: [
-    ['campaign.timeline', 'Horizonte de execução pendente.', 'Definir o período de teste ou calendário da campanha.'],
+    ['launch.cartOpenDate', 'Data ou janela desejada para o lançamento não informada.', 'Definir quando gostaria de abrir o carrinho, a flexibilidade e as restrições para Walker avaliar a viabilidade e recomendar um prazo se necessário.'],
+    ['campaign.timeline', 'Horizonte de execução pendente.', 'Definir o período de preparação ou teste da campanha.'],
     ['risk.tolerance', 'Limites de risco pendentes.', 'Estabelecer os limites de teste e quando revisar a estratégia.'],
     ['risk.previousCampaigns', 'Histórico ainda não registrado.', 'Registrar resultados anteriores ou declarar que esta será a primeira campanha.'],
   ] },
@@ -62,7 +63,7 @@ export function assessBriefing(data: Record<string, unknown>): BriefingAssessmen
     const gaps: BriefingDimension['gaps'] = [];
     for (const [field, observation, action, detailed] of checks) {
       const value = field === 'campaign.timeline'
-        ? data[field] ?? data['campaign.durationDays'] ?? data['launch.cartOpenDate']
+        ? data[field] ?? data['campaign.durationDays']
         : data[field];
       const numeric = ['product.price', 'campaign.revenueTarget', 'campaign.budget.total', 'campaign.budget.traffic'].includes(field);
       const validNumber = (typeof value === 'number' || (typeof value === 'string' && value.trim() !== '')) && Number.isFinite(Number(value)) && Number(value) >= 0;

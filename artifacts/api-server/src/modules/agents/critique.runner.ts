@@ -133,7 +133,7 @@ export async function runAgentWithCritique(opts: {
   )).orderBy(desc(campaignAgentsTable.completedAt)).limit(1);
   const persisted = delivered?.output as CritiqueResult | undefined;
   if (!opts.skipCheckpoint && delivered?.status === "completed" && persisted && typeof persisted.refinedOutput === "string") return { ...persisted, totalCreditsCharged: 0 };
-  await assertGenerationCredits(workspaceId);
+  await assertGenerationCredits(workspaceId, campaignId);
   if (!opts.skipCheckpoint && delivered?.status === "failed" && persisted && typeof persisted.refinedOutput === "string") return settle(persisted);
 
   const profileBlock = opts.profileContext ?? "";

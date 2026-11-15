@@ -721,7 +721,7 @@ async function runAgentInternal(opts: RunAgentOptions): Promise<RunAgentResult> 
       return { agentRecord: previous, content: output.content, creditsCharged: 0, checkpointId: checkpoint?.id };
     }
   }
-  await assertGenerationCredits(workspaceId);
+  await assertGenerationCredits(workspaceId, campaignId);
 
   let agentRecord: CampaignAgent | undefined;
   if (isValidCampaignId) {

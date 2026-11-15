@@ -398,11 +398,11 @@ const LAUNCH_QUESTIONS: IntakeQuestion[] = [
   {
     id: "launch.cartOpenDate",
     section: "lançamento",
-    label: "Data prevista de abertura do carrinho",
-    description: "O climax do lançamento — quando o produto finalmente fica disponível",
+    label: "Para quando você pretende lançar (abrir o carrinho)?",
+    description: "Informe a data ou período desejado. Se ainda não decidiu, diga quando gostaria de lançar, quais datas são possíveis e que compromissos ou restrições precisam ser respeitados. A equipe avaliará a viabilidade e poderá recomendar outro prazo.",
     type: "text",
-    required: false,
-    placeholder: "Ex: 15/06/2026 ou 'em 30 dias'",
+    required: true,
+    placeholder: "Ex: 15/06/2027; em 60 dias; ou ainda não defini — gostaria de lançar entre junho e agosto",
   },
   {
     id: "launch.cartOpenDuration",

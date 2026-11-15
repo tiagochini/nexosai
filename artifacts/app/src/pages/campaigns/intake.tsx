@@ -835,9 +835,15 @@ function TrialSocialAnalysisView({
           <option value="facebook">Facebook</option>
           </select>
           <SocialDiagnosisAccountPicker platform={platform} accounts={connectedAccounts} integrationId={integrationId} handle={handle} disabled={loading || submitting || !available} onSelect={(account) => { setIntegrationId(account?.id ?? ""); setHandle(account?.handle ?? ""); }} onHandleChange={setHandle} onConnect={() => void connectSocialDiagnosisAccount(campaignId, "trial", platform).catch((error) => toast.error(error instanceof Error ? error.message : t("Não foi possível iniciar a conexão.", "Could not start the connection.", "No se pudo iniciar la conexión.")))} />
-          <div className="md:col-span-2 flex justify-end"><Button variant="outline" onClick={() => void runAnalysis()} disabled={loading || submitting || !available} className="rounded-none font-mono text-xs uppercase">
-            {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t("Analisando", "Analyzing", "Analizando")}</> : t("Gerar análise", "Generate analysis", "Generar análisis")}
-          </Button></div>
+          <div className="md:col-span-2 flex flex-wrap justify-end gap-2">
+            <Button variant="ghost" onClick={onContinueToPlan} disabled={submitting} className="rounded-none font-mono text-xs uppercase">
+              {t("Pular análise e continuar", "Skip analysis and continue", "Omitir análisis y continuar")}
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+            <Button variant="outline" onClick={() => void runAnalysis()} disabled={loading || submitting || !available} className="rounded-none font-mono text-xs uppercase">
+              {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t("Analisando", "Analyzing", "Analizando")}</> : t("Gerar análise", "Generate analysis", "Generar análisis")}
+            </Button>
+          </div>
         </div>
         {!available && <div className="space-y-3">
           <p className="font-mono text-xs text-emerald-300">{diagnosis

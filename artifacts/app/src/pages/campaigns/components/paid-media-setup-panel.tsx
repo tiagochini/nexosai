@@ -68,6 +68,7 @@ export function PaidMediaSetupPanel({
   campaignId,
   masterplan,
   onDirtyChange,
+  trialMode = false,
 }: {
   campaignId: string;
   masterplan?: {
@@ -78,6 +79,7 @@ export function PaidMediaSetupPanel({
     snapshot?: any;
   };
   onDirtyChange?: (dirty: boolean) => void;
+  trialMode?: boolean;
 }) {
   const t = useUiText(),
     queryClient = useQueryClient();
@@ -210,7 +212,7 @@ export function PaidMediaSetupPanel({
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ requestApproval: true }),
+            body: JSON.stringify({ requestApproval: !trialMode }),
           },
         );
       } catch {
@@ -225,9 +227,15 @@ export function PaidMediaSetupPanel({
       }
       toast.success(
         t(
-          "Configuração salva em nova versão. Revise e aprove o Master Plan.",
-          "Setup saved in a new version. Review and approve the Master Plan.",
-          "Configuración guardada en nueva versión. Revisa y aprueba el Master Plan.",
+          trialMode
+            ? "Configuração salva em uma nova versão de rascunho. A aprovação oficial exige uma licença."
+            : "Configuração salva em nova versão. Revise e aprove o Master Plan.",
+          trialMode
+            ? "Setup saved in a new draft version. Official approval requires a license."
+            : "Setup saved in a new version. Review and approve the Master Plan.",
+          trialMode
+            ? "Configuración guardada en una nueva versión de borrador. La aprobación oficial requiere una licencia."
+            : "Configuración guardada en nueva versión. Revisa y aprueba el Master Plan.",
         ),
       );
     } catch (error) {
@@ -323,6 +331,22 @@ export function PaidMediaSetupPanel({
   const approvedSettings = masterplan?.snapshot?.strategy?.paidMedia;
   const approvedLink =
     approvedSettings?.creatives?.[0]?.object_story_spec?.link_data;
+  const strategy = (masterplan?.snapshot?.strategy ?? {}) as Record<string, any>;
+  const audiencePlan = strategy.audienceSegmentation ?? {};
+  const campaignFlow = strategy.campaignArchitecture ?? {};
+  const recommendationText = (value: unknown): string => {
+    if (typeof value === "string") return value.trim();
+    if (Array.isArray(value)) return value.map(String).filter(Boolean).join(" · ");
+    return "";
+  };
+  const agentRecommendations = [
+    [t("Avatar prioritário", "Primary avatar", "Avatar prioritario"), recommendationText(audiencePlan.primaryAvatar)],
+    [t("Perfil psicográfico", "Psychographic profile", "Perfil psicográfico"), recommendationText(audiencePlan.psychographicProfile)],
+    [t("Gatilhos de compra", "Buying triggers", "Disparadores de compra"), recommendationText(audiencePlan.buyingTriggers)],
+    [t("Fluxo e distribuição", "Campaign flow and distribution", "Flujo y distribución"), recommendationText(campaignFlow.platformDistributionStrategy)],
+    [t("Narrativa central", "Core narrative", "Narrativa central"), recommendationText(campaignFlow.coreNarrative)],
+    [t("Estratégia de CTA", "CTA strategy", "Estrategia de CTA"), recommendationText(campaignFlow.callToActionStrategy)],
+  ].filter(([, value]) => Boolean(value)) as Array<[string, string]>;
   const selectedAccount = accounts?.accounts.find(
     (account) => account.id === form.accountId,
   );
@@ -340,9 +364,15 @@ export function PaidMediaSetupPanel({
       </summary>
       <p className="text-xs text-muted-foreground mt-3">
         {t(
-          "Preencha os dados que serão revisados no Master Plan. Salvar exige nova aprovação e não cria anúncios. O orçamento é o total diário ou do período; em ABO ele será dividido entre os públicos.",
-          "Enter the settings to review in the Master Plan. Saving requires new approval and creates no ads. Budget is the daily or lifetime total; ABO splits it across audiences.",
-          "Completa los datos para revisar en el Master Plan. Guardar exige nueva aprobación y no crea anuncios. El presupuesto es el total diario o del período; ABO lo divide entre públicos.",
+          trialMode
+            ? "Preencha os dados para revisar no Master Plan. No trial, salvar cria uma versão de rascunho; a aprovação e a geração de conteúdo exigem licença."
+            : "Preencha os dados que serão revisados no Master Plan. Salvar exige nova aprovação e não cria anúncios. O orçamento é o total diário ou do período; em ABO ele será dividido entre os públicos.",
+          trialMode
+            ? "Enter the settings to review in the Master Plan. In the trial, saving creates a draft version; approval and content generation require a license."
+            : "Enter the settings to review in the Master Plan. Saving requires new approval and creates no ads. Budget is the daily or lifetime total; ABO splits it across audiences.",
+          trialMode
+            ? "Completa los datos para revisar en el Master Plan. En la prueba, guardar crea un borrador; la aprobación y la generación de contenido requieren una licencia."
+            : "Completa los datos para revisar en el Master Plan. Guardar exige nueva aprobación y no crea anuncios. El presupuesto es el total diario o del período; ABO lo divide entre públicos.",
         )}
       </p>
       {approvedSettings && (
@@ -377,12 +407,50 @@ export function PaidMediaSetupPanel({
           </p>
         </div>
       )}
+      <div className="my-3 space-y-3 border border-cyan-400/20 bg-cyan-400/[0.03] p-3" data-testid="agent-paid-media-recommendations">
+        <div>
+          <strong className="text-xs text-cyan-300">
+            {t("Público e fluxo recomendados pelos agentes", "Audience and campaign flow recommended by agents", "Público y flujo recomendados por los agentes")}
+          </strong>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {t(
+              "Essas recomendações vêm do avatar e da arquitetura aprovados no Masterplan. Conta, Pixel, Página e IDs de públicos personalizados dependem dos ativos conectados à sua plataforma.",
+              "These recommendations come from the approved avatar and campaign architecture. Account, pixel, page, and custom audience IDs depend on assets connected to your platform.",
+              "Estas recomendaciones vienen del avatar y la arquitectura aprobados en el Masterplan. La cuenta, el píxel, la página y los IDs de públicos personalizados dependen de los activos conectados a tu plataforma.",
+            )}
+          </p>
+        </div>
+        {agentRecommendations.length > 0 ? (
+          <dl className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            {agentRecommendations.map(([label, value]) => (
+              <div key={label} className="border border-border/30 bg-background/40 p-2">
+                <dt className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground/60">{label}</dt>
+                <dd className="mt-1 whitespace-pre-wrap text-xs text-foreground/80">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="text-xs text-amber-300/80">
+            {t(
+              "O Masterplan atual não contém recomendações de público e fluxo para exibir. Atualize a estratégia com os agentes antes de configurar os anúncios.",
+              "The current master plan has no audience or campaign flow recommendations to show. Update the strategy with the agents before setting up ads.",
+              "El Masterplan actual no contiene recomendaciones de público y flujo. Actualiza la estrategia con los agentes antes de configurar los anuncios.",
+            )}
+          </p>
+        )}
+      </div>
       {dirty && (
         <p className="text-xs text-amber-400">
           {t(
-            "Há alterações não salvas. Salve e revise a nova versão antes de aprovar.",
-            "There are unsaved changes. Save and review the new version before approval.",
-            "Hay cambios sin guardar. Guarda y revisa la nueva versión antes de aprobar.",
+            trialMode
+              ? "Há alterações não salvas. Salve para criar uma nova versão de rascunho."
+              : "Há alterações não salvas. Salve e revise a nova versão antes de aprovar.",
+            trialMode
+              ? "There are unsaved changes. Save to create a new draft version."
+              : "There are unsaved changes. Save and review the new version before approval.",
+            trialMode
+              ? "Hay cambios sin guardar. Guarda para crear una nueva versión de borrador."
+              : "Hay cambios sin guardar. Guarda y revisa la nueva versión antes de aprobar.",
           )}
         </p>
       )}
@@ -774,7 +842,7 @@ export function PaidMediaSetupPanel({
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={busy || dirty}
+                  disabled={trialMode || busy || dirty}
                   onClick={() => void approve()}
                 >
                   {t(

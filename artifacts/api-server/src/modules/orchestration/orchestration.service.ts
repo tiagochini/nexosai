@@ -23,7 +23,7 @@ import { AppError, NotFoundError, ValidationError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
 import type { Logger } from "pino";
 import { enforceLaunchAutonomyGate, enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
-import { assertCampaignCreditBudget } from "../credits/credits.service.js";
+import { assertCampaignCreditBudget, isTrialBriefingCampaign, isTrialStrategyCampaign } from "../credits/credits.service.js";
 import { assertSocialDiagnosisApproved } from "../campaigns/social-diagnosis.policy.js";
 import { resolveSocialMediaEntitlement } from "../billing/commercial-entitlements.service.js";
 import { calculateMasterplanReadiness } from "../masterplan/masterplan.service.js";
@@ -415,7 +415,11 @@ export async function triggerStrategyPhase(
 
   // Check this before charging credits or enqueueing the strategy phase.
   const socialMediaEntitlement = await resolveSocialMediaEntitlement(workspaceId);
-  assertSocialDiagnosisApproved(socialMediaEntitlement.active, campaign.brainData);
+  const trialStrategy = await isTrialBriefingCampaign(workspaceId, campaignId);
+  if (trialStrategy && campaign.status === "strategy_ready") {
+    throw new AppError(409, "A estratégia do trial já foi gerada e está disponível para revisão.", "TRIAL_STRATEGY_PREVIEW_ALREADY_GENERATED");
+  }
+  if (!trialStrategy) assertSocialDiagnosisApproved(socialMediaEntitlement.active, campaign.brainData);
 
   // PIPELINE_KERNEL: single source of truth
   if (!(STRATEGY_PHASE_ENTRY_STATUSES as readonly string[]).includes(campaign.status)) {
@@ -487,6 +491,9 @@ export async function triggerContentPhase(
     .limit(1);
 
   if (!campaign) throw new NotFoundError("Campaign");
+
+  const trial = await isTrialBriefingCampaign(workspaceId, campaignId);
+  if (trial) throw new AppError(403, "A geração de conteúdo exige uma licença NexOS ativa.", "TRIAL_CONTENT_GENERATION_BLOCKED");
 
   const pendingClarifications = await db.select({ id: agentClarificationRequestsTable.id, question: agentClarificationRequestsTable.question })
     .from(agentClarificationRequestsTable).where(and(
