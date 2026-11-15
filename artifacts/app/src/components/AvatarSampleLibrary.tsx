@@ -33,6 +33,7 @@ export function AvatarSampleLibrary({ onUseSample, refreshKey }: {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const urlMapRef = useRef<Record<string, string>>({});
   const previewRef = useRef<string | null>(null);
+  const liveVideoRef = useRef<HTMLVideoElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -56,6 +57,17 @@ export function AvatarSampleLibrary({ onUseSample, refreshKey }: {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const video = liveVideoRef.current;
+    const stream = recording ? streamRef.current : null;
+    if (video && stream) {
+      video.srcObject = stream;
+      void video.play().catch(() => {});
+    } else if (video) {
+      video.srcObject = null;
+    }
+  }, [recording]);
 
   const clearPreview = () => {
     if (previewRef.current) URL.revokeObjectURL(previewRef.current);
@@ -109,7 +121,7 @@ export function AvatarSampleLibrary({ onUseSample, refreshKey }: {
     setSaving(true);
     try {
       let savedSample: AvatarSample | undefined;
-      const query = new URLSearchParams({ consent: "true", consentVersion: CONSENT_VERSION });
+      const query = new URLSearchParams({ consent: "true", consentVersion: CONSENT_VERSION, durationSeconds: String(seconds) });
       const mimeType = blob.type.split(";")[0] || "video/webm";
       if (blob.size <= CHUNK_BYTES) {
         const result = await customFetch<{ sample: AvatarSample }>(`/api/workspaces/me/persona/avatar-samples?${query}`, {
@@ -215,7 +227,20 @@ export function AvatarSampleLibrary({ onUseSample, refreshKey }: {
         ) : (
           <Button size="sm" variant="destructive" onClick={stopRecording} className="font-mono text-xs gap-2"><Square className="h-4 w-4" />{t("Parar gravação", "Stop recording", "Detener grabación")} · {seconds}s</Button>
         )}
-        {previewUrl && <video src={previewUrl} controls playsInline className="w-full max-w-sm rounded-lg border border-border/40" />}
+        {recording && (
+          <div className="w-full max-w-sm space-y-2">
+            <div className="relative overflow-hidden rounded-lg border border-border/40 bg-black aspect-video">
+              <video ref={liveVideoRef} autoPlay muted playsInline className="h-full w-full object-cover -scale-x-100" />
+              <span className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 font-mono text-[10px] text-red-400">
+                {t("PRÉVIA AO VIVO", "LIVE PREVIEW", "VISTA PREVIA EN VIVO")}
+              </span>
+            </div>
+            <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">
+              {t("Confira se seu rosto e ombros estão enquadrados, se a luz ilumina seu rosto pela frente e se o ambiente está silencioso.", "Check that your face and shoulders are in frame, your face is lit from the front, and the room is quiet.", "Comprueba que tu rostro y hombros estén encuadrados, que la luz ilumine tu rostro desde delante y que el ambiente esté en silencio.")}
+            </p>
+          </div>
+        )}
+        {!recording && previewUrl && <video src={previewUrl} controls playsInline className="w-full max-w-sm rounded-lg border border-border/40" />}
         {blob && (
           <div className="space-y-3">
             <label className="flex items-start gap-2 font-mono text-[10px] text-muted-foreground leading-relaxed">

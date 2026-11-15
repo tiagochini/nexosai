@@ -87,6 +87,17 @@ const AVATAR_SAMPLE_MIME_TYPES: Record<string, { extension: string; formatPatter
   "video/mp4": { extension: "mp4", formatPattern: /mp4|mov/i },
 };
 
+function matchesVideoContainerSignature(video: Buffer, mimeType: string): boolean {
+  switch (mimeType) {
+    case "video/webm":
+      return video.length >= 4 && video[0] === 0x1a && video[1] === 0x45 && video[2] === 0xdf && video[3] === 0xa3;
+    case "video/mp4":
+      return video.length >= 8 && video.subarray(4, 8).toString("ascii") === "ftyp";
+    default:
+      return false;
+  }
+}
+
 type AvatarSampleMetadata = {
   sampleId: string;
   name: string;
@@ -122,6 +133,7 @@ async function persistAvatarSample(
   video: Buffer,
   contentType: string,
   onCleanupFailure: (failedCleanupCount: number) => void,
+  browserDurationSeconds?: number,
 ): Promise<AvatarSampleMetadata> {
   const format = AVATAR_SAMPLE_MIME_TYPES[contentType];
   if (!format || video.length < 1024 || video.length > MAX_AVATAR_SAMPLE_BYTES) {
@@ -135,8 +147,20 @@ async function persistAvatarSample(
     try {
       const { stdout } = await execFileAsync("ffprobe", ["-v", "error", "-show_streams", "-show_format", "-of", "json", tempFile], { maxBuffer: 1024 * 1024 });
       probe = JSON.parse(stdout) as typeof probe;
-    } catch {
-      throw new AvatarSampleUploadError("O arquivo enviado não contém vídeo válido no formato informado.", 400, "AVATAR_SAMPLE_INVALID_VIDEO");
+    } catch (error) {
+      const ffprobeUnavailable = (error as NodeJS.ErrnoException).code === "ENOENT";
+      if (!ffprobeUnavailable || !matchesVideoContainerSignature(video, contentType)
+        || !Number.isFinite(browserDurationSeconds) || browserDurationSeconds! < 5 || browserDurationSeconds! > 120) {
+        throw new AvatarSampleUploadError("O arquivo enviado não contém vídeo válido no formato informado.", 400, "AVATAR_SAMPLE_INVALID_VIDEO");
+      }
+      const fallbackFormatName: Record<string, string> = {
+        "video/webm": "webm",
+        "video/mp4": "mp4",
+      };
+      probe = {
+        streams: [{ codec_type: "video" }, { codec_type: "audio" }],
+        format: { duration: String(browserDurationSeconds), format_name: fallbackFormatName[contentType] },
+      };
     }
     const streams = probe.streams ?? [];
     const durationSeconds = Number(probe.format?.duration ?? 0);
@@ -1141,6 +1165,7 @@ router.post(
       name: z.string().trim().min(1).max(80).optional(),
       consent: z.literal("true"),
       consentVersion: z.literal(AVATAR_SAMPLE_CONSENT_VERSION),
+      durationSeconds: z.coerce.number().finite().optional(),
     }).safeParse(req.query);
     if (!parsed.success) {
       res.status(400).json({ error: "Confirme o consentimento para guardar esta gravação de avatar.", code: "AVATAR_SAMPLE_CONSENT_REQUIRED" });
@@ -1158,7 +1183,7 @@ router.post(
       const workspaceId = req.auth.workspaceId;
       const sample = await persistAvatarSample(workspaceId, parsed.data.name ?? AVATAR_SAMPLE_DEFAULT_NAME, video, contentType, (failedCleanupCount) => {
         req.log.error({ workspaceId, failedCleanupCount }, "Replaced avatar sample metadata, but failed to delete previous video objects");
-      });
+      }, parsed.data.durationSeconds);
       req.log.info({ workspaceId, sampleId: sample.sampleId, bytes: video.length, durationSeconds: sample.durationSeconds }, "Private avatar sample saved");
       res.status(201).json({ sample });
     } catch (error) {
@@ -1266,7 +1291,7 @@ router.post(
 // ── In-memory chunk buffer for large video uploads ────────────────────────────
 // Keyed by `${workspaceId}:${kind}`. Cleared when all chunks received + assembled.
 const _uploadChunks = new Map<string, { chunks: (Buffer | null)[]; total: number; contentType: string }>();
-const _avatarSampleChunks = new Map<string, { chunks: (Buffer | null)[]; total: number; contentType: string; name: string; startedAt: number }>();
+const _avatarSampleChunks = new Map<string, { chunks: (Buffer | null)[]; total: number; contentType: string; name: string; durationSeconds?: number; startedAt: number }>();
 
 router.post(
   "/me/persona/avatar-samples/chunk",
@@ -1276,6 +1301,7 @@ router.post(
       name: z.string().trim().min(1).max(80).optional(),
       consent: z.literal("true"),
       consentVersion: z.literal(AVATAR_SAMPLE_CONSENT_VERSION),
+      durationSeconds: z.coerce.number().finite().optional(),
     }).safeParse(req.query);
     const uploadId = String(req.headers["x-upload-id"] ?? "");
     const chunkIndex = Number(req.headers["x-chunk-index"] ?? NaN);
@@ -1301,10 +1327,10 @@ router.post(
         res.status(429).json({ error: "Já há gravações sendo enviadas. Aguarde a conclusão e tente novamente.", code: "AVATAR_SAMPLE_UPLOAD_BUSY" });
         return;
       }
-      _avatarSampleChunks.set(sessionKey, { chunks: new Array(totalChunks).fill(null), total: totalChunks, contentType, name: uploadName, startedAt: Date.now() });
+      _avatarSampleChunks.set(sessionKey, { chunks: new Array(totalChunks).fill(null), total: totalChunks, contentType, name: uploadName, durationSeconds: parsed.data.durationSeconds, startedAt: Date.now() });
     }
     const session = _avatarSampleChunks.get(sessionKey)!;
-    if (session.total !== totalChunks || session.contentType !== contentType || session.name !== uploadName) {
+    if (session.total !== totalChunks || session.contentType !== contentType || session.name !== uploadName || session.durationSeconds !== parsed.data.durationSeconds) {
       _avatarSampleChunks.delete(sessionKey);
       res.status(400).json({ error: "Os dados da gravação mudaram durante o envio. Tente novamente.", code: "AVATAR_SAMPLE_INVALID_CHUNK" });
       return;
@@ -1329,7 +1355,7 @@ router.post(
     try {
       const sample = await persistAvatarSample(workspaceId, session.name, video, session.contentType, (failedCleanupCount) => {
         req.log.error({ workspaceId, failedCleanupCount }, "Replaced avatar sample metadata, but failed to delete previous video objects");
-      });
+      }, session.durationSeconds);
       req.log.info({ workspaceId, sampleId: sample.sampleId, bytes: sample.sizeBytes }, "Private avatar sample saved from chunks");
       res.status(201).json({ complete: true, sample });
     } catch (error) {
