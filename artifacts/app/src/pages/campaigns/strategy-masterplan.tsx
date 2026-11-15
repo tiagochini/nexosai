@@ -601,6 +601,7 @@ function BigDominoCard({
   onEdit: () => void; onSave: () => void; onCancelEdit: () => void; onChangeEdit: (v: string) => void;
 }) {
   const t = useUiText();
+  const [expanded, setExpanded] = useState(false);
   const border = status === "approved" ? "border-emerald-500/50" : status === "rejected" ? "border-red-500/50" : status === "flagged" ? "border-amber-500/50" : "border-primary/25";
   return (
     <div className={`relative border-2 ${border} bg-gradient-to-br from-primary/[0.05] to-transparent transition-all`}
@@ -611,13 +612,21 @@ function BigDominoCard({
       <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b-2 border-l-2 border-primary/40 -translate-x-px translate-y-px" />
       <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-primary/40 translate-x-px translate-y-px" />
 
-      <div className="px-5 pt-4 pb-2 flex items-center gap-2">
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-controls="big-domino-content"
+        onClick={() => setExpanded(value => !value)}
+        className="w-full px-5 py-4 flex items-center gap-2 text-left group"
+      >
         <Zap className="h-3.5 w-3.5 text-primary/60" />
-        <span className="font-mono text-[9px] uppercase tracking-widest text-primary/55 font-bold">{t("02 — Big Domino · A crença central", "02 — Big Domino · The core belief", "02 — Big Domino · La creencia central")}</span>
+        <span className="font-mono text-[9px] uppercase tracking-widest text-primary/70 font-bold group-hover:text-primary transition-colors">{t("02 — Big Domino · A crença central", "02 — Big Domino · The core belief", "02 — Big Domino · La creencia central")}</span>
         <div className="flex-1 h-px bg-primary/10" />
-        <span className="font-mono text-[9px] text-muted-foreground/20 tracking-widest">02 / 10</span>
-      </div>
+        <span className="font-mono text-[9px] text-muted-foreground/35 tracking-widest">02 / 10</span>
+        <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
+      </button>
 
+      {expanded && <div id="big-domino-content">
       <div className="px-5 pb-2">
         <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30 mb-3">
           {t("A única crença que, implantada no avatar, colapsa todas as objeções de uma só vez", "The one belief that, once implanted in the avatar, collapses every objection at once", "La única creencia que, una vez implantada en el avatar, elimina todas las objeciones de una vez")}
@@ -664,6 +673,7 @@ function BigDominoCard({
             onClick={onEdit}><Pencil className="h-2.5 w-2.5" />{t("Editar", "Edit", "Editar")}</Button>
         )}
       </div>
+      </div>}
     </div>
   );
 }
@@ -809,7 +819,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
 
         <div className="flex flex-wrap gap-1.5 mt-3">
           {approvedCount === TOTAL_MODULES ? (
-            <Tag color="green"><Check className="h-2.5 w-2.5 mr-1" />{t("Masterplan 100% aprovado", "Master plan 100% approved", "Plan maestro 100% aprobado")}</Tag>
+            <Tag color="green"><Check className="h-2.5 w-2.5 mr-1" />{t("10/10 módulos marcados como aprovados", "10/10 modules marked as approved", "10/10 módulos marcados como aprobados")}</Tag>
           ) : (
             <>
               <Tag color="default"><Lock className="h-2.5 w-2.5 mr-1" />{TOTAL_MODULES - approvedCount - flaggedCount - rejectedCount} {t("pendentes", "pending", "pendientes")}</Tag>
@@ -1290,7 +1300,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
                 <>
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 5px #34d399" }} />
                   <span className="font-mono text-[10px] font-bold text-emerald-400/90 uppercase tracking-widest">
-                    {t("Masterplan aprovado", "Master plan approved", "Plan maestro aprobado")} — {approvedCount}/{TOTAL_MODULES}
+                    {t("Módulos marcados como aprovados", "Modules marked as approved", "Módulos marcados como aprobados")} — {approvedCount}/{TOTAL_MODULES}
                   </span>
                 </>
               ) : (

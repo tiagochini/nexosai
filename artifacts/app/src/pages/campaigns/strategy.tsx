@@ -17,14 +17,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   ArrowLeft, CheckCheck, Loader2, Brain, Zap,
-  BookOpen, Clock, Archive, ChevronRight, Activity, RotateCw, List,
+  BookOpen, Clock, Archive, ChevronRight, ChevronDown, Activity, RotateCw, List,
   AlertTriangle, Sparkles, CheckCircle2
 } from "lucide-react";
 import { StrategyMasterplan, parseStrategyInsights } from "./strategy-masterplan";
 import { missingTriggerMapFields } from "@/lib/trigger-map-contract";
 import { missingCampaignArchitectureFields, missingCampaignCoreFields, missingMasterplanQualityFields } from "@/lib/masterplan-quality-contract";
 import { MarketValidationReview } from "@/components/MarketValidationReview";
-import { useUiText } from "@/lib/i18n";
+import { intlLocale, useAppI18n, useUiLocale, useUiText } from "@/lib/i18n";
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
@@ -241,84 +241,91 @@ function MasterplanPanel({
   readOnly?: boolean;
   approvalDisabled?: boolean;
 }) {
-  const t = useUiText();
+  const copy = useAppI18n().masterplanStatus;
+  const { locale } = useUiLocale();
+  const [expanded, setExpanded] = useState(false);
   if (!currentMp) return null;
 
   const score = currentMp.readinessScore ?? 0;
   const scoreColor = score >= 80 ? "text-emerald-400" : score >= 50 ? "text-amber-400" : "text-red-400";
-  const statusLabels: Record<string, [string, string, string]> = {
-    draft: ["Rascunho", "Draft", "Borrador"],
-    pending_approval: ["Aguardando aprovação", "Awaiting approval", "Pendiente de aprobación"],
-    approved: ["Aprovado", "Approved", "Aprobado"],
-    superseded: ["Substituído", "Superseded", "Reemplazado"]
+  const statusLabels: Record<string, string> = {
+    draft: copy.draft,
+    pending_approval: copy.pendingApproval,
+    approved: copy.approved,
+    superseded: copy.superseded,
   };
+  const readinessLabels: Record<string, string> = {
+    ready: copy.ready,
+    blocked: copy.blocked,
+    review_required: copy.reviewRequired,
+  };
+  const actionLabels: Record<string, string> = {
+    generate_content: copy.generateContent,
+    launch: copy.launch,
+  };
+  const approvalLabels: Record<string, string> = { masterplan_approval: copy.masterplanApproval };
+  const humanizeCode = (value: string) => value.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  const readinessLabel = readinessLabels[currentMp.readinessStatus] ?? copy.processing;
 
   return (
-    <div className="mb-6 space-y-4">
-      {/* Current Version */}
-      <div className="border border-border/30 bg-muted/5 p-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-primary/60" />
-            <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-foreground">
-              {t("Status do masterplan", "Master plan status", "Estado del plan maestro")}
-            </h3>
-          </div>
-          <Badge variant="outline" className="font-mono text-[9px] uppercase border-primary/20 text-primary/80">
-            v{currentMp.version} · {statusLabels[currentMp.status] ? t(...statusLabels[currentMp.status]) : currentMp.status}
-          </Badge>
+    <div className="mb-6 border border-border/30 bg-muted/5">
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-controls="masterplan-status-details"
+        onClick={() => setExpanded(value => !value)}
+        className="w-full flex flex-wrap items-center gap-3 p-4 text-left hover:bg-white/[0.015]"
+      >
+        <Activity className="h-4 w-4 shrink-0 text-primary/70" />
+        <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-foreground">{copy.title}</h3>
+        <Badge variant="outline" className="font-mono text-[9px] uppercase border-primary/20 text-primary/80">v{currentMp.version}</Badge>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground/60">{copy.readiness}</span>
+          <strong className={`font-mono text-sm ${scoreColor}`}>{score}% · {readinessLabel}</strong>
+          <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
         </div>
+      </button>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+      {expanded && <div id="masterplan-status-details" className="border-t border-border/20 p-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="border border-border/20 bg-background/50 p-3">
-            <div className="font-mono text-[9px] text-muted-foreground/60 uppercase mb-1">{t("Prontidão", "Readiness", "Preparación")}</div>
-            <div className={`font-mono text-xl font-black ${scoreColor}`}>
-              {score}%
-            </div>
+            <div className="font-mono text-[9px] text-muted-foreground/60 uppercase mb-1">{copy.status}</div>
+            <div className="font-mono text-xs font-bold text-foreground/80">{statusLabels[currentMp.status] ?? humanizeCode(currentMp.status)}</div>
           </div>
           <div className="border border-border/20 bg-background/50 p-3">
-            <div className="font-mono text-[9px] text-muted-foreground/60 uppercase mb-1">{t("Status", "Status", "Estado")}</div>
-            <div className="font-mono text-xs font-bold text-foreground/80 mt-1 truncate">
-              {currentMp.readinessStatus === "ready" ? t("Pronto", "Ready", "Listo") :
-               currentMp.readinessStatus === "blocked" ? t("Bloqueado", "Blocked", "Bloqueado") :
-               currentMp.readinessStatus === "review_required" ? t("Requer revisão", "Review required", "Requiere revisión") : (currentMp.readinessStatus || t("Processando", "Processing", "Procesando"))}
-            </div>
-          </div>
-          <div className="border border-border/20 bg-background/50 p-3 md:col-span-2">
-            <div className="font-mono text-[9px] text-muted-foreground/60 uppercase mb-1">{t("Ações permitidas", "Allowed actions", "Acciones permitidas")}</div>
+            <div className="font-mono text-[9px] text-muted-foreground/60 uppercase mb-1">{copy.allowedActions}</div>
             <div className="flex flex-wrap gap-1 mt-1">
-              {currentMp.allowedActions?.length > 0 ? currentMp.allowedActions.map(a => (
-                <span key={a} className="font-mono text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 border border-primary/20">
-                  {a}
+              {currentMp.allowedActions?.length > 0 ? currentMp.allowedActions.map(action => (
+                <span key={action} className="border border-primary/20 bg-primary/10 px-1.5 py-0.5 font-mono text-[9px] text-primary">
+                  {actionLabels[action] ?? humanizeCode(action)}
                 </span>
-              )) : (
-                <span className="font-mono text-[9px] text-muted-foreground/50">{t("Nenhuma", "None", "Ninguna")}</span>
-              )}
+              )) : <span className="font-mono text-[9px] text-muted-foreground/50">{copy.noActions}</span>}
             </div>
           </div>
         </div>
 
         {(currentMp.readinessBlockers?.length > 0 || currentMp.requiredApprovals?.length > 0) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
             {currentMp.readinessBlockers?.length > 0 && (
               <div className="border border-red-500/20 bg-red-500/5 p-3">
-                <div className="font-mono text-[9px] text-red-400/80 uppercase mb-2">{t("Bloqueios:", "Blockers:", "Bloqueos:")}</div>
+                <div className="mb-2 font-mono text-[9px] uppercase text-red-400/80">{copy.blockers}</div>
                 <ul className="space-y-1">
-                  {currentMp.readinessBlockers.map((b, i) => (
-                    <li key={i} className="flex items-start gap-2 text-[10px] font-mono text-red-400/70">
-                      <span className="shrink-0 mt-0.5">◆</span> <span>{typeof b === "string" ? b : b.message ?? t("Dado obrigatório ausente", "Required data missing", "Falta un dato obligatorio")}</span>
-                    </li>
-                  ))}
+                  {currentMp.readinessBlockers.map((blocker, index) => {
+                    const message = typeof blocker === "string" ? blocker : blocker.message ?? copy.requiredDataMissing;
+                    return <li key={index} className="flex items-start gap-2 font-mono text-[10px] text-red-400/70">
+                      <span className="mt-0.5 shrink-0">◆</span><span>{message.includes("_") ? humanizeCode(message) : message}</span>
+                    </li>;
+                  })}
                 </ul>
               </div>
             )}
             {currentMp.requiredApprovals?.length > 0 && (
               <div className="border border-amber-500/20 bg-amber-500/5 p-3">
-                <div className="font-mono text-[9px] text-amber-400/80 uppercase mb-2">{t("Aprovações:", "Approvals:", "Aprobaciones:")}</div>
+                <div className="mb-2 font-mono text-[9px] uppercase text-amber-400/80">{copy.approvals}</div>
                 <ul className="space-y-1">
-                  {currentMp.requiredApprovals.map((a, i) => (
-                    <li key={i} className="flex items-start gap-2 text-[10px] font-mono text-amber-400/70">
-                      <span className="shrink-0 mt-0.5">◆</span> <span>{a}</span>
+                  {currentMp.requiredApprovals.map((approval, index) => (
+                    <li key={index} className="flex items-start gap-2 font-mono text-[10px] text-amber-400/70">
+                      <span className="mt-0.5 shrink-0">◆</span><span>{approvalLabels[approval] ?? humanizeCode(approval)}</span>
                     </li>
                   ))}
                 </ul>
@@ -328,60 +335,45 @@ function MasterplanPanel({
         )}
 
         {!readOnly && (
-          <div className="flex items-center gap-3 pt-2 border-t border-border/10">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onMaterialize({ requestApproval: false })}
-              disabled={isMaterializing}
-              className="font-mono text-[10px] uppercase tracking-widest gap-2 h-8"
-            >
+          <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border/10 pt-3">
+            <Button variant="outline" size="sm" onClick={() => onMaterialize({ requestApproval: false })} disabled={isMaterializing} className="h-8 gap-2 font-mono text-[10px] uppercase tracking-widest">
               {isMaterializing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCw className="h-3 w-3" />}
-              {t("Atualizar materialização", "Refresh materialization", "Actualizar materialización")}
+              {copy.refresh}
             </Button>
             {currentMp.status === "draft" && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onMaterialize({ requestApproval: true })}
-                disabled={isMaterializing || approvalDisabled}
-                className="font-mono text-[10px] uppercase tracking-widest gap-2 h-8 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-300"
-              >
+              <Button variant="outline" size="sm" onClick={() => onMaterialize({ requestApproval: true })} disabled={isMaterializing || approvalDisabled} className="h-8 gap-2 border-cyan-500/30 font-mono text-[10px] uppercase tracking-widest text-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-300">
                 {isMaterializing ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCheck className="h-3 w-3" />}
-                {t("Solicitar aprovação", "Request approval", "Solicitar aprobación")}
+                {copy.requestApproval}
               </Button>
             )}
           </div>
         )}
-      </div>
 
-      {/* History */}
-      {versions.length > 0 && (
-        <div className="border border-border/20 bg-background/30 p-3">
-          <div className="flex items-center gap-2 mb-3">
-            <List className="h-3.5 w-3.5 text-muted-foreground/50" />
-            <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-              {t("Histórico de versões", "Version history", "Historial de versiones")}
-            </span>
+        {versions.length > 0 && (
+          <div className="mt-4 border-t border-border/10 pt-4">
+            <div className="mb-3 flex items-center gap-2">
+              <List className="h-3.5 w-3.5 text-muted-foreground/50" />
+              <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{copy.history}</span>
+            </div>
+            <div className="max-h-32 space-y-1.5 overflow-y-auto pr-1">
+              {versions.map(version => (
+                <div key={version.id} className={`flex items-center gap-3 border p-2 ${version.id === currentMp.id ? "border-primary/30 bg-primary/5" : "border-border/10 bg-muted/5"}`}>
+                  <Badge variant="outline" className={`font-mono text-[8px] uppercase ${version.id === currentMp.id ? "border-primary/40 text-primary" : "border-border/40 text-muted-foreground"}`}>
+                    v{version.version}{version.id === currentMp.id ? ` · ${copy.currentVersion}` : ""}
+                  </Badge>
+                  <span className="font-mono text-[9px] text-muted-foreground/70">
+                    {new Date(version.createdAt).toLocaleString(intlLocale(locale))}
+                  </span>
+                  <div className="flex-1" />
+                  <span className="font-mono text-[9px] uppercase text-muted-foreground/50">
+                    {statusLabels[version.status] ?? humanizeCode(version.status)}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
-            {versions.map(v => (
-              <div key={v.id} className={`flex items-center gap-3 p-2 border ${v.id === currentMp.id ? 'border-primary/30 bg-primary/5' : 'border-border/10 bg-muted/5'}`}>
-                <Badge variant="outline" className={`font-mono text-[8px] uppercase ${v.id === currentMp.id ? 'border-primary/40 text-primary' : 'border-border/40 text-muted-foreground'}`}>
-                  v{v.version}
-                </Badge>
-                <span className="font-mono text-[9px] text-muted-foreground/70">
-                  {new Date(v.createdAt).toLocaleString()}
-                </span>
-                <div className="flex-1" />
-                <span className="font-mono text-[9px] text-muted-foreground/50 uppercase">
-                  {statusLabels[v.status] ? t(...statusLabels[v.status]) : v.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+        )}
+      </div>}
     </div>
   );
 }
@@ -390,6 +382,7 @@ function MasterplanPanel({
 
 export default function CampaignStrategyPage() {
   const t = useUiText();
+  const adoptionText = useAppI18n().campaignBriefingAdoption;
   const [, params] = useRoute("/campaigns/:id/strategy");
   const campaignId = params?.id ?? "";
   const [, setLocation] = useLocation();
@@ -529,11 +522,21 @@ export default function CampaignStrategyPage() {
     }),
     onSuccess: () => {
       setBriefingAdoptionOpen(false);
-      toast.success(t("Briefing vinculado e aprovado como cadastro do produto. Criando a versão do Masterplan…", "Briefing linked and approved as the product record. Creating the master plan version…", "Briefing vinculado y aprobado como registro del producto. Creando la versión del plan maestro…"));
+      toast.success(adoptionText.linked);
       void queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
       materializeMutation.mutate({ requestApproval: false });
     },
-    onError: (err: any) => toast.error(err?.data?.error || t("Não foi possível vincular o briefing existente.", "Could not link the existing briefing.", "No se pudo vincular el briefing existente."), { duration: 7000 }),
+    onError: (err: any) => {
+      const messages: Record<string, string> = {
+        CAMPAIGN_PRODUCT_ADOPTION_INVALID: adoptionText.activeSubscriptionRequired,
+        CAMPAIGN_PRODUCT_MISMATCH: adoptionText.productMismatch,
+        CAMPAIGN_SUBSCRIPTION_MISMATCH: adoptionText.subscriptionMismatch,
+        CAMPAIGN_BRIEFING_INCOMPLETE: adoptionText.briefingIncomplete,
+        INTAKE_INCOMPLETE: adoptionText.briefingIncomplete,
+        CAMPAIGN_INTAKE_PRODUCT_MISMATCH: adoptionText.intakeMismatch,
+      };
+      toast.error(messages[err?.data?.code] ?? adoptionText.failed, { duration: 7000 });
+    },
   });
 
   const completeTriggerStrategyMutation = useMutation({
@@ -866,7 +869,7 @@ export default function CampaignStrategyPage() {
             </div>
 
             <MasterplanPanel
-              currentMp={currentMp}
+              currentMp={currentMp ?? undefined}
               versions={mpVersions}
               onMaterialize={(req) => materializeMutation.mutate(req)}
               isMaterializing={materializeMutation.isPending}
@@ -964,7 +967,7 @@ export default function CampaignStrategyPage() {
             </div>
 
             <MasterplanPanel
-              currentMp={currentMp}
+              currentMp={currentMp ?? undefined}
               versions={mpVersions}
               onMaterialize={(req) => materializeMutation.mutate(req)}
               isMaterializing={materializeMutation.isPending}
@@ -1025,69 +1028,65 @@ export default function CampaignStrategyPage() {
                 <CheckCircle2 className="h-5 w-5" />
               </div>
               <DialogTitle className="font-mono text-base font-black uppercase tracking-wider text-foreground">
-                {t("Vincular briefing existente", "Link existing briefing", "Vincular briefing existente")}
+                {adoptionText.title}
               </DialogTitle>
               <DialogDescription className="pt-2 text-sm leading-relaxed text-muted-foreground">
-                {t(
-                  "O briefing que gerou esta estratégia será reaproveitado como cadastro oficial do produto. Escolha o produto/assinatura corretos e confirme o vínculo; o sistema registrará essa versão como aprovada antes de criar o Masterplan.",
-                  "The briefing that generated this strategy will be reused as the product's canonical record. Choose the correct product/subscription and confirm; the system will record this version as approved before creating the master plan.",
-                  "El briefing que generó esta estrategia se reutilizará como registro oficial del producto. Elige el producto/suscripción correctos y confirma el vínculo; el sistema registrará esta versión como aprobada antes de crear el plan maestro.",
-                )}
+                {adoptionText.description}
               </DialogDescription>
             </DialogHeader>
 
             {briefingAdoptionQuery.isLoading ? (
               <div className="mt-5 flex items-center gap-2 border border-cyan-400/15 bg-cyan-400/[0.03] p-3 text-xs text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />
-                {t("Localizando produtos e assinaturas ativos…", "Finding active products and subscriptions…", "Buscando productos y suscripciones activos…")}
+                {adoptionText.loading}
               </div>
             ) : briefingAdoptionQuery.isError ? (
               <div role="alert" className="mt-5 border border-red-400/25 bg-red-400/[0.05] p-3 text-xs leading-relaxed text-red-200/90">
-                {t("Não foi possível carregar os produtos disponíveis para esta campanha. Feche a janela e tente novamente.", "Could not load products available for this campaign. Close the dialog and try again.", "No se pudieron cargar los productos disponibles para esta campaña. Cierra la ventana e inténtalo de nuevo.")}
+                {adoptionText.loadError}
               </div>
             ) : (
               <div className="mt-5 space-y-4">
                 <div className="border border-white/8 bg-white/[0.02] p-3 text-xs leading-relaxed text-muted-foreground">
-                  <span className="font-mono text-[9px] uppercase tracking-wider text-cyan-200/80">{t("Briefing salvo", "Saved briefing", "Briefing guardado")}</span>
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-cyan-200/80">{adoptionText.savedBriefing}</span>
                   <div className="mt-1 text-foreground/85">
-                    {briefingAdoptionQuery.data?.briefingProductName ?? t("Produto não identificado no briefing", "Product not identified in the briefing", "Producto no identificado en el briefing")}
+                    {briefingAdoptionQuery.data?.briefingProductName ?? adoptionText.productUnknown}
                   </div>
                   <div className="mt-1 font-mono text-[9px] text-muted-foreground/60">
-                    {briefingAdoptionQuery.data?.briefingAnswerCount ?? 0} {t("respostas estruturadas encontradas", "structured answers found", "respuestas estructuradas encontradas")}
+                    {adoptionText.structuredAnswers.replace("{count}", String(briefingAdoptionQuery.data?.briefingAnswerCount ?? 0))}
                   </div>
                 </div>
 
                 {briefingAdoptionQuery.data?.candidates.length ? (
                   <label className="block space-y-1.5 text-xs">
-                    <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground/70">{t("Produto e assinatura ativa", "Product and active subscription", "Producto y suscripción activa")}</span>
+                    <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground/70">{adoptionText.selectionLabel}</span>
                     <select
                       value={selectedAdoptionSubscriptionId}
                       onChange={(event) => setSelectedAdoptionSubscriptionId(event.target.value)}
                       className="h-10 w-full border border-border/50 bg-background px-3 text-sm"
                     >
-                      <option value="">{t("Selecione o produto correto", "Select the correct product", "Selecciona el producto correcto")}</option>
+                      <option value="">{adoptionText.selectionPlaceholder}</option>
                       {briefingAdoptionQuery.data.candidates.map((candidate) => (
                         <option key={candidate.subscriptionId} value={candidate.subscriptionId}>
-                          {candidate.productName}{candidate.suggested ? ` · ${t("corresponde ao nome do briefing", "matches the briefing name", "coincide con el nombre del briefing")}` : ""} · {candidate.productKey}
+                          {candidate.productName}{candidate.suggested ? ` · ${adoptionText.matchesBriefing}` : ""} · {candidate.productKey}
                         </option>
                       ))}
                     </select>
                   </label>
                 ) : (
                   <div role="alert" className="border border-amber-300/20 bg-amber-300/[0.04] p-3 text-xs leading-relaxed text-amber-100/85">
-                    {t("Não encontrei uma assinatura ativa que possa ser vinculada. Verifique o produto/assinatura da campanha antes de continuar; o briefing permanece salvo.", "No active subscription is available to link. Check the campaign's product/subscription before continuing; the briefing remains saved.", "No encontré una suscripción activa para vincular. Revisa el producto/suscripción de la campaña antes de continuar; el briefing sigue guardado.")}
+                    {adoptionText.noActiveSubscription}
                   </div>
                 )}
 
                 <div className="border border-amber-300/15 bg-amber-300/[0.03] p-3 text-[11px] leading-relaxed text-muted-foreground">
-                  {t("Esta ação vincula o briefing existente ao produto selecionado e aprova essa cópia canônica para a campanha. Nenhum anúncio será criado e nenhuma verba será gasta.", "This links the existing briefing to the selected product and approves that canonical copy for this campaign. No ads will be created and no budget will be spent.", "Esta acción vincula el briefing existente al producto seleccionado y aprueba esa copia canónica para la campaña. No se crearán anuncios ni se gastará presupuesto.")}
+                  {adoptionText.confirmationNote}
                 </div>
               </div>
             )}
 
             <DialogFooter className="mt-6 flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button variant="outline" onClick={() => setBriefingAdoptionOpen(false)} disabled={adoptBriefingMutation.isPending || materializeMutation.isPending} className="rounded-none font-mono text-[10px] uppercase tracking-wider">
-                {t("Cancelar", "Cancel", "Cancelar")}
+                {adoptionText.cancel}
               </Button>
               <Button
                 onClick={() => adoptBriefingMutation.mutate(selectedAdoptionSubscriptionId)}
@@ -1095,8 +1094,8 @@ export default function CampaignStrategyPage() {
                 className="rounded-none bg-gradient-to-r from-cyan-600 to-blue-600 font-mono text-[10px] font-bold uppercase tracking-wider text-white hover:brightness-110"
               >
                 {adoptBriefingMutation.isPending || materializeMutation.isPending
-                  ? <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />{t("Vinculando…", "Linking…", "Vinculando…")}</>
-                  : <><CheckCircle2 className="mr-2 h-3.5 w-3.5" />{t("Vincular e continuar", "Link and continue", "Vincular y continuar")}</>}
+                  ? <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />{adoptionText.linking}</>
+                  : <><CheckCircle2 className="mr-2 h-3.5 w-3.5" />{adoptionText.confirm}</>}
               </Button>
             </DialogFooter>
           </div>
