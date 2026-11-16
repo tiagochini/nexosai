@@ -18,6 +18,7 @@ export const env = {
   ANTHROPIC_API_KEY: process.env["ANTHROPIC_API_KEY"] ?? "",
   ANTHROPIC_WORKSPACE_ID: process.env["ANTHROPIC_WORKSPACE_ID"]?.trim() ?? "",
   OPENAI_API_KEY: process.env["OPENAI_API_KEY"] ?? "",
+  XAI_API_KEY: process.env["XAI_API_KEY"] ?? "",
   NEXOS_OPENAI: process.env["NEXOS_OPENAI"] ?? "",
   GEMINI_API_KEY: process.env["GEMINI_API_KEY"] ?? "",
   AI_INTEGRATIONS_ANTHROPIC_BASE_URL:
@@ -117,7 +118,7 @@ export const env = {
   KAIROGEN_TOKEN_EXPIRES_AT: process.env["KAIROGEN_TOKEN_EXPIRES_AT"] ?? "",
   KAIROGEN_IMAGE_MODEL: process.env["KAIROGEN_IMAGE_MODEL"] ?? "nano-banana-2",
   KAIROGEN_VIDEO_MODEL: process.env["KAIROGEN_VIDEO_MODEL"] ?? "wan-2-6",
-  KAIROGEN_MEDIA_HOSTS: process.env["KAIROGEN_MEDIA_HOSTS"] ?? "kairogen.ai,storage.googleapis.com,replicate.delivery,fal.media",
+  KAIROGEN_MEDIA_HOSTS: process.env["KAIROGEN_MEDIA_HOSTS"] ?? "kairogen.ai,storage.googleapis.com,replicate.delivery,fal.media,runwayml.com,heygen.ai",
   // Runway ML — text/image → video (Gen-3 Alpha). https://dev.runwayml.com
   RUNWAY_API_KEY: process.env["RUNWAY_API_KEY"] ?? "",
   RUNWAY_API_VERSION: process.env["RUNWAY_API_VERSION"] ?? "2024-11-06",

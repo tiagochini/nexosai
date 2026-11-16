@@ -1,0 +1,18 @@
+
+  artifacts\api-server\dist\index.mjs                  14.7mb
+  artifacts\api-server\dist\pino-worker.mjs           153.1kb
+  artifacts\api-server\dist\pino-file.mjs             141.8kb
+  artifacts\api-server\dist\pino-pretty.mjs           114.8kb
+  artifacts\api-server\dist\thread-stream-worker.mjs    7.3kb
+  ...and 5 more output files...
+
+Done in 1187ms
+[2m18:43:44[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/me[39m
+Error: connect ECONNREFUSED 127.0.0.1:8090
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1645:16)
+[2m18:43:44[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/workspaces[39m
+Error: connect ECONNREFUSED 127.0.0.1:8090
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1645:16)
+[2m18:43:44[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/billing/access[39m
+Error: connect ECONNREFUSED 127.0.0.1:8090
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1645:16)

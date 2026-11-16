@@ -66,10 +66,41 @@ export async function generateCreativeImage(prompt: string, format: string, qual
   const landscape = format === "banner";
   const portrait = format === "stories" || format === "feed_portrait";
   const size = landscape ? "1536x1024" : portrait ? "1024x1536" : "1024x1024";
+  const aspectRatio = landscape ? "3:2" : portrait ? "2:3" : "1:1";
   const fullPrompt = `${prompt}. IMPORTANT: No text, words, letters, or numbers anywhere in the image. Pure visual composition only.`;
   const attempts: ImageAttempt[] = [];
+  if (env.XAI_API_KEY) attempts.push({ provider: "xai", model: "grok-imagine-image-2.0", run: async () => {
+    const response = await fetch("https://api.x.ai/v1/images/generations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.XAI_API_KEY}` },
+      body: JSON.stringify({
+        model: "grok-imagine-image-2.0",
+        prompt: fullPrompt,
+        n: 1,
+        aspect_ratio: aspectRatio,
+        quality: quality === "hd" ? "medium" : "low",
+        response_format: "b64_json",
+      }),
+      signal: AbortSignal.timeout(90_000),
+    });
+    const data = await response.json() as {
+      data?: { b64_json?: string; mime_type?: string }[];
+      error?: { code?: string; type?: string };
+    };
+    if (!response.ok) {
+      const upstreamCode = data.error?.code ?? data.error?.type;
+      if (upstreamCode && /safety|policy|moderation/i.test(upstreamCode)) {
+        throw Object.assign(new Error("XAI_IMAGE_SAFETY_BLOCKED"), { code: "IMAGE_SAFETY_BLOCKED", status: response.status });
+      }
+      throw Object.assign(new Error("XAI_IMAGE_REQUEST_FAILED"), { status: response.status });
+    }
+    const result = data.data?.[0];
+    const mimeType = result?.mime_type?.toLowerCase();
+    if (!result?.b64_json || !["image/jpeg", "image/png", "image/webp"].includes(mimeType ?? "")) return "";
+    return `data:${mimeType};base64,${result.b64_json}`;
+  } });
   if (kairogenConfigured()) attempts.push({ provider: "kairogen", model: env.KAIROGEN_IMAGE_MODEL,
-    run: () => generateKairogenImage(fullPrompt, landscape ? "3:2" : portrait ? "2:3" : "1:1", quality) });
+    run: () => generateKairogenImage(fullPrompt, aspectRatio, quality) });
   const addOpenAI = (apiKey: string, baseURL?: string) => {
     attempts.push({ provider: baseURL ? "openai-integration" : "openai", model: "gpt-image-1", run: async () => {
       const client = new OpenAI({ apiKey, baseURL, timeout: 90_000, maxRetries: 0 });

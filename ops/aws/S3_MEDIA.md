@@ -52,7 +52,8 @@ cadeia padrão de credenciais AWS; na EC2, isso deve resolver para a role
 As chaves lógicas já utilizadas pela aplicação são armazenadas sob `media/`
 para respeitar o escopo da role. O adaptador cobre uploads, leitura com Range,
 metadados, listagem, URLs assinadas e exclusão nos fluxos que já o utilizam
-(gravações, amostras privadas, mídia de presença e produção/edição de vídeo).
+(gravações, amostras privadas, mídia de presença, criativos de campanha e
+produção/edição de vídeo).
 Em desenvolvimento local e testes, os mesmos fluxos usam disco; configure
 `NEXOS_LOCAL_MEDIA_DIR` para escolher a pasta de desenvolvimento. Os testes que
 definem `NATIVE_MEDIA_TEST_STORAGE_DIR` ficam isolados nessa pasta. O staging
@@ -62,11 +63,20 @@ Isso não migra automaticamente objetos antigos que ainda estejam em GCS, nem
 substitui as verificações de autorização e isolamento por workspace feitas pela
 API. Configure `AWS_DEFAULT_REGION=us-east-2` e
 `NEXOS_MEDIA_S3_BUCKET=nexos-467626281008-us-east-2-an` no ambiente da API de
-produção antes de ativar os fluxos S3. As imagens geradas como data URLs e
-qualquer fluxo de upload fora desse adaptador ainda precisam de integração
-própria.
+produção. Novas imagens de `campaign_creatives` e vídeos de `video_projects`
+são enviados ao adaptador após a geração; as colunas/JSON guardam a chave lógica
+e não o base64 ou a URL temporária do provedor. As rotas autenticadas entregam
+os bytes de volta à interface. Em publicação externa, a API cria uma URL
+assinada curta a partir da chave. Em desenvolvimento e homologação local, os
+arquivos ficam em `NEXOS_LOCAL_MEDIA_DIR` ou, no Windows, por padrão em
+`%LOCALAPPDATA%/NexOS/media`.
 
-Para completar a integração de ativos de campanha ponta a ponta:
+Ativos antigos que ainda estejam como data URL/URL externa e registros em outras
+tabelas (por exemplo, `campaign_assets`) não são migrados por essa mudança.
+Ainda precisam de migração ou de integração específica antes que a origem antiga
+seja removida.
+
+Para completar a integração dos demais ativos de campanha ponta a ponta:
 
 1. Padronizar as chaves geradas pelo servidor no formato
    `media/{workspaceId}/{campaignId}/{assetId}/original.ext`; conferir posse da

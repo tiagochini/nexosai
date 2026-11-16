@@ -26,6 +26,7 @@ import { NotFoundError, AppError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
 import { env } from "../../lib/env.js";
 import type { Logger } from "pino";
+import { isStoredVideoKey, persistProviderVideo } from "./video-asset-storage.js";
 
 const log = logger.child({ module: "video-production" });
 
@@ -91,6 +92,22 @@ async function getProject(workspaceId: string, projectId: string): Promise<Video
     .limit(1);
   if (!project) throw new NotFoundError("Projeto de vídeo");
   return project;
+}
+
+/** Replace internal storage keys with workspace-authenticated API URLs for UI playback. */
+export function presentVideoProject(project: VideoProject): VideoProject {
+  return {
+    ...project,
+    storyboard: (project.storyboard as VideoScene[]).map((scene) => ({
+      ...scene,
+      clipUrl: isStoredVideoKey(scene.clipUrl)
+        ? `/api/video-projects/${project.id}/media/${encodeURIComponent(scene.id)}/preview`
+        : scene.clipUrl,
+      clipUrlHd: isStoredVideoKey(scene.clipUrlHd)
+        ? `/api/video-projects/${project.id}/media/${encodeURIComponent(scene.id)}/final`
+        : scene.clipUrlHd,
+    })),
+  };
 }
 
 // ─── Create ──────────────────────────────────────────────────────────────────
@@ -731,10 +748,14 @@ export async function generatePreviewClips(
         if (result.status === "failed" || result.status === "avatar_still_processing" || result.status === "avatar_consent_required") {
           return { ...scene, clipStatus: "failed" as const, notes: result.error ?? result.setupInstructions ?? `Generation ${result.status}` };
         }
+        let clipUrl = result.clipUrl;
+        if (result.status === "ready" && clipUrl && config.executionEngine !== "native") {
+          clipUrl = await persistProviderVideo(clipUrl, workspaceId, projectId, scene.id, "preview", project.campaignId);
+        }
         return {
           ...scene,
           clipStatus: result.status === "ready" ? "ready" as const : "generating" as const,
-          clipUrl: result.clipUrl,
+          clipUrl,
           notes: result.jobId ? `job:${result.provider}:${result.jobId}` : undefined,
         };
       } catch (err) {
@@ -875,10 +896,14 @@ export async function generateFinalClips(
         if (result.status === "failed" || result.status === "provider_not_configured" || result.status === "avatar_still_processing" || result.status === "avatar_consent_required") {
           return { ...scene, clipStatus: "failed" as const, notes: result.error ?? result.setupInstructions ?? `Generation ${result.status}` };
         }
+        let clipUrl = result.clipUrl;
+        if (result.status === "ready" && clipUrl && config.executionEngine !== "native") {
+          clipUrl = await persistProviderVideo(clipUrl, workspaceId, projectId, scene.id, "final", project.campaignId);
+        }
         return {
           ...scene,
           clipStatus: result.status === "ready" ? "ready" as const : "generating" as const,
-          clipUrlHd: result.clipUrl,
+          clipUrlHd: clipUrl,
           notes: result.jobId ? `job:${result.provider}:${result.jobId}` : undefined,
         };
       } catch (err) {
@@ -923,7 +948,7 @@ export async function pollClipJobs(workspaceId: string, projectId: string): Prom
         if (native.status === "succeeded") {
           const output = (native.outputObjects as Array<{ key: string }>)[0];
           if (!output) return { ...scene, clipStatus: "failed" as const, notes: "Native job completed without verified output" };
-          const isHd = scene.clipUrlHd !== undefined;
+          const isHd = project.status === "final_generating" || scene.clipUrlHd !== undefined;
           return { ...scene, clipStatus: "ready" as const, [isHd ? "clipUrlHd" : "clipUrl"]: output.key, notes: undefined };
         }
         if (native.status === "failed" || native.status === "cancelled") return { ...scene, clipStatus: "failed" as const, notes: native.errorMessage ?? native.status };
@@ -931,11 +956,14 @@ export async function pollClipJobs(workspaceId: string, projectId: string): Prom
       }
       const result = await pollVideoJob(jobId, provider);
       if (result.status === "ready") {
-        const isHd = scene.clipUrlHd !== undefined;
+        const isHd = project.status === "final_generating" || scene.clipUrlHd !== undefined;
+        const clipUrl = result.clipUrl
+          ? await persistProviderVideo(result.clipUrl, workspaceId, projectId, scene.id, isHd ? "final" : "preview", project.campaignId)
+          : undefined;
         return {
           ...scene,
           clipStatus: "ready" as const,
-          [isHd ? "clipUrlHd" : "clipUrl"]: result.clipUrl,
+          [isHd ? "clipUrlHd" : "clipUrl"]: clipUrl,
           notes: undefined,
         };
       }

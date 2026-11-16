@@ -175,6 +175,15 @@ export async function getCurrentMasterplan(workspaceId: string, campaignId: stri
   return row;
 }
 
+export async function getTrialMasterplanModuleReviews(workspaceId: string, campaignId: string) {
+  const [campaign] = await db.select({ strategyData: campaignsTable.strategyData, brainData: campaignsTable.brainData })
+    .from(campaignsTable).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).limit(1);
+  if (!campaign) throw new NotFoundError("Campaign");
+  const saved = object(object(campaign.brainData)["masterplanReview"]);
+  if (saved["strategyHash"] !== deterministicHash(campaign.strategyData)) return {};
+  return object(saved["moduleReviews"]);
+}
+
 /** Persists review decisions against the exact Master Plan version being viewed. */
 export async function updateMasterplanModuleReview(
   workspaceId: string,
@@ -213,6 +222,139 @@ export async function updateMasterplanModuleReview(
     data: { versionId, moduleId, status },
   });
   return updated.moduleReviews;
+}
+
+/** Saves trial checklist reviews on the campaign until a paid Masterplan version exists. */
+export async function updateTrialMasterplanModuleReview(
+  workspaceId: string,
+  campaignId: string,
+  moduleId: MasterplanModuleReviewId,
+  status: MasterplanModuleReviewStatus,
+  actorId: string,
+) {
+  let moduleReviews: Record<string, MasterplanModuleReviewStatus> = {};
+  await db.transaction(async (tx) => {
+    const [campaign] = await tx.select().from(campaignsTable).where(and(
+      eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId),
+    )).for("update").limit(1);
+    if (!campaign) throw new NotFoundError("Campaign");
+
+    const brainData = object(campaign.brainData);
+    const reviewRecord = object(brainData["masterplanReview"]);
+    const strategyHash = deterministicHash(campaign.strategyData);
+    const existing = reviewRecord["strategyHash"] === strategyHash ? object(reviewRecord["moduleReviews"]) : {};
+    moduleReviews = { ...existing, [moduleId]: status } as Record<string, MasterplanModuleReviewStatus>;
+    await tx.update(campaignsTable).set({
+      brainData: { ...brainData, masterplanReview: { strategyHash, moduleReviews } },
+      updatedAt: new Date(),
+    }).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
+    await tx.insert(auditLogsTable).values({
+      workspaceId, campaignId, action: "masterplan.trial_module_review_updated", actor: actorId,
+      data: { moduleId, status, strategyHash },
+    });
+  });
+  return moduleReviews;
+}
+
+/** Atomically approves every strategy checklist after validating the latest plan. */
+export async function approveAllMasterplanModuleReviews(
+  workspaceId: string,
+  campaignId: string,
+  versionId: string,
+  actorId: string,
+) {
+  let moduleReviews: unknown;
+  await db.transaction(async (tx) => {
+    const [campaign] = await tx.select({ strategyData: campaignsTable.strategyData })
+      .from(campaignsTable).where(and(
+        eq(campaignsTable.id, campaignId),
+        eq(campaignsTable.workspaceId, workspaceId),
+      )).for("update").limit(1);
+    if (!campaign) throw new NotFoundError("Campaign");
+
+    const [current] = await tx.select().from(masterplanVersionsTable).where(and(
+      eq(masterplanVersionsTable.workspaceId, workspaceId),
+      eq(masterplanVersionsTable.campaignId, campaignId),
+    )).orderBy(desc(masterplanVersionsTable.version)).limit(1).for("update");
+    if (!current) throw new NotFoundError("Masterplan");
+    if (current.id !== versionId) {
+      throw new AppError(409, "Esta versão do Master Plan não está mais disponível para revisão. Atualize a página.", "MASTERPLAN_REVIEW_VERSION_STALE");
+    }
+    if (current.status === "superseded") {
+      throw new AppError(409, "Esta versão do Master Plan foi substituída. Revise a versão atual.", "MASTERPLAN_REVIEW_VERSION_SUPERSEDED");
+    }
+
+    const pending = await tx.select({ id: agentClarificationRequestsTable.id, question: agentClarificationRequestsTable.question })
+      .from(agentClarificationRequestsTable).where(and(
+        eq(agentClarificationRequestsTable.workspaceId, workspaceId),
+        eq(agentClarificationRequestsTable.campaignId, campaignId),
+        eq(agentClarificationRequestsTable.status, "pending"),
+      ));
+    const readiness = calculateMasterplanReadiness(campaign.strategyData, pending);
+    if (readiness.status !== "ready") {
+      throw new AppError(428, "Há falhas ou pendências na geração do Masterplan. Corrija-as antes de aprovar todos os módulos.", "MASTERPLAN_NOT_READY", { blockers: readiness.blockers, score: readiness.score });
+    }
+
+    const approvedReviews = Object.fromEntries(MASTERPLAN_MODULE_REVIEW_IDS.map((moduleId) => [moduleId, "approved"]));
+    const [updated] = await tx.update(masterplanVersionsTable).set({
+      moduleReviews: sql`coalesce(${masterplanVersionsTable.moduleReviews}, '{}'::jsonb) || ${JSON.stringify(approvedReviews)}::jsonb`,
+    }).where(and(
+      eq(masterplanVersionsTable.id, versionId),
+      eq(masterplanVersionsTable.workspaceId, workspaceId),
+      eq(masterplanVersionsTable.campaignId, campaignId),
+      ne(masterplanVersionsTable.status, "superseded"),
+    )).returning({ moduleReviews: masterplanVersionsTable.moduleReviews });
+    if (!updated) throw new AppError(409, "Esta versão do Master Plan não está mais disponível para revisão. Atualize a página.", "MASTERPLAN_REVIEW_VERSION_STALE");
+    moduleReviews = updated.moduleReviews;
+
+    await tx.insert(auditLogsTable).values({
+      workspaceId,
+      campaignId,
+      action: "masterplan.module_reviews_approved_all",
+      actor: actorId,
+      data: { versionId, moduleIds: MASTERPLAN_MODULE_REVIEW_IDS },
+    });
+  });
+  return moduleReviews;
+}
+
+/** Atomically saves trial approvals without creating an official Masterplan version. */
+export async function approveAllTrialMasterplanModuleReviews(
+  workspaceId: string,
+  campaignId: string,
+  actorId: string,
+) {
+  let moduleReviews: Record<string, "approved"> = {};
+  await db.transaction(async (tx) => {
+    const [campaign] = await tx.select().from(campaignsTable).where(and(
+      eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId),
+    )).for("update").limit(1);
+    if (!campaign) throw new NotFoundError("Campaign");
+
+    const pending = await tx.select({ id: agentClarificationRequestsTable.id, question: agentClarificationRequestsTable.question })
+      .from(agentClarificationRequestsTable).where(and(
+        eq(agentClarificationRequestsTable.workspaceId, workspaceId),
+        eq(agentClarificationRequestsTable.campaignId, campaignId),
+        eq(agentClarificationRequestsTable.status, "pending"),
+      ));
+    const readiness = calculateMasterplanReadiness(campaign.strategyData, pending);
+    if (readiness.status !== "ready") {
+      throw new AppError(428, "Há falhas ou pendências na geração do Masterplan. Corrija-as antes de aprovar todos os módulos.", "MASTERPLAN_NOT_READY", { blockers: readiness.blockers, score: readiness.score });
+    }
+
+    const strategyHash = deterministicHash(campaign.strategyData);
+    moduleReviews = Object.fromEntries(MASTERPLAN_MODULE_REVIEW_IDS.map((moduleId) => [moduleId, "approved"])) as Record<string, "approved">;
+    const brainData = object(campaign.brainData);
+    await tx.update(campaignsTable).set({
+      brainData: { ...brainData, masterplanReview: { strategyHash, moduleReviews } },
+      updatedAt: new Date(),
+    }).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
+    await tx.insert(auditLogsTable).values({
+      workspaceId, campaignId, action: "masterplan.trial_module_reviews_approved_all", actor: actorId,
+      data: { moduleIds: MASTERPLAN_MODULE_REVIEW_IDS, strategyHash },
+    });
+  });
+  return moduleReviews;
 }
 
 export async function materializeMasterplan(workspaceId: string, campaignId: string, actorId?: string, requestApproval = false) {
@@ -264,6 +406,11 @@ export async function materializeMasterplan(workspaceId: string, campaignId: str
   const { blockers, score, status: readinessStatus } = readiness;
   const contentHash = deterministicHash(snapshot);
   const contextFingerprint = deterministicHash({ contentHash, readinessScore: score, blockers });
+  const savedReview = object(object(campaign.brainData)["masterplanReview"]);
+  const savedReviewHash = savedReview["strategyHash"];
+  const inheritedModuleReviews = savedReviewHash === deterministicHash(campaign.strategyData)
+    ? object(savedReview["moduleReviews"]) as Record<string, MasterplanModuleReviewStatus>
+    : {} as Record<string, MasterplanModuleReviewStatus>;
   const [latest] = await db.select({ version: masterplanVersionsTable.version, contentHash: masterplanVersionsTable.contentHash })
     .from(masterplanVersionsTable).where(and(eq(masterplanVersionsTable.workspaceId, workspaceId), eq(masterplanVersionsTable.campaignId, campaignId)))
     .orderBy(desc(masterplanVersionsTable.version)).limit(1);
@@ -283,6 +430,7 @@ export async function materializeMasterplan(workspaceId: string, campaignId: str
   const [created] = await db.insert(masterplanVersionsTable).values({
     workspaceId, campaignId, version: (latest?.version ?? 0) + 1, status: requestApproval ? "pending_approval" : "draft",
     snapshot, contentHash, contextFingerprint, readinessScore: score, readinessStatus, readinessBlockers: blockers,
+    moduleReviews: inheritedModuleReviews,
     autonomyContract: PRODUCT_AUTONOMY_CONTRACT, allowedActions: ["generate_content", "launch"],
     requiredApprovals: ["masterplan_approval"], createdByUserId: actorId,
     commercialSubscriptionId: boundSubscriptionId,

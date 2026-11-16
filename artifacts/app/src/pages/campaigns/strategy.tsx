@@ -2,8 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useRoute, useLocation } from "wouter";
 import {
   useGetCampaign,
-  useExecuteCampaign,
-  CampaignExecuteInputPhase,
   getGetCampaignQueryKey,
 } from "@workspace/api-client-react";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
@@ -467,7 +465,7 @@ export default function CampaignStrategyPage() {
   // ── Masterplan Versions ───────────────────────────────────────────────────
   const isAnalyzingStatus = campaign?.status === "analyzing";
 
-  const { data: currentMpRes, isLoading: isMpLoading, isError: isMpError } = useQuery<{ masterplan: MasterplanVersion | null }>({
+  const { data: currentMpRes, isLoading: isMpLoading, isError: isMpError } = useQuery<{ masterplan: MasterplanVersion | null; moduleReviews?: Record<string, "pending" | "approved" | "flagged" | "rejected"> }>({
     queryKey: ["/api/campaigns", campaignId, "masterplan", "current"],
     queryFn: () => customFetch(`/api/campaigns/${campaignId}/masterplan/current`),
     enabled: !!campaignId && !isAnalyzingStatus && campaign?.status !== "draft" && campaign?.status !== "intake",
@@ -477,17 +475,18 @@ export default function CampaignStrategyPage() {
 
   const moduleReviewMutation = useMutation({
     mutationFn: ({ moduleId, status }: { moduleId: string; status: "pending" | "approved" | "flagged" | "rejected" }) => {
-      if (!currentMp?.id) throw new Error(t("Master Plan indisponível para revisão.", "Master plan is not available for review.", "El plan maestro no está disponible para revisión."));
+      if (!currentMp?.id && !trialAccess) throw new Error(t("Master Plan indisponível para revisão.", "Master plan is not available for review.", "El plan maestro no está disponible para revisión."));
       return customFetch(`/api/campaigns/${campaignId}/masterplan/reviews/${moduleId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ versionId: currentMp.id, status }),
+        body: JSON.stringify({ ...(currentMp?.id ? { versionId: currentMp.id } : {}), status }),
       });
     },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan", "current"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan", "versions"] }),
+        queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) }),
       ]);
     },
     onError: async (error: any) => {
@@ -505,6 +504,37 @@ export default function CampaignStrategyPage() {
         return;
       }
       toast.error(error?.data?.error || error?.message || t("Não foi possível salvar a revisão.", "Could not save the review.", "No se pudo guardar la revisión."));
+    },
+  });
+
+  const approveAllModuleReviewsMutation = useMutation({
+    mutationFn: () => {
+      if (!currentMp?.id && !trialAccess) throw new Error(t("Master Plan indisponível para revisão.", "Master plan is not available for review.", "El plan maestro no está disponible para revisión."));
+      return customFetch(`/api/campaigns/${campaignId}/masterplan/reviews/approve-all`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(currentMp?.id ? { versionId: currentMp.id } : {}),
+      });
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan", "current"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan", "versions"] }),
+        queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) }),
+      ]);
+      toast.success(t("Todos os módulos foram aprovados.", "All modules have been approved.", "Todos los módulos han sido aprobados."));
+    },
+    onError: async (error: any) => {
+      if (error?.data?.code === "MASTERPLAN_REVIEW_VERSION_STALE") {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan", "current"] }),
+          queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan", "versions"] }),
+          queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) }),
+        ]);
+        toast.info(t("O Master Plan mudou. Carreguei a versão atual; confira o conteúdo e tente novamente.", "The Master Plan changed. I loaded the current version; review it and try again.", "El Master Plan cambió. Cargué la versión actual; revísala y vuelve a intentarlo."), { duration: 8000 });
+        return;
+      }
+      toast.error(error?.data?.error || error?.message || t("Não foi possível aprovar os módulos.", "Could not approve the modules.", "No se pudieron aprobar los módulos."));
     },
   });
 
@@ -618,32 +648,23 @@ export default function CampaignStrategyPage() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan"] });
-      executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } });
+      queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
+      toast.success(t("Masterplan aprovado. A prévia do cronograma está na próxima tela.", "Master plan approved. The schedule preview is on the next screen.", "Plan maestro aprobado. La vista previa del cronograma está en la siguiente pantalla."));
+      setLocation(`/campaigns/${campaignId}`);
     },
     onError: (err: any) => {
       toast.error(err?.data?.error || t("Falha ao aprovar masterplan.", "Failed to approve master plan.", "No se pudo aprobar el plan maestro."));
     }
   });
 
-  // ── Execute mutation (approve → generate content) ──────────────────────────
-  const executeMutation = useExecuteCampaign({
-    mutation: {
-      onSuccess: () => {
-        toast.success(t("Aprovado! Gerando as peças de conteúdo...", "Approved! Generating content...", "¡Aprobado! Generando las piezas de contenido..."));
-        queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
-        setLocation(`/campaigns/${campaignId}`);
-      },
-      onError: (err: unknown) => {
-        type ErrBody = { error?: string; code?: string };
-        const msg = (err as { data?: ErrBody })?.data?.error ?? t("Falha ao iniciar geração.", "Failed to start generation.", "No se pudo iniciar la generación.");
-        toast.error(msg, { duration: 6000 });
-      },
-    },
-  });
 
   const handleApprove = () => {
     if (trialAccess) {
-      toast.info(t("A aprovação e a geração de conteúdo ficam disponíveis com uma licença NexOS.", "Approval and content generation are available with a NexOS license.", "La aprobación y la generación de contenido están disponibles con una licencia NexOS."));
+      if (!allChecklistsApproved) {
+        toast.error(t("Aprove os 10 checklists para abrir a prévia do cronograma.", "Approve all 10 checklists to open the schedule preview.", "Aprueba los 10 checklists para abrir la vista previa del cronograma."));
+        return;
+      }
+      setLocation(`/campaigns/${campaignId}`);
       return;
     }
     if (currentMp && currentMp.readinessStatus !== "ready") {
@@ -656,13 +677,14 @@ export default function CampaignStrategyPage() {
     }
     if (currentMp && currentMp.status !== "approved") {
       approveMpMutation.mutate({ version: currentMp.version });
-    } else {
-      executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } });
+    } else if (currentMp?.status === "approved") {
+      setLocation(`/campaigns/${campaignId}`);
     }
   };
-  const isApproving = approveMpMutation.isPending || executeMutation.isPending;
+  const isApproving = approveMpMutation.isPending;
   const strategyCanAdvance = currentMp?.readinessStatus === "ready";
-  const approvedChecklistCount = REQUIRED_MASTERPLAN_REVIEWS.filter((moduleId) => currentMp?.moduleReviews?.[moduleId] === "approved").length;
+  const moduleReviewStatuses = currentMp?.moduleReviews ?? currentMpRes?.moduleReviews ?? {};
+  const approvedChecklistCount = REQUIRED_MASTERPLAN_REVIEWS.filter((moduleId) => moduleReviewStatuses[moduleId] === "approved").length;
   const allChecklistsApproved = approvedChecklistCount === REQUIRED_MASTERPLAN_REVIEWS.length;
   const advanceBlockers = (currentMp?.readinessBlockers ?? [])
     .map((blocker) => typeof blocker === "string" ? blocker : blocker.message)
@@ -905,14 +927,14 @@ export default function CampaignStrategyPage() {
                 </div>
                 <Button
                   onClick={handleApprove}
-                  disabled={trialAccess || isApproving || !strategyCanAdvance || !allChecklistsApproved}
+                  disabled={isApproving || (trialAccess ? !allChecklistsApproved : !strategyCanAdvance || !allChecklistsApproved)}
                   className="h-11 w-full gap-2 rounded-none px-5 font-mono text-[10px] font-black uppercase tracking-[0.12em] btn-weapon-primary sm:w-auto sm:min-w-[250px]"
                 >
                   {trialAccess
-                    ? <><CheckCheck className="h-3.5 w-3.5" /> {t("Disponível com licença", "Available with a license", "Disponible con licencia")}</>
+                    ? <><ChevronRight className="h-3.5 w-3.5" /> {t("Ver prévia do cronograma", "View schedule preview", "Ver vista previa del cronograma")}</>
                     : isApproving
                     ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("Gerando...", "Generating...", "Generando...")}</>
-                    : <><CheckCheck className="h-3.5 w-3.5" /> {t("Aprovar e gerar conteúdo", "Approve and generate content", "Aprobar y generar contenido")}</>}
+                    : <><CheckCheck className="h-3.5 w-3.5" /> {t("Aprovar Masterplan", "Approve master plan", "Aprobar plan maestro")}</>}
                 </Button>
               </div>
             </div>
@@ -931,8 +953,12 @@ export default function CampaignStrategyPage() {
                 key={currentMp?.id ?? "current-masterplan"}
                 strategyD={strategyD}
                 ins={strategyInsights}
-                reviewStatuses={currentMp?.moduleReviews}
+                reviewStatuses={moduleReviewStatuses}
                 onReviewStatusChange={(moduleId, status) => moduleReviewMutation.mutateAsync({ moduleId, status })}
+                onApproveAll={() => approveAllModuleReviewsMutation.mutate()}
+                canApproveAll={!trialAccess && currentMp?.readinessStatus === "ready" && currentMp.status !== "superseded"}
+                approvingAll={approveAllModuleReviewsMutation.isPending}
+                trialReviewMode={trialAccess}
                 campaignId={campaignId}
                 campaignTitle={campaignTitle}
                 track={track}
@@ -982,14 +1008,14 @@ export default function CampaignStrategyPage() {
                 </div>
                 <Button
                   onClick={handleApprove}
-                  disabled={trialAccess || isApproving || !strategyCanAdvance || !allChecklistsApproved}
+                  disabled={isApproving || (trialAccess ? !allChecklistsApproved : !strategyCanAdvance || !allChecklistsApproved)}
                   className="h-11 w-full gap-2 rounded-none px-5 font-mono text-[10px] font-black uppercase tracking-[0.12em] btn-weapon-primary sm:w-auto sm:min-w-[250px]"
                 >
                   {trialAccess
-                    ? <><CheckCheck className="h-3.5 w-3.5" /> {t("Disponível com licença", "Available with a license", "Disponible con licencia")}</>
+                    ? <><ChevronRight className="h-3.5 w-3.5" /> {t("Ver prévia do cronograma", "View schedule preview", "Ver vista previa del cronograma")}</>
                     : isApproving
                     ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("Gerando...", "Generating...", "Generando...")}</>
-                    : <><CheckCheck className="h-3.5 w-3.5" /> {t("Aprovar e gerar conteúdo", "Approve and generate content", "Aprobar y generar contenido")}</>}
+                    : <><CheckCheck className="h-3.5 w-3.5" /> {t("Aprovar Masterplan", "Approve master plan", "Aprobar plan maestro")}</>}
                 </Button>
               </div>
             )}

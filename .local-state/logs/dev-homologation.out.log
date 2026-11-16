@@ -1,0 +1,637 @@
+Compilando a API...
+NexOS homologação: http://localhost:8091 (API: http://localhost:8090/api, Academy: http://localhost:8091/nexos-academy/)
+
+  [32m[1mVITE[22m v7.3.7[39m  [2mready in [0m[1m442[22m[2m[0m ms[22m
+
+
+  [32m[1mVITE[22m v7.3.7[39m  [2mready in [0m[1m439[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m8092[22m/nexos-academy/[39m
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m8091[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://26.74.82.110:[1m8092[22m/nexos-academy/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://26.74.82.110:[1m8091[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.18.47:[1m8092[22m/nexos-academy/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.18.47:[1m8091[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://172.31.112.1:[1m8092[22m/nexos-academy/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://172.31.112.1:[1m8091[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[18:43:43.026] [32mINFO[39m (27916): [36m[BUILD_TAG] api-server booting[39m
+    [35mbuildTag[39m: "NEXOS_VIDEO_STORAGE_V1"
+    [35mbuiltAt[39m: "2026-08-13T20:10:22Z"
+[18:43:43.027] [32mINFO[39m (27916): [36mBoot DB connection info[39m
+    [35m[C0.6.2][39m: true
+    [35mdbHost[39m: "[REDACTED]"
+    [35mdbName[39m: "[REDACTED]"
+    [35mdbUser[39m: "[REDACTED]"
+[18:43:43.028] [32mINFO[39m (27916): [36mWebSocket (Socket.io) server initialized[39m
+[18:43:43.032] [32mINFO[39m (27916): [36mQueue initialized[39m
+    [35mqueue[39m: "homologation-lwjkykbjynmqnixeoldd-campaign-orchestration"
+[18:43:43.032] [32mINFO[39m (27916): [36mQueue initialized[39m
+    [35mqueue[39m: "homologation-lwjkykbjynmqnixeoldd-agent-execution"
+[18:43:43.032] [32mINFO[39m (27916): [36mQueue initialized[39m
+    [35mqueue[39m: "homologation-lwjkykbjynmqnixeoldd-content-generation"
+[18:43:43.032] [32mINFO[39m (27916): [36mJob queues initialized[39m
+[18:43:44.948] [32mINFO[39m (27916): [36mOrchestration worker initialized[39m
+[18:43:44.949] [32mINFO[39m (27916): [36mSocial publishing scheduler started (60s poll)[39m
+[18:43:44.949] [32mINFO[39m (27916): [36mSocial metrics sync scheduler started (6h interval)[39m
+[18:43:44.949] [32mINFO[39m (27916): [36mPaid-media scheduler started[39m
+[18:43:44.949] [32mINFO[39m (27916): [36mMeta retry watchdog started[39m
+    [35mcomponent[39m: "sequence-scheduler"
+    [35meveryMs[39m: 10000
+[18:43:44.950] [32mINFO[39m (27916): [36mSequence scheduler started via setInterval — Redis disabled or unavailable[39m
+    [35mcomponent[39m: "sequence-scheduler"
+    [35meveryMs[39m: 60000
+[18:43:44.950] [32mINFO[39m (27916): [36mLifecycle scheduler started[39m
+[18:43:44.950] [32mINFO[39m (27916): [36macademy-funnel: scheduler started (hourly tick)[39m
+[18:43:44.954] [32mINFO[39m (27916): [36mNexOS AI API Server listening[39m
+    [35mport[39m: 8090
+[18:43:47.121] [32mINFO[39m (27916): [36mRecording folders organized for all workspaces[39m
+    [35mtotal[39m: 8
+    [35morganized[39m: 8
+    [35mfailed[39m: 0
+[18:43:47.125] [32mINFO[39m (27916): [36mWebSocket client connected[39m
+    [35muserId[39m: "9d17d7bb-ccf7-46ed-87f6-0c30861c2984"
+[18:43:47.138] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "POST",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2095
+[18:43:47.196] [32mINFO[39m (27916): [36mWebSocket client disconnected[39m
+    [35muserId[39m: "9d17d7bb-ccf7-46ed-87f6-0c30861c2984"
+[18:43:47.566] [32mINFO[39m (27916): [36mWebSocket client connected[39m
+    [35muserId[39m: "9d17d7bb-ccf7-46ed-87f6-0c30861c2984"
+[18:43:47.640] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 3,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 1264
+[18:43:47.804] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 4,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 1427
+[18:43:48.155] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 7,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 1776
+[18:43:48.449] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 5,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 2071
+[18:43:48.713] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 2339
+[18:43:48.874] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 6,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 2495
+[18:43:50.452] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 9,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 1505
+[18:43:50.606] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 8,
+      "method": "POST",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 1659
+[18:43:51.564] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 10,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 900
+[18:43:53.227] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 11,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 1
+[18:45:50.512] [32mINFO[39m (27916): [36mWebSocket client disconnected[39m
+    [35muserId[39m: "9d17d7bb-ccf7-46ed-87f6-0c30861c2984"
+[18:45:50.734] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 12,
+      "method": "POST",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 204
+    }
+    [35mresponseTime[39m: 144
+[18:46:04.021] [32mINFO[39m (27916): [36mUser logged in[39m
+    [35mreq[39m: {
+      "id": 13,
+      "method": "POST",
+      "route": "[unmatched]"
+    }
+    [35muserId[39m: "837d33df-3ea3-4ec5-beae-b590624b2514"
+[18:46:04.192] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 13,
+      "method": "POST",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 722
+[18:46:04.914] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 16,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 298
+[18:46:05.018] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 17,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 396
+[18:46:05.041] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 19,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 411
+[18:46:05.051] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 20,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 418
+[18:46:05.449] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 15,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1006
+[18:46:05.628] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 14,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1351
+[18:46:05.749] [32mINFO[39m (27916): [36mWebSocket client connected[39m
+    [35muserId[39m: "837d33df-3ea3-4ec5-beae-b590624b2514"
+[18:46:05.766] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 18,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1137
+[18:46:05.801] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 21,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 285
+[18:46:05.812] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 22,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 283
+[18:46:06.130] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 24,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 286
+[18:46:06.140] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 25,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 291
+[18:46:07.152] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 23,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 1320
+[18:46:12.132] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 26,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 895
+[18:46:12.497] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 28,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 289
+[18:46:12.626] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 29,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 417
+[18:46:12.630] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 27,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 424
+[18:46:12.641] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 33,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 430
+[18:46:12.768] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 34,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 541
+[18:46:13.353] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 31,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1143
+[18:46:13.499] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 30,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 1290
+[18:46:13.785] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 32,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 1575
+[18:46:15.595] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 35,
+      "method": "POST",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 201
+    }
+    [35mresponseTime[39m: 1748
+[18:46:16.521] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 36,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 865
+[18:49:34.131] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 37,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 439
+[18:50:01.486] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 38,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 435
+[2m18:50:21[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/CampaignSchedulePreview.tsx[22m
+[18:50:21.990] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 39,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 433
+[2m18:55:40[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/CampaignSchedulePreview.tsx[22m
+[18:55:43.324] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 40,
+      "method": "POST",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1725
+[18:55:44.426] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 41,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 1025
+[2m18:55:53[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/CampaignSchedulePreview.tsx[22m
+[2m18:57:06[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/CampaignSchedulePreview.tsx[22m
+[18:57:08.423] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 42,
+      "method": "POST",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1807
+[18:57:09.554] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 43,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 1055
+[18:59:55.311] [32mINFO[39m (27916): [36mWebSocket client disconnected[39m
+    [35muserId[39m: "837d33df-3ea3-4ec5-beae-b590624b2514"
+[18:59:56.594] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 44,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 876
+[18:59:56.630] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 45,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 911
+[18:59:57.051] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 46,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 1311
+[18:59:57.584] [32mINFO[39m (27916): [36mWebSocket client connected[39m
+    [35muserId[39m: "837d33df-3ea3-4ec5-beae-b590624b2514"
+[18:59:57.708] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 47,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 427
+[18:59:57.721] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 48,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 438
+[18:59:57.742] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 51,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 446
+[18:59:57.854] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 52,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 556
+[18:59:57.862] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 54,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 403
+    }
+    [35mresponseTime[39m: 561
+[18:59:58.569] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 50,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 1278
+[18:59:58.715] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 53,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 1416
+[18:59:58.776] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 49,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 1488
+[19:00:00.354] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 55,
+      "method": "POST",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1502
+[19:00:01.746] [32mINFO[39m (27916): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 56,
+      "method": "GET",
+      "route": "[unmatched]"
+    }
+    [35mres[39m: {
+      "statusCode": 304
+    }
+    [35mresponseTime[39m: 1331

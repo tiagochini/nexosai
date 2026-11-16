@@ -15,6 +15,7 @@ import {
   type SocialMetrics,
 } from "@workspace/db";
 import { env } from "../../lib/env.js";
+import { getPresenceMediaSignedUrl } from "../../lib/gcs-recordings.js";
 import { AppError, NotFoundError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
 import { metaGraphFetch } from "../../lib/meta-graph.transport.js";
@@ -1303,6 +1304,23 @@ export async function publishPost(workspaceId: string, postId: string): Promise<
     throw new AppError(400, "Integração não autorizada", "INTEGRATION_ERROR");
   }
 
+  const providerPost = post.mediaUrls?.length
+    ? {
+        ...post,
+        mediaUrls: await Promise.all(post.mediaUrls.map(async (url) => {
+          const workspacePrefixes = [
+            `campaigns/${workspaceId}/`,
+            `video-projects/${workspaceId}/`,
+            `native-media/${workspaceId}/`,
+          ];
+          if (!workspacePrefixes.some((prefix) => url.startsWith(prefix))) return url;
+          const signedUrl = await getPresenceMediaSignedUrl(url, 900);
+          if (!signedUrl) throw new AppError(503, "A mídia da campanha não está disponível para publicação externa neste ambiente", "CAMPAIGN_MEDIA_URL_UNAVAILABLE");
+          return signedUrl;
+        })),
+      }
+    : post;
+
   const fingerprint = createHash("sha256").update(JSON.stringify({
     platform: post.platform, postType: post.postType, caption: post.caption ?? "",
     hashtags: post.hashtags ?? [], mediaUrls: post.mediaUrls ?? [], linkUrl: post.linkUrl ?? "",
@@ -1427,13 +1445,13 @@ export async function publishPost(workspaceId: string, postId: string): Promise<
   };
   switch (post.platform) {
     case "instagram":
-       result = await publishToInstagram(post, integration, { attemptKey, onStage: onProviderStage });
+       result = await publishToInstagram(providerPost, integration, { attemptKey, onStage: onProviderStage });
       break;
     case "facebook_page":
-       result = await publishToFacebook(post, integration, { attemptKey, onStage: onProviderStage });
+       result = await publishToFacebook(providerPost, integration, { attemptKey, onStage: onProviderStage });
       break;
     case "tiktok":
-       result = await publishToTikTok(post, integration, { attemptKey, onStage: onProviderStage });
+       result = await publishToTikTok(providerPost, integration, { attemptKey, onStage: onProviderStage });
       break;
     default:
       result = { success: false, error: `Platform ${post.platform} not yet supported for direct publishing` };

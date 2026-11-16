@@ -12,13 +12,46 @@ import { parseAgentJSON } from "../agents/agent.runner.js";
 import { deductCredits } from "../credits/credits.service.js";
 import { NotFoundError, AppError } from "../../lib/errors.js";
 import { generateCreativeImage } from "./image-provider-chain.js";
+import { campaignCreativeObjectKey, deleteGCSObject, uploadBufferToGCS } from "../../lib/gcs-recordings.js";
 import type { Logger } from "pino";
+
+function managedCreativeMediaUrl(campaignId: string, creativeId: string, variant: "preview" | "final", value: string | null): string | null {
+  if (!value?.startsWith("campaigns/")) return value;
+  return `/api/campaigns/${campaignId}/creatives/${creativeId}/media/${variant}`;
+}
+
+async function persistCreativeImage(
+  workspaceId: string,
+  campaignId: string,
+  creativeId: string,
+  variant: "preview" | "final",
+  dataUrl: string,
+): Promise<string> {
+  const match = /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl);
+  if (!match || match[2]!.length > 28_000_000) throw new AppError(502, "A imagem gerada não possui um formato válido", "IMAGE_DATA_MISSING");
+  const contentType = `image/${match[1]}`;
+  const bytes = Buffer.from(match[2]!, "base64");
+  const valid = (contentType === "image/png" && bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])))
+    || (contentType === "image/jpeg" && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255)
+    || (contentType === "image/webp" && bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP");
+  if (!valid) throw new AppError(502, "A imagem gerada está corrompida", "IMAGE_DATA_MISSING");
+  const extension = match[1] === "jpeg" ? "jpg" : match[1];
+  const key = campaignCreativeObjectKey(workspaceId, campaignId, creativeId, variant, extension!);
+  await uploadBufferToGCS(bytes, key, contentType);
+  return key;
+}
+
+async function removeReplacedCreativeImage(previousKey: string | null, nextKey: string, log: Logger, creativeId: string): Promise<void> {
+  if (previousKey?.startsWith("campaigns/") && previousKey !== nextKey) {
+    await deleteGCSObject(previousKey).catch((err) => log.warn({ err, creativeId }, "Could not remove replaced campaign image"));
+  }
+}
 
 export async function listCreatives(
   campaignId: string,
   workspaceId: string,
 ): Promise<CampaignCreative[]> {
-  return db
+  const creatives = await db
     .select()
     .from(campaignCreativesTable)
     .where(
@@ -28,6 +61,11 @@ export async function listCreatives(
       ),
     )
     .orderBy(desc(campaignCreativesTable.createdAt));
+  return creatives.map((creative) => ({
+    ...creative,
+    previewUrl: managedCreativeMediaUrl(creative.campaignId, creative.id, "preview", creative.previewUrl),
+    finalUrl: managedCreativeMediaUrl(creative.campaignId, creative.id, "final", creative.finalUrl),
+  }));
 }
 
 export async function generateConcept(
@@ -144,16 +182,18 @@ export async function approveConceptAndGeneratePreview(
 
   setImmediate(async () => {
     try {
-      const imageUrl = await generateCreativeImage(
+      const generatedImage = await generateCreativeImage(
         creative.concept!.dallePrompt,
         creative.format,
         "standard",
         log,
       );
+      const imageUrl = await persistCreativeImage(workspaceId, creative.campaignId, creative.id, "preview", generatedImage);
       await db
         .update(campaignCreativesTable)
         .set({ status: "preview_ready", previewUrl: imageUrl, imageExpired: false, metadata: { ...((creative.metadata ?? {}) as Record<string, unknown>), imageError: null } })
         .where(eq(campaignCreativesTable.id, creativeId));
+      await removeReplacedCreativeImage(creative.previewUrl, imageUrl, log, creativeId);
     } catch (err) {
       log.warn({ creativeId, err }, "Creative image preview generation failed");
       await db
@@ -197,12 +237,13 @@ export async function approvePreviewAndGenerateFinal(
 
   setImmediate(async () => {
     try {
-      const imageUrl = await generateCreativeImage(
+      const generatedImage = await generateCreativeImage(
         creative.concept!.dallePrompt,
         creative.format,
         "hd",
         log,
       );
+      const imageUrl = await persistCreativeImage(workspaceId, creative.campaignId, creative.id, "final", generatedImage);
       await db
         .update(campaignCreativesTable)
         .set({
@@ -213,6 +254,7 @@ export async function approvePreviewAndGenerateFinal(
           metadata: { ...((creative.metadata ?? {}) as Record<string, unknown>), imageError: null },
         })
         .where(eq(campaignCreativesTable.id, creativeId));
+      await removeReplacedCreativeImage(creative.finalUrl, imageUrl, log, creativeId);
 
       // Final URL persistence is intentionally the only consequence here.
       // Social publication remains behind the explicit preview/confirmation route;
@@ -285,12 +327,15 @@ export async function regenerateImage(
 
   setImmediate(async () => {
     try {
-      const imageUrl = await generateCreativeImage(
+      const generatedImage = await generateCreativeImage(
         creative.concept!.dallePrompt,
         creative.format,
         quality,
         log,
       );
+      const variant = quality === "hd" ? "final" : "preview";
+      const previousKey = variant === "final" ? creative.finalUrl : creative.previewUrl;
+      const imageUrl = await persistCreativeImage(workspaceId, creative.campaignId, creative.id, variant, generatedImage);
       const finalStatus = quality === "hd" ? "approved" : "preview_ready";
       const updateData: Record<string, unknown> =
         quality === "hd"
@@ -300,6 +345,7 @@ export async function regenerateImage(
         .update(campaignCreativesTable)
         .set(updateData as any)
         .where(eq(campaignCreativesTable.id, creativeId));
+      await removeReplacedCreativeImage(previousKey, imageUrl, log, creativeId);
     } catch (err) {
       log.warn({ creativeId, err }, "Creative image regeneration failed");
       const rollback = quality === "hd" ? "preview_ready" : "concept_ready";

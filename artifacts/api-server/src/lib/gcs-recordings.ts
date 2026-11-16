@@ -196,6 +196,19 @@ export function avatarSampleObjectKey(workspaceId: string, sampleId: string, ext
   return `avatar-samples/${workspaceId}/${sampleId}.${extension}`;
 }
 
+/** Persistent campaign creative asset key shared by local, GCS, and S3 storage. */
+export function campaignCreativeObjectKey(
+  workspaceId: string,
+  campaignId: string,
+  creativeId: string,
+  variant: "preview" | "final",
+  extension: string,
+): string {
+  const safeExtension = extension.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (!safeExtension) throw new Error("Invalid campaign media extension");
+  return `campaigns/${workspaceId}/${campaignId}/creatives/${creativeId}/${variant}.${safeExtension}`;
+}
+
 /**
  * Generate a GCS V4 Signed URL for a persona-media file so that external
  * providers (HeyGen) can download it directly from GCS without going through

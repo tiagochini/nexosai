@@ -23,6 +23,10 @@ export type StrategyObj = Record<string, unknown>;
 type Obj = Record<string, unknown>;
 type ModuleStatus = "pending" | "approved" | "flagged" | "rejected";
 const EMPTY_MODULE_REVIEWS: Record<string, ModuleStatus> = {};
+const REQUIRED_MODULE_IDS = [
+  "executiveSummary", "bigDomino", "positioning", "market", "audience",
+  "architecture", "triggers", "metrics", "risks", "notes",
+] as const;
 
 const STRATEGY_WRAPPER_KEYS = ["data", "result", "insights", "masterplan", "strategy"] as const;
 const STRATEGY_SUMMARY_KEYS = ["executiveSummary", "summary", "executive_summary", "analysis", "overview"] as const;
@@ -686,6 +690,10 @@ interface StrategyMasterplanProps {
   ins: Obj;
   reviewStatuses?: Record<string, ModuleStatus>;
   onReviewStatusChange?: (moduleId: string, status: ModuleStatus) => Promise<unknown>;
+  onApproveAll?: () => void;
+  canApproveAll?: boolean;
+  approvingAll?: boolean;
+  trialReviewMode?: boolean;
   userIdentity?: PdfUserIdentity;
   campaignId?: string;
   campaignTitle?: string;
@@ -696,7 +704,7 @@ interface StrategyMasterplanProps {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function StrategyMasterplan({ strategyD, ins, reviewStatuses = EMPTY_MODULE_REVIEWS, onReviewStatusChange, userIdentity, campaignId, campaignTitle, track, onRequestTriggerHelp, triggerHelpPending = false }: StrategyMasterplanProps) {
+export function StrategyMasterplan({ strategyD, ins, reviewStatuses = EMPTY_MODULE_REVIEWS, onReviewStatusChange, onApproveAll, canApproveAll: canApproveAllFromServer = false, approvingAll = false, trialReviewMode = false, userIdentity, campaignId, campaignTitle, track, onRequestTriggerHelp, triggerHelpPending = false }: StrategyMasterplanProps) {
   const t = useUiText();
   const hasIns = Object.keys(ins).length > 0;
   const src = hasIns ? ins : strategyD;
@@ -759,6 +767,21 @@ export function StrategyMasterplan({ strategyD, ins, reviewStatuses = EMPTY_MODU
   const transformBridge = str(triggerMap["transformationBridge"]);
 
   const hasContent = !!(executiveSummary || bigDomino || Object.keys(positioning).length || Object.keys(audience).length);
+  const allModulesGenerated = Boolean(
+    executiveSummary.trim() && bigDomino.trim() &&
+    (str(positioning["uniqueValueProposition"]) || str(positioning["primaryDifferentiator"]) || str(positioning["positioning"]) || str(positioning["priceJustification"]) || arr(positioning["competitiveAdvantages"]).length > 0) &&
+    (str(market["marketMaturity"]) || str(market["competitiveLandscape"]) || arr(market["opportunities"]).length > 0 || arr(market["threats"]).length > 0 || arr(market["entryBarriers"]).length > 0) &&
+    (str(audience["primaryAvatar"]) || str(audience["psychographicProfile"]) || str(audience["sophisticationStrategy"]) || arr(audience["buyingTriggers"]).length > 0 || arr(audience["objections"]).length > 0 || arr(audience["secondaryAvatars"]).length > 0) &&
+    (str(architecture["coreNarrative"]) || str(architecture["emotionalHook"]) || arr(architecture["keyMessages"]).length > 0 || arr(architecture["contentPillars"]).length > 0 || str(architecture["platformDistributionStrategy"]) || str(architecture["callToActionStrategy"])) &&
+    missingArchitectureFields.length === 0 && missingTriggerFields.length === 0 &&
+    missingMetricFields.length === 0 && missingRiskFields.length === 0 &&
+    strategistNotes.trim()
+  );
+  const canApproveAll = trialReviewMode ? allModulesGenerated : canApproveAllFromServer;
+  const handleApproveAll = () => {
+    if (!canApproveAll || allModulesApproved || approvingAll) return;
+    onApproveAll?.();
+  };
 
   const TOTAL_MODULES  = 10;
   const approvedCount  = Object.values(statuses).filter(s => s === "approved").length;
@@ -807,8 +830,22 @@ export function StrategyMasterplan({ strategyD, ins, reviewStatuses = EMPTY_MODU
               </div>
               <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35 mt-0.5">{t("aprovados", "approved", "aprobados")}</div>
             </div>
-            {userIdentity && (
-              <div className="flex flex-col items-end gap-1.5">
+            <div className="flex flex-col items-end gap-1.5">
+              <div className="flex flex-wrap justify-end gap-2">
+                {onApproveAll && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-none font-mono text-[9px] uppercase tracking-widest h-7 px-3 gap-1.5 border-emerald-400/25 text-emerald-300/80 hover:border-emerald-400/50 hover:text-emerald-200 transition-all"
+                  disabled={!canApproveAll || allModulesApproved || approvingAll}
+                  title={!canApproveAll ? t("A aprovação em lote será liberada quando a geração estiver completa, sem falhas ou pendências.", "Bulk approval unlocks when generation is complete, with no failures or blockers.", "La aprobación en lote se habilitará cuando la generación esté completa, sin fallos ni bloqueos.") : undefined}
+                  onClick={handleApproveAll}
+                >
+                  {approvingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                  {approvingAll ? t("Aprovando…", "Approving…", "Aprobando…") : t("Aprovar todos", "Approve all", "Aprobar todos")}
+                </Button>
+                )}
+                {userIdentity && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -821,13 +858,19 @@ export function StrategyMasterplan({ strategyD, ins, reviewStatuses = EMPTY_MODU
                 >
                   <Download className="h-3 w-3" />{t("Baixar PDF", "Download PDF", "Descargar PDF")}
                 </Button>
-                {!allModulesApproved && (
-                  <span className="font-mono text-[8px] text-muted-foreground/45">
-                    {t("Aprove os 10 módulos para liberar o PDF.", "Approve all 10 modules to unlock the PDF.", "Aprueba los 10 módulos para desbloquear el PDF.")}
-                  </span>
                 )}
               </div>
-            )}
+              {!allModulesApproved && userIdentity && (
+                <span className="font-mono text-[8px] text-muted-foreground/45">
+                  {t("Aprove os 10 módulos para liberar o PDF.", "Approve all 10 modules to unlock the PDF.", "Aprueba los 10 módulos para desbloquear el PDF.")}
+                </span>
+              )}
+              {!canApproveAll && (
+                <span className="font-mono text-[8px] text-amber-200/55">
+                  {t("Aprovação em lote disponível quando não houver falhas na geração.", "Bulk approval is available when generation has no failures.", "La aprobación en lote estará disponible cuando no haya fallos de generación.")}
+                </span>
+              )}
+              </div>
           </div>
         </div>
 
@@ -1278,9 +1321,9 @@ export function StrategyMasterplan({ strategyD, ins, reviewStatuses = EMPTY_MODU
 
       {/* ═══ M10 — NOTA DO ESTRATEGISTA ══════════════════════════════════════ */}
       {strategistNotes && (
-        <Module index={10} id="strategistNotes" icon={MessageSquare}
+        <Module index={10} id="notes" icon={MessageSquare}
           title="Nota do Estrategista" subtitle="Observações finais, recomendações e instruções de execução"
-          status={getStatus("strategistNotes")} accentColor="amber"
+          status={getStatus("notes")} accentColor="amber"
           onApprove={id => setStatus(id, "approved")}
           onReject={id => setStatus(id, "rejected")}
           onFlag={id => setStatus(id, "flagged")}
@@ -1340,8 +1383,7 @@ export function StrategyMasterplan({ strategyD, ins, reviewStatuses = EMPTY_MODU
             </div>
             <div className="flex items-center gap-1">
               {[...Array(TOTAL_MODULES)].map((_, i) => {
-                const ids = ["executiveSummary","bigDomino","positioning","market","audience","architecture","triggers","metrics","risks","strategistNotes"];
-                const s = getStatus(ids[i]);
+                const s = getStatus(REQUIRED_MODULE_IDS[i]!);
                 return (
                   <div key={i} className={`w-5 h-0.5 transition-all ${
                     s === "approved" ? "bg-emerald-500" : s === "rejected" ? "bg-red-500" : s === "flagged" ? "bg-amber-500" : "bg-white/10"

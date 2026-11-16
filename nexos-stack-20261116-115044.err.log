@@ -1,0 +1,15 @@
+
+  artifacts\api-server\dist\index.mjs                  14.7mb
+  artifacts\api-server\dist\pino-worker.mjs           153.1kb
+  artifacts\api-server\dist\pino-file.mjs             141.8kb
+  artifacts\api-server\dist\pino-pretty.mjs           114.8kb
+  artifacts\api-server\dist\thread-stream-worker.mjs    7.3kb
+  ...and 5 more output files...
+
+Done in 1057ms
+[2m14:47:03[22m [31m[1m[vite][22m[39m [31mws proxy error:[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[2m14:47:03[22m [31m[1m[vite][22m[39m [31mws proxy socket error:[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)

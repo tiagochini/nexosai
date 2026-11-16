@@ -9,10 +9,40 @@ import {
   regenerateImage,
 } from "./creatives.service.js";
 import { z } from "zod/v4";
+import { and, eq } from "drizzle-orm";
+import { db, campaignCreativesTable } from "@workspace/db";
+import { createGCSObjectStream, getGCSObjectMeta } from "../../lib/gcs-recordings.js";
 
 const router = Router();
 
 router.use(requireAuth);
+
+// GET /campaigns/:campaignId/creatives/:creativeId/media — workspace-scoped media stream.
+router.get("/:campaignId/creatives/:creativeId/media/:variant", async (req, res): Promise<void> => {
+  const { campaignId, creativeId } = req.params;
+  const variant = z.enum(["preview", "final"]).parse(req.params["variant"]);
+  const workspaceId = req.auth.workspaceId;
+  const [creative] = await db.select({ key: variant === "final" ? campaignCreativesTable.finalUrl : campaignCreativesTable.previewUrl })
+    .from(campaignCreativesTable)
+    .where(and(
+      eq(campaignCreativesTable.id, creativeId),
+      eq(campaignCreativesTable.campaignId, campaignId),
+      eq(campaignCreativesTable.workspaceId, workspaceId),
+    ))
+    .limit(1);
+  const key = creative?.key;
+  const expectedPrefix = `campaigns/${workspaceId}/${campaignId}/creatives/${creativeId}/`;
+  if (!key?.startsWith(expectedPrefix)) { res.status(404).json({ error: "Imagem não encontrada" }); return; }
+  let metadata;
+  try { metadata = await getGCSObjectMeta(key); }
+  catch { res.status(404).json({ error: "Imagem não encontrada" }); return; }
+  if (!metadata.contentType.startsWith("image/")) { res.status(404).json({ error: "Imagem não encontrada" }); return; }
+  res.setHeader("Content-Type", metadata.contentType);
+  res.setHeader("Content-Length", String(metadata.size));
+  res.setHeader("Cache-Control", "private, max-age=300");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  createGCSObjectStream(key).on("error", () => res.destroy()).pipe(res);
+});
 
 // GET /campaigns/:id/creatives
 router.get("/:campaignId/creatives", async (req, res) => {

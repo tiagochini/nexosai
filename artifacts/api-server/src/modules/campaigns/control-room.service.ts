@@ -676,10 +676,24 @@ export async function getCampaignControlRoomPreviews(campaignId: string, workspa
   for (const r of content) rows.push({ kind: "content_piece", id: r.id, type: r.type, status: r.status, title: r.title, updatedAt: r.updatedAt, available: hasPreviewContent(r.content), data: { content: r.content } });
   for (const r of media) { const mediaUrls = safePreviewUrls([r.lowResUrl, r.finalUrl]); rows.push({ kind: "media_brief", id: r.id, type: r.mediaType, status: r.conceptStatus, title: r.mediaType, updatedAt: r.updatedAt, available: hasPreviewContent(r.conceptData) || mediaUrls.length > 0, data: { concept: r.conceptData, mediaUrls } }); }
   for (const r of social) { const mediaUrls = safePreviewUrls(r.mediaUrls); rows.push({ kind: "social_post", id: r.id, type: r.postType, status: r.status, title: r.caption?.slice(0, 120) ?? r.postType, updatedAt: r.updatedAt, available: Boolean(r.caption || r.hashtags?.length || r.callToAction || r.reelScript || mediaUrls.length), href: `/campaigns/${campaignId}/content`, data: { caption: r.caption, hashtags: r.hashtags, callToAction: r.callToAction, mediaUrls, reelScript: r.reelScript } }); }
-  for (const r of creatives) { const mediaUrls = safePreviewUrls([r.previewUrl, r.finalUrl]); rows.push({ kind: "creative", id: r.id, type: r.format, status: r.status, title: r.requestNote ?? r.format, updatedAt: r.updatedAt, available: Boolean(r.concept) || mediaUrls.length > 0, data: { concept: r.concept, format: r.format, platform: r.platform, mediaUrls } }); }
+  for (const r of creatives) {
+    const creativeMedia = (value: string | null, variant: "preview" | "final") => value?.startsWith("campaigns/")
+      ? `/api/campaigns/${campaignId}/creatives/${r.id}/media/${variant}` : value;
+    const mediaUrls = safePreviewUrls([creativeMedia(r.previewUrl, "preview"), creativeMedia(r.finalUrl, "final")]);
+    rows.push({ kind: "creative", id: r.id, type: r.format, status: r.status, title: r.requestNote ?? r.format, updatedAt: r.updatedAt, available: Boolean(r.concept) || mediaUrls.length > 0, data: { concept: r.concept, format: r.format, platform: r.platform, mediaUrls } });
+  }
   for (const joined of assets) { const r = joined.campaign_assets; const mediaUrls = safePreviewUrls([r.previewUrl, r.finalUrl]); rows.push({ kind: "campaign_asset", id: r.id, type: r.assetType, status: r.status, title: r.title, updatedAt: r.updatedAt, available: Boolean(r.content) || mediaUrls.length > 0, data: { content: r.content, metadata: r.metadata, platform: r.platform, mediaUrls } }); }
   for (const r of pages) rows.push({ kind: "page", id: r.id, type: r.type, status: r.status, title: r.title, updatedAt: r.updatedAt, available: Boolean(r.html), data: { metadata: r.metadata, slug: r.slug, html: r.html } });
-  for (const r of videos) rows.push({ kind: "video_project", id: r.id, type: r.format, status: r.status, title: r.title, updatedAt: r.updatedAt, available: Boolean(r.script || r.storyboard?.length), data: { script: r.script, storyboard: r.storyboard, config: r.config } });
+  for (const r of videos) {
+    const storyboard = ((r.storyboard ?? []) as Array<Record<string, unknown>>).map((scene) => {
+      const sceneId = typeof scene.id === "string" ? scene.id : "";
+      const publicClip = (value: unknown, variant: "preview" | "final") => typeof value === "string"
+        && /^(video-projects|campaigns|native-media)\//.test(value)
+        ? `/api/video-projects/${r.id}/media/${encodeURIComponent(sceneId)}/${variant}` : value;
+      return { ...scene, clipUrl: publicClip(scene.clipUrl, "preview"), clipUrlHd: publicClip(scene.clipUrlHd, "final") };
+    });
+    rows.push({ kind: "video_project", id: r.id, type: r.format, status: r.status, title: r.title, updatedAt: r.updatedAt, available: Boolean(r.script || storyboard.length), data: { script: r.script, storyboard, config: r.config } });
+  }
   const filtered = rows.filter(r => (!filters.kind || r.kind === filters.kind) && (!filters.status || r.status === filters.status)).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime() || a.kind.localeCompare(b.kind) || b.id.localeCompare(a.id));
   const page = filtered.slice(0, filters.limit);
   const hasNextPage = filtered.length > filters.limit;
