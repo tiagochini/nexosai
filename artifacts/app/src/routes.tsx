@@ -5,7 +5,6 @@ import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useAuth } from "@/lib/auth";
 import { hasSeenWelcome } from "@/lib/welcome-state";
 import { ErrorBoundary } from "@/components/error-boundary";
-import { PublicLanding } from "@/components/public-landing";
 
 const AppLayout = lazy(() =>
   import("@/components/layout/app-layout").then((module) => ({
@@ -26,6 +25,7 @@ const Login = lazy(() => import("@/pages/login"));
 const Register = lazy(() => import("@/pages/register"));
 const PublicOfferPage = lazy(() => import("@/pages/public-offer"));
 const NotFound = lazy(() => import("@/pages/not-found"));
+const PublicLanding = lazy(() => import("@/components/public-landing").then((module) => ({ default: module.PublicLanding })));
 const InstitucionalPage = lazy(() => import("@/pages/institucional/index"));
 const ExecutionLanding = lazy(() => import("@/pages/landing"));
 const Welcome = lazy(() => import("@/pages/welcome/index"));
