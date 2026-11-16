@@ -455,6 +455,8 @@ export async function initiatePayment(opts: {
 
   const isCardApproved = pd.cardResult &&
     (pd.cardResult.status === "CONFIRMED" || pd.cardResult.status === "RECEIVED");
+  const isCardDeclined = pd.cardResult && ["REFUSED", "CANCELLED", "OVERDUE", "FAILED"].includes(pd.cardResult.status);
+  const paymentStatus = isCardApproved ? "paid" : isCardDeclined ? "failed" : "pending";
 
   const payment = await db.transaction(async (trx) => {
     const [inserted] = await trx.insert(subscriptionPaymentsTable)
@@ -465,7 +467,7 @@ export async function initiatePayment(opts: {
         amountCents: pd.chargedCents,
         currency: "BRL",
         method: opts.method,
-        status: isCardApproved ? "paid" : "pending",
+        status: paymentStatus,
         description,
         externalId: pd.externalId,
         pixData: pd.pixData,

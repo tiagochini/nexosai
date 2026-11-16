@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { AppError } from "../../lib/errors.js";
 import { and, desc, eq } from "drizzle-orm";
-import { auditLogsTable, campaignsTable, contentPiecesTable, db, domainsTable, launchSequencesTable, pagesTable, paidMediaDatasetsTable } from "@workspace/db";
+import { auditLogsTable, campaignsTable, contentPiecesTable, db, domainsTable, launchSequencesTable, masterplanVersionsTable, pagesTable, paidMediaDatasetsTable } from "@workspace/db";
 import {
   generateCampaignContent,
   getCampaignContent,
@@ -32,6 +32,9 @@ import { landingMeasurementState, publishCampaignLanding } from "../landing-publ
 
 import { getApprovedMasterplan } from "../masterplan/masterplan.service.js";
 import { assertLandingAdTracking } from "../landing-publication/landing-tracking.service.js";
+import { runAgent, parseAgentJSON } from "../agents/agent.runner.js";
+import { isTrialBriefingCampaign } from "../credits/credits.service.js";
+import { calculateMasterplanReadiness, deterministicHash, getTrialMasterplanModuleReviews, missingMasterplanModuleReviews } from "../masterplan/masterplan.service.js";
 
 import { prepareLandingUpgrade, publishLandingUpgrade } from "../landing-publication/landing-upgrade.service.js";
 
@@ -257,6 +260,267 @@ router.post("/:campaignId/content/generate", async (req, res): Promise<void> => 
       res.status(err.statusCode).json({ error: err.message, code: err.code });
       return;
     }
+    throw err;
+  }
+});
+
+function parseBriefingLaunchDate(value: unknown): Date | null {
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  const iso = text.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/);
+  const br = text.match(/\b(\d{1,2})[/.\-](\d{1,2})[/.\-](20\d{2})\b/);
+  const relative = text.match(/\b(?:em|daqui a)\s*(\d{1,3})\s*dias?\b/i);
+  let date: Date | null = null;
+  if (iso) date = new Date(Date.UTC(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3])));
+  else if (br) date = new Date(Date.UTC(Number(br[3]), Number(br[2]) - 1, Number(br[1])));
+  else if (relative) { date = new Date(); date.setUTCHours(0, 0, 0, 0); date.setUTCDate(date.getUTCDate() + Number(relative[1])); }
+  return date && !Number.isNaN(date.getTime()) ? date : null;
+}
+
+function dateOnly(date: Date): string { return date.toISOString().slice(0, 10); }
+
+function parseExplicitDuration(value: unknown): number | null {
+  const numeric = typeof value === "number" ? value : typeof value === "string" && /^\s*\d+(?:[.,]\d+)?\s*$/.test(value) ? Number(value.replace(",", ".")) : NaN;
+  return Number.isFinite(numeric) && numeric > 0 ? Math.min(14, Math.floor(numeric)) : null;
+}
+
+function durationFromLaunchWindow(value: unknown): number | null {
+  if (typeof value !== "string") return null;
+  const match = value.match(/\b(\d{1,2})\s*(?:dias?|days?)\b/i);
+  return match ? parseExplicitDuration(match[1]) : null;
+}
+
+function textValue(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function arrayOfObjects(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value)
+    ? value.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object" && !Array.isArray(item)))
+    : [];
+}
+
+function masterplanTriggerPhases(strategy: Record<string, unknown>, launchDate: Date | null, cartDuration: number | null) {
+  const triggerMap = strategy["triggerMap"] && typeof strategy["triggerMap"] === "object"
+    ? strategy["triggerMap"] as Record<string, unknown> : {};
+  const definitions = [
+    ["preLaunch", "Pré-lançamento", "preLaunch"],
+    ["cartOpen", "Abertura do carrinho", "cartOpen"],
+    ["cartClose", "Fechamento do carrinho", "cartClose"],
+    ["remarketing", "Remarketing", "remarketing"],
+  ] as const;
+  return definitions.flatMap(([key, name, id]) => {
+    const trigger = triggerMap[key] && typeof triggerMap[key] === "object" ? triggerMap[key] as Record<string, unknown> : {};
+    const details = [textValue(trigger["triggerLogic"]), textValue(trigger["primaryTrigger"]),
+      ...(Array.isArray(trigger["triggerStack"]) ? trigger["triggerStack"].filter((item): item is string => typeof item === "string" && Boolean(item.trim())).slice(0, 3) : [])]
+      .filter(Boolean);
+    if (!details.length) return [];
+    const isCartOpen = key === "cartOpen";
+    const isCartClose = key === "cartClose";
+    const startDate = launchDate && (isCartOpen || isCartClose)
+      ? dateOnly(new Date(launchDate.getTime() + (isCartClose ? (cartDuration ?? 0) : 0) * 86_400_000)) : "";
+    const endDate = launchDate && isCartOpen && cartDuration
+      ? dateOnly(new Date(launchDate.getTime() + (cartDuration - 1) * 86_400_000)) : startDate;
+    return [{
+      id, name, startDate, endDate,
+      ...(isCartOpen && cartDuration ? { dayStart: 0, dayEnd: cartDuration - 1 } : {}),
+      summary: details.join(" · "),
+      recommendedDuration: textValue(trigger["recommendedDuration"]),
+      durationRationale: textValue(trigger["durationRationale"]),
+      source: "masterplan.triggerMap",
+    }];
+  });
+}
+
+// Build and persist the schedule preview separately from campaign copy/assets.
+router.post("/:campaignId/schedule-preview/generate", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+  try {
+    const [campaign] = await db.select({
+      title: campaignsTable.title, status: campaignsTable.status, type: campaignsTable.type,
+      intakeData: campaignsTable.intakeData, strategyData: campaignsTable.strategyData, timelineData: campaignsTable.timelineData,
+    }).from(campaignsTable).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId))).limit(1);
+    if (!campaign) throw new AppError(404, "Campanha não encontrada.", "NOT_FOUND");
+    if (campaign.status !== "strategy_ready") throw new AppError(409, "A prévia do cronograma fica disponível depois da aprovação do Masterplan.", "MASTERPLAN_NOT_APPROVED");
+
+    const [approvedMasterplan] = await db.select({ id: masterplanVersionsTable.id, version: masterplanVersionsTable.version, contentHash: masterplanVersionsTable.contentHash, moduleReviews: masterplanVersionsTable.moduleReviews, snapshot: masterplanVersionsTable.snapshot })
+      .from(masterplanVersionsTable).where(and(
+        eq(masterplanVersionsTable.workspaceId, req.auth.workspaceId), eq(masterplanVersionsTable.campaignId, campaignId),
+        eq(masterplanVersionsTable.status, "approved"),
+      )).orderBy(desc(masterplanVersionsTable.version)).limit(1);
+    const savedTrialReviews = approvedMasterplan ? null : await getTrialMasterplanModuleReviews(req.auth.workspaceId, campaignId);
+    if (!approvedMasterplan && Object.keys(savedTrialReviews ?? {}).length === 0) {
+      throw new AppError(428, "Aprove o Masterplan antes de gerar a prévia do cronograma.", "MASTERPLAN_NOT_APPROVED");
+    }
+    const missingReviews = missingMasterplanModuleReviews(approvedMasterplan?.moduleReviews ?? savedTrialReviews);
+    if (missingReviews.length) throw new AppError(428, "Aprove os 10 checklists do Masterplan antes de gerar a prévia.", "MASTERPLAN_CHECKLISTS_PENDING", { unapprovedModules: missingReviews });
+    const readiness = calculateMasterplanReadiness(campaign.strategyData, []);
+    if (readiness.status !== "ready") throw new AppError(428, "Resolva as pendências do Masterplan antes de gerar a prévia.", "MASTERPLAN_NOT_READY", { blockers: readiness.blockers });
+
+    const timeline = campaign.timelineData && typeof campaign.timelineData === "object" ? campaign.timelineData as Record<string, unknown> : {};
+    const cachedPreview = timeline["schedulePreview"];
+    const intake = campaign.intakeData && typeof campaign.intakeData === "object" ? campaign.intakeData as Record<string, unknown> : {};
+    const launchDate = parseBriefingLaunchDate(intake["launch.cartOpenDate"]);
+    const briefingLaunchDate = textValue(intake["launch.cartOpenDate"]);
+    const briefingCartDuration = intake["launch.cartOpenDuration"] ?? null;
+    const briefingPreparationHorizon = intake["campaign.timeline"] ?? intake["campaign.durationDays"] ?? null;
+    const strategyFingerprint = deterministicHash(campaign.strategyData ?? {});
+    if (cachedPreview && typeof cachedPreview === "object" && (cachedPreview as Record<string, unknown>)["sourceVersion"] === 3
+      && (cachedPreview as Record<string, unknown>)["masterplanContentHash"] === (approvedMasterplan?.contentHash ?? null)
+      && (cachedPreview as Record<string, unknown>)["strategyFingerprint"] === strategyFingerprint
+      && (cachedPreview as Record<string, unknown>)["briefingLaunchDate"] === briefingLaunchDate
+      && (cachedPreview as Record<string, unknown>)["briefingCartDuration"] === briefingCartDuration
+      && (cachedPreview as Record<string, unknown>)["briefingPreparationHorizon"] === briefingPreparationHorizon
+      && Array.isArray((cachedPreview as Record<string, unknown>)["phases"])) {
+      res.json({ schedulePreview: cachedPreview, cached: true });
+      return;
+    }
+    const snapshot = approvedMasterplan?.snapshot && typeof approvedMasterplan.snapshot === "object"
+      ? approvedMasterplan.snapshot as Record<string, unknown> : {};
+    const masterplanTimeline = snapshot["timeline"] && typeof snapshot["timeline"] === "object" ? snapshot["timeline"] as Record<string, unknown> : {};
+    const strategy = snapshot["strategy"] && typeof snapshot["strategy"] === "object"
+      ? snapshot["strategy"] as Record<string, unknown>
+      : campaign.strategyData && typeof campaign.strategyData === "object" ? campaign.strategyData as Record<string, unknown> : {};
+    const successMetrics = strategy["successMetrics"] && typeof strategy["successMetrics"] === "object" ? strategy["successMetrics"] as Record<string, unknown> : {};
+    const cartDuration = parseExplicitDuration(intake["launch.cartOpenDuration"]) ?? durationFromLaunchWindow(successMetrics["launchWindow"]);
+    const sourcePhases = arrayOfObjects(masterplanTimeline["phases"]).length
+      ? arrayOfObjects(masterplanTimeline["phases"])
+      : arrayOfObjects(timeline["phases"]);
+    const triggerPhases = masterplanTriggerPhases(strategy, launchDate, cartDuration);
+    const phasesFromPlan: Array<Record<string, unknown>> = sourcePhases.length > 0
+      ? sourcePhases : triggerPhases.map((phase) => ({ ...phase }));
+    let phases: Array<Record<string, unknown>>;
+
+    if (phasesFromPlan.length > 0) {
+      const cartIndex = phasesFromPlan.findIndex((phase) => /cart|carrinho|abertura/i.test(String(phase["phase"] ?? phase["id"] ?? phase["name"] ?? "")));
+      const cartDay = cartIndex >= 0 && phasesFromPlan[cartIndex]?.["dayStart"] !== undefined
+        ? Number(phasesFromPlan[cartIndex]?.["dayStart"]) : null;
+      phases = phasesFromPlan.map((phase, index) => {
+        const hasDayStart = Number.isFinite(Number(phase["dayStart"]));
+        const dayStart = hasDayStart ? Number(phase["dayStart"]) : undefined;
+        const hasDayEnd = Number.isFinite(Number(phase["dayEnd"]));
+        const dayEnd = hasDayEnd ? Number(phase["dayEnd"]) : dayStart;
+        const canDeriveDates = launchDate && cartDay !== null && Number.isFinite(cartDay);
+        const start = typeof phase["startDate"] === "string" ? phase["startDate"] : canDeriveDates && dayStart !== undefined ? dateOnly(new Date(launchDate.getTime() + (dayStart - cartDay) * 86_400_000)) : textValue(phase["startDate"]);
+        const end = typeof phase["endDate"] === "string" ? phase["endDate"] : canDeriveDates && dayEnd !== undefined ? dateOnly(new Date(launchDate.getTime() + (dayEnd - cartDay) * 86_400_000)) : textValue(phase["endDate"]);
+        const summary = typeof phase["objective"] === "string" && phase["objective"].trim()
+          ? phase["objective"]
+          : Array.isArray(phase["primaryActions"]) ? (phase["primaryActions"] as unknown[]).filter((item): item is string => typeof item === "string").slice(0, 2).join(" ")
+            : textValue(phase["summary"] ?? phase["description"] ?? phase["triggerLogic"]);
+        return {
+          id: String(phase["phase"] ?? phase["id"] ?? `phase-${index + 1}`),
+          name: String(phase["name"] ?? phase["phase"] ?? `Etapa ${index + 1}`),
+          startDate: start, endDate: end,
+          ...(dayStart !== undefined ? { dayStart } : {}),
+          ...(dayEnd !== undefined ? { dayEnd } : {}), summary,
+          ...(textValue(phase["recommendedDuration"]) ? { recommendedDuration: textValue(phase["recommendedDuration"]) } : {}),
+          ...(textValue(phase["durationRationale"]) ? { durationRationale: textValue(phase["durationRationale"]) } : {}),
+          source: sourcePhases.length ? "masterplan.timeline" : "masterplan.triggerMap",
+        };
+      });
+    } else {
+      throw new AppError(409, "O Master Plan aprovado ainda não contém etapas ou gatilhos para montar a prévia. Atualize o briefing ou revise a estratégia antes de gerar o cronograma.", "SCHEDULE_SOURCE_DATA_MISSING");
+    }
+    const sourceLaunchWindow = textValue(successMetrics["launchWindow"]);
+    const campaignTimeline = textValue(briefingPreparationHorizon);
+    const schedulePreview: Record<string, unknown> = {
+      sourceVersion: 3,
+      masterplanVersionId: approvedMasterplan?.id ?? null,
+      masterplanVersion: approvedMasterplan?.version ?? null,
+      masterplanContentHash: approvedMasterplan?.contentHash ?? null,
+      strategyFingerprint,
+      briefingLaunchDate,
+      briefingCartDuration,
+      briefingPreparationHorizon,
+      dateBasis: launchDate ? "confirmed" : "relative",
+      launchDate: launchDate ? dateOnly(launchDate) : "",
+      cartDurationDays: cartDuration,
+      preparationHorizon: campaignTimeline || null,
+      masterplanLaunchWindow: sourceLaunchWindow || null,
+      dateNote: launchDate
+        ? "A abertura vem do briefing e as etapas e resumos vêm do Master Plan aprovado. Uma duração sem confirmação só aparece quando o agente a recomenda e justifica como hipótese."
+        : "O briefing não informa uma data exata de abertura. As etapas e os resumos vêm do Master Plan aprovado; durações não confirmadas aparecem como sugestão justificada do agente, quando disponível.",
+      phases,
+    };
+    await db.update(campaignsTable)
+      .set({ timelineData: { ...timeline, schedulePreview } as any, updatedAt: new Date() })
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId)));
+    const phaseCount = Array.isArray(schedulePreview["phases"]) ? schedulePreview["phases"].length : 0;
+    await db.insert(auditLogsTable).values({ workspaceId: req.auth.workspaceId, campaignId, action: "campaign.schedule_preview.generated", actor: req.auth.userId, data: { dateBasis: schedulePreview["dateBasis"], phases: phaseCount } });
+    res.status(201).json({ schedulePreview, cached: false });
+  } catch (err) {
+    if (err instanceof AppError) { res.status(err.statusCode).json({ error: err.message, code: err.code, details: err.data }); return; }
+    throw err;
+  }
+});
+
+// Generate only the requested launch phase after the Masterplan has been approved.
+router.post("/:campaignId/content/generate-phase", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+  const parsed = z.object({ phaseId: z.string().trim().min(1).max(120) }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Selecione uma etapa válida do cronograma.", code: "VALIDATION_ERROR" }); return; }
+
+  try {
+    if (await isTrialBriefingCampaign(req.auth.workspaceId, campaignId)) {
+      throw new AppError(403, "A geração de conteúdo exige uma licença NexOS ativa.", "TRIAL_CONTENT_GENERATION_BLOCKED");
+    }
+    const [campaign] = await db.select({ title: campaignsTable.title, status: campaignsTable.status, type: campaignsTable.type, strategyData: campaignsTable.strategyData, timelineData: campaignsTable.timelineData })
+      .from(campaignsTable).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId))).limit(1);
+    if (!campaign) throw new AppError(404, "Campanha não encontrada.", "NOT_FOUND");
+
+    const [approvedMasterplan] = await db.select({ moduleReviews: masterplanVersionsTable.moduleReviews })
+      .from(masterplanVersionsTable).where(and(
+        eq(masterplanVersionsTable.workspaceId, req.auth.workspaceId),
+        eq(masterplanVersionsTable.campaignId, campaignId),
+        eq(masterplanVersionsTable.status, "approved"),
+      )).orderBy(desc(masterplanVersionsTable.version)).limit(1);
+    // A trial campaign carries its checklist approvals in campaign brainData.
+    // Once a license is purchased, keep those decisions valid so the customer
+    // can generate without repeating the same review or fabricating a product binding.
+    const savedTrialReviews = approvedMasterplan ? null : await getTrialMasterplanModuleReviews(req.auth.workspaceId, campaignId);
+    if (!approvedMasterplan && Object.keys(savedTrialReviews ?? {}).length === 0) {
+      throw new AppError(428, "Aprove o Masterplan antes de gerar conteúdo.", "MASTERPLAN_NOT_APPROVED");
+    }
+    const missingReviews = missingMasterplanModuleReviews(approvedMasterplan?.moduleReviews ?? savedTrialReviews);
+    if (missingReviews.length) throw new AppError(428, "Aprove os 10 checklists do Masterplan antes de gerar conteúdo.", "MASTERPLAN_CHECKLISTS_PENDING", { unapprovedModules: missingReviews });
+    const readiness = calculateMasterplanReadiness(campaign.strategyData, []);
+    if (readiness.status !== "ready") throw new AppError(428, "Resolva as pendências do Masterplan antes de gerar conteúdo.", "MASTERPLAN_NOT_READY", { blockers: readiness.blockers });
+
+    const timeline = campaign.timelineData && typeof campaign.timelineData === "object" ? campaign.timelineData as Record<string, unknown> : {};
+    const preview = timeline["schedulePreview"] && typeof timeline["schedulePreview"] === "object"
+      ? timeline["schedulePreview"] as Record<string, unknown> : {};
+    const phases = Array.isArray(preview["phases"])
+      ? preview["phases"] as Array<Record<string, unknown>>
+      : Array.isArray(timeline["phases"]) ? timeline["phases"] as Array<Record<string, unknown>> : [];
+    const phase = phases.find((item) => String(item["phase"] ?? item["id"] ?? item["name"] ?? "") === parsed.data.phaseId);
+    if (!phase) throw new AppError(404, "A etapa não foi encontrada no cronograma desta campanha.", "LAUNCH_PHASE_NOT_FOUND");
+
+    const [existing] = await db.select({ id: contentPiecesTable.id, title: contentPiecesTable.title, status: contentPiecesTable.status })
+      .from(contentPiecesTable).where(and(
+        eq(contentPiecesTable.campaignId, campaignId), eq(contentPiecesTable.workspaceId, req.auth.workspaceId),
+        eq(contentPiecesTable.type, "content_calendar"), eq(contentPiecesTable.launchPhase, parsed.data.phaseId),
+      )).limit(1);
+    if (existing) { res.json({ piece: existing, alreadyGenerated: true }); return; }
+
+    const phaseName = String(phase["name"] ?? parsed.data.phaseId);
+    const objective = String(phase["objective"] ?? phase["summary"] ?? "");
+    const result = await runAgent({
+      campaignId, workspaceId: req.auth.workspaceId, agentRole: "content_calendar",
+      idempotencyKeyOverride: `launch_phase:${campaignId}:${parsed.data.phaseId}`,
+      systemPrompt: "Você é estrategista de conteúdo de lançamento. Gere conteúdo completo, específico para a fase informada, sem inventar fatos, datas, preços ou provas. Responda em português do Brasil com JSON válido: {\"summary\": string, \"calendar\": [{\"day\": number, \"platform\": string, \"format\": string, \"title\": string, \"hook\": string, \"caption\": string, \"objective\": string, \"cta\": string, \"visualConcept\": string}], \"productionNotes\": [string]}. Gere de 3 a 5 itens completos e prontos para revisão humana; todas as legendas devem estar escritas por inteiro.",
+      messages: [{ role: "user", content: `Campanha: ${campaign.title}\nEtapa: ${phaseName}\nDias: ${String(phase["dayStart"] ?? "?")} a ${String(phase["dayEnd"] ?? "?")}\nObjetivo: ${objective}\nAções principais: ${JSON.stringify(phase["primaryActions"] ?? [])}\nFormatos previstos: ${JSON.stringify(phase["contentTypes"] ?? [])}\nCanais: ${JSON.stringify(phase["channels"] ?? [])}\nMeta: crie somente os conteúdos desta etapa do cronograma.` }],
+      log: req.log, thinkingMessages: [`Preparando os conteúdos da etapa ${phaseName}...`],
+    });
+    const content = parseAgentJSON<Record<string, unknown>>(result.content, { summary: result.content, calendar: [], productionNotes: [] });
+    const [piece] = await db.insert(contentPiecesTable).values({
+      campaignId, workspaceId: req.auth.workspaceId, type: "content_calendar", status: "pending_approval",
+      title: `Conteúdo — ${phaseName}`, phase: phaseName, launchPhase: parsed.data.phaseId,
+      content: { ...content, launchPhase: parsed.data.phaseId, phaseName, objective } as any,
+      aiProvider: result.agentRecord?.aiProvider ?? null, creditsUsed: result.creditsCharged ?? 0,
+    }).returning({ id: contentPiecesTable.id, title: contentPiecesTable.title, status: contentPiecesTable.status });
+    res.status(201).json({ piece, alreadyGenerated: false });
+  } catch (err) {
+    if (err instanceof AppError) { res.status(err.statusCode).json({ error: err.message, code: err.code, details: err.data }); return; }
     throw err;
   }
 });

@@ -57,6 +57,7 @@ import { CampaignCreativeGallery } from "@/components/CampaignCreativeGallery";
 import { ComplianceReviewModal } from "@/components/ComplianceReviewModal";
 import { MarketValidationReview } from "@/components/MarketValidationReview";
 import { AutonomyAcceptanceModal } from "@/components/AutonomyAcceptanceModal";
+import { CampaignSchedulePreview } from "@/components/CampaignSchedulePreview";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface AgentRun {
@@ -1448,6 +1449,23 @@ export default function CampaignDetail() {
 
   const campaign = data?.campaign;
   const isActive = ACTIVE_STATUSES.includes(campaign?.status ?? "");
+  const { data: masterplanReviewState, isLoading: masterplanReviewLoading } = useQuery<{
+    masterplan: { status?: string } | null;
+    moduleReviews?: Record<string, string>;
+  }>({
+    queryKey: ["/api/campaigns", campaignId, "masterplan", "current"],
+    queryFn: () => customFetch(`/api/campaigns/${campaignId}/masterplan/current`),
+    enabled: Boolean(campaignId),
+    staleTime: 0,
+  });
+  const { data: onboardingStatus } = useQuery<{ trialAccess?: boolean }>({
+    queryKey: ["/api/onboarding/status"],
+    queryFn: () => customFetch("/api/onboarding/status"),
+    staleTime: 60000,
+  });
+  const trialAccess = onboardingStatus?.trialAccess === true;
+  const approvedTrialReviewCount = Object.values(masterplanReviewState?.moduleReviews ?? {}).filter((status) => status === "approved").length;
+  const canViewSchedule = masterplanReviewState?.masterplan?.status === "approved" || approvedTrialReviewCount === 10;
 
   useEffect(() => {
     setLocalIsActive(ACTIVE_STATUSES.includes(campaign?.status ?? ""));
@@ -1465,10 +1483,12 @@ export default function CampaignDetail() {
     if (!campaign || isLoading || isFetching) return;
     if (campaign.status === "draft" || campaign.status === "intake") {
       setLocation(`/campaigns/${campaignId}/intake`);
-    } else if (campaign.status === "analyzing" || campaign.status === "strategy_ready") {
+    } else if (campaign.status === "analyzing") {
+      setLocation(`/campaigns/${campaignId}/strategy`);
+    } else if (campaign.status === "strategy_ready" && !masterplanReviewLoading && !canViewSchedule) {
       setLocation(`/campaigns/${campaignId}/strategy`);
     }
-  }, [campaign?.status, campaignId, setLocation, campaign, isLoading, isFetching]);
+  }, [campaign?.status, campaignId, setLocation, campaign, isLoading, isFetching, masterplanReviewLoading, canViewSchedule]);
 
   // ── Agents query ──────────────────────────────────────────────────────────────
   const { data: agentsData, isLoading: agentsLoading } = useQuery({
@@ -2230,7 +2250,7 @@ export default function CampaignDetail() {
             </div>
 
             {/* Próxima ação — oculto quando approved (PreLaunchChecklist assume o controle) */}
-            {nextAction && campaign.status !== "approved" && (
+            {nextAction && campaign.status !== "approved" && !(campaign.status === "strategy_ready" && canViewSchedule) && (
               <div className="flex flex-col sm:flex-row gap-2">
                 {nextAction.isIntervention ? (
                   <>
@@ -2289,6 +2309,10 @@ export default function CampaignDetail() {
             )}
           </div>
         </div>
+
+        {campaign.status === "strategy_ready" && canViewSchedule && (
+          <CampaignSchedulePreview campaignId={campaignId} timeline={timelineD} trialAccess={trialAccess} />
+        )}
 
         {/* ─── Psychology Layer Missing Warning ─────────────────────────────────── */}
         {(() => {
@@ -2532,7 +2556,7 @@ export default function CampaignDetail() {
         )}
 
         {/* Revisão de Estratégia — obrigatório revisar antes de gerar conteúdo */}
-        {campaign.status === "strategy_ready" && Object.keys(strategyD).length > 0 && (() => {
+        {campaign.status === "strategy_ready" && !canViewSchedule && Object.keys(strategyD).length > 0 && (() => {
           const ins = parseStrategyInsights(strategyD);
           return (
             <div className="border border-cyan-400/25 bg-cyan-400/[0.03] overflow-hidden">
