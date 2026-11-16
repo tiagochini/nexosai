@@ -244,3 +244,6 @@ migrations registradas durante o deploy e não guarda a chave PEM nem credenciai
 AWS no GitHub. Esse fluxo usa imagens imutáveis e SSM. O caminho manual
 `deploy-from-git.sh` é separado e compila na EC2; ele exige memória/swap e espaço
 livre suficientes, além de backup/PITR confirmado.
+Antes de compilar, ele limpa o cache de build não utilizado e os caches limpos
+reaproveitáveis do kernel, registra RAM/swap disponíveis e compila API e web em
+sequência. Imagens de rollback e volumes não são removidos.

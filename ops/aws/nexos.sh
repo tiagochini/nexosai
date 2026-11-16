@@ -78,10 +78,33 @@ require_stopped_api() {
     echo 'Stop the API before changing the schema; stop other database writers too.' >&2; exit 1
   fi
 }
+report_build_memory() {
+  awk '
+    /^MemAvailable:/ { available=$2 }
+    /^SwapFree:/ { swap=$2 }
+    END {
+      printf "Build host memory: %.0f MiB available, %.0f MiB free swap.\n", available / 1024, swap / 1024
+    }
+  ' /proc/meminfo
+}
+prepare_build_host() {
+  echo 'Pruning unused Docker build cache before image builds.'
+  report_build_memory
+  docker builder prune --all --force
+  sync
+  if [[ -w /proc/sys/vm/drop_caches ]]; then
+    # Drop only clean, reclaimable kernel caches; active process memory is untouched.
+    printf '3\n' > /proc/sys/vm/drop_caches
+  else
+    echo 'Kernel cache cleanup is unavailable; continuing with Docker build-cache cleanup only.' >&2
+  fi
+  report_build_memory
+}
 case "$action" in
   check) check ;;
   build)
     check
+    prepare_build_host
     # Build these images in separate Compose invocations. Older Compose/Buildx
     # versions may ignore COMPOSE_PARALLEL_LIMIT for Bake and peak above the
     # EC2 memory budget when Vite and the API compiler run together.
