@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { isTrialBriefingCampaign } from "../credits/credits.service.js";
 import { AppError } from "../../lib/errors.js";
-import { approveMasterplan, getCurrentMasterplan, listMasterplanVersions, materializeMasterplan, repairMasterplanTriggerMap } from "./masterplan.service.js";
+import { approveMasterplan, getCurrentMasterplan, listMasterplanVersions, materializeMasterplan, repairMasterplanTriggerMap, updateMasterplanModuleReview, MASTERPLAN_MODULE_REVIEW_IDS } from "./masterplan.service.js";
 import { adoptCampaignBriefingToProduct, getCampaignBriefingAdoptionOptions } from "../product-intake/product-intake.service.js";
 
 import { getPaidMediaSetup, savePaidMediaSetup } from "../paid-media/paid-media-setup.service.js";
@@ -13,6 +13,10 @@ router.use(requireAuth);
 const materializeSchema = z.object({ requestApproval: z.boolean().optional().default(false) });
 const approveSchema = z.object({ version: z.number().int().positive() });
 const adoptBriefingSchema = z.object({ subscriptionId: z.string().uuid() });
+const moduleReviewSchema = z.object({
+  versionId: z.string().uuid(),
+  status: z.enum(["pending", "approved", "flagged", "rejected"]),
+});
 
 function handle(err: unknown, res: Response): void {
   if (err instanceof AppError) res.status(err.statusCode).json({ error: err.message, code: err.code, data: err.data });
@@ -28,6 +32,24 @@ router.get("/:campaignId/masterplan/current", async (req, res) => {
   try {
     const masterplan = await getCurrentMasterplan(req.auth.workspaceId, req.params["campaignId"] as string);
     res.json({ masterplan: masterplan ?? null });
+  } catch (err) { handle(err, res); }
+});
+router.put("/:campaignId/masterplan/reviews/:moduleId", async (req, res) => {
+  const parsed = moduleReviewSchema.safeParse(req.body);
+  if (!parsed.success || !MASTERPLAN_MODULE_REVIEW_IDS.includes(req.params["moduleId"] as typeof MASTERPLAN_MODULE_REVIEW_IDS[number])) {
+    res.status(400).json({ error: "Invalid Master Plan module review.", code: "MASTERPLAN_REVIEW_INVALID" });
+    return;
+  }
+  try {
+    const moduleReviews = await updateMasterplanModuleReview(
+      req.auth.workspaceId,
+      req.params["campaignId"] as string,
+      parsed.data.versionId,
+      req.params["moduleId"] as typeof MASTERPLAN_MODULE_REVIEW_IDS[number],
+      parsed.data.status,
+      req.auth.userId,
+    );
+    res.json({ moduleReviews });
   } catch (err) { handle(err, res); }
 });
 router.get("/:campaignId/masterplan/versions", async (req, res) => {

@@ -215,6 +215,7 @@ interface MasterplanVersion {
   version: number;
   status: "draft" | "pending_approval" | "approved" | "superseded";
   snapshot: any;
+  moduleReviews?: Record<string, "pending" | "approved" | "flagged" | "rejected">;
   contentHash: string;
   contextFingerprint: string;
   readinessScore: number;
@@ -468,6 +469,19 @@ export default function CampaignStrategyPage() {
     retry: false,
   });
   const currentMp = currentMpRes?.masterplan;
+
+  const moduleReviewMutation = useMutation({
+    mutationFn: ({ moduleId, status }: { moduleId: string; status: "pending" | "approved" | "flagged" | "rejected" }) => {
+      if (!currentMp?.id) throw new Error(t("Master Plan indisponível para revisão.", "Master plan is not available for review.", "El plan maestro no está disponible para revisión."));
+      return customFetch(`/api/campaigns/${campaignId}/masterplan/reviews/${moduleId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ versionId: currentMp.id, status }),
+      });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan", "current"] }),
+    onError: (error: any) => toast.error(error?.data?.error || error?.message || t("Não foi possível salvar a revisão.", "Could not save the review.", "No se pudo guardar la revisión.")),
+  });
 
   type BriefingAdoptionOptions = {
     briefingAnswerCount: number;
@@ -879,8 +893,11 @@ export default function CampaignStrategyPage() {
             {/* Full masterplan */}
             {hasStrategy ? (
               <StrategyMasterplan
+                key={currentMp?.id ?? "current-masterplan"}
                 strategyD={strategyD}
                 ins={strategyInsights}
+                reviewStatuses={currentMp?.moduleReviews}
+                onReviewStatusChange={(moduleId, status) => moduleReviewMutation.mutateAsync({ moduleId, status })}
                 campaignId={campaignId}
                 campaignTitle={campaignTitle}
                 track={track}

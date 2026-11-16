@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { db, campaignsTable, masterplanVersionsTable, agentClarificationRequestsTable, auditLogsTable, commercialSubscriptionsTable, productIntakesTable } from "@workspace/db";
 import { fillMissingCampaignArchitectureFields, fillMissingCampaignCoreFields, fillMissingMasterplanQualityFields, fillMissingTriggerMapFields, missingCampaignArchitectureFields, missingCampaignCoreFields, missingMasterplanQualityFields, missingTriggerMapFields, REQUIRED_CAMPAIGN_ARCHITECTURE_FIELDS, REQUIRED_CAMPAIGN_CORE_FIELDS, REQUIRED_MASTERPLAN_QUALITY_FIELDS, REQUIRED_TRIGGER_MAP_FIELDS } from "@workspace/api-zod";
 import { NotFoundError, AppError } from "../../lib/errors.js";
@@ -11,6 +11,12 @@ import { completeMissingStrategySections } from "../agents/strategy.agent.js";
 import { assertPaidMediaApprovalMatchesCampaign, paidMediaSnapshotFields } from "../paid-media/paid-media-setup.service.js";
 
 type Json = Record<string, unknown>;
+export const MASTERPLAN_MODULE_REVIEW_IDS = [
+  "executiveSummary", "bigDomino", "positioning", "market", "audience",
+  "architecture", "triggers", "metrics", "risks", "notes",
+] as const;
+export type MasterplanModuleReviewId = typeof MASTERPLAN_MODULE_REVIEW_IDS[number];
+export type MasterplanModuleReviewStatus = "pending" | "approved" | "flagged" | "rejected";
 export type ApprovedDossierBinding = {
   campaignId: string | null | undefined;
   masterplanVersionId: string | null | undefined;
@@ -163,6 +169,42 @@ export async function getCurrentMasterplan(workspaceId: string, campaignId: stri
     eq(masterplanVersionsTable.workspaceId, workspaceId), eq(masterplanVersionsTable.campaignId, campaignId),
   )).orderBy(desc(masterplanVersionsTable.version)).limit(1);
   return row;
+}
+
+/** Persists review decisions against the exact Master Plan version being viewed. */
+export async function updateMasterplanModuleReview(
+  workspaceId: string,
+  campaignId: string,
+  versionId: string,
+  moduleId: MasterplanModuleReviewId,
+  status: MasterplanModuleReviewStatus,
+  actorId: string,
+) {
+  const current = await getCurrentMasterplan(workspaceId, campaignId);
+  if (!current) throw new NotFoundError("Masterplan");
+  if (current.id !== versionId || current.status === "approved" || current.status === "superseded") {
+    throw new AppError(409, "Esta versão do Master Plan não está mais disponível para revisão. Atualize a página.", "MASTERPLAN_REVIEW_VERSION_STALE");
+  }
+
+  const [updated] = await db.update(masterplanVersionsTable).set({
+    moduleReviews: sql`jsonb_set(coalesce(${masterplanVersionsTable.moduleReviews}, '{}'::jsonb), ARRAY[${moduleId}]::text[], to_jsonb(${status}::text), true)`,
+  }).where(and(
+    eq(masterplanVersionsTable.id, versionId),
+    eq(masterplanVersionsTable.workspaceId, workspaceId),
+    eq(masterplanVersionsTable.campaignId, campaignId),
+    ne(masterplanVersionsTable.status, "approved"),
+    ne(masterplanVersionsTable.status, "superseded"),
+  )).returning({ moduleReviews: masterplanVersionsTable.moduleReviews });
+  if (!updated) throw new AppError(409, "Esta versão do Master Plan não está mais disponível para revisão. Atualize a página.", "MASTERPLAN_REVIEW_VERSION_STALE");
+
+  await db.insert(auditLogsTable).values({
+    workspaceId,
+    campaignId,
+    action: "masterplan.module_review_updated",
+    actor: actorId,
+    data: { versionId, moduleId, status },
+  });
+  return updated.moduleReviews;
 }
 
 export async function materializeMasterplan(workspaceId: string, campaignId: string, actorId?: string, requestApproval = false) {

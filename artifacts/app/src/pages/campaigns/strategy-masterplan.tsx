@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useTextAnnotation, AnnotationToolbar, AnnotationDialog } from "@/components/strategy-annotation";
 import {
   Target, Users, Zap, BarChart3, Brain, ShieldAlert,
@@ -22,6 +22,7 @@ import { useUiText } from "@/lib/i18n";
 export type StrategyObj = Record<string, unknown>;
 type Obj = Record<string, unknown>;
 type ModuleStatus = "pending" | "approved" | "flagged" | "rejected";
+const EMPTY_MODULE_REVIEWS: Record<string, ModuleStatus> = {};
 
 const STRATEGY_WRAPPER_KEYS = ["data", "result", "insights", "masterplan", "strategy"] as const;
 const STRATEGY_SUMMARY_KEYS = ["executiveSummary", "summary", "executive_summary", "analysis", "overview"] as const;
@@ -683,6 +684,8 @@ function BigDominoCard({
 interface StrategyMasterplanProps {
   strategyD: Obj;
   ins: Obj;
+  reviewStatuses?: Record<string, ModuleStatus>;
+  onReviewStatusChange?: (moduleId: string, status: ModuleStatus) => Promise<unknown>;
   userIdentity?: PdfUserIdentity;
   campaignId?: string;
   campaignTitle?: string;
@@ -693,12 +696,12 @@ interface StrategyMasterplanProps {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, campaignTitle, track, onRequestTriggerHelp, triggerHelpPending = false }: StrategyMasterplanProps) {
+export function StrategyMasterplan({ strategyD, ins, reviewStatuses = EMPTY_MODULE_REVIEWS, onReviewStatusChange, userIdentity, campaignId, campaignTitle, track, onRequestTriggerHelp, triggerHelpPending = false }: StrategyMasterplanProps) {
   const t = useUiText();
   const hasIns = Object.keys(ins).length > 0;
   const src = hasIns ? ins : strategyD;
 
-  const [statuses, setStatuses] = useState<Record<string, ModuleStatus>>({});
+  const [statuses, setStatuses] = useState<Record<string, ModuleStatus>>(reviewStatuses);
   const [editingModule, setEditingModule] = useState<string | null>(null);
   const [editValues, setEditValues]       = useState<Record<string, string>>({});
   const [savedEdits, setSavedEdits]       = useState<Record<string, string>>({});
@@ -710,8 +713,17 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
   const { selection, clearSelection, openDialog, dialog, closeDialog } =
     useTextAnnotation(masterplanRef);
 
-  const setStatus = (id: string, next: ModuleStatus) =>
-    setStatuses(prev => ({ ...prev, [id]: prev[id] === next ? "pending" : next }));
+  useEffect(() => setStatuses(reviewStatuses), [reviewStatuses]);
+  const setStatus = (id: string, next: ModuleStatus) => {
+    const previous = statuses[id] ?? "pending";
+    const updated = previous === next ? "pending" : next;
+    setStatuses(prev => ({ ...prev, [id]: updated }));
+    if (onReviewStatusChange) {
+      void onReviewStatusChange(id, updated).catch(() => {
+        setStatuses(prev => prev[id] === updated ? { ...prev, [id]: previous } : prev);
+      });
+    }
+  };
   const getStatus = (id: string): ModuleStatus => statuses[id] ?? "pending";
 
   // ── Data extraction ──

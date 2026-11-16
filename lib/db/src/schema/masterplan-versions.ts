@@ -7,6 +7,7 @@ import { commercialProductsTable, commercialSubscriptionsTable } from "./commerc
 export const masterplanVersionStatusEnum = pgEnum("masterplan_version_status", [
   "draft", "pending_approval", "approved", "superseded",
 ]);
+export type MasterplanModuleReviewStatus = "pending" | "approved" | "flagged" | "rejected";
 
 /** Immutable, tenant-scoped materialization of the campaign's operational truth. */
 export const masterplanVersionsTable = pgTable("masterplan_versions", {
@@ -16,6 +17,7 @@ export const masterplanVersionsTable = pgTable("masterplan_versions", {
   version: integer("version").notNull(),
   status: masterplanVersionStatusEnum("status").notNull().default("draft"),
   snapshot: jsonb("snapshot").notNull(),
+  moduleReviews: jsonb("module_reviews").$type<Record<string, MasterplanModuleReviewStatus>>().notNull().default({}),
   contentHash: text("content_hash").notNull(),
   contextFingerprint: text("context_fingerprint").notNull(),
   readinessScore: integer("readiness_score").notNull(),

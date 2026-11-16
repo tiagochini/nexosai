@@ -29,6 +29,7 @@ export function isTrialRouteAllowed(method: string, path: string, briefingCampai
     if (method === "POST" && path.toLowerCase() === `/campaigns/${briefingCampaignId.toLowerCase()}/execute/strategy`) return true;
     if (method === "POST" && path.toLowerCase() === `/campaigns/${briefingCampaignId.toLowerCase()}/masterplan/materialize`) return true;
     if (method === "PUT" && path.toLowerCase() === `/campaigns/${briefingCampaignId.toLowerCase()}/masterplan/paid-media-setup`) return true;
+    if (method === "PUT" && new RegExp(`^/campaigns/${briefingCampaignId}/masterplan/reviews/[A-Za-z][A-Za-z0-9]*$`, "i").test(path)) return true;
   }
   // The strategy page uses this read-only endpoint to label the downloadable
   // plan with the workspace identity.
