@@ -25,6 +25,8 @@ import {
   PSYCH_LAYER_MIN_OTHER_SECTIONS,
 } from "../lib/psychology-layer.js";
 import { AppError } from "../lib/errors.js";
+import { ensureRequiredPsychologyAgents } from "../modules/agents/execution-governor-psychology.js";
+import type { ExecutionPlan } from "../modules/agents/execution-governor.agent.js";
 
 // ── Campaign types that run the A/B/C psychology pipeline ────────────────────
 const TYPES_WITH_OFFER_ANALYSIS = [
@@ -456,4 +458,70 @@ await test("11. Clean idempotency: no checkpoint clearing when layer already pre
   console.log("  ✓ psychologyLayerAlreadyPersisted=true, checkpoints preserved");
 });
 
-console.log("\n✅ Psychology Pipeline Integration Tests: ALL PASSED (12/12 + 2 subtests = 14 assertions)\n");
+await test("13. Execution Governor keeps required psychology agents active", () => {
+  const plan = {
+    executionMode: "quick",
+    estimatedCost: 50,
+    estimatedLatency: "2 min",
+    estimatedLatencySeconds: 120,
+    activeAgents: ["strategy"],
+    skippedAgents: ["objection_killer", "hook_factory", "traffic_intelligence"],
+    blockedAgents: ["pricing_psychologist"],
+    parallelAgents: [],
+    executionOrder: ["strategy"],
+    agentClassifications: [
+      { agentId: "objection_killer", tier: "contextual", shouldRun: false, skipReason: "quick mode", priority: 3 },
+      { agentId: "hook_factory", tier: "expensive", shouldRun: false, skipReason: "premium only", priority: 4 },
+    ],
+    estimatedComplexity: "simple",
+    operationalRisk: "low",
+    optimizationNotes: [],
+    reasoningSummary: "quick",
+    recommendation: "run",
+    confidenceScore: 0.9,
+    estimatedInputTokens: 100,
+    estimatedOutputTokens: 100,
+    tokenBudgetWarning: false,
+  } as ExecutionPlan;
+
+  const result = ensureRequiredPsychologyAgents(plan, "launch");
+  for (const agent of ["pricing_psychologist", "objection_killer", "hook_factory"]) {
+    assert.ok(result.activeAgents.includes(agent), `${agent} should be active`);
+    assert.ok(!result.skippedAgents.includes(agent), `${agent} should not be skipped`);
+    assert.ok(!result.blockedAgents.includes(agent), `${agent} should not be blocked`);
+  }
+  assert.ok(result.skippedAgents.includes("traffic_intelligence"), "unrelated optimization should remain");
+  assert.ok(result.agentClassifications.every((item) => item.shouldRun), "required agent classifications should run");
+  console.log("  ✓ required psychology agents override governor skips and blocks");
+});
+
+await test("14. Execution Governor preserves optional agents for unrelated campaign types", () => {
+  const plan = {
+    executionMode: "quick",
+    estimatedCost: 50,
+    estimatedLatency: "2 min",
+    estimatedLatencySeconds: 120,
+    activeAgents: ["strategy"],
+    skippedAgents: ["hook_factory"],
+    blockedAgents: [],
+    parallelAgents: [],
+    executionOrder: ["strategy"],
+    agentClassifications: [],
+    estimatedComplexity: "simple",
+    operationalRisk: "low",
+    optimizationNotes: [],
+    reasoningSummary: "quick",
+    recommendation: "run",
+    confidenceScore: 0.9,
+    estimatedInputTokens: 100,
+    estimatedOutputTokens: 100,
+    tokenBudgetWarning: false,
+  } as ExecutionPlan;
+
+  ensureRequiredPsychologyAgents(plan, "branding");
+  assert.deepEqual(plan.skippedAgents, ["hook_factory"]);
+  assert.deepEqual(plan.activeAgents, ["strategy"]);
+  console.log("  ✓ campaign types without a psychology layer keep the original plan");
+});
+
+console.log("\n✅ Psychology Pipeline Integration Tests: ALL PASSED\n");

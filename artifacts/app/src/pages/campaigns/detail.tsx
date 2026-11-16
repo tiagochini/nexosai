@@ -2325,7 +2325,7 @@ export default function CampaignDetail() {
               <div className="px-4 py-3 border-b border-rose-400/30 flex items-center gap-2">
                 <Brain className="h-3.5 w-3.5 text-rose-400 shrink-0" />
                 <span className="font-mono text-[11px] uppercase tracking-widest text-rose-400 font-bold flex-1">
-                  {t("Agentes de Psicologia de Oferta Ausentes", "Missing Offer Psychology Agents", "Faltan agentes de psicología de ofertas")}
+                  {t("Camada de Psicologia de Oferta Incompleta", "Offer Psychology Layer Incomplete", "La capa de psicología de ofertas está incompleta")}
                 </span>
                 {detectedAt && (
                   <span className="font-mono text-[9px] text-rose-400/50 uppercase tracking-widest">
@@ -2335,7 +2335,7 @@ export default function CampaignDetail() {
               </div>
               <div className="p-4 space-y-3">
                 <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed">
-                  {t("Os agentes de psicologia de oferta não foram executados durante a fase de estratégia.", "Offer psychology agents did not run during the strategy phase.", "Los agentes de psicología de ofertas no se ejecutaron durante la fase de estrategia.")}
+                  {t("A estratégia não concluiu todas as análises necessárias. O sistema também tentou recuperar os dados antes de gerar o conteúdo, mas ainda há agentes sem resultado.", "The strategy did not complete all required analyses. The system also tried to recover the data before generating content, but some agents still have no results.", "La estrategia no completó todos los análisis necesarios. El sistema también intentó recuperar los datos antes de generar el contenido, pero algunos agentes aún no tienen resultados.")}
                   {" "}{t("Os agentes de copy", "Copy agents", "Los agentes de textos")} (<strong className="text-foreground/80">{t("Anúncios, VSL, Página de Vendas", "Ads, VSL, Sales Page", "Anuncios, VSL, Página de ventas")}</strong>) {t("precisam dessas análises para gerar copy com pricing, objections e hooks otimizados.", "need these analyses to create copy with optimized pricing, objections, and hooks.", "necesitan estos análisis para crear textos con precios, objeciones y ganchos optimizados.")}
                 </p>
                 {missingAgents.length > 0 && (

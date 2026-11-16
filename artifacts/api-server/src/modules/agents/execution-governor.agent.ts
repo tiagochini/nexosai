@@ -17,6 +17,7 @@
 
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { Logger } from "pino";
+import { ensureRequiredPsychologyAgents } from "./execution-governor-psychology.js";
 
 // ── Execution Plan ────────────────────────────────────────────────────────────
 
@@ -245,6 +246,9 @@ export async function runExecutionGovernor(
   };
 
   const plan = parseAgentJSON<ExecutionPlan>(result.content, defaultPlan);
+
+  // Content generation requires hooks plus two supporting psychology sections.
+  ensureRequiredPsychologyAgents(plan, campaignType);
 
   // Hard guard: the LLM must never skip traffic_intelligence when the caller
   // has already confirmed hasTraffic=true. The budget misread (legacy key vs new
