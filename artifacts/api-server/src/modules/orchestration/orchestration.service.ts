@@ -2,6 +2,7 @@ import { eq, and, desc, gt, lt, inArray } from "drizzle-orm";
 import {
   db,
   campaignsTable,
+  masterplanVersionsTable,
   campaignAgentsTable,
   approvalCheckpointsTable,
   auditLogsTable,
@@ -26,7 +27,7 @@ import { enforceLaunchAutonomyGate, enforceNoMandatoryPause } from "../autonomy/
 import { assertCampaignCreditBudget, isTrialBriefingCampaign, isTrialStrategyCampaign } from "../credits/credits.service.js";
 import { assertSocialDiagnosisApproved } from "../campaigns/social-diagnosis.policy.js";
 import { resolveSocialMediaEntitlement } from "../billing/commercial-entitlements.service.js";
-import { calculateMasterplanReadiness } from "../masterplan/masterplan.service.js";
+import { calculateMasterplanReadiness, missingMasterplanModuleReviews } from "../masterplan/masterplan.service.js";
 
 // ── Execution status ──────────────────────────────────────────────────────────
 
@@ -494,6 +495,20 @@ export async function triggerContentPhase(
 
   const trial = await isTrialBriefingCampaign(workspaceId, campaignId);
   if (trial) throw new AppError(403, "A geração de conteúdo exige uma licença NexOS ativa.", "TRIAL_CONTENT_GENERATION_BLOCKED");
+
+  const [approvedMasterplan] = await db.select({ moduleReviews: masterplanVersionsTable.moduleReviews })
+    .from(masterplanVersionsTable).where(and(
+      eq(masterplanVersionsTable.workspaceId, workspaceId),
+      eq(masterplanVersionsTable.campaignId, campaignId),
+      eq(masterplanVersionsTable.status, "approved"),
+    )).orderBy(desc(masterplanVersionsTable.version)).limit(1);
+  if (!approvedMasterplan) {
+    throw new AppError(428, "Aprove o Masterplan antes de gerar o conteúdo.", "MASTERPLAN_NOT_APPROVED");
+  }
+  const unapprovedModules = missingMasterplanModuleReviews(approvedMasterplan.moduleReviews);
+  if (unapprovedModules.length) {
+    throw new AppError(428, "Aprove os 10 checklists do Masterplan antes de gerar conteúdo.", "MASTERPLAN_CHECKLISTS_PENDING", { unapprovedModules, approvedCount: 10 - unapprovedModules.length, total: 10 });
+  }
 
   const pendingClarifications = await db.select({ id: agentClarificationRequestsTable.id, question: agentClarificationRequestsTable.question })
     .from(agentClarificationRequestsTable).where(and(

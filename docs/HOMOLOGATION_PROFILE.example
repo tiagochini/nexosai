@@ -4,6 +4,13 @@
 DATABASE_URL=postgresql://nexos_homologation:SENHA_URL_ENCODED@db.PROJECTREF.supabase.co:5432/postgres
 DATABASE_ADMIN_URL=postgresql://postgres:SENHA_URL_ENCODED@db.PROJECTREF.supabase.co:5432/postgres
 HOMOLOGATION_DATABASE_HOST=db.PROJECTREF.supabase.co
+# IPv4-only Windows/network alternative: use the Session Pooler connection
+# string from Supabase Dashboard > Connect (port 5432), with the custom role
+# username suffixed by the project ref, for example:
+# DATABASE_URL=postgresql://nexos_homologation.PROJECTREF:SENHA_URL_ENCODED@HOST_DA_SESSION_POOLER:5432/postgres
+# HOMOLOGATION_DATABASE_HOST=HOST_DA_SESSION_POOLER
+# Keep DATABASE_ADMIN_URL on the direct host; it is removed from API processes.
+# Do not use the Transaction Pooler (port 6543) for this profile.
 HOMOLOGATION_ENVIRONMENT=true
 DATABASE_SSL_MODE=verify-full
 DATABASE_SSL_CA_FILE=C:/CAMINHO/PRIVADO/supabase-root-ca.crt

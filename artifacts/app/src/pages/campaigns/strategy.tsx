@@ -227,6 +227,11 @@ interface MasterplanVersion {
   approvedAt: string | null;
 }
 
+const REQUIRED_MASTERPLAN_REVIEWS = [
+  "executiveSummary", "bigDomino", "positioning", "market", "audience",
+  "architecture", "triggers", "metrics", "risks", "notes",
+] as const;
+
 function MasterplanPanel({
   currentMp,
   versions,
@@ -479,8 +484,28 @@ export default function CampaignStrategyPage() {
         body: JSON.stringify({ versionId: currentMp.id, status }),
       });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan", "current"] }),
-    onError: (error: any) => toast.error(error?.data?.error || error?.message || t("Não foi possível salvar a revisão.", "Could not save the review.", "No se pudo guardar la revisión.")),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan", "current"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan", "versions"] }),
+      ]);
+    },
+    onError: async (error: any) => {
+      if (error?.data?.code === "MASTERPLAN_REVIEW_VERSION_STALE") {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan", "current"] }),
+          queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan", "versions"] }),
+          queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) }),
+        ]);
+        toast.info(t(
+          "O Master Plan foi atualizado em outra ação. Carreguei a versão mais recente; revise o conteúdo antes de aprovar novamente.",
+          "The Master Plan changed in another action. I loaded the latest version; review its content before approving again.",
+          "El Master Plan cambió en otra acción. Cargué la versión más reciente; revisa el contenido antes de aprobarla de nuevo.",
+        ), { duration: 8000 });
+        return;
+      }
+      toast.error(error?.data?.error || error?.message || t("Não foi possível salvar a revisão.", "Could not save the review.", "No se pudo guardar la revisión."));
+    },
   });
 
   type BriefingAdoptionOptions = {
@@ -625,6 +650,10 @@ export default function CampaignStrategyPage() {
       toast.error(t("O plano está incompleto. Preencha os módulos indicados em Bloqueios antes de avançar.", "The plan is incomplete. Fill the modules listed under Blockers before continuing.", "El plan está incompleto. Completa los módulos indicados en Bloqueos antes de continuar."), { duration: 7000 });
       return;
     }
+    if (!allChecklistsApproved) {
+      toast.error(t("Aprove os 10 checklists do Masterplan antes de gerar o conteúdo.", "Approve all 10 master plan checklists before generating content.", "Aprueba los 10 checklists del plan maestro antes de generar contenido."), { duration: 7000 });
+      return;
+    }
     if (currentMp && currentMp.status !== "approved") {
       approveMpMutation.mutate({ version: currentMp.version });
     } else {
@@ -633,6 +662,8 @@ export default function CampaignStrategyPage() {
   };
   const isApproving = approveMpMutation.isPending || executeMutation.isPending;
   const strategyCanAdvance = currentMp?.readinessStatus === "ready";
+  const approvedChecklistCount = REQUIRED_MASTERPLAN_REVIEWS.filter((moduleId) => currentMp?.moduleReviews?.[moduleId] === "approved").length;
+  const allChecklistsApproved = approvedChecklistCount === REQUIRED_MASTERPLAN_REVIEWS.length;
   const advanceBlockers = (currentMp?.readinessBlockers ?? [])
     .map((blocker) => typeof blocker === "string" ? blocker : blocker.message)
     .filter((message): message is string => Boolean(message));
@@ -642,6 +673,8 @@ export default function CampaignStrategyPage() {
     ? t("Não foi possível consultar a prontidão do Masterplan. Atualize a página ou tente recalcular.", "Could not load master plan readiness. Refresh the page or recalculate it.", "No se pudo consultar la preparación del plan maestro. Actualiza la página o vuelve a calcularla.")
     : !currentMp
     ? t("Ainda não existe uma versão materializada do Masterplan para aprovar.", "There is no materialized master plan version to approve yet.", "Todavía no existe una versión materializada del plan maestro para aprobar.")
+    : strategyCanAdvance && !allChecklistsApproved
+    ? t(`Aprove os 10 checklists do Masterplan para continuar (${approvedChecklistCount}/10 aprovados).`, `Approve all 10 master plan checklists to continue (${approvedChecklistCount}/10 approved).`, `Aprueba los 10 checklists del plan maestro para continuar (${approvedChecklistCount}/10 aprobados).`)
     : !strategyCanAdvance
     ? advanceBlockers.length > 0
       ? `${t("Pendências registradas pelo sistema", "System-reported blockers", "Bloqueos reportados por el sistema")}: ${advanceBlockers.join(" ")}`
@@ -833,7 +866,7 @@ export default function CampaignStrategyPage() {
                   </div>
                   <p className="mt-2 max-w-3xl font-mono text-[11px] leading-relaxed text-muted-foreground/75">
                     {trialAccess
-                      ? t("Consulte os módulos e baixe o PDF. Aprovar e gerar conteúdo exige uma licença.", "Review the modules and download the PDF. Approval and content generation require a license.", "Consulta los módulos y descarga el PDF. Aprobar y generar contenido requiere una licencia.")
+                      ? t("Revise e aprove os 10 módulos para liberar o PDF. Aprovar o plano e gerar conteúdo exige uma licença.", "Review and approve all 10 modules to unlock the PDF. Approving the plan and generating content require a license.", "Revisa y aprueba los 10 módulos para desbloquear el PDF. Aprobar el plan y generar contenido requiere una licencia.")
                       : t("Revise a estratégia. Depois da aprovação, os agentes preparam o conteúdo da campanha.", "Review the strategy. After approval, the agents prepare the campaign content.", "Revisa la estrategia. Tras aprobarla, los agentes preparan el contenido de la campaña.")}
                   </p>
                 </div>
@@ -864,13 +897,15 @@ export default function CampaignStrategyPage() {
                     <p className="font-mono text-[10px] leading-relaxed text-muted-foreground/60">
                       {trialAccess
                         ? t("A geração de conteúdo fica disponível com uma licença NexOS.", "Content generation is available with a NexOS license.", "La generación de contenido está disponible con una licencia NexOS.")
-                        : t("O plano está pronto para aprovação e geração do conteúdo.", "The plan is ready for approval and content generation.", "El plan está listo para aprobar y generar el contenido.")}
+                        : allChecklistsApproved
+                        ? t("Todos os checklists foram aprovados. O plano está pronto para gerar o conteúdo.", "All checklists are approved. The plan is ready to generate content.", "Todos los checklists están aprobados. El plan está listo para generar contenido.")
+                        : advanceBlockReason || t("Aprove os 10 checklists para liberar a aprovação e a geração do conteúdo.", "Approve all 10 checklists to unlock approval and content generation.", "Aprueba los 10 checklists para desbloquear la aprobación y la generación de contenido.")}
                     </p>
                   )}
                 </div>
                 <Button
                   onClick={handleApprove}
-                  disabled={trialAccess || isApproving || !strategyCanAdvance}
+                  disabled={trialAccess || isApproving || !strategyCanAdvance || !allChecklistsApproved}
                   className="h-11 w-full gap-2 rounded-none px-5 font-mono text-[10px] font-black uppercase tracking-[0.12em] btn-weapon-primary sm:w-auto sm:min-w-[250px]"
                 >
                   {trialAccess
@@ -922,7 +957,9 @@ export default function CampaignStrategyPage() {
                     {t("Tudo revisado?", "Finished reviewing?", "¿Terminaste de revisar?")}
                   </h3>
                   <p className="font-mono text-[10px] leading-relaxed text-muted-foreground/65">
-                    {t("Aprove o Masterplan para preparar o conteúdo completo do lançamento.", "Approve the master plan to prepare the complete launch content.", "Aprueba el plan maestro para preparar todo el contenido del lanzamiento.")}
+                    {allChecklistsApproved
+                      ? t("Todos os checklists foram aprovados. Aprove o Masterplan para preparar o conteúdo completo do lançamento.", "All checklists are approved. Approve the master plan to prepare the complete launch content.", "Todos los checklists están aprobados. Aprueba el plan maestro para preparar todo el contenido del lanzamiento.")
+                      : t(`Aprove os 10 checklists do Masterplan antes de gerar conteúdo (${approvedChecklistCount}/10 aprovados).`, `Approve all 10 master plan checklists before generating content (${approvedChecklistCount}/10 approved).`, `Aprueba los 10 checklists del plan maestro antes de generar contenido (${approvedChecklistCount}/10 aprobados).`)}
                   </p>
                   {!trialAccess && advanceBlockReason && (
                     <div role="status" className="space-y-2 pt-1">
@@ -945,7 +982,7 @@ export default function CampaignStrategyPage() {
                 </div>
                 <Button
                   onClick={handleApprove}
-                  disabled={trialAccess || isApproving || !strategyCanAdvance}
+                  disabled={trialAccess || isApproving || !strategyCanAdvance || !allChecklistsApproved}
                   className="h-11 w-full gap-2 rounded-none px-5 font-mono text-[10px] font-black uppercase tracking-[0.12em] btn-weapon-primary sm:w-auto sm:min-w-[250px]"
                 >
                   {trialAccess

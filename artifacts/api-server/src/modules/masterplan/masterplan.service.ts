@@ -15,6 +15,10 @@ export const MASTERPLAN_MODULE_REVIEW_IDS = [
   "executiveSummary", "bigDomino", "positioning", "market", "audience",
   "architecture", "triggers", "metrics", "risks", "notes",
 ] as const;
+export function missingMasterplanModuleReviews(moduleReviews: unknown): MasterplanModuleReviewId[] {
+  const reviews = object(moduleReviews);
+  return MASTERPLAN_MODULE_REVIEW_IDS.filter((moduleId) => reviews[moduleId] !== "approved");
+}
 export type MasterplanModuleReviewId = typeof MASTERPLAN_MODULE_REVIEW_IDS[number];
 export type MasterplanModuleReviewStatus = "pending" | "approved" | "flagged" | "rejected";
 export type ApprovedDossierBinding = {
@@ -182,17 +186,21 @@ export async function updateMasterplanModuleReview(
 ) {
   const current = await getCurrentMasterplan(workspaceId, campaignId);
   if (!current) throw new NotFoundError("Masterplan");
-  if (current.id !== versionId || current.status === "approved" || current.status === "superseded") {
+  if (current.id !== versionId) {
     throw new AppError(409, "Esta versão do Master Plan não está mais disponível para revisão. Atualize a página.", "MASTERPLAN_REVIEW_VERSION_STALE");
   }
+  if (current.status === "superseded") {
+    throw new AppError(409, "Esta versão do Master Plan foi substituída. Revise a versão atual.", "MASTERPLAN_REVIEW_VERSION_SUPERSEDED");
+  }
 
+  // Reviews are annotations, not changes to the approved strategy snapshot.
+  // Permit them on already-approved legacy versions created before this review flow.
   const [updated] = await db.update(masterplanVersionsTable).set({
     moduleReviews: sql`jsonb_set(coalesce(${masterplanVersionsTable.moduleReviews}, '{}'::jsonb), ARRAY[${moduleId}]::text[], to_jsonb(${status}::text), true)`,
   }).where(and(
     eq(masterplanVersionsTable.id, versionId),
     eq(masterplanVersionsTable.workspaceId, workspaceId),
     eq(masterplanVersionsTable.campaignId, campaignId),
-    ne(masterplanVersionsTable.status, "approved"),
     ne(masterplanVersionsTable.status, "superseded"),
   )).returning({ moduleReviews: masterplanVersionsTable.moduleReviews });
   if (!updated) throw new AppError(409, "Esta versão do Master Plan não está mais disponível para revisão. Atualize a página.", "MASTERPLAN_REVIEW_VERSION_STALE");
@@ -466,6 +474,10 @@ export async function repairMasterplanTriggerMap(workspaceId: string, campaignId
 export async function approveMasterplan(workspaceId: string, campaignId: string, version: number, actorId: string) {
   const [plan] = await db.select().from(masterplanVersionsTable).where(and(eq(masterplanVersionsTable.workspaceId, workspaceId), eq(masterplanVersionsTable.campaignId, campaignId), eq(masterplanVersionsTable.version, version))).limit(1);
   if (!plan) throw new NotFoundError("Masterplan");
+  const unapprovedModules = missingMasterplanModuleReviews(plan.moduleReviews);
+  if (unapprovedModules.length) {
+    throw new AppError(428, "Aprove os 10 checklists do Masterplan antes de aprovar e gerar conteúdo.", "MASTERPLAN_CHECKLISTS_PENDING", { unapprovedModules, approvedCount: MASTERPLAN_MODULE_REVIEW_IDS.length - unapprovedModules.length, total: MASTERPLAN_MODULE_REVIEW_IDS.length });
+  }
   if (plan.status === "approved") return plan;
   if (plan.status === "superseded") throw new AppError(409, "Versão do Masterplan já foi substituída.", "MASTERPLAN_SUPERSEDED");
   const now = new Date();
@@ -475,6 +487,10 @@ export async function approveMasterplan(workspaceId: string, campaignId: string,
     const [campaign] = await tx.select({ strategyData: campaignsTable.strategyData, intakeData: campaignsTable.intakeData }).from(campaignsTable).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).for("update").limit(1);
     const [current] = await tx.select().from(masterplanVersionsTable).where(and(eq(masterplanVersionsTable.id, plan.id), eq(masterplanVersionsTable.workspaceId, workspaceId))).limit(1);
     if (!campaign || !current || current.status === "superseded") throw new AppError(409, "Versão do Master Plan substituída; atualize antes de aprovar.", "MASTERPLAN_SUPERSEDED");
+    const stillUnapproved = missingMasterplanModuleReviews(current.moduleReviews);
+    if (stillUnapproved.length) {
+      throw new AppError(428, "Aprove os 10 checklists do Masterplan antes de aprovar e gerar conteúdo.", "MASTERPLAN_CHECKLISTS_PENDING", { unapprovedModules: stillUnapproved, approvedCount: MASTERPLAN_MODULE_REVIEW_IDS.length - stillUnapproved.length, total: MASTERPLAN_MODULE_REVIEW_IDS.length });
+    }
     const pending = await tx.select({ id: agentClarificationRequestsTable.id, question: agentClarificationRequestsTable.question })
       .from(agentClarificationRequestsTable).where(and(
         eq(agentClarificationRequestsTable.workspaceId, workspaceId),

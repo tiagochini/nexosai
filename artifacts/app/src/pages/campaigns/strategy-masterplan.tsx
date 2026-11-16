@@ -762,6 +762,7 @@ export function StrategyMasterplan({ strategyD, ins, reviewStatuses = EMPTY_MODU
 
   const TOTAL_MODULES  = 10;
   const approvedCount  = Object.values(statuses).filter(s => s === "approved").length;
+  const allModulesApproved = approvedCount === TOTAL_MODULES;
   const rejectedCount  = Object.values(statuses).filter(s => s === "rejected").length;
   const flaggedCount   = Object.values(statuses).filter(s => s === "flagged").length;
   const progress       = Math.round((approvedCount / TOTAL_MODULES) * 100);
@@ -807,14 +808,25 @@ export function StrategyMasterplan({ strategyD, ins, reviewStatuses = EMPTY_MODU
               <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35 mt-0.5">{t("aprovados", "approved", "aprobados")}</div>
             </div>
             {userIdentity && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="rounded-none font-mono text-[9px] uppercase tracking-widest h-7 px-3 gap-1.5 border-primary/25 text-primary/70 hover:border-primary/50 hover:text-primary transition-all"
-                onClick={() => setShowConsent(true)}
-              >
-                <Download className="h-3 w-3" />{t("Baixar PDF", "Download PDF", "Descargar PDF")}
-              </Button>
+              <div className="flex flex-col items-end gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-none font-mono text-[9px] uppercase tracking-widest h-7 px-3 gap-1.5 border-primary/25 text-primary/70 hover:border-primary/50 hover:text-primary transition-all"
+                  disabled={!allModulesApproved}
+                  title={!allModulesApproved ? t("Aprove os 10 módulos para liberar o PDF.", "Approve all 10 modules to unlock the PDF.", "Aprueba los 10 módulos para desbloquear el PDF.") : undefined}
+                  onClick={() => {
+                    if (allModulesApproved) setShowConsent(true);
+                  }}
+                >
+                  <Download className="h-3 w-3" />{t("Baixar PDF", "Download PDF", "Descargar PDF")}
+                </Button>
+                {!allModulesApproved && (
+                  <span className="font-mono text-[8px] text-muted-foreground/45">
+                    {t("Aprove os 10 módulos para liberar o PDF.", "Approve all 10 modules to unlock the PDF.", "Aprueba los 10 módulos para desbloquear el PDF.")}
+                  </span>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -1398,6 +1410,10 @@ export function StrategyMasterplan({ strategyD, ins, reviewStatuses = EMPTY_MODU
                 disabled={downloading}
                 className="flex-1 rounded-none font-mono text-[9px] uppercase tracking-widest h-8 gap-1.5 bg-primary hover:bg-primary/90"
                 onClick={async () => {
+                  if (!allModulesApproved) {
+                    setShowConsent(false);
+                    return;
+                  }
                   setDownloading(true);
                   try {
                     const { fingerprint } = generateMasterplanPDF(
