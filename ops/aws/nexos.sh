@@ -80,7 +80,14 @@ require_stopped_api() {
 }
 case "$action" in
   check) check ;;
-  build) check; dc build api web ;;
+  build)
+    check
+    # Build these images in separate Compose invocations. Older Compose/Buildx
+    # versions may ignore COMPOSE_PARALLEL_LIMIT for Bake and peak above the
+    # EC2 memory budget when Vite and the API compiler run together.
+    dc build api
+    dc build web
+    ;;
   verify-db) check; dc run --rm --no-deps db-tools ;;
   bootstrap)
     [[ "${2:-}" == --execute ]] || { echo 'Use bootstrap --execute for an EMPTY database.' >&2; exit 1; }
