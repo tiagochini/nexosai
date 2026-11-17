@@ -62,15 +62,23 @@ export function imageFromGeminiResponse(data: {
   return part ? `data:${part.inlineData!.mimeType};base64,${part.inlineData!.data}` : "";
 }
 
-export async function generateCreativeImage(prompt: string, format: string, quality: "standard" | "hd", log: Logger): Promise<string> {
+export async function generateCreativeImage(prompt: string, format: string, quality: "standard" | "hd", log: Logger, referenceImage?: string, locale = "pt-BR"): Promise<string> {
   const landscape = format === "banner";
   const portrait = format === "stories" || format === "feed_portrait";
   const size = landscape ? "1536x1024" : portrait ? "1024x1536" : "1024x1024";
   const aspectRatio = landscape ? "3:2" : portrait ? "2:3" : "1:1";
-  const fullPrompt = `${prompt}. IMPORTANT: No text, words, letters, or numbers anywhere in the image. Pure visual composition only.`;
+  const noTextInstruction = locale === "es-LA"
+    ? "No incluyas palabras, letras ni números visibles en la imagen. Muestra solo la composición visual."
+    : locale === "en-US" || locale === "en-AU"
+      ? "Do not include visible words, letters, or numbers in the image. Show only the visual composition."
+      : "Não inclua palavras, letras ou números visíveis na imagem. Mostre apenas a composição visual.";
+  const fullPrompt = `${prompt}. ${noTextInstruction}`;
   const attempts: ImageAttempt[] = [];
+  if (referenceImage && !env.XAI_API_KEY) {
+    throw new AppError(503, "A imagem de referência exige o provedor Grok configurado.", "REFERENCE_IMAGE_PROVIDER_UNAVAILABLE");
+  }
   if (env.XAI_API_KEY) attempts.push({ provider: "xai", model: "grok-imagine-image-2.0", run: async () => {
-    const response = await fetch("https://api.x.ai/v1/images/generations", {
+    const response = await fetch(referenceImage ? "https://api.x.ai/v1/images/edits" : "https://api.x.ai/v1/images/generations", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.XAI_API_KEY}` },
       body: JSON.stringify({
@@ -80,6 +88,7 @@ export async function generateCreativeImage(prompt: string, format: string, qual
         aspect_ratio: aspectRatio,
         quality: quality === "hd" ? "medium" : "low",
         response_format: "b64_json",
+        ...(referenceImage ? { image: { url: referenceImage, type: "image_url" } } : {}),
       }),
       signal: AbortSignal.timeout(90_000),
     });
@@ -99,7 +108,7 @@ export async function generateCreativeImage(prompt: string, format: string, qual
     if (!result?.b64_json || !["image/jpeg", "image/png", "image/webp"].includes(mimeType ?? "")) return "";
     return `data:${mimeType};base64,${result.b64_json}`;
   } });
-  if (kairogenConfigured()) attempts.push({ provider: "kairogen", model: env.KAIROGEN_IMAGE_MODEL,
+  if (!referenceImage && kairogenConfigured()) attempts.push({ provider: "kairogen", model: env.KAIROGEN_IMAGE_MODEL,
     run: () => generateKairogenImage(fullPrompt, aspectRatio, quality) });
   const addOpenAI = (apiKey: string, baseURL?: string) => {
     attempts.push({ provider: baseURL ? "openai-integration" : "openai", model: "gpt-image-1", run: async () => {
@@ -109,8 +118,8 @@ export async function generateCreativeImage(prompt: string, format: string, qual
       return b64 ? `data:image/png;base64,${b64}` : "";
     } });
   };
-  if (env.OPENAI_API_KEY) addOpenAI(env.OPENAI_API_KEY);
-  if (env.GEMINI_API_KEY) {
+  if (!referenceImage && env.OPENAI_API_KEY) addOpenAI(env.OPENAI_API_KEY);
+  if (!referenceImage && env.GEMINI_API_KEY) {
     attempts.push({ provider: "gemini", model: "gemini-2.5-flash-image", run: async () => {
       const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent", {
         method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
@@ -122,7 +131,7 @@ export async function generateCreativeImage(prompt: string, format: string, qual
       return imageFromGeminiResponse(await response.json() as Parameters<typeof imageFromGeminiResponse>[0]);
     } });
   }
-  if (env.AI_INTEGRATIONS_OPENAI_API_KEY && env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
+  if (!referenceImage && env.AI_INTEGRATIONS_OPENAI_API_KEY && env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
     addOpenAI(env.AI_INTEGRATIONS_OPENAI_API_KEY, env.AI_INTEGRATIONS_OPENAI_BASE_URL);
   }
   return executeImageProviderChain(attempts, log);

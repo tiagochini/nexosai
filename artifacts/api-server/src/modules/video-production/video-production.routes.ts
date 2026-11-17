@@ -10,6 +10,7 @@ import {
   approveScript,
   generateStoryboard,
   approveStoryboard,
+  saveStoryboardDraft,
   generateScenePreview,
   approveScenePreview,
   generatePreviewClips,
@@ -180,6 +181,25 @@ router.post("/video-projects/:id/generate-storyboard", async (req, res, next) =>
 });
 
 // ─── Step 4: Approve Storyboard ─────────────────────────────────────────────
+router.patch("/video-projects/:id/storyboard", async (req, res, next) => {
+  try {
+    const sceneUpdateSchema = z.object({
+      id: z.string().min(1).max(120),
+      title: z.string().min(1).max(200).optional(),
+      voiceoverText: z.string().max(10000).optional(),
+      visualDescription: z.string().max(12000).optional(),
+      cameraDirection: z.string().max(4000).optional(),
+      onScreenText: z.string().max(2000).optional(),
+      approved: z.boolean().optional(),
+    }).strict().refine((update) => Object.keys(update).some((key) => key !== "id"), "Informe ao menos um campo para salvar");
+    const { scenes } = z.object({ scenes: z.array(sceneUpdateSchema).min(1).max(500) }).strict().parse(req.body ?? {});
+    const project = await saveStoryboardDraft(req.auth.workspaceId, req.params["id"]!, scenes);
+    res.json({ project: withMediaUrls(project) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post("/video-projects/:id/approve-storyboard", async (req, res, next) => {
   try {
     const scenes = (req.body as any)["scenes"] as VideoScene[] | undefined;

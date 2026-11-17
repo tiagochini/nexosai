@@ -43,6 +43,7 @@ interface Scene {
   clipUrl?: string;
   clipUrlHd?: string;
   clipStatus: SceneClipStatus;
+  approvedAt?: string;
   previewApprovedAt?: string;
   previewRevision?: number;
   notes?: string;
@@ -215,7 +216,7 @@ function CreateProjectForm({
           className="w-full bg-background border border-border rounded-md px-3 py-2 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-primary"
         />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className="font-mono text-xs text-muted-foreground mb-1 block">{t("FORMATO", "FORMAT", "FORMATO")}</label>
           <select value={format} onChange={e => setFormat(e.target.value)} className="w-full bg-background border border-border rounded-md px-3 py-2 font-mono text-xs">
@@ -241,7 +242,7 @@ function CreateProjectForm({
       </div>
       <div>
         <label className="font-mono text-xs text-muted-foreground mb-2 block">{t("VOCÊ VAI APARECER NO VÍDEO?", "WILL YOU APPEAR IN THE VIDEO?", "¿APARECERÁS EN EL VÍDEO?")}</label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <button
             onClick={() => { setHasUserFace(false); setVoiceStyle("narrator"); }}
             className={`border rounded-lg p-3 text-left transition-all ${!hasUserFace ? "border-primary bg-primary/5" : "border-border hover:border-border/80"}`}
@@ -323,7 +324,7 @@ function CreateProjectForm({
           </div>
         </div>
       )}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
            <label className="font-mono text-xs text-muted-foreground mb-1 block">{t("TOM", "TONE", "TONO")}</label>
           <select value={tone} onChange={e => setTone(e.target.value)} className="w-full bg-background border border-border rounded-md px-3 py-2 font-mono text-xs">
@@ -358,12 +359,12 @@ function CreateProjectForm({
 function PipelineBar({ status }: { status: VideoStatus }) {
   const t = useUiText();
   return (
-    <div className="flex items-center gap-2 font-mono text-xs">
+    <div className="grid grid-cols-2 gap-2 font-mono text-xs sm:flex sm:flex-wrap sm:items-center sm:gap-2">
       {PIPELINE_STEPS.map((step, i) => {
         const state = stepState(step, status);
         return (
-          <div key={step.key} className="flex items-center gap-2">
-            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${
+          <div key={step.key} className="flex min-w-0 items-center gap-2">
+            <div className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-1 sm:flex-none sm:px-2.5 ${
               state === "done" ? "border-primary/40 bg-primary/10 text-primary" :
               state === "active" ? "border-primary bg-primary/20 text-primary font-bold" :
               "border-border text-muted-foreground"
@@ -373,7 +374,7 @@ function PipelineBar({ status }: { status: VideoStatus }) {
               {state === "pending" && <Clock className="h-3 w-3" />}
               {t(...step.label)}
             </div>
-            {i < PIPELINE_STEPS.length - 1 && <ChevronRight className="h-3 w-3 text-muted-foreground/40" />}
+            {i < PIPELINE_STEPS.length - 1 && <ChevronRight className="hidden h-3 w-3 shrink-0 text-muted-foreground/40 sm:block" />}
           </div>
         );
       })}
@@ -454,22 +455,57 @@ function ScriptPanel({ project, onAction, onApproved }: { project: VideoProject;
 function StoryboardPanel({ project, onAction }: { project: VideoProject; onAction: () => void }) {
   const t = useUiText();
   const [loading, setLoading] = useState(false);
-  const [approvedScenes, setApprovedScenes] = useState<Set<string>>(new Set());
+  const [savingSceneId, setSavingSceneId] = useState<string | null>(null);
+  const [sceneDrafts, setSceneDrafts] = useState<Record<string, Partial<Pick<Scene, "voiceoverText" | "visualDescription" | "cameraDirection" | "onScreenText">>>>({});
   const meta = project.config.storyboardMeta;
   const totalScenes = project.storyboard.length;
-  const allScenesApproved = totalScenes > 0 && approvedScenes.size >= totalScenes;
+  function isSceneDirty(scene: Scene) {
+    const draft = sceneDrafts[scene.id];
+    return Boolean(draft && Object.entries(draft).some(([key, value]) => value !== scene[key as keyof Scene]));
+  }
+  const approvedCount = project.storyboard.filter((scene) => Boolean(scene.approvedAt) && !isSceneDirty(scene)).length;
+  const allScenesApproved = totalScenes > 0 && approvedCount === totalScenes;
 
-  function toggleSceneApproval(sceneId: string) {
-    setApprovedScenes(prev => {
-      const next = new Set(prev);
-      if (next.has(sceneId)) next.delete(sceneId);
-      else next.add(sceneId);
-      return next;
-    });
+  function updateSceneDraft(sceneId: string, field: keyof Pick<Scene, "voiceoverText" | "visualDescription" | "cameraDirection" | "onScreenText">, value: string) {
+    setSceneDrafts((previous) => ({ ...previous, [sceneId]: { ...previous[sceneId], [field]: value } }));
   }
 
-  function approveAllScenes() {
-    setApprovedScenes(new Set(project.storyboard.map(s => s.id)));
+  async function saveScene(scene: Scene, approveScene = false) {
+    setSavingSceneId(scene.id);
+    try {
+      await customFetch(`/api/video-projects/${project.id}/storyboard`, {
+        method: "PATCH",
+        body: JSON.stringify({ scenes: [{ id: scene.id, ...sceneDrafts[scene.id], ...(approveScene ? { approved: true } : {}) }] }),
+      });
+      setSceneDrafts((previous) => {
+        const next = { ...previous };
+        delete next[scene.id];
+        return next;
+      });
+      toast.success(approveScene ? t("Contexto salvo e cena aprovada.", "Context saved and scene approved.", "Contexto guardado y escena aprobada.") : t("Alterações da cena salvas.", "Scene edits saved.", "Cambios de escena guardados."));
+      onAction();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("Não foi possível salvar esta cena.", "Could not save this scene.", "No se pudo guardar esta escena."));
+    } finally {
+      setSavingSceneId(null);
+    }
+  }
+
+  async function approveAllScenes() {
+    setLoading(true);
+    try {
+      await customFetch(`/api/video-projects/${project.id}/storyboard`, {
+        method: "PATCH",
+        body: JSON.stringify({ scenes: project.storyboard.map((scene) => ({ id: scene.id, ...sceneDrafts[scene.id], approved: true })) }),
+      });
+      setSceneDrafts({});
+      toast.success(t("Contextos salvos e todas as cenas aprovadas.", "Contexts saved and all scenes approved.", "Contextos guardados y todas las escenas aprobadas."));
+      onAction();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("Não foi possível salvar as aprovações.", "Could not save the approvals.", "No se pudieron guardar las aprobaciones."));
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function approve() {
@@ -513,14 +549,15 @@ function StoryboardPanel({ project, onAction }: { project: VideoProject; onActio
         <div className="border border-border/40 rounded-lg p-3 bg-muted/10 space-y-2">
           <div className="flex items-center justify-between">
             <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-              {t(`Aprovação de frames — ${approvedScenes.size}/${totalScenes} cenas`, `Frame approval — ${approvedScenes.size}/${totalScenes} scenes`, `Aprobación de fotogramas — ${approvedScenes.size}/${totalScenes} escenas`)}
+              {t(`Aprovação de cenas — ${approvedCount}/${totalScenes} cenas`, `Scene approval — ${approvedCount}/${totalScenes} scenes`, `Aprobación de escenas — ${approvedCount}/${totalScenes} escenas`)}
             </div>
             {!allScenesApproved && (
               <button
                 onClick={approveAllScenes}
-                className="font-mono text-[10px] text-primary hover:underline"
+                disabled={loading}
+                className="font-mono text-[10px] text-primary hover:underline disabled:opacity-50"
               >
-                {t("Aprovar todas", "Approve all", "Aprobar todas")}
+                {t("Salvar e aprovar todas", "Save and approve all", "Guardar y aprobar todas")}
               </button>
             )}
             {allScenesApproved && (
@@ -532,23 +569,25 @@ function StoryboardPanel({ project, onAction }: { project: VideoProject; onActio
           <div className="w-full h-1 bg-border/40 rounded-full overflow-hidden">
             <div
               className="h-full bg-primary transition-all duration-300"
-              style={{ width: `${totalScenes > 0 ? (approvedScenes.size / totalScenes) * 100 : 0}%` }}
+              style={{ width: `${totalScenes > 0 ? (approvedCount / totalScenes) * 100 : 0}%` }}
             />
           </div>
           {!allScenesApproved && (
             <p className="font-mono text-[10px] text-muted-foreground/60">
-              {t("Revise cada frame abaixo e marque como aprovado. O render final só libera após todas as cenas confirmadas.", "Review each frame below and mark it as approved. Final rendering becomes available once all scenes are confirmed.", "Revisa cada fotograma y márcalo como aprobado. El renderizado final estará disponible cuando confirmes todas las escenas.")}
+              {t("Edite a locução e a direção visual, salve o contexto e aprove cada cena. As aprovações ficam salvas no projeto.", "Edit the narration and visual direction, save the context, and approve each scene. Approvals are saved to the project.", "Edita la narración y la dirección visual, guarda el contexto y aprueba cada escena. Las aprobaciones quedan guardadas en el proyecto.")}
             </p>
           )}
         </div>
       )}
       <div className="space-y-3">
         {project.storyboard.map((scene) => {
-          const isSceneApproved = approvedScenes.has(scene.id);
+          const isSceneApproved = Boolean(scene.approvedAt) && !isSceneDirty(scene);
+          const draft = sceneDrafts[scene.id] ?? {};
+          const sceneBusy = savingSceneId === scene.id;
           return (
           <div key={scene.id} className={`border rounded-lg p-4 transition-colors ${isSceneApproved ? "border-green-400/40 bg-green-400/5" : "border-border/40 bg-background/40"}`}>
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div className="flex items-center gap-2">
+              <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <div className={`w-6 h-6 rounded-full font-mono text-xs flex items-center justify-center font-bold ${isSceneApproved ? "bg-green-400/20 text-green-400" : "bg-primary/20 text-primary"}`}>
                   {isSceneApproved ? <CheckCircle2 className="h-3.5 w-3.5" /> : scene.order}
                 </div>
@@ -561,27 +600,43 @@ function StoryboardPanel({ project, onAction }: { project: VideoProject; onActio
                 </span>
                 <span className="font-mono text-[10px] text-muted-foreground">{scene.durationSeconds}s</span>
                 {project.status === "storyboard_ready" && (
-                  <button
-                    onClick={() => toggleSceneApproval(scene.id)}
-                    className={`font-mono text-[10px] px-2 py-0.5 rounded border transition-colors ${
-                      isSceneApproved
-                        ? "border-green-400/40 text-green-400 bg-green-400/10 hover:bg-green-400/5"
-                        : "border-border/60 text-muted-foreground hover:border-primary/50 hover:text-primary"
-                    }`}
-                  >
-                    {isSceneApproved ? `✓ ${t("Aprovada", "Approved", "Aprobada")}` : t("Aprovar", "Approve", "Aprobar")}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {isSceneDirty(scene) && (
+                      <Button variant="outline" size="sm" onClick={() => void saveScene(scene)} disabled={loading || sceneBusy || savingSceneId !== null} className="h-7 font-mono text-[10px]">
+                        {sceneBusy ? <RefreshCw className="mr-1.5 h-3 w-3 animate-spin" /> : null}{t("Salvar edição", "Save edits", "Guardar cambios")}
+                      </Button>
+                    )}
+                    {isSceneApproved ? (
+                      <span className="rounded border border-green-400/40 bg-green-400/10 px-2 py-1 font-mono text-[10px] text-green-400">✓ {t("Contexto aprovado", "Context approved", "Contexto aprobado")}</span>
+                    ) : (
+                      <Button size="sm" onClick={() => void saveScene(scene, true)} disabled={loading || sceneBusy || savingSceneId !== null} className="h-7 font-mono text-[10px]">
+                        {sceneBusy ? <RefreshCw className="mr-1.5 h-3 w-3 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-3 w-3" />}{t("Salvar e aprovar", "Save and approve", "Guardar y aprobar")}
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-[11px] font-mono">
+            <div className="grid grid-cols-1 gap-3 text-[11px] font-mono md:grid-cols-2">
               <div>
                 <div className="text-muted-foreground/60 uppercase text-[9px] tracking-widest mb-1">{t("Locução", "Voiceover", "Locución")}</div>
-                <div className="text-foreground/80 leading-relaxed">{scene.voiceoverText}</div>
+                {project.status === "storyboard_ready" ? (
+                  <Textarea value={draft.voiceoverText ?? scene.voiceoverText} onChange={(event) => updateSceneDraft(scene.id, "voiceoverText", event.target.value)} rows={4} className="resize-y font-mono text-[11px] leading-relaxed" />
+                ) : <div className="whitespace-pre-wrap break-words text-foreground/80 leading-relaxed">{scene.voiceoverText}</div>}
               </div>
               <div>
                 <div className="text-muted-foreground/60 uppercase text-[9px] tracking-widest mb-1">{t("Cena Visual", "Visual Scene", "Escena visual")}</div>
-                <div className="text-muted-foreground leading-relaxed">{scene.visualDescription}</div>
+                {project.status === "storyboard_ready" ? (
+                  <Textarea value={draft.visualDescription ?? scene.visualDescription} onChange={(event) => updateSceneDraft(scene.id, "visualDescription", event.target.value)} rows={5} className="resize-y font-mono text-[11px] leading-relaxed" />
+                ) : <div className="whitespace-pre-wrap break-words text-muted-foreground leading-relaxed">{scene.visualDescription}</div>}
+                {project.status === "storyboard_ready" && (
+                  <div className="mt-3 space-y-2">
+                    <label className="block text-muted-foreground/60 uppercase text-[9px] tracking-widest">{t("Direção de câmera (opcional)", "Camera direction (optional)", "Dirección de cámara (opcional)")}</label>
+                    <Textarea value={draft.cameraDirection ?? scene.cameraDirection ?? ""} onChange={(event) => updateSceneDraft(scene.id, "cameraDirection", event.target.value)} rows={2} className="resize-y font-mono text-[11px]" />
+                    <label className="block text-muted-foreground/60 uppercase text-[9px] tracking-widest">{t("Texto na tela (opcional)", "On-screen text (optional)", "Texto en pantalla (opcional)")}</label>
+                    <Textarea value={draft.onScreenText ?? scene.onScreenText ?? ""} onChange={(event) => updateSceneDraft(scene.id, "onScreenText", event.target.value)} rows={2} className="resize-y font-mono text-[11px]" />
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border/30">
@@ -598,17 +653,17 @@ function StoryboardPanel({ project, onAction }: { project: VideoProject; onActio
       </div>
       {project.status === "storyboard_ready" && (
         <div className="flex gap-3">
-          <Button variant="outline" onClick={regenerate} disabled={loading} className="font-mono">
+          <Button variant="outline" onClick={regenerate} disabled={loading || savingSceneId !== null} className="font-mono">
             <RefreshCw className="h-4 w-4 mr-2" />{t("Regenerar", "Regenerate", "Regenerar")}
           </Button>
           <Button
             onClick={approve}
-            disabled={loading || !allScenesApproved}
+            disabled={loading || savingSceneId !== null || !allScenesApproved}
             className="font-mono flex-1"
             title={!allScenesApproved ? t(`Aprove todas as ${totalScenes} cenas para continuar`, `Approve all ${totalScenes} scenes to continue`, `Aprueba las ${totalScenes} escenas para continuar`) : undefined}
           >
             {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-            {allScenesApproved ? t("Aprovar Storyboard — Gerar Preview", "Approve Storyboard — Generate Preview", "Aprobar storyboard — Generar vista previa") : t(`Aprove todas as cenas (${approvedScenes.size}/${totalScenes})`, `Approve all scenes (${approvedScenes.size}/${totalScenes})`, `Aprobar todas las escenas (${approvedScenes.size}/${totalScenes})`)}
+            {allScenesApproved ? t("Aprovar Storyboard — Gerar Preview", "Approve Storyboard — Generate Preview", "Aprobar storyboard — Generar vista previa") : t(`Aprove todas as cenas (${approvedCount}/${totalScenes})`, `Approve all scenes (${approvedCount}/${totalScenes})`, `Aprobar todas las escenas (${approvedCount}/${totalScenes})`)}
           </Button>
         </div>
       )}
@@ -1235,7 +1290,7 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
         {!avatarReady && (
           <div className="space-y-3">
             {!avatarMode && (
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 <button onClick={() => { setAvatarMode("stock"); void loadStockAvatars(); }} className="p-3 rounded-lg border border-border/40 hover:border-primary/50 text-left transition-colors">
                   <div className="font-mono text-xs font-bold">{t("Avatar padrão", "Stock avatar", "Avatar predeterminado")}</div>
                   <div className="font-mono text-[10px] text-muted-foreground">{t("Escolha um avatar pronto da NexOS", "Choose a ready-made NexOS avatar", "Elige un avatar predeterminado de NexOS")}</div>
@@ -1325,7 +1380,7 @@ function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProj
                 {stockLoading ? (
                   <div className="font-mono text-[10px] text-muted-foreground">{t("Carregando avatares...", "Loading avatars...", "Cargando avatares...")}</div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     {stockAvatars.map(a => (
                       <button
                         key={a.id}
@@ -1638,18 +1693,18 @@ export default function VideoProductionPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <div className="border-b border-border/40 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <div className="border-b border-border/40 px-4 py-4 sm:px-6">
+        <div className="max-w-7xl mx-auto flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
               <Film className="h-5 w-5 text-primary" />
             </div>
             <div>
               <div className="font-mono font-bold text-foreground">{t("Produção de Vídeo", "Video Production", "Producción de vídeo")}</div>
-              <div className="font-mono text-[10px] text-muted-foreground">{t("Roteiro → Storyboard → Preview → Vídeo HD Final", "Script → Storyboard → Preview → Final HD Video", "Guion → Storyboard → Vista previa → Vídeo HD final")}</div>
+              <div className="font-mono text-[10px] leading-relaxed text-muted-foreground">{t("Roteiro → Storyboard → Preview → Vídeo HD Final", "Script → Storyboard → Preview → Final HD Video", "Guion → Storyboard → Vista previa → Vídeo HD final")}</div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             {provider && !provider.configured && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-yellow-500/30 bg-yellow-500/10">
                 <AlertCircle className="h-3.5 w-3.5 text-yellow-400" />
@@ -1694,9 +1749,9 @@ export default function VideoProductionPage() {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-6 py-6 flex gap-6">
+      <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-6 px-4 py-5 sm:px-6 sm:py-6 lg:flex-row">
         {/* Left: project list */}
-        <div className="w-72 shrink-0">
+        <div className="w-full min-w-0 lg:w-72 lg:shrink-0">
           <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mb-3">{t("Projetos", "Projects", "Proyectos")}</div>
           <div className="space-y-2">
             {loading && <div className="font-mono text-xs text-muted-foreground">{t("Carregando...", "Loading...", "Cargando...")}</div>}
@@ -1724,7 +1779,7 @@ export default function VideoProductionPage() {
         </div>
 
         {/* Right: project detail */}
-        <div className="flex-1 min-w-0">
+        <div className="w-full min-w-0 flex-1">
           {creating && !selected && (
             <div className="border border-border/40 rounded-xl p-6 bg-background/40">
               <div className="font-mono text-sm font-bold mb-4">{t("Novo Projeto de Vídeo", "New Video Project", "Nuevo proyecto de vídeo")}</div>
@@ -1745,10 +1800,10 @@ export default function VideoProductionPage() {
           {selected && (
             <div className="space-y-5">
               {/* Project header */}
-              <div className="border border-border/40 rounded-xl p-5 bg-background/40">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <div className="font-mono font-bold text-lg">{selected.title}</div>
+              <div className="min-w-0 rounded-xl border border-border/40 bg-background/40 p-4 sm:p-5">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="break-words font-mono text-lg font-bold">{selected.title}</div>
                     <div className="font-mono text-xs text-muted-foreground mt-0.5">
                       {selected.format.replace(/_/g," ").toUpperCase()} ·{" "}
                       {selected.config.aspectRatio} ·{" "}
@@ -1768,11 +1823,11 @@ export default function VideoProductionPage() {
 
               {/* Provider warning */}
               {provider && !provider.configured && (
-                <div className="border border-amber-500/20 rounded-xl p-5 bg-amber-500/5">
+                <div className="min-w-0 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 sm:p-5">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="font-mono text-sm font-bold text-amber-500 mb-1">{t("Geração de Vídeo 100% IA Temporariamente Indisponível", "100% AI video generation is temporarily unavailable", "La generación de vídeo 100 % con IA no está disponible temporalmente")}</div>
+                      <div className="mb-1 break-words font-mono text-sm font-bold text-amber-500">{t("Geração de Vídeo 100% IA Temporariamente Indisponível", "100% AI video generation is temporarily unavailable", "La generación de vídeo 100 % con IA no está disponible temporalmente")}</div>
                       <div className="font-mono text-xs text-muted-foreground mb-3">
                         {t("Não há um provedor de vídeo configurado ou ativo neste momento para processamento 100% autônomo. Para dar andamento imediato na produção do seu vídeo:", "No video provider is configured or active for fully automated processing right now. To continue producing your video immediately:", "Ahora no hay ningún proveedor de vídeo configurado o activo para el procesamiento totalmente automático. Para continuar la producción de tu vídeo de inmediato:")}
                       </div>
@@ -1895,8 +1950,8 @@ export default function VideoProductionPage() {
 
                   {/* Credit note when no brief yet */}
                   {!selected.config.filmingBrief && !briefLoading && (
-                    <div className="px-5 py-4 flex items-start gap-4">
-                      <div className="flex-1 grid grid-cols-3 gap-3">
+                    <div className="flex flex-col items-start gap-4 px-4 py-4 sm:flex-row sm:px-5">
+                      <div className="grid w-full min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                         {[
                           { icon: <Shirt className="h-4 w-4 text-primary" />, label: t("Vestuário pontual", "Tailored wardrobe", "Vestuario específico"), desc: t("Cor e estilo específicos para este roteiro e tom", "Colors and style tailored to this script and tone", "Colores y estilo específicos para este guion y tono") },
                           { icon: <Lightbulb className="h-4 w-4 text-primary" />, label: t("Cenário e luz", "Setting and lighting", "Escenario e iluminación"), desc: t("Setup do set que reforça a mensagem deste vídeo", "Set setup that reinforces this video's message", "Configuración del set que refuerza el mensaje de este vídeo") },
@@ -1909,7 +1964,7 @@ export default function VideoProductionPage() {
                           </div>
                         ))}
                       </div>
-                      <div className="font-mono text-[10px] text-muted-foreground whitespace-nowrap">
+                      <div className="font-mono text-[10px] text-muted-foreground sm:whitespace-nowrap">
                         {t("12 créditos", "12 credits", "12 créditos")}
                       </div>
                     </div>
@@ -1919,9 +1974,9 @@ export default function VideoProductionPage() {
                   {selected.config.filmingBrief && (
                     <div className="p-5 space-y-5">
                       {/* Setup row: vestuário + cenário + linguagem */}
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                         {/* Vestuário */}
-                        <div className="border border-border/30 rounded-lg p-4 bg-background/30">
+                        <div className="min-w-0 border border-border/30 rounded-lg p-4 bg-background/30">
                           <div className="flex items-center gap-2 mb-3">
                             <Shirt className="h-3.5 w-3.5 text-primary" />
                             <div className="font-mono text-xs font-bold text-primary uppercase tracking-wide">{t("Vestuário", "Wardrobe", "Vestuario")}</div>
@@ -1935,7 +1990,7 @@ export default function VideoProductionPage() {
                         </div>
 
                         {/* Cenário */}
-                        <div className="border border-border/30 rounded-lg p-4 bg-background/30">
+                        <div className="min-w-0 border border-border/30 rounded-lg p-4 bg-background/30">
                           <div className="flex items-center gap-2 mb-3">
                             <Lightbulb className="h-3.5 w-3.5 text-primary" />
                             <div className="font-mono text-xs font-bold text-primary uppercase tracking-wide">{t("Cenário & Luz", "Setting & Lighting", "Escenario e iluminación")}</div>
@@ -1944,9 +1999,9 @@ export default function VideoProductionPage() {
                             <div><span className="text-muted-foreground">{t("Fundo:", "Background:", "Fondo:")}</span> {selected.config.filmingBrief.cenario.fundo}</div>
                             <div><span className="text-muted-foreground">{t("Luz:", "Lighting:", "Iluminación:")}</span> {selected.config.filmingBrief.cenario.iluminacao}</div>
                             {selected.config.filmingBrief.cenario.elementos.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1">
+                              <div className="flex min-w-0 flex-wrap gap-1 mt-1">
                                 {selected.config.filmingBrief.cenario.elementos.map((el, i) => (
-                                  <Badge key={i} variant="outline" className="font-mono text-[9px]">{el}</Badge>
+                                  <Badge key={i} variant="outline" className="max-w-full whitespace-normal break-words text-left font-mono text-[9px] leading-snug">{el}</Badge>
                                 ))}
                               </div>
                             )}
@@ -1955,7 +2010,7 @@ export default function VideoProductionPage() {
                         </div>
 
                         {/* Linguagem */}
-                        <div className="border border-border/30 rounded-lg p-4 bg-background/30">
+                        <div className="min-w-0 border border-border/30 rounded-lg p-4 bg-background/30">
                           <div className="flex items-center gap-2 mb-3">
                             <Mic className="h-3.5 w-3.5 text-primary" />
                             <div className="font-mono text-xs font-bold text-primary uppercase tracking-wide">{t("Linguagem", "Delivery", "Forma de hablar")}</div>
@@ -2064,7 +2119,7 @@ export default function VideoProductionPage() {
 
                   {/* Mode selector — only when hasUserFace=true */}
                   {selected.config.hasUserFace && (
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <button
                         onClick={() => setHybridMode("ai")}
                         className={`p-4 rounded-lg border text-left transition-all ${hybridMode === "ai" ? "border-primary bg-primary/10" : "border-border/40 hover:border-border/70"}`}

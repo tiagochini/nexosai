@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,10 +8,10 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Sparkles, CheckCircle2, XCircle, RefreshCw,
   Download, Instagram, Facebook, Globe, Layers, Monitor,
-  Loader2, Plus, ImageOff, Eye, Wand2, ChevronRight,
+  Loader2, Plus, ImageOff, Eye, Wand2, ChevronRight, Pencil, Save, Trash2,
   Palette, Target, Zap, Clock,
 } from "lucide-react";
-import { useUiText } from "@/lib/i18n";
+import { useUiLocale, useUiText } from "@/lib/i18n";
 import { imageGenerationErrorMessage } from "@/lib/image-generation-error";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -41,6 +41,7 @@ interface Creative {
   finalUrl: string | null;
   rejectionReason: string | null;
   metadata?: Record<string, unknown>;
+  referenceImageUrl?: string | null;
   createdAt: string;
 }
 
@@ -81,6 +82,7 @@ const TRIGGER_LABELS: Record<string, [string, string, string]> = {
 
 function GenerateForm({ campaignId, onGenerated }: { campaignId: string; onGenerated: () => void }) {
   const t = useUiText();
+  const { locale } = useUiLocale();
   const [platform, setPlatform] = useState("instagram");
   const [format, setFormat] = useState("feed_square");
   const [note, setNote] = useState("");
@@ -90,7 +92,7 @@ function GenerateForm({ campaignId, onGenerated }: { campaignId: string; onGener
     mutationFn: async () => {
       return customFetch<unknown>(`/api/campaigns/${campaignId}/creatives/concept`, {
         method: "POST",
-        body: JSON.stringify({ platform, format, requestNote: note }),
+        body: JSON.stringify({ platform, format, requestNote: note, locale }),
       });
     },
     onSuccess: () => {
@@ -175,9 +177,17 @@ function GenerateForm({ campaignId, onGenerated }: { campaignId: string; onGener
 
 function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative; campaignId: string; onRefresh: () => void }) {
   const t = useUiText();
+  const { locale } = useUiLocale();
   const [rejectReason, setRejectReason] = useState("");
   const [showReject, setShowReject] = useState(false);
   const [imageUnavailable, setImageUnavailable] = useState(false);
+  const [loadedImageUrl, setLoadedImageUrl] = useState<string | null>(null);
+  const [mediaLoading, setMediaLoading] = useState(false);
+  const [mediaFetchError, setMediaFetchError] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editDraft, setEditDraft] = useState<Pick<CreativeConcept, "headline" | "subHeadline" | "visualDescription" | "cta" | "dallePrompt"> | null>(null);
+  const [referencePreview, setReferencePreview] = useState<string | null>(null);
+  const [referenceBusy, setReferenceBusy] = useState(false);
   const status = STATUS_CONFIG[creative.status] ?? STATUS_CONFIG.concept_pending;
   const fmt = FORMATS[creative.format];
   const plat = PLATFORMS.find((p) => p.value === creative.platform);
@@ -220,10 +230,90 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
     onError: () => toast.error(t("Erro ao regenerar", "Error regenerating", "Error al regenerar")),
   });
 
+  const saveConcept = useMutation({
+    mutationFn: async () => {
+      if (!editDraft) return;
+      await customFetch<unknown>(`/api/campaigns/${campaignId}/creatives/${creative.id}/concept`, { method: "PATCH", body: JSON.stringify({ ...editDraft, locale }) });
+    },
+    onSuccess: () => { toast.success(t("Alterações salvas. Gere uma nova variação para ver o resultado.", "Changes saved. Generate a new variation to see the result.", "Cambios guardados. Genera otra variación para ver el resultado.")); setEditing(false); onRefresh(); },
+    onError: () => toast.error(t("Não foi possível salvar as alterações.", "Could not save changes.", "No se pudieron guardar los cambios.")),
+  });
+
+  const translateConcept = useMutation({
+    mutationFn: async () => customFetch<unknown>(`/api/campaigns/${campaignId}/creatives/${creative.id}/translate`, { method: "POST", body: JSON.stringify({ locale }) }),
+    onSuccess: () => { toast.success(t("Conceito adaptado ao idioma selecionado.", "Concept updated to the selected language.", "Concepto adaptado al idioma seleccionado.")); onRefresh(); },
+    onError: () => toast.error(t("Não foi possível adaptar o conceito. Confira os créditos disponíveis.", "Could not update the concept language. Check available credits.", "No se pudo adaptar el concepto. Comprueba los créditos disponibles.")),
+  });
+
+  const uploadReference = async (file: File | undefined) => {
+    if (!file) return;
+    if (!(["image/png", "image/jpeg", "image/webp"].includes(file.type)) || file.size > 10 * 1024 * 1024) {
+      toast.error(t("Envie PNG, JPEG ou WebP de até 10 MB.", "Upload a PNG, JPEG, or WebP up to 10 MB.", "Sube PNG, JPEG o WebP de hasta 10 MB."));
+      return;
+    }
+    const form = new FormData(); form.append("image", file);
+    setReferenceBusy(true);
+    try {
+      await customFetch<unknown>(`/api/campaigns/${campaignId}/creatives/${creative.id}/reference-image`, { method: "POST", body: form });
+      toast.success(t("Imagem de referência salva no storage.", "Reference image saved to storage.", "Imagen de referencia guardada."));
+      onRefresh();
+    } catch { toast.error(t("Falha ao enviar a imagem de referência.", "Could not upload the reference image.", "No se pudo subir la imagen de referencia.")); }
+    finally { setReferenceBusy(false); }
+  };
+
+  const removeReference = async () => {
+    setReferenceBusy(true);
+    try {
+      await customFetch<unknown>(`/api/campaigns/${campaignId}/creatives/${creative.id}/reference-image`, { method: "DELETE" });
+      toast.success(t("Imagem de referência removida.", "Reference image removed.", "Imagen de referencia eliminada."));
+      onRefresh();
+    } catch { toast.error(t("Não foi possível remover a imagem.", "Could not remove the image.", "No se pudo eliminar la imagen.")); }
+    finally { setReferenceBusy(false); }
+  };
+
   const imageUrl = creative.finalUrl ?? creative.previewUrl;
   const hasImage = !!imageUrl;
   const imageError = creative.metadata?.imageError;
-  useEffect(() => setImageUnavailable(false), [imageUrl]);
+  useEffect(() => {
+    setImageUnavailable(false);
+    setMediaFetchError(false);
+    setLoadedImageUrl(null);
+    if (!imageUrl) {
+      setMediaLoading(false);
+      return;
+    }
+
+    // Managed campaign media is protected by the API's bearer auth. An <img>
+    // request cannot attach that header, so fetch it here and use a blob URL.
+    if (!imageUrl.startsWith("/api/campaigns/")) {
+      setLoadedImageUrl(imageUrl);
+      setMediaLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setMediaLoading(true);
+    void customFetch<Blob>(imageUrl, { responseType: "blob" })
+      .then((blob) => {
+        if (!blob.type.startsWith("image/")) throw new Error("Media response is not an image");
+        objectUrl = URL.createObjectURL(blob);
+        if (cancelled) URL.revokeObjectURL(objectUrl);
+        else setLoadedImageUrl(objectUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setMediaFetchError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setMediaLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [imageUrl]);
+  const imageSource = imageUrl?.startsWith("/api/campaigns/") ? loadedImageUrl : imageUrl;
   const imageFailure = Boolean(imageError) || imageUnavailable ||
     (!hasImage && ["preview_ready", "approved"].includes(creative.status));
   const retryQuality: "standard" | "hd" = creative.status === "approved" ||
@@ -233,6 +323,18 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
     : typeof imageError === "string"
       ? t(...imageGenerationErrorMessage(imageError))
       : t("A imagem não foi gerada. O conceito foi preservado; tente novamente.", "The image was not generated. The concept was preserved; try again.", "La imagen no se generó. Se conservó el concepto; inténtalo de nuevo.");
+
+  useEffect(() => {
+    const url = creative.metadata?.referenceImageUrl;
+    if (typeof url !== "string") { setReferencePreview(null); return; }
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    void customFetch<Blob>(url, { responseType: "blob" }).then((blob) => {
+      objectUrl = URL.createObjectURL(blob);
+      if (cancelled) URL.revokeObjectURL(objectUrl); else setReferencePreview(objectUrl);
+    }).catch(() => setReferencePreview(null));
+    return () => { cancelled = true; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [creative.metadata?.referenceImageUrl]);
   const visibleStatus = imageFailure
     ? { label: ["Falha na imagem", "Image generation failed", "Falló la imagen"] as [string, string, string], color: "border-red-400/40 bg-red-400/10 text-red-400", icon: ImageOff }
     : status;
@@ -257,13 +359,23 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
       {/* Image area */}
       <div className={`relative bg-background/40 flex items-center justify-center ${creative.format === "stories" || creative.format === "feed_portrait" ? "aspect-[9/16] max-h-64" : creative.format === "banner" ? "aspect-video" : "aspect-square"} overflow-hidden`}
         style={{ maxHeight: 320 }}>
-        {hasImage && !imageUnavailable ? (
+        {hasImage && imageSource && !imageUnavailable ? (
           <img
-            src={imageUrl!}
+            src={imageSource}
             alt={t("Criativo gerado", "Generated creative", "Creativo generado")}
             className="w-full h-full object-cover"
             onError={() => setImageUnavailable(true)}
           />
+        ) : mediaLoading ? (
+          <div className="flex flex-col items-center gap-3 p-6 text-center text-muted-foreground/50">
+            <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
+            <span className="font-mono text-xs uppercase tracking-widest">{t("Carregando imagem...", "Loading image...", "Cargando imagen...")}</span>
+          </div>
+        ) : mediaFetchError ? (
+          <div role="alert" className="flex flex-col items-center gap-3 p-6 text-center text-muted-foreground">
+            <ImageOff className="h-9 w-9 text-red-400/70" />
+            <span className="font-mono text-xs leading-relaxed">{t("Não foi possível carregar a imagem salva. Atualize a página e confira sua sessão.", "Could not load the saved image. Refresh the page and check your session.", "No se pudo cargar la imagen guardada. Actualiza la página y comprueba tu sesión.")}</span>
+          </div>
         ) : (
           <div className="flex flex-col items-center gap-3 text-muted-foreground/30 p-6 text-center">
             {["preview_generating", "final_generating", "concept_pending"].includes(creative.status) ? (
@@ -350,6 +462,53 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
         </div>
       )}
 
+      {creative.concept && creative.status !== "rejected" && (
+        <div className="px-4 pb-3 space-y-3">
+          {creative.metadata?.creativeLocale !== locale && (
+            <Button variant="outline" size="sm" onClick={() => translateConcept.mutate()} disabled={translateConcept.isPending || ["preview_generating", "final_generating"].includes(creative.status)} className="w-full rounded-none font-mono uppercase text-[10px] tracking-widest gap-2">
+              {translateConcept.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+              {translateConcept.isPending ? t("Adaptando o idioma...", "Updating language...", "Adaptando el idioma...") : t("Adaptar textos ao idioma selecionado (10 créditos)", "Set copy to selected language (10 credits)", "Adaptar textos al idioma seleccionado (10 créditos)")}
+            </Button>
+          )}
+          {!editing ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={["preview_generating", "final_generating"].includes(creative.status)}
+              onClick={() => { setEditDraft({ headline: creative.concept!.headline, subHeadline: creative.concept!.subHeadline, visualDescription: creative.concept!.visualDescription, cta: creative.concept!.cta, dallePrompt: creative.concept!.dallePrompt }); setEditing(true); }}
+              className="w-full rounded-none font-mono uppercase text-[10px] tracking-widest gap-2"
+            ><Pencil className="h-3 w-3" />{t("Editar texto e prompt da imagem", "Edit copy and image prompt", "Editar texto y prompt de imagen")}</Button>
+          ) : (
+            <div className="border border-primary/30 bg-primary/5 p-3 space-y-3">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-primary">{t("Edite antes de gerar ou gerar novamente", "Edit before generating or regenerating", "Edita antes de generar")}</div>
+              {([
+                ["headline", t("Texto principal", "Headline", "Título"), 2],
+                ["subHeadline", t("Texto de apoio", "Supporting copy", "Texto de apoyo"), 2],
+                ["cta", t("Texto do botão de ação", "Call-to-action text", "Texto de llamada a la acción"), 2],
+                ["visualDescription", t("Descrição do que deve aparecer", "Describe what should appear", "Describe lo que debe aparecer"), 4],
+                ["dallePrompt", t("Instrução completa para a imagem", "Full image prompt", "Prompt completo de imagen"), 6],
+              ] as const).map(([key, label, rows]) => (
+                <label key={key} className="block">
+                  <span className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{label}</span>
+                  <textarea rows={rows} value={editDraft?.[key] ?? ""} onChange={(event) => setEditDraft((current) => current ? { ...current, [key]: event.target.value } : current)} className="w-full resize-y border border-border/40 bg-background/70 p-2 font-mono text-xs leading-relaxed text-foreground focus:outline-none focus:border-primary/60" />
+                </label>
+              ))}
+              <label className="block">
+                <span className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Imagem que a IA deve usar como referência (PNG/JPEG/WebP, máx. 10 MB)", "Image for the AI to use as a reference (PNG/JPEG/WebP, max 10 MB)", "Imagen de referencia para la IA (PNG/JPEG/WebP, máx. 10 MB)")}</span>
+                <input type="file" accept="image/png,image/jpeg,image/webp" disabled={referenceBusy} onChange={(event) => { void uploadReference(event.target.files?.[0]); event.currentTarget.value = ""; }} className="block w-full text-xs text-muted-foreground file:mr-3 file:border file:border-border/40 file:bg-background file:px-3 file:py-2 file:font-mono file:text-[10px] file:uppercase" />
+              </label>
+              {referencePreview && <div className="flex items-center gap-3 border border-border/30 p-2"><img src={referencePreview} alt={t("Imagem de referência", "Reference image", "Imagen de referencia")} className="h-16 w-16 object-cover" /><span className="flex-1 font-mono text-[10px] text-muted-foreground">{t("Imagem salva. A próxima geração vai usá-la como referência.", "Saved. The next generation will use it as a reference.", "Guardada. La próxima generación la usará como referencia.")}</span><Button variant="outline" size="sm" disabled={referenceBusy} onClick={() => void removeReference()} className="rounded-none"><Trash2 className="h-3 w-3" /></Button></div>}
+              {referenceBusy && <div className="font-mono text-[10px] text-muted-foreground">{t("Salvando imagem...", "Saving image...", "Guardando imagen...")}</div>}
+              <div className="flex gap-2">
+                <Button onClick={() => saveConcept.mutate()} disabled={saveConcept.isPending || referenceBusy} className="flex-1 rounded-none font-mono uppercase text-[10px] tracking-widest gap-2"><Save className="h-3 w-3" />{saveConcept.isPending ? t("Salvando...", "Saving...", "Guardando...") : t("Salvar alterações", "Save changes", "Guardar cambios")}</Button>
+                <Button variant="outline" onClick={() => setEditing(false)} className="rounded-none font-mono uppercase text-[10px] tracking-widest">{t("Fechar", "Close", "Cerrar")}</Button>
+              </div>
+              <p className="font-mono text-[10px] leading-relaxed text-muted-foreground/70">{t("As alterações ficam salvas no criativo. Depois de salvar, use “Gerar outra variação” para atualizar a imagem. A imagem enviada fica no storage privado e orienta o Grok; ela não substitui o texto do anúncio.", "Your edits are saved to this creative. After saving, choose “Generate another variation” to update the image. The upload stays in private storage and guides Grok; it does not replace the ad copy.", "Los cambios se guardan. Después, elige “Generar otra variación”. La imagen queda en almacenamiento privado y guía a Grok; no reemplaza el texto del anuncio.")}</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Actions */}
       {creative.status !== "rejected" && (
         <div className="px-4 pb-4 space-y-2">
@@ -398,7 +557,7 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
                   className="flex-1 btn-weapon-primary rounded-none font-mono uppercase text-xs tracking-widest font-bold h-10 gap-1.5"
                 >
                   {approvePreview.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                  Aprovar Preview · Final HD (150 cr)
+                  {t("Aprovar prévia · gerar final HD (150 créditos)", "Approve preview · generate final HD (150 credits)", "Aprobar vista previa · generar final HD (150 créditos)")}
                 </Button>
                 <Button
                   variant="outline"
@@ -528,15 +687,15 @@ function FlowDiagram() {
 export default function CreativesPage() {
   const t = useUiText();
   const { id: campaignId } = useParams<{ id: string }>();
-  const queryClient = useQueryClient();
-  const [autoRefresh, setAutoRefresh] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["creatives", campaignId],
     queryFn: async () => {
       return customFetch<{ creatives: Creative[] }>(`/api/campaigns/${campaignId}/creatives`);
     },
-    refetchInterval: autoRefresh ? 4000 : false,
+    refetchInterval: (query) => query.state.data?.creatives.some((creative) =>
+      ["concept_pending", "preview_generating", "final_generating"].includes(creative.status)
+    ) ? 4000 : false,
   });
 
   const creatives = data?.creatives ?? [];
@@ -544,10 +703,6 @@ export default function CreativesPage() {
   const hasProcessing = creatives.some((c) =>
     ["concept_pending", "preview_generating", "final_generating"].includes(c.status)
   );
-
-  useEffect(() => {
-    setAutoRefresh(hasProcessing);
-  }, [hasProcessing]);
 
   const approved = creatives.filter((c) => c.status === "approved").length;
   const total = creatives.length;
@@ -572,7 +727,7 @@ export default function CreativesPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {autoRefresh && (
+          {hasProcessing && (
             <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-yellow-400/70">
               <Clock className="h-3 w-3 animate-spin" /> {t("atualizando", "refreshing", "actualizando")}
             </div>
@@ -580,7 +735,7 @@ export default function CreativesPage() {
           <Button variant="ghost" size="sm" onClick={() => refetch()} className="rounded-none font-mono uppercase text-xs tracking-widest gap-1.5">
             <RefreshCw className="h-3.5 w-3.5" /> {t("Atualizar", "Refresh", "Actualizar")}
           </Button>
-          <GenerateForm campaignId={campaignId!} onGenerated={() => { refetch(); setAutoRefresh(true); }} />
+          <GenerateForm campaignId={campaignId!} onGenerated={() => { void refetch(); }} />
         </div>
       </div>
 
@@ -622,7 +777,7 @@ export default function CreativesPage() {
           <p className="font-mono text-sm text-muted-foreground/50 max-w-sm mx-auto mb-6">
              {t('Clique em "Gerar criativo" para que o agente crie o conceito visual completo — título, paleta de cores, composição e prompt para gerar a imagem.', 'Click "Generate creative" to have the agent create the complete visual concept—headline, color palette, composition, and image-generation prompt.', 'Haz clic en "Generar creativo" para que el agente cree el concepto visual completo: titular, paleta de colores, composición y prompt para generar la imagen.')}
           </p>
-          <GenerateForm campaignId={campaignId!} onGenerated={() => { refetch(); setAutoRefresh(true); }} />
+          <GenerateForm campaignId={campaignId!} onGenerated={() => { void refetch(); }} />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -631,7 +786,7 @@ export default function CreativesPage() {
               key={creative.id}
               creative={creative}
               campaignId={campaignId!}
-              onRefresh={() => { refetch(); setAutoRefresh(true); }}
+              onRefresh={() => { void refetch(); }}
             />
           ))}
         </div>

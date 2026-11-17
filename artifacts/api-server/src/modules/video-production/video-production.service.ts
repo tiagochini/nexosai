@@ -715,6 +715,77 @@ export async function generateStoryboard(
 
 // ─── Approve Storyboard ──────────────────────────────────────────────────────
 
+export type VideoSceneDraftUpdate = {
+  id: string;
+  title?: string;
+  voiceoverText?: string;
+  visualDescription?: string;
+  cameraDirection?: string;
+  onScreenText?: string;
+  approved?: boolean;
+};
+
+/** Persist scene copy and per-scene approval while the storyboard is in review. */
+export async function saveStoryboardDraft(
+  workspaceId: string,
+  projectId: string,
+  updates: VideoSceneDraftUpdate[],
+): Promise<VideoProject> {
+  const project = await getProject(workspaceId, projectId);
+  if (project.status !== "storyboard_ready") {
+    throw new AppError(409, "As cenas só podem ser editadas durante a revisão do storyboard", "INVALID_STATUS");
+  }
+
+  const currentScenes = (project.storyboard as VideoScene[]) ?? [];
+  const updateById = new Map(updates.map((update) => [update.id, update]));
+  if (updateById.size !== updates.length) {
+    throw new AppError(400, "A lista contém cenas duplicadas", "DUPLICATE_SCENE");
+  }
+  for (const id of updateById.keys()) {
+    if (!currentScenes.some((scene) => scene.id === id)) throw new NotFoundError("Cena não encontrada");
+  }
+
+  const savedAt = new Date().toISOString();
+  const updatedScenes = currentScenes.map((scene) => {
+    const update = updateById.get(scene.id);
+    if (!update) return scene;
+
+    const contentChanged = (Object.keys(update) as Array<keyof VideoSceneDraftUpdate>)
+      .filter((key) => key !== "id" && key !== "approved")
+      .some((key) => update[key] !== scene[key as keyof VideoScene]);
+    const next = { ...scene };
+    if (update.title !== undefined) next.title = update.title;
+    if (update.voiceoverText !== undefined) next.voiceoverText = update.voiceoverText;
+    if (update.visualDescription !== undefined) next.visualDescription = update.visualDescription;
+    if (update.cameraDirection !== undefined) next.cameraDirection = update.cameraDirection || undefined;
+    if (update.onScreenText !== undefined) next.onScreenText = update.onScreenText || undefined;
+
+    // Keep the executable video prompt aligned with the visual context that was reviewed.
+    if (contentChanged && ["title", "visualDescription", "cameraDirection", "onScreenText"].some((key) => key in update)) {
+      const basePrompt = scene.videoPrompt.split("\n\n[Approved scene context]\n")[0] ?? scene.videoPrompt;
+      next.videoPrompt = [
+        basePrompt,
+        "[Approved scene context]",
+        `Title: ${next.title}`,
+        `Visual direction: ${next.visualDescription}`,
+        next.cameraDirection ? `Camera: ${next.cameraDirection}` : "",
+        next.onScreenText ? `On-screen text: ${next.onScreenText}` : "",
+      ].filter(Boolean).join("\n");
+    }
+
+    if (update.approved === true) next.approvedAt = savedAt;
+    else if (update.approved === false || contentChanged) next.approvedAt = undefined;
+    return next;
+  });
+
+  const [updated] = await db
+    .update(videoProjectsTable)
+    .set({ storyboard: updatedScenes, updatedAt: new Date() })
+    .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)))
+    .returning();
+  return updated!;
+}
+
 export async function approveStoryboard(
   workspaceId: string,
   projectId: string,
@@ -724,12 +795,16 @@ export async function approveStoryboard(
   if (project.status !== "storyboard_ready") {
     throw new AppError(409, "Só é possível aprovar storyboard com status storyboard_ready", "INVALID_STATUS");
   }
+  const scenesToApprove = adjustedScenes ?? (project.storyboard as VideoScene[]);
+  if (!scenesToApprove.length || scenesToApprove.some((scene) => !scene.approvedAt)) {
+    throw new AppError(409, "Aprove cada cena antes de avançar com o storyboard", "SCENES_NOT_APPROVED");
+  }
 
   const [updated] = await db
     .update(videoProjectsTable)
     .set({
       status: "storyboard_approved",
-      storyboard: adjustedScenes ?? project.storyboard,
+      storyboard: scenesToApprove,
       updatedAt: new Date(),
     })
     .where(eq(videoProjectsTable.id, projectId))

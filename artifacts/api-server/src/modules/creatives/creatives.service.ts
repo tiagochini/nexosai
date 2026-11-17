@@ -12,7 +12,7 @@ import { parseAgentJSON } from "../agents/agent.runner.js";
 import { deductCredits } from "../credits/credits.service.js";
 import { NotFoundError, AppError } from "../../lib/errors.js";
 import { generateCreativeImage } from "./image-provider-chain.js";
-import { campaignCreativeObjectKey, deleteGCSObject, uploadBufferToGCS } from "../../lib/gcs-recordings.js";
+import { campaignCreativeObjectKey, createGCSObjectStream, deleteGCSObject, uploadBufferToGCS } from "../../lib/gcs-recordings.js";
 import type { Logger } from "pino";
 
 function managedCreativeMediaUrl(campaignId: string, creativeId: string, variant: "preview" | "final", value: string | null): string | null {
@@ -47,6 +47,97 @@ async function removeReplacedCreativeImage(previousKey: string | null, nextKey: 
   }
 }
 
+function referenceKey(creative: CampaignCreative): string | null {
+  const key = (creative.metadata as Record<string, unknown> | null)?.referenceImageKey;
+  const expectedPrefix = `campaigns/${creative.workspaceId}/${creative.campaignId}/creatives/${creative.id}/reference/`;
+  return typeof key === "string" && key.startsWith(expectedPrefix) ? key : null;
+}
+
+async function getReferenceDataUrl(creative: CampaignCreative): Promise<string | undefined> {
+  const key = referenceKey(creative);
+  if (!key) return undefined;
+  const chunks: Buffer[] = [];
+  for await (const chunk of createGCSObjectStream(key)) chunks.push(Buffer.from(chunk));
+  const meta = await import("../../lib/gcs-recordings.js").then((m) => m.getGCSObjectMeta(key));
+  return `data:${meta.contentType};base64,${Buffer.concat(chunks).toString("base64")}`;
+}
+
+function creativeLocale(creative: CampaignCreative): string {
+  const locale = (creative.metadata as Record<string, unknown> | null)?.creativeLocale;
+  return typeof locale === "string" ? locale : "pt-BR";
+}
+
+export async function updateCreativeConcept(
+  campaignId: string,
+  creativeId: string,
+  workspaceId: string,
+  patch: Partial<CreativeConcept>,
+  locale: string,
+): Promise<CampaignCreative> {
+  const [creative] = await db.select().from(campaignCreativesTable).where(and(
+    eq(campaignCreativesTable.id, creativeId), eq(campaignCreativesTable.campaignId, campaignId), eq(campaignCreativesTable.workspaceId, workspaceId),
+  )).limit(1);
+  if (!creative) throw new NotFoundError("Criativo");
+  if (!creative.concept) throw new AppError(400, "Conceito não encontrado", "CONCEPT_NOT_READY");
+  if (["preview_generating", "final_generating"].includes(creative.status)) throw new AppError(409, "Aguarde a geração atual terminar antes de editar.", "CREATIVE_BUSY");
+  const concept = { ...creative.concept, ...patch };
+  const metadata = { ...((creative.metadata ?? {}) as Record<string, unknown>), creativeLocale: locale };
+  const [updated] = await db.update(campaignCreativesTable).set({ concept, prompt: concept.dallePrompt, metadata })
+    .where(and(eq(campaignCreativesTable.id, creativeId), eq(campaignCreativesTable.workspaceId, workspaceId))).returning();
+  return updated!;
+}
+
+export async function saveCreativeReferenceImage(
+  campaignId: string,
+  creativeId: string,
+  workspaceId: string,
+  bytes: Buffer,
+  contentType: string,
+): Promise<CampaignCreative> {
+  const [creative] = await db.select().from(campaignCreativesTable).where(and(
+    eq(campaignCreativesTable.id, creativeId), eq(campaignCreativesTable.campaignId, campaignId), eq(campaignCreativesTable.workspaceId, workspaceId),
+  )).limit(1);
+  if (!creative) throw new NotFoundError("Criativo");
+  if (["preview_generating", "final_generating"].includes(creative.status)) throw new AppError(409, "Aguarde a geração atual terminar antes de trocar a imagem.", "CREATIVE_BUSY");
+  const valid = (contentType === "image/png" && bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])))
+    || (contentType === "image/jpeg" && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255)
+    || (contentType === "image/webp" && bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP");
+  if (!valid) throw new AppError(400, "Envie uma imagem PNG, JPEG ou WebP válida.", "REFERENCE_IMAGE_INVALID");
+  const extension = contentType === "image/jpeg" ? "jpg" : contentType.split("/")[1];
+  const key = `campaigns/${workspaceId}/${campaignId}/creatives/${creativeId}/reference/reference.${extension}`;
+  await uploadBufferToGCS(bytes, key, contentType);
+  const previous = referenceKey(creative);
+  const metadata = { ...((creative.metadata ?? {}) as Record<string, unknown>), referenceImageKey: key, referenceImageContentType: contentType, imageError: null };
+  const [updated] = await db.update(campaignCreativesTable).set({ metadata }).where(eq(campaignCreativesTable.id, creativeId)).returning();
+  if (previous && previous !== key) await deleteGCSObject(previous).catch(() => undefined);
+  return updated!;
+}
+
+export async function removeCreativeReferenceImage(campaignId: string, creativeId: string, workspaceId: string): Promise<CampaignCreative> {
+  const [creative] = await db.select().from(campaignCreativesTable).where(and(
+    eq(campaignCreativesTable.id, creativeId), eq(campaignCreativesTable.campaignId, campaignId), eq(campaignCreativesTable.workspaceId, workspaceId),
+  )).limit(1);
+  if (!creative) throw new NotFoundError("Criativo");
+  const key = referenceKey(creative);
+  const metadata = { ...((creative.metadata ?? {}) as Record<string, unknown>) };
+  delete metadata["referenceImageKey"];
+  delete metadata["referenceImageContentType"];
+  const [updated] = await db.update(campaignCreativesTable).set({ metadata }).where(eq(campaignCreativesTable.id, creativeId)).returning();
+  if (key) await deleteGCSObject(key).catch(() => undefined);
+  return updated!;
+}
+
+export async function getCreativeReference(campaignId: string, creativeId: string, workspaceId: string): Promise<{ key: string; contentType: string } | null> {
+  const [creative] = await db.select().from(campaignCreativesTable).where(and(
+    eq(campaignCreativesTable.id, creativeId), eq(campaignCreativesTable.campaignId, campaignId), eq(campaignCreativesTable.workspaceId, workspaceId),
+  )).limit(1);
+  if (!creative) throw new NotFoundError("Criativo");
+  const key = referenceKey(creative);
+  if (!key) return null;
+  const contentType = String((creative.metadata as Record<string, unknown> | null)?.referenceImageContentType ?? "image/png");
+  return { key, contentType };
+}
+
 export async function listCreatives(
   campaignId: string,
   workspaceId: string,
@@ -63,6 +154,13 @@ export async function listCreatives(
     .orderBy(desc(campaignCreativesTable.createdAt));
   return creatives.map((creative) => ({
     ...creative,
+    metadata: creative.metadata ? {
+      ...creative.metadata,
+      referenceImageKey: undefined,
+      referenceImageUrl: (creative.metadata as Record<string, unknown>).referenceImageKey
+        ? `/api/campaigns/${creative.campaignId}/creatives/${creative.id}/media/reference`
+        : null,
+    } : creative.metadata,
     previewUrl: managedCreativeMediaUrl(creative.campaignId, creative.id, "preview", creative.previewUrl),
     finalUrl: managedCreativeMediaUrl(creative.campaignId, creative.id, "final", creative.finalUrl),
   }));
@@ -74,6 +172,7 @@ export async function generateConcept(
   platform: string,
   format: string,
   requestNote: string,
+  locale: string,
   log: Logger,
 ): Promise<CampaignCreative> {
   const [campaign] = await db
@@ -100,8 +199,11 @@ export async function generateConcept(
   // [C3-STANDALONE] idempotency: one concept charge per campaign+platform+format combination
   await deductCredits(workspaceId, "creative_brief", log, campaignId, undefined, undefined, undefined, `ws:${workspaceId}:creative:concept:${campaignId}:${platform}:${format}`);
 
-  const systemPrompt = `Você é o Creative Director da NexOS AI, especialista em criativos visuais de alta conversão para o mercado digital brasileiro.
+  const languageName = locale === "en-US" ? "inglês americano" : locale === "en-AU" ? "inglês australiano" : locale === "es-LA" ? "espanhol latino-americano" : "português brasileiro";
+  const systemPrompt = `Você é o Creative Director da NexOS AI, especialista em criativos visuais de alta conversão.
 Crie um conceito criativo completo para ${platform.toUpperCase()} no formato ${format.replace(/_/g, " ")}.
+
+IDIOMA OBRIGATÓRIO: ${languageName}. Todos os textos que uma pessoa verá ou editará — headline, subHeadline, visualDescription, cta, angle, mood, rationale e dallePrompt — devem ser escritos integralmente nesse idioma. Não use inglês ou espanhol como padrão. O prompt da imagem também deve estar no idioma selecionado.
 
 Retorne APENAS um JSON válido, sem texto extra, no formato:
 {
@@ -115,7 +217,7 @@ Retorne APENAS um JSON válido, sem texto extra, no formato:
   "mood": "atmosfera visual — ex: energético, sofisticado, aspiracional",
   "platform": "${platform}",
   "format": "${format}",
-  "dallePrompt": "prompt DALL-E 3 em inglês, ultra-detalhado, estilo fotográfico profissional, SEM TEXTO nem letras na imagem",
+  "dallePrompt": "instrução detalhada para gerar a imagem no idioma selecionado, estilo fotográfico profissional, sem texto visível na imagem",
   "rationale": "explicação em 2 frases de por que estas escolhas maximizam conversão"
 }`;
 
@@ -152,11 +254,41 @@ Crie um conceito criativo de alta conversão.`;
       requestNote: requestNote || null,
       concept,
       prompt: concept.dallePrompt,
+      metadata: { creativeLocale: locale },
     })
     .returning();
 
   log.info({ campaignId, creativeId: creative.id, platform, format }, "Creative concept generated");
   return creative;
+}
+
+export async function translateCreativeConcept(
+  campaignId: string,
+  creativeId: string,
+  workspaceId: string,
+  locale: string,
+  log: Logger,
+): Promise<CampaignCreative> {
+  const [creative] = await db.select().from(campaignCreativesTable).where(and(
+    eq(campaignCreativesTable.id, creativeId), eq(campaignCreativesTable.campaignId, campaignId), eq(campaignCreativesTable.workspaceId, workspaceId),
+  )).limit(1);
+  if (!creative) throw new NotFoundError("Criativo");
+  if (!creative.concept) throw new AppError(400, "Conceito não encontrado", "CONCEPT_NOT_READY");
+  if (["preview_generating", "final_generating"].includes(creative.status)) throw new AppError(409, "Aguarde a geração atual terminar antes de traduzir.", "CREATIVE_BUSY");
+  const languageName = locale === "en-US" ? "inglês americano" : locale === "en-AU" ? "inglês australiano" : locale === "es-LA" ? "espanhol latino-americano" : "português brasileiro";
+  await deductCredits(workspaceId, "creative_brief", log, campaignId, undefined, undefined, undefined, `ws:${workspaceId}:creative:translate:${creativeId}:${locale}`);
+  const result = await completeWithAgent(
+    "creative_director",
+    `Traduza o conceito de criativo fornecido para ${languageName}. Mantenha a mesma estratégia e significado. Todos os campos textuais devem ficar nesse idioma, inclusive dallePrompt. Preserve colorPalette e os códigos técnicos mentalTrigger, platform e format. Retorne somente JSON válido com os mesmos campos do objeto de entrada.`,
+    [{ role: "user", content: JSON.stringify(creative.concept) }],
+    workspaceId, log, campaignId,
+  );
+  const translated = parseAgentJSON<CreativeConcept>(result.content, {} as CreativeConcept);
+  if (!translated?.headline || !translated?.dallePrompt) throw new AppError(502, "Não foi possível adaptar o conceito ao idioma selecionado.", "CREATIVE_TRANSLATION_FAILED");
+  const metadata = { ...((creative.metadata ?? {}) as Record<string, unknown>), creativeLocale: locale };
+  const [updated] = await db.update(campaignCreativesTable).set({ concept: translated, prompt: translated.dallePrompt, metadata })
+    .where(and(eq(campaignCreativesTable.id, creativeId), eq(campaignCreativesTable.workspaceId, workspaceId))).returning();
+  return updated!;
 }
 
 export async function approveConceptAndGeneratePreview(
@@ -187,6 +319,8 @@ export async function approveConceptAndGeneratePreview(
         creative.format,
         "standard",
         log,
+        await getReferenceDataUrl(creative),
+        creativeLocale(creative),
       );
       const imageUrl = await persistCreativeImage(workspaceId, creative.campaignId, creative.id, "preview", generatedImage);
       await db
@@ -242,6 +376,8 @@ export async function approvePreviewAndGenerateFinal(
         creative.format,
         "hd",
         log,
+        await getReferenceDataUrl(creative),
+        creativeLocale(creative),
       );
       const imageUrl = await persistCreativeImage(workspaceId, creative.campaignId, creative.id, "final", generatedImage);
       await db
@@ -332,6 +468,8 @@ export async function regenerateImage(
         creative.format,
         quality,
         log,
+        await getReferenceDataUrl(creative),
+        creativeLocale(creative),
       );
       const variant = quality === "hd" ? "final" : "preview";
       const previousKey = variant === "final" ? creative.finalUrl : creative.previewUrl;
