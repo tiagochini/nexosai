@@ -8,11 +8,8 @@
  * "bring your own key" path for these providers — it would let customers
  * bypass AI credit consumption entirely.
  *
- * Priority chain:
- *   0. KAIROGEN — quote + credit check; fallback only before acceptance
- *   1. Runway ML (RUNWAY_API_KEY)         — text → video, up to 10s, 720p/1080p
- *   2. Kling AI via fal.ai (FAL_API_KEY)  — text → video, up to 10s
- *   3. HeyGen (HEYGEN_API_KEY)            — avatar/talking-head only
+ * Priority chain is controlled by VIDEO_PRIMARY_PROVIDER (Grok by default).
+ * The provider adapter keeps scene planning independent from the media vendor.
  *
  * ElevenLabs (ELEVENLABS_API_KEY) — voice cloning (separate flow)
  *
@@ -63,11 +60,20 @@ export interface VoiceCloneRequest {
 // ─── Provider availability ───────────────────────────────────────────────────
 // NexOS-operated infrastructure only — always the platform's own keys.
 
+function configuredVideoProviders(): string[] {
+  const configured: Record<string, boolean> = {
+    grok: Boolean(env.XAI_API_KEY),
+    kairogen: kairogenConfigured(),
+    runway: Boolean(env.RUNWAY_API_KEY),
+    kling: Boolean(env.FAL_API_KEY),
+  };
+  const preferred = env.VIDEO_PRIMARY_PROVIDER.toLowerCase();
+  const order = [preferred, "grok", "kairogen", "runway", "kling"];
+  return [...new Set(order)].filter((provider) => configured[provider]);
+}
+
 export function getAvailableVideoProvider(): string | null {
-  if (kairogenConfigured()) return "kairogen";
-  if (env.RUNWAY_API_KEY) return "runway";
-  if (env.FAL_API_KEY) return "kling";
-  return null;
+  return configuredVideoProviders()[0] ?? null;
 }
 
 export function getAvailableAvatarProvider(): string | null {
@@ -196,6 +202,58 @@ async function pollKlingJob(jobId: string): Promise<VideoClipResult> {
     return { status: "processing", jobId, provider: "kling" };
   } catch (err) {
     return { status: "failed", error: String(err), provider: "kling" };
+  }
+}
+
+// ─── Grok Imagine Video ─────────────────────────────────────────────────────
+
+async function generateWithGrok(req: VideoClipRequest): Promise<VideoClipResult> {
+  try {
+    const response = await fetch("https://api.x.ai/v1/videos/generations", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.XAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "grok-imagine-video-1.5",
+        prompt: [req.prompt, req.negativePrompt ? `Avoid: ${req.negativePrompt}` : ""].filter(Boolean).join("\n\n"),
+        duration: Math.min(15, Math.max(1, Math.round(req.durationSeconds))),
+        aspect_ratio: req.aspectRatio,
+        resolution: req.resolution,
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(`Grok video API error ${response.status}: ${detail.slice(0, 500)}`);
+    }
+    const data = await response.json() as { request_id?: string; video?: { url?: string } };
+    if (data.video?.url) return { status: "ready", clipUrl: data.video.url, provider: "grok" };
+    if (!data.request_id) throw new Error("Grok não retornou request_id para acompanhar a geração");
+    return { status: "submitted", jobId: data.request_id, provider: "grok" };
+  } catch (error) {
+    log.error({ err: error }, "Grok video generation failed");
+    return { status: "failed", error: String(error), provider: "grok" };
+  }
+}
+
+async function pollGrokJob(jobId: string): Promise<VideoClipResult> {
+  try {
+    const response = await fetch(`https://api.x.ai/v1/videos/${encodeURIComponent(jobId)}`, {
+      headers: { Authorization: `Bearer ${env.XAI_API_KEY}` },
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!response.ok) throw new Error(`Grok video poll error ${response.status}`);
+    const data = await response.json() as { status?: string; video?: { url?: string }; error?: { message?: string } | string };
+    if (data.status === "done" && data.video?.url) return { status: "ready", clipUrl: data.video.url, provider: "grok" };
+    if (data.status === "failed" || data.status === "expired") {
+      const message = typeof data.error === "string" ? data.error : data.error?.message;
+      return { status: "failed", error: message ?? `Grok generation ${data.status}`, provider: "grok" };
+    }
+    return { status: "processing", jobId, provider: "grok" };
+  } catch (error) {
+    return { status: "failed", error: String(error), provider: "grok" };
   }
 }
 
@@ -488,7 +546,9 @@ export async function fetchRandomStockHeygenAvatar(): Promise<StockAvatarResult 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 export async function generateVideoClip(req: VideoClipRequest): Promise<VideoClipResult> {
-  if (kairogenConfigured()) {
+  const primary = getAvailableVideoProvider();
+  if (primary === "grok") return generateWithGrok(req);
+  if (primary === "kairogen") {
     try {
       const result = await generateKairogen({ kind: "video", prompt: req.prompt, aspectRatio: req.aspectRatio,
         durationSeconds: req.durationSeconds, resolution: req.resolution, imageUrl: req.imageUrl });
@@ -496,15 +556,22 @@ export async function generateVideoClip(req: VideoClipRequest): Promise<VideoCli
     } catch (error) {
       if (!kairogenCanFallback(error)) return { status: "failed", error: "A geração KAIROGEN precisa de acompanhamento; nenhum segundo pedido foi enviado.", provider: "kairogen" };
       log.info({ provider: "kairogen", reason: error instanceof Error ? error.message : "unavailable" }, "Trying next configured video provider");
+      const providers = configuredVideoProviders();
+      const fallbackProviders = providers.slice(providers.indexOf("kairogen") + 1);
+      for (const provider of fallbackProviders) {
+        if (provider === "grok") return generateWithGrok(req);
+        if (provider === "runway") return generateWithRunway(req);
+        if (provider === "kling") return generateWithKling(req);
+      }
     }
   }
-  // Preserve the existing order after KAIROGEN is skipped.
-  if (env.RUNWAY_API_KEY) return generateWithRunway(req);
-  if (env.FAL_API_KEY) return generateWithKling(req);
+  if (primary === "runway") return generateWithRunway(req);
+  if (primary === "kling") return generateWithKling(req);
   return { status: "provider_not_configured", setupInstructions: SETUP_INSTRUCTIONS.video };
 }
 
 export async function pollVideoJob(jobId: string, provider: string): Promise<VideoClipResult> {
+  if (provider === "grok") return pollGrokJob(jobId);
   if (provider === "kairogen") {
     const result = await pollKairogen(jobId, "video");
     return { status: result.status, jobId, clipUrl: result.url, provider };

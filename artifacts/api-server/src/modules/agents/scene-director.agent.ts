@@ -20,11 +20,14 @@ export interface StoryboardInput {
   productDescription: string;
   targetAudience: string;
   format: string;
+  locale: string;
   script: string;
   config: Partial<VideoConfig>;
   campaignId?: string | null;
   workspaceId: string;
   campaignArc?: CampaignArc;
+  segmentIndex?: number;
+  segmentCount?: number;
   /** [C3-STANDALONE] Idempotency key — passed from video-production.service so double-click cannot double-charge. */
   idempotencyKey?: string;
 }
@@ -97,10 +100,13 @@ NARRATIVA VISUAL SEM PALAVRAS (o que o espectador SENTE pela câmera):
 const STORYBOARD_OUTPUT_SPEC = `═══════════════════════════════════════════
 REGRAS DE PRODUÇÃO TÉCNICA
 ═══════════════════════════════════════════
-• Máximo 12 cenas, mínimo 4 cenas (cada cena: 4 a 8 segundos — limite técnico do gerador)
+• Cada cena deve durar de 4 a 8 segundos e respeitar o limite do provedor de vídeo.
+• Gere quantas cenas forem necessárias para cobrir TODO o trecho recebido, sem resumir nem omitir a locução. Para um trecho de roteiro, gere normalmente 8–16 cenas.
+• A soma das durações deve se aproximar da duração estimada do roteiro narrado. Não devolva storyboards curtos de demonstração para um roteiro longo.
+• Divida a locução em trechos contínuos, cobrindo cada frase exatamente uma vez e preservando a ordem. Use todos os parágrafos do roteiro.
 • O arco emocional DEVE ser visível só pela progressão de paleta e ângulo de câmera
 • Cada cena deve mudar o estado emocional do espectador — nenhuma cena "neutra"
-• REGRA ABSOLUTA: videoPrompt em inglês, ultra-detalhado, profissional, SEM texto ou subtítulos visíveis na cena
+• REGRA ABSOLUTA: escreva videoPrompt no idioma selecionado para a campanha, ultra-detalhado, profissional, SEM texto ou subtítulos visíveis na cena
 • O videoPrompt deve descrever: posição de câmera + movimento + iluminação + paleta + sujeito + ação + mood em uma frase cinematográfica densa
 
 Retorne APENAS JSON válido sem texto extra:
@@ -113,17 +119,19 @@ Retorne APENAS JSON válido sem texto extra:
       "durationSeconds": 6,
       "voiceoverText": "exato texto de locução para esta cena",
       "visualDescription": "descrição visual em PT-BR — câmera, luz, composição, ação, emoção transmitida",
+      "cameraDirection": "enquadramento, lente e movimento da câmera",
+      "onScreenText": "texto curto na tela, ou string vazia",
       "sceneType": "hook|problem|solution|proof|cta|bridge|transition",
       "style": "cinematográfico noir|aspiracional dourado|minimalista tenso|dinâmico urbano|íntimo confessional",
       "palette": ["#hex1", "#hex2", "#hex3"],
       "transition": "cut|fade|dissolve|zoom_in|pan_right|match_cut|jump_cut|cross_fade",
       "mood": "urgente|inspiracional|empático|energético|sofisticado|íntimo|revelador|inevitável",
       "hasAvatar": false,
-      "videoPrompt": "Cinematic shot description in English: camera angle + movement + lighting setup + color palette + subject + action + emotional tone. No text, no subtitles, no watermarks visible."
+      "videoPrompt": "Descrição cinematográfica detalhada no idioma selecionado: posição e movimento de câmera, iluminação, paleta, sujeito, ação e tom emocional. Sem textos, legendas ou marcas d'água visíveis."
     }
   ],
   "totalDurationSeconds": 42,
-  "phaseSummary": "Hook (6s) → Problema (18s) → Virada (6s) → Solução (12s) → CTA (6s)",
+  "phaseSummary": "Resumo das fases deste trecho",
   "directorNotes": "análise do arco emocional visual, decisões de cor/luz, por que cada contraste foi escolhido"
 }`;
 
@@ -146,10 +154,18 @@ export async function runSceneDirectorAgent(
   const aspectRatio = input.config.aspectRatio ?? "16:9";
   const rhythm = input.config.rhythm ?? "medium";
   const tone = input.config.tone ?? "inspirational";
+  const promptLanguage = input.locale.toLowerCase().startsWith("en")
+    ? "English"
+    : input.locale.toLowerCase().startsWith("es")
+      ? "Spanish"
+      : "Português brasileiro";
+  const scriptWordCount = input.script.trim().split(/\s+/).filter(Boolean).length;
+  const narrationDurationSeconds = Math.round((scriptWordCount / 140) * 60);
 
   const userContent = `Produto: ${input.productName}
 ${input.productDescription ? `Descrição: ${input.productDescription}` : ""}
 Público-alvo: ${input.targetAudience}
+Idioma escolhido para a campanha: ${promptLanguage} (${input.locale}). Escreva o campo videoPrompt inteiramente nesse idioma.
 Formato de vídeo: ${input.format.replace(/_/g, " ").toUpperCase()}
 Proporção: ${aspectRatio} | Ritmo: ${rhythm} | Tom: ${tone}
 ${hasAvatar ? "⚠️ O APRESENTADOR APARECERÁ no vídeo — inclua cenas de talking-head (hasAvatar: true) nos momentos-chave" : "Vídeo sem apresentador visível — use cenários, animações, imagens de produto e B-roll"}
@@ -157,8 +173,10 @@ Estilo de voz: ${voiceStyle}
 ${input.config.styleKeywords?.length ? `Estilo visual desejado: ${input.config.styleKeywords.join(", ")}` : ""}
 ${input.config.palette?.length ? `Paleta de cores preferida: ${input.config.palette.join(", ")}` : ""}
 
-ROTEIRO COMPLETO:
+TRECHO DO ROTEIRO (crie cenas somente para este trecho, em ordem; não resuma e não acrescente falas):
 ${input.script}
+${input.segmentCount ? `TRECHO ${Number(input.segmentIndex ?? 0) + 1} DE ${input.segmentCount}. Este é parte de um roteiro maior. Mantenha o arco do trecho, sem antecipar o final.` : ""}
+Este trecho contém aproximadamente ${scriptWordCount} palavras e ${Math.floor(narrationDurationSeconds / 60)}:${String(narrationDurationSeconds % 60).padStart(2, "0")} de locução a 140 palavras por minuto. Distribua a fala por cenas de 4–8 segundos e crie cenas suficientes para que a duração somada acompanhe a duração da locução; não comprima o trecho em poucas cenas.
 ${input.campaignArc ? `
 ═══════════════════════════════════════════
 ARCO ESTRATÉGICO DA CAMPANHA — USE PARA CALIBRAR CADA CENA
@@ -175,7 +193,7 @@ ${input.campaignArc.track === "six_digits" ? "ESCALA: Primeiro grande lançament
 REGRA FINAL: O storyboard é a tradução visual do arco acima. Cada cena deve avançar a emoção dominante.
 ═══════════════════════════════════════════` : ""}
 
-Crie o storyboard cena a cena. Cada cena deve ter exatamente entre 4 e 8 segundos. Cada cena deve mudar o estado emocional do espectador.`;
+Crie o storyboard cena a cena cobrindo a narração inteira em ordem. Não resuma, não pule frases e não repita locução. Cada cena deve ter entre 4 e 8 segundos. Inclua uma cena para cada unidade visual/narrativa; prefira dezenas de cenas para roteiro longo em vez de agrupar vários parágrafos numa cena. Cada cena deve mudar ou aprofundar o estado emocional do espectador.`;
 
   const result = await completeWithAgent(
     "scene_director",
@@ -193,8 +211,14 @@ Crie o storyboard cena a cena. Cada cena deve ter exatamente entre 4 e 8 segundo
     directorNotes: string;
   }>(result.content, { scenes: [], totalDurationSeconds: 0, phaseSummary: "", directorNotes: "" });
 
-  if (!parsed.scenes?.length) {
+  if (!parsed || !Array.isArray(parsed.scenes) || parsed.scenes.length === 0) {
     throw new Error("Scene Director retornou storyboard vazio — resposta inválida da IA");
+  }
+  if (parsed.scenes.length > 100) {
+    throw new Error(`Scene Director excedeu o limite de 100 cenas: ${parsed.scenes.length}`);
+  }
+  if (parsed.scenes.some((scene) => !scene || typeof scene !== "object")) {
+    throw new Error("Scene Director retornou uma cena em formato inválido");
   }
 
   const scenes: VideoScene[] = parsed.scenes.map((s, i) => ({
@@ -204,6 +228,8 @@ Crie o storyboard cena a cena. Cada cena deve ter exatamente entre 4 e 8 segundo
     durationSeconds: Math.min(8, Math.max(4, s.durationSeconds ?? 6)),
     voiceoverText: s.voiceoverText ?? "",
     visualDescription: s.visualDescription ?? "",
+    cameraDirection: s.cameraDirection ?? "",
+    onScreenText: s.onScreenText ?? "",
     sceneType: SCENE_TYPES.includes(s.sceneType as (typeof SCENE_TYPES)[number])
       ? (s.sceneType as VideoScene["sceneType"])
       : "bridge",
@@ -218,7 +244,7 @@ Crie o storyboard cena a cena. Cada cena deve ter exatamente entre 4 e 8 segundo
 
   return {
     scenes,
-    totalDurationSeconds: parsed.totalDurationSeconds ?? scenes.reduce((a, s) => a + s.durationSeconds, 0),
+    totalDurationSeconds: scenes.reduce((a, s) => a + s.durationSeconds, 0),
     phaseSummary: parsed.phaseSummary ?? "",
     directorNotes: parsed.directorNotes ?? "",
   };

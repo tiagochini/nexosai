@@ -26,7 +26,7 @@ import {
   RefreshCw, Rocket, Brain, Video, CheckCheck, Wifi, Image, Database,
 } from "lucide-react";
 import { LaunchSequenceOverlay, LaunchRocketButton } from "@/components/launch-sequence";
-import { StrategyMasterplan, parseStrategyInsights } from "./strategy-masterplan";
+import { StrategyMasterplan, downloadCampaignMasterplanPdf, parseStrategyInsights } from "./strategy-masterplan";
 import {
   AnalyzingDisplay,
   GeneratingDisplay,
@@ -1982,6 +1982,28 @@ export default function CampaignDetail() {
 
   // Read contentRetry state from brainData — drives intervention UI
   const brainDataRaw = (campaignRaw["brainData"] ?? {}) as Record<string, unknown>;
+  const downloadMasterplanPdf = () => {
+    if (!user) {
+      toast.error(t("Não foi possível identificar o usuário para gerar o PDF.", "Could not identify the user to generate the PDF.", "No se pudo identificar al usuario para generar el PDF."));
+      return;
+    }
+    const campaignTitle = String(intakeD["product.name"] ?? campaign.title ?? t("Masterplan Estratégico", "Strategic master plan", "Plan maestro estratégico"));
+    const userIdentity = {
+      name: user.name ?? "",
+      email: user.email ?? "",
+      userId: user.id,
+      workspaceName: workspace?.name ?? "",
+      workspaceId: workspace?.id ?? "",
+    };
+    downloadCampaignMasterplanPdf({
+      strategyD,
+      campaignId,
+      campaignTitle,
+      track: String(intakeD["launch.track"] ?? ""),
+      marketValidation: (brainDataRaw["marketValidation"] ?? null) as Record<string, unknown> | null,
+      userIdentity,
+    });
+  };
   const contentRetryRaw = (brainDataRaw["contentRetry"] ?? {}) as Record<string, unknown>;
   const requiresIntervention = !!(contentRetryRaw["requiresIntervention"]);
   const failedAgentRaw = (contentRetryRaw["lastFailedAgent"] as string | undefined) ?? "";
@@ -2319,7 +2341,7 @@ export default function CampaignDetail() {
         </div>
 
         {campaign.status === "strategy_ready" && canViewSchedule && (
-          <CampaignSchedulePreview campaignId={campaignId} timeline={timelineD} trialAccess={trialAccess} />
+          <CampaignSchedulePreview campaignId={campaignId} timeline={timelineD} trialAccess={trialAccess} onDownloadPdf={downloadMasterplanPdf} />
         )}
 
         {/* ─── Psychology Layer Missing Warning ─────────────────────────────────── */}

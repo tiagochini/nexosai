@@ -1,4 +1,5 @@
 import { eq, and, desc } from "drizzle-orm";
+import { createHash } from "node:crypto";
 import {
   db,
   videoProjectsTable,
@@ -29,6 +30,20 @@ import type { Logger } from "pino";
 import { isStoredVideoKey, persistProviderVideo } from "./video-asset-storage.js";
 
 const log = logger.child({ module: "video-production" });
+
+/** Keep each model response small enough to avoid truncating long VSL storyboards. */
+function splitScriptForStoryboard(script: string, maxWords = 150): string[] {
+  const words = script.trim().split(/\s+/).filter(Boolean);
+  const segments: string[] = [];
+  for (let index = 0; index < words.length; index += maxWords) {
+    segments.push(words.slice(index, index + maxWords).join(" "));
+  }
+  return segments;
+}
+
+function storyboardScriptHash(script: string): string {
+  return createHash("sha256").update(script).digest("hex");
+}
 
 // ─── Validation helpers ──────────────────────────────────────────────────────
 
@@ -348,7 +363,7 @@ export async function generateScript(
     const format = project.format;
 
     const FORMAT_GUIDE: Record<string, string> = {
-      vsl: "VSL longa (3–12 min): arco completo de 5 atos — setup emocional → escalada de tensão → virada → revelação → CTA irresistível. Cada ato deve ter um pico emocional distinto.",
+      vsl: "VSL longa (7:45–10:30 min): escreva cerca de 1.085–1.470 palavras narráveis, considerando 140 palavras por minuto e pausas naturais. Arco completo de 5 atos — setup emocional → escalada de tensão → virada → revelação → CTA irresistível. Cada ato deve ter um pico emocional distinto.",
       cpl: "CPL (Carta de Pré-lançamento, 8–20 min): narrativa de transformação em 3 vídeos — CPL1 oportunidade, CPL2 mecanismo único, CPL3 prova e convite. Este vídeo é parte de uma sequência.",
       live_promo: "Promo de Live (60–90s): urgência extrema, data/hora específica, FOMO intenso, benefício imediato de assistir ao vivo. Ritmo acelerado, cortes rápidos.",
       stories: "Stories (15–30s): uma única ideia por stories, gancho nos primeiros 2 segundos, linguagem íntima e direta, CTA deslize para cima.",
@@ -436,7 +451,7 @@ ESTRUTURA DE ENTREGA:
 [CTA] — chamada clara, urgente, com escassez real ou temporal
 [DURAÇÃO ESTIMADA: X:XX]
 
-Escreva roteiro completo como texto corrido. Cada seção claramente marcada. Linguagem que ressoa emocionalmente, não apenas informa.`;
+Escreva roteiro completo como texto corrido. Cada seção claramente marcada. Para formato VSL, entregue 1.085–1.470 palavras narráveis para sustentar 7:45–10:30 em ritmo natural; não substitua o roteiro por um resumo e não conte títulos/instruções de cena como narração. Linguagem que ressoa emocionalmente, não apenas informa.`;
 
 
     const userContent = [
@@ -519,15 +534,33 @@ export async function generateStoryboard(
   }
   if (!project.script) throw new AppError(400, "Projeto sem roteiro — gere e aprove o roteiro primeiro", "NO_SCRIPT");
 
+  const scriptSegments = splitScriptForStoryboard(project.script);
+  const scriptHash = storyboardScriptHash(project.script);
+  const savedProgress = project.config.storyboardProgress;
+  const canResume = savedProgress?.scriptHash === scriptHash
+    && savedProgress.segmentCount === scriptSegments.length
+    && project.storyboard.length > 0;
+  let scenes: VideoScene[] = canResume ? [...project.storyboard] : [];
+  let nextSegmentIndex = canResume ? Math.min(savedProgress.nextSegmentIndex, scriptSegments.length) : 0;
+  const phaseSummaries = canResume ? [...(savedProgress.phaseSummaries ?? [])] : [];
+  const directorNotes = canResume ? [...(savedProgress.directorNotes ?? [])] : [];
+
   await db
     .update(videoProjectsTable)
-    .set({ status: "storyboard_generating", updatedAt: new Date() })
-    .where(eq(videoProjectsTable.id, projectId));
+    .set({
+      status: "storyboard_generating",
+      errorMessage: null,
+      ...(!canResume ? { storyboard: [], config: { ...project.config, storyboardProgress: undefined, storyboardMeta: undefined } as VideoConfig } : {}),
+      updatedAt: new Date(),
+    })
+    .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)));
 
+  let stage = "campaign_context";
   try {
     let productName = project.title;
     let productDescription = "";
     let targetAudience = "Empreendedores digitais brasileiros";
+    let campaignLocale = "pt-BR";
     let emotionalHook = "";
     let uniqueMechanism = "";
     let transformationBridge = "";
@@ -544,12 +577,14 @@ export async function generateStoryboard(
           strategyData: campaignsTable.strategyData,
           audienceData: campaignsTable.audienceData,
           track: campaignsTable.track,
+          locale: campaignsTable.locale,
         })
         .from(campaignsTable)
         .where(and(eq(campaignsTable.id, project.campaignId), eq(campaignsTable.workspaceId, workspaceId)))
         .limit(1);
 
       if (campaign) {
+        campaignLocale = campaign.locale || campaignLocale;
         const intake = (campaign.intakeData as Record<string, unknown>) ?? {};
         const strategy = (campaign.strategyData as Record<string, unknown>) ?? {};
         const audience = (campaign.audienceData as Record<string, unknown>) ?? {};
@@ -577,32 +612,77 @@ export async function generateStoryboard(
     }
 
     const config = project.config as VideoConfig;
-    const { scenes, totalDurationSeconds, phaseSummary, directorNotes } = await runSceneDirectorAgent(
-      {
-        productName,
-        productDescription,
-        targetAudience,
-        format: project.format,
-        script: project.script,
-        config,
-        campaignId: project.campaignId,
-        workspaceId,
-        idempotencyKey: `ws:${workspaceId}:video:storyboard:${projectId}`,
-        // ── Campaign arc context injected into ATLAS ──
-        campaignArc: {
-          emotionalHook,
-          uniqueMechanism,
-          transformationBridge,
-          positioning,
-          mentalTriggers,
-          avatarFears,
-          avatarAspirations,
-          track: campaignTrack,
+    stage = "scene_director";
+    for (let segmentIndex = nextSegmentIndex; segmentIndex < scriptSegments.length; segmentIndex += 1) {
+      const result = await runSceneDirectorAgent(
+        {
+          productName,
+          productDescription,
+          targetAudience,
+          format: project.format,
+          locale: campaignLocale,
+          script: scriptSegments[segmentIndex]!,
+          config,
+          campaignId: project.campaignId,
+          workspaceId,
+          // Reusing this key means segment retries do not charge the same storyboard action again.
+          idempotencyKey: `ws:${workspaceId}:video:storyboard:${projectId}`,
+          segmentIndex,
+          segmentCount: scriptSegments.length,
+          campaignArc: {
+            emotionalHook,
+            uniqueMechanism,
+            transformationBridge,
+            positioning,
+            mentalTriggers,
+            avatarFears,
+            avatarAspirations,
+            track: campaignTrack,
+          },
         },
-      },
-      reqLog,
-    );
+        reqLog,
+      );
 
+      const orderedScenes = result.scenes.map((scene, index) => ({
+        ...scene,
+        id: `scene_${String(scenes.length + index + 1).padStart(3, "0")}`,
+        order: scenes.length + index + 1,
+      }));
+      scenes.push(...orderedScenes);
+      phaseSummaries.push(result.phaseSummary);
+      directorNotes.push(result.directorNotes);
+      nextSegmentIndex = segmentIndex + 1;
+      stage = "persisting_storyboard_progress";
+      await db.update(videoProjectsTable)
+        .set({
+          storyboard: scenes,
+          config: {
+            ...config,
+            storyboardProgress: {
+              scriptHash,
+              nextSegmentIndex,
+              segmentCount: scriptSegments.length,
+              phaseSummaries,
+              directorNotes,
+            },
+          } as VideoConfig,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)));
+    }
+
+    if (!scenes.length) throw new Error("Scene Director não retornou cenas para o roteiro aprovado");
+    if (scenes.length > 100) throw new Error(`Storyboard excedeu o limite de 100 cenas: ${scenes.length}`);
+    const totalDurationSeconds = scenes.reduce((total, scene) => total + scene.durationSeconds, 0);
+    const narrationDurationSeconds = Math.round((project.script.trim().split(/\s+/).filter(Boolean).length / 140) * 60);
+    const phaseSummary = phaseSummaries.filter(Boolean).join(" → ");
+    const combinedDirectorNotes = directorNotes.filter(Boolean).join("\n\n");
+    if (narrationDurationSeconds > 0 && Math.abs(totalDurationSeconds - narrationDurationSeconds) / narrationDurationSeconds > 0.2) {
+      reqLog.warn({ projectId, sceneCount: scenes.length, totalDurationSeconds, narrationDurationSeconds }, "Storyboard duration differs from estimated narration duration");
+    }
+
+    stage = "persisting_storyboard";
+    reqLog.info({ projectId, sceneCount: scenes.length, totalDurationSeconds }, "Scene director output ready; saving storyboard");
     const [updated] = await db
       .update(videoProjectsTable)
       .set({
@@ -612,7 +692,8 @@ export async function generateStoryboard(
         config: {
           ...config,
           totalCreditsUsed: (config.totalCreditsUsed ?? 0) + 12,
-          storyboardMeta: { totalDurationSeconds, phaseSummary, directorNotes },
+          storyboardMeta: { totalDurationSeconds, narrationDurationSeconds, phaseSummary, directorNotes: combinedDirectorNotes },
+          storyboardProgress: undefined,
         } as VideoConfig,
         updatedAt: new Date(),
       })
@@ -621,10 +702,13 @@ export async function generateStoryboard(
 
     return updated!;
   } catch (err) {
+    const errorCode = err && typeof err === "object" && "code" in err ? String((err as { code?: unknown }).code ?? "") : undefined;
+    const errorName = err instanceof Error ? err.name : typeof err;
+    reqLog.error({ projectId, stage, errorName, errorCode }, "Video storyboard generation failed");
     await db
       .update(videoProjectsTable)
-      .set({ status: "script_approved", errorMessage: String(err), updatedAt: new Date() })
-      .where(eq(videoProjectsTable.id, projectId));
+      .set({ status: "script_approved", errorMessage: `Storyboard generation failed during ${stage}${errorCode ? ` (${errorCode})` : ""}`, updatedAt: new Date() })
+      .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)));
     throw err;
   }
 }
@@ -787,6 +871,123 @@ export async function generatePreviewClips(
     .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)))
     .returning();
 
+  return updated!;
+}
+
+// ─── Generate one scene preview ─────────────────────────────────────────────
+
+export async function generateScenePreview(
+  workspaceId: string,
+  projectId: string,
+  sceneId: string,
+  prompt: string | undefined,
+  reqLog: Logger,
+): Promise<VideoProject> {
+  const project = await getProject(workspaceId, projectId);
+  if (project.status !== "storyboard_ready") {
+    throw new AppError(409, "As cenas só podem ser geradas durante a revisão do storyboard", "INVALID_STATUS");
+  }
+  const scenes = (project.storyboard as VideoScene[]) ?? [];
+  const scene = scenes.find((item) => item.id === sceneId);
+  if (!scene) throw new NotFoundError("Cena não encontrada");
+  if (scene.clipStatus === "generating") throw new AppError(409, "Esta cena já está sendo gerada", "SCENE_GENERATING");
+
+  const videoPrompt = prompt?.trim() || scene.videoPrompt;
+  if (!videoPrompt) throw new AppError(400, "A cena precisa de um prompt visual", "PROMPT_REQUIRED");
+
+  const config = project.config as VideoConfig;
+  const revision = (scene.previewRevision ?? 0) + 1;
+  const costType = config.hasUserFace ? "video_avatar" : "video_low_res";
+  await deductCredits(
+    workspaceId,
+    costType,
+    reqLog,
+    project.campaignId ?? undefined,
+    undefined,
+    undefined,
+    undefined,
+    `ws:${workspaceId}:video:preview:${projectId}:${sceneId}:${revision}`,
+  );
+
+  const pendingScene: VideoScene = {
+    ...scene,
+    videoPrompt,
+    clipStatus: "generating",
+    clipUrl: undefined,
+    previewApprovedAt: undefined,
+    previewRevision: revision,
+    notes: undefined,
+  };
+  const pendingScenes = scenes.map((item) => item.id === sceneId ? pendingScene : item);
+  await db.update(videoProjectsTable)
+    .set({ storyboard: pendingScenes, creditsUsed: (project.creditsUsed ?? 0) + (config.hasUserFace ? 80 : 50), updatedAt: new Date() })
+    .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)));
+
+  try {
+    const result = await generateVideoClip({
+      prompt: videoPrompt,
+      durationSeconds: scene.durationSeconds,
+      aspectRatio: config.aspectRatio ?? "16:9",
+      resolution: "720p",
+      negativePrompt: (scene as VideoScene & { negativePrompt?: string }).negativePrompt,
+    });
+
+    let clipUrl = result.clipUrl;
+    if (result.status === "ready" && clipUrl) {
+      clipUrl = await persistProviderVideo(clipUrl, workspaceId, projectId, sceneId, "preview", project.campaignId);
+    }
+    const nextScene: VideoScene = result.status === "failed" || result.status === "provider_not_configured"
+      ? { ...pendingScene, clipStatus: "failed", notes: result.error ?? result.setupInstructions ?? "Provedor de vídeo não configurado" }
+      : {
+          ...pendingScene,
+          clipStatus: result.status === "ready" ? "ready" : "generating",
+          clipUrl,
+          notes: result.jobId ? `job:${result.provider}:${result.jobId}` : undefined,
+        };
+    const current = await getProject(workspaceId, projectId);
+    const latestScenes = (current.storyboard as VideoScene[]).map((item) => item.id === sceneId ? nextScene : item);
+    const [updated] = await db.update(videoProjectsTable)
+      .set({ storyboard: latestScenes, errorMessage: null, updatedAt: new Date() })
+      .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)))
+      .returning();
+    return updated!;
+  } catch (error) {
+    reqLog.error({ projectId, sceneId, error }, "Video scene preview generation failed");
+    const current = await getProject(workspaceId, projectId);
+    const failedScenes = (current.storyboard as VideoScene[]).map((item) => item.id === sceneId
+      ? { ...item, clipStatus: "failed" as const, notes: String(error) }
+      : item);
+    const [updated] = await db.update(videoProjectsTable)
+      .set({ storyboard: failedScenes, updatedAt: new Date() })
+      .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)))
+      .returning();
+    return updated!;
+  }
+}
+
+export async function approveScenePreview(
+  workspaceId: string,
+  projectId: string,
+  sceneId: string,
+): Promise<VideoProject> {
+  const project = await getProject(workspaceId, projectId);
+  if (project.status !== "storyboard_ready") {
+    throw new AppError(409, "As cenas só podem ser aprovadas durante a revisão do storyboard", "INVALID_STATUS");
+  }
+  const scenes = (project.storyboard as VideoScene[]) ?? [];
+  const scene = scenes.find((item) => item.id === sceneId);
+  if (!scene) throw new NotFoundError("Cena não encontrada");
+  if (scene.clipStatus !== "ready" || !scene.clipUrl) {
+    throw new AppError(409, "Gere e confira a prévia desta cena antes de aprová-la", "SCENE_PREVIEW_NOT_READY");
+  }
+
+  const approvedAt = new Date().toISOString();
+  const updatedScenes = scenes.map((item) => item.id === sceneId ? { ...item, previewApprovedAt: approvedAt } : item);
+  const allApproved = updatedScenes.every((item) => Boolean(item.previewApprovedAt));
+  const [updated] = await db.update(videoProjectsTable)
+    .set({ storyboard: updatedScenes, status: allApproved ? "preview_approved" : "storyboard_ready", updatedAt: new Date() })
+    .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)))
+    .returning();
   return updated!;
 }
 

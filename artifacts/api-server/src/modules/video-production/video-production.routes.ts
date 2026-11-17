@@ -10,6 +10,8 @@ import {
   approveScript,
   generateStoryboard,
   approveStoryboard,
+  generateScenePreview,
+  approveScenePreview,
   generatePreviewClips,
   approvePreview,
   generateFinalClips,
@@ -189,6 +191,25 @@ router.post("/video-projects/:id/approve-storyboard", async (req, res, next) => 
 });
 
 // ─── Step 5: Generate Preview ────────────────────────────────────────────────
+router.post("/video-projects/:id/scenes/:sceneId/generate-preview", async (req, res, next) => {
+  try {
+    const { prompt } = z.object({ prompt: z.string().trim().min(1).max(6000).optional() }).parse(req.body ?? {});
+    const project = await generateScenePreview(req.auth.workspaceId, req.params["id"]!, req.params["sceneId"]!, prompt, req.log);
+    res.json({ project: withMediaUrls(project) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/video-projects/:id/scenes/:sceneId/approve-preview", async (req, res, next) => {
+  try {
+    const project = await approveScenePreview(req.auth.workspaceId, req.params["id"]!, req.params["sceneId"]!);
+    res.json({ project: withMediaUrls(project) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post("/video-projects/:id/generate-preview", async (req, res, next) => {
   try {
     const project = await generatePreviewClips(req.auth.workspaceId, req.params["id"]!, req.log);

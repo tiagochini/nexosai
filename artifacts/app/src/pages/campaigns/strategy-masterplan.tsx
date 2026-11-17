@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import { generateMasterplanPDF, type PdfUserIdentity } from "@/lib/masterplan-pdf";
+import { generateMasterplanPDF, type MasterplanPdfData, type PdfUserIdentity } from "@/lib/masterplan-pdf";
 import { missingTriggerMapFields } from "@/lib/trigger-map-contract";
 import { missingCampaignArchitectureFields, missingMasterplanQualityFields } from "@/lib/masterplan-quality-contract";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
@@ -224,6 +224,68 @@ function obj(v: unknown): Obj {
   if (v && typeof v === "object" && !Array.isArray(v)) return v as Obj;
   if (typeof v === "string") return parseStrategyValue(v) ?? {};
   return {};
+}
+
+export function buildMasterplanPdfData({
+  strategyD, ins = {}, campaignId = "unknown", campaignTitle, track, marketValidation,
+}: {
+  strategyD: Obj;
+  ins?: Obj;
+  campaignId?: string;
+  campaignTitle?: string;
+  track?: string;
+  marketValidation?: Record<string, unknown> | null;
+}): MasterplanPdfData {
+  const src = Object.keys(ins).length > 0 ? ins : strategyD;
+  return {
+    campaignId,
+    campaignTitle: campaignTitle || str(strategyD["productName"]) || "Masterplan Estratégico",
+    track,
+    executiveSummary: summaryText(src["executiveSummary"]) || summaryText(strategyD["executiveSummary"]),
+    bigDomino: str(src["bigDomino"]) || str(strategyD["bigDomino"]),
+    positioning: obj(src["offerPositioning"] ?? strategyD["offerPositioning"]),
+    market: obj(src["marketDiagnosis"] ?? strategyD["marketDiagnosis"]),
+    audience: obj(src["audienceSegmentation"] ?? strategyD["audienceSegmentation"]),
+    architecture: obj(src["campaignArchitecture"] ?? strategyD["campaignArchitecture"]),
+    metrics: obj(src["successMetrics"] ?? strategyD["successMetrics"]),
+    risks: obj(src["risks"] ?? strategyD["risks"]),
+    triggerMap: obj(src["triggerMap"] ?? strategyD["triggerMap"]),
+    strategistNotes: str(src["strategistNotes"]) || str(strategyD["strategistNotes"]),
+    marketValidation,
+  };
+}
+
+export function downloadCampaignMasterplanPdf({
+  strategyD, campaignId, campaignTitle, track, marketValidation, userIdentity,
+}: {
+  strategyD: Obj;
+  campaignId: string;
+  campaignTitle: string;
+  track?: string;
+  marketValidation?: Record<string, unknown> | null;
+  userIdentity: PdfUserIdentity;
+}): void {
+  const { fingerprint } = generateMasterplanPDF(buildMasterplanPdfData({
+    strategyD,
+    ins: parseStrategyInsights(strategyD),
+    campaignId,
+    campaignTitle,
+    track,
+    marketValidation,
+  }), userIdentity);
+  void customFetch("/api/fingerprints", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      fingerprint,
+      campaignId,
+      campaignTitle,
+      track: track ?? "",
+      userName: userIdentity.name,
+      userEmail: userIdentity.email,
+      workspaceName: userIdentity.workspaceName,
+    }),
+  }).catch(() => { /* fingerprint registration is non-blocking */ });
 }
 
 // ─── Document primitives ──────────────────────────────────────────────────────

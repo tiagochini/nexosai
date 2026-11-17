@@ -651,8 +651,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <TopBar onMenuOpen={() => setMobileOpen(true)} />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto flex flex-col min-h-0">
-          <div className="mx-auto flex min-h-0 w-full min-w-0 max-w-[1400px] flex-1 flex-col p-4 md:p-6 lg:p-8">
+        <main className="flex-1 overflow-hidden flex flex-col min-h-0">
+          <div className="mx-auto flex min-h-0 w-full min-w-0 max-w-[1400px] flex-1 flex-col overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
             {children}
           </div>
           <div className="shrink-0 py-3 px-6 flex justify-center">

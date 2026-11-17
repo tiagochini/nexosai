@@ -25,10 +25,11 @@ function formatScheduleDate(value: unknown): string {
   return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "short", year: "numeric" }).format(date);
 }
 
-export function CampaignSchedulePreview({ campaignId, timeline, trialAccess }: {
+export function CampaignSchedulePreview({ campaignId, timeline, trialAccess, onDownloadPdf }: {
   campaignId: string;
   timeline: Record<string, unknown>;
   trialAccess: boolean;
+  onDownloadPdf: () => void;
 }) {
   const t = useUiText();
   const queryClient = useQueryClient();
@@ -150,11 +151,11 @@ export function CampaignSchedulePreview({ campaignId, timeline, trialAccess }: {
           type="button"
           size="sm"
           variant="outline"
-          onClick={() => window.location.assign(`/campaigns/${campaignId}/strategy`)}
+          onClick={onDownloadPdf}
           className="w-full shrink-0 gap-1.5 rounded-none font-mono text-[9px] uppercase tracking-wider sm:w-auto"
         >
           <FileDown className="h-3 w-3" />
-          {t("Abrir plano e acessar PDF", "Open plan and access PDF", "Abrir el plan y acceder al PDF")}
+          {t("Baixar PDF do plano", "Download plan PDF", "Descargar PDF del plan")}
         </Button>
       </div>
       {phases.length === 0 ? <div className="space-y-3 border border-amber-300/20 bg-amber-300/[0.04] p-3">

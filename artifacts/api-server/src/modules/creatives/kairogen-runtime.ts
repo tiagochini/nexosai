@@ -150,5 +150,6 @@ export async function generateKairogenImage(prompt: string, aspectRatio: string,
 
 export function allowedMediaHost(hostname: string): boolean {
   const allowed = env.KAIROGEN_MEDIA_HOSTS.split(",").map(host => host.trim().toLowerCase()).filter(Boolean);
+  allowed.push("x.ai");
   return allowed.some(host => hostname === host || hostname.endsWith(`.${host}`));
 }

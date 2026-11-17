@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,6 +31,8 @@ interface Scene {
   durationSeconds: number;
   voiceoverText: string;
   visualDescription: string;
+  cameraDirection?: string;
+  onScreenText?: string;
   sceneType: string;
   style: string;
   palette: string[];
@@ -41,6 +43,8 @@ interface Scene {
   clipUrl?: string;
   clipUrlHd?: string;
   clipStatus: SceneClipStatus;
+  previewApprovedAt?: string;
+  previewRevision?: number;
   notes?: string;
 }
 
@@ -95,13 +99,15 @@ interface VideoProject {
     rhythm: string;
     tone: string;
     totalCreditsUsed: number;
-    storyboardMeta?: { totalDurationSeconds: number; phaseSummary: string; directorNotes: string };
+    storyboardMeta?: { totalDurationSeconds: number; narrationDurationSeconds?: number; phaseSummary: string; directorNotes: string };
+    storyboardProgress?: { scriptHash: string; nextSegmentIndex: number; segmentCount: number };
     filmingBrief?: FilmingBrief;
     filmingBriefGeneratedAt?: string;
   };
   script?: string;
   storyboard: Scene[];
   creditsUsed: number;
+  errorMessage?: string | null;
 }
 
 interface ProviderStatus {
@@ -377,7 +383,7 @@ function PipelineBar({ status }: { status: VideoStatus }) {
 
 // ─── Script View ──────────────────────────────────────────────────────────────
 
-function ScriptPanel({ project, onAction }: { project: VideoProject; onAction: () => void }) {
+function ScriptPanel({ project, onAction, onApproved }: { project: VideoProject; onAction: () => void; onApproved?: () => void }) {
   const t = useUiText();
   const [editedScript, setEditedScript] = useState(project.script ?? "");
   const [loading, setLoading] = useState(false);
@@ -390,7 +396,7 @@ function ScriptPanel({ project, onAction }: { project: VideoProject; onAction: (
       await customFetch(`/api/video-projects/${project.id}/approve-script`, {
         method: "POST", body: JSON.stringify({ script: editedScript }),
       });
-      onAction();
+      onApproved ? onApproved() : onAction();
     } finally { setLoading(false); }
   }
 
@@ -430,7 +436,7 @@ function ScriptPanel({ project, onAction }: { project: VideoProject; onAction: (
         <div className="flex gap-3">
           <Button onClick={approveScript} disabled={loading} className="font-mono flex-1">
             {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-            {t("Aprovar Roteiro e Criar Storyboard", "Approve Script and Create Storyboard", "Aprobar guion y crear storyboard")}
+            {t("Aprovar roteiro e avançar para as cenas", "Approve script and continue to scenes", "Aprobar guion y continuar a las escenas")}
           </Button>
         </div>
       )}
@@ -497,7 +503,7 @@ function StoryboardPanel({ project, onAction }: { project: VideoProject; onActio
         <div className="border border-border/40 rounded-lg p-3 bg-muted/20 space-y-1">
           <div className="font-mono text-xs text-primary font-bold">{meta.phaseSummary}</div>
           <div className="font-mono text-[11px] text-muted-foreground">
-            {t(`Duração total: ${Math.floor(meta.totalDurationSeconds / 60)}:${String(meta.totalDurationSeconds % 60).padStart(2,"0")} · ${project.storyboard.length} cenas`, `Total duration: ${Math.floor(meta.totalDurationSeconds / 60)}:${String(meta.totalDurationSeconds % 60).padStart(2,"0")} · ${project.storyboard.length} scenes`, `Duración total: ${Math.floor(meta.totalDurationSeconds / 60)}:${String(meta.totalDurationSeconds % 60).padStart(2,"0")} · ${project.storyboard.length} escenas`)}
+            {t(`Cenas: ${Math.floor(meta.totalDurationSeconds / 60)}:${String(meta.totalDurationSeconds % 60).padStart(2,"0")}${meta.narrationDurationSeconds != null ? ` · Locução estimada: ${Math.floor(meta.narrationDurationSeconds / 60)}:${String(meta.narrationDurationSeconds % 60).padStart(2,"0")}` : ""} · ${project.storyboard.length} cenas`, `Scenes: ${Math.floor(meta.totalDurationSeconds / 60)}:${String(meta.totalDurationSeconds % 60).padStart(2,"0")}${meta.narrationDurationSeconds != null ? ` · Estimated narration: ${Math.floor(meta.narrationDurationSeconds / 60)}:${String(meta.narrationDurationSeconds % 60).padStart(2,"0")}` : ""} · ${project.storyboard.length} scenes`, `Escenas: ${Math.floor(meta.totalDurationSeconds / 60)}:${String(meta.totalDurationSeconds % 60).padStart(2,"0")}${meta.narrationDurationSeconds != null ? ` · Locución estimada: ${Math.floor(meta.narrationDurationSeconds / 60)}:${String(meta.narrationDurationSeconds % 60).padStart(2,"0")}` : ""} · ${project.storyboard.length} escenas`)}
           </div>
           {meta.directorNotes && <div className="font-mono text-[10px] text-muted-foreground/60 italic">{meta.directorNotes}</div>}
         </div>
@@ -703,6 +709,199 @@ function ClipsPanel({ project, isHd, onAction }: { project: VideoProject; isHd: 
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Scene-by-scene approval page ────────────────────────────────────────────
+
+export function VideoScenesReviewPage() {
+  const t = useUiText();
+  const [, navigate] = useLocation();
+  const [, params] = useRoute("/video-production/:projectId/scenes");
+  const projectId = params?.projectId ?? "";
+  const [project, setProject] = useState<VideoProject | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busySceneId, setBusySceneId] = useState<string | null>(null);
+  const [promptDrafts, setPromptDrafts] = useState<Record<string, string>>({});
+  const [storyboardError, setStoryboardError] = useState<string | null>(null);
+  const startedStoryboardRef = useRef(false);
+
+  async function loadProject() {
+    if (!projectId) return;
+    const response = await customFetch<{ project: VideoProject }>(`/api/video-projects/${projectId}`);
+    setProject(response.project);
+    setPromptDrafts((current) => {
+      const next = { ...current };
+      for (const scene of response.project.storyboard ?? []) next[scene.id] ??= scene.videoPrompt;
+      return next;
+    });
+  }
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    customFetch<{ project: VideoProject }>(`/api/video-projects/${projectId}`)
+      .then(({ project: loaded }) => {
+        if (!active) return;
+        if (loaded.status === "script_approved" && loaded.errorMessage?.startsWith("Storyboard generation failed during")) {
+          startedStoryboardRef.current = true;
+          setStoryboardError(loaded.errorMessage);
+        }
+        setProject(loaded);
+        setPromptDrafts(Object.fromEntries((loaded.storyboard ?? []).map((scene) => [scene.id, scene.videoPrompt])));
+      })
+      .catch(() => { if (active) toast.error(t("Não foi possível carregar o projeto de vídeo.", "Could not load the video project.", "No se pudo cargar el proyecto de vídeo.")); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [projectId]);
+
+  async function requestStoryboardGeneration() {
+    if (!project) return;
+    startedStoryboardRef.current = true;
+    setStoryboardError(null);
+    setProject((current) => current ? { ...current, status: "storyboard_generating" } : current);
+    try {
+      const { project: generated } = await customFetch<{ project: VideoProject }>(`/api/video-projects/${project.id}/generate-storyboard`, { method: "POST", body: "{}" });
+      setProject(generated);
+      setPromptDrafts(Object.fromEntries((generated.storyboard ?? []).map((scene) => [scene.id, scene.videoPrompt])));
+    } catch (error) {
+      // Keep the attempted flag set: automatic retry can repeat a slow, billable AI request.
+      const message = error instanceof Error ? error.message : t("Não foi possível criar o roteiro das cenas.", "Could not create the scene plan.", "No se pudo crear el plan de escenas.");
+      setStoryboardError(message);
+      setProject((current) => current ? { ...current, status: "script_approved" } : current);
+      toast.error(t("Não foi possível preparar as cenas. Revise o erro e tente novamente manualmente.", "Could not prepare the scenes. Review the error and retry manually.", "No se pudieron preparar las escenas. Revisa el error e inténtalo de nuevo manualmente."));
+      void loadProject();
+    }
+  }
+
+  useEffect(() => {
+    if (!project || project.status !== "script_approved" || startedStoryboardRef.current) return;
+    void requestStoryboardGeneration();
+  }, [project?.id, project?.status]);
+
+  useEffect(() => {
+    if (!project?.storyboard?.some((scene) => scene.clipStatus === "generating")) return;
+    const timer = window.setInterval(() => {
+      void customFetch<{ project: VideoProject }>(`/api/video-projects/${project.id}/poll`, { method: "POST", body: "{}" })
+        .then(({ project: refreshed }) => setProject(refreshed))
+        .catch(() => {});
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [project?.id, project?.storyboard]);
+
+  async function generateScene(scene: Scene) {
+    if (!project) return;
+    setBusySceneId(scene.id);
+    try {
+      const { project: updated } = await customFetch<{ project: VideoProject }>(`/api/video-projects/${project.id}/scenes/${scene.id}/generate-preview`, {
+        method: "POST",
+        body: JSON.stringify({ prompt: promptDrafts[scene.id] ?? scene.videoPrompt }),
+      });
+      setProject(updated);
+      toast.success(t("Prévia da cena enviada para geração.", "Scene preview submitted for generation.", "Vista previa de escena enviada a generación."));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("Falha ao gerar a prévia.", "Failed to generate the preview.", "No se pudo generar la vista previa."));
+    } finally { setBusySceneId(null); }
+  }
+
+  async function approveScene(scene: Scene) {
+    if (!project) return;
+    setBusySceneId(scene.id);
+    try {
+      const { project: updated } = await customFetch<{ project: VideoProject }>(`/api/video-projects/${project.id}/scenes/${scene.id}/approve-preview`, { method: "POST", body: "{}" });
+      setProject(updated);
+      toast.success(t("Cena aprovada.", "Scene approved.", "Escena aprobada."));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("Não foi possível aprovar esta cena.", "Could not approve this scene.", "No se pudo aprobar esta escena."));
+    } finally { setBusySceneId(null); }
+  }
+
+  if (project?.status === "script_approved" && storyboardError) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center gap-4 px-6 text-center">
+        <AlertCircle className="h-9 w-9 text-amber-400" />
+        <h1 className="font-mono text-lg font-bold">{t("Não foi possível preparar as cenas", "Could not prepare the scenes", "No se pudieron preparar las escenas")}</h1>
+        <p className="font-mono text-xs text-muted-foreground">{t("Seu roteiro aprovado continua salvo. A geração falhou; nenhuma nova tentativa será feita sem sua ação.", "Your approved script is still saved. Generation failed; no new attempt will run unless you choose it.", "Tu guion aprobado sigue guardado. La generación falló; no se volverá a intentar sin que lo elijas.")}</p>
+        {project.storyboard.length > 0 && <p className="font-mono text-xs text-primary">{t(`${project.storyboard.length} cenas já foram salvas; ao tentar novamente, a geração continuará do próximo trecho.`, `${project.storyboard.length} scenes are already saved; retrying will continue from the next segment.`, `${project.storyboard.length} escenas ya están guardadas; al reintentar, la generación continuará desde el siguiente tramo.`)}</p>}
+        <p className="max-w-full break-words font-mono text-[10px] text-muted-foreground/70">{storyboardError}</p>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Button variant="outline" onClick={() => navigate(`/video-production?projectId=${project.id}`)} className="font-mono text-xs">{t("Voltar ao roteiro", "Back to script", "Volver al guion")}</Button>
+          <Button onClick={() => void requestStoryboardGeneration()} className="font-mono text-xs"><RefreshCw className="mr-2 h-4 w-4" />{t("Tentar gerar as cenas novamente", "Retry scene generation", "Reintentar generación de escenas")}</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading || !project || project.status === "storyboard_generating" || project.status === "script_approved") {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <RefreshCw className="h-9 w-9 text-primary animate-spin" />
+        <h1 className="font-mono text-lg font-bold">{t("Preparando o roteiro das cenas", "Preparing the scene plan", "Preparando el plan de escenas")}</h1>
+        <p className="max-w-lg font-mono text-xs text-muted-foreground">{t("O ATLAS está dividindo a narração aprovada em cenas com direção visual e prompts prontos para o Grok.", "ATLAS is dividing the approved narration into scenes with visual direction and Grok-ready prompts.", "ATLAS está dividiendo la narración aprobada en escenas con dirección visual y prompts listos para Grok.")}</p>
+      </div>
+    );
+  }
+
+  const total = project.storyboard.length;
+  const approvedCount = project.storyboard.filter((scene) => Boolean(scene.previewApprovedAt)).length;
+  const allApproved = total > 0 && approvedCount === total;
+
+  return (
+    <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 md:px-8">
+      <Button variant="ghost" size="sm" onClick={() => navigate(`/video-production?projectId=${project.id}`)} className="font-mono text-xs">
+        <ChevronRight className="mr-2 h-3.5 w-3.5 rotate-180" />{t("Voltar ao projeto de vídeo", "Back to video project", "Volver al proyecto de vídeo")}
+      </Button>
+      <header className="border border-primary/30 bg-primary/5 p-5 md:p-7">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-primary">{t("Roteiro aprovado · etapa de produção", "Approved script · production step", "Guion aprobado · etapa de producción")}</div>
+            <h1 className="font-mono text-xl font-bold md:text-2xl">{t("Revise e aprove cada cena", "Review and approve each scene", "Revisa y aprueba cada escena")}</h1>
+            <p className="mt-2 max-w-2xl font-mono text-xs leading-relaxed text-muted-foreground">{t("Cada cena mantém o contexto do roteiro principal. Ajuste o prompt, gere a prévia no provedor de vídeo e aprove apenas quando estiver satisfeito.", "Each scene preserves the main script's context. Edit the prompt, generate a video preview, and approve it when satisfied.", "Cada escena conserva el contexto del guion principal. Ajusta el prompt, genera una vista previa y apruébala cuando estés conforme.")}</p>
+          </div>
+          <Badge variant="outline" className="font-mono text-xs text-primary">{approvedCount}/{total} {t("aprovadas", "approved", "aprobadas")}</Badge>
+        </div>
+        {project.config.storyboardMeta && <div className="mt-5 border-t border-border/40 pt-4 font-mono text-xs text-muted-foreground">{project.config.storyboardMeta.phaseSummary} · {Math.floor(project.config.storyboardMeta.totalDurationSeconds / 60)}:{String(project.config.storyboardMeta.totalDurationSeconds % 60).padStart(2, "0")}{project.config.storyboardMeta.narrationDurationSeconds != null ? ` · ${t(`locução estimada ${Math.floor(project.config.storyboardMeta.narrationDurationSeconds / 60)}:${String(project.config.storyboardMeta.narrationDurationSeconds % 60).padStart(2, "0")}`, `estimated narration ${Math.floor(project.config.storyboardMeta.narrationDurationSeconds / 60)}:${String(project.config.storyboardMeta.narrationDurationSeconds % 60).padStart(2, "0")}`, `locución estimada ${Math.floor(project.config.storyboardMeta.narrationDurationSeconds / 60)}:${String(project.config.storyboardMeta.narrationDurationSeconds % 60).padStart(2, "0")}`)}` : ""}</div>}
+      </header>
+
+      {project.status === "preview_approved" && (
+        <div className="flex flex-wrap items-center justify-between gap-4 border border-green-400/30 bg-green-400/5 p-5">
+          <div><div className="font-mono font-bold text-green-400">{t("Todas as cenas foram aprovadas", "All scenes have been approved", "Todas las escenas están aprobadas")}</div><div className="mt-1 font-mono text-xs text-muted-foreground">{t("O projeto está pronto para a próxima etapa de produção.", "The project is ready for the next production step.", "El proyecto está listo para la siguiente etapa de producción.")}</div></div>
+          <Button onClick={() => navigate(`/video-production?projectId=${project.id}`)} className="font-mono">{t("Continuar para vídeo final", "Continue to final video", "Continuar al vídeo final")}<ChevronRight className="ml-2 h-4 w-4" /></Button>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {project.storyboard.map((scene) => {
+          const approved = Boolean(scene.previewApprovedAt);
+          const url = scene.clipUrl;
+          return (
+            <article key={scene.id} className={`space-y-4 border p-4 md:p-6 ${approved ? "border-green-400/30 bg-green-400/[0.03]" : "border-border/50 bg-background/40"}`}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center border border-primary/40 font-mono text-xs text-primary">{String(scene.order).padStart(2, "0")}</span><div><h2 className="font-mono text-sm font-bold">{scene.title}</h2><p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{scene.durationSeconds}s · {scene.sceneType}</p></div></div>
+                {approved ? <Badge className="border-green-400/30 bg-green-400/10 font-mono text-green-400">✓ {t("Aprovada", "Approved", "Aprobada")}</Badge> : scene.clipStatus === "generating" ? <Badge variant="outline" className="font-mono text-yellow-400"><RefreshCw className="mr-1.5 h-3 w-3 animate-spin" />{t("Gerando prévia", "Generating preview", "Generando vista previa")}</Badge> : null}
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-3">
+                  <div className="border border-border/30 p-3"><div className="mb-1 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("Narração desta cena", "Scene narration", "Narración de la escena")}</div><p className="text-sm leading-relaxed">{scene.voiceoverText}</p></div>
+                  <div className="border border-border/30 p-3"><div className="mb-1 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("O que aparece", "What appears", "Qué aparece")}</div><p className="text-sm leading-relaxed">{scene.visualDescription}</p>{scene.cameraDirection && <p className="mt-2 font-mono text-[10px] text-muted-foreground">{t("Câmera:", "Camera:", "Cámara:")} {scene.cameraDirection}</p>}{scene.onScreenText && <p className="mt-2 font-mono text-[10px] text-primary">{t("Texto na tela:", "On-screen text:", "Texto en pantalla:")} {scene.onScreenText}</p>}</div>
+                </div>
+                <div className="space-y-3">
+                  {url ? <video src={url} controls playsInline className="aspect-video w-full bg-black object-contain" /> : <div className="flex aspect-video items-center justify-center border border-dashed border-border/50 bg-black/30 font-mono text-xs text-muted-foreground">{scene.clipStatus === "generating" ? t("A prévia está sendo gerada…", "Preview is generating…", "Generando vista previa…") : t("A prévia desta cena aparecerá aqui", "The scene preview will appear here", "La vista previa aparecerá aquí")}</div>}
+                  <label className="block font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("Prompt da cena", "Scene prompt", "Prompt de la escena")}</label>
+                  <Textarea value={promptDrafts[scene.id] ?? scene.videoPrompt} onChange={(event) => setPromptDrafts((prev) => ({ ...prev, [scene.id]: event.target.value }))} rows={5} className="resize-y font-mono text-[11px]" disabled={approved || scene.clipStatus === "generating"} />
+                  {scene.clipStatus === "failed" && scene.notes && <p className="font-mono text-[10px] text-red-400">{scene.notes}</p>}
+                  <div className="flex flex-wrap gap-2">
+                    {!approved && <Button onClick={() => void generateScene(scene)} disabled={busySceneId === scene.id || scene.clipStatus === "generating" || !promptDrafts[scene.id]?.trim()} variant="outline" size="sm" className="font-mono text-[10px]">{busySceneId === scene.id || scene.clipStatus === "generating" ? <RefreshCw className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Play className="mr-2 h-3.5 w-3.5" />}{url ? t("Gerar outra prévia", "Generate another preview", "Generar otra vista previa") : t("Gerar prévia da cena", "Generate scene preview", "Generar vista previa")}</Button>}
+                    {!approved && scene.clipStatus === "ready" && url && <Button onClick={() => void approveScene(scene)} disabled={busySceneId === scene.id} size="sm" className="font-mono text-[10px]">{busySceneId === scene.id ? <RefreshCw className="mr-2 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-2 h-3.5 w-3.5" />}{t("Aprovar esta cena", "Approve this scene", "Aprobar esta escena")}</Button>}
+                  </div>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -1612,7 +1811,7 @@ export default function VideoProductionPage() {
               {["script_generating","script_ready","script_approved"].includes(selected.status) && (
                 <div className="border border-border/40 rounded-xl p-5 bg-background/40">
                   <div className="font-mono text-sm font-bold mb-4">{t("Roteiro", "Script", "Guion")}</div>
-                  <ScriptPanel project={selected} onAction={refreshSelected} />
+                  <ScriptPanel project={selected} onAction={refreshSelected} onApproved={() => navigate(`/video-production/${selected.id}/scenes`)} />
                 </div>
               )}
 

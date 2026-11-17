@@ -71,6 +71,8 @@ export const SceneSchema = z.object({
   palette: z.array(z.string()),
   transition: z.string(),
   mood: z.string(),
+  onScreenText: z.string().optional(),
+  cameraDirection: z.string().optional(),
   hasAvatar: z.boolean().default(false),
   videoPrompt: z.string(),
   negativePrompt: z.string().optional(),
@@ -79,6 +81,8 @@ export const SceneSchema = z.object({
   clipUrlHd: z.string().optional(),
   clipStatus: z.enum(["pending", "generating", "ready", "failed"]).default("pending"),
   approvedAt: z.string().optional(),
+  previewApprovedAt: z.string().optional(),
+  previewRevision: z.number().int().nonnegative().optional(),
   notes: z.string().optional(),
 });
 
@@ -108,6 +112,19 @@ export const VideoConfigSchema = z.object({
   cloneSourceAssetIds: z.array(z.string()).optional(),
   consentConfirmedAt: z.string().optional(),
   totalCreditsUsed: z.number().default(0),
+  storyboardMeta: z.object({
+    totalDurationSeconds: z.number().nonnegative(),
+    narrationDurationSeconds: z.number().nonnegative().optional(),
+    phaseSummary: z.string(),
+    directorNotes: z.string(),
+  }).optional(),
+  storyboardProgress: z.object({
+    scriptHash: z.string(),
+    nextSegmentIndex: z.number().int().nonnegative(),
+    segmentCount: z.number().int().positive(),
+    phaseSummaries: z.array(z.string()).default([]),
+    directorNotes: z.array(z.string()).default([]),
+  }).optional(),
 });
 
 export type VideoConfig = z.infer<typeof VideoConfigSchema>;

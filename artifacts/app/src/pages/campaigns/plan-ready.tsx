@@ -5,6 +5,8 @@ import { ArrowRight, CheckCircle2, FileDown, Loader2, Sparkles } from "lucide-re
 import { Button } from "@/components/ui/button";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { getGetCampaignQueryKey } from "@workspace/api-client-react";
+import { useAuth } from "@/lib/auth";
+import { downloadCampaignMasterplanPdf } from "./strategy-masterplan";
 import { useUiText } from "@/lib/i18n";
 import { toast } from "sonner";
 
@@ -14,6 +16,9 @@ type CampaignResponse = {
     title?: string;
     status?: string;
     timelineData?: Record<string, unknown>;
+    strategyData?: Record<string, unknown>;
+    intakeData?: Record<string, unknown>;
+    brainData?: Record<string, unknown>;
   };
 };
 type MasterplanResponse = {
@@ -27,6 +32,7 @@ export default function CampaignPlanReady() {
   const campaignId = params?.id ?? "";
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { user, workspace } = useAuth();
 
   const campaignQuery = useQuery({
     queryKey: getGetCampaignQueryKey(campaignId),
@@ -50,6 +56,28 @@ export default function CampaignPlanReady() {
   const reviewsComplete = Object.values(moduleReviews).filter((status) => status === "approved").length >= 10;
   const planApproved = masterplanQuery.data?.masterplan?.status === "approved"
     || (onboardingQuery.data?.trialAccess === true && reviewsComplete);
+  const downloadPdf = () => {
+    if (!campaign || !user) {
+      toast.error(t("Não foi possível identificar o usuário para gerar o PDF.", "Could not identify the user to generate the PDF.", "No se pudo identificar al usuario para generar el PDF."));
+      return;
+    }
+    const intake = campaign.intakeData ?? {};
+    const brainData = campaign.brainData ?? {};
+    downloadCampaignMasterplanPdf({
+      strategyD: campaign.strategyData ?? {},
+      campaignId,
+      campaignTitle: String(intake["product.name"] ?? campaign.title ?? t("Masterplan Estratégico", "Strategic master plan", "Plan maestro estratégico")),
+      track: String(intake["launch.track"] ?? ""),
+      marketValidation: (brainData["marketValidation"] ?? null) as Record<string, unknown> | null,
+      userIdentity: {
+        name: user.name ?? "",
+        email: user.email ?? "",
+        userId: user.id,
+        workspaceName: workspace?.name ?? "",
+        workspaceId: workspace?.id ?? "",
+      },
+    });
+  };
   const storedPreview = campaign?.timelineData?.["schedulePreview"];
   const scheduleAlreadyOpened = Boolean(
     storedPreview && typeof storedPreview === "object" && (storedPreview as Record<string, unknown>)["sourceVersion"] === 3,
@@ -104,8 +132,8 @@ export default function CampaignPlanReady() {
         </div>
         {campaign.title && <p className="border-y border-border/40 py-3 font-mono text-xs uppercase tracking-wider text-muted-foreground">{campaign.title}</p>}
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Button type="button" variant="outline" onClick={() => setLocation(`/campaigns/${campaignId}/strategy`)} className="h-11 gap-2 rounded-none font-mono text-[10px] font-bold uppercase tracking-wider">
-            <FileDown className="h-4 w-4" />{t("Visualizar ou baixar PDF", "View or download PDF", "Ver o descargar PDF")}
+          <Button type="button" variant="outline" onClick={downloadPdf} className="h-11 gap-2 rounded-none font-mono text-[10px] font-bold uppercase tracking-wider">
+            <FileDown className="h-4 w-4" />{t("Baixar PDF do plano", "Download plan PDF", "Descargar PDF del plan")}
           </Button>
           <Button type="button" onClick={() => continueMutation.mutate()} disabled={continueMutation.isPending} className="h-11 gap-2 rounded-none font-mono text-[10px] font-bold uppercase tracking-wider btn-weapon-primary">
             {continueMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Sparkles className="h-4 w-4" /><ArrowRight className="h-4 w-4" /></>}

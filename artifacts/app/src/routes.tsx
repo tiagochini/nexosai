@@ -87,6 +87,7 @@ const PresencePage = lazy(() => import("@/pages/presence/index"));
 const IntakeHub = lazy(() => import("@/pages/intake/index"));
 const CloneDigitalPage = lazy(() => import("@/pages/clone-digital/index"));
 const VideoProductionPage = lazy(() => import("@/pages/video-production/index"));
+const VideoScenesReviewPage = lazy(() => import("@/pages/video-production/index").then((module) => ({ default: module.VideoScenesReviewPage })));
 const FilmingGuide = lazy(() => import("@/pages/video-production/filming-guide"));
 const DirectorGuide = lazy(() => import("@/pages/video-production/director-guide"));
 const LaunchRoom = lazy(() => import("@/pages/launch-room/index"));
@@ -430,6 +431,9 @@ export default function AppRoutes() {
       </Route>
 
       {/* Produção de Vídeo agente */}
+      <Route path="/video-production/:projectId/scenes">
+        {() => <ProtectedRoute><VideoScenesReviewPage /></ProtectedRoute>}
+      </Route>
       <Route path="/video-production/filming-guide">
         {() => <ProtectedRoute><FilmingGuide /></ProtectedRoute>}
       </Route>
