@@ -63,6 +63,7 @@ const RevenuePage = lazy(() => import("@/pages/revenue/index"));
 const ContentApproval = lazy(() => import("@/pages/campaigns/content"));
 const CreativesPage = lazy(() => import("@/pages/campaigns/creatives"));
 const CampaignStrategyPage = lazy(() => import("@/pages/campaigns/strategy"));
+const CampaignPlanReady = lazy(() => import("@/pages/campaigns/plan-ready"));
 const AffiliatePage = lazy(() => import("@/pages/affiliate/index"));
 const SelfProofPage = lazy(() => import("@/pages/self-proof/index"));
 const CompliancePage = lazy(() => import("@/pages/compliance/index"));
@@ -247,6 +248,9 @@ export default function AppRoutes() {
       </Route>
       <Route path="/campaigns/:id/strategy">
         {() => <ProtectedRoute><CampaignStrategyPage /></ProtectedRoute>}
+      </Route>
+      <Route path="/campaigns/:id/plan-ready">
+        {() => <ProtectedRoute><CampaignPlanReady /></ProtectedRoute>}
       </Route>
       <Route path="/campaigns/:id/control-room">
         {() => (

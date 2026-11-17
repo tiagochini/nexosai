@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useUiText } from "@/lib/i18n";
 import { toast } from "sonner";
-import { CalendarDays, CheckCircle2, Copy, CreditCard, Loader2, Lock, QrCode, Sparkles, WandSparkles } from "lucide-react";
+import { CalendarDays, CheckCircle2, Copy, CreditCard, FileDown, Loader2, Lock, QrCode, Sparkles, WandSparkles } from "lucide-react";
 
 type Phase = Record<string, unknown>;
 type Plan = { id: string; name: string; slug: string; monthlyPriceBrl: number };
@@ -140,12 +140,22 @@ export function CampaignSchedulePreview({ campaignId, timeline, trialAccess }: {
 
   return <>
     <section className="space-y-4 border border-cyan-400/25 bg-cyan-400/[0.025] p-4 sm:p-5">
-      <div className="flex items-start gap-3">
+      <div className="flex flex-wrap items-start gap-3">
         <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
-        <div>
+        <div className="min-w-0 flex-1">
           <h2 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-cyan-200">{t("Prévia do cronograma de lançamento", "Launch schedule preview", "Vista previa del cronograma de lanzamiento")}</h2>
           <p className="mt-1 font-mono text-[10px] leading-relaxed text-muted-foreground/65">{t("A prévia reúne datas e um resumo operacional. Copy, imagens e vídeos só são gerados separadamente quando você solicitar.", "The preview contains dates and an operational summary. Copy, images, and videos are generated separately only when requested.", "La vista previa incluye fechas y un resumen operativo. Los textos, imágenes y videos solo se generan por separado cuando los solicites.")}</p>
         </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => window.location.assign(`/campaigns/${campaignId}/strategy`)}
+          className="w-full shrink-0 gap-1.5 rounded-none font-mono text-[9px] uppercase tracking-wider sm:w-auto"
+        >
+          <FileDown className="h-3 w-3" />
+          {t("Abrir plano e acessar PDF", "Open plan and access PDF", "Abrir el plan y acceder al PDF")}
+        </Button>
       </div>
       {phases.length === 0 ? <div className="space-y-3 border border-amber-300/20 bg-amber-300/[0.04] p-3">
         <p className="font-mono text-[10px] text-amber-100/75">{t("Montando uma única prévia com os prazos do briefing e as etapas e recomendações do Master Plan aprovado. O sistema não inventa datas ou durações que não estejam nessas fontes.", "Building a one-time preview from the brief’s timing and the approved Master Plan’s phases and recommendations. The system does not invent dates or durations missing from those sources.", "Preparando una única vista previa con los plazos del briefing y las etapas y recomendaciones del Plan Maestro aprobado. El sistema no inventa fechas ni duraciones que no aparezcan en esas fuentes.")}</p>

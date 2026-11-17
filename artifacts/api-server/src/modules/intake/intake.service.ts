@@ -1070,7 +1070,7 @@ export async function saveIntakeData(
 
   if (!campaign) throw new NotFoundError("Campaign");
 
-  const EDITABLE_STATUSES = ["intake", "analyzing", "strategy_ready"];
+  const EDITABLE_STATUSES = ["intake"];
   if (!EDITABLE_STATUSES.includes(campaign.status ?? "")) {
     throw new ValidationError(
       `Cannot update intake when campaign status is '${campaign.status}'`,
@@ -1113,11 +1113,15 @@ export async function saveIntakeData(
 
 /** Once a Master Plan has been approved, the briefing becomes immutable. */
 export async function assertBriefingEditable(campaignId: string, workspaceId: string): Promise<void> {
-  const [campaign] = await db.select({ id: campaignsTable.id })
+  const [campaign] = await db.select({ id: campaignsTable.id, status: campaignsTable.status })
     .from(campaignsTable)
     .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
   if (!campaign) throw new NotFoundError("Campaign");
+
+  if (!["draft", "intake"].includes(campaign.status ?? "")) {
+    throw new AppError(409, "O briefing foi finalizado e não pode mais ser alterado. Consulte o histórico ou duplique-o para iniciar outra campanha.", "BRIEFING_LOCKED_AFTER_FINALIZATION");
+  }
 
   const [approvedMasterplan] = await db
     .select({ id: masterplanVersionsTable.id })

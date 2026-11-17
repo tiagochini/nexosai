@@ -33,6 +33,7 @@ import { isOrganicSocialIntegration } from "../integrations/integration-purpose.
 import { determineSocialDiagnosisStatus } from "./social-diagnosis.policy.js";
 import { resolveSocialMediaEntitlement } from "../billing/commercial-entitlements.service.js";
 import { finishTrialSocialAnalysis, getWorkspaceTrial, reserveTrialSocialAnalysis } from "../auth/trial-access.service.js";
+import { getTrialMasterplanModuleReviews, missingMasterplanModuleReviews } from "../masterplan/masterplan.service.js";
 import {
   getIntakeQuestions,
   validateIntakeCompleteness,
@@ -468,7 +469,9 @@ router.post("/:id/duplicate", async (req, res): Promise<void> => {
       ))
       .limit(1);
 
-    if (!approvedMasterplan) {
+    const trialModuleReviews = approvedMasterplan ? null : await getTrialMasterplanModuleReviews(req.auth.workspaceId, id);
+    const trialReviewApproved = Boolean(trialModuleReviews && missingMasterplanModuleReviews(trialModuleReviews).length === 0);
+    if (!approvedMasterplan && !trialReviewApproved) {
       res.status(409).json({ error: "Só é possível criar uma cópia depois da aprovação do Master Plan.", code: "MASTERPLAN_NOT_APPROVED" });
       return;
     }

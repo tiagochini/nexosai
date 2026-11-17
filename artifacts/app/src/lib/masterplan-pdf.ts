@@ -28,6 +28,7 @@ export interface MasterplanPdfData {
   risks: Record<string, unknown>;
   triggerMap: Record<string, unknown>;
   strategistNotes: string;
+  marketValidation?: Record<string, unknown> | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -697,6 +698,73 @@ export function generateMasterplanPDF(
         y += 2;
       }
     }
+    y += 4;
+  }
+
+  // ── AVALIAÇÃO DE MERCADO (validação independente do diagnóstico estratégico)
+  const validation = data.marketValidation;
+  const validators = Array.isArray(validation?.["validators"])
+    ? (validation["validators"] as unknown[]).filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object" && !Array.isArray(item)))
+    : [];
+  if (validation && (validators.length > 0 || str(validation["overallVerdict"]))) {
+    y = checkBreak(doc, y, 22);
+    y = renderSection(doc, "04A", "AVALIAÇÃO DE MERCADO", y);
+    const verdictLabels: Record<string, string> = {
+      VIAVEL: "Viável",
+      VIAVEL_COM_AJUSTES: "Viável com ajustes",
+      INVIAVEL: "Requer revisão antes de avançar",
+    };
+    const overallVerdict = str(validation["overallVerdict"]);
+    if (overallVerdict) y = labeledText(doc, "Resultado geral", verdictLabels[overallVerdict] ?? overallVerdict, y);
+    const validatedAt = str(validation["validatedAt"]);
+    const validatedDate = validatedAt ? new Date(validatedAt) : null;
+    if (validatedDate && !Number.isNaN(validatedDate.getTime())) {
+      y = labeledText(doc, "Avaliado em", validatedDate.toLocaleString("pt-BR", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Sao_Paulo" }), y);
+    }
+
+    const validatorLabels: Record<string, string> = {
+      market_validator: "Mercado e demanda",
+      offer_price_validator: "Oferta e precificação",
+      brand_validator: "Marca e autoridade",
+    };
+    validators.forEach((result) => {
+      const name = validatorLabels[str(result["validator"])] ?? (str(result["validator"]) || "Análise complementar");
+      const verdict = str(result["verdict"]);
+      y = checkBreak(doc, y, 14);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      setColor(doc, 80, 55, 130);
+      doc.text(`${name}${Number.isFinite(Number(result["score"])) ? ` · ${Number(result["score"])} pontos` : ""}`, ML, y);
+      y += 4;
+      if (verdict) y = labeledText(doc, "Conclusão", verdictLabels[verdict] ?? verdict, y);
+      if (str(result["justification"])) y = bodyText(doc, str(result["justification"]), y);
+      const criticalIssues = arr(result["criticalIssues"]).slice(0, 8);
+      const regulatoryAlerts = arr(result["regulatoryAlerts"]).slice(0, 8);
+      const suggestions = arr(result["adjustmentSuggestions"]).slice(0, 8);
+      if (criticalIssues.length) {
+        y = checkBreak(doc, y, 10);
+        doc.setFont("helvetica", "bold"); doc.setFontSize(7); setColor(doc, 160, 80, 30); doc.text("PONTOS DE ATENÇÃO", ML, y); y += 3;
+        y = bulletList(doc, criticalIssues, y, [160, 80, 30]);
+      }
+      if (regulatoryAlerts.length) {
+        y = checkBreak(doc, y, 10);
+        doc.setFont("helvetica", "bold"); doc.setFontSize(7); setColor(doc, 160, 60, 60); doc.text("ALERTAS REGULATÓRIOS", ML, y); y += 3;
+        y = bulletList(doc, regulatoryAlerts, y, [160, 60, 60]);
+      }
+      if (suggestions.length) {
+        y = checkBreak(doc, y, 10);
+        doc.setFont("helvetica", "bold"); doc.setFontSize(7); setColor(doc, 120, 90, 30); doc.text("AJUSTES SUGERIDOS", ML, y); y += 3;
+        y = bulletList(doc, suggestions, y, [120, 90, 30]);
+      }
+      y += 3;
+    });
+    const pivots = arr(validation["pivotSuggestions"]).slice(0, 8);
+    if (pivots.length) {
+      y = checkBreak(doc, y, 10);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(7); setColor(doc, 100, 80, 150); doc.text("ALTERNATIVAS CONSIDERADAS", ML, y); y += 3;
+      y = bulletList(doc, pivots, y, [100, 80, 150]);
+    }
+    y = bodyText(doc, "Esta avaliação é um apoio à decisão baseado nos dados disponíveis na data indicada. Confirme informações críticas antes de investir; ela não garante resultados comerciais.", y, CW, 7.5);
     y += 4;
   }
 

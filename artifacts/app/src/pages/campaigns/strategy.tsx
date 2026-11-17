@@ -649,8 +649,8 @@ export default function CampaignStrategyPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "masterplan"] });
       queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
-      toast.success(t("Masterplan aprovado. A prévia do cronograma está na próxima tela.", "Master plan approved. The schedule preview is on the next screen.", "Plan maestro aprobado. La vista previa del cronograma está en la siguiente pantalla."));
-      setLocation(`/campaigns/${campaignId}`);
+      toast.success(t("Masterplan aprovado. Seu plano de negócio está pronto.", "Master plan approved. Your business plan is ready.", "Plan maestro aprobado. Tu plan de negocio está listo."));
+      setLocation(`/campaigns/${campaignId}/plan-ready`);
     },
     onError: (err: any) => {
       toast.error(err?.data?.error || t("Falha ao aprovar masterplan.", "Failed to approve master plan.", "No se pudo aprobar el plan maestro."));
@@ -664,7 +664,7 @@ export default function CampaignStrategyPage() {
         toast.error(t("Aprove os 10 checklists para abrir a prévia do cronograma.", "Approve all 10 checklists to open the schedule preview.", "Aprueba los 10 checklists para abrir la vista previa del cronograma."));
         return;
       }
-      setLocation(`/campaigns/${campaignId}`);
+      setLocation(`/campaigns/${campaignId}/plan-ready`);
       return;
     }
     if (currentMp && currentMp.readinessStatus !== "ready") {
@@ -678,7 +678,7 @@ export default function CampaignStrategyPage() {
     if (currentMp && currentMp.status !== "approved") {
       approveMpMutation.mutate({ version: currentMp.version });
     } else if (currentMp?.status === "approved") {
-      setLocation(`/campaigns/${campaignId}`);
+      setLocation(`/campaigns/${campaignId}/plan-ready`);
     }
   };
   const isApproving = approveMpMutation.isPending;
@@ -888,7 +888,7 @@ export default function CampaignStrategyPage() {
                   </div>
                   <p className="mt-2 max-w-3xl font-mono text-[11px] leading-relaxed text-muted-foreground/75">
                     {trialAccess
-                      ? t("Revise e aprove os 10 módulos para liberar o PDF. Aprovar o plano e gerar conteúdo exige uma licença.", "Review and approve all 10 modules to unlock the PDF. Approving the plan and generating content require a license.", "Revisa y aprueba los 10 módulos para desbloquear el PDF. Aprobar el plan y generar contenido requiere una licencia.")
+                      ? t("Revise os 10 módulos para liberar o PDF e seguir ao cronograma. A geração de conteúdo exige uma licença.", "Review all 10 modules to unlock the PDF and continue to the schedule. Content generation requires a license.", "Revisa los 10 módulos para desbloquear el PDF y continuar al cronograma. La generación de contenido requiere una licencia.")
                       : t("Revise a estratégia. Depois da aprovação, os agentes preparam o conteúdo da campanha.", "Review the strategy. After approval, the agents prepare the campaign content.", "Revisa la estrategia. Tras aprobarla, los agentes preparan el contenido de la campaña.")}
                   </p>
                 </div>
@@ -931,7 +931,7 @@ export default function CampaignStrategyPage() {
                   className="h-11 w-full gap-2 rounded-none px-5 font-mono text-[10px] font-black uppercase tracking-[0.12em] btn-weapon-primary sm:w-auto sm:min-w-[250px]"
                 >
                   {trialAccess
-                    ? <><ChevronRight className="h-3.5 w-3.5" /> {t("Ver prévia do cronograma", "View schedule preview", "Ver vista previa del cronograma")}</>
+                    ? <><ChevronRight className="h-3.5 w-3.5" /> {t("Concluir revisão", "Finish review", "Finalizar revisión")}</>
                     : isApproving
                     ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("Gerando...", "Generating...", "Generando...")}</>
                     : <><CheckCheck className="h-3.5 w-3.5" /> {t("Aprovar Masterplan", "Approve master plan", "Aprobar plan maestro")}</>}
@@ -962,6 +962,7 @@ export default function CampaignStrategyPage() {
                 campaignId={campaignId}
                 campaignTitle={campaignTitle}
                 track={track}
+                marketValidation={mv}
                 userIdentity={userIdentity}
                 onRequestTriggerHelp={trialAccess ? undefined : requestTriggerHelp}
                 triggerHelpPending={completeTriggerStrategyMutation.isPending}

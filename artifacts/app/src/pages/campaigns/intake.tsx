@@ -24,7 +24,7 @@ import {
   Rocket, RefreshCw, Radio, TrendingUp, BarChart3,
   Users, Mail, Check, X, BarChart2, ChevronDown, ChevronUp, CornerDownLeft,
   Mic, MicOff, Paperclip, ImageIcon, File, FileAudio, FileVideo,
-  Target, DollarSign, Calendar, Clock, Shield, Star, Bot, Flame, Trophy,
+  Target, DollarSign, Calendar, Clock, Shield, Star, Bot, Flame, Trophy, Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import nexosLogo from "/nexos-logo.png";
@@ -928,6 +928,7 @@ export default function CampaignIntake() {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [finalizing, setFinalizing] = useState(false);
   const [duplicatingBriefing, setDuplicatingBriefing] = useState(false);
+  const [closingCampaign, setClosingCampaign] = useState(false);
   const [progress, setProgress] = useState(0);
   const [answeredRequired, setAnsweredRequired] = useState(0);
   const [totalRequired, setTotalRequired] = useState(0);
@@ -1041,6 +1042,37 @@ export default function CampaignIntake() {
   });
   const approvedMasterplanExists = (masterplanState?.versions ?? []).some(version => version.status === "approved" || !!version.approvedAt);
   const briefingLocked = loadingCampaign || masterplanStateLoading || approvedMasterplanExists;
+
+  const { data: currentMasterplanState, isLoading: currentMasterplanLoading } = useQuery<{ masterplan?: { status?: string } | null; moduleReviews?: Record<string, string> }>({
+    queryKey: ["/api/campaigns", campaignId, "masterplan", "current"],
+    queryFn: () => customFetch(`/api/campaigns/${campaignId}/masterplan/current`),
+    enabled: Boolean(campaignId && campaignData),
+    retry: false,
+  });
+  const campaignStatus = String(campaignData?.campaign?.status ?? "");
+  const campaignTimeline = campaignData?.campaign?.timelineData as Record<string, unknown> | undefined;
+  const schedulePreview = campaignTimeline?.["schedulePreview"];
+  const hasSavedSchedulePreview = Boolean(schedulePreview && typeof schedulePreview === "object" && (schedulePreview as Record<string, unknown>)["sourceVersion"] === 3);
+  const approvedModuleCount = Object.values(currentMasterplanState?.moduleReviews ?? {}).filter((status) => status === "approved").length;
+  const trialCanContinue = trialAccess && approvedModuleCount >= 10;
+  const masterplanApproved = currentMasterplanState?.masterplan?.status === "approved" || approvedMasterplanExists;
+  const isHistoricalBriefing = ["generating", "awaiting_approval", "approved", "executing", "live", "paused", "completed", "cancelled"].includes(campaignStatus);
+
+  useEffect(() => {
+    if (!campaignData?.campaign || loadingCampaign || masterplanStateLoading || currentMasterplanLoading) return;
+    if (["draft", "intake"].includes(campaignStatus) && (masterplanApproved || trialCanContinue)) {
+      if (hasSavedSchedulePreview) setLocation(`/campaigns/${campaignId}`);
+      else setLocation(`/campaigns/${campaignId}/plan-ready`);
+    } else if (campaignStatus === "analyzing") {
+      setLocation(`/campaigns/${campaignId}/strategy`);
+    } else if (campaignStatus === "strategy_ready") {
+      if (hasSavedSchedulePreview) setLocation(`/campaigns/${campaignId}`);
+      else if (masterplanApproved || trialCanContinue) setLocation(`/campaigns/${campaignId}/plan-ready`);
+      else setLocation(`/campaigns/${campaignId}/strategy`);
+    } else if (!isHistoricalBriefing && campaignStatus && !["draft", "intake"].includes(campaignStatus)) {
+      setLocation(`/campaigns/${campaignId}/strategy`);
+    }
+  }, [campaignData, campaignId, campaignStatus, currentMasterplanLoading, hasSavedSchedulePreview, isHistoricalBriefing, loadingCampaign, masterplanApproved, masterplanStateLoading, setLocation, trialCanContinue]);
 
   const { data, isLoading: loadingIntake } = useGetIntake(campaignId, {
     query: { enabled: !!campaignId && !!campaignData, queryKey: getGetIntakeQueryKey(campaignId) },
@@ -1622,7 +1654,7 @@ export default function CampaignIntake() {
   };
 
   const handleCreateBriefingCopy = async () => {
-    if (!approvedMasterplanExists || duplicatingBriefing) return;
+    if ((!approvedMasterplanExists && !isHistoricalBriefing) || duplicatingBriefing) return;
     setDuplicatingBriefing(true);
     try {
       const result = await customFetch<{ campaign: { id: string } }>(`/api/campaigns/${campaignId}/duplicate`, { method: "POST" });
@@ -1635,6 +1667,24 @@ export default function CampaignIntake() {
     }
   };
 
+  const handleCloseCampaign = async () => {
+    if (closingCampaign || campaignStatus === "cancelled") return;
+    if (!window.confirm(t("Encerrar esta campanha? O briefing ficará disponível somente no histórico.", "Close this campaign? The briefing will remain available only in history.", "¿Cerrar esta campaña? El briefing quedará disponible solo en el historial."))) return;
+    setClosingCampaign(true);
+    try {
+      await customFetch(`/api/campaigns/${campaignId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+      toast.success(t("Campanha encerrada.", "Campaign closed.", "Campaña cerrada."));
+      setLocation("/campaigns");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("Não foi possível encerrar a campanha.", "Could not close the campaign.", "No se pudo cerrar la campaña."));
+    } finally {
+      setClosingCampaign(false);
+    }
+  };
+
   if (isLoading && messages.length === 0) {
     return (
       <div className="space-y-6 max-w-4xl mx-auto">
@@ -1644,6 +1694,62 @@ export default function CampaignIntake() {
           <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">{t("Inicializando Briefing agente...", "Initializing Agent Briefing...", "Iniciando el briefing del agente...")}</p>
         </div>
       </div>
+    );
+  }
+
+  if (isHistoricalBriefing) {
+    const campaignTitle = String(campaignData?.campaign?.title ?? t("Campanha", "Campaign", "Campaña"));
+    const canCloseCampaign = ["generating", "awaiting_approval", "approved", "executing", "live", "paused"].includes(campaignStatus);
+    const savedAnswers = (data?.questions ?? []).flatMap((question) => {
+      const value = (data?.intakeData as Record<string, unknown> | undefined)?.[question.key];
+      if (value === undefined || value === null || value === "") return [];
+      const displayValue = typeof value === "string" ? value : JSON.stringify(value);
+      return displayValue ? [{ label: question.label, value: displayValue }] : [];
+    });
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-5 px-4 py-8">
+        <header className="space-y-2 border-b border-border/40 pb-5">
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary/70">{t("Histórico da campanha", "Campaign history", "Historial de campaña")}</p>
+          <h1 className="font-mono text-2xl font-black uppercase tracking-tight">{campaignTitle}</h1>
+          <p className="text-sm text-muted-foreground">{t("Este briefing está bloqueado para edição. Você pode consultar a conversa, encerrar a campanha ou criar uma cópia para iniciar uma nova.", "This brief is locked for editing. You can review the conversation, close the campaign, or copy it to start a new one.", "Este briefing está bloqueado para editar. Puedes consultar la conversación, cerrar la campaña o copiarlo para iniciar una nueva.")}</p>
+        </header>
+        {savedAnswers.length > 0 && (
+          <section className="space-y-3 border border-border/40 bg-card/20 p-4">
+            <h2 className="font-mono text-xs font-bold uppercase tracking-wider">{t("Respostas do briefing", "Briefing answers", "Respuestas del briefing")}</h2>
+            <dl className="grid gap-2 sm:grid-cols-2">
+              {savedAnswers.map((answer, index) => (
+                <div key={`${answer.label}-${index}`} className="border border-border/30 p-3">
+                  <dt className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground/65">{answer.label}</dt>
+                  <dd className="mt-1 whitespace-pre-wrap text-sm text-foreground/90">{answer.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
+        <section aria-label={t("Histórico de conversas", "Conversation history", "Historial de conversaciones")} className="max-h-[60vh] space-y-3 overflow-y-auto border border-border/40 bg-card/20 p-4">
+          {messages.length > 0 ? messages.map((message, index) => (
+            <article key={`${index}-${message.agentId ?? message.role}`} className={`max-w-[90%] whitespace-pre-wrap border p-3 text-sm leading-relaxed ${message.role === "user" ? "ml-auto border-primary/25 bg-primary/[0.06]" : "border-border/40 bg-background/40"}`}>
+              <p className="mb-1 font-mono text-[9px] uppercase tracking-wider text-muted-foreground/60">{message.role === "user" ? t("Você", "You", "Tú") : message.agentId ?? t("Agente NexOS", "NexOS agent", "Agente NexOS")}</p>
+              {message.content}
+            </article>
+          )) : <p className="text-sm text-muted-foreground">{t("Não há mensagens salvas. As respostas do briefing continuam disponíveis na visualização de dados.", "There are no saved messages. Brief answers remain available in the data view.", "No hay mensajes guardados. Las respuestas del briefing siguen disponibles en la vista de datos.")}</p>}
+        </section>
+        {canCloseCampaign && (
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button type="button" variant="outline" onClick={() => void handleCloseCampaign()} disabled={closingCampaign} className="gap-2 rounded-none font-mono text-[10px] uppercase tracking-wider">
+              {closingCampaign ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}{t("Encerrar campanha", "Close campaign", "Cerrar campaña")}
+            </Button>
+            <Button type="button" onClick={() => void handleCreateBriefingCopy()} disabled={duplicatingBriefing} className="gap-2 rounded-none font-mono text-[10px] uppercase tracking-wider btn-weapon-primary">
+              {duplicatingBriefing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}{t("Duplicar briefing", "Copy brief", "Duplicar briefing")}
+            </Button>
+          </div>
+        )}
+        {campaignStatus === "cancelled" && (
+          <Button type="button" onClick={() => void handleCreateBriefingCopy()} disabled={duplicatingBriefing} className="w-fit gap-2 rounded-none font-mono text-[10px] uppercase tracking-wider btn-weapon-primary">
+            {duplicatingBriefing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}{t("Duplicar briefing", "Copy brief", "Duplicar briefing")}
+          </Button>
+        )}
+      </main>
     );
   }
 

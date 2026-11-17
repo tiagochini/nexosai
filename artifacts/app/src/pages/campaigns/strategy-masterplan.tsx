@@ -698,13 +698,14 @@ interface StrategyMasterplanProps {
   campaignId?: string;
   campaignTitle?: string;
   track?: string;
+  marketValidation?: Record<string, unknown> | null;
   onRequestTriggerHelp?: () => void;
   triggerHelpPending?: boolean;
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function StrategyMasterplan({ strategyD, ins, reviewStatuses = EMPTY_MODULE_REVIEWS, onReviewStatusChange, onApproveAll, canApproveAll: canApproveAllFromServer = false, approvingAll = false, trialReviewMode = false, userIdentity, campaignId, campaignTitle, track, onRequestTriggerHelp, triggerHelpPending = false }: StrategyMasterplanProps) {
+export function StrategyMasterplan({ strategyD, ins, reviewStatuses = EMPTY_MODULE_REVIEWS, onReviewStatusChange, onApproveAll, canApproveAll: canApproveAllFromServer = false, approvingAll = false, trialReviewMode = false, userIdentity, campaignId, campaignTitle, track, marketValidation, onRequestTriggerHelp, triggerHelpPending = false }: StrategyMasterplanProps) {
   const t = useUiText();
   const hasIns = Object.keys(ins).length > 0;
   const src = hasIns ? ins : strategyD;
@@ -1473,6 +1474,7 @@ export function StrategyMasterplan({ strategyD, ins, reviewStatuses = EMPTY_MODU
                         risks,
                         triggerMap,
                         strategistNotes,
+                        marketValidation,
                       },
                       userIdentity
                     );

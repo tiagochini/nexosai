@@ -1465,7 +1465,13 @@ export default function CampaignDetail() {
   });
   const trialAccess = onboardingStatus?.trialAccess === true;
   const approvedTrialReviewCount = Object.values(masterplanReviewState?.moduleReviews ?? {}).filter((status) => status === "approved").length;
-  const canViewSchedule = masterplanReviewState?.masterplan?.status === "approved" || approvedTrialReviewCount === 10;
+  const canViewSchedule = masterplanReviewState?.masterplan?.status === "approved" || (trialAccess && approvedTrialReviewCount === 10);
+  const campaignTimelineForGate = (campaign as unknown as Record<string, unknown> | undefined)?.["timelineData"] as Record<string, unknown> | undefined;
+  const storedSchedulePreviewForGate = campaignTimelineForGate?.["schedulePreview"];
+  const hasSavedSchedulePreview = Boolean(
+    storedSchedulePreviewForGate && typeof storedSchedulePreviewForGate === "object"
+      && (storedSchedulePreviewForGate as Record<string, unknown>)["sourceVersion"] === 3,
+  );
 
   useEffect(() => {
     setLocalIsActive(ACTIVE_STATUSES.includes(campaign?.status ?? ""));
@@ -1487,8 +1493,10 @@ export default function CampaignDetail() {
       setLocation(`/campaigns/${campaignId}/strategy`);
     } else if (campaign.status === "strategy_ready" && !masterplanReviewLoading && !canViewSchedule) {
       setLocation(`/campaigns/${campaignId}/strategy`);
+    } else if (campaign.status === "strategy_ready" && !masterplanReviewLoading && canViewSchedule && !hasSavedSchedulePreview) {
+      setLocation(`/campaigns/${campaignId}/plan-ready`);
     }
-  }, [campaign?.status, campaignId, setLocation, campaign, isLoading, isFetching, masterplanReviewLoading, canViewSchedule]);
+  }, [campaign?.status, campaignTimelineForGate, campaignId, setLocation, campaign, isLoading, isFetching, masterplanReviewLoading, canViewSchedule, hasSavedSchedulePreview]);
 
   // ── Agents query ──────────────────────────────────────────────────────────────
   const { data: agentsData, isLoading: agentsLoading } = useQuery({
