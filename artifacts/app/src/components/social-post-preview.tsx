@@ -7,7 +7,7 @@ import { useUiText } from "@/lib/i18n";
 export interface PreviewPiece {
   campaignType?: string;
   id: string;
-  platform: "instagram" | "facebook" | "tiktok" | "email" | "whatsapp" | "landing" | "ads";
+  platform: "instagram" | "facebook" | "tiktok" | "youtube" | "google_ads" | "email" | "whatsapp" | "landing" | "ads";
   type: "post" | "story" | "reel" | "email" | "message" | "ad" | "copy" | "native_video";
   creatorName?: string;
   dayIndex: number;
@@ -388,6 +388,13 @@ export function SocialPostPreview({ piece, showMetrics = true, onApprove, onReje
   const isLoading = loading === piece.id;
 
   const previewEl =
+    piece.platform === "youtube" || piece.platform === "google_ads" ? <div className="mx-auto w-full max-w-sm space-y-3 border border-border bg-background p-4">
+      <p className="text-xs font-bold">{piece.platform === "youtube" ? "YouTube" : "Google Ads"}</p>
+      <p className="font-semibold">{piece.title}</p>
+      {piece.visualDirection && <p className="text-xs text-muted-foreground">{piece.visualDirection}</p>}
+      <p className="whitespace-pre-wrap text-sm">{piece.body}</p>
+      {piece.callToAction && <p className="text-sm font-semibold text-primary">{piece.callToAction}</p>}
+    </div> :
     piece.platform === "tiktok" ? <TikTokPost piece={piece} /> :
     piece.platform === "facebook" ? <FacebookPost piece={piece} /> :
     piece.type === "story" ? <InstagramStory piece={piece} /> :

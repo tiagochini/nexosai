@@ -1,4 +1,5 @@
 import { isPlatformAdmin } from "../admin/admin-access.js";
+import { scheduleCompleteness } from "./schedule-completeness.js";
 import { Router } from "express";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { runCrossAgentValidation } from "../campaign-brain/cross-validation.service.js";
@@ -43,7 +44,7 @@ async function launchCampaign(
   userId: string,
   log: Parameters<typeof triggerExecutionPhase>[2],
 ) {
-  const [ownedCampaign] = await db.select({ id: campaignsTable.id, landingSetupData: campaignsTable.landingSetupData }).from(campaignsTable)
+  const [ownedCampaign] = await db.select({ id: campaignsTable.id, landingSetupData: campaignsTable.landingSetupData, timelineData: campaignsTable.timelineData }).from(campaignsTable)
     .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).limit(1);
   if (!ownedCampaign) throw new AppError(404, "Campaign not found", "NOT_FOUND");
   const [approvedMasterplan] = await db.select({ id: masterplanVersionsTable.id }).from(masterplanVersionsTable)
@@ -55,8 +56,12 @@ async function launchCampaign(
     const categoryList = missing.map((m) => m.category).join(", ");
     throw new AppError(422, `Para lançar esta campanha, conecte as integrações necessárias: ${categoryList}. Acesse /integracoes para conectar.`, "MISSING_INTEGRATIONS", { missing, connectUrl: "/integracoes" });
   }
-  const allPieces = await db.select({ status: contentPiecesTable.status, type: contentPiecesTable.type }).from(contentPiecesTable)
-    .where(eq(contentPiecesTable.campaignId, campaignId));
+  const allPieces = await db.select({ status: contentPiecesTable.status, type: contentPiecesTable.type, launchPhase: contentPiecesTable.launchPhase, content: contentPiecesTable.content }).from(contentPiecesTable)
+    .where(and(eq(contentPiecesTable.campaignId, campaignId), eq(contentPiecesTable.workspaceId, workspaceId)));
+  const schedule = scheduleCompleteness(ownedCampaign.timelineData, allPieces);
+  if (!schedule.ready) {
+    throw new AppError(422, "Gere o conteúdo de todas as etapas do cronograma antes de lançar.", "SCHEDULE_CONTENT_INCOMPLETE", { missingPhases: schedule.missingPhases });
+  }
   const unapprovedPieces = allPieces.filter((piece) => piece.status !== "approved").length;
   if (allPieces.length === 0) {
     throw new AppError(422, "Nenhuma peça de conteúdo encontrada. Gere e aprove o conteúdo antes de lançar.", "NO_CONTENT", { approvalUrl: `/campaigns/${campaignId}/content` });
@@ -85,14 +90,14 @@ async function launchCampaign(
 router.post("/:campaignId/execute/preflight", async (req, res): Promise<void> => {
   const campaignId = req.params["campaignId"] as string;
   const workspaceId = req.auth.workspaceId;
-  const [campaign] = await db.select({ id: campaignsTable.id, landingSetupData: campaignsTable.landingSetupData })
+  const [campaign] = await db.select({ id: campaignsTable.id, landingSetupData: campaignsTable.landingSetupData, timelineData: campaignsTable.timelineData })
     .from(campaignsTable).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).limit(1);
   if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "NOT_FOUND" }); return; }
 
   const [masterplan, pieces, landingPage] = await Promise.all([
     db.select({ id: masterplanVersionsTable.id, version: masterplanVersionsTable.version, approvedAt: masterplanVersionsTable.approvedAt })
       .from(masterplanVersionsTable).where(and(eq(masterplanVersionsTable.campaignId, campaignId), eq(masterplanVersionsTable.workspaceId, workspaceId), eq(masterplanVersionsTable.status, "approved"))).orderBy(desc(masterplanVersionsTable.version)).limit(1),
-    db.select({ id: contentPiecesTable.id, type: contentPiecesTable.type, status: contentPiecesTable.status })
+    db.select({ id: contentPiecesTable.id, type: contentPiecesTable.type, status: contentPiecesTable.status, launchPhase: contentPiecesTable.launchPhase, content: contentPiecesTable.content })
       .from(contentPiecesTable).where(and(eq(contentPiecesTable.campaignId, campaignId), eq(contentPiecesTable.workspaceId, workspaceId))),
     db.select({ publishedUrl: pagesTable.publishedUrl, publishedAt: pagesTable.publishedAt })
       .from(pagesTable).where(and(eq(pagesTable.campaignId, campaignId), eq(pagesTable.workspaceId, workspaceId), eq(pagesTable.status, "published"))).limit(1),
@@ -104,7 +109,9 @@ router.post("/:campaignId/execute/preflight", async (req, res): Promise<void> =>
   const hasLanding = approvedPieces.some((piece) => piece.type === "landing_page_structure");
   const setup = (campaign.landingSetupData ?? {}) as { status?: string; ctas?: unknown[]; tracking?: unknown };
   const liveLanding = landingPage[0];
+  const schedule = scheduleCompleteness(campaign.timelineData, pieces);
   const checks: Array<{ id: string; label: string; state: "ready" | "blocked" | "warning" | "skipped"; detail: string; href?: string }> = [
+    { id: "schedule", label: "Conteúdo de todas as etapas", state: !schedule.required ? "skipped" : schedule.ready ? "ready" : "blocked", detail: !schedule.required ? "Campanha sem cronograma de etapas salvo." : schedule.ready ? "Todas as etapas têm conteúdo salvo." : `Etapas pendentes: ${schedule.missingPhases.join(", ")}.`, href: `/campaigns/${campaignId}` },
     { id: "masterplan", label: "Master Plan aprovado", state: plan ? "ready" : "blocked", detail: plan ? `Versão ${plan.version} aprovada${plan.approvedAt ? ` em ${new Date(plan.approvedAt).toLocaleString("pt-BR")}` : ""}.` : "Aprove o Master Plan para continuar.", href: `/campaigns/${campaignId}/control-room` },
     { id: "integrations", label: "Integrações necessárias", state: integrationCheck.status === "ok" ? (integrationCheck.checks.some((check) => check.state === "warning") ? "warning" : "ready") : "blocked", detail: integrationCheck.status === "ok" ? (integrationCheck.checks.map((check) => check.detail).join(" ") || "Nenhuma integração externa exigida pelas peças aprovadas.") : (integrationCheck.missing ?? []).map((item) => `${item.category}: ${item.reason}`).join(" "), href: "/integracoes" },
     { id: "content", label: "Conteúdos aprovados", state: pieces.length > 0 && pendingPieces === 0 ? "ready" : "blocked", detail: pieces.length === 0 ? "Gere e aprove as peças antes de iniciar." : pendingPieces === 0 ? `${approvedPieces.length} peça(s) aprovadas.` : `${pendingPieces} de ${pieces.length} peça(s) ainda aguardam aprovação.`, href: `/campaigns/${campaignId}/content` },

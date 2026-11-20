@@ -2761,11 +2761,11 @@ function expandApiPieces(pieces: ApiContentPiece[], complianceRevision?: Complia
         const calendar = c["calendar"] as Array<Record<string, unknown>> | undefined;
         if (calendar?.length) {
           calendar.forEach((post, i) => {
-            const requestedPlatforms = Array.isArray(post["platforms"]) ? post["platforms"] as string[] : ["instagram"];
+            const requestedPlatforms = Array.isArray(post["platforms"]) ? post["platforms"] as string[] : [String(post["platform"] ?? "instagram")];
             const platforms = [...new Set(requestedPlatforms
               .map(value => TYPE_TO_PLATFORM[value] ?? value)
               .filter((value): value is Platform => ["instagram", "facebook", "tiktok", "youtube"].includes(value)))];
-            const targetPlatforms = platforms.length > 0 ? platforms : ["instagram"];
+            const targetPlatforms: Platform[] = platforms.length > 0 ? platforms : ["instagram"];
             targetPlatforms.forEach(platform => {
               const rawPostType = String(post["postType"] ?? "post").toLowerCase();
               const pieceType: PieceType = platform === "youtube" || platform === "tiktok"

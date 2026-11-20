@@ -2346,6 +2346,7 @@ export default function CampaignDetail() {
             timeline={timelineD}
             trialAccess={trialAccess}
             campaignStatus={campaign.status}
+            campaignType={String(intakeD["campaign.type"] ?? campaign.type ?? "")}
             onDownloadPdf={downloadMasterplanPdf}
             onLaunch={() => handleExecuteClick("launch")}
             launchPending={executeMutation.isPending}

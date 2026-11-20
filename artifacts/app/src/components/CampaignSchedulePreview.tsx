@@ -26,11 +26,12 @@ function formatScheduleDate(value: unknown): string {
   return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "short", year: "numeric" }).format(date);
 }
 
-export function CampaignSchedulePreview({ campaignId, timeline, trialAccess, campaignStatus, onDownloadPdf, onLaunch, launchPending = false }: {
+export function CampaignSchedulePreview({ campaignId, timeline, trialAccess, campaignStatus, campaignType, onDownloadPdf, onLaunch, launchPending = false }: {
   campaignId: string;
   timeline: Record<string, unknown>;
   trialAccess: boolean;
   campaignStatus: string;
+  campaignType: string;
   onDownloadPdf: () => void;
   onLaunch: () => void;
   launchPending?: boolean;
@@ -46,6 +47,7 @@ export function CampaignSchedulePreview({ campaignId, timeline, trialAccess, cam
   const [card, setCard] = useState<CardDetails>(EMPTY_CARD);
   const [payment, setPayment] = useState<Payment | null>(null);
   const [copied, setCopied] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState<{ current: number; total: number; label: string } | null>(null);
   const confirmationHandled = useRef(false);
   const scheduleAttempted = useRef(false);
 
@@ -87,6 +89,7 @@ export function CampaignSchedulePreview({ campaignId, timeline, trialAccess, cam
     enabled: Boolean(campaignId) && !trialAccess,
   });
   const landingPagePiece = (generatedQuery.data?.pieces ?? []).find(piece => piece["type"] === "landing_page_structure");
+  const hasLandingPage = campaignType !== "challenge_funnel";
   const landingPageMutation = useMutation({
     mutationFn: () => customFetch<{ piece: Record<string, unknown>; created: boolean }>(`/api/campaigns/${campaignId}/content/landing-page/generate`, { method: "POST" }),
     onSuccess: async ({ created }) => {
@@ -100,26 +103,54 @@ export function CampaignSchedulePreview({ campaignId, timeline, trialAccess, cam
   });
   const generatedPhaseIds = new Set((generatedQuery.data?.pieces ?? []).map((piece) => {
     const content = piece["content"] && typeof piece["content"] === "object" ? piece["content"] as Record<string, unknown> : {};
+    const calendar = content["calendar"];
+    if (piece["type"] !== "content_calendar" || !Array.isArray(calendar) || calendar.length === 0 || !calendar.every(item => item && typeof item === "object" && typeof item.caption === "string" && item.caption.trim() && typeof item.platform === "string" && item.platform.trim())) return "";
     return String(piece["launchPhase"] ?? content["launchPhase"] ?? "");
   }).filter(Boolean));
   const generatedPhaseCount = phases.filter((phase, index) => {
     const phaseId = String(phase["phase"] ?? phase["id"] ?? phase["name"] ?? `phase-${index + 1}`);
     return generatedPhaseIds.has(phaseId);
   }).length;
-  const allPhasesGenerated = phases.length > 0 && generatedPhaseCount === phases.length;
+  const totalContentGroups = phases.length + (hasLandingPage ? 1 : 0);
+  const generatedContentGroups = generatedPhaseCount + (hasLandingPage && landingPagePiece ? 1 : 0);
+  const allContentGenerated = totalContentGroups > 0 && generatedContentGroups === totalContentGroups;
   const campaignApproved = campaignStatus === "approved";
 
-  const generateMutation = useMutation({
-    mutationFn: (phaseId: string) => customFetch(`/api/campaigns/${campaignId}/content/generate-phase`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phaseId }),
-    }),
-    onSuccess: (_result, phaseId) => {
-      void queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "content", "schedule-preview"] });
-      toast.success(generatedPhaseIds.has(phaseId)
-        ? t("O conteúdo desta etapa já estava salvo.", "This phase’s content was already saved.", "El contenido de esta etapa ya estaba guardado.")
-        : t("Conteúdo gerado e salvo para revisão.", "Content generated and saved for review.", "Contenido generado y guardado para revisión."));
+  const generateAllMutation = useMutation({
+    mutationFn: async () => {
+      const pendingPhases = phases.flatMap((phase, index) => {
+        const phaseId = String(phase["phase"] ?? phase["id"] ?? phase["name"] ?? `phase-${index + 1}`);
+        return generatedPhaseIds.has(phaseId) ? [] : [{ id: phaseId, label: String(phase["name"] ?? phaseId) }];
+      });
+      const tasks: Array<{ id: string; label: string; kind: "phase" | "landing" }> = pendingPhases.map((phase) => ({ ...phase, kind: "phase" }));
+      if (hasLandingPage && !landingPagePiece) tasks.push({ id: "landing-page", label: t("Landing page", "Landing page", "Landing page"), kind: "landing" as const });
+      setGenerationProgress({ current: 0, total: tasks.length, label: "" });
+      for (let index = 0; index < tasks.length; index += 1) {
+        const task = tasks[index]!;
+        setGenerationProgress({ current: index, total: tasks.length, label: task.label });
+        if (task.kind === "phase") {
+          await customFetch(`/api/campaigns/${campaignId}/content/generate-phase`, {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phaseId: task.id }),
+          });
+        } else {
+          await customFetch(`/api/campaigns/${campaignId}/content/landing-page/generate`, { method: "POST" });
+        }
+        setGenerationProgress({ current: index + 1, total: tasks.length, label: task.label });
+      }
+      return { generated: tasks.length };
     },
-    onError: (error: any) => toast.error(error?.data?.error || t("Não foi possível gerar esta etapa.", "Could not generate this phase.", "No se pudo generar esta etapa."), { duration: 7000 }),
+    onSuccess: async ({ generated }) => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "content", "schedule-preview"] });
+      setGenerationProgress(null);
+      toast.success(generated > 0
+        ? t("Todos os conteúdos do cronograma foram gerados e salvos.", "All schedule content has been generated and saved.", "Todo el contenido del cronograma fue generado y guardado.")
+        : t("Todos os conteúdos já estavam gerados.", "All content was already generated.", "Todo el contenido ya estaba generado."));
+    },
+    onError: async (error: any) => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "content", "schedule-preview"] });
+      setGenerationProgress(null);
+      toast.error(error?.data?.error || error?.message || t("Não foi possível concluir a geração. Tente novamente em instantes.", "We couldn’t finish generating the content. Please try again shortly.", "No pudimos terminar de generar el contenido. Inténtalo de nuevo en unos instantes."), { duration: 7000 });
+    },
   });
 
   const purchaseMutation = useMutation({
@@ -153,41 +184,14 @@ export function CampaignSchedulePreview({ campaignId, timeline, trialAccess, cam
     void queryClient.invalidateQueries({ queryKey: ["/api/billing/status"] });
   }, [currentPayment?.status, queryClient, t]);
 
-  const beginGeneration = (phase: Phase) => {
-    setActivePhase(phase);
-    if (trialAccess) setCheckoutOpen(true);
-    else {
-      const phaseId = String(phase["phase"] ?? phase["id"] ?? phase["name"] ?? "");
-      if (phaseId) generateMutation.mutate(phaseId);
-    }
-  };
-
   return <>
     <section className="space-y-4 border border-cyan-400/25 bg-cyan-400/[0.025] p-4 sm:p-5">
       <div className="flex flex-wrap items-start gap-3">
         <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
         <div className="min-w-0 flex-1">
           <h2 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-cyan-200">{t("Prévia do cronograma de lançamento", "Launch schedule preview", "Vista previa del cronograma de lanzamiento")}</h2>
-          <p className="mt-1 font-mono text-[10px] leading-relaxed text-muted-foreground/65">{t("A prévia reúne datas e um resumo operacional. Copy, landing page, imagens e vídeos são gerados separadamente quando você solicitar.", "The preview contains dates and an operational summary. Copy, landing pages, images, and videos are generated separately when requested.", "La vista previa incluye fechas y un resumen operativo. Los textos, landing pages, imágenes y videos se generan por separado cuando los solicites.")}</p>
+          <p className="mt-1 font-mono text-[10px] leading-relaxed text-muted-foreground/65">{t("A prévia reúne datas e etapas. Gere de uma vez os conteúdos de todas as etapas e a landing page; imagens e vídeos podem ser criados nas ferramentas próprias.", "This preview organizes dates and phases. Generate all phase content and the landing page at once; images and videos can be created in their dedicated tools.", "Esta vista previa organiza fechas y etapas. Genera de una vez el contenido de todas las etapas y la landing page; las imágenes y los videos se crean en sus herramientas específicas.")}</p>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => {
-            if (trialAccess) { setActivePhase({ name: t("Landing Page", "Landing Page", "Landing Page") }); setCheckoutOpen(true); return; }
-            if (landingPagePiece) { setLocation(`/campaigns/${campaignId}/content?tab=landing`); return; }
-            landingPageMutation.mutate();
-          }}
-          disabled={landingPageMutation.isPending || generatedQuery.isLoading}
-          className="w-full shrink-0 gap-1.5 rounded-none font-mono text-[9px] uppercase tracking-wider sm:w-auto"
-        >
-          {landingPageMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : trialAccess ? <Lock className="h-3 w-3" /> : <WandSparkles className="h-3 w-3" />}
-          {landingPageMutation.isPending
-            ? t("Gerando landing page…", "Generating landing page…", "Generando landing page…")
-            : landingPagePiece
-              ? t("Abrir landing page", "Open landing page", "Abrir landing page")
-              : t("Gerar landing page", "Generate landing page", "Generar landing page")}
-        </Button>
         <Button
           type="button"
           size="sm"
@@ -214,7 +218,6 @@ export function CampaignSchedulePreview({ campaignId, timeline, trialAccess, cam
           const phaseId = String(phase["phase"] ?? phase["id"] ?? phase["name"] ?? `phase-${index + 1}`);
           const phaseName = String(phase["name"] ?? phase["phase"] ?? t(`Etapa ${index + 1}`, `Phase ${index + 1}`, `Etapa ${index + 1}`));
           const alreadyGenerated = generatedPhaseIds.has(phaseId);
-          const isGenerating = generateMutation.isPending && generateMutation.variables === phaseId;
           const hasRelativeDays = Number.isFinite(Number(phase["dayStart"])) && phase["dayStart"] !== undefined;
           const recommendedDuration = typeof phase["recommendedDuration"] === "string" ? phase["recommendedDuration"].trim() : "";
           const durationRationale = typeof phase["durationRationale"] === "string" ? phase["durationRationale"].trim() : "";
@@ -227,33 +230,54 @@ export function CampaignSchedulePreview({ campaignId, timeline, trialAccess, cam
             {typeof phase["summary"] === "string" && <p className="mt-3 font-mono text-[10px] leading-relaxed text-muted-foreground/75">{phase["summary"]}</p>}
             {recommendedDuration && (phase["startDate"] || hasRelativeDays) && <p className="mt-2 font-mono text-[10px] leading-relaxed text-amber-200/85">{t("Duração sugerida pelo agente", "Duration suggested by the agent", "Duración sugerida por el agente")}: {recommendedDuration}{durationRationale ? ` — ${durationRationale}` : ""}</p>}
             {!recommendedDuration && !phase["startDate"] && !hasRelativeDays && <p className="mt-2 font-mono text-[9px] leading-relaxed text-amber-100/60">{t("Este Master Plan não registrou uma sugestão de duração para esta etapa. Gere uma nova versão do plano para solicitar a recomendação.", "This Master Plan has no duration recommendation for this phase. Create a new plan version to request one.", "Este Plan Maestro no registró una duración sugerida para esta etapa. Genera una nueva versión para solicitarla.")}</p>}
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Button type="button" size="sm" onClick={() => beginGeneration(phase)} disabled={alreadyGenerated || isGenerating || (!trialAccess && generateMutation.isPending)} className="h-8 gap-1.5 rounded-none font-mono text-[9px] uppercase tracking-wider">
-                {isGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : trialAccess ? <Lock className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
-                {isGenerating ? t("Gerando etapa…", "Generating phase…", "Generando etapa…") : alreadyGenerated ? t("Conteúdo já gerado", "Content generated", "Contenido generado") : t("Gerar conteúdo desta etapa", "Generate this phase’s content", "Generar contenido de esta etapa")}
-              </Button>
-              {alreadyGenerated && <Button type="button" size="sm" variant="outline" onClick={() => window.location.assign(`/campaigns/${campaignId}/content?phaseId=${encodeURIComponent(phaseId)}&phaseName=${encodeURIComponent(phaseName)}`)} className="h-8 rounded-none font-mono text-[9px] uppercase tracking-wider">{t("Revisar conteúdo", "Review content", "Revisar contenido")}</Button>}
-            </div>
           </article>;
         })}
-        {phases.length > 0 && <div className={`flex flex-col gap-3 border p-3 sm:flex-row sm:items-center ${allPhasesGenerated ? "border-emerald-400/30 bg-emerald-400/[0.04]" : "border-border/30 bg-background/35"}`}>
+        {hasLandingPage && <article className="border border-border/30 bg-background/35 p-3 sm:p-4">
+          <div className="flex flex-wrap items-start gap-3">
+            <span className="border border-violet-300/25 px-2 py-1 font-mono text-[9px] uppercase text-violet-200/80">{t("Página de vendas", "Sales page", "Página de ventas")}</span>
+            <h3 className="min-w-0 flex-1 font-mono text-xs font-bold uppercase tracking-wide text-foreground">Landing page</h3>
+            {landingPagePiece && <span className="flex items-center gap-1 font-mono text-[9px] uppercase text-emerald-300"><CheckCircle2 className="h-3 w-3" />{t("Conteúdo salvo", "Content saved", "Contenido guardado")}</span>}
+          </div>
+          <p className="mt-3 font-mono text-[10px] leading-relaxed text-muted-foreground/75">{t("Página de vendas estruturada para apresentar a oferta e conduzir o visitante à conversão.", "A structured sales page to present the offer and guide visitors toward conversion.", "Página de ventas estructurada para presentar la oferta y guiar a los visitantes a la conversión.")}</p>
+          <div className="mt-4">
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                if (trialAccess) { setActivePhase({ name: t("Landing page", "Landing page", "Landing page") }); setCheckoutOpen(true); return; }
+                if (landingPagePiece) { setLocation(`/campaigns/${campaignId}/content?tab=landing`); return; }
+                landingPageMutation.mutate();
+              }}
+              disabled={landingPageMutation.isPending || generatedQuery.isLoading || generateAllMutation.isPending}
+              className="h-8 gap-1.5 rounded-none font-mono text-[9px] uppercase tracking-wider"
+            >
+              {landingPageMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : trialAccess ? <Lock className="h-3 w-3" /> : <WandSparkles className="h-3 w-3" />}
+              {landingPageMutation.isPending ? t("Gerando landing page…", "Generating landing page…", "Generando landing page…") : landingPagePiece ? t("Abrir landing page", "Open landing page", "Abrir landing page") : t("Gerar landing page", "Generate landing page", "Generar landing page")}
+            </Button>
+          </div>
+        </article>}
+        {phases.length > 0 && <div className={`flex flex-col gap-3 border p-3 sm:flex-row sm:items-center ${allContentGenerated ? "border-emerald-400/30 bg-emerald-400/[0.04]" : "border-border/30 bg-background/35"}`}>
           <div className="min-w-0 flex-1">
-            <p className={`flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-wider ${allPhasesGenerated ? "text-emerald-200" : "text-muted-foreground"}`}>
-              {allPhasesGenerated && <CheckCircle2 className="h-3.5 w-3.5" />}
-              {t("Conteúdos gerados", "Content generated", "Contenido generado")} · {generatedPhaseCount}/{phases.length}
+            <p className={`flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-wider ${allContentGenerated ? "text-emerald-200" : "text-muted-foreground"}`}>
+              {allContentGenerated && <CheckCircle2 className="h-3.5 w-3.5" />}
+              {t("Conteúdos gerados", "Content generated", "Contenido generado")} · {generatedContentGroups}/{totalContentGroups}
             </p>
             <p className="mt-1 font-mono text-[10px] leading-relaxed text-muted-foreground/75">
-              {allPhasesGenerated
+              {allContentGenerated
                 ? campaignApproved
-                  ? t("Todas as etapas estão prontas e aprovadas. Você já pode lançar a campanha.", "Every phase is ready and approved. You can launch the campaign.", "Todas las etapas están listas y aprobadas. Ya puedes lanzar la campaña.")
-                  : t("Todas as etapas foram geradas. Revise e aprove as publicações para liberar o lançamento.", "Every phase has been generated. Review and approve the posts to unlock launch.", "Todas las etapas fueron generadas. Revisa y aprueba las publicaciones para habilitar el lanzamiento.")
-                : t("Gere o conteúdo de cada etapa. O lançamento será liberado depois da revisão e aprovação.", "Generate content for each phase. Launch will be available after review and approval.", "Genera contenido para cada etapa. El lanzamiento estará disponible después de revisar y aprobar.")}
+                  ? t("Todos os conteúdos estão gerados e prontos. Você já pode lançar a campanha.", "All content is generated and ready. You can launch the campaign.", "Todo el contenido está generado y listo. Ya puedes lanzar la campaña.")
+                  : t("Todos os conteúdos estão gerados. A campanha poderá ser lançada quando o fluxo de aprovação estiver concluído.", "All content is generated. The campaign can launch once its approval workflow is complete.", "Todo el contenido está generado. La campaña podrá lanzarse cuando termine el flujo de aprobación.")
+                : t("Gere todos os conteúdos do cronograma em uma única ação, incluindo a landing page.", "Generate all schedule content in one action, including the landing page.", "Genera todo el contenido del cronograma en una sola acción, incluida la landing page.")}
+              {generationProgress && <span className="mt-1 block text-cyan-200">{t("Gerando", "Generating", "Generando")} {generationProgress.current}/{generationProgress.total}: {generationProgress.label}</span>}
             </p>
           </div>
-          {allPhasesGenerated && <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-            {!campaignApproved && <Button type="button" variant="outline" size="sm" onClick={() => setLocation(`/campaigns/${campaignId}/content`)} className="gap-1.5 rounded-none font-mono text-[9px] uppercase tracking-wider">
-              {t("Revisar e aprovar", "Review and approve", "Revisar y aprobar")}
-            </Button>}
+          {!allContentGenerated ? <Button type="button" size="sm" disabled={generatedQuery.isLoading || generateAllMutation.isPending || landingPageMutation.isPending} onClick={() => {
+            if (trialAccess) { setActivePhase({ name: t("Todos os conteúdos", "All content", "Todo el contenido") }); setCheckoutOpen(true); return; }
+            generateAllMutation.mutate();
+          }} className="shrink-0 gap-1.5 rounded-none font-mono text-[9px] font-bold uppercase tracking-wider">
+            {generateAllMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : trialAccess ? <Lock className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
+            {generateAllMutation.isPending ? t("Gerando conteúdos…", "Generating content…", "Generando contenido…") : t("Gerar todos os conteúdos", "Generate all content", "Generar todo el contenido")}
+          </Button> : <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
             <Button type="button" size="sm" disabled={!campaignApproved || launchPending} onClick={onLaunch} className="gap-1.5 rounded-none font-mono text-[9px] font-bold uppercase tracking-wider">
               {launchPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
               {launchPending ? t("Iniciando…", "Starting…", "Iniciando…") : t("Lançar campanha", "Launch campaign", "Lanzar campaña")}

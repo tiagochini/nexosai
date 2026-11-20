@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { hasUsableCalendar } from "../orchestration/schedule-completeness.js";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { AppError } from "../../lib/errors.js";
@@ -510,12 +511,12 @@ router.post("/:campaignId/content/generate-phase", async (req, res): Promise<voi
     const phase = phases.find((item) => String(item["phase"] ?? item["id"] ?? item["name"] ?? "") === parsed.data.phaseId);
     if (!phase) throw new AppError(404, "A etapa não foi encontrada no cronograma desta campanha.", "LAUNCH_PHASE_NOT_FOUND");
 
-    const [existing] = await db.select({ id: contentPiecesTable.id, title: contentPiecesTable.title, status: contentPiecesTable.status })
+    const [existing] = await db.select({ id: contentPiecesTable.id, title: contentPiecesTable.title, status: contentPiecesTable.status, content: contentPiecesTable.content })
       .from(contentPiecesTable).where(and(
         eq(contentPiecesTable.campaignId, campaignId), eq(contentPiecesTable.workspaceId, req.auth.workspaceId),
         eq(contentPiecesTable.type, "content_calendar"), eq(contentPiecesTable.launchPhase, parsed.data.phaseId),
       )).limit(1);
-    if (existing) { res.json({ piece: existing, alreadyGenerated: true }); return; }
+    if (existing && hasUsableCalendar(existing.content)) { res.json({ piece: existing, alreadyGenerated: true }); return; }
 
     const phaseName = String(phase["name"] ?? parsed.data.phaseId);
     const objective = String(phase["objective"] ?? phase["summary"] ?? "");
@@ -527,12 +528,19 @@ router.post("/:campaignId/content/generate-phase", async (req, res): Promise<voi
       log: req.log, thinkingMessages: [`Preparando os conteúdos da etapa ${phaseName}...`],
     });
     const content = parseAgentJSON<Record<string, unknown>>(result.content, { summary: result.content, calendar: [], productionNotes: [] });
-    const [piece] = await db.insert(contentPiecesTable).values({
+    if (!hasUsableCalendar(content)) {
+      throw new AppError(422, "Não foi possível concluir os conteúdos desta etapa. Tente novamente em instantes.", "EMPTY_PHASE_CONTENT");
+    }
+    const values = {
       campaignId, workspaceId: req.auth.workspaceId, type: "content_calendar", status: "pending_approval",
       title: `Conteúdo — ${phaseName}`, phase: phaseName, launchPhase: parsed.data.phaseId,
       content: { ...content, launchPhase: parsed.data.phaseId, phaseName, objective } as any,
       aiProvider: result.agentRecord?.aiProvider ?? null, creditsUsed: result.creditsCharged ?? 0,
-    }).returning({ id: contentPiecesTable.id, title: contentPiecesTable.title, status: contentPiecesTable.status });
+    } as const;
+    const returning = { id: contentPiecesTable.id, title: contentPiecesTable.title, status: contentPiecesTable.status };
+    const [piece] = existing
+      ? await db.update(contentPiecesTable).set({ ...values, approvedAt: null }).where(and(eq(contentPiecesTable.id, existing.id), eq(contentPiecesTable.workspaceId, req.auth.workspaceId), eq(contentPiecesTable.campaignId, campaignId))).returning(returning)
+      : await db.insert(contentPiecesTable).values(values).returning(returning);
     res.status(201).json({ piece, alreadyGenerated: false });
   } catch (err) {
     if (err instanceof AppError) { res.status(err.statusCode).json({ error: err.message, code: err.code, details: err.data }); return; }
