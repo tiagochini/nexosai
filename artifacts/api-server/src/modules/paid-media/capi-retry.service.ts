@@ -33,6 +33,7 @@ export function capiRetryEnvelope(
     workspaceId: string;
     accountId: string;
     providerDatasetId: string;
+    provider?: string;
   },
   event: MetaCapiEvent,
   now = new Date(),
@@ -53,12 +54,14 @@ export function decodeCapiRetry(
     workspaceId: string;
     accountId: string;
     providerDatasetId: string;
+    provider?: string;
   },
   receipt: { eventId: string; eventName: string; occurredAt: Date },
 ) {
   const saved = JSON.parse(decryptIntegrationToken(payload));
   if (
     saved.version !== 1 ||
+    (saved.dataset?.provider != null ? saved.dataset.provider !== dataset.provider : dataset.provider != null && dataset.provider !== "meta_ads") ||
     ["id", "workspaceId", "accountId", "providerDatasetId"].some(
       (key) => saved.dataset?.[key] !== dataset[key as keyof typeof dataset],
     ) ||
@@ -197,7 +200,7 @@ export async function capiRetryTick(clock = () => new Date()) {
     try {
       event = decodeCapiRetry(receipt.retryPayload!, dataset, receipt);
       if (
-        dataset.provider !== "meta_ads" ||
+        !["meta_ads", "tiktok_ads"].includes(dataset.provider) ||
         (receipt.payload as Record<string, unknown>)["marketingConsent"] !==
           true
       )

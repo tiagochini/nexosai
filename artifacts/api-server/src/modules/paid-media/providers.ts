@@ -14,7 +14,6 @@ import {
   normalizeTikTokAccounts,
   normalizeTikTokInsights,
   rollbackActionFromSnapshot,
-  tikTokRefreshPersistence,
   verifyActionSnapshot,
 } from "./paid-media.domain.js";
 import { isPaidMediaIntegration } from "../integrations/integration-purpose.js";
@@ -22,6 +21,8 @@ import { isPaidMediaIntegration } from "../integrations/integration-purpose.js";
 import { metaAdSetPayload, metaCampaignPayload, validateMetaAccountBudget, validateMetaTree } from "./meta-launch.policy.js";
 import { verifyMetaLaunchAssets } from "./meta-asset-preflight.js";
 import { metaCreativePayload } from "./meta-assets.policy.js";
+import { validateTikTokTree, ttObject } from "./tiktok-launch.policy.js";
+import { sendTikTokEvent } from "./tiktok-events.js";
 
 export type PaidMediaProviderName = "meta_ads" | "tiktok_ads" | "google_ads";
 export type PaidMediaEntityKind = "campaign" | "ad_set" | "ad" | "creative";
@@ -162,7 +163,10 @@ export interface PaidMediaProviderAdapter {
   reconcileLaunchEntity?(workspaceId: string, accountId: string, type: PaidMediaEntityKind, payload: Record<string, unknown>, idempotencyKey: string): Promise<LaunchCreateResult | undefined>;
   readLaunchEntity?(workspaceId: string, accountId: string, type: PaidMediaEntityKind, entityId: string): Promise<ProviderEntity>;
   verifyLaunchEntityAbsence?(workspaceId: string, accountId: string, type: PaidMediaEntityKind, entityId: string): Promise<{ absent: boolean; evidence: Record<string, unknown> }>;
-  deleteEntity?(workspaceId: string, accountId: string, entityId: string, idempotencyKey: string): Promise<ProviderActionResult>;
+  deleteEntity?(workspaceId: string, accountId: string, entityId: string, idempotencyKey: string, type?: PaidMediaEntityKind): Promise<ProviderActionResult>;
+  diagnoseDataset?(workspaceId: string, accountId: string, datasetId: string): Promise<Record<string, unknown>>;
+  listPixels?(workspaceId: string, accountId: string): Promise<Record<string, unknown>>;
+  uploadAdVideo?(workspaceId: string, accountId: string, url: string): Promise<Record<string, unknown>>;
 }
 
 type Credential = { integrationId: string; accessToken: string; refreshToken: string | null; expiresAt: Date | null; metadata: Record<string, unknown> };
@@ -222,6 +226,17 @@ export function normalizeMetaCapiEvent(input: {
   if (Array.isArray(payload["contentIds"]) && payload["contentIds"].every((item) => typeof item === "string")) customData["content_ids"] = payload["contentIds"];
   if (typeof payload["contentType"] === "string") customData["content_type"] = payload["contentType"];
   return { eventName: input.eventName, eventId: input.eventId, eventTime, eventSourceUrl, userData, customData };
+}
+
+export function normalizeProviderConversion(provider: PaidMediaProviderName, input: Parameters<typeof normalizeMetaCapiEvent>[0]): MetaCapiEvent {
+  const event = normalizeMetaCapiEvent(input);
+  if (provider === "tiktok_ads") {
+    for (const key of ["ttclid", "ttp"]) {
+      const value = input.matchKeys?.[key];
+      if (typeof value === "string" && /^[A-Za-z0-9._-]{1,500}$/.test(value)) event.userData[key] = value;
+    }
+  }
+  return event;
 }
 
 /** Exported adapter seam: tests can supply a fake transport without touching global fetch. */
@@ -547,70 +562,164 @@ class TikTokAdsAdapter implements PaidMediaProviderAdapter {
   private readonly base = "https://business-api.tiktok.com/open_api/v1.3";
   capabilities(): PaidMediaProviderCapabilities {
     return {
-      launchTreeCreation: "unsupported",
+      launchTreeCreation: "supported",
       creativePause: "unsupported",
-      pixelDatasetDiagnostics: "unsupported",
+      pixelDatasetDiagnostics: "supported",
       cboAboObservation: "supported",
-      conversionsApi: "unsupported",
-      reason: "TikTok creative-level mutation and Events API delivery are not enabled by this adapter; receipt delivery remains fail-closed.",
+      conversionsApi: "supported",
+      operations: { campaign: "supported", adGroup: "supported", ad: "supported", conversion: "supported", audience: "unsupported" },
+      reason: "Manual website TRAFFIC/WEB_CONVERSIONS with approved uploaded video and identity; creates paused. Smart+ and catalog flows are not enabled.",
     };
   }
   async refreshCredential(workspaceId: string): Promise<void> {
-    const cred = await credential(workspaceId, this.provider);
-    if (!cred.refreshToken || !env.TIKTOK_CLIENT_KEY || !env.TIKTOK_CLIENT_SECRET) throw new PaidMediaProviderError("TikTok Ads refresh token is unavailable; reconnect the integration.", "AUTH");
-    const body = await request(`${this.base}/oauth2/refresh_token/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ app_id: env.TIKTOK_CLIENT_KEY, secret: env.TIKTOK_CLIENT_SECRET, grant_type: "refresh_token", refresh_token: cred.refreshToken }) });
-    const data = body["data"] as Record<string, unknown> | undefined;
-    if (!data?.["access_token"]) throw new PaidMediaProviderError("TikTok Ads did not return a refreshed credential.", "AUTH");
-    await db.update(workspaceIntegrationsTable).set(tikTokRefreshPersistence(cred, data)).where(eq(workspaceIntegrationsTable.id, cred.integrationId));
+    await credential(workspaceId, this.provider);
+    throw new PaidMediaProviderError("Reconecte o TikTok Ads para renovar a autorização da Marketing API.", "AUTH", 401);
   }
-  async sendConversionEvent(_workspaceId: string, _accountId: string, _datasetId: string, _event: MetaCapiEvent): Promise<ProviderConversionResult> {
-    throw new PaidMediaProviderError("TikTok Events API transport is not implemented by this adapter.", "UNSUPPORTED", 409);
+  async sendConversionEvent(workspaceId: string, accountId: string, datasetId: string, event: MetaCapiEvent): Promise<ProviderConversionResult> {
+    const { token } = await this.accountCredential(workspaceId, accountId);
+    return sendTikTokEvent(datasetId, token, event);
   }
-  private async token(workspaceId: string): Promise<string> {
-    const cred = await credential(workspaceId, this.provider);
-    if (cred.expiresAt && cred.expiresAt.getTime() < Date.now() + 60_000) { await this.refreshCredential(workspaceId); return (await credential(workspaceId, this.provider)).accessToken; }
-    return cred.accessToken;
+  private async accountCredential(workspaceId: string, accountId: string) {
+    const [account] = await db.select().from(paidMediaAccountsTable).where(and(eq(paidMediaAccountsTable.id, accountId), eq(paidMediaAccountsTable.workspaceId, workspaceId), eq(paidMediaAccountsTable.provider, this.provider), eq(paidMediaAccountsTable.isSelected, true))).limit(1);
+    if (!account) throw new PaidMediaProviderError("Selecione uma conta TikTok Ads deste workspace.", "PRECONDITION_FAILED", 409);
+    const cred = await credential(workspaceId, this.provider, account.integrationId);
+    const ids = cred.metadata.authorizedAdvertiserIds;
+    if (Array.isArray(ids) && ids.length > 0 && !ids.map(String).includes(account.providerAccountId)) throw new PaidMediaProviderError("TikTok: conta não autorizada por esta integração.", "AUTH", 403);
+    if (cred.expiresAt && cred.expiresAt.getTime() <= Date.now()) throw new PaidMediaProviderError("TikTok Ads: reconecte a credencial expirada.", "AUTH", 401);
+    return { account, token: cred.accessToken };
   }
-  private async call(workspaceId: string, path: string, body: Record<string, unknown>) {
-    const token = await this.token(workspaceId);
-    const response = await request(`${this.base}${path}`, { method: "POST", headers: { "Content-Type": "application/json", "Access-Token": token }, body: JSON.stringify(body) }, token);
-    const code = response["code"];
-    if (code !== undefined && Number(code) !== 0) throw new PaidMediaProviderError(String(response["message"] ?? "TikTok Marketing API rejected the request."), Number(code) === 401 ? "AUTH" : "PROVIDER_ERROR");
-    return response["data"] as Record<string, unknown> ?? {};
+  private async accountCall(workspaceId: string, accountId: string, path: string, payload: Record<string, unknown>, get = false) {
+    const { account, token } = await this.accountCredential(workspaceId, accountId);
+    const data = { ...payload, advertiser_id: account.providerAccountId };
+    const url = new URL(`${this.base}${path}`);
+    if (get) for (const [key, value] of Object.entries(data)) url.searchParams.set(key, typeof value === "object" ? JSON.stringify(value) : String(value));
+    const body = await request(url.toString(), { method: get ? "GET" : "POST", headers: { "Content-Type": "application/json", "Access-Token": token }, ...(get ? {} : { body: JSON.stringify(data) }) }, token, { retry: get });
+    if (typeof body.code !== "number") throw new PaidMediaProviderError("TikTok: resposta ambígua sem código de resultado.", "PROVIDER_ERROR", 502);
+    if (body.code !== 0) throw new PaidMediaProviderError("TikTok Marketing API rejeitou a operação.", "PROVIDER_ERROR", 422);
+    if (!body.data || typeof body.data !== "object") throw new PaidMediaProviderError("TikTok: resposta incompleta.", "PROVIDER_ERROR", 502);
+    return { data: Array.isArray(body.data) ? { list: body.data } : ttObject(body.data), requestId: body.request_id };
+  }
+  async diagnoseDataset(workspaceId: string, accountId: string, pixelCode: string) {
+    const { data, requestId } = await this.accountCall(workspaceId, accountId, "/pixel/list/", {}, true);
+    const pixels = Array.isArray(data.pixels) ? data.pixels as Record<string, unknown>[] : [];
+    const pixel = pixels.find(row => row.pixel_code === pixelCode || row.pixel_id === pixelCode);
+    return { provider: this.provider, source: "tiktok_pixel_list", checkedAt: new Date().toISOString(), accessible: Boolean(pixel), pixel: pixel ? { pixelId: pixel.pixel_id, pixelCode: pixel.pixel_code, name: pixel.pixel_name } : null, requestId, installationVerified: false, note: "Acesso ao pixel não comprova instalação no navegador ou no checkout." };
+  }
+  async listPixels(workspaceId: string, accountId: string) {
+    const { data, requestId } = await this.accountCall(workspaceId, accountId, "/pixel/list/", {}, true);
+    return { pixels: (Array.isArray(data.pixels) ? data.pixels as Record<string, unknown>[] : []).map(pixel => ({ pixelId: pixel.pixel_id, pixelCode: pixel.pixel_code, name: pixel.pixel_name })), requestId };
+  }
+  async uploadAdVideo(workspaceId: string, accountId: string, source: string) {
+    let url: URL;
+    try { url = new URL(source); } catch { throw new PaidMediaProviderError("Informe uma URL HTTPS válida para o vídeo.", "PRECONDITION_FAILED", 422); }
+    if (url.protocol !== "https:" || url.username || url.password || !url.hostname.includes(".") || isIP(url.hostname) || /(?:^|\.)(?:localhost|local|internal)$/.test(url.hostname)) throw new PaidMediaProviderError("O vídeo precisa estar em uma URL HTTPS pública.", "PRECONDITION_FAILED", 422);
+    const fileName = `nexos-${createHash("sha256").update(`${accountId}:${url.origin}${url.pathname}`).digest("hex")}.mp4`;
+    const { data, requestId } = await this.accountCall(workspaceId, accountId, "/file/video/ad/upload/", { upload_type: "UPLOAD_BY_URL", video_url: url.toString(), file_name: fileName, auto_fix_enabled: false });
+    const rows = Array.isArray(data.list) ? data.list as Record<string, unknown>[] : [];
+    const videoId = String(rows[0]?.video_id ?? data.video_id ?? "");
+    if (!videoId) throw new PaidMediaProviderError("TikTok não confirmou o identificador do vídeo. Confira a biblioteca antes de tentar novamente.", "PROVIDER_ERROR", 502);
+    const verified = await this.accountCall(workspaceId, accountId, "/file/video/ad/info/", { video_ids: [videoId] }, true);
+    if (!Array.isArray(verified.data.list) || !verified.data.list.some(row => ttObject(row).video_id === videoId)) throw new PaidMediaProviderError("TikTok ainda não confirmou a disponibilidade do vídeo na biblioteca.", "PROVIDER_ERROR", 502);
+    return { videoId, requestId, verified: true, fileName };
+  }
+  async preflightLaunch(workspaceId: string, accountId: string, tree: Record<string, unknown>) {
+    validateTikTokTree(tree);
+    await this.accountCredential(workspaceId, accountId);
+    const c = ttObject(tree.campaign), tracking = ttObject(c.tracking);
+    const ads = (tree.adGroups as Record<string, unknown>[]).flatMap(group => group.ads as Record<string, unknown>[]);
+    const checked = new Set<string>();
+    for (const ad of ads) {
+      const creative = ttObject(ad.creative);
+      const videoId = String(creative.videoId), identityId = String(creative.identityId);
+      if (checked.has(`${videoId}:${identityId}`)) continue;
+      const videos = await this.accountCall(workspaceId, accountId, "/file/video/ad/info/", { video_ids: [videoId] }, true);
+      const videoRows = Array.isArray(videos.data.list) ? videos.data.list as Record<string, unknown>[] : [];
+      if (!videoRows.some(row => row.video_id === videoId)) throw new PaidMediaProviderError("TikTok: vídeo aprovado indisponível nesta conta.", "PRECONDITION_FAILED", 422);
+      const identities = await this.accountCall(workspaceId, accountId, "/identity/get/", { identity_type: creative.identityType }, true);
+      const identityRows = Array.isArray(identities.data.identity_list) ? identities.data.identity_list as Record<string, unknown>[] : [];
+      if (!identityRows.some(row => row.identity_id === identityId)) throw new PaidMediaProviderError("TikTok: identidade aprovada indisponível nesta conta.", "PRECONDITION_FAILED", 422);
+      checked.add(`${videoId}:${identityId}`);
+    }
+    if (tracking.pixelId) {
+      const diagnostic = await this.diagnoseDataset(workspaceId, accountId, String(tracking.pixelId));
+      if (!diagnostic.accessible) throw new PaidMediaProviderError("TikTok: pixel não pertence à conta autorizada.", "PRECONDITION_FAILED", 422);
+    }
+  }
+  async createLaunchEntity(workspaceId: string, accountId: string, type: PaidMediaEntityKind, payload: Record<string, unknown>, _key: string): Promise<LaunchCreateResult> {
+    if (type === "creative") throw new PaidMediaProviderError("TikTok: o vídeo é vinculado no anúncio.", "UNSUPPORTED", 409);
+    const prefix = type === "ad_set" ? "adgroup" : type;
+    const pausedPayload = type === "ad" ? { ...payload, creatives: (Array.isArray(payload.creatives) ? payload.creatives : []).map(value => ({ ...ttObject(value), operation_status: "DISABLE" })) } : { ...payload, operation_status: "DISABLE" };
+    const { data, requestId } = await this.accountCall(workspaceId, accountId, `/${prefix}/create/`, pausedPayload);
+    const ids = data.ad_ids;
+    const id = type === "ad" && Array.isArray(ids) && ids.length === 1 ? String(ids[0]) : String(data[`${prefix}_id`] ?? "");
+    if (!id) throw new PaidMediaProviderError("TikTok: criação sem identificador; recuperação manual necessária.", "PROVIDER_ERROR", 502);
+    return { providerEntityId: id, entityType: type, parentProviderEntityId: String(payload.campaign_id ?? payload.adgroup_id ?? "") || undefined, evidence: { requestId, approvedPayload: payload } };
+  }
+  async readLaunchEntity(workspaceId: string, accountId: string, type: PaidMediaEntityKind, entityId: string): Promise<ProviderEntity> {
+    const prefix = type === "ad_set" ? "adgroup" : type;
+    const { data } = await this.accountCall(workspaceId, accountId, `/${prefix}/get/`, { filtering: { [`${prefix}_ids`]: [entityId] }, page: 1, page_size: 100 }, true);
+    const row = (Array.isArray(data.list) ? data.list as Record<string, unknown>[] : []).find(row => String(row[`${prefix}_id`]) === entityId);
+    if (!row) throw new PaidMediaProviderError("TikTok: entidade não encontrada na conta.", "PRECONDITION_FAILED", 404);
+    return { providerEntityId: entityId, entityType: type, status: String(row.operation_status), version: String(row.modify_time ?? ""), name: String(row[`${prefix}_name`] ?? ""), parentProviderEntityId: String(row[type === "ad" ? "adgroup_id" : "campaign_id"] ?? "") || undefined, data: row };
+  }
+  async reconcileLaunchEntity(): Promise<LaunchCreateResult | undefined> {
+    // TikTok create endpoints do not guarantee idempotency keys. An ambiguous
+    // request is held for recovery rather than issuing a duplicate mutation.
+    return undefined;
+  }
+  async deleteEntity(workspaceId: string, accountId: string, entityId: string, _key: string, type?: PaidMediaEntityKind) {
+    if (!type || type === "creative") throw new PaidMediaProviderError("TikTok: tipo de entidade obrigatório para compensação.", "PRECONDITION_FAILED", 422);
+    const prefix = type === "ad_set" ? "adgroup" : type;
+    const result = await this.accountCall(workspaceId, accountId, `/${prefix}/status/update/`, { [`${prefix}_ids`]: [entityId], operation_status: "DELETE" });
+    return { evidence: { requestId: result.requestId, deletedId: entityId } };
+  }
+  async verifyLaunchEntityAbsence(workspaceId: string, accountId: string, type: PaidMediaEntityKind, entityId: string) {
+    try { const row = await this.readLaunchEntity(workspaceId, accountId, type, entityId); return { absent: row.data.operation_status === "DELETE", evidence: { id: entityId, status: row.data.operation_status } }; }
+    catch (error) { if (error instanceof PaidMediaProviderError && error.status === 404) return { absent: true, evidence: { id: entityId, absent: true } }; throw error; }
   }
   async listAccounts(workspaceId: string): Promise<ProviderAccount[]> {
-    const data = await this.call(workspaceId, "/advertiser/info/", {});
-    const rows = (data["list"] ?? data["data"] ?? []) as Array<Record<string, unknown>>;
-    return normalizeTikTokAccounts(rows);
+    const cred = await credential(workspaceId, this.provider);
+    return this.listAccountsForIntegration(workspaceId, cred.integrationId);
+  }
+  async listAccountsForIntegration(workspaceId: string, integrationId: string): Promise<ProviderAccount[]> {
+    const cred = await credential(workspaceId, this.provider, integrationId);
+    const ids = cred.metadata.authorizedAdvertiserIds;
+    if (!Array.isArray(ids) || !ids.length) throw new PaidMediaProviderError("Reconecte o TikTok Ads para autorizar as contas de anúncios.", "AUTH", 409);
+    const url = new URL(`${this.base}/advertiser/info/`);
+    url.searchParams.set("advertiser_ids", JSON.stringify(ids.map(String)));
+    url.searchParams.set("fields", JSON.stringify(["advertiser_id", "advertiser_name", "currency", "timezone"]));
+    const result = await request(url.toString(), { method: "GET", headers: { "Access-Token": cred.accessToken } }, cred.accessToken);
+    if (result.code !== 0) throw new PaidMediaProviderError("TikTok: não foi possível consultar as contas autorizadas.", "AUTH", 403);
+    const data = ttObject(result.data);
+    return normalizeTikTokAccounts(Array.isArray(data.list) ? data.list : []);
   }
   async listEntities(workspaceId: string, accountId: string, type: PaidMediaEntityKind): Promise<ProviderEntity[]> {
     const endpoint = type === "ad_set" ? "/adgroup/get/" : `/${type}/get/`;
     if (type === "creative") throw new PaidMediaProviderError("TikTok creative listing is not supported by this adapter.", "UNSUPPORTED");
-    const data = await this.call(workspaceId, endpoint, { advertiser_id: accountId, page: 1, page_size: 100 });
+    const { data } = await this.accountCall(workspaceId, accountId, endpoint, { page: 1, page_size: 100 }, true);
     const rows = (data["list"] ?? []) as Array<Record<string, unknown>>;
     const idKey = type === "ad_set" ? "adgroup_id" : `${type}_id`;
     return rows.map((row) => ({ providerEntityId: String(row[idKey]), entityType: type, parentProviderEntityId: String(row[type === "ad" ? "adgroup_id" : type === "ad_set" ? "campaign_id" : ""] ?? "") || undefined, name: row["campaign_name"] as string | undefined, status: row["operation_status"] as string | undefined, version: row["modify_time"] as string | undefined, data: row }));
   }
   async fetchInsights(workspaceId: string, accountId: string, type: PaidMediaEntityKind, since: string, until: string): Promise<ProviderInsight[]> {
-    const data = await this.call(workspaceId, "/report/integrated/get/", { advertiser_id: accountId, service_type: "AUCTION", report_type: "BASIC", data_level: type === "ad_set" ? "AUCTION_ADGROUP" : `AUCTION_${type.toUpperCase()}`, dimensions: ["stat_time_day"], metrics: ["spend", "impressions", "clicks", "conversion", "total_purchase_value"], start_date: since, end_date: until, page: 1, page_size: 1000 });
+    const { data } = await this.accountCall(workspaceId, accountId, "/report/integrated/get/", { service_type: "AUCTION", report_type: "BASIC", data_level: type === "ad_set" ? "AUCTION_ADGROUP" : `AUCTION_${type.toUpperCase()}`, dimensions: ["stat_time_day", type === "ad_set" ? "adgroup_id" : `${type}_id`], metrics: ["spend", "impressions", "clicks", "conversion", "total_purchase_value"], start_date: since, end_date: until, page: 1, page_size: 1000 }, true);
     const rows = (data["list"] ?? []) as Array<Record<string, unknown>>;
     return normalizeTikTokInsights(rows, type);
   }
   async getEntitySnapshot(workspaceId: string, accountId: string, entityId: string, type: PaidMediaEntityKind): Promise<ProviderEntity> {
-    const entities = await this.listEntities(workspaceId, accountId, type);
-    const entity = entities.find((value) => value.providerEntityId === entityId);
-    if (!entity) throw new PaidMediaProviderError("TikTok entity was not found.", "PRECONDITION_FAILED", 404);
-    return entity;
+    return this.readLaunchEntity(workspaceId, accountId, type, entityId);
   }
   async applyAction(workspaceId: string, accountId: string, action: ProviderAction): Promise<ProviderActionResult> {
     if (!["pause", "resume", "update_daily_budget", "update_bid"].includes(action.type)) throw new PaidMediaProviderError(`TikTok does not support ${action.type} through this executor.`, "UNSUPPORTED");
     const before = await this.getEntitySnapshot(workspaceId, accountId, action.entityId, action.entityType);
     if (action.expectedVersion && before.version !== action.expectedVersion) throw new PaidMediaProviderError("Entity changed since proposal creation.", "PRECONDITION_FAILED", 409);
-    const endpoint = action.entityType === "ad_set" ? "/adgroup/update/" : `/${action.entityType}/update/`;
+    const prefix = action.entityType === "ad_set" ? "adgroup" : action.entityType;
+    const statusAction = action.type === "pause" || action.type === "resume";
+    const endpoint = `/${prefix}/${statusAction ? "status/update" : "update"}/`;
     const idKey = action.entityType === "ad_set" ? "adgroup_id" : `${action.entityType}_id`;
     const patch = action.type === "pause" ? { operation_status: "DISABLE" } : action.type === "resume" ? { operation_status: "ENABLE" } : action.type === "update_daily_budget" ? { budget: action.changes["dailyBudget"], budget_mode: "BUDGET_MODE_DAY" } : { bid_price: action.changes["bidAmount"] };
-    const data = await this.call(workspaceId, endpoint, { advertiser_id: accountId, [idKey]: action.entityId, ...patch });
-    return { providerRequestId: String(data["request_id"] ?? ""), evidence: data };
+    const { data, requestId } = await this.accountCall(workspaceId, accountId, endpoint, { [statusAction ? `${prefix}_ids` : idKey]: statusAction ? [action.entityId] : action.entityId, ...patch });
+    return { providerRequestId: String(requestId ?? ""), evidence: data };
   }
   async verifyAction(workspaceId: string, accountId: string, action: ProviderAction) {
     const after = await this.getEntitySnapshot(workspaceId, accountId, action.entityId, action.entityType);

@@ -4,6 +4,7 @@ import { db, paidMediaDatasetsTable, paidMediaEventReceiptsTable, pagesTable } f
 import { trackCapturedLandingLead, trackLandingPageView } from "../modules/landing-publication/landing-tracking.service.js";
 import { recordDatasetEvent } from "../modules/paid-media/attribution.service.js";
 import { paidMediaProvider } from "../modules/paid-media/providers.js";
+import { decodeCapiRetry } from "../modules/paid-media/capi-retry.service.js";
 
 // Exercise the real service and its SQL predicates against a memory store.
 // No network, credential or database connection is used.
@@ -11,6 +12,7 @@ const original = { insert: db.insert, select: db.select, update: db.update };
 const oldKey = process.env["INTEGRATION_TOKEN_ENCRYPTION_KEY"];
 process.env["INTEGRATION_TOKEN_ENCRYPTION_KEY"] = Buffer.alloc(32, 7).toString("base64");
 const adapter = paidMediaProvider("meta_ads"), send = adapter.sendConversionEvent;
+const tikTokAdapter = paidMediaProvider("tiktok_ads"), tikTokSend = tikTokAdapter.sendConversionEvent;
 const rows = new Map<string, any>();
 const dialect = new PgDialect();
 let providerCalls = 0, claimPredicates = 0;
@@ -109,10 +111,36 @@ try {
   const pageView = await trackLandingPageView({ ...trackingInput, eventId: "visit" }, { origin: "https://example.test", ip: "127.0.0.1", userAgent: "private-agent" });
   assert.equal(pageView.deliveryStatus, "sent");
   assert.equal(sentLandingEvent.eventId, "pageview:page:visit");
+  const ttDataset = { ...dataset, provider: "tiktok_ads" as const };
+  let tikTokCalls = 0;
+  tikTokAdapter.sendConversionEvent = async (workspace, account, pixel, value) => {
+    tikTokCalls++;
+    assert.equal(workspace, dataset.workspaceId);
+    assert.equal(account, dataset.accountId);
+    assert.equal(pixel, dataset.providerDatasetId);
+    assert.equal(value.userData.ttclid, "click-id");
+    return { providerRequestId: "tt-receipt", evidence: { accepted: true } };
+  };
+  const ttEvent = { ...event, eventId: "tiktok-lead", matchKeys: { email: "person@example.test", ttclid: "click-id" } };
+  await recordDatasetEvent(ttDataset, { ...ttEvent, source: "browser" });
+  await Promise.all([recordDatasetEvent(ttDataset, ttEvent), recordDatasetEvent(ttDataset, ttEvent)]);
+  assert.equal(tikTokCalls, 1, "TikTok browser/server and concurrent events share one atomic delivery claim");
+  await recordDatasetEvent(ttDataset, ttEvent);
+  assert.equal(tikTokCalls, 1, "TikTok accepted receipt cannot be replayed");
+  assert.equal((await recordDatasetEvent(ttDataset, { ...ttEvent, eventId: "tt-denied", payload: { marketingConsent: false } })).deliveryStatus, "consent_withheld");
+  assert.equal(tikTokCalls, 1);
+  tikTokAdapter.sendConversionEvent = async () => { throw new Error("timeout"); };
+  const ttFailure = await recordDatasetEvent(ttDataset, { ...ttEvent, eventId: "tt-timeout" });
+  assert.equal(ttFailure.deliveryStatus, "pending");
+  assert.ok(rows.get("tt-timeout").retryPayload, "TikTok ambiguous delivery keeps encrypted retry with the original event id");
+  const pendingTT = rows.get("tt-timeout");
+  assert.equal(decodeCapiRetry(pendingTT.retryPayload, ttDataset, pendingTT).eventId, "tt-timeout");
+  assert.throws(() => decodeCapiRetry(pendingTT.retryPayload, { ...ttDataset, provider: "meta_ads" }, pendingTT), /scope/);
   console.log("Meta receipt service: PASS (consent, hashed persistence, browser/server ordering, concurrent claim, replay, event identity)");
 } finally {
   if (oldKey === undefined) delete process.env["INTEGRATION_TOKEN_ENCRYPTION_KEY"]; else process.env["INTEGRATION_TOKEN_ENCRYPTION_KEY"] = oldKey;
   Object.assign(db, original);
   adapter.sendConversionEvent = send;
+  tikTokAdapter.sendConversionEvent = tikTokSend;
   release?.();
 }

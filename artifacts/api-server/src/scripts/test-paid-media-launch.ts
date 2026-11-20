@@ -15,7 +15,7 @@ assert.deepEqual(allocateApprovedBudget({ amount: 10, kind: "daily" }, 3), [3.34
 assert.equal(allocateApprovedBudget({ amount: 10, kind: "lifetime" }, 3).reduce((a, b) => a + b, 0) <= 10, true);
 assert.equal(paidMediaProviderCapabilities("meta_ads").launchTreeCreation, "supported");
 assert.equal(paidMediaProviderCapabilities("google_ads").launchTreeCreation, "unsupported");
-assert.equal(paidMediaProviderCapabilities("tiktok_ads").launchTreeCreation, "unsupported");
+assert.equal(paidMediaProviderCapabilities("tiktok_ads").launchTreeCreation, "supported");
 
 // Exact binding inputs are represented in the immutable compile contract.
 assert.equal((tree["accountId"] ?? "act_123"), "act_123");
@@ -41,7 +41,7 @@ for (const [field, code] of [["budget", "BUDGET_AUTHORIZATION_REQUIRED"], ["dest
 assert.ok(buildLaunchReadiness({ masterplan: plan, account: null, intake, tree, provider: "meta_ads" }).blockers.some((x) => x.code === "ACCOUNT_NOT_FOUND"));
 assert.ok(buildLaunchReadiness({ masterplan: plan, account: { ...account, isSelected: false }, intake, tree, provider: "meta_ads" }).blockers.some((x) => x.code === "PRODUCTION_ACCOUNT_SELECTION_REQUIRED"));
 assert.ok(buildLaunchReadiness({ masterplan: plan, account, intake, tree, provider: "google_ads" }).blockers.some((x) => x.code === "PROVIDER_CAPABILITY_BLOCKED"));
-assert.ok(buildLaunchReadiness({ masterplan: plan, account, intake, tree, provider: "tiktok_ads" }).blockers.some((x) => x.code === "PROVIDER_CAPABILITY_BLOCKED"));
+assert.ok(buildLaunchReadiness({ masterplan: plan, account, intake, tree, provider: "tiktok_ads" }).blockers.some((x) => x.code === "TIKTOK_CONFIGURATION_INVALID"));
 
 let mutations = 0; const calls: string[] = []; const ids = new Map<string, number>();
 const transport = async (path: string, payload: Record<string, unknown>, key: string) => {

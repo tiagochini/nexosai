@@ -14,6 +14,7 @@ import {
   executionEvidenceTable,
   paidMediaLaunchStepsTable,
   paidMediaLaunchAttemptsTable,
+  auditLogsTable,
 } from "@workspace/db";
 import { randomUUID } from "node:crypto";
 import { requireAuth } from "../auth/auth.middleware.js";
@@ -281,6 +282,22 @@ router.get("/datasets", async (req, res): Promise<void> => {
     lastEventAt: paidMediaDatasetsTable.lastEventAt, lastDiagnosticAt: paidMediaDatasetsTable.lastDiagnosticAt,
     createdAt: paidMediaDatasetsTable.createdAt, updatedAt: paidMediaDatasetsTable.updatedAt,
   }).from(paidMediaDatasetsTable).where(eq(paidMediaDatasetsTable.workspaceId, req.auth.workspaceId)) });
+});
+router.get("/accounts/tiktok_ads/:accountId/pixels", async (req, res): Promise<void> => {
+  try {
+    const result = await paidMediaProvider("tiktok_ads").listPixels!(req.auth.workspaceId, req.params["accountId"]);
+    res.json(result);
+  } catch (error) {
+    res.status(error instanceof PaidMediaProviderError ? error.status ?? 502 : 502).json({ error: "Não foi possível consultar os pixels do TikTok. Confira a conexão e tente novamente.", code: "TIKTOK_PIXEL_LOOKUP_FAILED" });
+  }
+});
+router.post("/accounts/tiktok_ads/:accountId/videos", async (req, res): Promise<void> => {
+  if (typeof req.body?.videoUrl !== "string" || req.body.videoUrl.length > 4096) { res.status(400).json({ error: "Informe a URL pública do vídeo.", code: "VALIDATION_ERROR" }); return; }
+  try {
+    const result = await paidMediaProvider("tiktok_ads").uploadAdVideo!(req.auth.workspaceId, req.params["accountId"], req.body.videoUrl);
+    await db.insert(auditLogsTable).values({ workspaceId: req.auth.workspaceId, actor: req.auth.userId, action: "tiktok_ad_video_uploaded", data: { accountId: req.params["accountId"], videoId: result.videoId, requestId: result.requestId } });
+    res.status(201).json(result);
+  } catch (error) { res.status(error instanceof PaidMediaProviderError ? error.status ?? 502 : 502).json({ error: "Não foi possível confirmar o envio do vídeo. Confira a biblioteca do TikTok antes de tentar novamente.", code: "TIKTOK_VIDEO_UPLOAD_UNCONFIRMED" }); }
 });
 router.post("/datasets", async (req, res): Promise<void> => {
   const provider = providerFrom(req.body?.provider);

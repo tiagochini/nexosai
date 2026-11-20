@@ -3,10 +3,12 @@ import {
   db, paidMediaAccountsTable, paidMediaAttributionTouchpointsTable,
   paidMediaConversionsTable, paidMediaDatasetsTable, paidMediaEntitiesTable,
   paidMediaEventReceiptsTable, paidMediaInsightsTable,
+  pagesTable,
 } from "@workspace/db";
-import { paidMediaProvider, paidMediaProviderCapabilities, normalizeMetaCapiEvent } from "./providers.js";
+import { paidMediaProvider, paidMediaProviderCapabilities, normalizeProviderConversion } from "./providers.js";
 
 import { capiRetryEnvelope, finishCapiAttempt } from "./capi-retry.service.js";
+import { tikTokPageConfiguration } from "./tiktok-pixel-diagnostics.js";
 
 function finiteNumber(value: unknown, name: string): number {
   const parsed = Number(value);
@@ -21,10 +23,10 @@ export async function recordDatasetEvent(
   const occurredAt = new Date(input.occurredAt);
   if (Number.isNaN(occurredAt.getTime()) || !input.eventId || !input.eventName) throw new Error("eventId, eventName and a valid occurredAt are required.");
   const consented = input.payload?.["marketingConsent"] === true;
-  const normalized = normalizeMetaCapiEvent({ ...input, matchKeys: consented ? input.matchKeys : {} });
+  const normalized = normalizeProviderConversion(dataset.provider, { ...input, matchKeys: consented ? input.matchKeys : {} });
   const { client_ip_address: _ip, client_user_agent: _userAgent, ...safeKeys } = normalized.userData;
   const safePayload = { ...normalized.customData, marketingConsent: consented };
-  const queued = input.source === "server" && consented && dataset.provider === "meta_ads" && dataset.providerDatasetId && Object.keys(normalized.userData).length
+  const queued = input.source === "server" && consented && paidMediaProviderCapabilities(dataset.provider).conversionsApi === "supported" && dataset.providerDatasetId && Object.keys(normalized.userData).length
     ? { ...capiRetryEnvelope(dataset, normalized), deliveryAttempts: 0, retryAt: new Date() } : {};
   const inserted = await db.insert(paidMediaEventReceiptsTable).values({
     workspaceId: dataset.workspaceId, datasetId: dataset.id, source: input.source,
@@ -51,7 +53,7 @@ export async function recordDatasetEvent(
   }
   let capiEvent;
   try {
-    capiEvent = normalizeMetaCapiEvent({ eventName: input.eventName, eventId: input.eventId, occurredAt: existing.occurredAt.toISOString(), matchKeys: input.matchKeys, payload: input.payload });
+    capiEvent = normalizeProviderConversion(dataset.provider, { eventName: input.eventName, eventId: input.eventId, occurredAt: existing.occurredAt.toISOString(), matchKeys: input.matchKeys, payload: input.payload });
     if (!Object.keys(capiEvent.userData).length) {
       await db.update(paidMediaEventReceiptsTable).set({ deliveryStatus: "capability_blocked", retryPayload: null, retryAt: null, providerErrorCode: "MISSING_MATCH_KEYS", providerErrorMessage: "No consented Meta match key was supplied; no provider event was sent." })
         .where(and(eq(paidMediaEventReceiptsTable.id, existing.id), eq(paidMediaEventReceiptsTable.deliveryStatus, "pending"), isNull(paidMediaEventReceiptsTable.providerAttemptedAt)));
@@ -85,6 +87,13 @@ export async function recordDatasetEvent(
 export async function datasetDiagnostics(workspaceId: string, datasetId: string) {
   const [dataset] = await db.select().from(paidMediaDatasetsTable).where(and(eq(paidMediaDatasetsTable.id, datasetId), eq(paidMediaDatasetsTable.workspaceId, workspaceId))).limit(1);
   if (!dataset) throw new Error("Dataset not found.");
+  let providerDiagnostic: Record<string, unknown> | null = null;
+  const adapter = paidMediaProvider(dataset.provider);
+  if (adapter.diagnoseDataset) {
+    try { providerDiagnostic = await adapter.diagnoseDataset(workspaceId, dataset.accountId, dataset.providerDatasetId); }
+    catch { providerDiagnostic = { accessible: false, status: "unavailable", note: "Não foi possível consultar o pixel no provedor; confira a conta, a autorização e tente novamente." }; }
+  }
+  const pageConfiguration = dataset.provider === "tiktok_ads" ? tikTokPageConfiguration(await db.select({ id: pagesTable.id, html: pagesTable.html, status: pagesTable.status, publishedUrl: pagesTable.publishedUrl, metadata: pagesTable.metadata }).from(pagesTable).where(eq(pagesTable.workspaceId, workspaceId)), dataset.providerDatasetId) : [];
   const [stats] = await db.select({
     events: sql<number>`count(*)::int`,
     matched: sql<number>`count(*) filter (where ${paidMediaEventReceiptsTable.eventMatchKeys} <> '{}'::jsonb)::int`,
@@ -118,6 +127,8 @@ export async function datasetDiagnostics(workspaceId: string, datasetId: string)
   const measured = stats?.matched ?? 0;
   return {
     datasetId: dataset.id,
+    providerDiagnostic,
+    pageConfiguration,
     lastEventAt: dataset.lastEventAt,
     lastDiagnosticAt: new Date().toISOString(),
     eventCount: events,

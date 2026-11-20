@@ -13,6 +13,7 @@ import { isPaidMediaIntegration } from "../integrations/integration-purpose.js";
 import { metaAdSetPayload, metaCampaignPayload, validateMetaTree } from "./meta-launch.policy.js";
 
 import { metaCreativePayload } from "./meta-assets.policy.js";
+import { validateTikTokTree, tikTokCampaignPayload, tikTokGroupPayload, tikTokAdPayload, validateTikTokReadback } from "./tiktok-launch.policy.js";
 
 type Json = Record<string, unknown>;
 const obj = (v: unknown): Json => v && typeof v === "object" && !Array.isArray(v) ? v as Json : {};
@@ -164,6 +165,10 @@ export function compileMasterplanTree(snapshot: unknown, provider: PaidMediaProv
       validationBlockers.push({ code: error.code ?? "META_CONFIGURATION_INVALID", message: error.message });
     }
   }
+  if (provider === "tiktok_ads") {
+    try { validateTikTokTree(tree); meta = tikTokCampaignPayload(tree.campaign); }
+    catch (error) { if (!(error instanceof AppError)) throw error; validationBlockers.push({ code: error.code ?? "TIKTOK_CONFIGURATION_INVALID", message: error.message }); }
+  }
   const validatedTree = { ...tree, validationBlockers };
   return { tree: validatedTree, providerPayload: { [provider]: { campaign: meta } }, planHash: deterministicHash({ tree: validatedTree, providerPayload: { [provider]: { campaign: meta } } }) };
 }
@@ -184,6 +189,9 @@ export function buildLaunchReadiness(input: {
   if (input.account && (!input.account.currency || !input.account.timezone)) blockers.push({ code: "ACCOUNT_PROFILE_INCOMPLETE", message: "Account currency and timezone are required." });
   if (!input.intake || !["approved", "locked"].includes(input.intake.status)) blockers.push({ code: "PRODUCT_INTAKE_NOT_APPROVED", message: "An approved product intake version is required." });
   const root = obj(input.tree), campaign = obj(root["campaign"]);
+  if (input.provider === "tiktok_ads") {
+    try { validateTikTokTree(root); } catch (error) { if (!(error instanceof AppError)) throw error; blockers.push({ code: error.code ?? "TIKTOK_CONFIGURATION_INVALID", message: error.message }); }
+  }
   if (input.provider === "meta_ads") {
     try { validateMetaTree(root); } catch (error) {
       if (!(error instanceof AppError)) throw error;
@@ -199,9 +207,9 @@ export function buildLaunchReadiness(input: {
     || (campaign["budgetKind"] === "lifetime" && (!Number.isFinite(lifetimeStartMs) || !Number.isFinite(lifetimeEndMs) || lifetimeStartMs >= lifetimeEndMs))) blockers.push({ code: "BUDGET_SEMANTICS_REQUIRED", message: "Lifetime budgets require an explicit valid startTime before endTime." });
   if (typeof campaign["destination"] !== "string" || !/^https?:\/\//i.test(campaign["destination"])) blockers.push({ code: "DESTINATION_URL_REQUIRED", message: "A valid destination URL is required." });
   const capabilities = paidMediaProviderCapabilities(input.provider);
-  if (input.provider !== "meta_ads" || capabilities.operations?.campaign !== "supported" || capabilities.operations?.adGroup !== "supported" || capabilities.operations?.ad !== "supported") blockers.push({ code: "PROVIDER_CAPABILITY_BLOCKED", message: "Provider cannot create the complete campaign tree." });
+  if (capabilities.launchTreeCreation !== "supported" || capabilities.operations?.campaign !== "supported" || capabilities.operations?.adGroup !== "supported" || capabilities.operations?.ad !== "supported") blockers.push({ code: "PROVIDER_CAPABILITY_BLOCKED", message: "Provider cannot create the complete campaign tree." });
   const tracking = obj(root["tracking"] ?? root["trackingRequirements"] ?? campaign["tracking"]);
-  if (campaign["objective"] !== "OUTCOME_TRAFFIC" && (!tracking["pixelId"] || !tracking["conversionEvent"])) blockers.push({ code: "TRACKING_REQUIREMENTS_REQUIRED", message: "A tracking pixel/dataset and conversion event are required." });
+  if (!["OUTCOME_TRAFFIC", "TRAFFIC"].includes(String(campaign["objective"])) && (!tracking["pixelId"] || !tracking["conversionEvent"])) blockers.push({ code: "TRACKING_REQUIREMENTS_REQUIRED", message: "A tracking pixel/dataset and conversion event are required." });
   if (arr(obj(root["campaign"])["creatives"] ?? root["creatives"]).length === 0 && arr(obj(root["content"])["references"]).length === 0 && !arr(root["adGroups"]).some((group) => arr(obj(group)["ads"]).some((ad) => Object.values(obj(obj(ad)["creative"])).some((value) => value != null)))) blockers.push({ code: "CREATIVE_READINESS_REQUIRED", message: "At least one approved creative/content reference is required." });
   const constraints = obj(root["operatingMemory"] ?? root["constraints"]);
   if (arr(constraints["prohibitedClaims"]).length || arr(constraints["legalBoundaries"]).length) blockers.push({ code: "POLICY_LEGAL_REVIEW_REQUIRED", message: "Policy and legal constraints require explicit review before activation." });
@@ -309,10 +317,13 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
    }
   try {
     const groups = Array.isArray((plan.tree as Json)["adGroups"]) ? (plan.tree as Json)["adGroups"] as Json[] : [];
+    const isTikTok = plan.provider === "tiktok_ads";
+    const validateReadback = isTikTok ? validateTikTokReadback : validateLaunchReadback;
+    const budgetMinorUnits = (row: Json) => isTikTok ? Math.round(Number(row.budget ?? 0) * 100) : Number(row[obj((plan.tree as Json).campaign).budgetKind === "daily" ? "daily_budget" : "lifetime_budget"]);
     const pendingSteps = [{ key: "campaign", type: "campaign" as const }, ...groups.flatMap((group) => [
       { key: String(group["key"]), type: "ad_set" as const },
       ...((Array.isArray(group["ads"]) ? group["ads"] : []) as Json[]).flatMap((ad) => [
-        { key: `${String(ad["key"])}:creative`, type: "creative" as const },
+        ...(isTikTok ? [] : [{ key: `${String(ad["key"])}:creative`, type: "creative" as const }]),
         { key: `${String(ad["key"])}:ad`, type: "ad" as const },
       ]),
     ])];
@@ -336,7 +347,7 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
       eq(paidMediaAccountsTable.provider, plan.provider),
     )).limit(1))[0]!;
     if (!account) throw new AppError(409, "Launch account is not owned by this workspace.", "WORKSPACE_SCOPE_REJECTED");
-    validateMetaTree(tree);
+    if (isTikTok) validateTikTokTree(tree); else validateMetaTree(tree);
     if (obj(campaign["budget"])["currency"] !== account.currency) throw new AppError(409, "A moeda aprovada difere da conta atual.", "BUDGET_CURRENCY_MISMATCH");
     if (!adapter.preflightLaunch) throw new AppError(409, "Validação da conta Meta indisponível.", "PROVIDER_CAPABILITY_BLOCKED");
     await adapter.preflightLaunch(workspaceId, plan.accountId, tree);
@@ -359,19 +370,19 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
       const dependencies = step.entityType === "ad_set"
         ? [campaignStep]
         : step.entityType === "ad"
-          ? [adSetStep, creativeStep]
+          ? isTikTok ? [adSetStep] : [adSetStep, creativeStep]
           : [];
       for (const dependency of dependencies) {
         if (!dependency?.providerEntityId || dependency.status !== "verified") {
           throw new AppError(409, "Verified launch dependency is missing.", "PROVIDER_READBACK_INVALID");
         }
         const dependencyReadback = await adapter.readLaunchEntity(workspaceId, plan.accountId, dependency.entityType, dependency.providerEntityId);
-        validateLaunchReadback(dependency.entityType, dependency.providerEntityId, dependencyReadback.data, obj(dependency.readback));
+        validateReadback(dependency.entityType, dependency.providerEntityId, dependencyReadback.data, isTikTok ? obj(obj(dependency.providerResponse).approvedPayload) : obj(dependency.readback));
       }
       const payload: Json = step.entityType === "campaign" ? obj(providerConfig["campaign"])
-        : step.entityType === "ad_set" ? metaAdSetPayload(campaign, obj(group), campaignStep?.providerEntityId)
+        : step.entityType === "ad_set" ? isTikTok ? tikTokGroupPayload(campaign, obj(group), campaignStep?.providerEntityId ?? undefined) : metaAdSetPayload(campaign, obj(group), campaignStep?.providerEntityId)
         : step.entityType === "creative" ? metaCreativePayload(obj(ad?.ad?.["creative"]), ad?.ad?.["key"])
-        : { name: ad?.ad?.["key"], adset_id: adSetStep?.providerEntityId, creative: { creative_id: creativeStep?.providerEntityId } };
+        : isTikTok ? tikTokAdPayload(obj(ad?.ad), adSetStep?.providerEntityId ?? undefined) : { name: ad?.ad?.["key"], adset_id: adSetStep?.providerEntityId, creative: { creative_id: creativeStep?.providerEntityId } };
        const intent = obj(step.providerResponse)["preCreateIntent"];
        if (!step.providerEntityId && intent) {
          if (!adapter.reconcileLaunchEntity) throw new AppError(409, "Provider mutation may have been accepted but cannot be reconciled safely.", "LAUNCH_MANUAL_RECOVERY_REQUIRED");
@@ -383,8 +394,8 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
        }
        if (step.providerEntityId) {
         const readback = await adapter.readLaunchEntity(workspaceId, plan.accountId, step.entityType, step.providerEntityId);
-        validateLaunchReadback(step.entityType, step.providerEntityId, readback.data, payload);
-        if ((campaign["budgetMode"] === "cbo" && step.entityType === "campaign") || (campaign["budgetMode"] === "abo" && step.entityType === "ad_set")) actualAdSetBudgetMinorUnits += Number(readback.data[campaign["budgetKind"] === "daily" ? "daily_budget" : "lifetime_budget"]);
+        validateReadback(step.entityType, step.providerEntityId, readback.data, payload);
+        if ((campaign["budgetMode"] === "cbo" && step.entityType === "campaign") || (campaign["budgetMode"] === "abo" && step.entityType === "ad_set")) actualAdSetBudgetMinorUnits += budgetMinorUnits(readback.data);
         await db.update(paidMediaLaunchStepsTable).set({ status: "verified", readback: readback.data }).where(eq(paidMediaLaunchStepsTable.id, step.id));
         step.status = "verified";
         step.readback = readback.data;
@@ -409,8 +420,8 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
        }
       await db.update(paidMediaLaunchStepsTable).set({ providerEntityId: result.providerEntityId, status: "created", providerResponse: result.evidence }).where(eq(paidMediaLaunchStepsTable.id, step.id));
       const readback = await adapter.readLaunchEntity(workspaceId, plan.accountId, step.entityType, result.providerEntityId);
-      validateLaunchReadback(step.entityType, result.providerEntityId, readback.data, payload);
-      if ((campaign["budgetMode"] === "cbo" && step.entityType === "campaign") || (campaign["budgetMode"] === "abo" && step.entityType === "ad_set")) actualAdSetBudgetMinorUnits += Number(readback.data[campaign["budgetKind"] === "daily" ? "daily_budget" : "lifetime_budget"]);
+      validateReadback(step.entityType, result.providerEntityId, readback.data, payload);
+      if ((campaign["budgetMode"] === "cbo" && step.entityType === "campaign") || (campaign["budgetMode"] === "abo" && step.entityType === "ad_set")) actualAdSetBudgetMinorUnits += budgetMinorUnits(readback.data);
       await db.update(paidMediaLaunchStepsTable).set({ status: "verified", readback: readback.data }).where(eq(paidMediaLaunchStepsTable.id, step.id));
       step.providerEntityId = result.providerEntityId;
       step.status = "verified";
@@ -459,7 +470,7 @@ export async function activateLaunchPlan(workspaceId: string, planId: string) {
       )).returning({ id: paidMediaLaunchAttemptsTable.id });
       if (!ownerCheck) throw new AppError(409, "Launch lease was lost; compensation delegated to current owner.", "LAUNCH_OWNERSHIP_LOST");
       try {
-        const deleted = await adapter.deleteEntity!(workspaceId, plan.accountId, step.providerEntityId, `compensate:${plan.id}:${step.id}`);
+        const deleted = await adapter.deleteEntity!(workspaceId, plan.accountId, step.providerEntityId, `compensate:${plan.id}:${step.id}`, step.entityType);
         const absence = await adapter.verifyLaunchEntityAbsence!(workspaceId, plan.accountId, step.entityType, step.providerEntityId);
         if (!absence.absent) throw new Error("Provider deletion was not verified.");
         await db.update(paidMediaLaunchStepsTable).set({ status: "compensated", compensation: { delete: deleted.evidence, absence: absence.evidence } }).where(eq(paidMediaLaunchStepsTable.id, step.id));
@@ -512,7 +523,7 @@ export async function compensateLaunchPlan(workspaceId: string, planId: string) 
   for (const step of steps) {
     if (!step.providerEntityId) continue;
     try {
-      const deleted = await adapter.deleteEntity(workspaceId, plan.accountId, step.providerEntityId, `compensate:${plan.id}:${step.id}`);
+      const deleted = await adapter.deleteEntity(workspaceId, plan.accountId, step.providerEntityId, `compensate:${plan.id}:${step.id}`, step.entityType);
       const absence = await adapter.verifyLaunchEntityAbsence(workspaceId, plan.accountId, step.entityType, step.providerEntityId);
       evidence.push(redactLaunchEvidence({ stepId: step.id, delete: deleted.evidence, absence: absence.evidence }));
       if (!absence.absent) compensated = false;

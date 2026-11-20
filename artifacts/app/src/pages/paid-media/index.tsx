@@ -1,4 +1,5 @@
 import { GoalReportsTab } from "./components/GoalReportsTab";
+import { TikTokPixelsTab } from "./components/TikTokPixelsTab";
 import { MetaAudiencesTab } from "./components/MetaAudiencesTab";
 import { MetaAdvancedOperationsTab } from "./components/MetaAdvancedOperationsTab";
 import { MetaCapiTestsTab } from "./components/MetaCapiTestsTab";
@@ -35,6 +36,7 @@ export default function PaidMediaPage() {
           <TabsTrigger value="meta-audiences" className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest gap-2"><Target className="h-3.5 w-3.5" />{t("Públicos Meta", "Meta audiences", "Públicos Meta")}</TabsTrigger>
           <TabsTrigger value="meta-advanced" className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest gap-2">CRM &amp; Experiments</TabsTrigger>
           <TabsTrigger value="capi-tests" className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest">Test Events</TabsTrigger>
+          <TabsTrigger value="tiktok-pixels" className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest">TikTok Pixels</TabsTrigger>
           <TabsTrigger value="accounts" className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest gap-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-none border border-transparent data-[state=active]:border-primary/30">
             <Activity className="h-3.5 w-3.5" /> {t("Integrações & Sync", "Integrations & Sync", "Integraciones y sincronización")}
           </TabsTrigger>
@@ -53,6 +55,7 @@ export default function PaidMediaPage() {
         <div className="flex-1 mt-4 bg-card/10 border border-border/30 rounded-sm p-4 overflow-y-auto relative scanline-overlay">
           <div className="relative z-10 h-full">
             <TabsContent value="launch-plans" className="m-0 h-full"><LaunchPlansTab /></TabsContent>
+            <TabsContent value="tiktok-pixels" className="m-0 h-full"><TikTokPixelsTab /></TabsContent>
             <TabsContent value="goal-reports" className="m-0 h-full"><GoalReportsTab /></TabsContent>
             <TabsContent value="meta-audiences" className="m-0 h-full"><MetaAudiencesTab /></TabsContent>
             <TabsContent value="meta-advanced" className="m-0 h-full"><MetaAdvancedOperationsTab /></TabsContent>
