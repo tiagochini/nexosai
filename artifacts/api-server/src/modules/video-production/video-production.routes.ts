@@ -105,11 +105,12 @@ router.get("/video-projects", async (req, res, next) => {
 // ─── Create ──────────────────────────────────────────────────────────────────
 router.post("/video-projects", async (req, res, next) => {
   try {
-    const { title, format, campaignId, vslId, config } = req.body as {
+    const { title, format, campaignId, vslId, scriptSeed, config } = req.body as {
       title: string;
       format?: string;
       campaignId?: string;
       vslId?: string;
+      scriptSeed?: string;
       config?: Record<string, unknown>;
     };
     if (!title) throw new AppError(400, "title é obrigatório", "VALIDATION_ERROR");
@@ -118,6 +119,7 @@ router.post("/video-projects", async (req, res, next) => {
       format: (format ?? "vsl") as any,
       campaignId,
       vslId,
+      scriptSeed,
       config: config ?? {},
     });
     res.status(201).json({ project: withMediaUrls(project) });

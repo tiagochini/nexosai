@@ -15,9 +15,9 @@ import { generateCreativeImage } from "./image-provider-chain.js";
 import { campaignCreativeObjectKey, createGCSObjectStream, deleteGCSObject, uploadBufferToGCS } from "../../lib/gcs-recordings.js";
 import type { Logger } from "pino";
 
-function managedCreativeMediaUrl(campaignId: string, creativeId: string, variant: "preview" | "final", value: string | null): string | null {
+function managedCreativeMediaUrl(campaignId: string, creativeId: string, variant: "preview" | "final", value: string | null, updatedAt: Date): string | null {
   if (!value?.startsWith("campaigns/")) return value;
-  return `/api/campaigns/${campaignId}/creatives/${creativeId}/media/${variant}`;
+  return `/api/campaigns/${campaignId}/creatives/${creativeId}/media/${variant}?v=${updatedAt.getTime()}`;
 }
 
 async function persistCreativeImage(
@@ -56,10 +56,33 @@ function referenceKey(creative: CampaignCreative): string | null {
 async function getReferenceDataUrl(creative: CampaignCreative): Promise<string | undefined> {
   const key = referenceKey(creative);
   if (!key) return undefined;
+  return readCreativeObjectAsDataUrl(key);
+}
+
+async function readCreativeObjectAsDataUrl(key: string): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of createGCSObjectStream(key)) chunks.push(Buffer.from(chunk));
   const meta = await import("../../lib/gcs-recordings.js").then((m) => m.getGCSObjectMeta(key));
+  if (!meta.contentType.startsWith("image/") || meta.size > 20 * 1024 * 1024) {
+    throw new AppError(400, "A imagem selecionada excede o limite de edição ou não é válida.", "REFERENCE_IMAGE_INVALID");
+  }
   return `data:${meta.contentType};base64,${Buffer.concat(chunks).toString("base64")}`;
+}
+
+async function getCreativeImageDataUrl(creative: CampaignCreative, key: string | null): Promise<string | undefined> {
+  const expectedPrefix = `campaigns/${creative.workspaceId}/${creative.campaignId}/creatives/${creative.id}/`;
+  return key?.startsWith(expectedPrefix) ? readCreativeObjectAsDataUrl(key) : undefined;
+}
+
+async function getCreativeGenerationReferences(creative: CampaignCreative, baseImageKey: string | null, includeObjectReference = true): Promise<string[]> {
+  const references: string[] = [];
+  const baseImage = await getCreativeImageDataUrl(creative, baseImageKey);
+  if (baseImage) references.push(baseImage);
+  if (includeObjectReference) {
+    const objectImage = await getReferenceDataUrl(creative);
+    if (objectImage) references.push(objectImage);
+  }
+  return references;
 }
 
 function creativeLocale(creative: CampaignCreative): string {
@@ -79,8 +102,14 @@ export async function updateCreativeConcept(
   )).limit(1);
   if (!creative) throw new NotFoundError("Criativo");
   if (!creative.concept) throw new AppError(400, "Conceito não encontrado", "CONCEPT_NOT_READY");
+  if (creative.status === "approved") throw new AppError(409, "Este criativo já foi aprovado e não pode mais ser editado.", "CREATIVE_ALREADY_APPROVED");
   if (["preview_generating", "final_generating"].includes(creative.status)) throw new AppError(409, "Aguarde a geração atual terminar antes de editar.", "CREATIVE_BUSY");
   const concept = { ...creative.concept, ...patch };
+  // Keep the visible scene summary in sync with the single prompt the image
+  // provider actually consumes. The editor no longer exposes two competing descriptions.
+  if (patch.dallePrompt !== undefined && patch.visualDescription === undefined) {
+    concept.visualDescription = patch.dallePrompt;
+  }
   const metadata = { ...((creative.metadata ?? {}) as Record<string, unknown>), creativeLocale: locale };
   const [updated] = await db.update(campaignCreativesTable).set({ concept, prompt: concept.dallePrompt, metadata })
     .where(and(eq(campaignCreativesTable.id, creativeId), eq(campaignCreativesTable.workspaceId, workspaceId))).returning();
@@ -98,6 +127,7 @@ export async function saveCreativeReferenceImage(
     eq(campaignCreativesTable.id, creativeId), eq(campaignCreativesTable.campaignId, campaignId), eq(campaignCreativesTable.workspaceId, workspaceId),
   )).limit(1);
   if (!creative) throw new NotFoundError("Criativo");
+  if (creative.status === "approved") throw new AppError(409, "Este criativo já foi aprovado e não pode mais ser alterado.", "CREATIVE_ALREADY_APPROVED");
   if (["preview_generating", "final_generating"].includes(creative.status)) throw new AppError(409, "Aguarde a geração atual terminar antes de trocar a imagem.", "CREATIVE_BUSY");
   const valid = (contentType === "image/png" && bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])))
     || (contentType === "image/jpeg" && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255)
@@ -118,6 +148,7 @@ export async function removeCreativeReferenceImage(campaignId: string, creativeI
     eq(campaignCreativesTable.id, creativeId), eq(campaignCreativesTable.campaignId, campaignId), eq(campaignCreativesTable.workspaceId, workspaceId),
   )).limit(1);
   if (!creative) throw new NotFoundError("Criativo");
+  if (creative.status === "approved") throw new AppError(409, "Este criativo já foi aprovado e não pode mais ser alterado.", "CREATIVE_ALREADY_APPROVED");
   const key = referenceKey(creative);
   const metadata = { ...((creative.metadata ?? {}) as Record<string, unknown>) };
   delete metadata["referenceImageKey"];
@@ -158,11 +189,11 @@ export async function listCreatives(
       ...creative.metadata,
       referenceImageKey: undefined,
       referenceImageUrl: (creative.metadata as Record<string, unknown>).referenceImageKey
-        ? `/api/campaigns/${creative.campaignId}/creatives/${creative.id}/media/reference`
+        ? `/api/campaigns/${creative.campaignId}/creatives/${creative.id}/media/reference?v=${creative.updatedAt.getTime()}`
         : null,
     } : creative.metadata,
-    previewUrl: managedCreativeMediaUrl(creative.campaignId, creative.id, "preview", creative.previewUrl),
-    finalUrl: managedCreativeMediaUrl(creative.campaignId, creative.id, "final", creative.finalUrl),
+    previewUrl: managedCreativeMediaUrl(creative.campaignId, creative.id, "preview", creative.previewUrl, creative.updatedAt),
+    finalUrl: managedCreativeMediaUrl(creative.campaignId, creative.id, "final", creative.finalUrl, creative.updatedAt),
   }));
 }
 
@@ -274,6 +305,7 @@ export async function translateCreativeConcept(
   )).limit(1);
   if (!creative) throw new NotFoundError("Criativo");
   if (!creative.concept) throw new AppError(400, "Conceito não encontrado", "CONCEPT_NOT_READY");
+  if (creative.status === "approved") throw new AppError(409, "Este criativo já foi aprovado e não pode mais ser alterado.", "CREATIVE_ALREADY_APPROVED");
   if (["preview_generating", "final_generating"].includes(creative.status)) throw new AppError(409, "Aguarde a geração atual terminar antes de traduzir.", "CREATIVE_BUSY");
   const languageName = locale === "en-US" ? "inglês americano" : locale === "en-AU" ? "inglês australiano" : locale === "es-LA" ? "espanhol latino-americano" : "português brasileiro";
   await deductCredits(workspaceId, "creative_brief", log, campaignId, undefined, undefined, undefined, `ws:${workspaceId}:creative:translate:${creativeId}:${locale}`);
@@ -303,6 +335,7 @@ export async function approveConceptAndGeneratePreview(
     .limit(1);
   if (!creative) throw new NotFoundError("Criativo");
   if (!creative.concept) throw new AppError(400, "Conceito não encontrado", "CONCEPT_NOT_READY");
+  if (creative.status === "approved") throw new AppError(409, "Este criativo já foi aprovado e não pode mais ser gerado.", "CREATIVE_ALREADY_APPROVED");
 
   // [C3-STANDALONE] idempotency: one preview charge per creative — concept approval is a one-time action
   await deductCredits(workspaceId, "video_low_res", log, creative.campaignId, undefined, undefined, undefined, `ws:${workspaceId}:creative:preview:${creativeId}`);
@@ -319,7 +352,7 @@ export async function approveConceptAndGeneratePreview(
         creative.format,
         "standard",
         log,
-        await getReferenceDataUrl(creative),
+        await getCreativeGenerationReferences(creative, null),
         creativeLocale(creative),
       );
       const imageUrl = await persistCreativeImage(workspaceId, creative.campaignId, creative.id, "preview", generatedImage);
@@ -334,7 +367,7 @@ export async function approveConceptAndGeneratePreview(
         .update(campaignCreativesTable)
         .set({
           status: "concept_ready",
-          metadata: { imageError: err instanceof Error ? err.message : "generation_failed" },
+          metadata: { ...((creative.metadata ?? {}) as Record<string, unknown>), imageError: err instanceof Error ? err.message : "generation_failed" },
         })
         .where(eq(campaignCreativesTable.id, creativeId));
     }
@@ -360,6 +393,7 @@ export async function approvePreviewAndGenerateFinal(
     .limit(1);
   if (!creative) throw new NotFoundError("Criativo");
   if (!creative.concept) throw new AppError(400, "Conceito não encontrado", "CONCEPT_NOT_READY");
+  if (creative.status === "approved") throw new AppError(409, "Este criativo já foi aprovado e não pode mais ser gerado.", "CREATIVE_ALREADY_APPROVED");
 
   // [C3-STANDALONE] idempotency: one final charge per creative — preview approval is a one-time action
   await deductCredits(workspaceId, "video_high_res", log, creative.campaignId, undefined, undefined, undefined, `ws:${workspaceId}:creative:final:${creativeId}`);
@@ -376,8 +410,9 @@ export async function approvePreviewAndGenerateFinal(
         creative.format,
         "hd",
         log,
-        await getReferenceDataUrl(creative),
+        await getCreativeGenerationReferences(creative, creative.previewUrl, false),
         creativeLocale(creative),
+        "scene",
       );
       const imageUrl = await persistCreativeImage(workspaceId, creative.campaignId, creative.id, "final", generatedImage);
       await db
@@ -403,7 +438,7 @@ export async function approvePreviewAndGenerateFinal(
           status: "preview_ready",
           finalUrl: null,
           approvedAt: null,
-          metadata: { imageError: err instanceof Error ? err.message : "generation_failed" },
+          metadata: { ...((creative.metadata ?? {}) as Record<string, unknown>), imageError: err instanceof Error ? err.message : "generation_failed" },
         })
         .where(eq(campaignCreativesTable.id, creativeId));
     }
@@ -449,17 +484,30 @@ export async function regenerateImage(
     .limit(1);
   if (!creative) throw new NotFoundError("Criativo");
   if (!creative.concept) throw new AppError(400, "Conceito não encontrado", "CONCEPT_NOT_READY");
+  if (creative.status === "approved") throw new AppError(409, "Este criativo já foi aprovado e não pode mais ser gerado.", "CREATIVE_ALREADY_APPROVED");
 
   const creditAction = quality === "hd" ? "video_high_res" : "video_low_res";
   // [C3-STANDALONE] 5-minute bucket key: same regen within 5 min = blocked; new regen after = charged.
   const idemBucket = Math.floor(Date.now() / 300_000);
-  await deductCredits(workspaceId, creditAction, log, creative.campaignId, undefined, undefined, undefined, `ws:${workspaceId}:creative:regen:${creativeId}:${quality}:${idemBucket}`);
-
   const targetStatus = quality === "hd" ? "final_generating" : "preview_generating";
+  const previousImages = [...new Set([creative.previewUrl, creative.finalUrl].filter((value): value is string => Boolean(value)))];
+  // Do not feed the previous generated image back as a reference: doing so makes
+  // the provider preserve unwanted composition details despite an edited prompt.
+  // Only the user-uploaded object/logo is a generation reference.
+  const references = await getCreativeGenerationReferences(creative, null);
+  const referenceMode = "object" as const;
+  await deductCredits(workspaceId, creditAction, log, creative.campaignId, undefined, undefined, undefined, `ws:${workspaceId}:creative:regen:${creativeId}:${quality}:${idemBucket}`);
+  // Keep the source image in memory for the edit request, then remove both generated
+  // variants so the new output cannot be confused with a stale preview or final image.
+  for (const key of previousImages) {
+    const expectedPrefix = `campaigns/${workspaceId}/${creative.campaignId}/creatives/${creative.id}/`;
+    if (key.startsWith(expectedPrefix)) await deleteGCSObject(key);
+  }
+  const metadata = { ...((creative.metadata ?? {}) as Record<string, unknown>), imageError: null };
   await db
     .update(campaignCreativesTable)
-    .set({ status: targetStatus as any, metadata: {} })
-    .where(eq(campaignCreativesTable.id, creativeId));
+    .set({ status: targetStatus as any, previewUrl: null, finalUrl: null, approvedAt: null, metadata })
+    .where(and(eq(campaignCreativesTable.id, creativeId), eq(campaignCreativesTable.workspaceId, workspaceId)));
 
   setImmediate(async () => {
     try {
@@ -468,22 +516,21 @@ export async function regenerateImage(
         creative.format,
         quality,
         log,
-        await getReferenceDataUrl(creative),
+        references,
         creativeLocale(creative),
+        referenceMode,
       );
       const variant = quality === "hd" ? "final" : "preview";
-      const previousKey = variant === "final" ? creative.finalUrl : creative.previewUrl;
       const imageUrl = await persistCreativeImage(workspaceId, creative.campaignId, creative.id, variant, generatedImage);
       const finalStatus = quality === "hd" ? "approved" : "preview_ready";
       const updateData: Record<string, unknown> =
         quality === "hd"
-          ? { status: finalStatus, finalUrl: imageUrl, approvedAt: new Date(), imageExpired: false }
-          : { status: finalStatus, previewUrl: imageUrl, imageExpired: false };
+          ? { status: finalStatus, finalUrl: imageUrl, approvedAt: new Date(), imageExpired: false, metadata }
+          : { status: finalStatus, previewUrl: imageUrl, imageExpired: false, metadata };
       await db
         .update(campaignCreativesTable)
         .set(updateData as any)
-        .where(eq(campaignCreativesTable.id, creativeId));
-      await removeReplacedCreativeImage(previousKey, imageUrl, log, creativeId);
+        .where(and(eq(campaignCreativesTable.id, creativeId), eq(campaignCreativesTable.workspaceId, workspaceId)));
     } catch (err) {
       log.warn({ creativeId, err }, "Creative image regeneration failed");
       const rollback = quality === "hd" ? "preview_ready" : "concept_ready";
@@ -491,7 +538,7 @@ export async function regenerateImage(
         .update(campaignCreativesTable)
         .set({
           status: rollback as any,
-          metadata: { imageError: err instanceof Error ? err.message : "generation_failed" },
+          metadata: { ...((creative.metadata ?? {}) as Record<string, unknown>), imageError: err instanceof Error ? err.message : "generation_failed" },
         })
         .where(eq(campaignCreativesTable.id, creativeId));
     }

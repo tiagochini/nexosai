@@ -175,7 +175,7 @@ function GenerateForm({ campaignId, onGenerated }: { campaignId: string; onGener
 
 // ── Creative Card ─────────────────────────────────────────────────────────────
 
-function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative; campaignId: string; onRefresh: () => void }) {
+function CreativeCard({ creative, campaignId, onRefresh, expanded = false }: { creative: Creative; campaignId: string; onRefresh: () => void; expanded?: boolean }) {
   const t = useUiText();
   const { locale } = useUiLocale();
   const [rejectReason, setRejectReason] = useState("");
@@ -184,27 +184,38 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
   const [loadedImageUrl, setLoadedImageUrl] = useState<string | null>(null);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaFetchError, setMediaFetchError] = useState(false);
+  const [downloadBusy, setDownloadBusy] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editDraft, setEditDraft] = useState<Pick<CreativeConcept, "headline" | "subHeadline" | "visualDescription" | "cta" | "dallePrompt"> | null>(null);
+  const [editDraft, setEditDraft] = useState<Pick<CreativeConcept, "headline" | "subHeadline" | "cta" | "dallePrompt"> | null>(null);
   const [referencePreview, setReferencePreview] = useState<string | null>(null);
   const [referenceBusy, setReferenceBusy] = useState(false);
   const status = STATUS_CONFIG[creative.status] ?? STATUS_CONFIG.concept_pending;
   const fmt = FORMATS[creative.format];
   const plat = PLATFORMS.find((p) => p.value === creative.platform);
 
+  const saveDraftBeforeAction = async () => {
+    if (!editing || !editDraft) return;
+    await customFetch<unknown>(`/api/campaigns/${campaignId}/creatives/${creative.id}/concept`, {
+      method: "PATCH",
+      body: JSON.stringify({ ...editDraft, locale }),
+    });
+  };
+
   const approveConcept = useMutation({
     mutationFn: async () => {
+      await saveDraftBeforeAction();
       await customFetch<unknown>(`/api/campaigns/${campaignId}/creatives/${creative.id}/approve-concept`, { method: "POST" });
     },
-    onSuccess: () => { toast.success(t("Conceito aprovado! Gerando imagem...", "Concept approved! Generating image...", "¡Concepto aprobado! Generando imagen...")); onRefresh(); },
+    onSuccess: () => { setEditing(false); toast.success(t("Conceito salvo e aprovado. Gerando imagem...", "Concept saved and approved. Generating image...", "Concepto guardado y aprobado. Generando imagen...")); onRefresh(); },
     onError: () => toast.error(t("Erro ao aprovar conceito", "Error approving concept", "Error al aprobar el concepto")),
   });
 
   const approvePreview = useMutation({
     mutationFn: async () => {
+      await saveDraftBeforeAction();
       await customFetch<unknown>(`/api/campaigns/${campaignId}/creatives/${creative.id}/approve-preview`, { method: "POST" });
     },
-    onSuccess: () => { toast.success(t("Preview aprovado! Gerando versão final HD...", "Preview approved! Generating final HD version...", "¡Vista previa aprobada! Generando la versión final HD...")); onRefresh(); },
+    onSuccess: () => { setEditing(false); toast.success(t("Alterações salvas. Gerando versão final HD...", "Changes saved. Generating final HD version...", "Cambios guardados. Generando la versión final HD...")); onRefresh(); },
     onError: () => toast.error(t("Erro ao aprovar preview", "Error approving preview", "Error al aprobar la vista previa")),
   });
 
@@ -221,12 +232,13 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
 
   const regenerate = useMutation({
     mutationFn: async (quality: "standard" | "hd") => {
+      await saveDraftBeforeAction();
       await customFetch<unknown>(`/api/campaigns/${campaignId}/creatives/${creative.id}/regenerate`, {
         method: "POST",
         body: JSON.stringify({ quality }),
       });
     },
-    onSuccess: () => { toast.success(t("Regenerando imagem...", "Regenerating image...", "Regenerando imagen...")); onRefresh(); },
+    onSuccess: () => { setEditing(false); toast.success(t("Prompt salvo. Gerando nova imagem...", "Prompt saved. Generating a new image...", "Prompt guardado. Generando una nueva imagen...")); onRefresh(); },
     onError: () => toast.error(t("Erro ao regenerar", "Error regenerating", "Error al regenerar")),
   });
 
@@ -274,6 +286,34 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
   const imageUrl = creative.finalUrl ?? creative.previewUrl;
   const hasImage = !!imageUrl;
   const imageError = creative.metadata?.imageError;
+
+  const downloadCreative = async () => {
+    if (!imageUrl || downloadBusy) return;
+    setDownloadBusy(true);
+    try {
+      const blob = imageUrl.startsWith("/api/campaigns/")
+        ? await customFetch<Blob>(imageUrl, { responseType: "blob" })
+        : await fetch(imageUrl).then((response) => {
+            if (!response.ok) throw new Error("Image download failed");
+            return response.blob();
+          });
+      if (!blob.type.startsWith("image/")) throw new Error("Downloaded content is not an image");
+      const extension = blob.type === "image/jpeg" ? "jpg" : blob.type.split("/")[1] || "png";
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `criativo-${creative.id}.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch {
+      toast.error(t("Não foi possível baixar o criativo. Atualize a página e tente novamente.", "Could not download the creative. Refresh the page and try again.", "No se pudo descargar el creativo. Actualiza la página e inténtalo de nuevo."));
+    } finally {
+      setDownloadBusy(false);
+    }
+  };
+
   useEffect(() => {
     setImageUnavailable(false);
     setMediaFetchError(false);
@@ -356,14 +396,16 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
         </div>
       </div>
 
+      <div className={expanded ? "grid min-w-0 grid-cols-1 lg:grid-cols-2" : undefined}>
+      <div className={expanded ? "min-w-0" : undefined}>
       {/* Image area */}
-      <div className={`relative bg-background/40 flex items-center justify-center ${creative.format === "stories" || creative.format === "feed_portrait" ? "aspect-[9/16] max-h-64" : creative.format === "banner" ? "aspect-video" : "aspect-square"} overflow-hidden`}
-        style={{ maxHeight: 320 }}>
+      <div className={`relative bg-background/40 flex items-center justify-center ${expanded ? "min-h-[320px] lg:min-h-[520px]" : creative.format === "stories" || creative.format === "feed_portrait" ? "aspect-[9/16] max-h-64" : creative.format === "banner" ? "aspect-video" : "aspect-square"} overflow-hidden`}
+        style={expanded ? { height: "min(70vh, 760px)" } : { maxHeight: 320 }}>
         {hasImage && imageSource && !imageUnavailable ? (
           <img
             src={imageSource}
             alt={t("Criativo gerado", "Generated creative", "Creativo generado")}
-            className="w-full h-full object-cover"
+            className={`h-full w-full ${expanded ? "object-contain" : "object-cover"}`}
             onError={() => setImageUnavailable(true)}
           />
         ) : mediaLoading ? (
@@ -461,8 +503,10 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
           )}
         </div>
       )}
+      </div>
 
-      {creative.concept && creative.status !== "rejected" && (
+      <div className={expanded ? "min-w-0 border-t border-border/20 lg:border-l lg:border-t-0" : undefined}>
+      {creative.concept && !["rejected", "approved"].includes(creative.status) && (
         <div className="px-4 pb-3 space-y-3">
           {creative.metadata?.creativeLocale !== locale && (
             <Button variant="outline" size="sm" onClick={() => translateConcept.mutate()} disabled={translateConcept.isPending || ["preview_generating", "final_generating"].includes(creative.status)} className="w-full rounded-none font-mono uppercase text-[10px] tracking-widest gap-2">
@@ -475,7 +519,7 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
               variant="outline"
               size="sm"
               disabled={["preview_generating", "final_generating"].includes(creative.status)}
-              onClick={() => { setEditDraft({ headline: creative.concept!.headline, subHeadline: creative.concept!.subHeadline, visualDescription: creative.concept!.visualDescription, cta: creative.concept!.cta, dallePrompt: creative.concept!.dallePrompt }); setEditing(true); }}
+                onClick={() => { setEditDraft({ headline: creative.concept!.headline, subHeadline: creative.concept!.subHeadline, cta: creative.concept!.cta, dallePrompt: creative.concept!.dallePrompt }); setEditing(true); }}
               className="w-full rounded-none font-mono uppercase text-[10px] tracking-widest gap-2"
             ><Pencil className="h-3 w-3" />{t("Editar texto e prompt da imagem", "Edit copy and image prompt", "Editar texto y prompt de imagen")}</Button>
           ) : (
@@ -485,8 +529,7 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
                 ["headline", t("Texto principal", "Headline", "Título"), 2],
                 ["subHeadline", t("Texto de apoio", "Supporting copy", "Texto de apoyo"), 2],
                 ["cta", t("Texto do botão de ação", "Call-to-action text", "Texto de llamada a la acción"), 2],
-                ["visualDescription", t("Descrição do que deve aparecer", "Describe what should appear", "Describe lo que debe aparecer"), 4],
-                ["dallePrompt", t("Instrução completa para a imagem", "Full image prompt", "Prompt completo de imagen"), 6],
+                ["dallePrompt", t("Descrição da imagem: cena, objetos, posição e orientação", "Image description: scene, objects, placement, and orientation", "Descripción de imagen: escena, objetos, posición y orientación"), 9],
               ] as const).map(([key, label, rows]) => (
                 <label key={key} className="block">
                   <span className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{label}</span>
@@ -494,7 +537,7 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
                 </label>
               ))}
               <label className="block">
-                <span className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Imagem que a IA deve usar como referência (PNG/JPEG/WebP, máx. 10 MB)", "Image for the AI to use as a reference (PNG/JPEG/WebP, max 10 MB)", "Imagen de referencia para la IA (PNG/JPEG/WebP, máx. 10 MB)")}</span>
+                <span className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Imagem do objeto ou logo que deseja inserir na foto (PNG/JPEG/WebP, máx. 10 MB)", "Object or logo image to place into the photo (PNG/JPEG/WebP, max 10 MB)", "Imagen del objeto o logo que quieres incluir en la foto (PNG/JPEG/WebP, máx. 10 MB)")}</span>
                 <input type="file" accept="image/png,image/jpeg,image/webp" disabled={referenceBusy} onChange={(event) => { void uploadReference(event.target.files?.[0]); event.currentTarget.value = ""; }} className="block w-full text-xs text-muted-foreground file:mr-3 file:border file:border-border/40 file:bg-background file:px-3 file:py-2 file:font-mono file:text-[10px] file:uppercase" />
               </label>
               {referencePreview && <div className="flex items-center gap-3 border border-border/30 p-2"><img src={referencePreview} alt={t("Imagem de referência", "Reference image", "Imagen de referencia")} className="h-16 w-16 object-cover" /><span className="flex-1 font-mono text-[10px] text-muted-foreground">{t("Imagem salva. A próxima geração vai usá-la como referência.", "Saved. The next generation will use it as a reference.", "Guardada. La próxima generación la usará como referencia.")}</span><Button variant="outline" size="sm" disabled={referenceBusy} onClick={() => void removeReference()} className="rounded-none"><Trash2 className="h-3 w-3" /></Button></div>}
@@ -503,7 +546,7 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
                 <Button onClick={() => saveConcept.mutate()} disabled={saveConcept.isPending || referenceBusy} className="flex-1 rounded-none font-mono uppercase text-[10px] tracking-widest gap-2"><Save className="h-3 w-3" />{saveConcept.isPending ? t("Salvando...", "Saving...", "Guardando...") : t("Salvar alterações", "Save changes", "Guardar cambios")}</Button>
                 <Button variant="outline" onClick={() => setEditing(false)} className="rounded-none font-mono uppercase text-[10px] tracking-widest">{t("Fechar", "Close", "Cerrar")}</Button>
               </div>
-              <p className="font-mono text-[10px] leading-relaxed text-muted-foreground/70">{t("As alterações ficam salvas no criativo. Depois de salvar, use “Gerar outra variação” para atualizar a imagem. A imagem enviada fica no storage privado e orienta o Grok; ela não substitui o texto do anúncio.", "Your edits are saved to this creative. After saving, choose “Generate another variation” to update the image. The upload stays in private storage and guides Grok; it does not replace the ad copy.", "Los cambios se guardan. Después, elige “Generar otra variación”. La imagen queda en almacenamiento privado y guía a Grok; no reemplaza el texto del anuncio.")}</p>
+              <p className="font-mono text-[10px] leading-relaxed text-muted-foreground/70">{t("Esta é a descrição usada pelo Grok. Ao regerar, ele cria uma nova composição a partir dela, sem copiar a imagem anterior. Se incluir um celular, especifique que a tela deve ficar voltada para a câmera.", "This is the description Grok uses. Regeneration creates a new composition from it instead of copying the previous image. If you include a phone, specify that its screen must face the camera.", "Esta es la descripción que usa Grok. Al regenerar, crea una nueva composición a partir de ella en vez de copiar la imagen anterior. Si incluyes un teléfono, indica que la pantalla debe mirar a la cámara.")}</p>
             </div>
           )}
         </div>
@@ -512,11 +555,11 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
       {/* Actions */}
       {creative.status !== "rejected" && (
         <div className="px-4 pb-4 space-y-2">
-          {imageFailure && (
+          {imageFailure && creative.status !== "approved" && (
             <Button
               variant="outline"
               onClick={() => regenerate.mutate(retryQuality)}
-              disabled={regenerate.isPending || ["preview_generating", "final_generating"].includes(creative.status)}
+              disabled={regenerate.isPending || referenceBusy || ["preview_generating", "final_generating"].includes(creative.status)}
               className="w-full rounded-none font-mono uppercase text-xs tracking-widest h-10 gap-2 border-red-400/40 text-red-300 hover:bg-red-400/10"
             >
               {regenerate.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
@@ -531,7 +574,7 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
             <div className="flex gap-2">
               <Button
                 onClick={() => approveConcept.mutate()}
-                disabled={approveConcept.isPending}
+                disabled={approveConcept.isPending || referenceBusy}
                 className="flex-1 btn-weapon-primary rounded-none font-mono uppercase text-xs tracking-widest font-bold h-10 gap-1.5"
               >
                 {approveConcept.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
@@ -553,7 +596,7 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
               <div className="flex gap-2">
                 <Button
                   onClick={() => approvePreview.mutate()}
-                  disabled={approvePreview.isPending}
+                  disabled={approvePreview.isPending || referenceBusy}
                   className="flex-1 btn-weapon-primary rounded-none font-mono uppercase text-xs tracking-widest font-bold h-10 gap-1.5"
                 >
                   {approvePreview.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
@@ -571,7 +614,7 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
                 <Button
                   variant="outline"
                   onClick={() => regenerate.mutate("standard")}
-                  disabled={regenerate.isPending}
+                  disabled={regenerate.isPending || referenceBusy}
                   size="sm"
                   className="w-full rounded-none font-mono uppercase text-[10px] tracking-widest h-8 gap-1.5 border-border/30"
                 >
@@ -585,27 +628,11 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
           {creative.status === "approved" && (
             <div className="flex gap-2">
               {hasImage ? (
-                <a
-                  href={imageUrl!}
-                  download={`criativo-${creative.id}.png`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1"
-                >
-                  <Button className="w-full rounded-none font-mono uppercase text-xs tracking-widest font-bold h-10 gap-2 border border-green-400/40 bg-green-400/10 text-green-400 hover:bg-green-400/20">
-                  <Download className="h-3.5 w-3.5" /> {t("Baixar criativo", "Download creative", "Descargar creativo")}
+                  <Button onClick={() => void downloadCreative()} disabled={downloadBusy} className="flex-1 rounded-none font-mono uppercase text-xs tracking-widest font-bold h-10 gap-2 border border-green-400/40 bg-green-400/10 text-green-400 hover:bg-green-400/20">
+                  {downloadBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                  {downloadBusy ? t("Baixando...", "Downloading...", "Descargando...") : t("Baixar criativo", "Download creative", "Descargar creativo")}
                   </Button>
-                </a>
               ) : null}
-              <Button
-                variant="outline"
-                onClick={() => regenerate.mutate("hd")}
-                disabled={regenerate.isPending}
-                size="sm"
-                className="rounded-none font-mono uppercase text-[10px] tracking-widest h-10 gap-1.5 border-border/30"
-              >
-                <RefreshCw className="h-3.5 w-3.5" /> {t("Regenerar", "Regenerate", "Regenerar")}
-              </Button>
             </div>
           )}
 
@@ -647,6 +674,8 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
           <p className="font-mono text-xs text-muted-foreground/60">{t("Motivo:", "Reason:", "Motivo:")} {creative.rejectionReason}</p>
         </div>
       )}
+      </div>
+      </div>
     </div>
   );
 }
@@ -708,7 +737,7 @@ export default function CreativesPage() {
   const total = creatives.length;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+    <div className="mx-auto max-w-7xl px-4 py-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-4">
@@ -780,13 +809,14 @@ export default function CreativesPage() {
           <GenerateForm campaignId={campaignId!} onGenerated={() => { void refetch(); }} />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className={creatives.length === 1 ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"}>
           {creatives.map((creative) => (
             <CreativeCard
               key={creative.id}
               creative={creative}
               campaignId={campaignId!}
               onRefresh={() => { void refetch(); }}
+              expanded={creatives.length === 1}
             />
           ))}
         </div>

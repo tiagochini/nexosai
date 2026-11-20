@@ -103,7 +103,7 @@ Você cria calendários de conteúdo que constroem audiência, criam antecipaç�
 | Facebook | Distribuição para audiência +30 anos + grupos de nicho + posts de prova social | **OBRIGATÓRIO** |
 | TikTok | Alcance novo (topo de funil) + conteúdo educacional nativo + viralização | **OBRIGATÓRIO** |
 | WhatsApp | Conversão direta via listas e grupos — operado pela launch sequence | Via sequência |
-| YouTube | VSL + Shorts de autoridade | Recomendado |
+| YouTube | Shorts de autoridade adaptados ao calendário | **OBRIGATÓRIO** |
 | LinkedIn | B2B e posicionamento de expertise | Se avatar B2B |
 
 **NUNCA gere um calendário só com Instagram.** Isso é erro primário. O lançamento acontece em múltiplas frentes simultaneamente.
@@ -267,9 +267,10 @@ ${phasesSummary}
 **Narrativa central:** ${strategy.campaignArchitecture?.coreNarrative ?? ""}
 **Gancho emocional:** ${strategy.campaignArchitecture?.emotionalHook ?? ""}`;
 
-  const CALENDAR_CHUNK_REQ = `- Cada entrada DEVE ter platforms: [instagram, facebook, tiktok]
+  const CALENDAR_CHUNK_REQ = `- Cada entrada DEVE ter platforms: [instagram, facebook, tiktok, youtube_shorts]
 - facebookCaption obrigatório em posts de texto
 - tiktokHook obrigatório em posts de vídeo
+- videoScript obrigatório para youtube_shorts
 - Captions COMPLETAS (prontas para publicar)
 - Retorne APENAS JSON com o campo "calendar" (array de posts para os dias indicados)`;
 
@@ -286,7 +287,7 @@ ${sharedContext}
 **CHUNK ${chunkIdx}/${ranges.length} — APENAS dias ${dayStart}-${dayEnd}**
 ${CALENDAR_CHUNK_REQ}
 
-Retorne APENAS JSON no formato: { "calendar": [ { "day": N, "phase": "...", "phaseName": "...", "platforms": [...], "postType": "...", "caption": "...", "facebookCaption": "...", "tiktokHook": "...", "hashtags": [...], "visualDirection": "...", "postingTime": "...", "engagementTactic": "...", "objective": "...", "kpi": "..." } ] }`;
+Retorne APENAS JSON no formato: { "calendar": [ { "day": N, "phase": "...", "phaseName": "...", "platforms": [...], "postType": "...", "caption": "...", "facebookCaption": "...", "tiktokHook": "...", "videoScript": "...", "hashtags": [...], "visualDirection": "...", "postingTime": "...", "engagementTactic": "...", "objective": "...", "kpi": "..." } ] }`;
 
     for (let attempt = 1; attempt <= 2; attempt++) {
       const r = await withRegenContext(`${operationBase}:days:${dayStart}-${dayEnd}:attempt:${attempt}`, () => runAgent({

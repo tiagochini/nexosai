@@ -6,6 +6,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { auditLogsTable, campaignsTable, contentPiecesTable, db, domainsTable, launchSequencesTable, masterplanVersionsTable, pagesTable, paidMediaDatasetsTable } from "@workspace/db";
 import {
   generateCampaignContent,
+  generateCampaignLandingPage,
   getCampaignContent,
   getCampaignMediaBriefs,
   approveContentPiece,
@@ -255,6 +256,20 @@ router.post("/:campaignId/content/generate", async (req, res): Promise<void> => 
       message: "Content generation completed",
       result,
     });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+router.post("/:campaignId/content/landing-page/generate", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+  try {
+    const result = await generateCampaignLandingPage(campaignId, req.auth.workspaceId, req.log);
+    res.status(result.created ? 201 : 200).json(result);
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });
@@ -533,8 +548,10 @@ router.post("/:campaignId/content/generate-phase", async (req, res): Promise<voi
 router.post("/:campaignId/content/:pieceId/generate-visual", async (req, res): Promise<void> => {
   const { campaignId, pieceId } = req.params as { campaignId: string; pieceId: string };
   try {
+    const body = z.object({ contentPieceKey: z.string().max(180).optional() }).safeParse(req.body ?? {});
+    if (!body.success) { res.status(400).json({ error: "Peça inválida para gerar o criativo.", code: "VALIDATION_ERROR" }); return; }
     const { generateVisualForPiece } = await import("./creative-auto-gen.service.js");
-    const result = await generateVisualForPiece(campaignId, req.auth.workspaceId, pieceId, req.log);
+    const result = await generateVisualForPiece(campaignId, req.auth.workspaceId, pieceId, req.log, body.data.contentPieceKey);
     res.json({ creativeId: result.creativeId, conceptTitle: result.conceptTitle, dallePrompt: result.dallePrompt });
   } catch (err) {
     if (err instanceof AppError) {

@@ -2340,8 +2340,16 @@ export default function CampaignDetail() {
           </div>
         </div>
 
-        {campaign.status === "strategy_ready" && canViewSchedule && (
-          <CampaignSchedulePreview campaignId={campaignId} timeline={timelineD} trialAccess={trialAccess} onDownloadPdf={downloadMasterplanPdf} />
+        {["strategy_ready", "awaiting_approval", "approved"].includes(campaign.status) && canViewSchedule && (
+          <CampaignSchedulePreview
+            campaignId={campaignId}
+            timeline={timelineD}
+            trialAccess={trialAccess}
+            campaignStatus={campaign.status}
+            onDownloadPdf={downloadMasterplanPdf}
+            onLaunch={() => handleExecuteClick("launch")}
+            launchPending={executeMutation.isPending}
+          />
         )}
 
         {/* ─── Psychology Layer Missing Warning ─────────────────────────────────── */}

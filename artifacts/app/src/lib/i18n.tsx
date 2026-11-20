@@ -71,6 +71,9 @@ export const APP_TRANSLATIONS = {
       briefingIncomplete: "O briefing ainda não tem respostas suficientes para ser vinculado. Complete os dados do produto e tente novamente.",
       intakeMismatch: "O briefing oficial está vinculado a outro produto. Revise o vínculo antes de continuar.",
     },
+    videoProduction: {
+      previewFailed: "Não foi possível preparar esta prévia agora. Tente novamente em alguns instantes. Se isso continuar, fale com nosso suporte — estamos aqui para ajudar.",
+    },
     masterplanStatus: {
       title: "Status do Masterplan",
       version: "Versão",
@@ -223,6 +226,9 @@ export const APP_TRANSLATIONS = {
       subscriptionMismatch: "The selected subscription does not match the subscription linked to this campaign.",
       briefingIncomplete: "The briefing does not have enough answers to be linked yet. Complete the product details and try again.",
       intakeMismatch: "The official briefing is linked to a different product. Review the product link before continuing.",
+    },
+    videoProduction: {
+      previewFailed: "We couldn't prepare this preview right now. Please try again in a few moments. If it keeps happening, contact our support team—we're here to help.",
     },
     masterplanStatus: {
       title: "Master plan status",
@@ -377,6 +383,9 @@ export const APP_TRANSLATIONS = {
       briefingIncomplete: "The briefing does not have enough answers to be linked yet. Complete the product details and try again.",
       intakeMismatch: "The official briefing is linked to a different product. Review the product link before continuing.",
     },
+    videoProduction: {
+      previewFailed: "We couldn't prepare this preview right now. Please try again shortly. If the issue persists, contact our support team—we're here to help.",
+    },
     masterplanStatus: {
       title: "Master plan status",
       version: "Version",
@@ -529,6 +538,9 @@ export const APP_TRANSLATIONS = {
       subscriptionMismatch: "La suscripción seleccionada no coincide con la vinculada a la campaña.",
       briefingIncomplete: "El briefing aún no tiene suficientes respuestas para vincularse. Completa los datos del producto e inténtalo de nuevo.",
       intakeMismatch: "El briefing oficial está vinculado a otro producto. Revisa el vínculo antes de continuar.",
+    },
+    videoProduction: {
+      previewFailed: "No pudimos preparar esta vista previa ahora. Inténtalo de nuevo en unos instantes. Si sigue ocurriendo, contacta con nuestro equipo de soporte; estamos aquí para ayudarte.",
     },
     masterplanStatus: {
       title: "Estado del plan maestro",

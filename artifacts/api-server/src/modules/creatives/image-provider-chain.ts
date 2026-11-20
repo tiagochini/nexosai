@@ -62,7 +62,7 @@ export function imageFromGeminiResponse(data: {
   return part ? `data:${part.inlineData!.mimeType};base64,${part.inlineData!.data}` : "";
 }
 
-export async function generateCreativeImage(prompt: string, format: string, quality: "standard" | "hd", log: Logger, referenceImage?: string, locale = "pt-BR"): Promise<string> {
+export async function generateCreativeImage(prompt: string, format: string, quality: "standard" | "hd", log: Logger, referenceImages: string[] = [], locale = "pt-BR", referenceMode: "object" | "scene" | "scene-and-object" = "object"): Promise<string> {
   const landscape = format === "banner";
   const portrait = format === "stories" || format === "feed_portrait";
   const size = landscape ? "1536x1024" : portrait ? "1024x1536" : "1024x1024";
@@ -72,13 +72,37 @@ export async function generateCreativeImage(prompt: string, format: string, qual
     : locale === "en-US" || locale === "en-AU"
       ? "Do not include visible words, letters, or numbers in the image. Show only the visual composition."
       : "Não inclua palavras, letras ou números visíveis na imagem. Mostre apenas a composição visual.";
-  const fullPrompt = `${prompt}. ${noTextInstruction}`;
+  const phoneInstruction = locale === "es-LA"
+    ? "Si aparece un teléfono, la pantalla debe mirar claramente a la cámara y ser visible para quien observa la imagen; la persona debe sostenerlo de forma natural con la pantalla hacia el frente. No muestres la parte trasera, no inviertas ni espejes el teléfono."
+    : locale === "en-US" || locale === "en-AU"
+      ? "If a smartphone appears, its screen must face the camera and be clearly visible to the viewer; the person must hold it naturally with the screen facing forward. Do not show the back, reverse, or mirror the phone."
+      : "Se aparecer um celular, a tela deve ficar voltada para a câmera e claramente visível para quem olha a imagem; a pessoa deve segurá-lo naturalmente, com a tela para a frente. Não mostre a traseira nem deixe o celular invertido ou espelhado.";
+  const referenceInstruction = referenceMode === "scene-and-object" && referenceImages.length > 1
+    ? locale === "es-LA"
+      ? "La primera imagen es la composición de la campaña: conserva la escena y el encuadre. La segunda imagen es el objeto o logotipo que debes integrar de forma visible y natural en esa escena."
+      : locale === "en-US" || locale === "en-AU"
+        ? "The first image is the campaign composition: preserve its scene and framing. The second image is the object or logo to place visibly and naturally into that scene."
+        : "A primeira imagem é a composição da campanha: preserve a cena e o enquadramento. A segunda imagem é o objeto ou logotipo que deve ser inserido de forma visível e natural nessa cena."
+    : referenceMode === "scene" && referenceImages.length > 0
+      ? locale === "es-LA"
+        ? "Usa la primera imagen como base de la campaña. Conserva la escena y la composición, mejorando solo la calidad visual."
+        : locale === "en-US" || locale === "en-AU"
+          ? "Use the provided image as the campaign base. Preserve its scene and composition, improving only the visual quality."
+          : "Use a imagem enviada como base da campanha. Preserve a cena e a composição, melhorando apenas a qualidade visual."
+      : referenceImages.length === 1
+      ? locale === "es-LA"
+        ? "Usa la imagen de referencia como el objeto o logotipo que debe aparecer en la composición final."
+        : locale === "en-US" || locale === "en-AU"
+          ? "Use the reference image as the object or logo that must appear in the final composition."
+          : "Use a imagem de referência como o objeto ou logotipo que deve aparecer na composição final."
+      : "";
+  const fullPrompt = [prompt, referenceInstruction, phoneInstruction, noTextInstruction].filter(Boolean).join(". ");
   const attempts: ImageAttempt[] = [];
-  if (referenceImage && !env.XAI_API_KEY) {
+  if (referenceImages.length > 0 && !env.XAI_API_KEY) {
     throw new AppError(503, "A imagem de referência exige o provedor Grok configurado.", "REFERENCE_IMAGE_PROVIDER_UNAVAILABLE");
   }
   if (env.XAI_API_KEY) attempts.push({ provider: "xai", model: "grok-imagine-image-2.0", run: async () => {
-    const response = await fetch(referenceImage ? "https://api.x.ai/v1/images/edits" : "https://api.x.ai/v1/images/generations", {
+    const response = await fetch(referenceImages.length > 0 ? "https://api.x.ai/v1/images/edits" : "https://api.x.ai/v1/images/generations", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.XAI_API_KEY}` },
       body: JSON.stringify({
@@ -88,7 +112,8 @@ export async function generateCreativeImage(prompt: string, format: string, qual
         aspect_ratio: aspectRatio,
         quality: quality === "hd" ? "medium" : "low",
         response_format: "b64_json",
-        ...(referenceImage ? { image: { url: referenceImage, type: "image_url" } } : {}),
+        ...(referenceImages.length === 1 ? { image: { url: referenceImages[0], type: "image_url" } } : {}),
+        ...(referenceImages.length > 1 ? { images: referenceImages.map((url) => ({ url, type: "image_url" })) } : {}),
       }),
       signal: AbortSignal.timeout(90_000),
     });
@@ -108,7 +133,7 @@ export async function generateCreativeImage(prompt: string, format: string, qual
     if (!result?.b64_json || !["image/jpeg", "image/png", "image/webp"].includes(mimeType ?? "")) return "";
     return `data:${mimeType};base64,${result.b64_json}`;
   } });
-  if (!referenceImage && kairogenConfigured()) attempts.push({ provider: "kairogen", model: env.KAIROGEN_IMAGE_MODEL,
+  if (referenceImages.length === 0 && kairogenConfigured()) attempts.push({ provider: "kairogen", model: env.KAIROGEN_IMAGE_MODEL,
     run: () => generateKairogenImage(fullPrompt, aspectRatio, quality) });
   const addOpenAI = (apiKey: string, baseURL?: string) => {
     attempts.push({ provider: baseURL ? "openai-integration" : "openai", model: "gpt-image-1", run: async () => {
@@ -118,8 +143,8 @@ export async function generateCreativeImage(prompt: string, format: string, qual
       return b64 ? `data:image/png;base64,${b64}` : "";
     } });
   };
-  if (!referenceImage && env.OPENAI_API_KEY) addOpenAI(env.OPENAI_API_KEY);
-  if (!referenceImage && env.GEMINI_API_KEY) {
+  if (referenceImages.length === 0 && env.OPENAI_API_KEY) addOpenAI(env.OPENAI_API_KEY);
+  if (referenceImages.length === 0 && env.GEMINI_API_KEY) {
     attempts.push({ provider: "gemini", model: "gemini-2.5-flash-image", run: async () => {
       const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent", {
         method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
@@ -131,7 +156,7 @@ export async function generateCreativeImage(prompt: string, format: string, qual
       return imageFromGeminiResponse(await response.json() as Parameters<typeof imageFromGeminiResponse>[0]);
     } });
   }
-  if (!referenceImage && env.AI_INTEGRATIONS_OPENAI_API_KEY && env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
+  if (referenceImages.length === 0 && env.AI_INTEGRATIONS_OPENAI_API_KEY && env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
     addOpenAI(env.AI_INTEGRATIONS_OPENAI_API_KEY, env.AI_INTEGRATIONS_OPENAI_BASE_URL);
   }
   return executeImageProviderChain(attempts, log);

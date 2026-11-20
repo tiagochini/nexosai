@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Image, Film, FileText, ChevronRight, Sparkles, Loader2,
@@ -101,6 +102,7 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
   const [, navigate] = useLocation();
   const [mode, setMode] = useState<RecordingMode>("avatar_twin");
   const [creatingVideo, setCreatingVideo] = useState(false);
+  const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // ── Queries ──────────────────────────────────────────────────────────────
@@ -171,7 +173,23 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
   const campaignVsls = vsls.filter(v => v.campaignId === campaignId || vsls.length <= 3);
 
   return (
-    <div className="border border-primary/30 bg-card/40 space-y-0 overflow-hidden">
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => setOpen(true)}
+        className="w-full justify-between rounded-none border-primary/30 bg-primary/[0.04] px-4 py-3 font-mono text-xs uppercase tracking-widest text-primary hover:bg-primary/10"
+      >
+        <span className="flex items-center gap-2"><Sparkles className="h-3.5 w-3.5" />{t("Estudo criativo", "Creative study", "Estudio creativo")}</span>
+        <span className="text-[10px] text-muted-foreground">{t("Banners, vídeos e roteiros", "Banners, videos, and scripts", "Banners, vídeos y guiones")}</span>
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[90vh] w-[min(96vw,1100px)] max-w-none overflow-y-auto rounded-none border-primary/30 bg-background p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{t("Estúdio de Criativos — Aprovação Final", "Creative Studio — Final Approval", "Estudio creativo — Aprobación final")}</DialogTitle>
+            <DialogDescription>{t("Gere, revise e aprove os materiais criativos da campanha.", "Generate, review, and approve campaign creative assets.", "Genera, revisa y aprueba los materiales creativos de la campaña.")}</DialogDescription>
+          </DialogHeader>
+          <div className="border border-primary/30 bg-card/40 space-y-0 overflow-hidden">
       {/* Header */}
       <div className="bg-primary/8 border-b border-primary/20 px-5 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -430,6 +448,9 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
           </div>
         </div>
       </div>
-    </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

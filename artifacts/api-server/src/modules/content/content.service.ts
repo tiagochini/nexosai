@@ -466,6 +466,57 @@ async function runInlinePsychologyRecovery(
 export function generateCampaignContent(campaignId: string, workspaceId: string, log: Logger): Promise<ContentGenerationResult> {
   return withProjectExecution(workspaceId, campaignId, () => generateCampaignContentInternal(campaignId, workspaceId, log));
 }
+
+export function generateCampaignLandingPage(campaignId: string, workspaceId: string, log: Logger) {
+  return withProjectExecution(workspaceId, campaignId, async () => {
+    const [campaign] = await db
+      .select()
+      .from(campaignsTable)
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+      .limit(1);
+    if (!campaign) throw new NotFoundError("Campaign");
+    const intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
+    const campaignType = String(intakeData["campaign.type"] ?? campaign.type ?? "launch");
+    if (campaignType === "challenge_funnel") {
+      throw new ValidationError("Este tipo de campanha não gera landing page de vendas.");
+    }
+
+    const [existing] = await db
+      .select()
+      .from(contentPiecesTable)
+      .where(and(
+        eq(contentPiecesTable.campaignId, campaignId),
+        eq(contentPiecesTable.workspaceId, workspaceId),
+        eq(contentPiecesTable.type, "landing_page_structure"),
+      ))
+      .limit(1);
+    if (existing) return { piece: existing, created: false };
+
+    const strategy = (campaign.strategyData ?? {}) as unknown as StrategyOutput;
+    const profile = campaign.audienceData ? extractProfile(campaign.audienceData) : undefined;
+    const landingPage = await runLandingPageAgent(campaignId, workspaceId, intakeData, strategy, profile, log);
+    const contractWarning = validatePieceContract("landing_page_structure", landingPage);
+    if (contractWarning) throw new ValidationError(`A landing page não passou pela validação: ${contractWarning}`);
+
+    const [piece] = await db
+      .insert(contentPiecesTable)
+      .values({
+        campaignId,
+        workspaceId,
+        type: "landing_page_structure",
+        status: "pending_approval",
+        title: `Página de Vendas — ${landingPage.sections?.length ?? 0} seções | ${landingPage.pageType ?? "vsl"}`,
+        content: landingPage as any,
+        aiProvider: "openai",
+        creditsUsed: 65,
+      })
+      .returning();
+    if (!piece) throw new ValidationError("Não foi possível salvar a landing page gerada.");
+    log.info({ campaignId, pieceId: piece.id }, "Landing page generated from campaign schedule");
+    return { piece, created: true };
+  });
+}
+
 async function generateCampaignContentInternal(
   campaignId: string,
   workspaceId: string,

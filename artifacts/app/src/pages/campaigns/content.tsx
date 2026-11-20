@@ -15,7 +15,7 @@ import {
   Zap, Target, Activity, PlayCircle, Link2, Shield,
   RefreshCw, Rocket, AlertTriangle, Copy, Check,
   Video, UserCheck, UserX, Settings, ChevronDown, ChevronUp,
-  Flame, Clapperboard, Clock, Bot, ImagePlus, Share2,
+  Flame, Clapperboard, Clock, Bot, Image, ImagePlus, Share2,
 } from "lucide-react";
 import {
   Dialog,
@@ -34,7 +34,7 @@ import { useUiText } from "@/lib/i18n";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Platform = "instagram" | "facebook" | "tiktok" | "email" | "whatsapp" | "landing" | "ads";
+type Platform = "instagram" | "facebook" | "tiktok" | "youtube" | "email" | "whatsapp" | "landing" | "ads" | "google_ads";
 type PieceType = "post" | "story" | "reel" | "native_video" | "email" | "message" | "ad" | "copy";
 type Status = "pending" | "approved" | "rejected" | "edited";
 type Segment = "hot" | "warm" | "cold" | "all";
@@ -54,6 +54,7 @@ interface ContentPiece extends PreviewPiece {
   id: string;
   platform: Platform;
   type: PieceType;
+  launchPhase?: string;
   dayIndex: number;
   title: string;
   staticTitle?: [string, string, string];
@@ -83,27 +84,30 @@ interface ContentPiece extends PreviewPiece {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const PLATFORM_ICON: Record<Platform, React.ElementType> = {
-  instagram: Instagram, facebook: Globe, tiktok: Music2,
-  email: Mail, whatsapp: MessageSquare, landing: Globe, ads: BarChart3,
+  instagram: Instagram, facebook: Globe, tiktok: Music2, youtube: Video,
+  email: Mail, whatsapp: MessageSquare, landing: Globe, ads: BarChart3, google_ads: BarChart3,
 };
 const PLATFORM_LABEL: Record<Platform, string> = {
-  instagram: "Instagram", facebook: "Facebook", tiktok: "TikTok",
-  email: "E-mail", whatsapp: "WhatsApp", landing: "Landing Page", ads: "Ads",
+  instagram: "Instagram", facebook: "Facebook", tiktok: "TikTok", youtube: "YouTube",
+  email: "E-mail", whatsapp: "WhatsApp", landing: "Landing Page", ads: "Meta Ads", google_ads: "Google Ads",
 };
 function localizedPlatformLabel(platform: Platform, t: (pt: string, en: string, es: string) => string): string {
   if (platform === "email") return t("E-mail", "Email", "Correo electrónico");
   if (platform === "landing") return t("Landing Page", "Landing Page", "Página de destino");
-  if (platform === "ads") return t("Anúncios", "Ads", "Anuncios");
+  if (platform === "ads") return t("Meta Ads", "Meta Ads", "Meta Ads");
+  if (platform === "google_ads") return t("Google Ads", "Google Ads", "Google Ads");
   return PLATFORM_LABEL[platform];
 }
 const PLATFORM_COLOR: Record<Platform, string> = {
   instagram: "text-pink-400 border-pink-400/40 bg-pink-400/10",
   facebook: "text-indigo-400 border-indigo-400/40 bg-indigo-400/10",
   tiktok: "text-red-400 border-red-400/40 bg-red-400/10",
+  youtube: "text-red-300 border-red-300/40 bg-red-300/10",
   email: "text-blue-400 border-blue-400/40 bg-blue-400/10",
   whatsapp: "text-green-400 border-green-400/40 bg-green-400/10",
   landing: "text-cyan-400 border-cyan-400/40 bg-cyan-400/10",
   ads: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10",
+  google_ads: "text-amber-300 border-amber-300/40 bg-amber-300/10",
 };
 const SEGMENT_LABEL: Record<string, [string, string, string]> = {
   hot: ["Quentes", "Hot", "Calientes"], warm: ["Mornos", "Warm", "Tibios"], cold: ["Frios", "Cold", "Fríos"], all: ["Todos", "All", "Todos"],
@@ -252,7 +256,7 @@ function CampaignFlowchart({ pieces }: { pieces: ContentPiece[] }) {
           <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{t("Detalhamento por plataforma", "Platform breakdown", "Desglose por plataforma")}</span>
         </div>
         <div className="divide-y divide-border/30">
-          {(["instagram", "facebook", "tiktok", "email", "whatsapp", "ads"] as Platform[]).map(platform => {
+          {(["instagram", "facebook", "tiktok", "youtube", "email", "whatsapp", "ads", "google_ads"] as Platform[]).map(platform => {
             const platformPieces = pieces.filter(p => p.platform === platform);
             if (platformPieces.length === 0) return null;
             const PIcon = PLATFORM_ICON[platform];
@@ -518,6 +522,9 @@ function PorFaseTab({
   loading,
   rewriting,
   complianceScan,
+  phaseFilterId,
+  phaseFilterName,
+  onClearPhaseFilter,
 }: {
   pieces: ContentPiece[];
   campaignId: string;
@@ -528,6 +535,9 @@ function PorFaseTab({
   loading?: string | null;
   rewriting?: string | null;
   complianceScan?: ComplianceSweepSummary | null;
+  phaseFilterId?: string | null;
+  phaseFilterName?: string;
+  onClearPhaseFilter?: () => void;
 }) {
   const t = useUiText();
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(
@@ -548,6 +558,36 @@ function PorFaseTab({
       s.has(key) ? s.delete(key) : s.add(key);
       return s;
     });
+
+  if (phaseFilterId) {
+    const normalizePhaseId = (value: string) => value.trim().toLowerCase().replace(/[\s-]+/g, "_");
+    const phasePieces = pieces.filter(piece => piece.launchPhase && normalizePhaseId(piece.launchPhase) === normalizePhaseId(phaseFilterId));
+    return (
+      <section className="space-y-4 border border-primary/30 bg-card/20 p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/30 pb-3">
+          <div>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-primary/70">{t("Conteúdo da etapa selecionada", "Selected phase content", "Contenido de la etapa seleccionada")}</p>
+            <h2 className="mt-1 font-mono text-sm font-bold uppercase tracking-wide">{phaseFilterName}</h2>
+            <p className="mt-1 font-mono text-[10px] text-muted-foreground/60">{phasePieces.length} {t("peças desta etapa", "pieces in this phase", "piezas de esta etapa")}</p>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={onClearPhaseFilter} className="rounded-none font-mono text-[9px] uppercase tracking-wider">
+            {t("Ver todas as etapas", "View all phases", "Ver todas las etapas")}
+          </Button>
+        </div>
+        {phasePieces.length === 0 ? (
+          <p className="border border-dashed border-border/40 px-4 py-8 text-center font-mono text-[11px] text-muted-foreground/60">
+            {t("Ainda não há conteúdo salvo para esta etapa.", "No content has been saved for this phase yet.", "Todavía no hay contenido guardado para esta etapa.")}
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {phasePieces.map(piece => (
+              <ContentCard key={piece.id} piece={piece} campaignId={campaignId} onApprove={onApprove} onReject={onReject} onEdit={onEdit} onAiRewrite={onAiRewrite} loading={loading} rewriting={rewriting} prescanResult={complianceScan?.byPiece[piece.id] ?? null} />
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -690,13 +730,133 @@ function PorFaseTab({
 
 // ── Content Card (text view) ──────────────────────────────────────────────────
 
-function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewrite, loading, rewriting, prescanResult }: {
+interface LinkedCreative {
+  id: string;
+  status: string;
+  previewUrl: string | null;
+  finalUrl: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+function PublicationCreativePanel({ campaignId, piece, creativeIdOverride }: { campaignId: string; piece: ContentPiece; creativeIdOverride?: string | null }) {
+  const t = useUiText();
+  const rootPieceId = getParentId(piece.id);
+  const creativesQuery = useQuery({
+    queryKey: [`/api/campaigns/${campaignId}/creatives`],
+    queryFn: () => customFetch<{ creatives: LinkedCreative[] }>(`/api/campaigns/${campaignId}/creatives`),
+    staleTime: 15_000,
+  });
+  const linkedCreative = (creativesQuery.data?.creatives ?? []).find(creative => {
+    const metadata = creative.metadata ?? {};
+    return creative.id === creativeIdOverride || metadata["contentPieceKey"] === piece.id || (!piece.id.includes("::") && metadata["contentPieceId"] === rootPieceId);
+  });
+  const imageUrl = linkedCreative?.finalUrl ?? linkedCreative?.previewUrl ?? null;
+  const [imageSource, setImageSource] = useState<string | null>(null);
+  const [imageFailed, setImageFailed] = useState(false);
+  const [startingImageGeneration, setStartingImageGeneration] = useState(false);
+
+  useEffect(() => {
+    setImageSource(null);
+    setImageFailed(false);
+    if (!imageUrl) return;
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    const loadImage = imageUrl.startsWith("/api/campaigns/")
+      ? customFetch<Blob>(imageUrl, { responseType: "blob" })
+      : fetch(imageUrl).then(response => {
+          if (!response.ok) throw new Error("Creative image request failed");
+          return response.blob();
+        });
+    void loadImage.then(blob => {
+      if (!blob.type.startsWith("image/")) throw new Error("Creative media is not an image");
+      objectUrl = URL.createObjectURL(blob);
+      if (!cancelled) setImageSource(objectUrl);
+    }).catch(() => { if (!cancelled) setImageFailed(true); });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [imageUrl]);
+
+  const imageReady = Boolean(imageUrl && imageSource && !imageFailed);
+  const hasCreative = Boolean(linkedCreative);
+  const imageIsGenerating = linkedCreative?.status === "preview_generating" || linkedCreative?.status === "final_generating";
+  const imageGenerationFailed = linkedCreative?.status === "concept_ready" && Boolean(linkedCreative.metadata?.["imageError"]);
+
+  useEffect(() => {
+    if (!imageIsGenerating) return;
+    const timer = window.setInterval(() => {
+      void creativesQuery.refetch();
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [imageIsGenerating, creativesQuery.refetch]);
+
+  async function handleGenerateImage() {
+    if (!linkedCreative || startingImageGeneration) return;
+    setStartingImageGeneration(true);
+    try {
+      await customFetch<unknown>(`/api/campaigns/${campaignId}/creatives/${linkedCreative.id}/approve-concept`, { method: "POST" });
+      await creativesQuery.refetch();
+      toast.success(t("Conceito aprovado. Estamos gerando a imagem para esta publicação.", "Concept approved. We are generating the image for this post.", "Concepto aprobado. Estamos generando la imagen para esta publicación."));
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : t("Não foi possível iniciar a geração da imagem.", "Could not start image generation.", "No se pudo iniciar la generación de la imagen."));
+    } finally {
+      setStartingImageGeneration(false);
+    }
+  }
+
+  return (
+    <section className="space-y-3 border border-border/40 bg-card/30 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-widest text-foreground">
+          <ImagePlus className="h-3.5 w-3.5 text-purple-400" />{t("Criativo visual", "Visual creative", "Creatividad visual")}
+        </h3>
+        {hasCreative && <Badge variant="outline" className="rounded-none border-purple-400/30 font-mono text-[9px] uppercase text-purple-300">{linkedCreative!.status.replace(/_/g, " ")}</Badge>}
+      </div>
+      {imageReady ? (
+        <img src={imageSource!} alt={t(`Criativo visual para ${piece.title}`, `Visual creative for ${piece.title}`, `Creatividad visual para ${piece.title}`)} className="mx-auto max-h-[420px] w-full object-contain bg-black/30" />
+      ) : (
+        <div className="flex min-h-28 flex-col items-center justify-center gap-2 border border-dashed border-border/40 bg-background/40 p-4 text-center">
+          {imageIsGenerating ? <Loader2 className="h-4 w-4 animate-spin text-purple-300" /> : <Image className="h-4 w-4 text-muted-foreground/40" />}
+          <p className="font-mono text-[10px] leading-relaxed text-muted-foreground/70">
+            {imageFailed
+              ? t("Não foi possível carregar a imagem deste criativo.", "Could not load this creative image.", "No se pudo cargar la imagen de esta creatividad.")
+              : imageIsGenerating
+                ? t("A imagem do criativo está sendo preparada.", "The creative image is being prepared.", "Se está preparando la imagen de la creatividad.")
+                : imageGenerationFailed
+                  ? t("A imagem não foi gerada desta vez. Tente novamente; se o problema persistir, fale com o suporte.", "The image could not be generated this time. Try again; if the issue continues, contact support.", "No se pudo generar la imagen esta vez. Inténtalo de nuevo; si el problema continúa, contacta con soporte.")
+                  : hasCreative
+                  ? t("O conceito está pronto. Use o botão abaixo para gerar a imagem.", "The concept is ready. Use the button below to generate the image.", "El concepto está listo. Usa el botón de abajo para generar la imagen.")
+                  : t("Esta etapa gerou o texto e a direção visual. A imagem do criativo ainda não foi gerada.", "This phase generated the copy and visual direction. The creative image has not been generated yet.", "Esta etapa generó el texto y la dirección visual. La imagen aún no se ha generado.")}
+          </p>
+          {piece.visualDirection && <p className="max-w-lg font-mono text-[10px] leading-relaxed text-purple-200/70">{piece.visualDirection}</p>}
+        </div>
+      )}
+      {linkedCreative?.status === "concept_ready" && (
+        <Button type="button" size="sm" onClick={handleGenerateImage} disabled={startingImageGeneration} className="w-full rounded-none font-mono text-[10px] uppercase tracking-wider">
+          {startingImageGeneration ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-2 h-3.5 w-3.5" />}
+          {startingImageGeneration
+            ? t("Iniciando geração…", "Starting generation…", "Iniciando generación…")
+            : imageGenerationFailed
+              ? t("Tentar gerar novamente", "Try generating again", "Intentar generar de nuevo")
+              : t("Gerar imagem deste criativo", "Generate this creative image", "Generar imagen de esta creatividad")}
+        </Button>
+      )}
+      {hasCreative && <Link href={`/campaigns/${campaignId}/creatives`} className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider text-purple-300 hover:text-purple-200">
+        {t("Abrir este criativo em Criativos", "Open this creative in Creatives", "Abrir esta creatividad en Creatividades")} <ArrowRight className="h-3 w-3" />
+      </Link>}
+    </section>
+  );
+}
+
+function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewrite, onVisualCreated, loading, rewriting, prescanResult }: {
   piece: ContentPiece;
   campaignId: string;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   onEdit: (piece: ContentPiece) => void;
   onAiRewrite: (id: string) => void;
+  onVisualCreated?: (pieceId: string, creativeId: string) => void;
   loading?: string | null;
   rewriting?: string | null;
   prescanResult?: PieceScanResult | null;
@@ -707,6 +867,11 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
   const [copied, setCopied] = useState(false);
   const [generatingVisual, setGeneratingVisual] = useState(false);
   const [visualCreativeId, setVisualCreativeId] = useState<string | null>(null);
+  const [visualStudioOpen, setVisualStudioOpen] = useState(false);
+  const [visualPrompt, setVisualPrompt] = useState("");
+  const [startingPreviewGeneration, setStartingPreviewGeneration] = useState(false);
+  const [videoStudioOpen, setVideoStudioOpen] = useState(false);
+  const [creatingVideoProject, setCreatingVideoProject] = useState(false);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [publishLoading, setPublishLoading] = useState(false);
@@ -728,6 +893,8 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
   const [scheduleConfirming, setScheduleConfirming] = useState(false);
 
   const needsVisual = VISUAL_PLATFORMS.includes(piece.platform);
+  const isVideoPiece = piece.type === "reel" || piece.type === "native_video";
+  const needsImageCreative = needsVisual && !isVideoPiece;
   const isSocialPlatform = (["instagram", "facebook", "tiktok"] as Platform[]).includes(piece.platform);
 
   async function handleOpenPublishModal() {
@@ -843,24 +1010,71 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
     try {
       const result = await customFetch<{ creativeId: string; conceptTitle: string; dallePrompt: string }>(
         `/api/campaigns/${campaignId}/content/${rootPieceId}/generate-visual`,
-        { method: "POST" },
+        { method: "POST", body: JSON.stringify({ contentPieceKey: piece.id }) },
       );
       setVisualCreativeId(result.creativeId);
+      onVisualCreated?.(piece.id, result.creativeId);
+      setVisualPrompt(result.dallePrompt);
+      setVisualStudioOpen(true);
+      void queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/creatives`] });
       toast.success(
-        `${t("Conceito visual criado", "Visual concept created", "Concepto visual creado")} — "${result.conceptTitle}". ${t("Acesse Criativos para aprovar e gerar a imagem com DALL-E 3.", "Go to Creatives to approve it and generate the image with DALL-E 3.", "Ve a Creativos para aprobarlo y generar la imagen con DALL-E 3.")}`,
-        {
-          duration: 8000,
-          action: {
-            label: t("Abrir Criativos", "Open Creatives", "Abrir Creativos"),
-            onClick: () => { window.location.href = `/campaigns/${campaignId}/creatives`; },
-          },
-        },
+        `${t("Estúdio criativo aberto", "Creative studio opened", "Estudio creativo abierto")} — "${result.conceptTitle}".`,
+        { duration: 8000 },
       );
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : t("Erro ao gerar conceito visual", "Error generating visual concept", "Error al generar el concepto visual");
       toast.error(msg);
     } finally {
       setGeneratingVisual(false);
+    }
+  }
+
+  async function handleGenerateVisualPreview() {
+    if (!visualCreativeId || startingPreviewGeneration) return;
+    setStartingPreviewGeneration(true);
+    try {
+      await customFetch<unknown>(`/api/campaigns/${campaignId}/creatives/${visualCreativeId}/concept`, {
+        method: "PATCH",
+        body: JSON.stringify({ dallePrompt: visualPrompt }),
+      });
+      await customFetch<unknown>(`/api/campaigns/${campaignId}/creatives/${visualCreativeId}/approve-concept`, { method: "POST" });
+      setVisualStudioOpen(false);
+      void queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/creatives`] });
+      toast.success(t("Prompt salvo. Gerando a imagem para esta publicação; a prévia aparecerá aqui.", "Prompt saved. Generating the image for this post; its preview will appear here.", "Prompt guardado. Generando la imagen para esta publicación; la vista previa aparecerá aquí."));
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : t("Não foi possível gerar a imagem desta publicação.", "Could not generate this post's image.", "No se pudo generar la imagen de esta publicación."));
+    } finally {
+      setStartingPreviewGeneration(false);
+    }
+  }
+
+  async function handleCreateVideoProject() {
+    if (creatingVideoProject) return;
+    setCreatingVideoProject(true);
+    const scriptSeed = [
+      piece.title,
+      piece.body,
+      piece.callToAction ? `CTA: ${piece.callToAction}` : "",
+      piece.visualDirection ? `Direção visual: ${piece.visualDirection}` : "",
+      piece.hashtags?.join(" ") ?? "",
+    ].filter(Boolean).join("\n\n");
+    try {
+      const { project } = await customFetch<{ project: { id: string } }>("/api/video-projects", {
+        method: "POST",
+        body: JSON.stringify({
+          title: `${t("Vídeo", "Video", "Vídeo")} — ${piece.title}`,
+          format: piece.platform === "youtube" ? "youtube" : piece.type === "reel" || piece.platform === "tiktok" ? "reels" : "stories",
+          campaignId,
+          scriptSeed,
+          config: { aspectRatio: "9:16", tone: "inspirational", rhythm: "medium", sourceMode: "hybrid" },
+        }),
+      });
+      setVideoStudioOpen(false);
+      window.location.assign(`/video-production?projectId=${encodeURIComponent(project.id)}`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : t("Não foi possível abrir o gerador de vídeo.", "Could not open the video generator.", "No se pudo abrir el generador de vídeo."));
+    } finally {
+      setCreatingVideoProject(false);
     }
   }
 
@@ -1072,7 +1286,7 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
               <Sparkles className="h-3 w-3" />{t("Reescrever", "Rewrite", "Reescribir")}
             </Button>
             {/* Gerar Visual — only shown for social platforms that need a real image/video */}
-            {needsVisual && piece.status === "approved" && !visualCreativeId && (
+            {needsImageCreative && piece.status === "approved" && !visualCreativeId && (
               <Button
                 size="sm"
                 variant="ghost"
@@ -1085,13 +1299,24 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
                 {generatingVisual ? t("Gerando...", "Generating...", "Generando...") : t("Gerar visual", "Generate visual", "Generar imagen")}
               </Button>
             )}
-            {needsVisual && piece.status === "approved" && visualCreativeId && (
-              <a
-                href={`/campaigns/${campaignId}/creatives`}
+            {needsImageCreative && piece.status === "approved" && visualCreativeId && (
+              <button
+                type="button"
+                onClick={() => setVisualStudioOpen(true)}
                 className="inline-flex items-center h-7 px-2 gap-1.5 rounded-none font-mono uppercase text-[11px] tracking-widest text-purple-400 border border-purple-400/40 bg-purple-400/10 hover:bg-purple-400/20"
               >
-                <CheckCircle2 className="h-3 w-3" />{t("Visual criado", "Visual created", "Imagen creada")}
-              </a>
+                <Edit3 className="h-3 w-3" />{t("Abrir estúdio", "Open studio", "Abrir estudio")}
+              </button>
+            )}
+            {needsVisual && isVideoPiece && piece.status === "approved" && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setVideoStudioOpen(true)}
+                className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-cyan-300 hover:text-cyan-200 hover:bg-cyan-400/10"
+              >
+                <Clapperboard className="h-3 w-3" />{t("Gerar vídeo", "Generate video", "Generar vídeo")}
+              </Button>
             )}
             {/* A1 FIX (Bug #04): Publicar nas Redes — gate explícito, não automático */}
             {isSocialPlatform && piece.status === "approved" && (
@@ -1224,6 +1449,69 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
                 {publishConfirming ? t("Publicando...", "Publishing...", "Publicando...") : t("Confirmar e publicar", "Confirm and publish", "Confirmar y publicar")}
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={visualStudioOpen} onOpenChange={setVisualStudioOpen}>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-none border border-purple-400/30 bg-background">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-mono uppercase tracking-widest">
+              <ImagePlus className="h-4 w-4 text-purple-400" />{t("Estúdio criativo da publicação", "Publication creative studio", "Estudio creativo de la publicación")}
+            </DialogTitle>
+            <DialogDescription className="font-mono text-xs">
+              {localizedPlatformLabel(piece.platform, t)} · {t("Dia", "Day", "Día")} {piece.dayIndex} · {piece.title}. {t("Revise o prompt antes de gerar a prévia.", "Review the prompt before generating the preview.", "Revisa el prompt antes de generar la vista previa.")}
+            </DialogDescription>
+          </DialogHeader>
+          <label className="block space-y-2">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("Prompt da imagem", "Image prompt", "Prompt de imagen")}</span>
+            <textarea
+              value={visualPrompt}
+              onChange={(event) => setVisualPrompt(event.target.value)}
+              maxLength={6000}
+              rows={12}
+              className="w-full resize-y border border-border/60 bg-card/40 p-3 font-mono text-xs leading-relaxed text-foreground outline-none focus:border-primary"
+            />
+          </label>
+          <p className="font-mono text-[10px] leading-relaxed text-muted-foreground/70">
+            {t("Ao gerar, o prompt será salvo e a imagem ficará disponível na prévia desta publicação. Você poderá aprovar ou pedir outra versão em Criativos.", "Generating saves the prompt and makes the image available in this post's preview. You can approve it or request another version in Creatives.", "Al generar, se guardará el prompt y la imagen aparecerá en la vista previa de esta publicación. Podrás aprobarla o pedir otra versión en Creatividades.")}
+          </p>
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button type="button" variant="outline" onClick={() => setVisualStudioOpen(false)} className="rounded-none font-mono text-[10px] uppercase tracking-wider">
+              {t("Fechar", "Close", "Cerrar")}
+            </Button>
+            <Button type="button" onClick={handleGenerateVisualPreview} disabled={!visualPrompt.trim() || startingPreviewGeneration} className="rounded-none font-mono text-[10px] uppercase tracking-wider">
+              {startingPreviewGeneration ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-2 h-3.5 w-3.5" />}
+              {startingPreviewGeneration ? t("Gerando prévia…", "Generating preview…", "Generando vista previa…") : t("Gerar prévia da imagem", "Generate image preview", "Generar vista previa de imagen")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={videoStudioOpen} onOpenChange={setVideoStudioOpen}>
+        <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto rounded-none border border-cyan-400/30 bg-background">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-mono uppercase tracking-widest">
+              <Clapperboard className="h-4 w-4 text-cyan-300" />{t("Gerador de vídeo desta publicação", "Video generator for this post", "Generador de vídeo de esta publicación")}
+            </DialogTitle>
+            <DialogDescription className="font-mono text-xs">
+              {localizedPlatformLabel(piece.platform, t)} · {t("Dia", "Day", "Día")} {piece.dayIndex} · {piece.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 border border-border/40 bg-card/30 p-3">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-cyan-200">{t("Conteúdo que será enviado ao gerador", "Content sent to the generator", "Contenido que se enviará al generador")}</p>
+            <p className="max-h-36 overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed text-foreground/80">{piece.body}</p>
+            {piece.visualDirection && <p className="border-t border-border/30 pt-2 font-mono text-[10px] leading-relaxed text-muted-foreground">{t("Direção visual", "Visual direction", "Dirección visual")}: {piece.visualDirection}</p>}
+          </div>
+          <p className="font-mono text-[10px] leading-relaxed text-muted-foreground/70">
+            {t("O projeto será aberto no gerador de vídeo com o roteiro e a direção desta publicação como contexto. Lá você poderá revisar, criar cenas, gerar a prévia e aprovar.", "The project opens in the video generator with this post's script and direction as context. There you can review, create scenes, generate the preview, and approve it.", "El proyecto se abrirá en el generador de vídeo con el guion y la dirección de esta publicación. Allí podrás revisar, crear escenas, generar la vista previa y aprobarla.")}
+          </p>
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button type="button" variant="outline" onClick={() => setVideoStudioOpen(false)} className="rounded-none font-mono text-[10px] uppercase tracking-wider">{t("Cancelar", "Cancel", "Cancelar")}</Button>
+            <Button type="button" onClick={handleCreateVideoProject} disabled={creatingVideoProject} className="rounded-none bg-cyan-500/15 font-mono text-[10px] uppercase tracking-wider text-cyan-200 hover:bg-cyan-500/25">
+              {creatingVideoProject ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Clapperboard className="mr-2 h-3.5 w-3.5" />}
+              {creatingVideoProject ? t("Abrindo gerador…", "Opening generator…", "Abriendo generador…") : t("Abrir gerador de vídeo", "Open video generator", "Abrir generador de vídeo")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1823,10 +2111,11 @@ const TYPE_TO_PLATFORM: Record<string, Platform> = {
   instagram_post: "instagram", instagram_reel: "instagram", instagram_story: "instagram",
   instagram_feed: "instagram", reel: "instagram", story: "instagram",
   tiktok_video: "tiktok", tiktok_reel: "tiktok", native_video: "tiktok",
+  youtube: "youtube", youtube_shorts: "youtube", youtube_short: "youtube",
   facebook_post: "facebook", facebook_ad: "facebook", live_stream: "facebook",
   email_campaign: "email", email: "email",
   whatsapp_message: "whatsapp", whatsapp: "whatsapp",
-  ad_copy: "ads", meta_ad: "ads", google_ad: "ads",
+  ad_copy: "ads", meta_ad: "ads", google_ad: "google_ads", google_ads: "google_ads",
   landing_page: "landing",
   // Aggregated AI document types
   email_sequence: "email",
@@ -2134,6 +2423,7 @@ function expandApiPieces(pieces: ApiContentPiece[], complianceRevision?: Complia
       id: `${piece.id}::${subKey}`,
       platform: TYPE_TO_PLATFORM[rawType] ?? "email",
       type: TYPE_TO_PIECE_TYPE[rawType] ?? "copy",
+      launchPhase: piece.launchPhase,
       dayIndex: baseDayIndex,
       title: AGGREGATED_TYPE_LABELS[rawType]?.[0] ?? rawType,
       staticTitle: AGGREGATED_TYPE_LABELS[rawType],
@@ -2471,24 +2761,42 @@ function expandApiPieces(pieces: ApiContentPiece[], complianceRevision?: Complia
         const calendar = c["calendar"] as Array<Record<string, unknown>> | undefined;
         if (calendar?.length) {
           calendar.forEach((post, i) => {
-            const platforms = (post["platforms"] as string[] | undefined) ?? ["instagram"];
-            const firstPlatform = platforms[0] ?? "instagram";
-            const mappedPlatform: Platform = (TYPE_TO_PLATFORM[firstPlatform] ?? "instagram") as Platform;
-            result.push(child(`post:${i}`, {
-              platform: mappedPlatform,
-              type: (post["postType"] as PieceType) ?? "post",
-              dayIndex: typeof post["day"] === "number" ? (post["day"] as number) : i,
-              title: `📱 Dia ${typeof post["day"] === "number" ? (post["day"] as number) + 1 : i + 1} — ${post["phaseName"] as string ?? post["phase"] as string ?? platforms.join("/")}`,
-              body: [
-                post["caption"] ? (post["caption"] as string) : post["copyText"] ? (post["copyText"] as string) : "",
-                post["hashtags"] && Array.isArray(post["hashtags"]) ? `\n${(post["hashtags"] as string[]).join(" ")}` : "",
-                post["visualDirection"] ? `\nVisual: ${post["visualDirection"] as string}` : "",
-                post["tiktokHook"] ? `\nHook TikTok: ${post["tiktokHook"] as string}` : "",
-              ].filter(Boolean).join(""),
-              callToAction: post["engagementTactic"] as string | undefined,
-              visualDirection: post["visualDirection"] as string | undefined,
-              tiktokHook: post["tiktokHook"] as string | undefined,
-            }));
+            const requestedPlatforms = Array.isArray(post["platforms"]) ? post["platforms"] as string[] : ["instagram"];
+            const platforms = [...new Set(requestedPlatforms
+              .map(value => TYPE_TO_PLATFORM[value] ?? value)
+              .filter((value): value is Platform => ["instagram", "facebook", "tiktok", "youtube"].includes(value)))];
+            const targetPlatforms = platforms.length > 0 ? platforms : ["instagram"];
+            targetPlatforms.forEach(platform => {
+              const rawPostType = String(post["postType"] ?? "post").toLowerCase();
+              const pieceType: PieceType = platform === "youtube" || platform === "tiktok"
+                ? "native_video"
+                : rawPostType === "reels" || rawPostType === "reel"
+                  ? "reel"
+                  : rawPostType === "stories" || rawPostType === "story"
+                    ? "story"
+                    : rawPostType === "live"
+                      ? "native_video"
+                      : "post";
+              const caption = platform === "facebook"
+                ? (post["facebookCaption"] as string | undefined) ?? (post["caption"] as string | undefined)
+                : (post["caption"] as string | undefined) ?? (post["copyText"] as string | undefined);
+              result.push(child(`post:${i}:${platform}`, {
+                platform,
+                type: pieceType,
+                dayIndex: typeof post["day"] === "number" ? (post["day"] as number) : i,
+                title: `📱 Dia ${typeof post["day"] === "number" ? (post["day"] as number) + 1 : i + 1} — ${PLATFORM_LABEL[platform]}`,
+                body: [
+                  caption ?? "",
+                  post["hashtags"] && Array.isArray(post["hashtags"]) ? `\n${(post["hashtags"] as string[]).join(" ")}` : "",
+                  platform === "tiktok" && post["tiktokHook"] ? `\nHook TikTok: ${post["tiktokHook"] as string}` : "",
+                  (platform === "youtube" || platform === "tiktok") && post["videoScript"] ? `\n\nRoteiro do vídeo:\n${post["videoScript"] as string}` : "",
+                  post["visualDirection"] ? `\nVisual: ${post["visualDirection"] as string}` : "",
+                ].filter(Boolean).join(""),
+                callToAction: post["engagementTactic"] as string | undefined,
+                visualDirection: (post["visualDirection"] ?? post["visualConcept"]) as string | undefined,
+                tiktokHook: post["tiktokHook"] as string | undefined,
+              }));
+            });
           });
         } else {
           result.push(child("fallback", {
@@ -2510,7 +2818,7 @@ function expandApiPieces(pieces: ApiContentPiece[], complianceRevision?: Complia
           const allAds: Array<{ ad: Record<string, unknown>; pl: Platform }> = [
             ...metaAds.map(a => ({ ad: a, pl: "ads" as Platform })),
             ...tiktokAds.map(a => ({ ad: a, pl: "tiktok" as Platform })),
-            ...googleAds.map(a => ({ ad: a, pl: "ads" as Platform })),
+            ...googleAds.map(a => ({ ad: a, pl: "google_ads" as Platform })),
           ];
           allAds.forEach(({ ad, pl }) => {
             const headline = (ad["headline"] as string | undefined) ?? (
@@ -4181,15 +4489,26 @@ function CPLTab({ apiPieces, onApprove, onReject, loading }: {
 
 type Tab = "masterplan" | "por_fase" | "platform" | "preview" | "flowchart" | "schedule" | "segmentation" | "landing" | "aquecimento" | "cpl";
 
-const VISUAL_PLATFORMS: Platform[] = ["instagram", "facebook", "tiktok"];
+const VISUAL_PLATFORMS: Platform[] = ["instagram", "facebook", "tiktok", "youtube"];
 
 export default function ContentApproval() {
   const t = useUiText();
   const params = useParams<{ id: string }>();
   const campaignId = params.id;
+  const search = useSearch();
+  const searchParams = new URLSearchParams(search);
+  const phaseFilterStorageKey = `campaign-content-phase:${campaignId}`;
+  const phaseFilterNameStorageKey = `${phaseFilterStorageKey}:name`;
+  const phaseIdFromUrl = searchParams.get("phaseId")?.trim() || null;
+  const phaseNameFromUrl = searchParams.get("phaseName")?.trim() || null;
+  const showAllPhases = searchParams.get("allPhases") === "1";
+  const rememberedPhaseId = typeof window !== "undefined" ? window.sessionStorage.getItem(phaseFilterStorageKey) : null;
+  const rememberedPhaseName = typeof window !== "undefined" ? window.sessionStorage.getItem(phaseFilterNameStorageKey) : null;
+  const phaseFilterId = phaseIdFromUrl || (!showAllPhases ? rememberedPhaseId : null);
+  const phaseFilterName = phaseNameFromUrl || rememberedPhaseName || phaseFilterId;
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<Tab>("masterplan");
+  const [activeTab, setActiveTab] = useState<Tab>(phaseFilterId || searchParams.get("tab") === "phases" ? "por_fase" : searchParams.get("tab") === "landing" ? "landing" : "masterplan");
   const [cinemaActive, setCinemaActive] = useState(false);
   const [editingPiece, setEditingPiece] = useState<ContentPiece | null>(null);
   const [loadingPiece, setLoadingPiece] = useState<string | null>(null);
@@ -4207,8 +4526,20 @@ export default function ContentApproval() {
   const [previewFilter, setPreviewFilter] = useState<Platform | "all">("all");
   const [regeneratingContent, setRegeneratingContent] = useState(false);
   const [regeneratingPieceId, setRegeneratingPieceId] = useState<string | null>(null);
+  const [selectedSchedulePieceId, setSelectedSchedulePieceId] = useState<string | null>(null);
+  const [selectedScheduleCreativeId, setSelectedScheduleCreativeId] = useState<string | null>(null);
 
   const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (phaseIdFromUrl) {
+      window.sessionStorage.setItem(phaseFilterStorageKey, phaseIdFromUrl);
+      if (phaseNameFromUrl) window.sessionStorage.setItem(phaseFilterNameStorageKey, phaseNameFromUrl);
+    } else if (showAllPhases) {
+      window.sessionStorage.removeItem(phaseFilterStorageKey);
+      window.sessionStorage.removeItem(phaseFilterNameStorageKey);
+    }
+  }, [phaseFilterStorageKey, phaseFilterNameStorageKey, phaseIdFromUrl, phaseNameFromUrl, showAllPhases]);
 
   const { data: campaignData, isLoading } = useQuery({
     queryKey: [`/api/campaigns/${campaignId}`],
@@ -4320,7 +4651,13 @@ export default function ContentApproval() {
     }
   })();
 
-  const pieces: ContentPiece[] = useMemo(() => (localPieces ?? realPieces ?? []).map(piece => ({ ...piece, campaignType: campaign?.type })), [localPieces, realPieces, campaign?.type]);
+  const pieces: ContentPiece[] = useMemo(() => {
+    const availablePieces = localPieces ?? realPieces ?? [];
+    const scopedPieces = phaseFilterId
+      ? availablePieces.filter(piece => piece.launchPhase?.trim().toLowerCase().replace(/[\s-]+/g, "_") === phaseFilterId.toLowerCase().replace(/[\s-]+/g, "_"))
+      : availablePieces;
+    return scopedPieces.map(piece => ({ ...piece, campaignType: campaign?.type }));
+  }, [localPieces, realPieces, campaign?.type, phaseFilterId]);
   const approvedCount = pieces.filter(p => p.status === "approved").length;
   const pendingCount  = pieces.filter(p => p.status === "pending").length;
   const rejectedCount = pieces.filter(p => p.status === "rejected").length;
@@ -4693,11 +5030,11 @@ export default function ContentApproval() {
   });
 
   const TABS: { id: Tab; label: string; icon: React.ElementType; badge?: string }[] = [
+    { id: "schedule",     label: t("Cronograma", "Schedule", "Cronograma"), icon: Calendar },
     { id: "masterplan",   label: t("Masterplan", "Master plan", "Plan maestro"), icon: Rocket },
     { id: "por_fase",     label: t("Por fase", "By phase", "Por fase"), icon: Target, badge: `${pieces.length}` },
     { id: "preview",      label: t("Prévia visual", "Visual preview", "Vista previa visual"), icon: Eye },
     { id: "platform",     label: t("Por plataforma", "By platform", "Por plataforma"), icon: Globe },
-    { id: "schedule",     label: t("Cronograma", "Schedule", "Cronograma"), icon: Calendar },
     ...(landingPageData ? [{ id: "landing" as Tab, label: "Landing Page", icon: Globe, badge: "LP" }] : []),
     ...(hasWarmingContent ? [{ id: "aquecimento" as Tab, label: t("Aquecimento", "Warm-up", "Calentamiento"), icon: Flame, badge: "PRÉ" }] : []),
     ...(hasCPLContent ? [{ id: "cpl" as Tab, label: "CPL Scripts", icon: Clapperboard, badge: "CPL" }] : []),
@@ -4779,6 +5116,63 @@ export default function ContentApproval() {
       {editingPiece && (
         <EditModal piece={editingPiece} onClose={() => setEditingPiece(null)} onSave={handleSaveEdit} />
       )}
+      <Dialog open={selectedSchedulePieceId !== null} onOpenChange={(open) => { if (!open) { setSelectedSchedulePieceId(null); setSelectedScheduleCreativeId(null); } }}>
+        <DialogContent className="max-h-[90vh] w-[min(96vw,900px)] max-w-none overflow-y-auto rounded-none border-primary/30 bg-background">
+          {(() => {
+            const selectedPiece = pieces.find(piece => piece.id === selectedSchedulePieceId);
+            if (!selectedPiece) return null;
+            const PlatformIcon = PLATFORM_ICON[selectedPiece.platform] ?? Globe;
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex flex-wrap items-center gap-2 font-mono uppercase tracking-wider">
+                    <PlatformIcon className="h-4 w-4 text-primary" />
+                    {t("Detalhes da publicação", "Publication details", "Detalles de la publicación")}
+                  </DialogTitle>
+                  <DialogDescription className="font-mono text-xs">
+                    {localizedPlatformLabel(selectedPiece.platform, t)} · {t("Dia", "Day", "Día")} {selectedPiece.dayIndex} · {selectedPiece.title}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+                  <div className="min-w-0 space-y-3">
+                    {VISUAL_PLATFORMS.includes(selectedPiece.platform) && (
+                      <section className="space-y-2">
+                        <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-foreground">{t("Prévia da publicação", "Publication preview", "Vista previa de la publicación")}</h3>
+                        <SocialPostPreview piece={selectedPiece} showMetrics={false} />
+                        <p className="font-mono text-[9px] text-muted-foreground/50">{t("Mockup do post. A imagem real aparece abaixo quando o criativo for gerado.", "Post mockup. The actual image appears below once the creative is generated.", "Mockup de la publicación. La imagen real aparecerá abajo cuando se genere la creatividad.")}</p>
+                      </section>
+                    )}
+                    {selectedPiece.type === "reel" || selectedPiece.type === "native_video" ? (
+                      <section className="space-y-3 border border-cyan-400/30 bg-cyan-500/5 p-3">
+                        <h3 className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-widest text-foreground">
+                          <Clapperboard className="h-3.5 w-3.5 text-cyan-300" />{t("Vídeo desta publicação", "Video for this post", "Vídeo de esta publicación")}
+                        </h3>
+                        <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">
+                          {t("Esta publicação é um vídeo. Abra o gerador específico para criar cenas e prévia usando o roteiro e a direção visual dela.", "This post is a video. Open its dedicated generator to create scenes and a preview using its script and visual direction.", "Esta publicación es un vídeo. Abre su generador específico para crear escenas y una vista previa con su guion y dirección visual.")}
+                        </p>
+                      </section>
+                    ) : (
+                      <PublicationCreativePanel campaignId={campaignId} piece={selectedPiece} creativeIdOverride={selectedScheduleCreativeId} />
+                    )}
+                  </div>
+                  <ContentCard
+                    piece={selectedPiece}
+                    campaignId={campaignId}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
+                    onEdit={setEditingPiece}
+                    onAiRewrite={handleAiRewrite}
+                    onVisualCreated={(pieceId, creativeId) => { if (pieceId === selectedPiece.id) setSelectedScheduleCreativeId(creativeId); }}
+                    loading={loadingPiece}
+                    rewriting={rewritingPiece}
+                    prescanResult={complianceScan?.byPiece[selectedPiece.id] ?? null}
+                  />
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       <div className="max-w-5xl mx-auto space-y-5">
         {/* Header */}
@@ -4858,8 +5252,30 @@ export default function ContentApproval() {
           </div>
         </div>
 
-        {/* ── Creative Studio: request AI/upload images & video from the deliverables page ── */}
-        <CreativeStudioBlock campaignId={campaignId} campaignTitle={campaign?.title ?? t("Campanha", "Campaign", "Campaña")} />
+        {/* Keep the publication schedule visible near the top of the campaign content page. */}
+        <div className="flex gap-0.5 border border-border/50 bg-card/40 p-1 w-full overflow-x-auto scrollbar-none">
+          {TABS.filter(tab => !isContinuous || tab.id !== "por_fase").map(tab => {
+            const Icon = tab.icon;
+            return (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                className={`relative flex items-center gap-1.5 px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-mono uppercase tracking-widest transition-all whitespace-nowrap flex-1 justify-center
+                  ${activeTab === tab.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"}`}>
+                <Icon className="h-3 w-3 shrink-0" />
+                <span className={tab.id === "schedule" ? "inline" : "hidden sm:inline"}>{tab.label}</span>
+                {tab.badge && (
+                  <span className={`ml-0.5 font-mono text-[8px] px-1 py-0.5 border ${activeTab === tab.id ? "border-primary-foreground/40 text-primary-foreground/80" : "border-primary/40 text-primary"}`}>
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* General creative tools belong to the master plan, not the publication schedule. */}
+        {activeTab === "masterplan" && (
+          <CreativeStudioBlock campaignId={campaignId} campaignTitle={campaign?.title ?? t("Campanha", "Campaign", "Campaña")} />
+        )}
 
         {/* ── Compliance Pre-Scan Banner ───────────────────────────────────── */}
         {complianceScan && complianceScan.scanned && complianceScan.withViolations > 0 && (
@@ -4995,26 +5411,6 @@ export default function ContentApproval() {
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex gap-0.5 border border-border/50 bg-card/40 p-1 w-full overflow-x-auto scrollbar-none">
-          {TABS.filter(tab => !isContinuous || tab.id !== "por_fase").map(tab => {
-            const Icon = tab.icon;
-            return (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`relative flex items-center gap-1.5 px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-mono uppercase tracking-widest transition-all whitespace-nowrap flex-1 justify-center
-                  ${activeTab === tab.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"}`}>
-                <Icon className="h-3 w-3 shrink-0" />
-                <span className="hidden sm:inline">{tab.label}</span>
-                {tab.badge && (
-                  <span className={`ml-0.5 font-mono text-[8px] px-1 py-0.5 border ${activeTab === tab.id ? "border-primary-foreground/40 text-primary-foreground/80" : "border-primary/40 text-primary"}`}>
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
         {isContinuous && (activeTab === "masterplan" || activeTab === "flowchart") && (
           <ContinuousContentOverview title={campaign?.title ?? ""} intake={campaign?.intakeData ?? {}} pieceCount={pieces.length} approvedCount={approvedCount} platformCount={new Set(pieces.map(p => p.platform)).size} calendarDays={generatedCalendarDays} onReview={() => setActiveTab("platform")} />
         )}
@@ -5040,6 +5436,13 @@ export default function ContentApproval() {
             loading={loadingPiece}
             rewriting={rewritingPiece}
             complianceScan={complianceScan}
+            phaseFilterId={phaseFilterId}
+            phaseFilterName={phaseFilterName ?? t("Etapa selecionada", "Selected phase", "Etapa seleccionada")}
+            onClearPhaseFilter={() => {
+              window.sessionStorage.removeItem(phaseFilterStorageKey);
+              window.sessionStorage.removeItem(phaseFilterNameStorageKey);
+              setLocation(`/campaigns/${campaignId}/content?tab=phases&allPhases=1`);
+            }}
           />
         )}
 
@@ -5054,7 +5457,7 @@ export default function ContentApproval() {
             {/* Platform filter */}
             <div className="flex gap-2 flex-wrap items-center">
               <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground shrink-0">{t("Plataforma:", "Platform:", "Plataforma:")}</span>
-              {([[ "all", t("Todas", "All", "Todas"), Globe], ["instagram", "Instagram", Instagram], ["facebook", "Facebook", Globe], ["tiktok", "TikTok", Music2]] as [Platform | "all", string, React.ElementType][]).map(([val, label, Icon]) => (
+              {([[ "all", t("Todas", "All", "Todas"), Globe], ["instagram", "Instagram", Instagram], ["facebook", "Facebook", Globe], ["tiktok", "TikTok", Music2], ["youtube", "YouTube", Video]] as [Platform | "all", string, React.ElementType][]).map(([val, label, Icon]) => (
                 <button key={val} onClick={() => setPreviewFilter(val)}
                   className={`flex items-center gap-1.5 px-3 h-7 font-mono text-[11px] uppercase tracking-widest border transition-all
                     ${previewFilter === val
@@ -5226,9 +5629,41 @@ export default function ContentApproval() {
                     </div>
                   </div>
                   <div className="ml-11 grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {dayPieces.map(piece => (
-                      <ContentCard key={piece.id} piece={piece} campaignId={campaignId} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} rewriting={rewritingPiece} prescanResult={complianceScan?.byPiece[piece.id] ?? null} />
-                    ))}
+                    {dayPieces.map(piece => {
+                      const PlatformIcon = PLATFORM_ICON[piece.platform] ?? Globe;
+                      const platformColor = PLATFORM_COLOR[piece.platform] ?? "text-muted-foreground border-border/40";
+                      return (
+                        <div
+                          key={piece.id}
+                          onClick={() => setSelectedSchedulePieceId(piece.id)}
+                          className="w-full min-w-0 cursor-pointer border border-border/50 bg-card/40 p-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/[0.04]"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <PlatformIcon className={`h-4 w-4 shrink-0 ${platformColor.split(" ")[0]}`} />
+                              <Badge variant="outline" className={`rounded-none font-mono text-[10px] uppercase ${platformColor}`}>
+                                {localizedPlatformLabel(piece.platform, t)}
+                              </Badge>
+                              <span className="truncate font-mono text-[10px] uppercase tracking-wider text-muted-foreground/60">{t("Dia", "Day", "Día")} {piece.dayIndex}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(event) => { event.stopPropagation(); setSelectedSchedulePieceId(piece.id); }}
+                              className="shrink-0 font-mono text-[10px] uppercase text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                            >
+                              {t("Ver publicação", "View post", "Ver publicación")} →
+                            </button>
+                          </div>
+                          <h3 className="mt-3 font-mono text-sm font-bold text-foreground">{piece.title}</h3>
+                          <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">{piece.body}</p>
+                          {piece.visualDirection && (
+                            <p className="mt-3 line-clamp-2 border-t border-border/30 pt-2 text-[10px] leading-relaxed text-muted-foreground/70">
+                              <span className="font-mono uppercase tracking-wider text-primary/70">{t("Direção visual", "Visual direction", "Dirección visual")}: </span>{piece.visualDirection}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );

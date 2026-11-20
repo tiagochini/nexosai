@@ -11,7 +11,7 @@ import {
   ChevronDown, ChevronUp, Camera, Upload, Scissors, Square,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useUiText, useUiLocale, intlLocale } from "@/lib/i18n";
+import { useAppI18n, useUiText, useUiLocale, intlLocale } from "@/lib/i18n";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -117,6 +117,105 @@ interface ProviderStatus {
   voiceProvider: string | null;
   configured: boolean;
   instructions: { video: string; avatar: string; voice: string };
+}
+
+/** Fetch private API-backed clips with the app's bearer token before playback. */
+function AuthenticatedVideoPreview({
+  src,
+  className,
+  downloadName,
+}: {
+  src: string;
+  className: string;
+  downloadName?: string;
+}) {
+  const t = useUiText();
+  const i18n = useAppI18n();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [playbackUrl, setPlaybackUrl] = useState<string | null>(src.startsWith("/api/") ? null : src);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+
+  useEffect(() => {
+    setLoadError(false);
+    if (!src.startsWith("/api/")) {
+      setPlaybackUrl(src);
+      setLoading(false);
+      return;
+    }
+
+    setPlaybackUrl(null);
+    let active = true;
+    let requestStarted = false;
+    let objectUrl: string | null = null;
+    const load = async () => {
+      if (requestStarted || !active) return;
+      requestStarted = true;
+      setLoading(true);
+      try {
+        const media = await customFetch<Blob>(src, { responseType: "blob" });
+        const nextUrl = URL.createObjectURL(media);
+        if (!active) {
+          URL.revokeObjectURL(nextUrl);
+          return;
+        }
+        objectUrl = nextUrl;
+        setPlaybackUrl(nextUrl);
+      } catch {
+        if (active) setLoadError(true);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    const target = containerRef.current;
+    if (target && typeof IntersectionObserver !== "undefined") {
+      const observer = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) void load();
+      }, { rootMargin: "200px" });
+      observer.observe(target);
+      return () => {
+        active = false;
+        observer.disconnect();
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+      };
+    }
+
+    void load();
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [src, retryCount, t]);
+
+  return (
+    <div ref={containerRef} className="space-y-2">
+      {playbackUrl ? (
+        <video src={playbackUrl} controls playsInline preload="metadata" className={className} />
+      ) : (
+        <div className="flex aspect-video items-center justify-center border border-dashed border-border/50 bg-black/30 px-4 text-center font-mono text-xs text-muted-foreground" aria-live="polite">
+          {loading ? t("Carregando prévia do storage…", "Loading preview from storage…", "Cargando vista previa del almacenamiento…") : loadError ? (
+            <span>
+              <span className="block text-red-400">{previewFailureMessage(i18n)}</span>
+              <button type="button" onClick={() => setRetryCount((count) => count + 1)} className="mt-2 underline underline-offset-2">
+                {t("Tentar carregar novamente", "Try loading again", "Intentar cargar de nuevo")}
+              </button>
+            </span>
+          ) : t("A prévia será carregada quando aparecer na tela.", "The preview will load when it comes into view.", "La vista previa se cargará al aparecer en pantalla.")}
+        </div>
+      )}
+      {playbackUrl && downloadName && (
+        <a href={playbackUrl} download={downloadName} className="flex items-center gap-1.5 font-mono text-[10px] text-primary hover:underline">
+          <Download className="h-3 w-3" />{t("Baixar clipe", "Download clip", "Descargar clip")}
+        </a>
+      )}
+    </div>
+  );
+}
+
+function previewFailureMessage(i18n: ReturnType<typeof useAppI18n>) {
+  return i18n.videoProduction.previewFailed;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -675,6 +774,7 @@ function StoryboardPanel({ project, onAction }: { project: VideoProject; onActio
 
 function ClipsPanel({ project, isHd, onAction }: { project: VideoProject; isHd: boolean; onAction: () => void }) {
   const t = useUiText();
+  const i18n = useAppI18n();
   const [loading, setLoading] = useState(false);
   const isGenerating = project.status === (isHd ? "final_generating" : "preview_generating");
   const isReady = project.status === (isHd ? "completed" : "preview_ready");
@@ -743,14 +843,11 @@ function ClipsPanel({ project, isHd, onAction }: { project: VideoProject; isHd: 
               </div>
               {url && (
                 <div className="mt-2">
-                  <video src={url} controls className="w-full rounded-md max-h-48 bg-black" />
-                  <a href={url} download className="flex items-center gap-1.5 font-mono text-[10px] text-primary hover:underline mt-1">
-                    <Download className="h-3 w-3" />{t("Baixar clipe", "Download clip", "Descargar clip")}
-                  </a>
+                  <AuthenticatedVideoPreview src={url} downloadName={`cena-${scene.order}.mp4`} className="w-full rounded-md max-h-48 bg-black" />
                 </div>
               )}
               {scene.clipStatus === "failed" && scene.notes && !scene.notes.startsWith("job:") && (
-                <p className="font-mono text-[10px] text-red-400 mt-2">{scene.notes}</p>
+                <p className="font-mono text-[10px] text-red-400 mt-2">{previewFailureMessage(i18n)}</p>
               )}
             </div>
           );
@@ -772,6 +869,7 @@ function ClipsPanel({ project, isHd, onAction }: { project: VideoProject; isHd: 
 
 export function VideoScenesReviewPage() {
   const t = useUiText();
+  const i18n = useAppI18n();
   const [, navigate] = useLocation();
   const [, params] = useRoute("/video-production/:projectId/scenes");
   const projectId = params?.projectId ?? "";
@@ -855,8 +953,8 @@ export function VideoScenesReviewPage() {
       });
       setProject(updated);
       toast.success(t("Prévia da cena enviada para geração.", "Scene preview submitted for generation.", "Vista previa de escena enviada a generación."));
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("Falha ao gerar a prévia.", "Failed to generate the preview.", "No se pudo generar la vista previa."));
+    } catch {
+      toast.error(previewFailureMessage(i18n));
     } finally { setBusySceneId(null); }
   }
 
@@ -943,10 +1041,10 @@ export function VideoScenesReviewPage() {
                   <div className="border border-border/30 p-3"><div className="mb-1 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("O que aparece", "What appears", "Qué aparece")}</div><p className="text-sm leading-relaxed">{scene.visualDescription}</p>{scene.cameraDirection && <p className="mt-2 font-mono text-[10px] text-muted-foreground">{t("Câmera:", "Camera:", "Cámara:")} {scene.cameraDirection}</p>}{scene.onScreenText && <p className="mt-2 font-mono text-[10px] text-primary">{t("Texto na tela:", "On-screen text:", "Texto en pantalla:")} {scene.onScreenText}</p>}</div>
                 </div>
                 <div className="space-y-3">
-                  {url ? <video src={url} controls playsInline className="aspect-video w-full bg-black object-contain" /> : <div className="flex aspect-video items-center justify-center border border-dashed border-border/50 bg-black/30 font-mono text-xs text-muted-foreground">{scene.clipStatus === "generating" ? t("A prévia está sendo gerada…", "Preview is generating…", "Generando vista previa…") : t("A prévia desta cena aparecerá aqui", "The scene preview will appear here", "La vista previa aparecerá aquí")}</div>}
+                  {url ? <AuthenticatedVideoPreview src={url} className="aspect-video w-full bg-black object-contain" /> : <div className="flex aspect-video items-center justify-center border border-dashed border-border/50 bg-black/30 font-mono text-xs text-muted-foreground">{scene.clipStatus === "generating" ? t("A prévia está sendo gerada…", "Preview is generating…", "Generando vista previa…") : t("A prévia desta cena aparecerá aqui", "The scene preview will appear here", "La vista previa aparecerá aquí")}</div>}
                   <label className="block font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{t("Prompt da cena", "Scene prompt", "Prompt de la escena")}</label>
                   <Textarea value={promptDrafts[scene.id] ?? scene.videoPrompt} onChange={(event) => setPromptDrafts((prev) => ({ ...prev, [scene.id]: event.target.value }))} rows={5} className="resize-y font-mono text-[11px]" disabled={approved || scene.clipStatus === "generating"} />
-                  {scene.clipStatus === "failed" && scene.notes && <p className="font-mono text-[10px] text-red-400">{scene.notes}</p>}
+                  {scene.clipStatus === "failed" && scene.notes && <p className="font-mono text-[10px] text-red-400">{previewFailureMessage(i18n)}</p>}
                   <div className="flex flex-wrap gap-2">
                     {!approved && <Button onClick={() => void generateScene(scene)} disabled={busySceneId === scene.id || scene.clipStatus === "generating" || !promptDrafts[scene.id]?.trim()} variant="outline" size="sm" className="font-mono text-[10px]">{busySceneId === scene.id || scene.clipStatus === "generating" ? <RefreshCw className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Play className="mr-2 h-3.5 w-3.5" />}{url ? t("Gerar outra prévia", "Generate another preview", "Generar otra vista previa") : t("Gerar prévia da cena", "Generate scene preview", "Generar vista previa")}</Button>}
                     {!approved && scene.clipStatus === "ready" && url && <Button onClick={() => void approveScene(scene)} disabled={busySceneId === scene.id} size="sm" className="font-mono text-[10px]">{busySceneId === scene.id ? <RefreshCw className="mr-2 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-2 h-3.5 w-3.5" />}{t("Aprovar esta cena", "Approve this scene", "Aprobar esta escena")}</Button>}
@@ -1527,16 +1625,6 @@ export default function VideoProductionPage() {
     setActionLoading(true);
     try {
       const res = await customFetch<{ project: VideoProject }>(`/api/video-projects/${selected.id}/generate-storyboard`, { method: "POST", body: "{}" });
-      setSelected(res.project);
-      setProjects(ps => ps.map(p => p.id === res.project.id ? res.project : p));
-    } finally { setActionLoading(false); }
-  }
-
-  async function generatePreview() {
-    if (!selected) return;
-    setActionLoading(true);
-    try {
-      const res = await customFetch<{ project: VideoProject }>(`/api/video-projects/${selected.id}/generate-preview`, { method: "POST", body: "{}" });
       setSelected(res.project);
       setProjects(ps => ps.map(p => p.id === res.project.id ? res.project : p));
     } finally { setActionLoading(false); }
@@ -2149,14 +2237,12 @@ export default function VideoProductionPage() {
                   {hybridMode === "ai" && (
                     <div>
                       <div className="font-mono text-xs text-muted-foreground mb-3">
-                        {selected.config.hasUserFace
-                          ? t("O agente vai gerar clipes com avatar digital (720p) para cada cena. Você aprova cena a cena.", "The agent will generate digital-avatar clips (720p) for each scene. You approve them scene by scene.", "El agente generará clips con avatar digital (720p) para cada escena. Los aprobarás uno por uno.")
-                          : t("O agente vai gerar clipes de preview (720p) para cada cena do storyboard. Você aprova cena a cena antes do vídeo HD final.", "The agent will generate preview clips (720p) for each storyboard scene. You approve them scene by scene before the final HD video.", "El agente generará clips de vista previa (720p) para cada escena del storyboard. Los aprobarás uno por uno antes del vídeo HD final.")}
+                        {t("Gere a prévia de uma cena por vez, confira o resultado e aprove antes de seguir. Os créditos são cobrados por cena solicitada.", "Generate one scene preview at a time, review it, and approve it before continuing. Credits are charged per requested scene.", "Genera la vista previa de una escena a la vez, revísala y apruébala antes de continuar. Los créditos se cobran por escena solicitada.")}
                       </div>
                       <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground mb-3">
                         <span className="flex items-center gap-1">
                           <Sparkles className="h-3.5 w-3.5 text-primary" />
-                          {t(`${selected.config.hasUserFace ? "80" : "50"} créditos/cena · ${(selected.config.hasUserFace ? 80 : 50) * selected.storyboard.length} total`, `${selected.config.hasUserFace ? "80" : "50"} credits/scene · ${(selected.config.hasUserFace ? 80 : 50) * selected.storyboard.length} total`, `${selected.config.hasUserFace ? "80" : "50"} créditos/escena · ${(selected.config.hasUserFace ? 80 : 50) * selected.storyboard.length} en total`)}
+                          {t(`${selected.config.hasUserFace ? "80" : "50"} créditos por cena gerada`, `${selected.config.hasUserFace ? "80" : "50"} credits per generated scene`, `${selected.config.hasUserFace ? "80" : "50"} créditos por escena generada`)}
                         </span>
                         <span>·</span>
                         <span>{provider?.videoProvider ?? "Runway ML / Kling"}</span>
@@ -2174,9 +2260,9 @@ export default function VideoProductionPage() {
                           </Button>
                         </div>
                       )}
-                      <Button onClick={generatePreview} disabled={actionLoading || !provider?.configured} className="font-mono">
-                        {actionLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
-                        {t("Gerar Preview dos Clipes", "Generate Clip Preview", "Generar vista previa de los clips")}
+                      <Button onClick={() => navigate(`/video-production/${selected.id}/scenes`)} disabled={!provider?.configured} className="font-mono">
+                        <Play className="h-4 w-4 mr-2" />
+                        {t("Revisar previews cena a cena", "Review scene previews one by one", "Revisar vistas previas escena por escena")}
                       </Button>
                     </div>
                   )}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -25,13 +26,17 @@ function formatScheduleDate(value: unknown): string {
   return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "short", year: "numeric" }).format(date);
 }
 
-export function CampaignSchedulePreview({ campaignId, timeline, trialAccess, onDownloadPdf }: {
+export function CampaignSchedulePreview({ campaignId, timeline, trialAccess, campaignStatus, onDownloadPdf, onLaunch, launchPending = false }: {
   campaignId: string;
   timeline: Record<string, unknown>;
   trialAccess: boolean;
+  campaignStatus: string;
   onDownloadPdf: () => void;
+  onLaunch: () => void;
+  launchPending?: boolean;
 }) {
   const t = useUiText();
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [activePhase, setActivePhase] = useState<Phase | null>(null);
@@ -81,10 +86,28 @@ export function CampaignSchedulePreview({ campaignId, timeline, trialAccess, onD
     queryFn: () => customFetch<{ pieces?: Array<Record<string, unknown>> }>(`/api/campaigns/${campaignId}/content`),
     enabled: Boolean(campaignId) && !trialAccess,
   });
+  const landingPagePiece = (generatedQuery.data?.pieces ?? []).find(piece => piece["type"] === "landing_page_structure");
+  const landingPageMutation = useMutation({
+    mutationFn: () => customFetch<{ piece: Record<string, unknown>; created: boolean }>(`/api/campaigns/${campaignId}/content/landing-page/generate`, { method: "POST" }),
+    onSuccess: async ({ created }) => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/campaigns", campaignId, "content", "schedule-preview"] });
+      toast.success(created
+        ? t("Landing page gerada e salva para revisão.", "Landing page generated and saved for review.", "Landing page generada y guardada para revisión.")
+        : t("A landing page desta campanha já estava salva.", "This campaign’s landing page was already saved.", "La landing page de esta campaña ya estaba guardada."));
+      setLocation(`/campaigns/${campaignId}/content?tab=landing`);
+    },
+    onError: (error: any) => toast.error(error?.data?.error || error?.message || t("Não foi possível gerar a landing page.", "Could not generate the landing page.", "No se pudo generar la landing page."), { duration: 7000 }),
+  });
   const generatedPhaseIds = new Set((generatedQuery.data?.pieces ?? []).map((piece) => {
     const content = piece["content"] && typeof piece["content"] === "object" ? piece["content"] as Record<string, unknown> : {};
     return String(piece["launchPhase"] ?? content["launchPhase"] ?? "");
   }).filter(Boolean));
+  const generatedPhaseCount = phases.filter((phase, index) => {
+    const phaseId = String(phase["phase"] ?? phase["id"] ?? phase["name"] ?? `phase-${index + 1}`);
+    return generatedPhaseIds.has(phaseId);
+  }).length;
+  const allPhasesGenerated = phases.length > 0 && generatedPhaseCount === phases.length;
+  const campaignApproved = campaignStatus === "approved";
 
   const generateMutation = useMutation({
     mutationFn: (phaseId: string) => customFetch(`/api/campaigns/${campaignId}/content/generate-phase`, {
@@ -145,8 +168,26 @@ export function CampaignSchedulePreview({ campaignId, timeline, trialAccess, onD
         <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
         <div className="min-w-0 flex-1">
           <h2 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-cyan-200">{t("Prévia do cronograma de lançamento", "Launch schedule preview", "Vista previa del cronograma de lanzamiento")}</h2>
-          <p className="mt-1 font-mono text-[10px] leading-relaxed text-muted-foreground/65">{t("A prévia reúne datas e um resumo operacional. Copy, imagens e vídeos só são gerados separadamente quando você solicitar.", "The preview contains dates and an operational summary. Copy, images, and videos are generated separately only when requested.", "La vista previa incluye fechas y un resumen operativo. Los textos, imágenes y videos solo se generan por separado cuando los solicites.")}</p>
+          <p className="mt-1 font-mono text-[10px] leading-relaxed text-muted-foreground/65">{t("A prévia reúne datas e um resumo operacional. Copy, landing page, imagens e vídeos são gerados separadamente quando você solicitar.", "The preview contains dates and an operational summary. Copy, landing pages, images, and videos are generated separately when requested.", "La vista previa incluye fechas y un resumen operativo. Los textos, landing pages, imágenes y videos se generan por separado cuando los solicites.")}</p>
         </div>
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => {
+            if (trialAccess) { setActivePhase({ name: t("Landing Page", "Landing Page", "Landing Page") }); setCheckoutOpen(true); return; }
+            if (landingPagePiece) { setLocation(`/campaigns/${campaignId}/content?tab=landing`); return; }
+            landingPageMutation.mutate();
+          }}
+          disabled={landingPageMutation.isPending || generatedQuery.isLoading}
+          className="w-full shrink-0 gap-1.5 rounded-none font-mono text-[9px] uppercase tracking-wider sm:w-auto"
+        >
+          {landingPageMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : trialAccess ? <Lock className="h-3 w-3" /> : <WandSparkles className="h-3 w-3" />}
+          {landingPageMutation.isPending
+            ? t("Gerando landing page…", "Generating landing page…", "Generando landing page…")
+            : landingPagePiece
+              ? t("Abrir landing page", "Open landing page", "Abrir landing page")
+              : t("Gerar landing page", "Generate landing page", "Generar landing page")}
+        </Button>
         <Button
           type="button"
           size="sm"
@@ -191,10 +232,34 @@ export function CampaignSchedulePreview({ campaignId, timeline, trialAccess, onD
                 {isGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : trialAccess ? <Lock className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
                 {isGenerating ? t("Gerando etapa…", "Generating phase…", "Generando etapa…") : alreadyGenerated ? t("Conteúdo já gerado", "Content generated", "Contenido generado") : t("Gerar conteúdo desta etapa", "Generate this phase’s content", "Generar contenido de esta etapa")}
               </Button>
-              {alreadyGenerated && <Button type="button" size="sm" variant="outline" onClick={() => window.location.assign(`/campaigns/${campaignId}/content`)} className="h-8 rounded-none font-mono text-[9px] uppercase tracking-wider">{t("Revisar conteúdo", "Review content", "Revisar contenido")}</Button>}
+              {alreadyGenerated && <Button type="button" size="sm" variant="outline" onClick={() => window.location.assign(`/campaigns/${campaignId}/content?phaseId=${encodeURIComponent(phaseId)}&phaseName=${encodeURIComponent(phaseName)}`)} className="h-8 rounded-none font-mono text-[9px] uppercase tracking-wider">{t("Revisar conteúdo", "Review content", "Revisar contenido")}</Button>}
             </div>
           </article>;
         })}
+        {phases.length > 0 && <div className={`flex flex-col gap-3 border p-3 sm:flex-row sm:items-center ${allPhasesGenerated ? "border-emerald-400/30 bg-emerald-400/[0.04]" : "border-border/30 bg-background/35"}`}>
+          <div className="min-w-0 flex-1">
+            <p className={`flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-wider ${allPhasesGenerated ? "text-emerald-200" : "text-muted-foreground"}`}>
+              {allPhasesGenerated && <CheckCircle2 className="h-3.5 w-3.5" />}
+              {t("Conteúdos gerados", "Content generated", "Contenido generado")} · {generatedPhaseCount}/{phases.length}
+            </p>
+            <p className="mt-1 font-mono text-[10px] leading-relaxed text-muted-foreground/75">
+              {allPhasesGenerated
+                ? campaignApproved
+                  ? t("Todas as etapas estão prontas e aprovadas. Você já pode lançar a campanha.", "Every phase is ready and approved. You can launch the campaign.", "Todas las etapas están listas y aprobadas. Ya puedes lanzar la campaña.")
+                  : t("Todas as etapas foram geradas. Revise e aprove as publicações para liberar o lançamento.", "Every phase has been generated. Review and approve the posts to unlock launch.", "Todas las etapas fueron generadas. Revisa y aprueba las publicaciones para habilitar el lanzamiento.")
+                : t("Gere o conteúdo de cada etapa. O lançamento será liberado depois da revisão e aprovação.", "Generate content for each phase. Launch will be available after review and approval.", "Genera contenido para cada etapa. El lanzamiento estará disponible después de revisar y aprobar.")}
+            </p>
+          </div>
+          {allPhasesGenerated && <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+            {!campaignApproved && <Button type="button" variant="outline" size="sm" onClick={() => setLocation(`/campaigns/${campaignId}/content`)} className="gap-1.5 rounded-none font-mono text-[9px] uppercase tracking-wider">
+              {t("Revisar e aprovar", "Review and approve", "Revisar y aprobar")}
+            </Button>}
+            <Button type="button" size="sm" disabled={!campaignApproved || launchPending} onClick={onLaunch} className="gap-1.5 rounded-none font-mono text-[9px] font-bold uppercase tracking-wider">
+              {launchPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              {launchPending ? t("Iniciando…", "Starting…", "Iniciando…") : t("Lançar campanha", "Launch campaign", "Lanzar campaña")}
+            </Button>
+          </div>}
+        </div>}
       </div>}
     </section>
 

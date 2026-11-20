@@ -132,6 +132,7 @@ export interface CreateVideoProjectInput {
   format: VideoProject["format"];
   campaignId?: string;
   vslId?: string;
+  scriptSeed?: string;
   config: Partial<VideoConfig>;
 }
 
@@ -192,7 +193,7 @@ export async function createVideoProject(
       // Always "intake" — CYRUS must always run to elevate copy into cinematic screenplay
       status: "intake",
       // VSL copy stored as raw seed for CYRUS to transform cinematically
-      script: vslCopySeed ?? undefined,
+      script: input.scriptSeed?.trim() || vslCopySeed || undefined,
       config,
       storyboard: [],
     })
@@ -959,7 +960,7 @@ export async function generateScenePreview(
   reqLog: Logger,
 ): Promise<VideoProject> {
   const project = await getProject(workspaceId, projectId);
-  if (project.status !== "storyboard_ready") {
+  if (!(["storyboard_ready", "storyboard_approved"] as const).includes(project.status as "storyboard_ready" | "storyboard_approved")) {
     throw new AppError(409, "As cenas só podem ser geradas durante a revisão do storyboard", "INVALID_STATUS");
   }
   const scenes = (project.storyboard as VideoScene[]) ?? [];
@@ -971,6 +972,9 @@ export async function generateScenePreview(
   if (!videoPrompt) throw new AppError(400, "A cena precisa de um prompt visual", "PROMPT_REQUIRED");
 
   const config = project.config as VideoConfig;
+  if (!getAvailableVideoProvider()) {
+    throw new AppError(503, "Nenhum provedor de vídeo está configurado para gerar prévias.", "VIDEO_PROVIDER_NOT_CONFIGURED");
+  }
   const revision = (scene.previewRevision ?? 0) + 1;
   const costType = config.hasUserFace ? "video_avatar" : "video_low_res";
   await deductCredits(
@@ -1046,7 +1050,7 @@ export async function approveScenePreview(
   sceneId: string,
 ): Promise<VideoProject> {
   const project = await getProject(workspaceId, projectId);
-  if (project.status !== "storyboard_ready") {
+  if (!(["storyboard_ready", "storyboard_approved"] as const).includes(project.status as "storyboard_ready" | "storyboard_approved")) {
     throw new AppError(409, "As cenas só podem ser aprovadas durante a revisão do storyboard", "INVALID_STATUS");
   }
   const scenes = (project.storyboard as VideoScene[]) ?? [];
@@ -1060,7 +1064,7 @@ export async function approveScenePreview(
   const updatedScenes = scenes.map((item) => item.id === sceneId ? { ...item, previewApprovedAt: approvedAt } : item);
   const allApproved = updatedScenes.every((item) => Boolean(item.previewApprovedAt));
   const [updated] = await db.update(videoProjectsTable)
-    .set({ storyboard: updatedScenes, status: allApproved ? "preview_approved" : "storyboard_ready", updatedAt: new Date() })
+    .set({ storyboard: updatedScenes, status: allApproved ? "preview_approved" : project.status, updatedAt: new Date() })
     .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)))
     .returning();
   return updated!;
