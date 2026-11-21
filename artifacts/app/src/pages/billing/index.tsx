@@ -1072,6 +1072,10 @@ export default function BillingPage() {
         )}
       </div>
 
+      {!loadingOnboardingStatus && isTrialAccess && <div role="status" className="border border-cyan-400/30 bg-cyan-400/5 px-4 py-3 text-sm text-cyan-100/90">
+        {t("O trial não permite comprar pacotes de créditos. Para continuar usando o NexOS após o trial, escolha um plano pago.", "Credit packs cannot be purchased during the trial. To keep using NexOS after the trial, choose a paid plan.", "La prueba no permite comprar paquetes de créditos. Para seguir usando NexOS después de la prueba, elige un plan de pago.")}
+      </div>}
+
       {/* ── Promo Code Redemption ── */}
       <PromoCodeSection />
 

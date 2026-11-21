@@ -22,10 +22,16 @@ import { checkBillingManualConfirmation } from "./billing.security.js";
 import { activateTrialSettings, canRepairConsumedTrialAccess, getWorkspaceTrial, trialFromSettings } from "../auth/trial-access.service.js";
 import { activateWorkspacePlanAccess } from "./billing-plan-activation.js";
 import { isTrialSocialMediaSalesEnabled } from "./trial-social-media-sales.service.js";
+import { isCreditPackPurchaseAllowed } from "./credit-pack-purchase.policy.js";
 
 const router = Router();
 
 router.get("/packs", requireAuth, async (_req, res): Promise<void> => {
+  if (!isCreditPackPurchaseAllowed(Boolean(await getWorkspaceTrial(_req.auth.workspaceId)))) {
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ packs: [] });
+    return;
+  }
   const packs = await db.select({
     id: creditPackPricingTable.id, credits: creditPackPricingTable.credits,
     priceBrl: creditPackPricingTable.priceBrl, label: creditPackPricingTable.label,

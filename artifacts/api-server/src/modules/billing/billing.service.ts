@@ -23,6 +23,7 @@ import { REVERSAL_EVENTS } from "../../lib/asaas-refunds.js";
 import { activatePaidPlan, activateWorkspacePlanAccess } from "./billing-plan-activation.js";
 import { getWorkspaceTrial } from "../auth/trial-access.service.js";
 import { isTrialSocialMediaSalesEnabled } from "./trial-social-media-sales.service.js";
+import { isCreditPackPurchaseAllowed } from "./credit-pack-purchase.policy.js";
 
 // ─── Asaas API ────────────────────────────────────────────────────────────────
 
@@ -726,6 +727,10 @@ export async function initiatePackPayment(opts: {
   userEmail: string;
   card?: CardInputData;
 }, buildPayment: typeof buildAsaasPayment = buildAsaasPayment): Promise<SubscriptionPayment> {
+  if (!isCreditPackPurchaseAllowed(Boolean(await getWorkspaceTrial(opts.workspaceId)))) {
+    throw new AppError(403, "Usuários trial não podem comprar pacotes de créditos. Ative um plano pago para continuar.", "TRIAL_CREDIT_PACK_PURCHASE_DISABLED");
+  }
+
   const [configuredPack] = await db.select().from(creditPackPricingTable)
     .where(eq(creditPackPricingTable.id, opts.packId)).limit(1);
   const fallbackPack = PACK_CONFIG[opts.packId];
