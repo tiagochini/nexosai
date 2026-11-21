@@ -1,3 +1,4 @@
+import { getTrialPlanSales } from "./trial-plan-sales.service.js";
 import { hasActivePlatformAdminSession, requirePlatformAdmin } from "../admin/admin.middleware.js";
 import { Router } from "express";
 import { z } from "zod/v4";
@@ -18,8 +19,9 @@ import { db, inviteCodesTable, workspacesTable, plansTable, subscriptionPayments
 import { and, eq, gt, isNotNull, isNull, or, sql, inArray } from "drizzle-orm";
 import { matchesAsaasWebhookToken } from "../../lib/asaas-webhook-auth.js";
 import { checkBillingManualConfirmation } from "./billing.security.js";
-import { activateTrialSettings, canRepairConsumedTrialAccess, trialFromSettings } from "../auth/trial-access.service.js";
+import { activateTrialSettings, canRepairConsumedTrialAccess, getWorkspaceTrial, trialFromSettings } from "../auth/trial-access.service.js";
 import { activateWorkspacePlanAccess } from "./billing-plan-activation.js";
+import { isTrialSocialMediaSalesEnabled } from "./trial-social-media-sales.service.js";
 
 const router = Router();
 
@@ -74,8 +76,9 @@ router.get("/public-offers/:key", async (req, res): Promise<void> => {
   res.json({ offer });
 });
 
-router.get("/offers", requireAuth, async (_req, res): Promise<void> => {
-  const offers = await db.select({
+router.get("/offers", requireAuth, async (req, res): Promise<void> => {
+  const [offers, trial] = await Promise.all([
+    db.select({
     id: commercialSalesOffersTable.id, key: commercialSalesOffersTable.key, name: commercialSalesOffersTable.name,
     description: commercialSalesOffersTable.description, priceCents: commercialSalesOffersTable.priceCents,
     planSlug: commercialSalesOffersTable.planSlug, licensePlanName: plansTable.name,
@@ -87,9 +90,14 @@ router.get("/offers", requireAuth, async (_req, res): Promise<void> => {
     creditsIncluded: commercialSalesOffersTable.creditsIncluded,
   }).from(commercialSalesOffersTable)
     .innerJoin(plansTable, eq(plansTable.slug, commercialSalesOffersTable.planSlug))
-    .where(and(eq(commercialSalesOffersTable.active, true), eq(plansTable.active, true), isNotNull(commercialSalesOffersTable.planSlug)));
+    .where(and(eq(commercialSalesOffersTable.active, true), eq(plansTable.active, true), isNotNull(commercialSalesOffersTable.planSlug))),
+    getWorkspaceTrial(req.auth.workspaceId),
+  ]);
+  const salesEnabled = trial ? await isTrialSocialMediaSalesEnabled() : true;
+  const settings = trial ? await getTrialPlanSales() : { blockedPlans: [], blockedOffers: [] };
+  const visibleOffers = offers.filter(offer => !settings.blockedOffers.includes(offer.id) && (!trial || salesEnabled || offer.socialMediaDays <= 0));
   res.setHeader("Cache-Control", "no-store");
-  res.json({ offers });
+  res.json({ offers: visibleOffers, blockedFixedPlanIds: settings.blockedPlans });
 });
 
 router.get("/offer-contracts", requireAuth, async (req, res): Promise<void> => {

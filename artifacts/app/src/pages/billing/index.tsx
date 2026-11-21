@@ -785,7 +785,7 @@ export default function BillingPage() {
     },
   });
 
-  const offersQuery = useQuery({ queryKey: ["/api/billing/offers"], queryFn: () => customFetch<{ offers: SalesOffer[] }>("/api/billing/offers") });
+  const offersQuery = useQuery({ queryKey: ["/api/billing/offers"], queryFn: () => customFetch<{ offers: SalesOffer[]; blockedFixedPlanIds?: string[] }>("/api/billing/offers") });
   const creditPacksQuery = useQuery({ queryKey: ["/api/billing/packs"], queryFn: () => customFetch<{ packs: CreditPack[] }>("/api/billing/packs") });
   useEffect(() => {
     const offerKey = new URLSearchParams(window.location.search).get("offer");
@@ -1176,7 +1176,7 @@ export default function BillingPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {displayPlans.map(plan => {
+            {displayPlans.filter(plan => !isTrialAccess || !offersQuery.data?.blockedFixedPlanIds?.includes(plan.id)).map(plan => {
               const isCurrent = !loadingOnboardingStatus && !isTrialAccess && plan.slug === currentLicensePlanSlug && plan.slug !== requestedPlanSlug;
               const isDowngrade = isLicenseDowngrade(currentLicensePlanSlug, plan.slug);
               const isSelected = checkout?.id === plan.id && checkout.type === "plan";

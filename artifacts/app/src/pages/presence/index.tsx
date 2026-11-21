@@ -233,6 +233,8 @@ export default function PresencePage() {
   const [publishingNow, setPublishingNow] = useState<Set<string>>(new Set());
   const [mediaDrawerPostId, setMediaDrawerPostId] = useState<string | null>(null);
   const [showProfileAnalysis, setShowProfileAnalysis] = useState(false);
+  const [trialMode, setTrialMode] = useState<boolean | null>(null);
+  const [trialSocialMediaSalesEnabled, setTrialSocialMediaSalesEnabled] = useState(false);
   const [showScheduleTest, setShowScheduleTest] = useState(false);
   const [socialHealth, setSocialHealth] = useState<{
     provider: string;
@@ -300,8 +302,24 @@ export default function PresencePage() {
   useEffect(() => {
     (async () => {
       try {
+        const status = await customFetch<{
+          trialAccess?: boolean;
+          trialSocialMediaSalesEnabled?: boolean;
+        }>("/api/onboarding/status");
+        const isTrial = status.trialAccess === true;
+        setTrialMode(isTrial);
+        setTrialSocialMediaSalesEnabled(status.trialSocialMediaSalesEnabled === true);
+        if (isTrial) {
+          setLoading(false);
+          return;
+        }
         await Promise.all([loadConfig(), loadPosts(), loadMetrics(), loadSocialHealth(), loadIntelligenceContext()]);
-      } catch { /* sem config ainda */ }
+      } catch {
+        // If status is unavailable, preserve the existing experience for paid workspaces.
+        setTrialMode(false);
+        try { await Promise.all([loadConfig(), loadPosts(), loadMetrics(), loadSocialHealth(), loadIntelligenceContext()]); }
+        catch { /* sem config ainda */ }
+      }
       setLoading(false);
     })();
   }, [loadConfig, loadPosts, loadMetrics, loadIntelligenceContext]);
@@ -314,10 +332,10 @@ export default function PresencePage() {
 
   // Permissão de notificação do browser
   useEffect(() => {
-    if ("Notification" in window && Notification.permission === "default") {
+    if (trialMode === false && "Notification" in window && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
-  }, []);
+  }, [trialMode]);
 
   // Socket: escuta publicações em tempo real → notificação push + reload
   useWorkspaceSocket(workspace?.id, (alert) => {
@@ -546,6 +564,53 @@ export default function PresencePage() {
     return (
       <div className="flex h-64 items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (trialMode) {
+    return (
+      <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="flex items-center gap-2 text-xl font-semibold">
+              <Share2 className="h-5 w-5 text-primary" /> {t("Presença Social", "Social Presence", "Presencia Social")}
+              <Badge variant="outline" className="border-amber-400/40 text-amber-300">TRIAL</Badge>
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("No trial, você pode analisar perfis públicos das redes sociais.", "During the trial, you can analyze public social media profiles.", "Durante la prueba, puedes analizar perfiles públicos de redes sociales.")}
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => setShowProfileAnalysis(true)}>
+            <Search className="mr-2 h-4 w-4" /> {t("Analisar perfil", "Analyze a profile", "Analizar perfil")}
+          </Button>
+        </div>
+        <section className="rounded-xl border border-border bg-card/50 p-6">
+          <div className="flex items-start gap-4">
+            <div className="rounded-lg bg-primary/10 p-3"><Search className="h-5 w-5 text-primary" /></div>
+            <div className="space-y-2">
+              <h2 className="font-semibold">{t("Análise de redes sociais", "Social media profile analysis", "Análisis de redes sociales")}</h2>
+              <p className="text-sm text-muted-foreground">
+                {t("Informe o perfil público para receber uma leitura de conteúdo, pontos fortes, oportunidades e próximos passos.", "Enter a public profile to review its content, strengths, opportunities, and recommended next steps.", "Indica un perfil público para revisar su contenido, fortalezas, oportunidades y próximos pasos.")}
+              </p>
+              <Button onClick={() => setShowProfileAnalysis(true)}>
+                <Search className="mr-2 h-4 w-4" /> {t("Começar análise", "Start analysis", "Iniciar análisis")}
+              </Button>
+            </div>
+          </div>
+        </section>
+        {trialSocialMediaSalesEnabled && (
+          <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-primary/30 bg-primary/5 p-5">
+            <div>
+              <h2 className="font-semibold">{t("Quer manter sua marca ativa nas redes?", "Ready to keep your brand active on social media?", "¿Quieres mantener tu marca activa en redes?")}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{t("Conheça os planos de Social Media disponíveis.", "Explore the available Social Media plans.", "Conoce los planes de Social Media disponibles.")}</p>
+            </div>
+            <Button onClick={() => { window.location.href = "/billing"; }}>
+              {t("Ver planos Social Media", "View Social Media plans", "Ver planes de Social Media")}
+            </Button>
+          </section>
+        )}
+        {showProfileAnalysis && <SocialProfileAnalysisPanel onClose={() => setShowProfileAnalysis(false)} />}
       </div>
     );
   }

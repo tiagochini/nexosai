@@ -1,3 +1,4 @@
+import { getTrialPlanSales } from "../billing/trial-plan-sales.service.js";
 import { getProviderBalances } from "./provider-balances.service.js";
 import { Router } from "express";
 import { z } from "zod";
@@ -23,11 +24,63 @@ import {
   waitlistTable, commercialProductsTable, commercialSubscriptionsTable, auditLogsTable,
   aiCreditSettingsTable, commercialSalesOffersTable,
   creditPackPricingTable,
+  platformFeatureSettingsTable,
 } from "@workspace/db";
 import { and, eq, desc, count, sql, inArray } from "drizzle-orm";
 
 const router = Router();
 router.use(requireAuth, requirePlatformAdmin);
+
+router.get("/trial-plan-sales", async (_req, res): Promise<void> => {
+  const [settings, plans, offers] = await Promise.all([
+    getTrialPlanSales(), db.select({ id: plansTable.id, name: plansTable.name }).from(plansTable).where(eq(plansTable.active, true)),
+    db.select({ id: commercialSalesOffersTable.id, name: commercialSalesOffersTable.name }).from(commercialSalesOffersTable).where(eq(commercialSalesOffersTable.active, true)),
+  ]);
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ ...settings, plans, offers });
+});
+router.patch("/trial-plan-sales", async (req, res): Promise<void> => {
+  const input = z.object({ kind: z.enum(["plan", "offer"]), id: z.string().uuid(), blocked: z.boolean() }).strict().parse(req.body);
+  const table = input.kind === "plan" ? plansTable : commercialSalesOffersTable;
+  const [item] = await db.select({ id: table.id }).from(table).where(eq(table.id, input.id)).limit(1);
+  if (!item) throw new NotFoundError("Plano");
+  await db.transaction(async tx => {
+    await tx.insert(platformFeatureSettingsTable).values({ id: 1 }).onConflictDoNothing();
+    const [settings] = await tx.select().from(platformFeatureSettingsTable).where(eq(platformFeatureSettingsTable.id, 1)).for("update");
+    const current = input.kind === "plan" ? settings!.trialBlockedPlans : settings!.trialBlockedOffers;
+    const next = input.blocked ? [...new Set([...current, input.id])] : current.filter(id => id !== input.id);
+    await tx.update(platformFeatureSettingsTable).set({
+      ...(input.kind === "plan" ? { trialBlockedPlans: next } : { trialBlockedOffers: next }),
+      updatedBy: req.auth.userId, updatedAt: new Date(),
+    }).where(eq(platformFeatureSettingsTable.id, 1));
+    await tx.insert(auditLogsTable).values({ workspaceId: req.auth.workspaceId, actor: req.auth.userId, action: "admin.trial_plan_sales.updated", data: input });
+  });
+  res.json({ ok: true });
+});
+
+router.get("/trial-social-media-sales", async (_req, res): Promise<void> => {
+  const [settings] = await db.select({ enabled: platformFeatureSettingsTable.trialSocialMediaSalesEnabled, updatedAt: platformFeatureSettingsTable.updatedAt })
+    .from(platformFeatureSettingsTable).where(eq(platformFeatureSettingsTable.id, 1)).limit(1);
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ enabled: settings?.enabled ?? false, updatedAt: settings?.updatedAt ?? null });
+});
+
+router.patch("/trial-social-media-sales", async (req, res): Promise<void> => {
+  const parsed = z.object({ enabled: z.boolean() }).strict().safeParse(req.body);
+  if (!parsed.success) throw new ValidationError("Informe se a venda de planos Social Media para trial deve ficar ativa ou inativa.");
+  const updatedAt = new Date();
+  const [settings] = await db.insert(platformFeatureSettingsTable).values({
+    id: 1, trialSocialMediaSalesEnabled: parsed.data.enabled, updatedBy: req.auth.userId, updatedAt,
+  }).onConflictDoUpdate({ target: platformFeatureSettingsTable.id, set: {
+    trialSocialMediaSalesEnabled: parsed.data.enabled, updatedBy: req.auth.userId, updatedAt,
+  } }).returning({ enabled: platformFeatureSettingsTable.trialSocialMediaSalesEnabled, updatedAt: platformFeatureSettingsTable.updatedAt });
+  await db.insert(auditLogsTable).values({
+    workspaceId: req.auth.workspaceId, action: "admin.trial_social_media_sales.updated", actor: req.auth.userId,
+    data: { enabled: parsed.data.enabled, updatedAt: updatedAt.toISOString() },
+  });
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ ok: true, ...settings });
+});
 
 router.get("/provider-balances", async (_req, res, next): Promise<void> => {
   res.setHeader("Cache-Control", "no-store");

@@ -5,6 +5,7 @@ import { db, campaignsTable, workspacesTable, commercialProductsTable, commercia
 import { and, asc, eq, count, gt, isNull, or } from "drizzle-orm";
 import { AppError } from "../../lib/errors.js";
 import { getWorkspaceTrial } from "../auth/trial-access.service.js";
+import { isTrialSocialMediaSalesEnabled } from "../billing/trial-social-media-sales.service.js";
 
 import { createCampaign } from "../campaigns/campaigns.service.js";
 import { saveIntakeData } from "../intake/intake.service.js";
@@ -62,10 +63,12 @@ router.get("/status", async (req, res): Promise<void> => {
 
   const total = campaignCount?.count ?? 0;
   const trial = await getWorkspaceTrial(req.auth.workspaceId);
+  const trialSocialMediaSalesEnabled = trial ? await isTrialSocialMediaSalesEnabled() : false;
   const daysSinceCreation = workspace?.createdAt
     ? Math.floor((Date.now() - new Date(workspace.createdAt).getTime()) / 86_400_000)
     : 0;
 
+  res.setHeader("Cache-Control", "no-store");
   res.json({
     needsOnboarding: total === 0,
     campaignCount: total,
@@ -74,6 +77,7 @@ router.get("/status", async (req, res): Promise<void> => {
     trialAccess: trial != null,
     trialBriefingCampaignId: trial?.briefingCampaignId ?? null,
     trialSocialAnalysisAvailable: trial?.socialAnalysisStatus === "available",
+    trialSocialMediaSalesEnabled,
   });
 });
 

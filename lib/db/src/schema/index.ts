@@ -82,3 +82,4 @@ export * from "./academy-student-accounts";
 export * from "./meta-audience-operations";
 export * from "./meta-advanced-operations";
 export * from "./meta-capi-tests";
+export * from "./platform-feature-settings";

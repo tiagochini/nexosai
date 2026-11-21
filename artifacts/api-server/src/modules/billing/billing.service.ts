@@ -1,3 +1,4 @@
+import { assertTrialPlanSaleAllowed } from "./trial-plan-sales.service.js";
 import { eq, and, desc, sql, type SQL, inArray, or, gt } from "drizzle-orm";
 import {
   db,
@@ -20,6 +21,8 @@ import { fetchAsaasSettlement, parseAsaasSettlement, matchesBillingSettlement, t
 import { reconcileBillingReversal, reconcileBillingIfHeld } from "./billing-reversal.service.js";
 import { REVERSAL_EVENTS } from "../../lib/asaas-refunds.js";
 import { activatePaidPlan, activateWorkspacePlanAccess } from "./billing-plan-activation.js";
+import { getWorkspaceTrial } from "../auth/trial-access.service.js";
+import { isTrialSocialMediaSalesEnabled } from "./trial-social-media-sales.service.js";
 
 // ─── Asaas API ────────────────────────────────────────────────────────────────
 
@@ -438,6 +441,7 @@ export async function initiatePayment(opts: {
     .where(eq(plansTable.id, opts.planId))
     .limit(1);
   if (!plan || !plan.active) throw new NotFoundError("Plano não encontrado");
+  await assertTrialPlanSaleAllowed(opts.workspaceId, "plan", plan.id);
   await assertLicenseDoesNotDowngrade(opts.workspaceId, plan.slug);
 
   const amountCents = Math.round(Number(plan.priceMonthly) * 100);
@@ -597,6 +601,10 @@ export async function initiateSalesOfferPurchase(opts: {
   const [offerRow] = await db.select().from(commercialSalesOffersTable)
     .where(and(eq(commercialSalesOffersTable.id, opts.offerId), eq(commercialSalesOffersTable.active, true))).limit(1);
   if (!offerRow) throw new NotFoundError("Oferta comercial");
+  await assertTrialPlanSaleAllowed(opts.workspaceId, "offer", offerRow.id);
+  if (offerRow.socialMediaDays > 0 && await getWorkspaceTrial(opts.workspaceId) && !await isTrialSocialMediaSalesEnabled()) {
+    throw new AppError(403, "A venda dos planos de Social Media está temporariamente indisponível para o trial.", "TRIAL_SOCIAL_MEDIA_SALES_DISABLED");
+  }
   const now = new Date();
   const [existingContract] = await db.select({ id: commercialOfferContractsTable.id })
     .from(commercialOfferContractsTable)

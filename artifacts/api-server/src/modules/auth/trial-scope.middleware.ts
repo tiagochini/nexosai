@@ -12,6 +12,8 @@ export function isTrialRouteAllowed(method: string, path: string, briefingCampai
   if (method === "GET" && new RegExp(`^/billing/payment/${UUID}$`, "i").test(path)) return true;
   // Trial users may connect a Facebook Page in read-only analysis mode only.
   if (method === "GET" && path === "/integrations/oauth/start/facebook_analysis") return true;
+  // Trial users can run public profile analysis, but no other Social Presence tools.
+  if (method === "POST" && path === "/presence/analyze-profile") return true;
   if (method === "POST" && path === "/billing/initiate") return true;
   if (method === "POST" && /^\/billing\/offers\/[0-9a-f-]+\/purchase$/i.test(path)) return true;
   if (method === "POST" && [
@@ -67,7 +69,7 @@ export async function enforceTrialScope(req: Request, res: Response, next: NextF
     if (!trial) { next(); return; }
     if (isTrialRouteAllowed(req.method.toUpperCase(), req.path, trial.briefingCampaignId)) { next(); return; }
     res.status(403).json({
-      error: "O acesso trial inclui um briefing e uma análise de Página do Facebook. Contrate uma licença para liberar os demais recursos.",
+      error: "O trial inclui um briefing e a análise de perfis públicos de redes sociais. Contrate um plano para liberar os demais recursos.",
       code: "TRIAL_SCOPE_RESTRICTED",
     });
   } catch (error) {
