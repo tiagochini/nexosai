@@ -878,16 +878,18 @@ export default function AdminPage() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6 px-3 sm:px-4">
 
       {/* Header */}
-      <div className="border-b border-border/50 pb-5 flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <ShieldCheck className="h-5 w-5 text-yellow-400" />
-            <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">
+      <div className="border-b border-border/50 pb-5 flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
+        <div className="min-w-0 space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <ShieldCheck className="h-5 w-5 shrink-0 text-yellow-400" />
+            <h1 className="min-w-0 text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">
               {t("Central de comando · NexOS", "Command Center · NexOS", "Centro de control · NexOS")}
             </h1>
+          </div>
+          <div className="flex flex-wrap gap-2">
             <Badge variant="outline" className="rounded-none font-mono text-[11px] border-yellow-400/30 text-yellow-400 bg-yellow-400/10">
               {t("Proprietário", "Owner", "Propietario")}
             </Badge>
@@ -899,7 +901,7 @@ export default function AdminPage() {
             {t(`${ov?.total ?? 0} usuários registrados · ${ov?.byStatus?.["ativo_lancando"] ?? 0} lançando agora`, `${ov?.total ?? 0} registered users · ${ov?.byStatus?.["ativo_lancando"] ?? 0} launching now`, `${ov?.total ?? 0} usuarios registrados · ${ov?.byStatus?.["ativo_lancando"] ?? 0} en lanzamiento ahora`)}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 xl:justify-end">
           <Link href="/admin/operations">
             <Button
               variant="outline"
@@ -936,12 +938,13 @@ export default function AdminPage() {
           <Button variant="link" onClick={() => { setPayFilter("all"); setTab("pagamentos"); }}>Ver estornos nos pagamentos</Button>
         </div>
       )}
-      <div className="flex gap-0 border-b border-border/40">
+      <div className="-mx-3 overflow-x-auto border-b border-border/40 px-3 sm:-mx-4 sm:px-4">
+        <div className="flex w-max min-w-full gap-0">
         {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`font-mono text-[11px] uppercase tracking-widest px-5 py-2.5 border-b-2 transition-colors
+            className={`shrink-0 whitespace-nowrap font-mono text-[11px] uppercase tracking-widest px-4 lg:px-5 py-2.5 border-b-2 transition-colors
               ${tab === t.id
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"}`}
@@ -949,6 +952,7 @@ export default function AdminPage() {
             {t.label}
           </button>
         ))}
+        </div>
       </div>
 
       {/* ── OVERVIEW TAB ── */}
@@ -1215,7 +1219,7 @@ export default function AdminPage() {
         <div className="space-y-4">
 
           {/* Summary strip */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
               { label: t("Pendentes", "Pending", "Pendientes"), val: paymentsData?.filter(p => p.status === "pending").length ?? "—", cls: "text-yellow-400 border-yellow-400/20" },
               { label: t("Confirmados", "Confirmed", "Confirmados"), val: paymentsData?.filter(p => p.status === "paid").length ?? "—", cls: "text-success border-success/20" },
@@ -1255,7 +1259,7 @@ export default function AdminPage() {
           {/* Payments list */}
           <div className="border border-border/50 overflow-hidden">
             {/* Header row */}
-            <div className="hidden md:grid grid-cols-[1fr_120px_90px_80px_100px_120px] text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50 border-b border-border/50 bg-muted/10 px-5 py-2 gap-3">
+            <div className="hidden lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(90px,1.1fr)_minmax(90px,0.8fr)_minmax(60px,0.65fr)_minmax(85px,0.8fr)_minmax(160px,1.35fr)] text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50 border-b border-border/50 bg-muted/10 px-5 py-2 gap-3">
               <span>{t("Cliente", "Customer", "Cliente")}</span>
               <span>{t("Descrição", "Description", "Descripción")}</span>
               <span className="text-right">{t("Valor", "Amount", "Importe")}</span>
@@ -1286,7 +1290,7 @@ export default function AdminPage() {
                   const meta  = p.metadata as { type?: string; packCredits?: number; refundHold?: boolean; refundNotice?: string; refundedAmountCents?: number } | null;
                   return (
                     <div key={p.id} className="hover:bg-muted/5 transition-colors">
-                      <div className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_120px_90px_80px_100px_120px] items-center px-5 py-3.5 gap-3">
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_minmax(90px,1.1fr)_minmax(90px,0.8fr)_minmax(60px,0.65fr)_minmax(85px,0.8fr)_minmax(160px,1.35fr)] items-center px-3 sm:px-5 py-3.5 gap-3">
 
                         {/* Client */}
                         <div className="min-w-0">
@@ -1301,35 +1305,35 @@ export default function AdminPage() {
                         </div>
 
                         {/* Description */}
-                        <div className="hidden md:block font-mono text-[11px] text-muted-foreground/70 truncate">
+                        <div className="hidden lg:block min-w-0 font-mono text-[11px] text-muted-foreground/70 truncate">
                           {p.description ?? "—"}
                         </div>
 
                         {/* Amount */}
-                        <div className="hidden md:block text-right font-mono text-sm font-bold">
+                        <div className="hidden lg:block text-right font-mono text-sm font-bold">
                           R${(p.amountCents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                         </div>
 
                         {/* Method */}
-                        <div className="hidden md:flex justify-center items-center gap-1.5">
+                        <div className="hidden lg:flex justify-center items-center gap-1.5">
                           <MethodIcon className="h-3.5 w-3.5 text-muted-foreground/50" />
                           <span className="font-mono text-[11px] text-muted-foreground/70">{methodLabel}</span>
                         </div>
 
                         {/* Status */}
-                        <div className="hidden md:flex justify-center">
+                        <div className="hidden lg:flex justify-center min-w-0">
                           <Badge variant="outline" className={`rounded-none font-mono text-[10px] ${st.cls}`}>
                             {statusLabel}
                           </Badge>
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="col-start-2 row-start-1 flex min-w-0 items-center justify-end gap-2 lg:col-auto lg:row-auto">
                           {isPending && (
                             <>
                               <Button
                                 size="sm"
-                                className="rounded-none font-mono uppercase text-[10px] tracking-widest gap-1 h-7 bg-success/80 hover:bg-success text-white border-0"
+                                className="shrink-0 rounded-none font-mono uppercase text-[10px] tracking-widest gap-1 h-7 bg-success/80 hover:bg-success text-white border-0"
                                 disabled={confirmMutation.isPending && confirmMutation.variables === p.id}
                                 onClick={() => confirmMutation.mutate(p.id)}
                               >
@@ -1340,7 +1344,7 @@ export default function AdminPage() {
                               </Button>
                               <button
                                 onClick={() => setExpandedPayment(isExpanded ? null : p.id)}
-                                className="font-mono text-[10px] text-muted-foreground/50 hover:text-primary uppercase tracking-widest border border-border/30 px-2 h-7"
+                                className="shrink-0 font-mono text-[10px] text-muted-foreground/50 hover:text-primary uppercase tracking-widest border border-border/30 px-2 h-7"
                               >
                                 {isExpanded ? t("Fechar", "Close", "Cerrar") : t("Dados", "Details", "Datos")}
                               </button>
