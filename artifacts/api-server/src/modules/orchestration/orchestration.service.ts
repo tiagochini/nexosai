@@ -26,7 +26,6 @@ import type { Logger } from "pino";
 import { enforceLaunchAutonomyGate, enforceNoMandatoryPause } from "../autonomy/autonomy.service.js";
 import { assertCampaignCreditBudget, isTrialBriefingCampaign, isTrialStrategyCampaign } from "../credits/credits.service.js";
 import { assertSocialDiagnosisApproved } from "../campaigns/social-diagnosis.policy.js";
-import { resolveSocialMediaEntitlement } from "../billing/commercial-entitlements.service.js";
 import { calculateMasterplanReadiness, missingMasterplanModuleReviews } from "../masterplan/masterplan.service.js";
 
 // ── Execution status ──────────────────────────────────────────────────────────
@@ -415,12 +414,11 @@ export async function triggerStrategyPhase(
   if (!campaign) throw new NotFoundError("Campaign");
 
   // Check this before charging credits or enqueueing the strategy phase.
-  const socialMediaEntitlement = await resolveSocialMediaEntitlement(workspaceId);
   const trialStrategy = await isTrialBriefingCampaign(workspaceId, campaignId);
   if (trialStrategy && campaign.status === "strategy_ready") {
     throw new AppError(409, "A estratégia do trial já foi gerada e está disponível para revisão.", "TRIAL_STRATEGY_PREVIEW_ALREADY_GENERATED");
   }
-  if (!trialStrategy) assertSocialDiagnosisApproved(socialMediaEntitlement.active, campaign.brainData);
+  if (!trialStrategy) assertSocialDiagnosisApproved(campaign.brainData);
 
   // PIPELINE_KERNEL: single source of truth
   if (!(STRATEGY_PHASE_ENTRY_STATUSES as readonly string[]).includes(campaign.status)) {

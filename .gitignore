@@ -60,6 +60,7 @@ iniciar-servidor.bat
 Thumbs.db
 attached_assets/
 /uploads/recordings
+/output
 
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md

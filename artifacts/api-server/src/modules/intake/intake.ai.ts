@@ -21,6 +21,7 @@ import { recommendTrackFromRevenue } from "./intake.scoring.js";
 import { approveProductIntake, getProductIntake } from "../product-intake/product-intake.service.js";
 import { briefingAnswerCount } from "../product-intake/product-intake.contracts.js";
 import { defaultScarcity } from "./intake-context.js";
+import { assertSocialDiagnosisApproved } from "../campaigns/social-diagnosis.policy.js";
 import {
   triggerMarketIntelFromIntake,
   buildIntakeMarketIntelContext,
@@ -1189,6 +1190,10 @@ export async function finalizeIntake(
   if (campaign.status !== "intake") {
     throw new ValidationError(`Campanha não está em intake (status atual: ${campaign.status})`);
   }
+
+  // Public social analysis is required before every paid campaign can leave intake.
+  // Official account metrics remain an optional addition from Social Media access.
+  assertSocialDiagnosisApproved(campaign.brainData);
 
   const type = (campaign.type ?? "launch") as CampaignType;
   const track = (campaign.track ?? "six_digits") as CampaignTrack;

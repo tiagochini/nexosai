@@ -375,6 +375,7 @@ function MasterPlanView({
   onApprove,
   onBack,
   finalizing,
+  socialDiagnosisRecovery = false,
 }: {
   campaignId: string;
   formData: Record<string, string>;
@@ -383,6 +384,7 @@ function MasterPlanView({
   onApprove: () => Promise<void>;
   onBack: () => void;
   finalizing: boolean;
+  socialDiagnosisRecovery?: boolean;
 }) {
   const t = useUiText();
   const { locale } = useUiLocale();
@@ -671,12 +673,12 @@ function MasterPlanView({
       </div>
 
       }
-      {(socialMediaEntitled === true || trialAccess) && <section className="border border-cyan-400/40 bg-cyan-400/5 p-5 mb-6 space-y-4" aria-labelledby="social-diagnosis-heading">
+      <section className="border border-cyan-400/40 bg-cyan-400/5 p-5 mb-6 space-y-4" aria-labelledby="social-diagnosis-heading">
         <div>
           <h2 id="social-diagnosis-heading" className="font-mono text-sm font-bold uppercase tracking-wider">{t("Diagnóstico de Presença Social", "Social Presence Diagnosis", "Diagnóstico de presencia social")}</h2>
           <p className="text-xs text-muted-foreground mt-1">{trialAccess
             ? t("Seu acesso de avaliação inclui um briefing e a análise de uma Página do Facebook. Outros recursos e a execução por agentes exigem uma licença.", "Your trial includes one briefing and one Facebook Page analysis. Other features and agent execution require a license.", "Tu prueba incluye un briefing y el análisis de una página de Facebook. Otras funciones y la ejecución por agentes requieren una licencia.")
-            : t("Etapa anterior à estratégia: contexto da campanha, presença pública, dados disponíveis e lacunas. Nenhuma métrica será presumida quando a plataforma não a fornecer.", "Required before strategy: campaign context, public presence, available data, and gaps. Metrics will not be assumed when the platform does not provide them.", "Antes de la estrategia: contexto de campaña, presencia pública, datos disponibles y brechas. No se supondrán métricas que la plataforma no proporcione.")}</p>
+            : t("Etapa obrigatória antes da estratégia, com ou sem contrato de Social Media. A análise usa informações públicas; métricas oficiais da conta são complementares e dependem do acesso ao módulo.", "Required before strategy, with or without a Social Media contract. The analysis uses public information; official account metrics are optional and require module access.", "Obligatorio antes de la estrategia, con o sin contrato de Social Media. El análisis usa información pública; las métricas oficiales son complementarias y requieren acceso al módulo.")}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-[150px_1fr] gap-2">
           <select value={socialPlatform} onChange={(event) => { setSocialPlatform(event.target.value); setSocialIntegrationId(""); setSocialHandle(""); setSocialDiagnosis(null); setSocialDiagnosisApproved(false); }} disabled={socialDiagnosisLoading || (trialAccess && !socialAnalysisAvailable)} className="h-10 border border-border/50 bg-background px-3 text-sm">
@@ -714,27 +716,27 @@ function MasterPlanView({
             ? <p className="text-cyan-200 font-mono text-xs">{t("Análise incluída no trial concluída. O briefing está disponível para consulta; iniciar estratégia e agentes requer uma licença.", "Trial analysis complete. The briefing is available for review; starting strategy and agents requires a license.", "Análisis de prueba completado. El briefing está disponible para consulta; iniciar estrategia y agentes requiere una licencia.")}</p>
             : socialDiagnosisApproved ? <div className="text-emerald-400 font-mono text-xs">✓ {t("Diagnóstico revisado e confirmado", "Diagnosis reviewed and confirmed", "Diagnóstico revisado y confirmado")}</div> : socialDiagnosis.status !== "generated" ? <p className="text-amber-300 font-mono text-xs">{t("Dados verificáveis insuficientes. Conecte a conta correspondente ou gere novamente quando houver fontes públicas citadas; a estratégia permanece bloqueada até existir evidência.", "Insufficient verifiable data. Connect the matching account or retry when cited public sources are available; strategy remains blocked until evidence exists.", "Datos verificables insuficientes. Conecta la cuenta correspondiente o vuelve a intentarlo cuando haya fuentes públicas citadas; la estrategia sigue bloqueada hasta tener evidencia.")}</p> : <Button variant="outline" onClick={() => void approveSocialDiagnosis()} disabled={socialDiagnosisLoading || finalizing} className="rounded-none font-mono text-xs uppercase">{t("Confirmar diagnóstico e seguir", "Confirm diagnosis and continue", "Confirmar diagnóstico y continuar")}</Button>}
         </div>}
-      </section>}
+      </section>
       {/* ── CTA de aprovação ── */}
       <div className="border border-primary/30 bg-primary/5 p-6 flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <p className="font-mono text-sm font-bold text-foreground">
-            {t("Plano completo", "Complete plan", "Plan completo")} · {agentCount} {t("agentes prontos para execução", "agents ready to execute", "agentes listos para ejecutar")}
+            {socialDiagnosisRecovery ? t("Diagnóstico social pendente", "Social diagnosis pending", "Diagnóstico social pendiente") : <>{t("Plano completo", "Complete plan", "Plan completo")} · {agentCount} {t("agentes prontos para execução", "agents ready to execute", "agentes listos para ejecutar")}</>}
           </p>
           <p className="font-mono text-[11px] text-muted-foreground mt-0.5">
-            {t("Ao aprovar, os agentes iniciam imediatamente — estratégia, conteúdo e calendário editorial", "Once approved, the agents start immediately — strategy, content, and editorial calendar", "Al aprobar, los agentes comienzan de inmediato — estrategia, contenido y calendario editorial")}
+            {socialDiagnosisRecovery ? t("Confirme a análise para voltar ao Masterplan.", "Confirm the analysis to return to the master plan.", "Confirma el análisis para volver al plan maestro.") : t("Ao aprovar, os agentes iniciam imediatamente — estratégia, conteúdo e calendário editorial", "Once approved, the agents start immediately — strategy, content, and editorial calendar", "Al aprobar, los agentes comienzan de inmediato — estrategia, contenido y calendario editorial")}
           </p>
         </div>
         {trialAccess && <p className="text-xs text-amber-300">{t("O trial permite preencher um briefing e analisar uma Página do Facebook. A aprovação para execução dos agentes exige uma licença.", "The trial allows one briefing and one Facebook Page analysis. Approving agent execution requires a license.", "La prueba permite completar un briefing y analizar una página de Facebook. Aprobar la ejecución de agentes requiere una licencia.")}</p>}
-        {socialMediaEntitled === null && <p role="status" className="text-xs text-amber-300">{t("Verificando o contrato de Social Media… Se não carregar, atualize a tela antes de iniciar.", "Checking the Social Media contract… If it does not load, refresh before starting.", "Verificando el contrato de Social Media… Si no carga, actualiza la pantalla antes de iniciar.")}</p>}
+        {socialMediaEntitled === null && <p role="status" className="text-xs text-amber-300">{t("Carregando o diagnóstico social salvo…", "Loading the saved social diagnosis…", "Cargando el diagnóstico social guardado…")}</p>}
         <Button
           onClick={() => void onApprove()}
-          disabled={finalizing || socialMediaEntitled === null || trialAccess || (socialMediaEntitled && !socialDiagnosisApproved)}
+          disabled={finalizing || socialMediaEntitled === null || trialAccess || !socialDiagnosisApproved}
           className="font-mono uppercase tracking-widest rounded-none gap-2 h-14 px-8 text-sm btn-weapon-primary whitespace-nowrap shrink-0"
         >
           {finalizing
             ? <><Loader2 className="h-5 w-5 animate-spin" />{t("Iniciando Agentes...", "Starting Agents...", "Iniciando agentes...")}</>
-            : <><Rocket className="h-5 w-5" />{t("Aprovar e Iniciar Agentes", "Approve and Start Agents", "Aprobar e iniciar agentes")}<ChevronRight className="h-5 w-5" /></>
+            : socialDiagnosisRecovery ? <><CheckCircle2 className="h-5 w-5" />{t("Concluir análise e voltar", "Finish analysis and return", "Finalizar análisis y volver")}<ChevronRight className="h-5 w-5" /></> : <><Rocket className="h-5 w-5" />{t("Aprovar e Iniciar Agentes", "Approve and Start Agents", "Aprobar e iniciar agentes")}<ChevronRight className="h-5 w-5" /></>
           }
         </Button>
       </div>
@@ -946,6 +948,7 @@ export default function CampaignIntake() {
 
   // Master Plan view — shown after chat completes, before calling finalize
   const [showMasterPlan, setShowMasterPlan] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("social_analysis_view") === "master");
+  const socialDiagnosisRecovery = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("social_diagnosis_recovery") === "1";
   const [showTrialSocialAnalysis, setShowTrialSocialAnalysis] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("social_analysis_view") === "trial");
 
   useEffect(() => {
@@ -1060,6 +1063,7 @@ export default function CampaignIntake() {
 
   useEffect(() => {
     if (!campaignData?.campaign || loadingCampaign || masterplanStateLoading || currentMasterplanLoading) return;
+    if (socialDiagnosisRecovery && campaignStatus === "strategy_ready") return;
     if (["draft", "intake"].includes(campaignStatus) && (masterplanApproved || trialCanContinue)) {
       if (hasSavedSchedulePreview) setLocation(`/campaigns/${campaignId}`);
       else setLocation(`/campaigns/${campaignId}/plan-ready`);
@@ -1072,7 +1076,7 @@ export default function CampaignIntake() {
     } else if (!isHistoricalBriefing && campaignStatus && !["draft", "intake"].includes(campaignStatus)) {
       setLocation(`/campaigns/${campaignId}/strategy`);
     }
-  }, [campaignData, campaignId, campaignStatus, currentMasterplanLoading, hasSavedSchedulePreview, isHistoricalBriefing, loadingCampaign, masterplanApproved, masterplanStateLoading, setLocation, trialCanContinue]);
+  }, [campaignData, campaignId, campaignStatus, currentMasterplanLoading, hasSavedSchedulePreview, isHistoricalBriefing, loadingCampaign, masterplanApproved, masterplanStateLoading, setLocation, trialCanContinue, socialDiagnosisRecovery]);
 
   const { data, isLoading: loadingIntake } = useGetIntake(campaignId, {
     query: { enabled: !!campaignId && !!campaignData, queryKey: getGetIntakeQueryKey(campaignId) },
@@ -1603,6 +1607,11 @@ export default function CampaignIntake() {
 
   // ── Finalize intake ────────────────────────────────────────────────────────────
   const handleFinalize = async () => {
+    if (socialDiagnosisRecovery) {
+      toast.success(t("Análise social confirmada. Voltando ao Masterplan.", "Social diagnosis confirmed. Returning to the master plan.", "Diagnóstico social confirmado. Volviendo al plan maestro."));
+      setLocation(`/campaigns/${campaignId}/strategy`);
+      return;
+    }
     if (loadingAccessStatus || !accessStatus) {
       toast.error(t("Não foi possível verificar seu acesso. Atualize a página e tente novamente.", "Could not verify your access. Refresh the page and try again.", "No se pudo verificar tu acceso. Actualiza la página e inténtalo de nuevo."));
       return;
@@ -1624,6 +1633,11 @@ export default function CampaignIntake() {
       toast.success(t("Briefing finalizado! Gerando Masterplan...", "Briefing complete! Generating Master Plan...", "¡Briefing finalizado! Generando el plan maestro..."));
     } catch (err) {
       const msg = err instanceof Error ? err.message : t("Erro ao finalizar", "Error finalizing", "Error al finalizar");
+      if (err instanceof ApiError && (err.data as { code?: string } | null)?.code === "SOCIAL_DIAGNOSIS_REQUIRED") {
+        toast.error(t("Antes de continuar, informe o perfil público da marca, gere o diagnóstico social e confirme a análise.", "Before continuing, enter the brand's public profile, generate the social diagnosis, and confirm it.", "Antes de continuar, ingresa el perfil público de la marca, genera el diagnóstico social y confirma el análisis."));
+        setFinalizing(false);
+        return;
+      }
       // If intake is "too short", block navigation — otherwise go to campaign regardless
       if (msg.includes("Briefing muito curto")) {
         toast.error(t("Briefing muito curto. Adicione mais detalhes antes de continuar.", "The briefing is too short. Add more details before continuing.", "El briefing es demasiado breve. Añade más detalles antes de continuar."));
@@ -1775,6 +1789,7 @@ export default function CampaignIntake() {
         onApprove={handleFinalize}
         onBack={() => setShowMasterPlan(false)}
         finalizing={finalizing}
+        socialDiagnosisRecovery={socialDiagnosisRecovery}
       />
     );
   }

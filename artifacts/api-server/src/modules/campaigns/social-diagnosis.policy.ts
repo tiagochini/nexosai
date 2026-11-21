@@ -1,4 +1,4 @@
-import { ValidationError } from "../../lib/errors.js";
+import { AppError } from "../../lib/errors.js";
 
 export function determineSocialDiagnosisStatus(input: {
   accountMetricsAvailable: boolean;
@@ -9,14 +9,15 @@ export function determineSocialDiagnosisStatus(input: {
     : "insufficient_data";
 }
 
-export function assertSocialDiagnosisApproved(socialMediaEntitled: boolean, brainData: unknown): void {
-  if (!socialMediaEntitled) return;
+export function assertSocialDiagnosisApproved(brainData: unknown): void {
   const brain = brainData && typeof brainData === "object" ? brainData as Record<string, unknown> : {};
   const diagnosis = brain.socialDiagnosis && typeof brain.socialDiagnosis === "object"
     ? brain.socialDiagnosis as Record<string, unknown>
     : undefined;
   if (diagnosis?.status === "approved") return;
-  throw new ValidationError(
-    "Antes de gerar a estratégia, conclua e confirme o Diagnóstico de Presença Social no briefing.",
+  throw new AppError(
+    409,
+    "Antes de continuar, conclua e confirme o Diagnóstico de Presença Social no briefing.",
+    "SOCIAL_DIAGNOSIS_REQUIRED",
   );
 }

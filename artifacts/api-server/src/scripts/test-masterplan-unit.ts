@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { REQUIRED_CAMPAIGN_ARCHITECTURE_FIELDS, REQUIRED_CAMPAIGN_CORE_FIELDS, REQUIRED_MASTERPLAN_QUALITY_FIELDS, REQUIRED_TRIGGER_MAP_FIELDS } from "@workspace/api-zod";
 import { calculateMasterplanReadiness, canonicalize, deterministicHash, matchesApprovedDossier } from "../modules/masterplan/masterplan.service.js";
 import { campaignContextPreamble } from "../modules/agents/campaign-action-context.js";
 
@@ -10,18 +11,41 @@ const ordered = { campaign: "abc", strategy: { a: [{ y: false, z: true }], b: 2 
 assert.deepEqual(canonicalize(unordered), canonicalize(ordered));
 assert.equal(deterministicHash(unordered), deterministicHash(ordered), "hash must be key-order deterministic");
 
-const ready = calculateMasterplanReadiness({ objective: "launch" }, []);
+const requiredFields = [
+  ...REQUIRED_CAMPAIGN_CORE_FIELDS,
+  ...REQUIRED_CAMPAIGN_ARCHITECTURE_FIELDS,
+  ...REQUIRED_MASTERPLAN_QUALITY_FIELDS,
+  ...REQUIRED_TRIGGER_MAP_FIELDS.map((field) => ({ ...field, path: `triggerMap.${field.path}` })),
+];
+function setPath(target: Record<string, unknown>, path: string, value: unknown) {
+  const keys = path.split(".");
+  let current = target;
+  for (const key of keys.slice(0, -1)) {
+    const child = current[key];
+    if (!child || typeof child !== "object" || Array.isArray(child)) current[key] = {};
+    current = current[key] as Record<string, unknown>;
+  }
+  current[keys[keys.length - 1]!] = value;
+}
+const completeStrategy: Record<string, unknown> = {};
+for (const field of requiredFields) {
+  setPath(completeStrategy, field.path, field.kind === "list" ? ["validated fixture"] : field.kind === "number" ? 1 : "Validated fixture");
+}
+const ready = calculateMasterplanReadiness(completeStrategy, []);
 assert.deepEqual(ready, { blockers: [], score: 100, status: "ready" });
-const needsAttention = calculateMasterplanReadiness({ objective: "launch" }, [{ id: "clarification-1", question: "Preço?" }]);
-assert.equal(needsAttention.score, 75);
-assert.equal(needsAttention.status, "needs_attention");
-const blocked = calculateMasterplanReadiness({}, [
-  { id: "clarification-1", question: "Preço?" },
-  { id: "clarification-2", question: "Data?" },
+const needsAttention = calculateMasterplanReadiness(completeStrategy, [{ id: "clarification-1", question: "Preço?" }]);
+assert.equal(needsAttention.score, 100, "clarifications do not erase completed strategy fields");
+assert.equal(needsAttention.status, "blocked");
+assert.equal(needsAttention.blockers[0]?.type, "clarification");
+const incompleteStrategy = structuredClone(completeStrategy);
+setPath(incompleteStrategy, "executiveSummary", "");
+setPath(incompleteStrategy, "bigDomino", "");
+const blocked = calculateMasterplanReadiness(incompleteStrategy, [
+  { id: "clarification-1", question: "Data?" },
 ]);
-assert.equal(blocked.score, 25);
+assert.equal(blocked.score, Math.round(((requiredFields.length - 2) / requiredFields.length) * 100));
 assert.equal(blocked.status, "blocked");
-assert.equal(blocked.blockers.length, 3, "strategy and pending clarification blockers are retained");
+assert.equal(blocked.blockers.length, 3, "missing fields and pending clarification blockers are retained");
 
 assert.match(campaignContextPreamble(false), /FALLBACK LEGADO EXPLÍCITO/);
 assert.doesNotMatch(campaignContextPreamble(true), /FALLBACK LEGADO EXPLÍCITO/);

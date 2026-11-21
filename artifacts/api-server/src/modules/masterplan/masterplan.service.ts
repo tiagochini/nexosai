@@ -9,6 +9,7 @@ import { latestRegionalIntelligenceSummary } from "../market-intel/regional-inte
 import { completeMissingStrategySections } from "../agents/strategy.agent.js";
 
 import { assertPaidMediaApprovalMatchesCampaign, paidMediaSnapshotFields } from "../paid-media/paid-media-setup.service.js";
+import { assertSocialDiagnosisApproved } from "../campaigns/social-diagnosis.policy.js";
 
 type Json = Record<string, unknown>;
 export const MASTERPLAN_MODULE_REVIEW_IDS = [
@@ -632,9 +633,10 @@ export async function approveMasterplan(workspaceId: string, campaignId: string,
   await db.transaction(async (tx) => {
     // Serialize with executable briefing edits. Re-read after taking the same
     // campaign lock so a concurrent approval cannot resurrect a stale version.
-    const [campaign] = await tx.select({ strategyData: campaignsTable.strategyData, intakeData: campaignsTable.intakeData }).from(campaignsTable).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).for("update").limit(1);
+    const [campaign] = await tx.select({ strategyData: campaignsTable.strategyData, intakeData: campaignsTable.intakeData, brainData: campaignsTable.brainData }).from(campaignsTable).where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId))).for("update").limit(1);
     const [current] = await tx.select().from(masterplanVersionsTable).where(and(eq(masterplanVersionsTable.id, plan.id), eq(masterplanVersionsTable.workspaceId, workspaceId))).limit(1);
     if (!campaign || !current || current.status === "superseded") throw new AppError(409, "Versão do Master Plan substituída; atualize antes de aprovar.", "MASTERPLAN_SUPERSEDED");
+    assertSocialDiagnosisApproved(campaign.brainData);
     const stillUnapproved = missingMasterplanModuleReviews(current.moduleReviews);
     if (stillUnapproved.length) {
       throw new AppError(428, "Aprove os 10 checklists do Masterplan antes de aprovar e gerar conteúdo.", "MASTERPLAN_CHECKLISTS_PENDING", { unapprovedModules: stillUnapproved, approvedCount: MASTERPLAN_MODULE_REVIEW_IDS.length - stillUnapproved.length, total: MASTERPLAN_MODULE_REVIEW_IDS.length });

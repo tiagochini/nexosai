@@ -180,9 +180,6 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
     });
     return;
   }
-  if (!entitlement.active && !trial) {
-    res.status(403).json({ error: "O diagnóstico social exige um contrato de Social Media vigente.", code: "SOCIAL_MEDIA_ENTITLEMENT_REQUIRED", entitlement }); return;
-  }
   const selectedIntegration = parsed.data.integrationId
     ? (await getConnectedAccounts(req.auth.workspaceId)).find((account) => {
       if (account.id !== parsed.data.integrationId || account.status !== "connected" || !isOrganicSocialIntegration(account.metadata as Record<string, unknown> | null)) return false;
@@ -204,7 +201,7 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
         : String(metadata["displayName"] ?? selectedIntegration.accountName ?? "");
     if (canonicalHandle) handle = cleanSocialHandle(canonicalHandle);
   }
-  if (campaign.status !== "intake") { res.status(409).json({ error: "O diagnóstico só pode ser gerado enquanto o briefing estiver em edição.", code: "SOCIAL_DIAGNOSIS_PHASE_CLOSED" }); return; }
+  if (campaign.status !== "intake" && campaign.status !== "strategy_ready") { res.status(409).json({ error: "O diagnóstico só pode ser gerado durante o briefing ou antes da aprovação do Masterplan.", code: "SOCIAL_DIAGNOSIS_PHASE_CLOSED" }); return; }
 
   const trialReserved = trial ? await reserveTrialSocialAnalysis(req.auth.workspaceId) : false;
   if (trial && !trialReserved) {
@@ -219,7 +216,11 @@ router.post("/:id/social-diagnosis", async (req, res): Promise<void> => {
     .map(([key, value]) => `${key}: ${String(value).slice(0, 300)}`)
     .join("\n").slice(0, 6000);
   const analysis = await analyzeSocialProfile(parsed.data.platform, handle, businessContext, req.log);
-  const accounts = await getAccountsWithAnalytics(req.auth.workspaceId);
+  // Public profile analysis is available to every campaign. Official metrics
+  // are attached only when Social Media access or the trial provides them.
+  const accounts = entitlement.active || trial
+    ? await getAccountsWithAnalytics(req.auth.workspaceId)
+    : [];
   const normalizedHandle = handle.toLowerCase().replace(/^@/, "");
   let connected = parsed.data.integrationId
     ? accounts.find((account) => account.integrationId === parsed.data.integrationId &&
@@ -307,11 +308,7 @@ router.post("/:id/social-diagnosis/approve", async (req, res): Promise<void> => 
   const [campaign] = await db.select({ status: campaignsTable.status, brainData: campaignsTable.brainData })
     .from(campaignsTable).where(and(eq(campaignsTable.id, id), eq(campaignsTable.workspaceId, req.auth.workspaceId))).limit(1);
   if (!campaign) { res.status(404).json({ error: "Campanha não encontrada.", code: "NOT_FOUND" }); return; }
-  const entitlement = await resolveSocialMediaEntitlement(req.auth.workspaceId);
-  if (!entitlement.active) {
-    res.status(403).json({ error: "A confirmação do diagnóstico exige um contrato de Social Media vigente.", code: "SOCIAL_MEDIA_ENTITLEMENT_REQUIRED", entitlement }); return;
-  }
-  if (campaign.status !== "intake") { res.status(409).json({ error: "O diagnóstico só pode ser confirmado enquanto o briefing estiver em edição.", code: "SOCIAL_DIAGNOSIS_PHASE_CLOSED" }); return; }
+  if (campaign.status !== "intake" && campaign.status !== "strategy_ready") { res.status(409).json({ error: "O diagnóstico só pode ser confirmado durante o briefing ou antes da aprovação do Masterplan.", code: "SOCIAL_DIAGNOSIS_PHASE_CLOSED" }); return; }
   const brainData = (campaign.brainData ?? {}) as Record<string, unknown>;
   const current = brainData.socialDiagnosis as Record<string, unknown> | undefined;
   if (!current || current.status !== "generated") { res.status(409).json({ error: "Gere o diagnóstico antes de confirmá-lo.", code: "SOCIAL_DIAGNOSIS_MISSING" }); return; }

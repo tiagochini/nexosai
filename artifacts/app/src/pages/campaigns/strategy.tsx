@@ -421,6 +421,9 @@ export default function CampaignStrategyPage() {
     },
   });
   const campaign = data?.campaign as (Record<string, unknown> & { status?: string; title?: string; id?: string }) | undefined;
+  const campaignBrainData = (campaign?.["brainData"] ?? {}) as Record<string, unknown>;
+  const savedSocialDiagnosis = campaignBrainData["socialDiagnosis"] as Record<string, unknown> | null;
+  const socialDiagnosisApproved = savedSocialDiagnosis?.["status"] === "approved";
 
   useEffect(() => {
     const status = campaign?.status ?? "";
@@ -667,6 +670,10 @@ export default function CampaignStrategyPage() {
       setLocation(`/campaigns/${campaignId}/plan-ready`);
       return;
     }
+    if (!socialDiagnosisApproved) {
+      toast.error(t("Conclua e confirme o Diagnóstico de Presença Social antes de aprovar o Masterplan.", "Complete and confirm the Social Presence Diagnosis before approving the master plan.", "Completa y confirma el diagnóstico de presencia social antes de aprobar el plan maestro."));
+      return;
+    }
     if (currentMp && currentMp.readinessStatus !== "ready") {
       toast.error(t("O plano está incompleto. Preencha os módulos indicados em Bloqueios antes de avançar.", "The plan is incomplete. Fill the modules listed under Blockers before continuing.", "El plan está incompleto. Completa los módulos indicados en Bloqueos antes de continuar."), { duration: 7000 });
       return;
@@ -683,6 +690,7 @@ export default function CampaignStrategyPage() {
   };
   const isApproving = approveMpMutation.isPending;
   const strategyCanAdvance = currentMp?.readinessStatus === "ready";
+  const canApproveWithSocialDiagnosis = trialAccess || socialDiagnosisApproved;
   const moduleReviewStatuses = currentMp?.moduleReviews ?? currentMpRes?.moduleReviews ?? {};
   const approvedChecklistCount = REQUIRED_MASTERPLAN_REVIEWS.filter((moduleId) => moduleReviewStatuses[moduleId] === "approved").length;
   const allChecklistsApproved = approvedChecklistCount === REQUIRED_MASTERPLAN_REVIEWS.length;
@@ -867,6 +875,15 @@ export default function CampaignStrategyPage() {
         {/* STRATEGY READY — full masterplan + approve */}
         {isReady && (
           <div className="space-y-0">
+            {!trialAccess && !socialDiagnosisApproved && (
+              <div className="mb-6 flex flex-col gap-3 border border-amber-300/35 bg-amber-300/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="font-mono text-xs font-bold uppercase tracking-wider text-amber-200">{t("Análise de redes sociais obrigatória", "Social media analysis required", "Análisis de redes sociales obligatorio")}</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">{t("Esta campanha avançou sem concluir a análise. Faça a análise pública da marca para liberar a aprovação do Masterplan; não é necessário contratar Social Media.", "This campaign advanced before the analysis was completed. Run the brand's public analysis to unlock master plan approval; a Social Media contract is not required.", "Esta campaña avanzó sin completar el análisis. Analiza públicamente la marca para habilitar la aprobación del plan maestro; no hace falta contratar Social Media.")}</p>
+                </div>
+                <Button onClick={() => setLocation(`/campaigns/${campaignId}/intake?social_analysis_view=master&social_diagnosis_recovery=1`)} className="shrink-0 rounded-none font-mono text-[10px] uppercase tracking-wider">{t("Concluir análise social", "Complete social analysis", "Completar análisis social")}<ChevronRight className="ml-2 h-3 w-3" /></Button>
+              </div>
+            )}
             {/* Approve banner (sticky-ish at top) */}
             <div className="mb-6 overflow-hidden border border-cyan-400/30 bg-gradient-to-br from-cyan-400/[0.07] via-card/80 to-primary/[0.05] shadow-[0_12px_40px_rgba(0,0,0,0.18)]">
               <div className="flex items-start gap-4 px-5 py-5 sm:px-6">
@@ -927,7 +944,7 @@ export default function CampaignStrategyPage() {
                 </div>
                 <Button
                   onClick={handleApprove}
-                  disabled={isApproving || (trialAccess ? !allChecklistsApproved : !strategyCanAdvance || !allChecklistsApproved)}
+                  disabled={isApproving || (trialAccess ? !allChecklistsApproved : !strategyCanAdvance || !allChecklistsApproved || !canApproveWithSocialDiagnosis)}
                   className="h-11 w-full gap-2 rounded-none px-5 font-mono text-[10px] font-black uppercase tracking-[0.12em] btn-weapon-primary sm:w-auto sm:min-w-[250px]"
                 >
                   {trialAccess
@@ -1009,7 +1026,7 @@ export default function CampaignStrategyPage() {
                 </div>
                 <Button
                   onClick={handleApprove}
-                  disabled={isApproving || (trialAccess ? !allChecklistsApproved : !strategyCanAdvance || !allChecklistsApproved)}
+                  disabled={isApproving || (trialAccess ? !allChecklistsApproved : !strategyCanAdvance || !allChecklistsApproved || !canApproveWithSocialDiagnosis)}
                   className="h-11 w-full gap-2 rounded-none px-5 font-mono text-[10px] font-black uppercase tracking-[0.12em] btn-weapon-primary sm:w-auto sm:min-w-[250px]"
                 >
                   {trialAccess
