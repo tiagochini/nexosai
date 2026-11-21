@@ -600,38 +600,6 @@ export default function AdminPage() {
     },
   });
 
-  const trialPlanSales = useQuery({
-    queryKey: ["/api/admin/trial-plan-sales"], enabled: isAdmin && tab === "convites",
-    queryFn: () => customFetch<{ plans: { id: string; name: string }[]; offers: { id: string; name: string }[]; blockedPlans: string[]; blockedOffers: string[] }>("/api/admin/trial-plan-sales"),
-  });
-  const trialPlanSalesMutation = useMutation({
-    mutationFn: (input: { kind: "plan" | "offer"; id: string; blocked: boolean }) => customFetch("/api/admin/trial-plan-sales", { method: "PATCH", body: JSON.stringify(input) }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/admin/trial-plan-sales"] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/billing/offers"] });
-      toast.success(t("Disponibilidade no trial atualizada.", "Trial availability updated.", "Disponibilidad en prueba actualizada."));
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-
-  const { data: trialSocialMediaSales } = useQuery({
-    queryKey: ["/api/admin/trial-social-media-sales"],
-    enabled: isAdmin && tab === "convites",
-    queryFn: () => customFetch<{ enabled: boolean; updatedAt: string | null }>("/api/admin/trial-social-media-sales"),
-  });
-  const trialSocialMediaSalesMutation = useMutation({
-    mutationFn: (enabled: boolean) => customFetch<{ enabled: boolean }>("/api/admin/trial-social-media-sales", {
-      method: "PATCH", body: JSON.stringify({ enabled }),
-    }),
-    onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/admin/trial-social-media-sales"] });
-      toast.success(data.enabled
-        ? t("Venda de planos Social Media liberada para usuários trial.", "Social Media plan sales enabled for trial users.", "Venta de planes Social Media habilitada para usuarios de prueba.")
-        : t("Venda de planos Social Media bloqueada para usuários trial.", "Social Media plan sales disabled for trial users.", "Venta de planes Social Media bloqueada para usuarios de prueba."));
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-
   interface WaitlistEntry {
     id: string; name: string; whatsapp: string; email: string | null;
     segment: string; source: string | null; notified: boolean;
@@ -1747,45 +1715,6 @@ export default function AdminPage() {
       {/* ─── TAB: CONVITES ─────────────────────────────────────────────────────── */}
       {tab === "convites" && (
         <div className="space-y-5">
-          <section className="border border-border p-4 space-y-4">
-            <h3 className="font-bold">{t("Venda de planos para trial", "Plan sales for trial users", "Venta de planes para prueba")}</h3>
-            <p className="text-sm text-muted-foreground">{t("Controle cada plano individualmente. Os bloqueios afetam somente usuários trial. Social Media também depende da liberação abaixo.", "Control each plan individually. Blocks only affect trial users. Social Media also requires the switch below.", "Controla cada plan individualmente. Los bloqueos solo afectan a usuarios de prueba. Social Media también requiere la opción de abajo.")}</p>
-            {trialPlanSales.isError && <p role="alert">{t("Não foi possível carregar os controles.", "Could not load controls.", "No se pudieron cargar los controles.")}</p>}
-            {(["plan", "offer"] as const).map(kind => <div key={kind} className="space-y-2">
-              <h4 className="font-semibold">{kind === "plan" ? t("Planos fixos", "Fixed plans", "Planes fijos") : t("Planos e ofertas editáveis", "Editable plans and offers", "Planes y ofertas editables")}</h4>
-              {(kind === "plan" ? trialPlanSales.data?.plans : trialPlanSales.data?.offers)?.map(item => {
-                const blocked = (kind === "plan" ? trialPlanSales.data?.blockedPlans : trialPlanSales.data?.blockedOffers)?.includes(item.id) ?? false;
-                return <div key={item.id} className="flex items-center justify-between gap-3 border border-border p-3">
-                  <div><p>{item.name}</p><p className="text-xs text-muted-foreground">{blocked ? t("Bloqueado para trial", "Blocked for trial", "Bloqueado para prueba") : t("Liberado para trial", "Enabled for trial", "Habilitado para prueba")}</p></div>
-                  <Button size="sm" variant={blocked ? "default" : "outline"} disabled={trialPlanSalesMutation.isPending} onClick={() => trialPlanSalesMutation.mutate({ kind, id: item.id, blocked: !blocked })}>{blocked ? t("Liberar", "Enable", "Habilitar") : t("Bloquear", "Disable", "Bloquear")}</Button>
-                </div>;
-              })}
-            </div>)}
-          </section>
-          <div className="flex flex-wrap items-center justify-between gap-4 border border-primary/30 bg-primary/5 p-4">
-            <div className="space-y-1">
-              <h3 className="font-mono text-sm font-bold uppercase tracking-wider">{t("Venda de Social Media no trial", "Social Media sales during trial", "Venta de Social Media durante la prueba")}</h3>
-              <p className="max-w-2xl text-xs text-muted-foreground">
-                {t("Controla se usuários trial podem ver e comprar planos de Social Media. A análise pública das redes continua disponível mesmo com a venda bloqueada.", "Choose whether trial users can view and purchase Social Media plans. Public profile analysis remains available when sales are disabled.", "Controla si los usuarios de prueba pueden ver y comprar planes de Social Media. El análisis público de perfiles sigue disponible aunque se bloqueen las ventas.")}
-              </p>
-              <Badge variant="outline" className={trialSocialMediaSales?.enabled ? "border-emerald-400/40 text-emerald-300" : "border-amber-400/40 text-amber-300"}>
-                {trialSocialMediaSales?.enabled ? t("Venda liberada", "Sales enabled", "Venta habilitada") : t("Venda bloqueada", "Sales disabled", "Venta bloqueada")}
-              </Badge>
-            </div>
-            <Button
-              size="sm"
-              variant={trialSocialMediaSales?.enabled ? "outline" : "default"}
-              className="rounded-none font-mono uppercase tracking-widest"
-              disabled={trialSocialMediaSalesMutation.isPending || trialSocialMediaSales === undefined}
-              onClick={() => trialSocialMediaSalesMutation.mutate(!trialSocialMediaSales?.enabled)}
-            >
-              {trialSocialMediaSalesMutation.isPending
-                ? t("Salvando...", "Saving...", "Guardando...")
-                : trialSocialMediaSales?.enabled
-                  ? t("Bloquear venda no trial", "Disable trial sales", "Bloquear venta en prueba")
-                  : t("Liberar venda no trial", "Enable trial sales", "Habilitar venta en prueba")}
-            </Button>
-          </div>
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h2 className="font-mono text-lg uppercase tracking-widest font-bold">🎟️ {t("Códigos de Convite — NexOS", "Invite Codes — NexOS", "Códigos de invitación — NexOS")}</h2>

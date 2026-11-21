@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { customFetch, ApiError } from "@workspace/api-client-react/custom-fetch";
 import { useAuth } from "@/lib/auth";
 import { useUiText } from "@/lib/i18n";
@@ -60,6 +60,37 @@ export default function AdminPricingPage() {
     queryKey: ["/api/admin/credit-packs"],
     enabled: isAdmin,
     queryFn: () => customFetch<{ packs: CreditPack[] }>("/api/admin/credit-packs"),
+  });
+  const trialPlanSalesQuery = useQuery({
+    queryKey: ["/api/admin/trial-plan-sales"],
+    enabled: isAdmin,
+    queryFn: () => customFetch<{ plans: { id: string; name: string }[]; offers: { id: string; name: string }[]; blockedPlans: string[]; blockedOffers: string[] }>("/api/admin/trial-plan-sales"),
+  });
+  const trialPlanSalesMutation = useMutation({
+    mutationFn: (input: { kind: "plan" | "offer"; id: string; blocked: boolean }) => customFetch("/api/admin/trial-plan-sales", { method: "PATCH", body: JSON.stringify(input) }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/admin/trial-plan-sales"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/billing/offers"] });
+      toast.success(t("Disponibilidade no trial atualizada.", "Trial availability updated.", "Disponibilidad en prueba actualizada."));
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const trialSocialMediaSalesQuery = useQuery({
+    queryKey: ["/api/admin/trial-social-media-sales"],
+    enabled: isAdmin,
+    queryFn: () => customFetch<{ enabled: boolean; updatedAt: string | null }>("/api/admin/trial-social-media-sales"),
+  });
+  const trialSocialMediaSalesMutation = useMutation({
+    mutationFn: (enabled: boolean) => customFetch<{ enabled: boolean }>("/api/admin/trial-social-media-sales", {
+      method: "PATCH", body: JSON.stringify({ enabled }),
+    }),
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/admin/trial-social-media-sales"] });
+      toast.success(data.enabled
+        ? t("Venda de planos Social Media liberada para usuários trial.", "Social Media plan sales enabled for trial users.", "Venta de planes Social Media habilitada para usuarios de prueba.")
+        : t("Venda de planos Social Media bloqueada para usuários trial.", "Social Media plan sales disabled for trial users.", "Venta de planes Social Media bloqueada para usuarios de prueba."));
+    },
+    onError: (error: Error) => toast.error(error.message),
   });
 
   useEffect(() => {
@@ -157,6 +188,53 @@ export default function AdminPricingPage() {
         </section>;
       })}</div>
     )}
+
+    <section className="space-y-4 border-t border-border/50 pt-6">
+      <div>
+        <h2 className="font-mono text-xl font-bold uppercase">{t("Disponibilidade para trial", "Trial availability", "Disponibilidad para prueba")}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("Defina quais planos e ofertas podem ser vendidos durante o trial. Essas regras afetam somente usuários trial.", "Choose which plans and offers can be sold during the trial. These rules only affect trial users.", "Define qué planes y ofertas se pueden vender durante la prueba. Estas reglas solo afectan a usuarios de prueba.")}</p>
+      </div>
+
+      {trialPlanSalesQuery.isLoading ? <div className="py-6 text-center text-sm text-muted-foreground">{t("Carregando disponibilidade…", "Loading availability…", "Cargando disponibilidad…")}</div> : trialPlanSalesQuery.isError ? <div role="alert" className="flex flex-wrap items-center justify-between gap-4 border border-destructive/30 p-4 text-sm text-destructive"><span>{t("Não foi possível carregar os controles de venda no trial.", "Could not load trial sales controls.", "No se pudieron cargar los controles de venta de prueba.")}</span><Button type="button" variant="outline" size="sm" onClick={() => void trialPlanSalesQuery.refetch()} className="rounded-none gap-2"><RefreshCw className="h-3.5 w-3.5" />{t("Tentar novamente", "Retry", "Reintentar")}</Button></div> : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {(["plan", "offer"] as const).map((kind) => {
+            const items = kind === "plan" ? trialPlanSalesQuery.data?.plans : trialPlanSalesQuery.data?.offers;
+            const blockedItems = kind === "plan" ? trialPlanSalesQuery.data?.blockedPlans : trialPlanSalesQuery.data?.blockedOffers;
+            return <div key={kind} className="space-y-2 border border-border/60 bg-card/40 p-4">
+              <h3 className="font-semibold">{kind === "plan" ? t("Planos fixos", "Fixed plans", "Planes fijos") : t("Planos e ofertas editáveis", "Editable plans and offers", "Planes y ofertas editables")}</h3>
+              {items?.length ? items.map((item) => {
+                const blocked = blockedItems?.includes(item.id) ?? false;
+                return <div key={item.id} className="flex items-center justify-between gap-3 border border-border/60 p-3">
+                  <div className="min-w-0"><p className="truncate">{item.name}</p><p className="text-xs text-muted-foreground">{blocked ? t("Bloqueado para trial", "Blocked for trial", "Bloqueado para prueba") : t("Liberado para trial", "Enabled for trial", "Habilitado para prueba")}</p></div>
+                  <Button size="sm" variant={blocked ? "default" : "outline"} disabled={trialPlanSalesMutation.isPending} onClick={() => trialPlanSalesMutation.mutate({ kind, id: item.id, blocked: !blocked })}>{blocked ? t("Liberar", "Enable", "Habilitar") : t("Bloquear", "Disable", "Bloquear")}</Button>
+                </div>;
+              }) : <p className="text-sm text-muted-foreground">{t("Nenhum item disponível.", "No items available.", "No hay elementos disponibles.")}</p>}
+            </div>;
+          })}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-4 border border-primary/30 bg-primary/5 p-4">
+        <div className="space-y-1">
+          <h3 className="font-mono text-sm font-bold uppercase tracking-wider">{t("Venda de Social Media no trial", "Social Media sales during trial", "Venta de Social Media durante la prueba")}</h3>
+          <p className="max-w-2xl text-xs text-muted-foreground">{t("Controla se usuários trial podem ver e comprar planos de Social Media. A análise pública das redes continua disponível mesmo com a venda bloqueada.", "Choose whether trial users can view and purchase Social Media plans. Public profile analysis remains available when sales are disabled.", "Controla si usuarios de prueba pueden ver y comprar planes de Social Media. El análisis público de perfiles sigue disponible aunque se bloqueen las ventas.")}</p>
+          {trialSocialMediaSalesQuery.isError ? <p role="alert" className="text-xs text-destructive">{t("Não foi possível carregar o status da venda Social Media.", "Could not load Social Media sales status.", "No se pudo cargar el estado de venta de Social Media.")} <button type="button" className="underline" onClick={() => void trialSocialMediaSalesQuery.refetch()}>{t("Tentar novamente", "Retry", "Reintentar")}</button></p> : <Badge variant="outline" className={trialSocialMediaSalesQuery.data?.enabled ? "border-emerald-400/40 text-emerald-300" : "border-amber-400/40 text-amber-300"}>{trialSocialMediaSalesQuery.data?.enabled ? t("Venda liberada", "Sales enabled", "Venta habilitada") : t("Venda bloqueada", "Sales disabled", "Venta bloqueada")}</Badge>}
+        </div>
+        <Button
+          size="sm"
+          variant={trialSocialMediaSalesQuery.data?.enabled ? "outline" : "default"}
+          className="rounded-none font-mono uppercase tracking-widest"
+          disabled={trialSocialMediaSalesMutation.isPending || !trialSocialMediaSalesQuery.data || trialSocialMediaSalesQuery.isError}
+          onClick={() => trialSocialMediaSalesMutation.mutate(!trialSocialMediaSalesQuery.data?.enabled)}
+        >
+          {trialSocialMediaSalesMutation.isPending
+            ? t("Salvando...", "Saving...", "Guardando...")
+            : trialSocialMediaSalesQuery.data?.enabled
+              ? t("Bloquear venda no trial", "Disable trial sales", "Bloquear venta en prueba")
+              : t("Liberar venda no trial", "Enable trial sales", "Habilitar venta en prueba")}
+        </Button>
+      </div>
+    </section>
 
     <section className="space-y-4 border-t border-border/50 pt-6">
       <div><h2 className="font-mono text-xl font-bold uppercase">{t("Pacotes de créditos", "Credit packs", "Paquetes de créditos")}</h2><p className="mt-1 text-sm text-muted-foreground">{t("Ajuste os preços dos quatro pacotes vendidos na área de cobrança. Os créditos e pagamentos já feitos não mudam.", "Set prices for the four packs offered in billing. Credit amounts and completed payments are unchanged.", "Ajusta los precios de los cuatro paquetes disponibles en facturación. Los créditos y pagos completados no cambian.")}</p></div>
